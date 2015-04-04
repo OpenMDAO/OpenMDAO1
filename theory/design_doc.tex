@@ -5,12 +5,14 @@
 \usepackage{parskip}
 \usepackage{verbments}
 
+
 \usepackage[letterpaper]{geometry}
 \geometry{left=.5in, right=.5in}
 
 
 
 \newcommand{\classname}[1]{\texttt{#1}}
+\newcommand{\method}[1]{\texttt{#1}}
 
 
 \title {OpenMDAO 1.0 Design Doc}
@@ -33,28 +35,20 @@ analysis:
     state variables that drive the non linear residual equations to zero
     \item linearize: compute partial derivatives around current location for all
     residuals as a function of current input and state variables
-    \item apply\_linear: linear operator which provides the product of the systems
-    Jacobian with a given vector
-    \item solve\_linear: solve the linear system defined by the jacobian on the
-    lhs and a given vector on the right hand side
+    \item multi_apply\_linear: linear operator which provides the product of the systems
+    Jacobian with a given set of vectors
+    \item multi_solve\_linear: solve the linear system defined by the jacobian on the
+    lhs and a set of vectors on the right hand side
 \end{itemize}
 
+There are three different types of \classname{System} that the user can user or extend:
+\begin{enumerate}
+    \item Component: responsible creating variables, performing computations with them, and providing derivatives of those computations
+    \item Group: Defined collection of systems, executed in a given order, that are solved (linear and non-linear) as a block
+    \item Namespace: A group that also defines a unique name-space for the systems it contains and tracks data connections between its children
+\end{enumerate}
 
 
-The basic unit of computational work in OpenMDAO is the \classname{Component}.
-The apply\_linear method in \classname{System} is intended to take advantage of sparse jacobian
-structures and provide an efficient method of performing matrix vector products. In some cases,
-such as when wrapping a CFD code, this method will be ultimately performed by an underlying
-linear operator in the analysis tool. However, for many cases when analyses are developed natively in
-OpenMDAO, the user may find it convinent to provide a Jacobian in the form of a dictionary with
-keys of $(<output\_var>,\ <input\_var>)$ and values being partial derivatives of
-$\frac{d<output\_var>}{d<input\_var>}$. This dictionary is given as the return value
-from the linearize method. The base implementation of the apply\_linear method
-in \classname{ImplicitComponent} will automatically implement the linear operator around
-the given dictionary. The user is expected to overload the base class method if they wish to
-use implement the linear operator themselves.
-
-\begin{center}
 \begin{tikzpicture}[]% [ show background grid ]
     \begin{interface}[text width =10cm ]{System}{0,0}
         \operation{apply\_nonlinear(pvec, uvec, fvec)}
@@ -78,10 +72,14 @@ use implement the linear operator themselves.
         \implement{System}
         \attribute{non-linear solver}
         \attribute{linear solver}
+        \attribute{workflow}
+        \attribute{sequence}
+        \attribute{exec_type}
+        \operation{setup_sequence}
     \end{class}
 
     \begin{class}{Namespace}{6,-4.5}
-        \implement{System}
+        \inherit{Group}
         \attribute{name}
         \attribute{non-linear solver}
         \attribute{linear solver}
@@ -93,14 +91,50 @@ use implement the linear operator themselves.
     \composition{Namespace}{}{1..*}{Group}
 
 \end{tikzpicture}
-\end{center}
-
 \pagebreak
-\section{Defining Component Classes}
 
-Componnets can have implicit and explicit relationships. Implicit replationships are defined
-by adding state variables. Explicit relationships are defined by adding outputs.
 
+\section{Component API}
+
+The basic unit of computational work in OpenMDAO is the \classname{Component}.
+Componnets can contain implicit and explicit functions. Implicit functions are created
+by adding state variables. Explicit functions are defined by adding outputs.
+
+
+\subsection{Component Partial Derivatives}
+
+Users building a component can choose to return a dictionary from linearize.
+This is the simplest, and most compact way to define derivatives.
+
+\begin{pyglist}[language=python]
+    class SomeOtherComp(Component):
+        def __init__(self):
+            super(SomeComp,self).__init__()
+
+            self.add_input('x1', size=(2,3))
+            self.add_input('x2', val=3.4)
+
+            self.add_state('y1', size=(2,3))
+            self.add_output('z1', size=(2,3))
+
+        def apply_nonlinear(self, pvec, uvec, fvec):
+
+            uvec['z1'] = 3*pvec['x1'] + pvec['x2']
+            fvec['y1'] = uvec['y1'] - pvec['x1']
+
+        def linearize(self):
+            self.J = {}
+            self.J['z1','x1'] = 3
+            self.J['z1','x2'] = 1
+
+            self.J['y1'] = 1 # derivative of resid w.r.t state
+            self.J['y1','x1'] = -1
+
+            return J
+\end{pyglist}
+
+If the user wishes to implenent the linear operator directly, they can overload
+the \method{apply\_linear} from the \classname{Component} base class.
 
 \begin{pyglist}[language=python]
     class SomeComp(Component):
@@ -136,38 +170,10 @@ by adding state variables. Explicit relationships are defined by adding outputs.
                 dpvec['x1'] -= dfvec['y1']
 \end{pyglist}
 
-Users building a component can choose to return a dictionary from linearize to avoid
-writing apply\_linear method themselves.
-
-\begin{pyglist}[language=python]
-    class SomeOtherComp(Component):
-        def __init__(self):
-            super(SomeComp,self).__init__()
-
-            self.add_input('x1', size=(2,3))
-            self.add_input('x2', val=3.4)
-
-            self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
-
-        def apply_nonlinear(self, pvec, uvec, fvec):
-
-            uvec['z1'] = 3*pvec['x1'] + pvec['x2']
-            fvec['y1'] = uvec['y1'] - pvec['x1']
-
-        def linearize(self):
-            self.J = {}
-            self.J['z1','x1'] = 3
-            self.J['z1','x2'] = 1
-
-            self.J['y1'] = 1 # derivative of resid w.r.t state
-            self.J['y1','x1'] = -1
-
-            return J
-\end{pyglist}
-
-Another part of the component api, \textttt{multi_apply_linear}, allows a component
-to provide matrix vector products with multiple right-hand-sides at once.
+The system interface requires the \method{multi\_apply\_linear}  method which provides matrix
+vector products on multiple vectors at once. \classname{Component} base implementation
+for \method{multi\_apply\_linear} is just a for-loop over \method{apply\_linear}. But like
+the \method{apply\_linear} method, users can overload it if they choose.
 
 \begin{pyglist}[language=python]
     class SomeComp(Component):
@@ -203,16 +209,106 @@ to provide matrix vector products with multiple right-hand-sides at once.
                 dpmat['x1'] -= dfmat['y1']
 \end{pyglist}
 
-default base-class implementation that is just a for-loop over apply\_linear.
+\subsection{Grouping related variables}
+It is often desireable to group sets of related variables together in a hierarchical
+tree structure. However, OpenMDAO requires a totally flat variable space foreach component.
+The solution to this issue is to establish a hierarchical naming convention of your choosing, and
+utilize it in the creation of variables.
 
-\section{Variable Connections within a namespace}
+\begin{pyglist}[language=python]
+    class SomeOtherComp(Component):
+        def __init__(self):
+            super(SomeComp,self).__init__()
+
+            self.add_input('x.x1', size=(2,3))
+            self.add_input('x.x2', val=3.4)
+
+            self.add_state('y1', size=(2,3))
+            self.add_output('z1', size=(2,3))
+
+        def apply_nonlinear(self, pvec, uvec, fvec):
+
+            uvec['z1'] = 3*pvec['x.x1'] + pvec['x.x2']
+            fvec['y1'] = uvec['y1'] - pvec['x1']
+
+        def linearize(self):
+            self.J = {}
+            self.J['z1','x.x1'] = 3
+            self.J['z1','x.x2'] = 1
+
+            self.J['y1'] = 1 # derivative of resid w.r.t state
+            self.J['y1','x.x1'] = -1
+
+            return J
+\end{pyglist}
+
+Conceptually, it is clear that there is now a group of variables collectively
+identified by \texttt{x}, but the variable space in actuality remains completely
+flat.
+
+\section{Group: Execution Order}
+All groups contain a \texttt{workflow} attribute which specifies the order its children will run in.
+By default, the order children are added determines the \texttt{workflow}.
+However, the user is free to redefine the \texttt{workflow} themselves if they choose.
+
+Although the \texttt{workflow} guarantees the order the user defined children run in, it
+does not define the full set of children a group will execute. The full set of
+child systems that will actually be executed is defined by the \texttt{sequence}.
+
+There are two ways in which the \texttt{sequence} could deviate from the \texttt{workflow}.
+First, if a group's \textttt{exec\_type} attribute is set to \texttt{'auto'} (the default),
+then that group will automatically break its children up into smaller parallel and serial sub-groups
+based on the data-dependence-graph for its children. Second, any data transformations required by the
+data-dependence-graph (e.g. unit conversions or connection expressions) will introduce additional
+\classname{Component} instances to the sequence.
+
+The \method{setup\_sequence} method is responsible for constructing the sequence for group with a
+given workflow. \method{build\_sequence} should be called recursively on all child groups inside a
+containing group.
+
+\section{Namespace: Variable Naming and Connections}
+All variables have a fully qualified name, consisting of a complete path from the top most
+\classname{Namespace} instance recursively down through the containing systems and including
+the variable name itself.
+
+For instance ...
+
+All variable connection statements happen within an instance of \classname{Namespace}.
+
+There are two different types of \classname{NameSpace}: automatic connection and manual connection.
 \subsection{Auto Connect (Global Variables)}
 \subsection{Manual Connection (Local Variables)}
+\subsection{Mass connection of grouped variables}
 
-\section{Drivers  (Optimizers and DOE)}
+\section{Drivers (Optimizers and DOE)}
 Note: Linear and non-linear solvers do not count as drivers
 
-Drivers are iterative processes that operate on top of analyses
+A \classname{Driver} is an iterative process that operates on a single \classname{System} contained inside it.
+
+The \classname{Driver} base class run the \classname{System} it contains for a single iteration.
+Other types of \classname{Driver} include Optimizers, CaseIteratorDriver, DesignOfExperiments, IterateUntil
+SensitivityDriver, or Montecarlo.
+
+Although \classname{Driver} does implement the \classname{System} interface it is not a regular system.
+Within a hierarchy composed of  \classname{Component}, \classname{Group}, and \classname{NameSpace}
+instances all variables are available to any system at any hierarchical level.However, an instance
+of \classname{Driver} represents an opaque boundry across which only certain defined variables are allowed
+to cross.
+
+An instance of \classname{Driver} may be used as a \classname{Component} in a higher level analysis,
+but that top level analysis will not know anything about the internal composition of the driver. For example,
+if derivatives were requested from the driver, by the top level analysis, then the driver would need to
+implement its own \method{linearize} (and possibly \method{apply\_linear} or \method{mult\_apply\_linear} methods).
+The \classname{Driver} base class could provide a finite-difference based implementation.
+
+Note: Driver might be a sub-class of Component, but its not totally clear yet.
+\begin{itemize}
+    \item How do you define variables? Probably with the same \method{add\_input}, \method{add\_state}, \method{add\_output} api.
+    \item How do you get data from the system to the boundary variables? Maybe just have the user issue manaul assignments in
+    a \method{post\_execute} or some other kind of hook.
+\end{itemize}
 
 
 \end{document}
+
+\classname{Driver} instances
