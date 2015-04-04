@@ -1,0 +1,153 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+
+\title {Jacobian Free Newton's Method for Non-Linear Systems with Composit Residual Functions via MAUD}
+
+\begin{document}
+
+\maketitle
+
+\section{Problem Definition}
+
+Composite residuals arise when solving a non-linear system whos residual evaluation is a function of two
+or more different components. For example, consider a non linear system with state variable vector, $u$, and
+residual vector, $r$, computed via two components, $Y$ and $R$. Assume $u$ and $r$ are of size $n$.
+
+\begin{equation}
+  u \longrightarrow Y \longrightarrow y \longrightarrow R \longrightarrow r
+\end{equation}
+
+$y$ and $r$ are explicit functions of $u$ and $y$ respectively
+
+\begin{align}
+  y = & Y(u) \notag \\
+  r = & R(y)
+\end{align}
+
+A composite residual function, $G$, is then defined
+
+\begin{equation}
+  G(u) = R(Y(u))
+\end{equation}
+
+The problem definition is then given as follows
+
+\begin{align}
+  Find &\  u \notag \\
+  s.t. &\  G(u) = 0
+\end{align}
+
+\section{Traditional Newtons Method}
+
+The Newton update, $\Delta u$, is computed via
+\begin{equation}
+  \frac{\partial G}{\partial u} \Delta u = -G(u)
+\end{equation}
+
+Expanding the partial derivative of $G$ out to account for the composite residual function
+gives
+
+\begin{equation}
+  \frac{\partial R}{\partial y}  \frac{\partial Y}{\partial u} \Delta u = -R\left(Y(u)\right)
+  \label{expanded_newton_iter}
+\end{equation}
+
+In order to compute $\Delta u$, the partial derivatives
+$\frac{\partial R}{\partial y}$ and  $\frac{\partial Y}{\partial u}$ must first be computed.
+Then a matrix multiplication is performed ($\mathcal{O}(n^3)$) to get $\frac{\partial G}{\partial u}$.
+Lastly the solution to a size $n$ linear system is found.
+
+\section{MAUD Formulation}
+
+Representing the composite residual as a system of non linear equations using the MAUD yeilds
+two separate, but coupled, residual functions with $y$ and $r$ as state variables
+and $u$ as an input.
+
+\begin{align}
+  A(u,y,r) & = y - Y(u) \label{MAUD_y} \\
+  B(u,y,r) & = r - R(y) \label{MAUD_r}
+  \label{maud1}
+\end{align}
+
+The original problem formulation seeks to drive $r$ to 0. So we'll just assume
+that $r$ is 0, then find values of $u$ and $y$ that drive
+the remaining residuals to 0. This gives a new system of equations:
+
+\begin{align}
+  C(u,y) & = y - Y(u) = 0 \label{y_resid} \\
+  D(r,y) & = R(y) = 0 \label{r_resid}
+  \label{maud2}
+\end{align}
+
+You can compute a Newton update for the non-linear system via
+
+\begin{equation}
+  \begin{bmatrix}
+    \frac{\partial C}{\partial u} & \frac{\partial C}{\partial y} \\
+    \frac{\partial D}{\partial u} & \frac{\partial D}{\partial y}
+  \end{bmatrix}
+  \begin{bmatrix}
+    \Delta u \\
+    \Delta y
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    -C(u,y) \\
+    -D(u,y)
+  \end{bmatrix}
+\end{equation}
+
+\begin{equation}
+  \begin{bmatrix}
+    -\frac{\partial Y}{\partial u} & 1 \\
+    0 & \frac{\partial R}{\partial y}
+  \end{bmatrix}
+  \begin{bmatrix}
+    \Delta u \\
+    \Delta y \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    Y(u) - y \\
+    - R(y)
+  \end{bmatrix}
+\end{equation}
+
+Expanding out the linear system yields
+
+\begin{align}
+  -\frac{\partial Y}{\partial u} \Delta u + \Delta y & = Y(u) - y   \label{Delta_u} \\
+  \frac{\partial R}{\partial y} \Delta y & = -R(y)   \label{Delta_y}
+\end{align}
+
+
+Multiplying both sides by of Eqn.~\ref{Delta_u} by $\frac{\partial R}{\partial y}$ yields
+
+\begin{equation}
+  -\frac{\partial R}{\partial y} \frac{\partial Y}{\partial u} \Delta u + \frac{\partial R}{\partial y} \Delta y = Y(u) - y
+\end{equation}
+
+Now, assuming that you always executed $Y$ first and then $R$, you know that $Y(u) - y$ will always be identically 0.
+
+\begin{equation}
+  -\frac{\partial R}{\partial y} \frac{\partial Y}{\partial u} \Delta u + \frac{\partial R}{\partial y} \Delta y = 0
+  \label{newton_update_1}
+\end{equation}
+
+Finally, substituting Eqn.~\ref{Delta_y} into Eqn.~\ref{newton_update_1} yeilds
+
+\begin{equation}
+  \frac{\partial R}{\partial y} \frac{\partial Y}{\partial u} \Delta u = -R(y)
+  \label{maud_Delta_u_update}
+\end{equation}
+
+We now note that Eqn.~\ref{maud_Delta_u_update} and Eqn.~\ref{expanded_newton_iter} are equivalent, hence
+the resulting $\Delta u$ value computed via the traditional method and the MAUD method are also
+equivalent.
+
+However, the MAUD provides a computational savings. The partial derivatives $\frac{\partial R}{\partial y}$
+and $\frac{\partial Y}{\partial u}$ must still be computed. But the newton update, $\Delta u$ can now be found
+directly via a single solution to a linear system of size $n$ without the expensive matrix
+multiplication step needed with the traditional method.
+
+\end{document}

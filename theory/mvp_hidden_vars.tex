@@ -1,0 +1,130 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+
+\title {Matrix-Free Matrix Vector Producs Across Sub-Assemblies}
+
+\begin{document}
+
+\maketitle
+Given a system with 3 variables, $x$, $y$, $z$:
+
+\begin{align}
+  R_x &= x - x^* \\
+  R_y &= -R(x, y) \\
+  R_f &= f - F(x,y)
+\end{align}
+
+The jacobian, $J$, is given by
+
+\begin{equation}
+  J = \begin{bmatrix}
+  \frac{\partial R_x}{\partial x} & \frac{\partial R_x}{\partial y} & \frac{\partial R_x}{\partial f} \\
+  \frac{\partial R_y}{\partial x} & \frac{\partial R_y}{\partial y} & \frac{\partial R_y}{\partial f} \\
+  \frac{\partial R_f}{\partial x} & \frac{\partial R_f}{\partial y} & \frac{\partial R_f}{\partial f}
+      \end{bmatrix}
+  = \begin{bmatrix}
+  I & 0 & 0 \\
+  -\frac{\partial R}{\partial x} & -\frac{\partial R}{\partial y} & 0\\
+  -\frac{\partial F}{\partial x} & -\frac{\partial F}{\partial y} & I\\
+      \end{bmatrix}
+\end{equation}
+
+Applying the unified chain rule equation from MAUD
+
+\begin{equation}
+  \begin{bmatrix}
+  I & 0 & 0 \\
+  -\frac{\partial R}{\partial x} & -\frac{\partial R}{\partial y} & 0\\
+  -\frac{\partial F}{\partial x} & -\frac{\partial F}{\partial y} & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+  I & 0 & 0 \\
+  \frac{d y}{d x} & \frac{d y}{d r} & 0\\
+  \frac{d f}{d x} & \frac{d f}{d r} & I\\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  I & 0 & 0 \\
+  0 & I & 0\\
+  0 & 0 & I\\
+  \end{bmatrix}
+  \label{ucr}
+\end{equation}
+
+Right multiply both sides of Eqn.~\ref{ucr} by $ \begin{bmatrix}a1 \\a2 \\a3\end{bmatrix}$
+
+\begin{equation}
+  \begin{bmatrix}
+    I & 0 & 0 \\
+    -\frac{\partial R}{\partial x} & -\frac{\partial R}{\partial y} & 0\\
+    -\frac{\partial F}{\partial x} & -\frac{\partial F}{\partial y} & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    I & 0 & 0 \\
+    \frac{d y}{d x} & \frac{d y}{d r} & 0\\
+    \frac{d f}{d x} & \frac{d f}{d r} & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    a1 \\
+    a2 \\
+    a3
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    I & 0 & 0 \\
+    0 & I & 0\\
+    0 & 0 & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    a1 \\
+    a2 \\
+    a3
+  \end{bmatrix}
+  \label{right_mult1}
+\end{equation}
+
+\begin{equation}
+  \begin{bmatrix}
+    I & 0 & 0 \\
+    -\frac{\partial R}{\partial x} & -\frac{\partial R}{\partial y} & 0\\
+    -\frac{\partial F}{\partial x} & -\frac{\partial F}{\partial y} & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    a1 \\
+    a1 \frac{d y}{d x} + a2 \frac{d y}{d r}\\
+    a1 \frac{d f}{d x} + a2 \frac{d f}{d r} + a3\\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    a1 \\
+    a2 \\
+    a3
+  \end{bmatrix}
+  \label{right_mult2}
+\end{equation}
+
+a1 \frac{d f}{d x}$, so right multiply Eqn.~\ref{ucr} by
+$\begin{bmatrix}a1 \\0 \\0\end{bmatrix}$ instead
+
+\begin{equation}
+  \begin{bmatrix}
+    I & 0 & 0 \\
+    -\frac{\partial R}{\partial x} & -\frac{\partial R}{\partial y} & 0\\
+    -\frac{\partial F}{\partial x} & -\frac{\partial F}{\partial y} & I\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    a1 \\
+    a1 \frac{d y}{d x} \\
+    a1 \frac{d f}{d x} \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    a1 \\
+    0 \\
+    0
+  \end{bmatrix}
+  \label{right_mult3}
+\end{equation}
+
+
+\end{document}
