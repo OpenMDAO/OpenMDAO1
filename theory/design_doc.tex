@@ -13,6 +13,7 @@
 
 \newcommand{\classname}[1]{\texttt{#1}}
 \newcommand{\method}[1]{\texttt{#1}}
+\newcommand{\var}[1]{\texttt{#1}}
 
 
 \title {OpenMDAO 1.0 Design Doc}
@@ -22,7 +23,7 @@
 
 \section{Analysis Composition Objects}
 
-OpenMDAO is designed around the Multidisciplinary Analysis and Unfied Derivatives (MAUD) mathematical
+OpenMDAO is designed around the Modular Analysis and Unfied Derivatives (MAUD) mathematical
 architecture. In MAUD, all analyses are represented as systems of coupled non-linear implicit equations.
 \classname{System} is the baseclass for all objects that are responsible for mathematical computations.
 Any instance of \classname{System} must implement 5 methods in order to be able to perform
@@ -35,9 +36,9 @@ analysis:
     state variables that drive the non linear residual equations to zero
     \item linearize: compute partial derivatives around current location for all
     residuals as a function of current input and state variables
-    \item multi_apply\_linear: linear operator which provides the product of the systems
+    \item multi\_apply\_linear: linear operator which provides the product of the systems
     Jacobian with a given set of vectors
-    \item multi_solve\_linear: solve the linear system defined by the jacobian on the
+    \item multi\_solve\_linear: solve the linear system defined by the jacobian on the
     lhs and a set of vectors on the right hand side
 \end{itemize}
 
@@ -119,7 +120,8 @@ This is the simplest, and most compact way to define derivatives.
 
         def apply_nonlinear(self, pvec, uvec, fvec):
 
-            uvec['z1'] = 3*pvec['x1'] + pvec['x2']
+            # note that the fvec object needs to do a subtraction during this set
+            fvec['z1'] = 3*pvec['x1'] + pvec['x2']
             fvec['y1'] = uvec['y1'] - pvec['x1']
 
         def linearize(self):
@@ -147,27 +149,70 @@ the \method{apply\_linear} from the \classname{Component} base class.
             self.add_state('y1', size=(2,3))
             self.add_output('z1', size=(2,3))
 
-        def apply_nonlinear(self, pvec, uvec, fvec):
+        def apply_nonlinear(self, pvec, uvec, rvec):
 
-            uvec['z1'] = 3*pvec['x1'] + pvec['x2']
-            fvec['y1'] = uvec['y1'] - pvec['x1']
+            rvec['z1'] = 3*pvec['x1'] + pvec['x2']
+            rvec['y1'] = uvec['y1'] - pvec['x1']
 
         def linearize(self):
             pass # nothing meaningful to do here
 
-        def apply_linear(self, pvec, uvec, dpvec, duvec, dfvec, mode='fwd'):
+        def apply_linear(self, pvec, uvec, dpvec, duvec, drvec, mode='fwd'):
 
             if mode="fwd":
-                duvec['z1'] += 3*dpvec['x1']
-                duvec['z1'] += dpvec['x2']
-                dfvec['y1'] += duvec['y1'] - dpvec['x1']
+                drvec['z1'] += 3*duvec['x1']
+                drvec['z1'] += duvec['x2']
+                drvec['y1'] += duvec['y1'] - duvec['x1']
 
             elif mode='adj':
-                dpvec['x1'] += 3*duvec['z1']
-                dpvec['x2'] += duvec['z1']
+                duvec['x1'] += 3*drvec['z1']
+                duvec['x2'] += drvec['z2']
+                duvec['y1'] += drvec['y1'] - drvec['x1']
+\end{pyglist}
 
-                duvec['y1'] += dfvec['y1']
-                dpvec['x1'] -= dfvec['y1']
+An alternate proposal is to do away with apply apply_linear as a separate method and
+rely instead only on the returned value for J, where each entry in J can optional
+allow either a dense matrix, a sparse matrix, or a linear operator. One very nice feature
+of this is that it would allow users to mix and match a bit, if they wanted to.
+
+\begin{pyglist}[language=python]
+    class SomeComp(Component):
+        def __init__(self):
+            super(SomeComp,self).__init__()
+
+            self.add_input('x1', size=(2,3))
+            self.add_input('x2', val=3.4)
+
+            self.add_state('y1', size=(2,3))
+            self.add_output('z1', size=(2,3))
+
+        def apply_nonlinear(self, pvec, uvec, rvec):
+
+            rvec['z1'] = 3*pvec['x1']**2 + pvec['x2']
+            rvec['y1'] = np.exp(uvec['y1']) - pvec['x1']
+
+        def linearize(self):
+            self.J = {}
+
+
+            def fwd(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+                drvec['z1'] += 6*uvec['x']*duvec['x1']
+            def rev(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+                duvec['x1'] += 6*uvec['x']*drvec['z1']
+            self.J['z1','x1'] = {'fwd': fwd, 'rev': rev}
+
+            self.J['z1','x2'] = 1
+
+            def fwd(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+                drvec['y1'] += np.exp(uvec['y1'])*duvec['y1']
+            def rev(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+                duvec['y1'] += np.exp(uvec['y1'])*drvec['y1']
+            self.J['y1'] = {'fwd': fwd, 'rev': rev} # derivative of resid w.r.t state
+
+            self.J['y1','x1'] = -1
+
+            return J
+
 \end{pyglist}
 
 The system interface requires the \method{multi\_apply\_linear}  method which provides matrix
@@ -186,15 +231,15 @@ the \method{apply\_linear} method, users can overload it if they choose.
             self.add_state('y1', size=(2,3))
             self.add_output('z1', size=(2,3))
 
-        def apply_nonlinear(self, pvec, uvec, fvec):
+        def apply_nonlinear(self, pvec, uvec, rvec):
 
-            uvec['z1'] = 3*pvec['x1']**2 + pvec['x2']
+            fvec['z1'] = 3*pvec['x1']**2 + pvec['x2']
             fvec['y1'] = uvec['y1'] - pvec['x1']
 
         def linearize(self):
             pass # nothing meaningful to do here
 
-        def multi_apply_linear(self, pvec, uvec, dpmat, dumat, dfmat, mode='fwd'):
+        def multi_apply_linear(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
 
             if mode="fwd":
                 dumat['z1'] += 3*2*pvec['x1'].dot(dpmat['x1'])
@@ -271,14 +316,64 @@ All variables have a fully qualified name, consisting of a complete path from th
 \classname{Namespace} instance recursively down through the containing systems and including
 the variable name itself.
 
-For instance ...
+\subsection{Justin's Idea}
+
+\begin{pyglist}[language=python]
+
+    class Compressor(NameSpace):
+        def __init__(self):
+            self.add('pressure_rise', PressureRise()) # has a variable PR
+            self.add('ideal_flow', SetTotalSP())
+            self.add('enthalpy_rise', EnthalpyRise())
+            self.add('real_flow', SetTotalhP())
+            self.add('power', Power())
+
+            self.promote('real_flow.Tt', 'Fl_O.Tt')
+            self.promote('real_flow.Pt', 'Fl_O.Pt')
+
+    class EngineCycle(NameSpace):
+
+        def __init__(self):
+            self.add('hpc', Compressor())
+
+            self.promote('hpc.pressure_rise.PR', 'PR')
+
+\end{pyglist}
+
+The fully qualified name for the \var{PR} variable in the \classname{PressureRise}
+component , from within the \className{EngineCycle} namespace, is \var{hpc.pressure\_rise.PR}.
+However \var{hpc.pressure\_rise.PR} was also promoted, and so the location in the data vector
+that holds it can also be addressed by \var{PR} from within the \className{EngineCycle} namespace.
+
+Similarly, \var{'real\_flow.Tt'} and \var{'real\_flow.Pt'} have been promoted into the
+\classname{Compressor} namespace. So they they can be addressed within the \classname{EngineCycle}
+namespace by \var{hpc.Fl\_O.Tt} and \var{hpc.Fl\_O.Pt}
 
 All variable connection statements happen within an instance of \classname{Namespace}.
 
-There are two different types of \classname{NameSpace}: automatic connection and manual connection.
-\subsection{Auto Connect (Global Variables)}
-\subsection{Manual Connection (Local Variables)}
-\subsection{Mass connection of grouped variables}
+\subsection{John's Idea}
+
+\begin{pyglist}[language=python]
+
+    class Compressor(NameSpace):
+        def __init__(self):
+            self.add('pressure_rise', PressureRise(),
+                global_inputs=('PR')) # has a variable PR
+            self.add('ideal_flow', SetTotalSP())
+            self.add('enthalpy_rise', EnthalpyRise())
+            self.add('real_flow', SetTotalhP(),
+                global_outputs=(('Tt','Fl_O.Tt'),('Pt', 'Fl_O.Pt'))
+            self.add('power', Power())
+
+    class EngineCycle(NameSpace):
+
+        def __init__(self):
+            self.add('hpc', Compressor())
+
+            self.promote('hpc.pressure_rise.PR', 'PR')
+
+\end{pyglist}
+
 
 \section{Drivers (Optimizers and DOE)}
 Note: Linear and non-linear solvers do not count as drivers
