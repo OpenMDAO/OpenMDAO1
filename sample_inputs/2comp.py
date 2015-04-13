@@ -33,23 +33,21 @@ class Sim(Group):
 
         super(Sim, self).__init__()
 
-        self.add('parab1', Parab()
-            promote_ins = {'x':'x'},
-            promote_outs = {'y': 'z0'}
-        )
+        self.add('parab1', Parab(), auto_alias=True)
 
-        self.add('parab2', Parab()
-            promote_ins = {'x':'z0',},
-            promote_outs = {'y':'y1'}
-        )
+        self.add('parab2', Parab(), auto_alias=True)
 
-        self.add('parab3', Adder(),
-            promote_ins = {'x':'z0'},
-            promote_outs = {'y':'y2'}
-        )
+        self.add('parab3', Adder(), auto_alias=True)
 
-        # self.connect('parab1.y', 'parab2.x', name='x1')
-        # self.conenct('parab1.y', 'parab3.x', name='x1')
+        self.alias('parab1.x', 'z0')
+
+        self.alias('parab1.y', 'y')
+        self.alias('parab2.x', 'y')
+        self.connect(name="y", 'parab1.y', 'parab2.x')
+
+        self.connect('z0+3*y', 'parab.x')
+
+        # self.connect('parab1.y', 'parab3.x', name='x1')
 
 if __name__ == "__main__":
 
@@ -58,7 +56,14 @@ if __name__ == "__main__":
 
     top = Assembly()
 
-    s = top.root = Sim()
+    s = top.root = Sim(name_space="")
+
+    s.sequence  == ['parab1', 'parab2', 'parab3']
+    s.sequence  == ['parab2', 'parab1', 'parab3']
+
+    s.auto_workflow()
+
+    s.workflow == ['parab1', 'parab2' ,'parab3']
 
     #top.driver = Cobyla()
     top.setup()
