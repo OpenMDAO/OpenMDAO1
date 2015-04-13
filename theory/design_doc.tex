@@ -46,7 +46,7 @@ There are three different types of \classname{System} that the user can user or 
 \begin{enumerate}
     \item Component: responsible creating variables, performing computations with them, and providing derivatives of those computations
     \item Group: Defined collection of systems, executed in a given order, that are solved (linear and non-linear) as a block
-    \item Namespace: A group that also defines a unique name-space for the systems it contains and tracks data connections between its children
+    \item Assembly: A Group that also defines a unique name-space for the systems it contains and tracks data connections between its children
 \end{enumerate}
 
 
@@ -170,10 +170,12 @@ the \method{apply\_linear} from the \classname{Component} base class.
                 duvec['y1'] += drvec['y1'] - drvec['x1']
 \end{pyglist}
 
-An alternate proposal is to do away with apply apply_linear as a separate method and
+An alternate proposal is to do away with apply \method{apply\_linear} as a separate method and
 rely instead only on the returned value for J, where each entry in J can optional
 allow either a dense matrix, a sparse matrix, or a linear operator. One very nice feature
 of this is that it would allow users to mix and match a bit, if they wanted to.
+
+NOTE: What does this idea imply for \method{solve\_linear}?
 
 \begin{pyglist}[language=python]
     class SomeComp(Component):
@@ -195,17 +197,17 @@ of this is that it would allow users to mix and match a bit, if they wanted to.
             self.J = {}
 
 
-            def fwd(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+            def fwd(self, pvec, uvec, dpvec, duvec, drvec):
                 drvec['z1'] += 6*uvec['x']*duvec['x1']
-            def rev(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+            def rev(self, pvec, uvec, dpvec, duvec, drvec):
                 duvec['x1'] += 6*uvec['x']*drvec['z1']
             self.J['z1','x1'] = {'fwd': fwd, 'rev': rev}
 
             self.J['z1','x2'] = 1
 
-            def fwd(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+            def fwd(self, pvec, uvec, dpvec, duvec, drvec):
                 drvec['y1'] += np.exp(uvec['y1'])*duvec['y1']
-            def rev(self, pvec, uvec, dpmat, dumat, drmat, mode='fwd'):
+            def rev(self, pvec, uvec, dpvec, duvec, drvec):
                 duvec['y1'] += np.exp(uvec['y1'])*drvec['y1']
             self.J['y1'] = {'fwd': fwd, 'rev': rev} # derivative of resid w.r.t state
 
