@@ -1,6 +1,7 @@
 import numpy as np
 
 from openmdao.core import Component, NameSpace, Group
+from openmdao.util import ExprComp
 
 class Parab(Component):
 
@@ -26,36 +27,37 @@ class Adder(Component):
         super(Component,self).__init__()
 
         self.add_input('x', val=1.0, size=1)
-
         self.add_output('y', val=1.0, size=1)
-
         self.add_state('u', val=1.0, size=1)
 
     def execute(self, ins, outs):
         outs['z'] = ins['x']+2
 
 
-class Sim(Group):
+class Sim(NameSpace):
 
     def __init__(self):
 
         super(Sim, self).__init__()
 
-        p1 = self.add('parab1', Parab(), name_space=False)
+        p1 = self.add(Parab(), name='parab1')
+        p2 = self.add(Parab(), name='parab2')
+        p3 = self.add(Adder(), name='parab3')
 
-        p2 = self.add('parab2', Parab(),  name_space=False)
+        self.alias('parab1.y', 'y')
+        self.alias('parab1.x', 'x')
 
-        p3 = self.add('parab3', Adder(),  name_space=False)
+        self.connect('y','parab2.x')
 
-        self.connect('parab1.x', 'z0')
+        #this actually creates a new component with an output named "y" at this level of the system hierarchy
+        #    This component should be non-namespacing so that a variable called 'y' in this namespace
+        p_expr = self.add(name="z_expr", ExprComp('z=3*y+2*x'))
+        self.connect('parab1.x', 'z_expr.x')
+        self.connect('parab1.y', 'z_expr.y')
+        self.alias('z_expr.z', 'z')
 
-        self.create_passthrough('parab.x2','y')
-        self.connect('x', 'Fl_O.y', target_units="Btu/lbm")
-        # self.connect(name="y", 'parab1.y', 'parab2.x')
+        self.connect('z', 'parab3.x')
 
-        self.connect('z0+3*y', 'parab.x')
-
-        self.connect('parab1.y', 'parab3.x', name='x1')
 
 if __name__ == "__main__":
 
@@ -73,6 +75,12 @@ if __name__ == "__main__":
     s.workflow == ['parab1', 'parab2' ,'parab3']
 
     #top.driver = Cobyla()
-    top.setup()
+    #top.setup()
+    top.setup_comps()
+    top.setup_variables() # all systems repor their outputs from the bottom to the top
+    top.setup_sizes()
+    top.setup_vectors() #this is where each sub-system will get its own vector wrapper that only has access to variables within its own scope
+    top.setup_scatters()
+
 
     top.run()
