@@ -51,10 +51,7 @@ class Sim(NameSpace):
 
         #this actually creates a new component with an output named "y" at this level of the system hierarchy
         #    This component should be non-namespacing so that a variable called 'y' in this namespace
-        p_expr = self.add(name="z_expr", ExprComp('z=3*y+2*x'))
-        self.connect('parab1.x', 'z_expr.x')
-        self.connect('parab1.y', 'z_expr.y')
-        self.alias('z_expr.z', 'z')
+        p_expr = self.add(ExprComp('z=3*y+2*x'))
 
         self.connect('z', 'parab3.x')
 
