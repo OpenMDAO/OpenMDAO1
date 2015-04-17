@@ -6,7 +6,7 @@ __undefined = object()
 class Component(System):
     def __init__(self):
         super(Component, self).__init__()
-        
+
         # by default, don't promote any vars up to our parent
         self.promotes = ()
 
@@ -14,4 +14,7 @@ class Component(System):
         pass
 
     def add_output(name, val=__undefined):
+        pass
+
+    def add_state(name, val=__undefined):
         pass
