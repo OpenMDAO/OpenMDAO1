@@ -9,7 +9,7 @@
 
 \section{Problem Definition}
 
-Composite residuals arise when solving a non-linear system whos residual evaluation is a function of two
+Composite resids arise when solving a non-linear system whos residual evaluation is a function of two
 or more different components. For example, consider a non linear system with state variable vector, $u$, and
 residual vector, $r$, computed via two components, $Y$ and $R$. Assume $u$ and $r$ are of size $n$.
 
@@ -71,7 +71,7 @@ and $u$ as an input.
 
 The original problem formulation seeks to drive $r$ to 0. So we'll just assume
 that $r$ is 0, then find values of $u$ and $y$ that drive
-the remaining residuals to 0. This gives a new system of equations:
+the remaining resids to 0. This gives a new system of equations:
 
 \begin{align}
   C(u,y) & = y - Y(u) = 0 \label{y_resid} \\

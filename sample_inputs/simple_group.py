@@ -1,19 +1,20 @@
 import numpy as np
 
-from openmdao.core import Component, NameSpace, Group
+from openmdao.core import Component, Assembly, Group
 from openmdao.util import ExprComp
 
 class Parab(Component):
 
     def __init__(self):
 
-        self.add_input('x', default=np.ones(10,), units="BTU/lbm")
+        self.add_input('x', init=np.ones(10,), units="BTU/lbm")
         self.add_input('x', size=10, type=np.array)
 
-        self.add_output('y', default=1.0)
+        self.add_output('y', init=1.0)
 
     def get_var_idx(self): # needed only for parallel
         comm = self.comm
+        rank = comm.rank
 
         return {'x':, [1,3,4,10,9,7,8,12,52,18]}
 
@@ -26,14 +27,14 @@ class Adder(Component):
     def __init__(self):
         super(Component,self).__init__()
 
-        self.add_input('x', val=1.0, size=1)
-        self.add_output('y', val=1.0, size=1)
-        self.add_state('u', val=1.0, size=1)
+        self.add_input('x', init=1.0)
+        self.add_output('y', init=1.0)
+        self.add_state('u', init=1.0)
 
     def execute(self, ins, outs):
         outs['z'] = ins['x']+2
 
-class Sim(NameSpace):
+class Sim(Assembly):
 
     def __init__(self):
 
@@ -49,7 +50,7 @@ class Sim(NameSpace):
         self.connect('y','parab2.x')
 
         #this actually creates a new component with an output named "y" at this level of the system hierarchy
-        #    This component should be non-namespacing so that a variable called 'y' in this namespace
+        #    This component should be non-namespacing so that a variable called 'y' in this Assembly
         z_expr = self.add(ExprComp('z=3*y+2*x'))
 
         self.connect('z', 'parab3.x')
