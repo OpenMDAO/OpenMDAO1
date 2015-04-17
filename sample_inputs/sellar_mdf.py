@@ -1,13 +1,13 @@
 import numpy as np
 
-from openmdao.core import Component, Assembly, Group,
-from openmdao.components import ExprComp, ParamComp,
+from openmdao.core import Component, Assembly, Group
+from openmdao.components import ExprComp, ParamComp
 from openmdao.solvers import Newton, Krylov, ScipyGMRes
 
 class SellarDis1(Component):
 
     def __init__(self):
-        super(Component, self).__init__()
+        super(SellarDis1, self).__init__()
         self.add_input('z', val=np.zeros(2))
         self.add_input('x', val=0.)
         self.add_input('y2', val=0.)
@@ -43,7 +43,7 @@ class SellarDis1(Component):
 class SellarDis2(Component):
 
     def __init__(self):
-        super(Component, self).__init__()
+        super(SellarDis2, self).__init__()
 
         self.add_input('z', val=np.zeros(2))
         self.add_input('y1', val=0.)
