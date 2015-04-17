@@ -64,10 +64,10 @@ class Sim(Assembly):
 
 if __name__ == "__main__":
 
-    from openmdao.core import Assembly
+    from openmdao.core import Problem
     from openmdao.drivers import Cobyla
 
-    top = Assembly()
+    top = Problem()
 
     s = top.root = Sim(name_space="root")
 
