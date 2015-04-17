@@ -24,7 +24,7 @@ class Parab(Component):
 class Adder(Component):
 
     def __init__(self):
-        super(Component,self).__init__()
+        super(Adder, self).__init__()
 
         self.add_input('x', val=1.0, size=1)
         self.add_output('y', val=1.0, size=1)
