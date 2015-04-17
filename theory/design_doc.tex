@@ -79,7 +79,7 @@ There are three different types of \classname{System} that the user can user or 
         \operation{setup_sequence}
     \end{class}
 
-    \begin{class}{Namespace}{6,-4.5}
+    \begin{class}{Assembly}{6,-4.5}
         \inherit{Group}
         \attribute{name}
         \attribute{non-linear solver}
@@ -88,8 +88,8 @@ There are three different types of \classname{System} that the user can user or 
     \end{class}
 
     \composition{Group}{}{1..*}{Component}
-    \composition{Namespace}{}{1..*}{Component}
-    \composition{Namespace}{}{1..*}{Group}
+    \composition{Assembly}{}{1..*}{Component}
+    \composition{Assembly}{}{1..*}{Group}
 
 \end{tikzpicture}
 \pagebreak
@@ -313,16 +313,16 @@ The \method{setup\_sequence} method is responsible for constructing the sequence
 given workflow. \method{setup\_sequence} should be called recursively on all child groups inside a
 containing group.
 
-\section{Namespace: Variable Naming and Connections}
+\section{Assembly: Variable Naming and Connections}
 All variables have a fully qualified name, consisting of a complete path from the top most
-\classname{Namespace} instance recursively down through the containing systems and including
+\classname{Assembly} instance recursively down through the containing systems and including
 the variable name itself.
 
 \subsection{Justin's Idea}
 
 \begin{pyglist}[language=python]
 
-    class Compressor(NameSpace):
+    class Compressor(Assembly):
         def __init__(self):
             self.add('pressure_rise', PressureRise()) # has a variable PR
             self.add('ideal_flow', SetTotalSP())
@@ -333,7 +333,7 @@ the variable name itself.
             self.promote('real_flow.Tt', 'Fl_O.Tt')
             self.promote('real_flow.Pt', 'Fl_O.Pt')
 
-    class EngineCycle(NameSpace):
+    class EngineCycle(Assembly):
 
         def __init__(self):
             self.add('hpc', Compressor())
@@ -343,21 +343,21 @@ the variable name itself.
 \end{pyglist}
 
 The fully qualified name for the \var{PR} variable in the \classname{PressureRise}
-component , from within the \className{EngineCycle} namespace, is \var{hpc.pressure\_rise.PR}.
+component , from within the \className{EngineCycle} Assembly, is \var{hpc.pressure\_rise.PR}.
 However \var{hpc.pressure\_rise.PR} was also promoted, and so the location in the data vector
-that holds it can also be addressed by \var{PR} from within the \className{EngineCycle} namespace.
+that holds it can also be addressed by \var{PR} from within the \className{EngineCycle} Assembly.
 
 Similarly, \var{'real\_flow.Tt'} and \var{'real\_flow.Pt'} have been promoted into the
-\classname{Compressor} namespace. So they they can be addressed within the \classname{EngineCycle}
-namespace by \var{hpc.Fl\_O.Tt} and \var{hpc.Fl\_O.Pt}
+\classname{Compressor} Assembly. So they they can be addressed within the \classname{EngineCycle}
+Assembly by \var{hpc.Fl\_O.Tt} and \var{hpc.Fl\_O.Pt}
 
-All variable connection statements happen within an instance of \classname{Namespace}.
+All variable connection statements happen within an instance of \classname{Assembly}.
 
 \subsection{John's Idea}
 
 \begin{pyglist}[language=python]
 
-    class Compressor(NameSpace):
+    class Compressor(Assembly):
         def __init__(self):
             self.add('pressure_rise', PressureRise(),
                 global_inputs=('PR')) # has a variable PR
@@ -367,7 +367,7 @@ All variable connection statements happen within an instance of \classname{Names
                 global_outputs=(('Tt','Fl_O.Tt'),('Pt', 'Fl_O.Pt'))
             self.add('power', Power())
 
-    class EngineCycle(NameSpace):
+    class EngineCycle(Assembly):
 
         def __init__(self):
             self.add('hpc', Compressor())
@@ -387,7 +387,7 @@ Other types of \classname{Driver} include Optimizers, CaseIteratorDriver, Design
 SensitivityDriver, or Montecarlo.
 
 Although \classname{Driver} does implement the \classname{System} interface it is not a regular system.
-Within a hierarchy composed of  \classname{Component}, \classname{Group}, and \classname{NameSpace}
+Within a hierarchy composed of  \classname{Component}, \classname{Group}, and \classname{Assembly}
 instances all variables are available to any system at any hierarchical level.However, an instance
 of \classname{Driver} represents an opaque boundry across which only certain defined variables are allowed
 to cross.

@@ -1,6 +1,6 @@
 import numpy as np
 
-from openmdao.core import Component, NameSpace, Group
+from openmdao.core import Component, Assembly, Group
 from openmdao.util import ExprComp
 
 class Parab(Component):
@@ -34,7 +34,7 @@ class Adder(Component):
         outs['z'] = ins['x']+2
 
 
-class Sim(NameSpace):
+class Sim(Assembly):
 
     def __init__(self):
 
@@ -50,7 +50,7 @@ class Sim(NameSpace):
         self.connect('y','parab2.x')
 
         #this actually creates a new component with an output named "y" at this level of the system hierarchy
-        #    This component should be non-namespacing so that a variable called 'y' in this namespace
+        #    This component should be non-namespacing so that a variable called 'y' in this Assembly
         p_expr = self.add(ExprComp('z=3*y+2*x'))
 
         self.connect('z', 'parab3.x')
