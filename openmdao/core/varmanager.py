@@ -1,5 +1,8 @@
 
 class VarManager(object):
+    """A manager of the data transfer of a possibly distributed
+    collection of variables.
+    """
     def __init__(self):
         pass
 

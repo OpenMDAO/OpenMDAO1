@@ -1,7 +1,7 @@
 
-from openmdao.core.system import System
+from openmdao.core.component import Component
 
-class Problem(System):
+class Problem(Component):
     def __init__(self, root=None, driver=None):
         self.root = root
         self.driver = driver
