@@ -7,13 +7,14 @@ class Parab(Component):
 
     def __init__(self):
 
-        self.add_input('x', default=np.ones(10,), units="BTU/lbm")
+        self.add_input('x', init=np.ones(10,), units="BTU/lbm")
         self.add_input('x', size=10, type=np.array)
 
-        self.add_output('y', default=1.0)
+        self.add_output('y', init=1.0)
 
     def get_var_idx(self): # needed only for parallel
         comm = self.comm
+        rank = comm.rank
 
         return {'x':, [1,3,4,10,9,7,8,12,52,18]}
 
@@ -26,9 +27,9 @@ class Adder(Component):
     def __init__(self):
         super(Component,self).__init__()
 
-        self.add_input('x', val=1.0, size=1)
-        self.add_output('y', val=1.0, size=1)
-        self.add_state('u', val=1.0, size=1)
+        self.add_input('x', init=1.0)
+        self.add_output('y', init=1.0)
+        self.add_state('u', init=1.0)
 
     def execute(self, ins, outs):
         outs['z'] = ins['x']+2
