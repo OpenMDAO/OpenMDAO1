@@ -84,8 +84,8 @@ class SellarProblem(Assembly):
         self.connect('x_param:x', 's1:x')
 
         mda = self.add(Group(d1, d2))
-        mda.nl_solver = Newton()
-        mda.lin_solver = ScipyGMRes()
+        mda.solve_nonlinear = Newton()
+        mda.solve_linear = Scipy    GMRes()
 
 
 if __name__ == "__main__":
