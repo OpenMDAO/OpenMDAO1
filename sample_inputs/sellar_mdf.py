@@ -30,10 +30,10 @@ class SellarDis1(Component):
     #     pass
 
     #    pvec, uvec, rvec, dpvec, duvec, drvec
-    # def solve_linear(self, mode="fwd", params, unknowns, resids, dparams, dunknowns, dresids):
+    # def solve_linear(self, mode="fwd", params, unknowns, resids, vec_params, vec_unknowns, vec_resids):
     #     pass
 
-    # def apply_linear(self, mode="fwd", params, unknowns, resids, dparams, dunknowns, dresids):
+    # def apply_linear(self, mode="fwd", params, unknowns, resids, vec_params, vec_unknowns, vec_resids):
     #     pass
 
     # def preconditioner(self):
@@ -84,8 +84,8 @@ class SellarProblem(Assembly):
         self.connect('x_param:x', 's1:x')
 
         mda = self.add(Group(d1, d2))
-        mda.nl_solver = Newton()
-        mda.lin_solver = ScipyGMRes()
+        mda.solve_nonlinear = Newton()
+        mda.solve_linear = ScipyGMRes()
 
 
 if __name__ == "__main__":
