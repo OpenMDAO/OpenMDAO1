@@ -85,7 +85,7 @@ class SellarProblem(Assembly):
 
         mda = self.add(Group(d1, d2))
         mda.solve_nonlinear = Newton()
-        mda.solve_linear = Scipy    GMRes()
+        mda.solve_linear = ScipyGMRes()
 
 
 if __name__ == "__main__":
