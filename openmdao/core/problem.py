@@ -6,5 +6,8 @@ class Problem(Component):
         self.root = root
         self.driver = driver
 
+    def setup(self):
+        pass
+        
     def run(self):
         pass
