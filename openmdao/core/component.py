@@ -1,7 +1,6 @@
 
 from openmdao.core.system import System
 
-__undefined = object()
 
 class Component(System):
     def __init__(self):
@@ -10,11 +9,11 @@ class Component(System):
         # by default, don't promote any vars up to our parent
         self.promotes = ()
 
-    def add_input(name, val=__undefined):
+    def add_input(self, name, val=None):
         pass
 
-    def add_output(name, val=__undefined):
+    def add_output(self, name, val=None):
         pass
 
-    def add_state(name, val=__undefined):
+    def add_state(self, name, val=None):
         pass
