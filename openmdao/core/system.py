@@ -15,10 +15,10 @@ class System(object):
     def apply_nonlinear(self, params, unknowns, resids):
         pass
 
-    def solve_linear(self, mode="fwd", params, unknowns, resids,
-                                       dparams, dunknowns, dresids):
+    def solve_linear(self, params, unknowns, resids, dparams, dunknowns, 
+        dresids, mode="fwd"):
         pass
 
-    def apply_linear(self, mode="fwd", params, unknowns, resids,
-                                       dparams, dunknowns, dresids):
+    def apply_linear(self, params, unknowns, resids, dparams, dunknowns, 
+        dresids, mode="fwd"):
         pass
