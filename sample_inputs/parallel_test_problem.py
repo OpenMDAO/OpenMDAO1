@@ -38,7 +38,7 @@ class SimpleProblem(Assembly):
             self.add('a%i' % i, Simple())
 
         for i in xrange(2):
-            self.add('b%i' % i, Simple())            
+            self.add('b%i' % i, Simple())
 
         self.connect("a0:z", "b0:x")
         self.connect("a0:z", "b0:A[0]")
@@ -66,8 +66,7 @@ class SimpleProblem(Assembly):
             self.connect("d%i.z" % i, "e%i.x" % i)
             self.connect("d%i.z" % i, "e%i.y" % i)
             self.connect("d%i.z" % i, "e%i.A[0]" % i)
- 
-        expr = "log(" + ('+'.join(["e%i:z" % i for i in xrange(4)])) + ") + a0:z"
- 
-        self.add('obj', ExprComp(expr))
 
+        expr = "log(" + ('+'.join(["e%i:z" % i for i in xrange(4)])) + ") + a0:z"
+
+        self.add('obj', ExprComp(expr))

@@ -83,7 +83,9 @@ class SellarProblem(Assembly):
 
         self.connect('x_param:x', 's1:x')
 
-        mda = self.add(Group(d1, d2))
+        # helper method that will add the group and move s1 and s2 into it
+        #   or the user could make the group explicitly first
+        mda = self.group('s1', 's2')
         mda.solve_nonlinear = Newton()
         mda.solve_linear = ScipyGMRes()
 
