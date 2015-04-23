@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 from openmdao.core.component import Component
+# from openmdao.components.linear_system import LinearSystem
 
 class LinearSystem(Component):
 

@@ -4,10 +4,11 @@ import numpy as np
 class LinearSystem(Component):
 
     def __init__(self, size=None):
+        super(LinearSystem, self).__init__()
         self.size = size
 
-        self.add_input("A", val=np.eye(size))
-        self.add_input("b", val=np.ones(size))
+        self.add_param("A", val=np.eye(size))
+        self.add_param("b", val=np.ones(size))
 
         self.add_state("x", val=np.zeros(size))
 
