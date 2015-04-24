@@ -9,13 +9,13 @@ class SimpleComp(Component):
     def __init__(self):
         super(SimpleComp, self).__init__()
 
-        # Inputs
+        # Params
         self.add_param('x', 3.0)
 
-        # Outputs
+        # Unknowns
         self.add_unknown('y', 5.5)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
 
-        unknowns['y'] = 2.0*parameters['x']
+        unknowns['y'] = 2.0*params['x']
