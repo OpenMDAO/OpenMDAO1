@@ -17,7 +17,7 @@ class TestVecWrapper(unittest.TestCase):
         unknowns['y4'] = { 'shape': (2, 1) }
         states['s1'] = { 'val': -1.0 }
 
-        vw = SourceVecWrapper(unknowns, states, initialize=True)
+        vw = SourceVecWrapper(unknowns, states, store_noflats=True)
 
         self.assertEqual(vw.vec.size, 10)
         self.assertEqual(len(vw), 5)

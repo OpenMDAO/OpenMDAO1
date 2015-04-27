@@ -29,22 +29,27 @@ class TestGroup(unittest.TestCase):
 
     def test_variables(self):
         group = Group()
-        comp = SimpleComp()
-        group.add('mycomp', comp)
-
-        nextcomp = SimpleComp()
-        group.add('nextcomp', nextcomp)
+        group.add('C1', SimpleComp(), promotes=['x'])
+        group.add("C2", SimpleComp(), promotes=['y'])
 
         params, unknowns, states = group.variables()
 
-        expect_params = ['mycomp:x', 'nextcomp:x']
-        expect_unknowns = ['mycomp:y', 'nextcomp:y']
+        self.assertEqual(params.keys(), ['x', 'C2:x'])
+        self.assertEqual(unknowns.keys(), ['C1:y', 'y'])
+        self.assertEqual(states.keys(), [])
 
+    def test_connect(self):
+        G1 = Group()
+        G1.add('C1', SimpleComp()])
+        G1.add("C2", SimpleComp(), promotes=['y'])
+        G1.connect('C1:y', 'C2:x')
 
-        self.assertEquals(expect_params, params.keys())
-        self.assertEquals(expect_unknowns, unknowns.keys())
-        self.assertEquals([], states.keys())
+        G2 = Group()
+        G2.add(G1, promotes=['y'])
+        G2.add("C3", SimpleComp(), promotes=['x'])
+        G2.connect('G1:y', 'x')
 
+        G2.setup_vectors()
 
     def test_setup(self):
         pass

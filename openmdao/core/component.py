@@ -10,9 +10,6 @@ class Component(System):
         self._unknowns = OrderedDict()
         self._states = OrderedDict()
 
-        # by default, don't promote any vars up to our parent
-        self.promotes = ()
-
     def add_param(self, name, val, **kwargs):
         args = kwargs.copy()
         args['val'] = val
@@ -30,4 +27,3 @@ class Component(System):
 
     def variables(self):
         return self._params, self._unknowns, self._states
-

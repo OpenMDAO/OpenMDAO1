@@ -46,15 +46,25 @@ class VecWrapper(object):
 
 
 class SourceVecWrapper(VecWrapper):
-    def __init__(self, unknowns, states, initialize=False):
+    def __init__(self, unknowns, states, store_noflats=False, parent=None):
         super(SourceVecWrapper, self).__init__()
+
+        if parent is not None:
+            self.create_view(unknowns, states, store_noflats, parent)
+            return
 
         vec_size = 0
         for name, meta in unknowns.items():
-            vec_size += self._add_var(name, meta, vec_size)
+            vmeta = self._add_var(name, meta, vec_size)
+            if vmeta['size'] > 0 or store_noflats:
+                self._vardict[name] = vmeta
+                vec_size += vmeta['size']
 
         for name, meta in states.items():
-            vec_size += self._add_var(name, meta, vec_size, state=True)
+            vmeta = self._add_var(name, meta, vec_size, state=True)
+            if vmeta['size'] > 0 or store_noflats:
+                self._vardict[name] = vmeta
+                vec_size += vmeta['size']
 
         self.vec = numpy.zeros(vec_size)
 
@@ -62,7 +72,10 @@ class SourceVecWrapper(VecWrapper):
             if meta['size'] > 0:
                 meta['val'] = self.vec[meta['start']:meta['end']]
 
-        if initialize:
+        # if store_noflats is True, this is the unknowns vecwrapper,
+        # so initialize all of the values from the unknowns and states
+        # dicts.
+        if store_noflats:
             for name, meta in unknowns.items():
                 self[name] = meta['val']
 
@@ -70,7 +83,7 @@ class SourceVecWrapper(VecWrapper):
                 self[name] = meta['val']
 
     def _add_var(self, name, meta, index, state=False):
-        vmeta = self._vardict[name] = {}
+        vmeta = {}
         vmeta['state'] = state
 
         if 'shape' in meta:
@@ -108,11 +121,14 @@ class SourceVecWrapper(VecWrapper):
             vmeta['start'] = index
             vmeta['end'] = index + var_size
 
-        return var_size
+        return vmeta
+
+    def create_view(self, unknowns, states, store_noflats, parent):
+        pass
 
 
 class TargetVecWrapper(VecWrapper):
-    def __init__(self, params, srcvec):
+    def __init__(self, params, srcvec, initialize=True):
         super(TargetVecWrapper, self).__init__()
         vec_size = 0
         for name, meta in params.items():
