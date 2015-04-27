@@ -66,19 +66,25 @@ class SourceVecWrapper(VecWrapper):
             for name, meta in states.items():
                 self[name] = meta['val']
 
-
     def _add_var(self, name, meta, index, state=False):
         vmeta = self._vardict[name] = {}
         vmeta['state'] = state
 
         if 'shape' in meta:
-            vmeta['shape'] = meta['shape']
-            if 'val' in meta and not is_differentiable(val):
-                var_size = 0
+            shape = meta['shape']
+            vmeta['shape'] = shape
+            if 'val' in meta:
+                val = meta['val']
+                if not is_differentiable(val):
+                    var_size = 0
+                else:
+                    if val.shape != shape:
+                        raise ValueError("specified shape != val shape")
+                    var_size = val.size
             else:
-                var_size = 1
-                for s in meta['shape']:
-                    var_size *= s
+                # no val given, so assume they want a numpy float array
+                meta['val'] = numpy.zeros(shape)
+                var_size = meta['val'].size
         elif 'val' in meta:
             val = meta['val']
             if is_differentiable(val):
@@ -101,6 +107,9 @@ class SourceVecWrapper(VecWrapper):
 
         return var_size
 
+
 class TargetVecWrapper(VecWrapper):
     def __init__(self, params, srcvec):
-        pass
+        vec_size = 0
+        for name, meta in params.items():
+            vec_size += srcvec[name]

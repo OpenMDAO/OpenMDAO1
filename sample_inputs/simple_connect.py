@@ -7,10 +7,10 @@ class Parab(Component):
 
     def __init__(self):
 
-        self.add_input('x', default=np.ones(10,), units="BTU/lbm")
-        self.add_input('x', size=10, type=np.array)
+        self.add_param('x', default=np.ones(10,), units="BTU/lbm")
+        self.add_param('x', size=10, type=np.array)
 
-        self.add_output('y', default=1.0)
+        self.add_unknown('y', default=1.0)
 
     def get_var_idx(self): # needed only for parallel
         comm = self.comm
@@ -26,8 +26,8 @@ class Adder(Component):
     def __init__(self):
         super(Adder, self).__init__()
 
-        self.add_input('x', val=1.0, size=1)
-        self.add_output('y', val=1.0, size=1)
+        self.add_param('x', val=1.0, size=1)
+        self.add_unknown('y', val=1.0, size=1)
         self.add_state('u', val=1.0, size=1)
 
     def execute(self, ins, outs):
