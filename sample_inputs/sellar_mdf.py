@@ -8,11 +8,11 @@ class SellarDis1(Component):
 
     def __init__(self):
         super(SellarDis1, self).__init__()
-        self.add_input('z', val=np.zeros(2))
-        self.add_input('x', val=0.)
-        self.add_input('y2', val=0.)
+        self.add_param('z', val=np.zeros(2))
+        self.add_param('x', val=0.)
+        self.add_param('y2', val=0.)
 
-        self.add_output('y1', val=0.)
+        self.add_unknown('y1', val=0.)
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['y1'] = params['z'][0]**2 + params['z'][1] + params['x'] - .2*params['y2']
@@ -45,10 +45,10 @@ class SellarDis2(Component):
     def __init__(self):
         super(SellarDis2, self).__init__()
 
-        self.add_input('z', val=np.zeros(2))
-        self.add_input('y1', val=0.)
+        self.add_param('z', val=np.zeros(2))
+        self.add_param('y1', val=0.)
 
-        self.add_output('y2', val=0.)
+        self.add_unknown('y2', val=0.)
 
         def apply_nonlinear(self, params, unknowns):
             unknowns['y2'] = params['y1']**.5 + np.sum(params['z'])

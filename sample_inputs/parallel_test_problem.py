@@ -9,11 +9,11 @@ class Simple(Component):
 
     def __init__(self):
         super(Simple, self).__init__()
-        self.add_input('x', val=0.)
-        self.add_input('y', val=2.)
-        self.add_input('A', val=np.zeros(75, dtype=np.float))
+        self.add_param('x', val=0.)
+        self.add_param('y', val=2.)
+        self.add_param('A', val=np.zeros(75, dtype=np.float))
 
-        self.add_output('z', val=0.)
+        self.add_unknown('z', val=0.)
 
         self.dz_dA = np.ones(75, dtype=np.float)
 
