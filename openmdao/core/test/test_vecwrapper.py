@@ -49,7 +49,21 @@ class TestVecWrapper(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+        params = OrderedDict()
+        params['y1'] = { 'val': np.ones((3, 2)) }
+        params['y2'] = { 'val': 2.0 }
+        params['y3'] = { 'val': "foo" }
+        params['y4'] = { 'shape': (2, 1) }
 
+        tvw = TargetVecWrapper(params, vw)
+
+        self.assertEqual(tvw.vec.size, 9)
+        self.assertEqual(len(tvw), 4)
+        self.assertEqual(tvw.keys(), ['y1','y2','y3', 'y4'])
+        self.assertTrue(np.all(tvw['y1']==np.ones((3,2))*3.))
+        self.assertEqual(tvw['y2'], 2.5)
+        self.assertEqual(tvw['y3'], 'bar')
+        self.assertTrue(np.all(tvw['y4']==np.ones((2,1))*7.))
 
 if __name__ == "__main__":
     unittest.main()

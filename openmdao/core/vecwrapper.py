@@ -41,6 +41,9 @@ class VecWrapper(object):
     def items(self):
         return self._vardict.items()
 
+    def metadata(self, name):
+        return self._vardict[name]
+
 
 class SourceVecWrapper(VecWrapper):
     def __init__(self, unknowns, states, initialize=False):
@@ -110,6 +113,33 @@ class SourceVecWrapper(VecWrapper):
 
 class TargetVecWrapper(VecWrapper):
     def __init__(self, params, srcvec):
+        super(TargetVecWrapper, self).__init__()
         vec_size = 0
         for name, meta in params.items():
-            vec_size += srcvec[name]
+            vec_size += self._add_var(name, meta, vec_size, srcvec)
+
+        self.vec = numpy.zeros(vec_size)
+
+        for name, meta in self._vardict.items():
+            if meta['size'] > 0:
+                meta['val'] = self.vec[meta['start']:meta['end']]
+                self[name] = srcvec[name]
+
+    def _add_var(self, name, meta, index, srcvec):
+        vmeta = self._vardict[name] = {}
+
+        srcval = srcvec[name]
+        srcmeta = srcvec.metadata(name)
+        var_size = srcmeta['size']
+
+        vmeta['size'] = var_size
+        if 'shape' in srcmeta:
+            vmeta['shape'] = srcmeta['shape']
+
+        if var_size > 0:
+            vmeta['start'] = index
+            vmeta['end'] = index + var_size
+        else:
+            vmeta['val'] = srcmeta['val']
+
+        return var_size

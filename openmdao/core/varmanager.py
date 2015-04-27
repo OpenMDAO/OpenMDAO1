@@ -11,6 +11,7 @@ class VarManager(object):
         self.resids = None
         self.dresids = None
 
+
 class ProblemVarManager(VarManager):
     def __init__(self, params, unknowns, states):
         pass
