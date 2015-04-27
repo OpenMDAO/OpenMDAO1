@@ -24,7 +24,10 @@ class VecWrapper(object):
         """Set the value of the named var"""
         meta = self._vardict[name]
         if meta['size'] > 0:
-            meta['val'][:] = value[:]
+            if isinstance(value, numpy.ndarray):
+                meta['val'][:] = value.flat[:]
+            else:
+                meta['val'][:] = value
         else:
             meta['val'] = value
 
@@ -58,10 +61,10 @@ class SourceVecWrapper(VecWrapper):
 
         if initialize:
             for name, meta in unknowns.items():
-                self.vec[name] = meta['val']
+                self[name] = meta['val']
 
             for name, meta in states.items():
-                self.vec[name] = meta['val']
+                self[name] = meta['val']
 
 
     def _add_var(self, name, meta, index, state=False):
