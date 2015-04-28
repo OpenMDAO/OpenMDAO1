@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from collections import OrderedDict
 
-from openmdao.core.varmanager import ProblemVarManager
+from openmdao.core.varmanager import VarManager
 
 class TestVarManager(unittest.TestCase):
 
@@ -10,7 +10,7 @@ class TestVarManager(unittest.TestCase):
         params = OrderedDict()
         unknowns = OrderedDict()
         states = OrderedDict()
-        # 
+        #
         # params['x1'] = {}
         # params['x2'] = {}
         # unknowns['y1'] = { 'val': np.ones(3) }
