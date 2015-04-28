@@ -93,9 +93,10 @@ def run_wing():
             wingproj_file = 'wing_proj_template.wpr'
 
         venvdir = os.path.dirname(os.path.dirname(sys.executable))
-        proj_template = os.path.join(os.path.dirname(venvdir),
-                                     '../config',wingproj_file)
-        projpath = os.path.join(venvdir, 'etc', 'wingproj.wpr')
+        proj_template = os.path.join(os.getcwd(),
+                                     '../config', wingproj_file)
+        projpath = os.path.join(os.getcwd(), '../config', 'wingproj.wpr')
+
         _modify_wpr_file(proj_template, projpath, version)
 
     # in order to find all of our shared libraries,
