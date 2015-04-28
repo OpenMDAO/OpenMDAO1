@@ -12,7 +12,7 @@ class VecWrapper(object):
         self._vardict = OrderedDict()
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named var."""
+        """Retrieve unflattened value of named var"""
         meta = self._vardict[name]
         shape = meta.get('shape')
         if shape is None:
@@ -32,10 +32,11 @@ class VecWrapper(object):
             meta['val'] = value
 
     def __len__(self):
-        """Return the number of keys"""
+        """Return the number of keys (variables)"""
         return len(self._vardict)
 
     def keys(self):
+        """Return the keys (variable names)"""
         return self._vardict.keys()
 
     def items(self):
@@ -44,24 +45,24 @@ class VecWrapper(object):
     def metadata(self, name):
         return self._vardict[name]
 
+    @staticmethod
+    def create_source_vector(outputs, states, store_noflats=False):
+        """Create a vector storing a flattened array of the variables in outputs
+        and states. If store_noflats is True, then non-flattenable variables
+        will also be stored. If a parent vector is provided, then this vector
+        will provide a view into the parent vector"""
 
-class SourceVecWrapper(VecWrapper):
-    def __init__(self, unknowns, states, store_noflats=False, parent=None):
-        super(SourceVecWrapper, self).__init__()
-
-        if parent is not None:
-            self.create_view(unknowns, states, store_noflats, parent)
-            return
+        self = VecWrapper()
 
         vec_size = 0
-        for name, meta in unknowns.items():
-            vmeta = self._add_var(name, meta, vec_size)
+        for name, meta in outputs.items():
+            vmeta = self._add_source_var(name, meta, vec_size)
             if vmeta['size'] > 0 or store_noflats:
                 self._vardict[name] = vmeta
                 vec_size += vmeta['size']
 
         for name, meta in states.items():
-            vmeta = self._add_var(name, meta, vec_size, state=True)
+            vmeta = self._add_source_var(name, meta, vec_size, state=True)
             if vmeta['size'] > 0 or store_noflats:
                 self._vardict[name] = vmeta
                 vec_size += vmeta['size']
@@ -72,17 +73,23 @@ class SourceVecWrapper(VecWrapper):
             if meta['size'] > 0:
                 meta['val'] = self.vec[meta['start']:meta['end']]
 
-        # if store_noflats is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the unknowns and states
+        # if store_noflats is True, this is the outputs vecwrapper,
+        # so initialize all of the values from the outputs and states
         # dicts.
         if store_noflats:
-            for name, meta in unknowns.items():
+            for name, meta in outputs.items():
                 self[name] = meta['val']
 
             for name, meta in states.items():
                 self[name] = meta['val']
 
-    def _add_var(self, name, meta, index, state=False):
+        return self
+
+    def _add_source_var(self, name, meta, index, state=False):
+        """Add a variable to the vector. If the variable is differentiable,
+        then allocate a range in the vector array to store it. Store the
+        shape of the variable so it can be un-flattened later."""
+
         vmeta = {}
         vmeta['state'] = state
 
@@ -123,39 +130,50 @@ class SourceVecWrapper(VecWrapper):
 
         return vmeta
 
-    def create_view(self, unknowns, states, store_noflats, parent):
-        pass
+    @staticmethod
+    def create_target_vector(params, srcvec, store_noflats=False):
+        """Create a vector storing a flattened array of the variables in params.
+        Variable shape and value are retrieved from srcvec"""
 
+        self = VecWrapper()
 
-class TargetVecWrapper(VecWrapper):
-    def __init__(self, params, srcvec, initialize=True):
-        super(TargetVecWrapper, self).__init__()
         vec_size = 0
         for name, meta in params.items():
-            vec_size += self._add_var(name, meta, vec_size, srcvec)
+            source = meta.get('_source_')
+            if source is not None:
+                src_meta = srcvec.metadata(source)
+            else:
+                src_meta = srcvec.metadata(name)
+            vec_size += self._add_target_var(name, meta, vec_size, src_meta, store_noflats)
 
         self.vec = numpy.zeros(vec_size)
 
         for name, meta in self._vardict.items():
             if meta['size'] > 0:
                 meta['val'] = self.vec[meta['start']:meta['end']]
-                self[name] = srcvec[name]
 
-    def _add_var(self, name, meta, index, srcvec):
+        return self
+
+    def _add_target_var(self, name, meta, index, src_meta, store_noflats):
+        """Add a variable to the vector. Allocate a range in the vector array
+        and store the shape of the variable so it can be un-flattened later."""
         vmeta = self._vardict[name] = {}
 
-        srcval = srcvec[name]
-        srcmeta = srcvec.metadata(name)
-        var_size = srcmeta['size']
+        var_size = src_meta['size']
 
         vmeta['size'] = var_size
-        if 'shape' in srcmeta:
-            vmeta['shape'] = srcmeta['shape']
+        if 'shape' in src_meta:
+            vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
             vmeta['start'] = index
             vmeta['end'] = index + var_size
-        else:
-            vmeta['val'] = srcmeta['val']
+        elif store_noflats:
+            vmeta['val'] = src_meta['val']
 
         return var_size
+
+    def get_view(self, var_list):
+        view = VecWrapper()
+        # TODO: create view of self
+        return view

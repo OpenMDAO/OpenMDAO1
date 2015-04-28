@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from openmdao.core.group import Group
+from openmdao.components.paramcomp import ParamComp
 from openmdao.test.testcomps import SimpleComp
 
 class TestGroup(unittest.TestCase):
@@ -39,17 +40,31 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(states.keys(), [])
 
     def test_connect(self):
-        G1 = Group()
-        G1.add('C1', SimpleComp()])
-        G1.add("C2", SimpleComp(), promotes=['y'])
-        G1.connect('C1:y', 'C2:x')
+        G4 = Group()
 
-        G2 = Group()
-        G2.add(G1, promotes=['y'])
-        G2.add("C3", SimpleComp(), promotes=['x'])
-        G2.connect('G1:y', 'x')
+        G2 = G4.add('G2', Group())
+        G2.add('C1', ParamComp('y1', 5.))
 
-        G2.setup_vectors()
+        G1 = G2.add('G1', Group())
+        G1.add('C2', SimpleComp())
+
+        G3 = G4.add('G3', Group())
+        G3.add('C3', SimpleComp())
+        G3.add('C4', SimpleComp())
+
+        G2.connect('C1:y1', 'G1:C2:x')
+        G4.connect('G2:G1:C2:y', 'G3:C3:x')
+        # G4.connect('G2:C1:y', 'G2:G1:C2:x')
+        G3.connect('C3:y', 'C4:x')
+
+        self.assertEqual(set(G1.connections()), set([]))
+        self.assertEqual(set(G2.connections()), set([('G1:C2:x', 'C1:y1')]))
+        self.assertEqual(set(G3.connections()), set([('C4:x', 'C3:y')]))
+        self.assertEqual(set(G4.connections()),
+            set([('G3:C4:x', 'G3:C3:y'), ('G3:C3:x', 'G2:G1:C2:y'), ('G2:G1:C2:x', 'G2:C1:y1')]))
+
+        G4.setup_vectors()
+        # print G4.varmanager.variables()
 
     def test_setup(self):
         pass

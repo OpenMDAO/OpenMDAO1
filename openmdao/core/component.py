@@ -7,7 +7,7 @@ class Component(System):
     def __init__(self):
         super(Component, self).__init__()
         self._params = OrderedDict()
-        self._unknowns = OrderedDict()
+        self._outputs = OrderedDict()
         self._states = OrderedDict()
 
     def add_param(self, name, val, **kwargs):
@@ -15,10 +15,10 @@ class Component(System):
         args['val'] = val
         self._params[name] = args
 
-    def add_unknown(self, name, val, **kwargs):
+    def add_output(self, name, val, **kwargs):
         args = kwargs.copy()
         args['val'] = val
-        self._unknowns[name] = args
+        self._outputs[name] = args
 
     def add_state(self, name, val, **kwargs):
         args = kwargs.copy()
@@ -26,4 +26,4 @@ class Component(System):
         self._states[name] = args
 
     def variables(self):
-        return self._params, self._unknowns, self._states
+        return self._params, self._outputs, self._states
