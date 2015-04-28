@@ -8,7 +8,7 @@ from subprocess import Popen
 import ConfigParser
 from optparse import OptionParser
 
-from openmdao.util.fileutil import find_in_path, find_in_dir_list, find_files, find_up
+from openmdao.util.fileutil import find_files, find_up
 
 def _modify_wpr_file(template, outfile, version):
     config = ConfigParser.ConfigParser()
