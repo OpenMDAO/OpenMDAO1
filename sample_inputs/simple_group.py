@@ -1,13 +1,13 @@
 import numpy as np
 
-from openmdao.core import Component, Assembly, Group
+from openmdao.core.component import Component
 from openmdao.util import ExprComp
 
 class Parab(Component):
 
     def __init__(self):
 
-        self.add_param('x', init=np.ones(10,), units="BTU/lbm")
+        #self.add_param('x', init=np.ones(10,), units="BTU/lbm")
         self.add_param('x', size=10, type=np.array)
 
         self.add_unknown('y', init=1.0)
@@ -16,7 +16,7 @@ class Parab(Component):
         comm = self.comm
         rank = comm.rank
 
-        return {'x':, [1,3,4,10,9,7,8,12,52,18]}
+        return {'x': [1,3,4,10,9,7,8,12,52,18]}
 
 
     def execute(self, ins, outs):

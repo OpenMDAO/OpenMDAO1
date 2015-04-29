@@ -1,6 +1,6 @@
 import numpy as np
 
-from openmdao.core import Component, Assembly
+from openmdao.core.component import Component
 from openmdao.components import ExprComp, ParamComp
 from openmdao.solvers import Newton, Krylov, ScipyGMRes
 

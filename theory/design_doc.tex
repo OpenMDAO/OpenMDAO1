@@ -112,11 +112,11 @@ This is the simplest, and most compact way to define derivatives.
         def __init__(self):
             super(SomeComp,self).__init__()
 
-            self.add_input('x1', size=(2,3))
-            self.add_input('x2', val=3.4)
+            self.add_param('x1', size=(2,3))
+            self.add_param('x2', val=3.4)
 
             self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
+            self.add_unknown('z1', size=(2,3))
 
         def apply_nonlinear(self, pvec, uvec, fvec):
 
@@ -143,11 +143,11 @@ the \method{apply\_linear} from the \classname{Component} base class.
         def __init__(self):
             super(SomeComp,self).__init__()
 
-            self.add_input('x1', size=(2,3))
-            self.add_input('x2', val=3.4)
+            self.add_param('x1', size=(2,3))
+            self.add_param('x2', val=3.4)
 
             self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
+            self.add_unknown('z1', size=(2,3))
 
         def apply_nonlinear(self, pvec, uvec, rvec):
 
@@ -182,11 +182,11 @@ NOTE: What does this idea imply for \method{solve\_linear}?
         def __init__(self):
             super(SomeComp,self).__init__()
 
-            self.add_input('x1', size=(2,3))
-            self.add_input('x2', val=3.4)
+            self.add_param('x1', size=(2,3))
+            self.add_param('x2', val=3.4)
 
             self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
+            self.add_unknown('z1', size=(2,3))
 
         def apply_nonlinear(self, pvec, uvec, rvec):
 
@@ -227,11 +227,11 @@ the \method{apply\_linear} method, users can overload it if they choose.
         def __init__(self):
             super(SomeComp,self).__init__()
 
-            self.add_input('x1', size=(2,3))
-            self.add_input('x2', val=3.4)
+            self.add_param('x1', size=(2,3))
+            self.add_param('x2', val=3.4)
 
             self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
+            self.add_unknown('z1', size=(2,3))
 
         def apply_nonlinear(self, pvec, uvec, rvec):
 
@@ -267,11 +267,11 @@ utilize it in the creation of variables.
         def __init__(self):
             super(SomeComp,self).__init__()
 
-            self.add_input('x.x1', size=(2,3))
-            self.add_input('x.x2', val=3.4)
+            self.add_param('x.x1', size=(2,3))
+            self.add_param('x.x2', val=3.4)
 
             self.add_state('y1', size=(2,3))
-            self.add_output('z1', size=(2,3))
+            self.add_unknown('z1', size=(2,3))
 
         def apply_nonlinear(self, pvec, uvec, fvec):
 
