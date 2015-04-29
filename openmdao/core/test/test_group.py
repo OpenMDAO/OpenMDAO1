@@ -61,18 +61,19 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(set(G4.connections()),
             set([('G3:C4:x', 'G3:C3:y'), ('G3:C3:x', 'G2:G1:C2:y'), ('G2:G1:C2:x', 'G2:C1:y1')]))
 
+        G4.setup_syspaths('')
         G4.setup_vectors()
 
-        expected_G4_params   = ['G2:G1:C2:x', 'G3:C3:x', 'G3:C4:x']
+        expected_G4_params   = ['G3:C3:x']
         expected_G4_unknowns = ['G2:C1:y1', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
 
-        expected_G3_params   = ['C3:x', 'C4:x']
+        expected_G3_params   = ['C4:x']
         expected_G3_unknowns = ['C3:y', 'C4:y']
 
         expected_G2_params   = ['G1:C2:x']
         expected_G2_unknowns = ['C1:y1', 'G1:C2:y']
 
-        expected_G1_params   = ['C2:x']
+        expected_G1_params   = []
         expected_G1_unknowns = ['C2:y']
 
         self.assertEqual(G4.varmanager.params.keys(),    expected_G4_params)

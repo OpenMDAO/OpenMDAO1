@@ -136,19 +136,22 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(params, srcvec, store_noflats=False):
+    def create_target_vector(group, params, srcvec, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
-        Variable shape and value are retrieved from srcvec"""
+        Variable shape and value are retrieved from srcvec
+        """
 
         self = VecWrapper()
 
         vec_size = 0
         for name, meta in params.items():
+            powner = meta.get('owner')
             source = meta.get('_source_')
             if source is not None:
                 src_meta = srcvec.metadata(source)
             else:
                 src_meta = srcvec.metadata(name)
+            #TODO: check for self-containment of src and param
             vec_size += self._add_target_var(name, meta, vec_size, src_meta, store_noflats)
 
         self.vec = numpy.zeros(vec_size)
@@ -178,13 +181,18 @@ class VecWrapper(object):
 
         return var_size
 
-    def get_view(self, varmap, copy=False):
+    def get_view(self, varmap, is_target=False):
         view = VecWrapper()
         view_size = 0
 
         start = -1
         for name, meta in self._vardict.items():
             if name in varmap:
+                if is_target:
+                    if '_source_' not in meta:
+                        continue
+                    if '_source_' in meta and meta['_source_'] not in self._vardict:
+                        continue
                 view._vardict[varmap[name]] = self._vardict[name]
                 if meta['size'] > 0:
                     pstart, pend = self._slices[name]
@@ -199,7 +207,7 @@ class VecWrapper(object):
                     view._slices[varmap[name]] = (view_size, view_size + meta['size'])
                     view_size += meta['size']
 
-        if copy:
+        if is_target:
             view.vec = numpy.zeros(view_size)
         else:
             view.vec = self.vec[start:end]

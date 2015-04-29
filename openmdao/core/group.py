@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from openmdao.core.system import System
+from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):
@@ -9,6 +10,9 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
+
+    def __contains__(self, name):
+        return name in self._subsystems
 
     def add(self, name, system, promotes=None):
         if promotes is not None:
@@ -29,12 +33,19 @@ class Group(System):
         outputs = OrderedDict()
         states = OrderedDict()
 
+        comps = {}
         for name, sub in self.subsystems():
             subparams, suboutputs, substates = sub.variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
+                if isinstance(sub, Component):
+                    comps[name] = (sub, subparams)
+                else:
+                    if '_source_' in meta and (meta['_source_'] in suboutputs or meta['_source_'] in substates):
+                        meta['owner'] = self.pathname
                 if '_source_' in meta:
                     meta['_source_'] = self.var_pathname(meta['_source_'], sub)
+                    meta['owner'] = sub.pathname
                 else:
                     pname = self.var_pathname(p, sub)
                     source = self._src.get(pname)
@@ -46,6 +57,7 @@ class Group(System):
                             meta['_source_'] = self.var_pathname(vname, src_sys)
                         else:
                             meta['_source_'] = source
+
                 params[self.var_pathname(p, sub)] = meta
 
             for u, meta in suboutputs.items():
@@ -53,6 +65,16 @@ class Group(System):
 
             for s, meta in substates.items():
                 states[self.var_pathname(s, sub)] = meta
+
+        for name, (sub, subparams) in comps.items():
+            for p, meta in subparams.items():
+                pname = self.var_pathname(p, sub)
+                src = self._src.get(pname)
+                if src:
+                    if src in outputs or src in states:
+                        meta['owner'] = self.pathname
+                elif pname in outputs or pname in states:
+                    meta['owner'] = self.pathname
 
         return params, outputs, states
 
@@ -78,7 +100,7 @@ class Group(System):
     def setup_vectors(self, parent_vm=None):
         params, outputs, states = self.variables()
         if parent_vm is None:
-            self.varmanager = VarManager(params, outputs, states)
+            self.varmanager = VarManager(self, params, outputs, states)
         else:
             self.varmanager = VarViewManager(parent_vm,
                                              self.name,
@@ -89,3 +111,11 @@ class Group(System):
 
         for name, sub in self.subsystems():
             sub.setup_vectors(self.varmanager)
+
+    def setup_syspaths(self, parent_path):
+        """Set the absolute pathname of each System in the
+        tree.
+        """
+        super(Group, self).setup_syspaths(parent_path)
+        for name, sub in self.subsystems():
+            sub.setup_syspaths(self.pathname)
