@@ -31,24 +31,32 @@ class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, name,
                  promotes, params, outputs, states):
 
-        ulist = []
+        umap = {}
         for u in parent_vm.unknowns.keys():
             parts = u.split(':',1)
             if parts[0] == name and parts[1] in outputs:
-                ulist.append((u,parts[1]))
+                umap[u] = parts[1]
             elif u in promotes and u in outputs:
-                ulist.append((u,u))
+                umap[u] = u
 
         for u in parent_vm.unknowns.keys():
             parts = u.split(':',1)
             if parts[0] == name and parts[1] in states:
-                ulist.append((u,parts[1]))
+                umap[u] = parts[1]
             elif u in promotes and u in states:
-                ulist.append((u,u))
+                umap[u] = u
 
-        self.unknowns  = parent_vm.unknowns.get_view(ulist)
-        self.dunknowns = parent_vm.dunknowns.get_view(ulist)
-        self.resids    = parent_vm.resids.get_view(ulist)
-        self.dresids   = parent_vm.dresids.get_view(ulist)
-        self.params    = VecWrapper.create_target_vector(params, self.unknowns)
-        self.dparams   = VecWrapper.create_target_vector(params, self.unknowns)
+        pmap = {}
+        for p in parent_vm.params.keys():
+            parts = p.split(':',1)
+            if parts[0] == name and parts[1] in params:
+                pmap[p] = parts[1]
+            elif p in promotes and p in params:
+                pmap[p] = p
+
+        self.unknowns  = parent_vm.unknowns.get_view(umap)
+        self.dunknowns = parent_vm.dunknowns.get_view(umap)
+        self.resids    = parent_vm.resids.get_view(umap)
+        self.dresids   = parent_vm.dresids.get_view(umap)
+        self.params    = parent_vm.params.get_view(pmap, copy=True)
+        self.dparams   = parent_vm.dparams.get_view(pmap, copy=True)

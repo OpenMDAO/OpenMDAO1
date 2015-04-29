@@ -32,10 +32,20 @@ class Group(System):
         for name, sub in self.subsystems():
             subparams, suboutputs, substates = sub.variables()
             for p, meta in subparams.items():
-                pname = self.var_pathname(p, sub)
-                source = self._src.get(pname)
-                if source is not None:
-                    meta['_source_'] = self.var_pathname(source, self)
+                meta = meta.copy()
+                if '_source_' in meta:
+                    meta['_source_'] = self.var_pathname(meta['_source_'], sub)
+                else:
+                    pname = self.var_pathname(p, sub)
+                    source = self._src.get(pname)
+                    if source is not None:
+                        parts = source.split(':', 1)
+                        if parts[0] in self._subsystems:
+                            src_sys = self._subsystems[parts[0]]
+                            vname = parts[1]
+                            meta['_source_'] = self.var_pathname(vname, src_sys)
+                        else:
+                            meta['_source_'] = source
                 params[self.var_pathname(p, sub)] = meta
 
             for u, meta in suboutputs.items():

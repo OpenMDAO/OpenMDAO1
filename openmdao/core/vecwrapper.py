@@ -10,6 +10,7 @@ class VecWrapper(object):
     def __init__(self):
         self.vec = None
         self._vardict = OrderedDict()
+        self._slices = OrderedDict()
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named var"""
@@ -57,23 +58,30 @@ class VecWrapper(object):
         vec_size = 0
         for name, meta in outputs.items():
             vmeta = self._add_source_var(name, meta, vec_size)
-            if vmeta['size'] > 0 or store_noflats:
+            var_size = vmeta['size']
+            if var_size > 0 or store_noflats:
+                if var_size > 0:
+                    self._slices[name] = (vec_size, vec_size + var_size)
                 self._vardict[name] = vmeta
-                vec_size += vmeta['size']
+                vec_size += var_size
 
         for name, meta in states.items():
             vmeta = self._add_source_var(name, meta, vec_size, state=True)
-            if vmeta['size'] > 0 or store_noflats:
+            var_size = vmeta['size']
+            if var_size > 0 or store_noflats:
+                if var_size > 0:
+                    self._slices[name] = (vec_size, vec_size + var_size)
                 self._vardict[name] = vmeta
-                vec_size += vmeta['size']
+                vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
 
         for name, meta in self._vardict.items():
             if meta['size'] > 0:
-                meta['val'] = self.vec[meta['start']:meta['end']]
+                start, end = self._slices[name]
+                meta['val'] = self.vec[start:end]
 
-        # if store_noflats is True, this is the outputs vecwrapper,
+        # if store_noflats is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the outputs and states
         # dicts.
         if store_noflats:
@@ -124,9 +132,6 @@ class VecWrapper(object):
             raise ValueError("No value or shape given for '%s'" % name)
 
         vmeta['size'] = var_size
-        if var_size > 0:
-            vmeta['start'] = index
-            vmeta['end'] = index + var_size
 
         return vmeta
 
@@ -150,7 +155,8 @@ class VecWrapper(object):
 
         for name, meta in self._vardict.items():
             if meta['size'] > 0:
-                meta['val'] = self.vec[meta['start']:meta['end']]
+                start, end = self._slices[name]
+                meta['val'] = self.vec[start:end]
 
         return self
 
@@ -166,14 +172,36 @@ class VecWrapper(object):
             vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
-            vmeta['start'] = index
-            vmeta['end'] = index + var_size
+            self._slices[name] = (index, index + var_size)
         elif store_noflats:
             vmeta['val'] = src_meta['val']
 
         return var_size
 
-    def get_view(self, var_list):
+    def get_view(self, varmap, copy=False):
         view = VecWrapper()
-        # TODO: create view of self
+        view_size = 0
+
+        start = -1
+        for name, meta in self._vardict.items():
+            if name in varmap:
+                view._vardict[varmap[name]] = self._vardict[name]
+                if meta['size'] > 0:
+                    pstart, pend = self._slices[name]
+                    if start == -1:
+                        start = pstart
+                        end = pend
+                    else:
+                        assert pstart == end, \
+                               "%s not contiguous in block containing %s" % \
+                               (name, varmap.keys())
+                    end = pend
+                    view._slices[varmap[name]] = (view_size, view_size + meta['size'])
+                    view_size += meta['size']
+
+        if copy:
+            view.vec = numpy.zeros(view_size)
+        else:
+            view.vec = self.vec[start:end]
+
         return view
