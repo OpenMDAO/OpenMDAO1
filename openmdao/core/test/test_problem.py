@@ -11,15 +11,37 @@ class TestProblem(unittest.TestCase):
         root  = Group()
         root.add('ls', LinearSystem(size=10))
 
-        prob = Problem(root)
+        prob = Problem(root=root)
 
         try:
             prob.setup()
         except Exception as error:
-            self.assertEquals(error.message, 
+            self.assertEquals(error.message,
                 "Parameters ['ls:A','ls:b'] have no associated unknowns.")
         else:
             self.fail("Error expected")
+
+    def test_calc_gradient_interface_errors(self):
+
+        root  = Group()
+        prob = Problem(root=root)
+
+        try:
+            prob.calc_gradient(mode='junk')
+        except Exception as error:
+            msg = "mode must be 'auto', 'fwd', or 'rev'"
+            self.assertEquals(error.message, msg)
+        else:
+            self.fail("Error expected")
+
+        try:
+            prob.calc_gradient(return_format='junk')
+        except Exception as error:
+            msg = "return_format must be 'array' or 'dict'"
+            self.assertEquals(error.message, msg)
+        else:
+            self.fail("Error expected")
+
 
 if __name__ == "__main__":
     unittest.main()

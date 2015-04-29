@@ -1,0 +1,65 @@
+""" OpenMDAO LinearSolver that uses Scipy's GMRES to solve for derivatives."""
+
+
+# pylint: disable=E0611, F0401
+import numpy as np
+from scipy.sparse.linalg import gmres, LinearOperator
+
+from openmdao.solvers.solverbase import LinearSolver
+
+
+class ScipyGMRES(LinearSolver):
+    """ Scipy's GMRES Solver. This is a serial solver, so
+    it should never be used in an MPI setting.
+    """
+
+    def solve_linear(self, rhs):
+        """ Solves the linear system for the problem in self.system. The
+        full solution vector is returned.
+
+        rhs: ndarray
+            Array containing the right hand side for the linear solve. Also
+            possibly a 2D array with multiple right hand sides.
+        """
+
+        A = LinearOperator((n_edge, n_edge),
+                           matvec=self.mult,
+                           dtype=float)
+
+        # TODO: Options dictionary?
+        options = self.options
+
+        # Call GMRES to solve the linear system
+        d_unknowns, info = gmres(A, rhs,
+                                 tol=options['atol'],
+                                 maxiter=options['maxiter'])
+
+        # TODO: Talk about warn/error logging
+        if info > 0:
+            msg = "ERROR in solve_linear in '%s': gmres failed to converge " \
+                  "after %d iterations"
+            #logger.error(msg, system.name, info)
+        elif info < 0:
+            msg = "ERROR in solve_linear in '%s': gmres failed"
+            #logger.error(msg, system.name)
+
+        #print system.name, 'Linear solution vec', d_unknowns
+        return d_unknowns
+
+    def mult(self, arg):
+        """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
+        system."""
+
+        # Set incoming vector
+        system = self.system
+        system.sol_vec.array[:] = arg[:]
+
+        # Start with a clean slate
+        system.rhs_vec.array[:] = 0.0
+        #system.d_params[:] = 0.0  <--- Don't have a name for this yet
+
+        # TODO: Rename this?
+        #system.applyJ(# What are the args?)
+
+        # TODO: Rename rhs_vec and sol_vec?
+        return system.rhs_vec.array[:]
