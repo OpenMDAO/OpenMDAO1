@@ -2,8 +2,6 @@
 
 import unittest
 
-import numpy as np
-
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.testcomps import SimpleComp
@@ -53,8 +51,8 @@ class TestGroup(unittest.TestCase):
         G3.add('C4', SimpleComp())
 
         G2.connect('C1:y1', 'G1:C2:x')
+        # G4.connect('G2:C1:y1', 'G2:G1:C2:x')
         G4.connect('G2:G1:C2:y', 'G3:C3:x')
-        # G4.connect('G2:C1:y', 'G2:G1:C2:x')
         G3.connect('C3:y', 'C4:x')
 
         self.assertEqual(set(G1.connections()), set([]))
@@ -64,7 +62,54 @@ class TestGroup(unittest.TestCase):
             set([('G3:C4:x', 'G3:C3:y'), ('G3:C3:x', 'G2:G1:C2:y'), ('G2:G1:C2:x', 'G2:C1:y1')]))
 
         G4.setup_vectors()
-        # print G4.varmanager.variables()
+
+        expected_G4_params   = ['G2:G1:C2:x', 'G3:C3:x', 'G3:C4:x']
+        expected_G4_unknowns = ['G2:C1:y1', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
+
+        expected_G3_params   = ['C3:x', 'C4:x']
+        expected_G3_unknowns = ['C3:y', 'C4:y']
+
+        expected_G2_params   = ['G1:C2:x']
+        expected_G2_unknowns = ['C1:y1', 'G1:C2:y']
+
+        expected_G1_params   = ['C2:x']
+        expected_G1_unknowns = ['C2:y']
+
+        self.assertEqual(G4.varmanager.params.keys(),    expected_G4_params)
+        self.assertEqual(G4.varmanager.dparams.keys(),   expected_G4_params)
+        self.assertEqual(G4.varmanager.unknowns.keys(),  expected_G4_unknowns)
+        self.assertEqual(G4.varmanager.dunknowns.keys(), expected_G4_unknowns)
+        self.assertEqual(G4.varmanager.resids.keys(),    expected_G4_unknowns)
+        self.assertEqual(G4.varmanager.dresids.keys(),   expected_G4_unknowns)
+
+        self.assertEqual(G3.varmanager.params.keys(),    expected_G3_params)
+        self.assertEqual(G3.varmanager.dparams.keys(),   expected_G3_params)
+        self.assertEqual(G3.varmanager.unknowns.keys(),  expected_G3_unknowns)
+        self.assertEqual(G3.varmanager.dunknowns.keys(), expected_G3_unknowns)
+        self.assertEqual(G3.varmanager.resids.keys(),    expected_G3_unknowns)
+        self.assertEqual(G3.varmanager.dresids.keys(),   expected_G3_unknowns)
+
+        self.assertEqual(G2.varmanager.params.keys(),    expected_G2_params)
+        self.assertEqual(G2.varmanager.dparams.keys(),   expected_G2_params)
+        self.assertEqual(G2.varmanager.unknowns.keys(),  expected_G2_unknowns)
+        self.assertEqual(G2.varmanager.dunknowns.keys(), expected_G2_unknowns)
+        self.assertEqual(G2.varmanager.resids.keys(),    expected_G2_unknowns)
+        self.assertEqual(G2.varmanager.dresids.keys(),   expected_G2_unknowns)
+
+        self.assertEqual(G1.varmanager.params.keys(),    expected_G1_params)
+        self.assertEqual(G1.varmanager.dparams.keys(),   expected_G1_params)
+        self.assertEqual(G1.varmanager.unknowns.keys(),  expected_G1_unknowns)
+        self.assertEqual(G1.varmanager.dunknowns.keys(), expected_G1_unknowns)
+        self.assertEqual(G1.varmanager.resids.keys(),    expected_G1_unknowns)
+        self.assertEqual(G1.varmanager.dresids.keys(),   expected_G1_unknowns)
+
+        # verify subsystem is using shared view of parent unknowns vector
+        G4.varmanager.unknowns['G2:C1:y1'] = 99.
+        self.assertEqual(G2.varmanager.unknowns['C1:y1'], 99.)
+
+        # verify subsystem is getting correct metadata from parent unknowns vector
+        self.assertEqual(G4.varmanager.unknowns.metadata('G2:C1:y1'),
+                         G2.varmanager.unknowns.metadata('C1:y1'))
 
     def test_setup(self):
         pass

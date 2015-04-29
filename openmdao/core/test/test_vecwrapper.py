@@ -7,7 +7,6 @@ from openmdao.core.vecwrapper import VecWrapper
 class TestVecWrapper(unittest.TestCase):
 
     def test_vecwrapper(self):
-
         outputs = OrderedDict()
         states = OrderedDict()
 
@@ -67,6 +66,10 @@ class TestVecWrapper(unittest.TestCase):
 
         p['y1'] = np.ones((3,2))*9.
         self.assertTrue(np.all(p['y1']==np.ones((3,2))*9.))
+
+    def test_view(self):
+        # TODO: test VecWrapper.get_view()
+
 
 if __name__ == "__main__":
     unittest.main()
