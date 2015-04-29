@@ -111,6 +111,10 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(G4.varmanager.unknowns.metadata('G2:C1:y1'),
                          G2.varmanager.unknowns.metadata('C1:y1'))
 
+    def test_promotes(self):
+        # TODO: test groups with components that promote variables
+        self.fail("Test not yet implemented")
+
     def test_setup(self):
         pass
 

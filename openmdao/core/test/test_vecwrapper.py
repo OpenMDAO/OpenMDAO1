@@ -69,6 +69,7 @@ class TestVecWrapper(unittest.TestCase):
 
     def test_view(self):
         # TODO: test VecWrapper.get_view()
+        self.fail("Test not yet implemented")
 
 
 if __name__ == "__main__":
