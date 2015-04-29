@@ -1,7 +1,7 @@
 
 import os
 import sys
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 setup(name='openmdao',
       version=1.0,
@@ -21,21 +21,20 @@ setup(name='openmdao',
       author_email='',
       url='http://openmdao.org',
       license='Apache License, Version 2.0',
-      packages=find_packages(),
-      include_package_data=True,
-      package_data={
-          'openmdao': ['src/openmdao/docs/*']
-      },
-      zip_safe=False,
-      install_requires=[
-          'setuptools',
-          'zope.interface',
-      ],
-      extras_require={
-          'numpy_comps': ['numpy'],
-      },
-      entry_points="""
-      [console_scripts]
-      openmdao=openmdao.main.cli:openmdao
-      """,
+      packages=[
+          'openmdao',
+          'openmdao.core',
+          'openmdao.core.test',
+          'openmdao.util',
+          'openmdao.test',
+          'openmdao.units',
+          'openmdao.components',
+          'openmdao.drivers',
+          'openmdao.doegenerators',
+          'openmdao.surrogatemodels',
+      ], 
+      #entry_points="""
+      #[console_scripts]
+      #openmdao=openmdao.core.cli:openmdao
+      #""",
       )
