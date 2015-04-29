@@ -1,9 +1,17 @@
+""" Base class for systems in OpenMDAO."""
+
 
 class System(object):
     def __init__(self):
         self.name = ''
         # by default, don't promote any vars up to our parent
         self.promotes = ()
+
+        # These point to (du,df) or (df,du) depending on mode.
+        # TODO: Since systems don't own their own variables, we might lose
+        # the convenience of these.
+        self.sol_vec = None
+        self.rhs_vec = None
 
     def promoted(self, name):
         # TODO: handle wildcards
