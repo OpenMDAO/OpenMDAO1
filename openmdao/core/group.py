@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from openmdao.core.system import System
-from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):
@@ -38,14 +37,8 @@ class Group(System):
             subparams, suboutputs, substates = sub.variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                if isinstance(sub, Component):
-                    comps[name] = (sub, subparams)
-                else:
-                    if '_source_' in meta and (meta['_source_'] in suboutputs or meta['_source_'] in substates):
-                        meta['owner'] = self.pathname
                 if '_source_' in meta:
                     meta['_source_'] = self.var_pathname(meta['_source_'], sub)
-                    meta['owner'] = sub.pathname
                 else:
                     pname = self.var_pathname(p, sub)
                     source = self._src.get(pname)
@@ -78,6 +71,43 @@ class Group(System):
 
         return params, outputs, states
 
+    def assign_parameters(self, params, outputs, states):
+        """Map absolute system names to the absolute names of the
+        parameters they control
+        """
+        # TODO: implement this:
+        """
+            a group owns a scatter if:
+                if group owns the connection and it was made at the 'appropriate' level
+                    i.e. the lowest level at which the connection can be made
+
+        =====================
+
+                G2.connect(C1:y, G1:C2:x)   vs   G4.connect(G2:C1:y, G2:G1:C2:x)
+
+                - G2 outputs (or states) will have metadata for C1:y
+                    abs path of C1:y will be G2:C1;y
+                - G2 params will have metadata for G1:C2:x
+                    abs path of G1:c2:x will be G2:G1:C2:x
+                - the system that is responsible for scatter is G2 (common path)
+                    that's us.. so we 'own' the param
+
+
+                - G4 outputs or states will have G2:C1:y with metadata
+                    abs path of G2:C1:y will be G2:C1:y
+                - G4 params will have G2:G1:C2:x
+                    abs path will be same
+                - the system that is responsible for the scatter is G2 (common path)
+                    that's NOT us, we don't 'own' the param
+                    we know that the reponsible system is 'G2'
+                    G2 has already provided it's variable info...
+
+
+        =====================
+
+        """
+        return {}
+
     def connections(self):
         """ returns iterator over connections """
         conns = self._src.copy()
@@ -97,25 +127,33 @@ class Group(System):
         else:
             return name
 
-    def setup_vectors(self, parent_vm=None):
+    def setup_vectors(self, parent_vm=None, param_owners=None):
+        # TODO: move first-time only stuff to Problem
+
         params, outputs, states = self.variables()
+
         if parent_vm is None:
-            self.varmanager = VarManager(self, params, outputs, states)
+            param_owners = self.assign_parameters(params, outputs, states)
+            my_params = param_owners.get(self.pathname, [])
+
+            self.varmanager = VarManager(params, outputs, states, my_params)
         else:
+            my_params = param_owners.get(self.pathname, [])
             self.varmanager = VarViewManager(parent_vm,
                                              self.name,
                                              self.promotes,
                                              params,
                                              outputs,
-                                             states)
+                                             states,
+                                             my_params)
 
         for name, sub in self.subsystems():
-            sub.setup_vectors(self.varmanager)
+            sub.setup_vectors(self.varmanager, param_owners)
 
-    def setup_syspaths(self, parent_path):
+    def setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
-        super(Group, self).setup_syspaths(parent_path)
+        super(Group, self).setup_paths(parent_path)
         for name, sub in self.subsystems():
-            sub.setup_syspaths(self.pathname)
+            sub.setup_paths(self.pathname)

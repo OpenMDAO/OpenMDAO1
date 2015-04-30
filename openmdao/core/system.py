@@ -18,7 +18,7 @@ class System(object):
         # TODO: handle wildcards
         return name in self.promotes
 
-    def setup_syspaths(self, parent_path):
+    def setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
@@ -27,7 +27,7 @@ class System(object):
         else:
             self.pathname = self.name
 
-    def setup_vectors(self, parent_vm=None):
+    def setup_vectors(self, parent_vm=None, param_owners=None):
         pass
 
     def preconditioner(self):

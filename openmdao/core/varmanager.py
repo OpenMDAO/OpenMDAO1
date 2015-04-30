@@ -18,18 +18,18 @@ class VarManagerBase(object):
 
 
 class VarManager(VarManagerBase):
-    def __init__(self, system, params, outputs, states):
-        self.unknowns = VecWrapper.create_source_vector(outputs, states, store_noflats=True)
+    def __init__(self, params, outputs, states, my_params):
+        self.unknowns  = VecWrapper.create_source_vector(outputs, states, store_noflats=True)
         self.dunknowns = VecWrapper.create_source_vector(outputs, states)
-        self.resids = VecWrapper.create_source_vector(outputs, states)
-        self.dresids = VecWrapper.create_source_vector(outputs, states)
-        self.params = VecWrapper.create_target_vector(system, params, self.unknowns, store_noflats=True)
-        self.dparams = VecWrapper.create_target_vector(system, params, self.unknowns)
+        self.resids    = VecWrapper.create_source_vector(outputs, states)
+        self.dresids   = VecWrapper.create_source_vector(outputs, states)
+        self.params    = VecWrapper.create_target_vector(params, self.unknowns, my_params, store_noflats=True)
+        self.dparams   = VecWrapper.create_target_vector(params, self.unknowns, my_params)
 
 
 class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, name,
-                 promotes, params, outputs, states):
+                 promotes, params, outputs, states, param_owners):
 
         umap = {}
         for u in parent_vm.unknowns.keys():
@@ -58,5 +58,5 @@ class VarViewManager(VarManagerBase):
         self.dunknowns = parent_vm.dunknowns.get_view(umap)
         self.resids    = parent_vm.resids.get_view(umap)
         self.dresids   = parent_vm.dresids.get_view(umap)
-        self.params    = parent_vm.params.get_view(pmap, is_target=True)
-        self.dparams   = parent_vm.dparams.get_view(pmap, is_target=True)
+        self.params    = VecWrapper.create_target_vector(params, self.unknowns, param_owners, store_noflats=True)
+        self.dparams   = VecWrapper.create_target_vector(params, self.unknowns, param_owners)
