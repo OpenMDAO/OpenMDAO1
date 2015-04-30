@@ -92,10 +92,10 @@ def run_wing():
         else:
             wingproj_file = 'wing_proj_template.wpr'
 
-        venvdir = os.path.dirname(os.path.dirname(sys.executable))
-        proj_template = os.path.join(os.getcwd(),
+        mydir = os.path.dirname(os.path.abspath(__file__))
+        proj_template = os.path.join(mydir,
                                      '../config', wingproj_file)
-        projpath = os.path.join(os.getcwd(), '../config', 'wingproj.wpr')
+        projpath = os.path.join(mydir, '../config', 'wingproj.wpr')
 
         _modify_wpr_file(proj_template, projpath, version)
 
