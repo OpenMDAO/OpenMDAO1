@@ -13,22 +13,19 @@ class Problem(Component):
     def run(self):
         pass
 
-    def calc_gradient(self, inputs=None, outputs=None, mode='auto',
+    def calc_gradient(self, params, unknowns, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer, but also can be
         used for testing derivatives on your model.
 
-        inputs: list of strings (optional)
+        params: list of strings (optional)
             List of parameter name strings with respect to which derivatives
-            are desired. All params must have a paramcomp. Default is None,
-            which uses all ParamSystems as inputs.
+            are desired. All params must have a paramcomp.
 
-        outputs: list of strings (optional)
+        unknowns: list of strings (optional)
             List of output or state name strings for derivatives to be
-            calculated. All must be valid outputs. Default is None, which
-            calculate derivatives for all outputs with no corresponding
-            connection targets.
+            calculated. All must be valid unknowns in OpenMDAO.
 
         mode: string (optional)
             Deriviative direction, can be 'fwd', 'rev', or 'auto'.

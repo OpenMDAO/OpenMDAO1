@@ -1,8 +1,14 @@
+""" Unit test for the Problem class. """
+
 import unittest
+
 import numpy as np
+
 from openmdao.components.linear_system import LinearSystem
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
+from openmdao.test.simplecomps import SimpleComp
+
 
 class TestProblem(unittest.TestCase):
 
@@ -25,9 +31,10 @@ class TestProblem(unittest.TestCase):
 
         root  = Group()
         prob = Problem(root=root)
+        root.add('comp', SimpleComp())
 
         try:
-            prob.calc_gradient(mode='junk')
+            prob.calc_gradient(['comp:x'], ['comp:y'], mode='junk')
         except Exception as error:
             msg = "mode must be 'auto', 'fwd', or 'rev'"
             self.assertEquals(error.message, msg)
@@ -35,7 +42,7 @@ class TestProblem(unittest.TestCase):
             self.fail("Error expected")
 
         try:
-            prob.calc_gradient(return_format='junk')
+            prob.calc_gradient(['comp:x'], ['comp:y'], return_format='junk')
         except Exception as error:
             msg = "return_format must be 'array' or 'dict'"
             self.assertEquals(error.message, msg)

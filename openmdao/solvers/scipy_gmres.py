@@ -13,7 +13,7 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
-    def solve_linear(self, rhs):
+    def solve(self, rhs):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
@@ -36,11 +36,11 @@ class ScipyGMRES(LinearSolver):
 
         # TODO: Talk about warn/error logging
         if info > 0:
-            msg = "ERROR in solve_linear in '%s': gmres failed to converge " \
+            msg = "ERROR in solve in '%s': gmres failed to converge " \
                   "after %d iterations"
             #logger.error(msg, system.name, info)
         elif info < 0:
-            msg = "ERROR in solve_linear in '%s': gmres failed"
+            msg = "ERROR in solve in '%s': gmres failed"
             #logger.error(msg, system.name)
 
         #print system.name, 'Linear solution vec', d_unknowns
@@ -56,10 +56,10 @@ class ScipyGMRES(LinearSolver):
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
-        #system.d_params[:] = 0.0  <--- Don't have a name for this yet
+        system.varmanager.dparams[:] = 0.0
 
         # TODO: Rename this?
-        #system.applyJ(# What are the args?)
+        system.applyJ()
 
         # TODO: Rename rhs_vec and sol_vec?
         return system.rhs_vec.array[:]

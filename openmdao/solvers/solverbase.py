@@ -8,8 +8,9 @@ class LinearSolver(object):
     def __init__(self, system):
         self.system = system
         self.options = system.ln_options
+        self.iter_count = 0
 
-    def solve_linear(self, rhs):
+    def solve(self, rhs):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
@@ -27,8 +28,9 @@ class NonLinearSolver(object):
     def __init__(self):
         self.system = None
         self.options = system.nl_options
+        self.iter_count = 0
 
-    def solve_nonlinear(self):
+    def solve(self):
         """ Drive all residuals in self.system and all subsystems to zero.
         This includes all implicit components.
         """

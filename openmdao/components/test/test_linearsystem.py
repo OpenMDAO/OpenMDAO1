@@ -9,7 +9,7 @@ class LinearSystem(Component):
         pass
 
     def solve_nonlinear(self, params, unknowns, resids):
-        
+
         unknowns['x'] = np.linalg.solve(params['A'], params['b'])
 
     def apply_nonlinear(self, params, unknowns, resids):
@@ -26,8 +26,8 @@ class LinearSystem(Component):
 
 
 class TestLinearSystem(unittest.TestCase):
-    
-    def setUp(self): 
+
+    def setUp(self):
         self.s = LinearSystem()
         self.params, self.unknowns, self.resids = {}, {}, {}
 
@@ -39,7 +39,6 @@ class TestLinearSystem(unittest.TestCase):
         self.resids['x'] = np.zeros(10)
 
     def test_solve_linearsystem(self):
-        
 
         self.s.solve_nonlinear(self.params, self.unknowns, self.resids)
 
@@ -49,7 +48,7 @@ class TestLinearSystem(unittest.TestCase):
 
         assert rel < 1e-6
 
-    def test_apply_nonlinear(self): 
+    def test_apply_nonlinear(self):
 
        self.unknowns['x'] = np.array([0,1,2,3,4,5,6,7,8,9])
        self.s.apply_nonlinear(self.params, self.unknowns, self.resids)
@@ -77,7 +76,7 @@ class TestLinearSystem(unittest.TestCase):
         d_resids = {}
         d_resids['x'] = np.zeros((2))
 
-        self.s.apply_linear(self.params, self.unknowns, self.resids, 
+        self.s.apply_linear(self.params, self.unknowns, self.resids,
                             d_params, d_unknowns, d_resids)
 
         actual = d_resids['x']
