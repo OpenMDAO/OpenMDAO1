@@ -136,7 +136,7 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(group, params, srcvec, store_noflats=False):
+    def create_target_vector(params, srcvec, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """

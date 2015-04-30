@@ -117,10 +117,10 @@ class TestGroup(unittest.TestCase):
         self.fail("Test not yet implemented")
 
     def test_setup(self):
-        pass
+        self.fail("Test not yet implemented")
 
     def test_solve(self):
-        pass
+        self.fail("Test not yet implemented")
 
 
 if __name__ == "__main__":
