@@ -32,9 +32,9 @@ setup(name='openmdao',
           'openmdao.drivers',
           'openmdao.doegenerators',
           'openmdao.surrogatemodels',
-      ], 
-      #entry_points="""
-      #[console_scripts]
-      #openmdao=openmdao.core.cli:openmdao
-      #""",
-      )
+      ],
+      entry_points= """
+        [console_scripts]
+        wingproj=openmdao.devtools.wingproj:run_wing
+      """
+    )

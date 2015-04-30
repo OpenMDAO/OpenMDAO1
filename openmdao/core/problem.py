@@ -8,7 +8,7 @@ class Problem(Component):
         self.driver = driver
 
     def setup(self):
-        pass
+        self.root.setup_syspaths(self.pathname)
 
     def run(self):
         pass
@@ -51,4 +51,3 @@ class Problem(Component):
         # system in root for each of them.
 
         pass
-
