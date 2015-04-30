@@ -25,5 +25,18 @@ class Component(System):
         args['val'] = val
         self._states[name] = args
 
+    def setup_paths(self, parent_path):
+        """Set the absolute pathname of each Variable in the
+        Component.
+        """
+        super(Component, self).setup_paths(parent_path)
+
+        for name, meta in self._params.items():
+            meta['pathname'] = ':'.join((self.pathname, name))
+        for name, meta in self._outputs.items():
+            meta['pathname'] = ':'.join((self.pathname, name))
+        for name, meta in self._states.items():
+            meta['pathname'] = ':'.join((self.pathname, name))
+
     def variables(self):
         return self._params, self._outputs, self._states

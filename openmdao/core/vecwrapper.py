@@ -136,23 +136,24 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(params, srcvec, store_noflats=False):
+    def create_target_vector(params, srcvec, my_params, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """
-
         self = VecWrapper()
 
         vec_size = 0
         for name, meta in params.items():
-            powner = meta.get('owner')
-            source = meta.get('_source_')
-            if source is not None:
-                src_meta = srcvec.metadata(source)
-            else:
-                src_meta = srcvec.metadata(name)
-            #TODO: check for self-containment of src and param
-            vec_size += self._add_target_var(name, meta, vec_size, src_meta, store_noflats)
+            if meta['pathname'] in my_params:
+                # if connected, get metadata from the source
+                source = meta.get('_source_')
+                if source is not None:
+                    src_meta = srcvec.metadata(source)
+                else:
+                    src_meta = srcvec.metadata(name)
+
+                #TODO: check for self-containment of src and param
+                vec_size += self._add_target_var(name, meta, vec_size, src_meta, store_noflats)
 
         self.vec = numpy.zeros(vec_size)
 
