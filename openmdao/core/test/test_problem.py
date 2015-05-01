@@ -49,6 +49,8 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_setup(self):
+        self.fail("Not Implemented yet")
 
 if __name__ == "__main__":
     unittest.main()
