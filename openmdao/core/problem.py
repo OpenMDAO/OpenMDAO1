@@ -13,6 +13,8 @@ class Problem(Component):
 
     def setup(self):
         self.root.setup_paths(self.pathname)
+        self.root.setup_variables()
+        self.root.setup_vectors()
 
     def run(self):
         pass

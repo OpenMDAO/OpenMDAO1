@@ -6,12 +6,15 @@ from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):
+    """A system that contains other systems"""
+    
     def __init__(self):
         super(Group, self).__init__()
+
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
-
+        
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
         self.rhs_vec = None
@@ -33,15 +36,19 @@ class Group(System):
         """ returns iterator over subsystems """
         return self._subsystems.iteritems()
 
-    def variables(self):
-        params = OrderedDict()
-        unknowns = OrderedDict()
+    def subgroups(self):
+        """ returns iterator over subgroups """
+        for name, subsystem in self._subsystems.items():
+            if isinstance(subsystem, Group):         
+                yield name, subsystem
 
+    def setup_variables(self):
+        """Return params and unkowns for all susbsystems"""
         # TODO: check for the same var appearing more than once in unknowns
 
         comps = {}
-        for name, sub in self.subsystems():
-            subparams, subunknowns = sub.variables()
+        for name, sub in self.subsystems():           
+            subparams, subunknowns = sub.setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
                 if '_source_' in meta:
@@ -58,27 +65,41 @@ class Group(System):
                         else:
                             meta['_source_'] = source
 
-                params[self.var_pathname(p, sub)] = meta
+                self._params[self.var_pathname(p, sub)] = meta
 
             for u, meta in subunknowns.items():
-                unknowns[self.var_pathname(u, sub)] = meta
+                self._unknowns[self.var_pathname(u, sub)] = meta
 
-        for name, (sub, subparams) in comps.items():
-            for p, meta in subparams.items():
-                pname = self.var_pathname(p, sub)
-                src = self._src.get(pname)
-                if src:
-                    if src in unknowns:
-                        meta['owner'] = self.pathname
-                elif pname in unknowns:
-                    meta['owner'] = self.pathname
-
-        return params, unknowns
+        return self._params, self._unknowns
 
     def assign_parameters(self, params, unknowns):
         """Map absolute system names to the absolute names of the
         parameters they control
         """
+        
+        param_owners = {}
+        
+        for name, subgroup in self.subgroups():
+            param_owners.update(subgroup.assign_parameters(params, unknowns))
+        
+        for par, unk in self._src.items():
+            par_pathname = params[par]['pathname']
+            unk_pathname = unknowns[unk]['pathname']
+            
+            par_parts = par_pathname.split(':')
+            unk_parts = unk_pathname.split(':')
+            
+            common_parts = []
+            i = 0
+            while(par_parts[i] == unk_parts[i]):
+                common_parts.append(par_parts[i])
+            common_path = ':'.join(common_parts)
+            
+            param_owners[par_pathname] = common_path
+            
+        return param_owners    
+        
+            
         # TODO: implement this:
         """
             a group owns a scatter if:
@@ -115,12 +136,11 @@ class Group(System):
     def connections(self):
         """ returns iterator over connections """
         conns = self._src.copy()
-        for name, subsystem in self.subsystems():
-            if isinstance(subsystem, Group):
-                for tgt, src in subsystem.connections():
-                    src_name = self.var_pathname(src, subsystem)
-                    tgt_name = self.var_pathname(tgt, subsystem)
-                    conns[tgt_name] = src_name
+        for name, subsystem in self.subgroups():
+            for tgt, src in subsystem.connections():
+                src_name = self.var_pathname(src, subsystem)
+                tgt_name = self.var_pathname(tgt, subsystem)
+                conns[tgt_name] = src_name
         return conns.items()
 
     def var_pathname(self, name, subsystem):
@@ -133,9 +153,6 @@ class Group(System):
 
     def setup_vectors(self, parent_vm=None, param_owners=None):
         # TODO: move first-time only stuff to Problem
-
-        params, unknowns = self.variables()
-
         if parent_vm is None:
             param_owners = self.assign_parameters(params, unknowns)
             my_params = param_owners.get(self.pathname, [])

@@ -5,6 +5,10 @@ class System(object):
     def __init__(self):
         self.name = ''
         self.pathname = ''
+
+        self._params = OrderedDict()
+        self._unknowns = OrderedDict()
+
         # by default, don't promote any vars up to our parent
         self.promotes = ()
 
