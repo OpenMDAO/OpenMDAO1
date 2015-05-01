@@ -12,8 +12,12 @@ class TestVecWrapper(unittest.TestCase):
         unknowns['y1'] = { 'val': np.ones((3, 2)) }
         unknowns['y2'] = { 'val': 2.0 }
         unknowns['y3'] = { 'val': "foo" }
-        unknowns['y4'] = { 'shape': (2, 1) }
-        unknowns['s1'] = { 'val': -1.0, 'state': True }
+        unknowns['y4'] = { 'shape': (2, 1), }
+        unknowns['s1'] = { 'val': -1.0, 'state': True, }
+
+        for u, meta in unknowns.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
 
         u = VecWrapper.create_source_vector(unknowns, store_noflats=True)
 
@@ -55,8 +59,14 @@ class TestVecWrapper(unittest.TestCase):
 
         for p, meta in params.items():
             meta['pathname'] = p
+            meta['relative_name'] = p
 
-        p = VecWrapper.create_target_vector(params, u, params.keys(), store_noflats=True)
+        connections = {}
+        for p in params:
+            connections[p] = p
+
+        p = VecWrapper.create_target_vector(params, u, params.keys(),
+                                            connections, store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)

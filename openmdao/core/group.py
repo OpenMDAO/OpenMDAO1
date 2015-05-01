@@ -7,14 +7,14 @@ from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):
     """A system that contains other systems"""
-    
+
     def __init__(self):
         super(Group, self).__init__()
 
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
-        
+
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
         self.rhs_vec = None
@@ -39,7 +39,7 @@ class Group(System):
     def subgroups(self):
         """ returns iterator over subgroups """
         for name, subsystem in self._subsystems.items():
-            if isinstance(subsystem, Group):         
+            if isinstance(subsystem, Group):
                 yield name, subsystem
 
     def setup_variables(self):
@@ -71,7 +71,6 @@ class Group(System):
             return name
 
     def setup_vectors(self, param_owners, connections, parent_vm=None):
-        print self.name, 'setup_vectors()'
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self.varmanager = VarManager(self._params, self._unknowns,
@@ -101,19 +100,19 @@ class Group(System):
         connections = {}
         for _, sub in self.subgroups():
             connections.update(sub.get_connections())
-            
+
         for tgt, src in self._src.items():
             src_pathname = get_varpathname(src, self._unknowns)
             tgt_pathname = get_varpathname(tgt, self._params)
             connections[tgt_pathname] = src_pathname
-            
+
         return connections
-        
+
 def get_varpathname(var_name, var_dict):
-    """Returns the absolute pathname for the given relative variable 
+    """Returns the absolute pathname for the given relative variable
     name in the variable dictionary"""
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
             return pathname
     raise RuntimeError("Absolute pathname not found for %s" % var_name)
-    
+

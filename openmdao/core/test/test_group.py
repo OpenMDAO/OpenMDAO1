@@ -63,7 +63,36 @@ class TestGroup(unittest.TestCase):
 
         # verify variables are set up correctly
         root.setup_variables()
+
         # TODO: check for expected results from setup_variables
+        self.assertEqual(G1._params.items(),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'C2:x'})])
+        self.assertEqual(G1._unknowns.items(),
+                         [('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'C2:y'})])
+
+        self.assertEqual(G2._params.items(),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G1:C2:x'})])
+        self.assertEqual(G2._unknowns.items(),
+                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'C1:y1'}),
+                          ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
+
+        self.assertEqual(G3._params.items(),
+                         [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'C4:x'})])
+        self.assertEqual(G3._unknowns.items(),
+                         [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
+                          ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
+
+        self.assertEqual(root._params.items(),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:G1:C2:x'}),
+                          ('G3:C3:x', {'val': 3.0, 'relative_name': 'G3:C3:x'}),
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'G3:C4:x'})])
+
+        self.assertEqual(root._unknowns.items(),
+                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'G2:C1:y1'}),
+                          ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G2:G1:C2:y'}),
+                          ('G3:C3:y', {'val': 5.5, 'relative_name': 'G3:C3:y'}),
+                          ('G3:C4:y', {'val': 5.5, 'relative_name': 'G3:C4:y'})])
 
         # verify we get correct connection information
         connections = root.get_connections()
@@ -73,7 +102,7 @@ class TestGroup(unittest.TestCase):
             'G3:C4:x':    'G3:C3:y'
         }
         self.assertEqual(connections, expected_connections)
-        
+
         from openmdao.core.problem import assign_parameters
         param_owners = assign_parameters(connections)
         expected_owners = {
