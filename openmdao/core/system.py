@@ -14,6 +14,9 @@ class System(object):
         # by default, don't promote any vars up to our parent
         self.promotes = ()
 
+        self.ln_solver = None
+        self.nl_solver = None
+
     def promoted(self, name):
         # TODO: handle wildcards
         return name in self.promotes
