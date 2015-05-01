@@ -1,10 +1,16 @@
-""" Base class for systems in OpenMDAO."""
+from collections import OrderedDict
 
 
 class System(object):
+    """ Base class for systems in OpenMDAO."""
+
     def __init__(self):
         self.name = ''
         self.pathname = ''
+
+        self._params = OrderedDict()
+        self._unknowns = OrderedDict()
+
         # by default, don't promote any vars up to our parent
         self.promotes = ()
 
@@ -15,7 +21,7 @@ class System(object):
         # TODO: handle wildcards
         return name in self.promotes
 
-    def setup_syspaths(self, parent_path):
+    def setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
@@ -23,9 +29,6 @@ class System(object):
             self.pathname = ':'.join((parent_path, self.name))
         else:
             self.pathname = self.name
-
-    def setup_vectors(self, parent_vm=None):
-        pass
 
     def preconditioner(self):
         pass

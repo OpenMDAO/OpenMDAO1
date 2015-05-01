@@ -2,13 +2,15 @@
 
 from collections import OrderedDict
 
-from openmdao.core.component import Component
 from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):
+    """A system that contains other systems"""
+
     def __init__(self):
         super(Group, self).__init__()
+
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
@@ -34,66 +36,31 @@ class Group(System):
         """ returns iterator over subsystems """
         return self._subsystems.iteritems()
 
-    def variables(self):
-        params = OrderedDict()
-        outputs = OrderedDict()
-        states = OrderedDict()
+    def subgroups(self):
+        """ returns iterator over subgroups """
+        for name, subsystem in self._subsystems.items():
+            if isinstance(subsystem, Group):
+                yield name, subsystem
+
+    def setup_variables(self):
+        """Return params and unknowns for all subsystems and stores them
+        as attributes of the group"""
+        # TODO: check for the same var appearing more than once in unknowns
 
         comps = {}
         for name, sub in self.subsystems():
-            subparams, suboutputs, substates = sub.variables()
+            subparams, subunknowns = sub.setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                if isinstance(sub, Component):
-                    comps[name] = (sub, subparams)
-                else:
-                    if '_source_' in meta and (meta['_source_'] in suboutputs or meta['_source_'] in substates):
-                        meta['owner'] = self.pathname
-                if '_source_' in meta:
-                    meta['_source_'] = self.var_pathname(meta['_source_'], sub)
-                    meta['owner'] = sub.pathname
-                else:
-                    pname = self.var_pathname(p, sub)
-                    source = self._src.get(pname)
-                    if source is not None:
-                        parts = source.split(':', 1)
-                        if parts[0] in self._subsystems:
-                            src_sys = self._subsystems[parts[0]]
-                            vname = parts[1]
-                            meta['_source_'] = self.var_pathname(vname, src_sys)
-                        else:
-                            meta['_source_'] = source
+                meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
+                self._params[p] = meta
 
-                params[self.var_pathname(p, sub)] = meta
+            for u, meta in subunknowns.items():
+                meta = meta.copy()
+                meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
+                self._unknowns[u] = meta
 
-            for u, meta in suboutputs.items():
-                outputs[self.var_pathname(u, sub)] = meta
-
-            for s, meta in substates.items():
-                states[self.var_pathname(s, sub)] = meta
-
-        for name, (sub, subparams) in comps.items():
-            for p, meta in subparams.items():
-                pname = self.var_pathname(p, sub)
-                src = self._src.get(pname)
-                if src:
-                    if src in outputs or src in states:
-                        meta['owner'] = self.pathname
-                elif pname in outputs or pname in states:
-                    meta['owner'] = self.pathname
-
-        return params, outputs, states
-
-    def connections(self):
-        """ returns iterator over connections """
-        conns = self._src.copy()
-        for name, subsystem in self.subsystems():
-            if isinstance(subsystem, Group):
-                for tgt, src in subsystem.connections():
-                    src_name = self.var_pathname(src, subsystem)
-                    tgt_name = self.var_pathname(tgt, subsystem)
-                    conns[tgt_name] = src_name
-        return conns.items()
+        return self._params, self._unknowns
 
     def var_pathname(self, name, subsystem):
         if subsystem.promoted(name):
@@ -103,25 +70,50 @@ class Group(System):
         else:
             return name
 
-    def setup_vectors(self, parent_vm=None):
-        params, outputs, states = self.variables()
+    def setup_vectors(self, param_owners, connections, parent_vm=None):
+        my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self.varmanager = VarManager(self, params, outputs, states)
+            self.varmanager = VarManager(self._params, self._unknowns,
+                                         my_params, connections)
         else:
             self.varmanager = VarViewManager(parent_vm,
-                                             self.name,
+                                             self.pathname,
                                              self.promotes,
-                                             params,
-                                             outputs,
-                                             states)
+                                             self._params,
+                                             self._unknowns,
+                                             my_params,
+                                             connections)
 
-        for name, sub in self.subsystems():
-            sub.setup_vectors(self.varmanager)
+        for name, sub in self.subgroups():
+            sub.setup_vectors(param_owners, connections, parent_vm=self.varmanager)
 
-    def setup_syspaths(self, parent_path):
+    def setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
-        super(Group, self).setup_syspaths(parent_path)
+        super(Group, self).setup_paths(parent_path)
         for name, sub in self.subsystems():
-            sub.setup_syspaths(self.pathname)
+            sub.setup_paths(self.pathname)
+
+    def get_connections(self):
+        """ Get all explicit connections stated with absolute pathnames
+        """
+        connections = {}
+        for _, sub in self.subgroups():
+            connections.update(sub.get_connections())
+
+        for tgt, src in self._src.items():
+            src_pathname = get_varpathname(src, self._unknowns)
+            tgt_pathname = get_varpathname(tgt, self._params)
+            connections[tgt_pathname] = src_pathname
+
+        return connections
+
+def get_varpathname(var_name, var_dict):
+    """Returns the absolute pathname for the given relative variable
+    name in the variable dictionary"""
+    for pathname, meta in var_dict.items():
+        if meta['relative_name'] == var_name:
+            return pathname
+    raise RuntimeError("Absolute pathname not found for %s" % var_name)
+

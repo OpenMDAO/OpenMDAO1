@@ -8,33 +8,71 @@ from openmdao.core.system import System
 class Component(System):
     """ Base class for a Component system. The Component can declare
     variables and operates on its inputs to produce unknowns, which can be
-    excplicit outputs or implicit states."""
+    excplicit outputs or implicit states.
+    """
 
     def __init__(self):
         super(Component, self).__init__()
-        self._params = OrderedDict()
-        self._outputs = OrderedDict()
-        self._states = OrderedDict()
+        self._post_setup = False
 
         self.J = None
 
     def add_param(self, name, val, **kwargs):
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
         self._params[name] = args
 
     def add_output(self, name, val, **kwargs):
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
-        self._outputs[name] = args
+        self._unknowns[name] = args
 
     def add_state(self, name, val, **kwargs):
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
-        self._states[name] = args
+        args['state'] = True
+        self._unknowns[name] = args
 
-    def variables(self):
-        return self._params, self._outputs, self._states
+    def _check_name(self, name):
+        if self._post_setup:
+            raise RuntimeError("%s: can't add variable %s because setup has already been called",
+                               (self.pathname, name))
+        if name in self._params or name in self._unknowns:
+            raise RuntimeError("%s: variable %s already exists" %
+                               (self.pathname, name))
+
+    def setup_variables(self):
+        """Returns our params and unknowns, and stores them
+        as attributes of the component"""
+
+        # rekey with absolute path names and add relative names
+
+        _new_params = OrderedDict()
+        for name, meta in self._params.items():
+            if not self.pathname:
+                var_pathname = name
+            else:
+                var_pathname = ':'.join([self.pathname, name])
+            _new_params[var_pathname] = meta
+            meta['relative_name'] = name
+        self._params = _new_params
+
+        _new_unknowns = OrderedDict()
+        for name, meta in self._unknowns.items():
+            if not self.pathname:
+                var_pathname = name
+            else:
+                var_pathname = ':'.join([self.pathname, name])
+            _new_unknowns[var_pathname] = meta
+            meta['relative_name'] = name
+        self._unknowns = _new_unknowns
+
+        self._post_setup = True
+
+        return self._params, self._unknowns
 
     def linearize(self, params, unknowns):
         """ Calculates the Jacobian of a component if it provides
@@ -115,4 +153,3 @@ class Component(System):
                 result[:] = J.dot(arg.flatten()).reshape(result.shape)
             else:
                 arg[:] = J.T.dot(result.flatten()).reshape(arg.shape)
-

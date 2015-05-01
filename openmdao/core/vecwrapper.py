@@ -47,26 +47,17 @@ class VecWrapper(object):
         return self._vardict[name]
 
     @staticmethod
-    def create_source_vector(outputs, states, store_noflats=False):
-        """Create a vector storing a flattened array of the variables in outputs
-        and states. If store_noflats is True, then non-flattenable variables
-        will also be stored. If a parent vector is provided, then this vector
-        will provide a view into the parent vector"""
+    def create_source_vector(unknowns, store_noflats=False):
+        """Create a vector storing a flattened array of the variables in unknowns.
+        If store_noflats is True, then non-flattenable variables
+        will also be stored.
+        """
 
         self = VecWrapper()
 
         vec_size = 0
-        for name, meta in outputs.items():
+        for name, meta in unknowns.items():
             vmeta = self._add_source_var(name, meta, vec_size)
-            var_size = vmeta['size']
-            if var_size > 0 or store_noflats:
-                if var_size > 0:
-                    self._slices[name] = (vec_size, vec_size + var_size)
-                self._vardict[name] = vmeta
-                vec_size += var_size
-
-        for name, meta in states.items():
-            vmeta = self._add_source_var(name, meta, vec_size, state=True)
             var_size = vmeta['size']
             if var_size > 0 or store_noflats:
                 if var_size > 0:
@@ -82,13 +73,10 @@ class VecWrapper(object):
                 meta['val'] = self.vec[start:end]
 
         # if store_noflats is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the outputs and states
+        # so initialize all of the values from the unknowns
         # dicts.
         if store_noflats:
-            for name, meta in outputs.items():
-                self[name] = meta['val']
-
-            for name, meta in states.items():
+            for name, meta in unknowns.items():
                 self[name] = meta['val']
 
         return self
@@ -100,6 +88,7 @@ class VecWrapper(object):
 
         vmeta = {}
         vmeta['state'] = state
+        vmeta['pathname'] = name
 
         if 'shape' in meta:
             shape = meta['shape']
@@ -136,23 +125,24 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(group, params, srcvec, store_noflats=False):
+    def create_target_vector(params, srcvec, my_params, connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """
-
         self = VecWrapper()
 
         vec_size = 0
-        for name, meta in params.items():
-            powner = meta.get('owner')
-            source = meta.get('_source_')
-            if source is not None:
-                src_meta = srcvec.metadata(source)
-            else:
-                src_meta = srcvec.metadata(name)
-            #TODO: check for self-containment of src and param
-            vec_size += self._add_target_var(name, meta, vec_size, src_meta, store_noflats)
+        for pathname, meta in params.items():
+            if pathname in my_params:
+                # if connected, get metadata from the source
+                src_pathname = connections.get(pathname)
+                if src_pathname is None:
+                    raise RuntimeError("Parameter %s is not connected" % pathname)
+                relative_name = get_relative_varname(src_pathname, srcvec)
+                src_meta = srcvec.metadata(relative_name)
+
+                #TODO: check for self-containment of src and param
+                vec_size += self._add_target_var(meta, vec_size, src_meta, store_noflats)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -163,9 +153,11 @@ class VecWrapper(object):
 
         return self
 
-    def _add_target_var(self, name, meta, index, src_meta, store_noflats):
+    def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later."""
+
+        name = meta['relative_name']
         vmeta = self._vardict[name] = {}
 
         var_size = src_meta['size']
@@ -181,18 +173,13 @@ class VecWrapper(object):
 
         return var_size
 
-    def get_view(self, varmap, is_target=False):
+    def get_view(self, varmap):
         view = VecWrapper()
         view_size = 0
 
         start = -1
         for name, meta in self._vardict.items():
             if name in varmap:
-                if is_target:
-                    if '_source_' not in meta:
-                        continue
-                    if '_source_' in meta and meta['_source_'] not in self._vardict:
-                        continue
                 view._vardict[varmap[name]] = self._vardict[name]
                 if meta['size'] > 0:
                     pstart, pend = self._slices[name]
@@ -207,9 +194,14 @@ class VecWrapper(object):
                     view._slices[varmap[name]] = (view_size, view_size + meta['size'])
                     view_size += meta['size']
 
-        if is_target:
-            view.vec = numpy.zeros(view_size)
-        else:
-            view.vec = self.vec[start:end]
+        view.vec = self.vec[start:end]
 
         return view
+
+def get_relative_varname(pathname, var_dict):
+    """Returns the absolute pathname for the given relative variable
+    name in the variable dictionary"""
+    for rel_name, meta in var_dict.items():
+        if meta['pathname'] == pathname:
+            return rel_name
+    raise RuntimeError("Relative name not found for %s" % pathname)
