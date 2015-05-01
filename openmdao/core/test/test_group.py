@@ -4,7 +4,7 @@ import unittest
 
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.testcomps import SimpleComp
+from openmdao.test.simplecomps import SimpleComp
 
 class TestGroup(unittest.TestCase):
 
@@ -31,11 +31,10 @@ class TestGroup(unittest.TestCase):
         group.add('C1', SimpleComp(), promotes=['x'])
         group.add("C2", SimpleComp(), promotes=['y'])
 
-        params, unknowns, states = group.variables()
+        params, unknowns = group.variables()
 
         self.assertEqual(params.keys(), ['x', 'C2:x'])
         self.assertEqual(unknowns.keys(), ['C1:y', 'y'])
-        self.assertEqual(states.keys(), [])
 
     def test_connect(self):
         G4 = Group()

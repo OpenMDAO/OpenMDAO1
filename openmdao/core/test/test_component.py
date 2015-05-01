@@ -11,7 +11,7 @@ class TestComponent(unittest.TestCase):
         self.comp.add_param("x", 0.0)
         self.comp.add_param("y", 0.0)
 
-        params, unknowns, states = self.comp.variables()
+        params, unknowns = self.comp.variables()
 
         self.assertEquals(["x", "y"], params.keys())
 
@@ -22,7 +22,7 @@ class TestComponent(unittest.TestCase):
         self.comp.add_output("x", -1)
         self.comp.add_output("y", np.zeros(10))
 
-        params, unknowns, states = self.comp.variables()
+        params, unknowns = self.comp.variables()
 
         self.assertEquals(["x", "y"], unknowns.keys())
 
@@ -36,12 +36,12 @@ class TestComponent(unittest.TestCase):
         self.comp.add_state("s1", 0.0)
         self.comp.add_state("s2", 6.0)
 
-        params, unknowns, states = self.comp.variables()
+        params, unknowns = self.comp.variables()
 
-        self.assertEquals(["s1", "s2"], states.keys())
+        self.assertEquals(["s1", "s2"], unknowns.keys())
 
-        self.assertEquals(states["s1"], {"val": 0.0})
-        self.assertEquals(states["s2"], {"val": 6.0})
+        self.assertEquals(unknowns["s1"], {"val": 0.0, 'state': True })
+        self.assertEquals(unknowns["s2"], {"val": 6.0, 'state': True })
 
 if __name__ == "__main__":
     unittest.main()
