@@ -94,6 +94,7 @@ class Group(System):
         super(Group, self).setup_paths(parent_path)
         for name, sub in self.subsystems():
             sub.setup_paths(self.pathname)
+
     def get_connections(self):
         """ Get all explicit connections stated with absolute pathnames
         """

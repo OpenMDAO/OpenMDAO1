@@ -50,8 +50,8 @@ class VecWrapper(object):
     def create_source_vector(unknowns, store_noflats=False):
         """Create a vector storing a flattened array of the variables in unknowns.
         If store_noflats is True, then non-flattenable variables
-        will also be stored. If a parent vector is provided, then this vector
-        will provide a view into the parent vector"""
+        will also be stored.
+        """
 
         self = VecWrapper()
 
@@ -156,7 +156,7 @@ class VecWrapper(object):
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later."""
-        
+
         name = meta['relative_name']
         vmeta = self._vardict[name] = {}
 
@@ -199,10 +199,9 @@ class VecWrapper(object):
         return view
 
 def get_relative_varname(pathname, var_dict):
-    """Returns the absolute pathname for the given relative variable 
+    """Returns the absolute pathname for the given relative variable
     name in the variable dictionary"""
     for rel_name, meta in var_dict.items():
         if meta['pathname'] == pathname:
             return rel_name
     raise RuntimeError("Relative name not found for %s" % pathname)
-        

@@ -27,8 +27,9 @@ class TestGroupConnect(unittest.TestCase):
 
         self.top.root.connect('src:y', "tgt:x")
 
+        self.top.setup()
         self.top.run()
-        var = self.top.varmanager.unknowns['tgt:y']
+        var = self.top.root.varmanager.unknowns['tgt:y']
         self.assertEqual(len(var), 2)
         self.assertEqual(var[0][0], 0.0)
         self.assertEqual(var[1][0], 0.0)
