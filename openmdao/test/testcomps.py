@@ -15,7 +15,7 @@ class SimpleComp(Component):
         # Unknowns
         self.add_output('y', 5.5)
 
-    def solve_nonlinear(self, params, outputs, resids):
+    def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
 
-        outputs['y'] = 2.0*params['x']
+        unknowns['y'] = 2.0*params['x']

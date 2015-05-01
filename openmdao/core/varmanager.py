@@ -18,32 +18,25 @@ class VarManagerBase(object):
 
 
 class VarManager(VarManagerBase):
-    def __init__(self, params, outputs, states, my_params):
-        self.unknowns  = VecWrapper.create_source_vector(outputs, states, store_noflats=True)
-        self.dunknowns = VecWrapper.create_source_vector(outputs, states)
-        self.resids    = VecWrapper.create_source_vector(outputs, states)
-        self.dresids   = VecWrapper.create_source_vector(outputs, states)
+    def __init__(self, params, unknowns, my_params):
+        self.unknowns  = VecWrapper.create_source_vector(unknowns, store_noflats=True)
+        self.dunknowns = VecWrapper.create_source_vector(unknowns)
+        self.resids    = VecWrapper.create_source_vector(unknowns)
+        self.dresids   = VecWrapper.create_source_vector(unknowns)
         self.params    = VecWrapper.create_target_vector(params, self.unknowns, my_params, store_noflats=True)
         self.dparams   = VecWrapper.create_target_vector(params, self.unknowns, my_params)
 
 
 class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, name,
-                 promotes, params, outputs, states, param_owners):
+                 promotes, params, unknowns, param_owners):
 
         umap = {}
         for u in parent_vm.unknowns.keys():
             parts = u.split(':',1)
-            if parts[0] == name and parts[1] in outputs:
+            if parts[0] == name and parts[1] in unknowns:
                 umap[u] = parts[1]
-            elif u in promotes and u in outputs:
-                umap[u] = u
-
-        for u in parent_vm.unknowns.keys():
-            parts = u.split(':',1)
-            if parts[0] == name and parts[1] in states:
-                umap[u] = parts[1]
-            elif u in promotes and u in states:
+            elif u in promotes and u in unknowns:
                 umap[u] = u
 
         pmap = {}

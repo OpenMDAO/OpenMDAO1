@@ -23,6 +23,7 @@ class Component(System):
     def add_state(self, name, val, **kwargs):
         args = kwargs.copy()
         args['val'] = val
+        args['state'] = True
         self._states[name] = args
 
     def setup_paths(self, parent_path):
@@ -39,4 +40,7 @@ class Component(System):
             meta['pathname'] = ':'.join((self.pathname, name))
 
     def variables(self):
-        return self._params, self._outputs, self._states
+        unknowns = OrderedDict()
+        unknowns.update(self._states)
+        unknowns.update(self._outputs)
+        return self._params, unknowns

@@ -29,12 +29,13 @@ class Group(System):
 
     def variables(self):
         params = OrderedDict()
-        outputs = OrderedDict()
-        states = OrderedDict()
+        unknowns = OrderedDict()
+
+        # TODO: check for the same var appearing more than once in unknowns
 
         comps = {}
         for name, sub in self.subsystems():
-            subparams, suboutputs, substates = sub.variables()
+            subparams, subunknowns = sub.variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
                 if '_source_' in meta:
@@ -53,25 +54,22 @@ class Group(System):
 
                 params[self.var_pathname(p, sub)] = meta
 
-            for u, meta in suboutputs.items():
-                outputs[self.var_pathname(u, sub)] = meta
-
-            for s, meta in substates.items():
-                states[self.var_pathname(s, sub)] = meta
+            for u, meta in subunknowns.items():
+                unknowns[self.var_pathname(u, sub)] = meta
 
         for name, (sub, subparams) in comps.items():
             for p, meta in subparams.items():
                 pname = self.var_pathname(p, sub)
                 src = self._src.get(pname)
                 if src:
-                    if src in outputs or src in states:
+                    if src in unknowns:
                         meta['owner'] = self.pathname
-                elif pname in outputs or pname in states:
+                elif pname in unknowns:
                     meta['owner'] = self.pathname
 
-        return params, outputs, states
+        return params, unknowns
 
-    def assign_parameters(self, params, outputs, states):
+    def assign_parameters(self, params, unknowns):
         """Map absolute system names to the absolute names of the
         parameters they control
         """
@@ -85,7 +83,7 @@ class Group(System):
 
                 G2.connect(C1:y, G1:C2:x)   vs   G4.connect(G2:C1:y, G2:G1:C2:x)
 
-                - G2 outputs (or states) will have metadata for C1:y
+                - G2 unknowns will have metadata for C1:y
                     abs path of C1:y will be G2:C1;y
                 - G2 params will have metadata for G1:C2:x
                     abs path of G1:c2:x will be G2:G1:C2:x
@@ -93,7 +91,7 @@ class Group(System):
                     that's us.. so we 'own' the param
 
 
-                - G4 outputs or states will have G2:C1:y with metadata
+                - G4 unknowns will have G2:C1:y with metadata
                     abs path of G2:C1:y will be G2:C1:y
                 - G4 params will have G2:G1:C2:x
                     abs path will be same
@@ -130,21 +128,20 @@ class Group(System):
     def setup_vectors(self, parent_vm=None, param_owners=None):
         # TODO: move first-time only stuff to Problem
 
-        params, outputs, states = self.variables()
+        params, unknowns = self.variables()
 
         if parent_vm is None:
-            param_owners = self.assign_parameters(params, outputs, states)
+            param_owners = self.assign_parameters(params, unknowns)
             my_params = param_owners.get(self.pathname, [])
 
-            self.varmanager = VarManager(params, outputs, states, my_params)
+            self.varmanager = VarManager(params, unknowns, my_params)
         else:
             my_params = param_owners.get(self.pathname, [])
             self.varmanager = VarViewManager(parent_vm,
                                              self.name,
                                              self.promotes,
                                              params,
-                                             outputs,
-                                             states,
+                                             unknowns,
                                              my_params)
 
         for name, sub in self.subsystems():

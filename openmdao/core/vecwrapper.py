@@ -47,26 +47,17 @@ class VecWrapper(object):
         return self._vardict[name]
 
     @staticmethod
-    def create_source_vector(outputs, states, store_noflats=False):
-        """Create a vector storing a flattened array of the variables in outputs
-        and states. If store_noflats is True, then non-flattenable variables
+    def create_source_vector(unknowns, store_noflats=False):
+        """Create a vector storing a flattened array of the variables in unknowns.
+        If store_noflats is True, then non-flattenable variables
         will also be stored. If a parent vector is provided, then this vector
         will provide a view into the parent vector"""
 
         self = VecWrapper()
 
         vec_size = 0
-        for name, meta in outputs.items():
+        for name, meta in unknowns.items():
             vmeta = self._add_source_var(name, meta, vec_size)
-            var_size = vmeta['size']
-            if var_size > 0 or store_noflats:
-                if var_size > 0:
-                    self._slices[name] = (vec_size, vec_size + var_size)
-                self._vardict[name] = vmeta
-                vec_size += var_size
-
-        for name, meta in states.items():
-            vmeta = self._add_source_var(name, meta, vec_size, state=True)
             var_size = vmeta['size']
             if var_size > 0 or store_noflats:
                 if var_size > 0:
@@ -82,13 +73,10 @@ class VecWrapper(object):
                 meta['val'] = self.vec[start:end]
 
         # if store_noflats is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the outputs and states
+        # so initialize all of the values from the unknowns
         # dicts.
         if store_noflats:
-            for name, meta in outputs.items():
-                self[name] = meta['val']
-
-            for name, meta in states.items():
+            for name, meta in unknowns.items():
                 self[name] = meta['val']
 
         return self

@@ -7,16 +7,15 @@ from openmdao.core.vecwrapper import VecWrapper
 class TestVecWrapper(unittest.TestCase):
 
     def test_vecwrapper(self):
-        outputs = OrderedDict()
-        states = OrderedDict()
+        unknowns = OrderedDict()
 
-        outputs['y1'] = { 'val': np.ones((3, 2)) }
-        outputs['y2'] = { 'val': 2.0 }
-        outputs['y3'] = { 'val': "foo" }
-        outputs['y4'] = { 'shape': (2, 1) }
-        states['s1'] = { 'val': -1.0 }
+        unknowns['y1'] = { 'val': np.ones((3, 2)) }
+        unknowns['y2'] = { 'val': 2.0 }
+        unknowns['y3'] = { 'val': "foo" }
+        unknowns['y4'] = { 'shape': (2, 1) }
+        unknowns['s1'] = { 'val': -1.0, 'state': True }
 
-        u = VecWrapper.create_source_vector(outputs, states, store_noflats=True)
+        u = VecWrapper.create_source_vector(unknowns, store_noflats=True)
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
@@ -54,7 +53,10 @@ class TestVecWrapper(unittest.TestCase):
         params['y3'] = { 'val': "foo" }
         params['y4'] = { 'shape': (2, 1) }
 
-        p = VecWrapper.create_target_vector(params, u, store_noflats=True)
+        for p, meta in params.items():
+            meta['pathname'] = p
+
+        p = VecWrapper.create_target_vector(params, u, params.keys(), store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)
