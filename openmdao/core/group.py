@@ -1,3 +1,5 @@
+""" Defines the base class for a Group in OpenMDAO."""
+
 from collections import OrderedDict
 
 from openmdao.core.system import System
