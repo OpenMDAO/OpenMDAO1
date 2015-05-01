@@ -1,7 +1,9 @@
-""" Base class for systems in OpenMDAO."""
+from collections import OrderedDict
 
 
 class System(object):
+    """ Base class for systems in OpenMDAO."""
+
     def __init__(self):
         self.name = ''
         self.pathname = ''
@@ -24,9 +26,6 @@ class System(object):
             self.pathname = ':'.join((parent_path, self.name))
         else:
             self.pathname = self.name
-
-    def setup_vectors(self, parent_vm=None, param_owners=None):
-        pass
 
     def preconditioner(self):
         pass
