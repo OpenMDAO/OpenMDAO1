@@ -1,5 +1,9 @@
+""" Test for the Component class"""
+
 import unittest
+
 import numpy as np
+
 from openmdao.core.component import Component
 
 class TestComponent(unittest.TestCase):
