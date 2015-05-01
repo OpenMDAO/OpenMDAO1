@@ -1,7 +1,9 @@
+""" Defines the base class for a Group in OpenMDAO."""
+
 from collections import OrderedDict
 
-from openmdao.core.system import System
 from openmdao.core.component import Component
+from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, VarViewManager
 
 class Group(System):

@@ -4,7 +4,7 @@ import unittest
 
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.testcomps import SimpleComp
+from openmdao.test.simplecomps import SimpleComp
 
 class TestGroup(unittest.TestCase):
 

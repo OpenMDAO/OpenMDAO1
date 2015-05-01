@@ -1,8 +1,11 @@
-""" Defines the base class for a component in"""
+""" Defines the Problem class in OpenMDAO."""
 
 from openmdao.core.component import Component
 
 class Problem(Component):
+    """ The Problem is always the top object for running an OpenMDAO
+    model."""
+
     def __init__(self, root=None, driver=None):
         self.root = root
         self.driver = driver
