@@ -11,6 +11,10 @@ class Group(System):
         self._local_subsystems = OrderedDict()
         self._src = {}
 
+        # These point to (du,df) or (df,du) depending on mode.
+        self.sol_vec = None
+        self.rhs_vec = None
+
     def __contains__(self, name):
         return name in self._subsystems
 
