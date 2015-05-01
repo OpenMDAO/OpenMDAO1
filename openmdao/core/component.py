@@ -22,17 +22,24 @@ class Component(System):
         args['state'] = True
         self._unknowns[name] = args
 
-    def setup_paths(self, parent_path):
-        """Set the absolute pathname of each Variable in the
-        Component.
-        """
-        super(Component, self).setup_paths(parent_path)
-
+    def setup_variables(self):
+        """Returns our params and unknowns, and stores them
+        as attributes of the component"""
+        
+        # rekey with absolute path names and add relative names
+        
+        _new_params = OrderedDict()
         for name, meta in self._params.items():
-            meta['pathname'] = ':'.join((self.pathname, name))
-        for name, meta in self._unknowns.items():
-            meta['pathname'] = ':'.join((self.pathname, name))
+            var_pathname = ':'.join([self.pathname, name])
+            _new_params[var_pathname] = meta
+            meta['relative_name'] = name
+        self._params = _new_params
 
-    def setup_variables():
-        """Returns our params and unknowns"""
+        _new_unknowns = OrderedDict()
+        for name, meta in self._unknowns.items():
+            var_pathname = ':'.join([self.pathname, name])
+            _new_unknowns[var_pathname] = meta
+            meta['relative_name'] = name
+        self._unknowns = _new_unknowns
+        
         return self._params, self._unknowns
