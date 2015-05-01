@@ -18,7 +18,7 @@ class TestGroupConnect(unittest.TestCase):
         self.src = self.top.root.add('src', SimpleComp())
         self.tgt = self.top.root.add('tgt', SimpleComp())
 
-    def test_connection_array_array(self):
+    def test_connection_array_array_same_size(self):
 
         # Array to Array same size
 
@@ -32,7 +32,6 @@ class TestGroupConnect(unittest.TestCase):
         self.assertEqual(len(var), 2)
         self.assertEqual(var[0][0], 0.0)
         self.assertEqual(var[1][0], 0.0)
-
 
 
 if __name__ == "__main__":
