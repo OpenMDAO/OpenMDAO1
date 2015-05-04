@@ -83,9 +83,10 @@ class SimpleArrayComp(Component):
 
 
 class SimpleImplicitComp(Component):
-    """ A Simple Implicit Component
-    f(x,z) = x*z + z - 4
-    y = x + z
+    """ A Simple Implicit Component with an additional output equation.
+
+    f(x,z) = xz + z - 4
+    y = x + 2z
 
     Sol: when x = 0.5, z = 2.666
     """
@@ -118,21 +119,31 @@ class SimpleImplicitComp(Component):
             z = znew
             znew = 4.0 - x*z
 
-            eps = x*znew + znew - 4
+            eps = x*znew + znew - 4.0
 
         unknowns['z'] = znew
         unknowns['y'] = x + 2.0*znew
 
         resids['z'] = eps
 
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Don't solve; just calculate the redisual. """
+
+        x = params['x']
+        z = unknowns['z']
+        resids['z'] = x*z + z - 4.0
+
     def jacobian(self, params, unknowns):
         """Analytical derivatives"""
 
         J = {}
+
+        # Output equation
         J[('y', 'x')] = np.array([1.0])
         J[('y', 'z')] = np.array([2.0])
 
-        J[('z', 'z')] = np.array([unknowns['z'] + 1.0])
-        J[('z', 'x')] = np.array([params['x'] + 1.0])
+        # State equation
+        J[('z', 'z')] = np.array([params['x'] + 1.0])
+        J[('z', 'x')] = np.array([unknowns['z']])
 
         return J
