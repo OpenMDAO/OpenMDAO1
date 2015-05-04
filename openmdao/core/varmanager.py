@@ -13,7 +13,7 @@ class VarManagerBase(object):
         self.resids = None
         self.dresids = None
 
-    def setup_scatters(self):
+    def _setup_scatters(self):
         pass
 
 
@@ -29,7 +29,7 @@ class VarManager(VarManagerBase):
 
 class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, sys_pathname,
-                 promotes, params, unknowns, 
+                 promotes, params, unknowns,
                  param_owners, connections):
 
         # parent_vm.unknowns is keyed on name relative to the parent system/varmanager

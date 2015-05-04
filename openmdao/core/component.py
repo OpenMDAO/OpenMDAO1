@@ -45,7 +45,7 @@ class Component(System):
             raise RuntimeError("%s: variable %s already exists" %
                                (self.pathname, name))
 
-    def setup_variables(self):
+    def _setup_variables(self):
         """Returns our params and unknowns, and stores them
         as attributes of the component"""
 

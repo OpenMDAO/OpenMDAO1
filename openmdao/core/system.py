@@ -21,7 +21,7 @@ class System(object):
         # TODO: handle wildcards
         return name in self.promotes
 
-    def setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """

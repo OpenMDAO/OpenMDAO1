@@ -1,6 +1,7 @@
 """ Defines the Problem class in OpenMDAO."""
 
 from openmdao.core.component import Component
+from openmdao.core.group import _get_implicit_connections
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -13,30 +14,34 @@ class Problem(Component):
 
     def setup(self):
         # Give every system an absolute pathname
-        self.root.setup_paths(self.pathname)
+        self.root._setup_paths(self.pathname)
 
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
         # variable relative to that system.
         # Returns the parameters and unknowns dictionaries for the root.
-        params, unknowns = self.root.setup_variables()
+        params, unknowns = self.root._setup_variables()
 
         # Get all explicit connections (stated with absolute pathnames)
-        connections = self.root.get_connections()
+        connections = self.root._get_explicit_connections()
 
         # go through relative names of all top level params/unknowns
         # if relative name in unknowns matches relative name in params
         # that indicates an implicit connection
         # make those names absolute and add to connections
-        # TODO: implement that
+        implicit_conns = _get_implicit_connections(params, unknowns)
+
+        # TODO: check for conflicting explicit/implicit conns
+
+        connections.update(implicit_conns)
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must perform scatters to
         param_owners = assign_parameters(connections)
 
         #
-        self.root.setup_vectors(param_owners, connections)
+        self.root._setup_vectors(param_owners, connections)
 
     def run(self):
         pass
