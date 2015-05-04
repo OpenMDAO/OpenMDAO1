@@ -287,7 +287,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(list(G1.varmanager.dresids.keys()),   expected_G1_unknowns)
 
         # verify subsystem is using shared view of parent unknowns vector
-        root.varmanager.unknowns['G2:C1:y1'] = 99.
+        root.varmanager.unknowns['G2:x'] = 99.
         self.assertEqual(G2.varmanager.unknowns['C1:y1'], 99.)
 
         # verify subsystem is getting correct metadata from parent unknowns vector
