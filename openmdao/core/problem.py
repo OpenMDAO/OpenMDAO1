@@ -21,7 +21,7 @@ class Problem(Component):
         # Metadata for each variable will contain the name of the
         # variable relative to that system.
         # Returns the parameters and unknowns dictionaries for the root.
-        params, unknowns = self.root._setup_variables()
+        params_dict, unknowns_dict = self.root._setup_variables()
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -30,7 +30,7 @@ class Problem(Component):
         # if relative name in unknowns matches relative name in params
         # that indicates an implicit connection
         # make those names absolute and add to connections
-        implicit_conns = _get_implicit_connections(params, unknowns)
+        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
 
         # check for conflicting explicit/implicit connections
         for tgt, src in connections.items():
@@ -43,7 +43,7 @@ class Problem(Component):
 
         # check for parameters that are not connected to a source/unknown
         hanging_params = []
-        for p in params:
+        for p in params_dict:
             if p not in connections.keys():
                 hanging_params.append(p)
 

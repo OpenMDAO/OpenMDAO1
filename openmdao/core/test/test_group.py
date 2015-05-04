@@ -33,13 +33,13 @@ class TestGroup(unittest.TestCase):
 
         # paths must be initialized prior to calling _setup_variables
         group._setup_paths('')
-        params, unknowns = group._setup_variables()
+        params_dict, unknowns_dict = group._setup_variables()
 
-        self.assertEqual(list(params.keys()), ['C1:x', 'C2:x'])
-        self.assertEqual(list(unknowns.keys()), ['C1:y', 'C2:y'])
+        self.assertEqual(list(params_dict.keys()), ['C1:x', 'C2:x'])
+        self.assertEqual(list(unknowns_dict.keys()), ['C1:y', 'C2:y'])
 
-        self.assertEqual([m['relative_name'] for n,m in params.items()], ['x', 'C2:x'])
-        self.assertEqual([m['relative_name'] for n,m in unknowns.items()], ['C1:y', 'y'])
+        self.assertEqual([m['relative_name'] for n,m in params_dict.items()], ['x', 'C2:x'])
+        self.assertEqual([m['relative_name'] for n,m in unknowns_dict.items()], ['C1:y', 'y'])
 
     def test_connect(self):
         root = Group()
@@ -70,30 +70,30 @@ class TestGroup(unittest.TestCase):
         root._setup_variables()
 
         # TODO: check for expected results from _setup_variables
-        self.assertEqual(list(G1._params.items()),
+        self.assertEqual(list(G1._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'C2:x'})])
-        self.assertEqual(list(G1._unknowns.items()),
+        self.assertEqual(list(G1._unknowns_dict.items()),
                          [('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'C2:y'})])
 
-        self.assertEqual(list(G2._params.items()),
+        self.assertEqual(list(G2._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G1:C2:x'})])
-        self.assertEqual(list(G2._unknowns.items()),
+        self.assertEqual(list(G2._unknowns_dict.items()),
                          [('G2:C1:y1', {'val': 5.0, 'relative_name': 'C1:y1'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
 
-        self.assertEqual(list(G3._params.items()),
+        self.assertEqual(list(G3._params_dict.items()),
                          [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
                           ('G3:C4:x', {'val': 3.0, 'relative_name': 'C4:x'})])
-        self.assertEqual(list(G3._unknowns.items()),
+        self.assertEqual(list(G3._unknowns_dict.items()),
                          [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
                           ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
 
-        self.assertEqual(list(root._params.items()),
+        self.assertEqual(list(root._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:G1:C2:x'}),
                           ('G3:C3:x', {'val': 3.0, 'relative_name': 'G3:C3:x'}),
                           ('G3:C4:x', {'val': 3.0, 'relative_name': 'G3:C4:x'})])
 
-        self.assertEqual(list(root._unknowns.items()),
+        self.assertEqual(list(root._unknowns_dict.items()),
                          [('G2:C1:y1', {'val': 5.0, 'relative_name': 'G2:C1:y1'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G2:G1:C2:y'}),
                           ('G3:C3:y', {'val': 5.5, 'relative_name': 'G3:C3:y'}),
@@ -195,30 +195,30 @@ class TestGroup(unittest.TestCase):
         root._setup_variables()
 
         # TODO: check for expected results from _setup_variables
-        self.assertEqual(list(G1._params.items()),
+        self.assertEqual(list(G1._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'x'})])
-        self.assertEqual(list(G1._unknowns.items()),
+        self.assertEqual(list(G1._unknowns_dict.items()),
                          [('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'C2:y'})])
 
-        self.assertEqual(list(G2._params.items()),
+        self.assertEqual(list(G2._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'x'})])
-        self.assertEqual(list(G2._unknowns.items()),
+        self.assertEqual(list(G2._unknowns_dict.items()),
                          [('G2:C1:x', {'val': 5.0, 'relative_name': 'x'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
 
-        self.assertEqual(list(G3._params.items()),
+        self.assertEqual(list(G3._params_dict.items()),
                          [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
                           ('G3:C4:x', {'val': 3.0, 'relative_name': 'x'})])
-        self.assertEqual(list(G3._unknowns.items()),
+        self.assertEqual(list(G3._unknowns_dict.items()),
                          [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
                           ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
 
-        self.assertEqual(list(root._params.items()),
+        self.assertEqual(list(root._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:x'}),
                           ('G3:C3:x', {'val': 3.0, 'relative_name': 'G3:C3:x'}),
                           ('G3:C4:x', {'val': 3.0, 'relative_name': 'x'})])
 
-        self.assertEqual(list(root._unknowns.items()),
+        self.assertEqual(list(root._unknowns_dict.items()),
                          [('G2:C1:x', {'val': 5.0, 'relative_name': 'G2:x'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G2:G1:C2:y'}),
                           ('G3:C3:y', {'val': 5.5, 'relative_name': 'G3:C3:y'}),
@@ -232,7 +232,7 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(connections, expected_connections)
 
-        connections.update(_get_implicit_connections(root._params, root._unknowns))
+        connections.update(_get_implicit_connections(root._params_dict, root._unknowns_dict))
 
         from openmdao.core.problem import assign_parameters
         param_owners = assign_parameters(connections)

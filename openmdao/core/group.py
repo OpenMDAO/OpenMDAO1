@@ -52,14 +52,14 @@ class Group(System):
             for p, meta in subparams.items():
                 meta = meta.copy()
                 meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
-                self._params[p] = meta
+                self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
                 meta = meta.copy()
                 meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
-                self._unknowns[u] = meta
+                self._unknowns_dict[u] = meta
 
-        return self._params, self._unknowns
+        return self._params_dict, self._unknowns_dict
 
     def var_pathname(self, name, subsystem):
         if subsystem.promoted(name):
@@ -72,13 +72,13 @@ class Group(System):
     def _setup_vectors(self, param_owners, connections, parent_vm=None):
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self.varmanager = VarManager(self._params, self._unknowns,
+            self.varmanager = VarManager(self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
             self.varmanager = VarViewManager(parent_vm,
                                              self.pathname,
-                                             self._params,
-                                             self._unknowns,
+                                             self._params_dict,
+                                             self._unknowns_dict,
                                              my_params,
                                              connections)
 
@@ -101,8 +101,8 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, src in self._src.items():
-            src_pathname = get_absvarpathname(src, self._unknowns)
-            tgt_pathname = get_absvarpathname(tgt, self._params)
+            src_pathname = get_absvarpathname(src, self._unknowns_dict)
+            tgt_pathname = get_absvarpathname(tgt, self._params_dict)
             connections[tgt_pathname] = src_pathname
 
         return connections
