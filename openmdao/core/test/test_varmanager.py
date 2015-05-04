@@ -31,7 +31,6 @@ class TestVarManager(unittest.TestCase):
         root.varmanager.unknowns['G2:G1:C2:y'] = 99.
 
         root.varmanager._scatter('G3')
-        print root.varmanager.params['G3:C3:x']
         self.assertEqual(root.varmanager.params['G3:C3:x'], 99.)
 
 

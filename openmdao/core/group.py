@@ -20,9 +20,15 @@ class Group(System):
         self.rhs_vec = None
 
     def __contains__(self, name):
+        """Return True if a system of the given name exists as a direct child of
+        this system.
+        """
         return name in self._subsystems
 
     def add(self, name, system, promotes=None):
+        """Add a subsystem to this group, specifying its name and any variables
+        that it promotes to the parent level.
+        """
         if promotes is not None:
             system.promotes = promotes
         self._subsystems[name] = system
@@ -30,22 +36,25 @@ class Group(System):
         return system
 
     def connect(self, src, target):
+        """Connect the given source variable to the given target
+        variable.
+        """
         self._src[target] = src
 
     def subsystems(self):
-        """ returns iterator over subsystems """
+        """ Returns an iterator over subsystems. """
         return self._subsystems.items()
 
     def subgroups(self):
-        """ returns iterator over subgroups """
+        """ Returns an iterator over subgroups. """
         for name, subsystem in self._subsystems.items():
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
     def _setup_variables(self):
         """Return params and unknowns for all subsystems and stores them
-        as attributes of the group"""
-        # TODO: check for the same var appearing more than once in unknowns
+        as attributes of the group
+        """
 
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
@@ -62,6 +71,9 @@ class Group(System):
         return self._params_dict, self._unknowns_dict
 
     def var_pathname(self, name, subsystem):
+        """Return the name of the given variable, based on its
+        promotion status.
+        """
         if subsystem.promoted(name):
             return name
         if len(subsystem.name) > 0:
@@ -70,6 +82,9 @@ class Group(System):
             return name
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None):
+        """Create a VarManager for this Group and all below it in the System
+        tree, along with their internal VecWrappers.
+        """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self.varmanager = VarManager(self._params_dict, self._unknowns_dict,
@@ -109,7 +124,8 @@ class Group(System):
 
 def _get_implicit_connections(params, unknowns):
     """Finds all matches between relative names of params and
-    unknowns.  Any matches imply an implicit connection.
+    unknowns.  Any matches imply an implicit connection.  All
+    connections are expressed using absolute pathnames.
 
     This should only be called using params and unknowns from the
     top level Group in the system tree.
