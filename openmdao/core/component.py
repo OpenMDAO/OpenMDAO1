@@ -15,7 +15,7 @@ class Component(System):
         super(Component, self).__init__()
         self._post_setup = False
 
-        self.J = None
+        self._jacobian_cache = {}
 
     def add_param(self, name, val, **kwargs):
         self._check_name(name)
@@ -85,12 +85,12 @@ class Component(System):
         unknowns: vecwrapper
             VecWrapper containing outputs and states (u)
         """
-        self.J = self.jacobian(params, unknowns)
+        self._jacobian_cache = self.jacobian(params, unknowns)
 
     def jacobian(self, params, unknowns):
-        """ Returns Jacobian. Returns None unless component overides.
-        J should be a dictionary whose keys are tuples of the form
-        ('unknown', 'param') and whose values are ndarrays.
+        """ Returns Jacobian. Returns None unless component overides and
+        returns something. J should be a dictionary whose keys are tuples of
+        the form ('unknown', 'param') and whose values are ndarrays.
 
         params: vecwrapper
             VecWrapper containing parameters (p)
@@ -104,7 +104,7 @@ class Component(System):
         dstates, mode):
         """Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
-        method, then we just multiply by self.J.
+        method, then we just multiply by self._jacobian_cache.
 
         params: vecwrapper
             VecWrapper containing parameters (p)
@@ -132,7 +132,7 @@ class Component(System):
             Derivative mode, can be 'fwd' or 'rev'
         """
 
-        for key, J in self.J.iteritems():
+        for key, J in self._jacobian_cache.iteritems():
             unknown, param = key
 
             # States are never in dparams.

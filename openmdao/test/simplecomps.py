@@ -67,10 +67,10 @@ class SimpleArrayComp(Component):
 
         params['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][1]
         params['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
-        #print "ran", self.x, self.y
+        #print "ran", params['x'], params['y']
 
     def jacobian(self, params, unknowns):
-        """Analytical first derivatives"""
+        """Analytical derivatives"""
 
         dy1_dx1 = 2.0
         dy1_dx2 = 7.0
@@ -80,3 +80,57 @@ class SimpleArrayComp(Component):
         J[('y', 'x')] = np.array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
 
         return J
+
+
+class SimpleImplicitComp(Component):
+    """ A Simple Implicit Component
+    f(x,z) = x*z + z - 4
+    y = x + z
+
+    Sol: when x = 0.5, z = 2.666
+    """
+
+    def __init__(self):
+        super(SimpleImplicitComp, self).__init__()
+
+        # Params
+        self.add_param('x', 0.5, low=0.01, high=1.0)
+
+        # Unknowns
+        self.add_output('y', 0.0)
+
+        # States
+        self.add_state('z', 0.0)
+
+        self.maxiter = 10
+        self.atol = 1.0e-6
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Simple iterative solve. (Babylonian method) """
+
+        x = params['x']
+        z = unknowns['z']
+        znew = z
+
+        iter = 0
+        eps = 1.0e99
+        while iter < self.maxiter and abs(eps) > self.atol:
+            z = znew
+            znew = 4.0 - x*z
+
+            eps = x*znew + znew - 4
+
+        unknowns['z'] = znew
+        unknowns['y'] = x + 2.0*znew
+
+        resids['z'] = eps
+
+    def jacobian(self, params, unknowns):
+        """Analytical derivatives"""
+
+        J = {}
+        J[('y', 'x')] = np.array([1.0])
+        J[('y', 'z')] = np.array([2.0])
+
+        J[('z', 'z')] = np.array([unknowns['z'] + 1.0])
+        J[('z', 'x')] = np.array([params['x'] + 1.0])
