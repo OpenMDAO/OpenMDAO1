@@ -300,6 +300,5 @@ class TestGroup(unittest.TestCase):
     def test_solve(self):
         self.fail("Test not yet implemented")
 
-
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,7 @@ class VarManagerBase(object):
         self.dresids = None
 
     def _setup_scatters(self):
+        # TODO:
         pass
 
 
@@ -26,6 +27,16 @@ class VarManager(VarManagerBase):
         self.params    = VecWrapper.create_target_vector(params, self.unknowns, my_params, connections, store_noflats=True)
         self.dparams   = VecWrapper.create_target_vector(params, self.unknowns, my_params, connections)
 
+    def _scatter(self):
+        # TODO:
+
+        # if fwd:
+        #    copy unknowns to params
+        #    for unk in unknowns
+        # else:  #rev
+        #    copy params to unknowns
+
+        pass
 
 class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, sys_pathname, params, unknowns,

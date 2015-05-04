@@ -32,15 +32,30 @@ class Problem(Component):
         # make those names absolute and add to connections
         implicit_conns = _get_implicit_connections(params, unknowns)
 
-        # TODO: check for conflicting explicit/implicit conns
+        # check for conflicting explicit/implicit connections
+        for tgt, src in connections.items():
+            if tgt in implicit_conns:
+                msg = '%s is explicitly connected to %s but implicitly connected to %s' % \
+                      (tgt, connections[tgt], implicit_conns[tgt])
+                raise RuntimeError(msg)
 
         connections.update(implicit_conns)
+
+        # check for parameters that are not connected to a source/unknown
+        hanging_params = []
+        for p in params:
+            if p not in connections.keys():
+                hanging_params.append(p)
+
+        if hanging_params:
+            msg = 'Parameters %s have no associated unknowns.' % hanging_params
+            raise RuntimeError(msg)
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must perform scatters to
         param_owners = assign_parameters(connections)
 
-        #
+        # create VarManagers and vecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections)
 
     def run(self):

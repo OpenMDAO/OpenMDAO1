@@ -47,7 +47,6 @@ class Group(System):
         as attributes of the group"""
         # TODO: check for the same var appearing more than once in unknowns
 
-        comps = {}
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
@@ -147,4 +146,3 @@ def get_absvarpathname(var_name, var_dict):
         if meta['relative_name'] == var_name:
             return pathname
     raise RuntimeError("Absolute pathname not found for %s" % var_name)
-
