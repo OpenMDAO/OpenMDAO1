@@ -13,14 +13,14 @@ class Problem(Component):
 
     def setup(self):
         # Give every system an absolute pathname
-        self.root.setup_paths(self.pathname)
+        self.root._setup_paths(self.pathname)
 
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
         # variable relative to that system.
         # Returns the parameters and unknowns dictionaries for the root.
-        params, unknowns = self.root.setup_variables()
+        params, unknowns = self.root._setup_variables()
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root.get_connections()
@@ -36,7 +36,7 @@ class Problem(Component):
         param_owners = assign_parameters(connections)
 
         #
-        self.root.setup_vectors(param_owners, connections)
+        self.root._setup_vectors(param_owners, connections)
 
     def run(self):
         pass

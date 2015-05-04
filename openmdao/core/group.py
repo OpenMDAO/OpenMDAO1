@@ -42,14 +42,14 @@ class Group(System):
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
-    def setup_variables(self):
+    def _setup_variables(self):
         """Return params and unknowns for all subsystems and stores them
         as attributes of the group"""
         # TODO: check for the same var appearing more than once in unknowns
 
         comps = {}
         for name, sub in self.subsystems():
-            subparams, subunknowns = sub.setup_variables()
+            subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
                 meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
@@ -70,7 +70,7 @@ class Group(System):
         else:
             return name
 
-    def setup_vectors(self, param_owners, connections, parent_vm=None):
+    def _setup_vectors(self, param_owners, connections, parent_vm=None):
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self.varmanager = VarManager(self._params, self._unknowns,
@@ -85,15 +85,15 @@ class Group(System):
                                              connections)
 
         for name, sub in self.subgroups():
-            sub.setup_vectors(param_owners, connections, parent_vm=self.varmanager)
+            sub._setup_vectors(param_owners, connections, parent_vm=self.varmanager)
 
-    def setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
-        super(Group, self).setup_paths(parent_path)
+        super(Group, self)._setup_paths(parent_path)
         for name, sub in self.subsystems():
-            sub.setup_paths(self.pathname)
+            sub._setup_paths(self.pathname)
 
     def get_connections(self):
         """ Get all explicit connections stated with absolute pathnames

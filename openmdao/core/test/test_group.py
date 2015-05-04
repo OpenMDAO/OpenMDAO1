@@ -31,10 +31,15 @@ class TestGroup(unittest.TestCase):
         group.add('C1', SimpleComp(), promotes=['x'])
         group.add("C2", SimpleComp(), promotes=['y'])
 
-        params, unknowns = group.setup_variables()
+        # paths must be initialized prior to calling _setup_variables
+        group._setup_paths('')
+        params, unknowns = group._setup_variables()
 
-        self.assertEqual(list(params.keys()), ['x', 'C2:x'])
-        self.assertEqual(list(unknowns.keys()), ['C1:y', 'y'])
+        self.assertEqual(list(params.keys()), ['C1:x', 'C2:x'])
+        self.assertEqual(list(unknowns.keys()), ['C1:y', 'C2:y'])
+
+        self.assertEqual([m['relative_name'] for n,m in params.items()], ['x', 'C2:x'])
+        self.assertEqual([m['relative_name'] for n,m in unknowns.items()], ['C1:y', 'y'])
 
     def test_connect(self):
         root = Group()
@@ -54,7 +59,7 @@ class TestGroup(unittest.TestCase):
         root.connect('G2:G1:C2:y', 'G3:C3:x')
         G3.connect('C3:y', 'C4:x')
 
-        root.setup_paths('')
+        root._setup_paths('')
 
         self.assertEqual(root.pathname, '')
         self.assertEqual(G3.pathname, 'G3')
@@ -62,9 +67,9 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(G1.pathname, 'G2:G1')
 
         # verify variables are set up correctly
-        root.setup_variables()
+        root._setup_variables()
 
-        # TODO: check for expected results from setup_variables
+        # TODO: check for expected results from _setup_variables
         self.assertEqual(list(G1._params.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'C2:x'})])
         self.assertEqual(list(G1._unknowns.items()),
@@ -113,7 +118,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(param_owners, expected_owners)
 
         # verify vectors are set up correctly
-        root.setup_vectors(param_owners, connections)
+        root._setup_vectors(param_owners, connections)
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:C1:y1', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
@@ -163,10 +168,132 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(root.varmanager.unknowns.metadata('G2:C1:y1'),
                          G2.varmanager.unknowns.metadata('C1:y1'))
 
-
     def test_promotes(self):
-        # TODO: test groups with components that promote variables
-        self.fail("Test not yet implemented")
+        root = Group()
+
+        G2 = root.add('G2', Group())
+        G2.add('C1', ParamComp('y1', 5.))
+
+        G1 = G2.add('G1', Group())
+        G1.add('C2', SimpleComp())
+
+        G3 = root.add('G3', Group())
+        G3.add('C3', SimpleComp())
+        G3.add('C4', SimpleComp())
+
+        G2.connect('C1:y1', 'G1:C2:x')
+        #root.connect('G2:C1:y1', 'G2:G1:C2:x')
+        root.connect('G2:G1:C2:y', 'G3:C3:x')
+        G3.connect('C3:y', 'C4:x')
+
+        root._setup_paths('')
+
+        self.assertEqual(root.pathname, '')
+        self.assertEqual(G3.pathname, 'G3')
+        self.assertEqual(G2.pathname, 'G2')
+        self.assertEqual(G1.pathname, 'G2:G1')
+
+        # verify variables are set up correctly
+        root._setup_variables()
+
+        # TODO: check for expected results from _setup_variables
+        self.assertEqual(list(G1._params.items()),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'C2:x'})])
+        self.assertEqual(list(G1._unknowns.items()),
+                         [('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'C2:y'})])
+
+        self.assertEqual(list(G2._params.items()),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G1:C2:x'})])
+        self.assertEqual(list(G2._unknowns.items()),
+                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'C1:y1'}),
+                          ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
+
+        self.assertEqual(list(G3._params.items()),
+                         [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'C4:x'})])
+        self.assertEqual(list(G3._unknowns.items()),
+                         [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
+                          ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
+
+        self.assertEqual(list(root._params.items()),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:G1:C2:x'}),
+                          ('G3:C3:x', {'val': 3.0, 'relative_name': 'G3:C3:x'}),
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'G3:C4:x'})])
+
+        self.assertEqual(list(root._unknowns.items()),
+                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'G2:C1:y1'}),
+                          ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G2:G1:C2:y'}),
+                          ('G3:C3:y', {'val': 5.5, 'relative_name': 'G3:C3:y'}),
+                          ('G3:C4:y', {'val': 5.5, 'relative_name': 'G3:C4:y'})])
+
+        # verify we get correct connection information
+        connections = root.get_connections()
+        expected_connections = {
+            'G2:G1:C2:x': 'G2:C1:y1',
+            'G3:C3:x':    'G2:G1:C2:y',
+            'G3:C4:x':    'G3:C3:y'
+        }
+        self.assertEqual(connections, expected_connections)
+
+        from openmdao.core.problem import assign_parameters
+        param_owners = assign_parameters(connections)
+        expected_owners = {
+            'G3': ['G3:C4:x'],
+            '':   ['G3:C3:x'],
+            'G2': ['G2:G1:C2:x']
+        }
+        self.assertEqual(param_owners, expected_owners)
+
+        # verify vectors are set up correctly
+        root._setup_vectors(param_owners, connections)
+
+        expected_root_params   = ['G3:C3:x']
+        expected_root_unknowns = ['G2:C1:y1', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
+
+        expected_G3_params   = ['C4:x']
+        expected_G3_unknowns = ['C3:y', 'C4:y']
+
+        expected_G2_params   = ['G1:C2:x']
+        expected_G2_unknowns = ['C1:y1', 'G1:C2:y']
+
+        expected_G1_params   = []
+        expected_G1_unknowns = ['C2:y']
+
+        self.assertEqual(list(root.varmanager.params.keys()),    expected_root_params)
+        self.assertEqual(list(root.varmanager.dparams.keys()),   expected_root_params)
+        self.assertEqual(list(root.varmanager.unknowns.keys()),  expected_root_unknowns)
+        self.assertEqual(list(root.varmanager.dunknowns.keys()), expected_root_unknowns)
+        self.assertEqual(list(root.varmanager.resids.keys()),    expected_root_unknowns)
+        self.assertEqual(list(root.varmanager.dresids.keys()),   expected_root_unknowns)
+
+        self.assertEqual(list(G3.varmanager.params.keys()),    expected_G3_params)
+        self.assertEqual(list(G3.varmanager.dparams.keys()),   expected_G3_params)
+        self.assertEqual(list(G3.varmanager.unknowns.keys()),  expected_G3_unknowns)
+        self.assertEqual(list(G3.varmanager.dunknowns.keys()), expected_G3_unknowns)
+        self.assertEqual(list(G3.varmanager.resids.keys()),    expected_G3_unknowns)
+        self.assertEqual(list(G3.varmanager.dresids.keys()),   expected_G3_unknowns)
+
+        self.assertEqual(list(G2.varmanager.params.keys()),    expected_G2_params)
+        self.assertEqual(list(G2.varmanager.dparams.keys()),   expected_G2_params)
+        self.assertEqual(list(G2.varmanager.unknowns.keys()),  expected_G2_unknowns)
+        self.assertEqual(list(G2.varmanager.dunknowns.keys()), expected_G2_unknowns)
+        self.assertEqual(list(G2.varmanager.resids.keys()),    expected_G2_unknowns)
+        self.assertEqual(list(G2.varmanager.dresids.keys()),   expected_G2_unknowns)
+
+        self.assertEqual(list(G1.varmanager.params.keys()),    expected_G1_params)
+        self.assertEqual(list(G1.varmanager.dparams.keys()),   expected_G1_params)
+        self.assertEqual(list(G1.varmanager.unknowns.keys()),  expected_G1_unknowns)
+        self.assertEqual(list(G1.varmanager.dunknowns.keys()), expected_G1_unknowns)
+        self.assertEqual(list(G1.varmanager.resids.keys()),    expected_G1_unknowns)
+        self.assertEqual(list(G1.varmanager.dresids.keys()),   expected_G1_unknowns)
+
+        # verify subsystem is using shared view of parent unknowns vector
+        root.varmanager.unknowns['G2:C1:y1'] = 99.
+        self.assertEqual(G2.varmanager.unknowns['C1:y1'], 99.)
+
+        # verify subsystem is getting correct metadata from parent unknowns vector
+        self.assertEqual(root.varmanager.unknowns.metadata('G2:C1:y1'),
+                         G2.varmanager.unknowns.metadata('C1:y1'))
 
     def test_setup(self):
         self.fail("Test not yet implemented")
