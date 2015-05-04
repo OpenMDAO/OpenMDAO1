@@ -28,8 +28,7 @@ class VarManager(VarManagerBase):
 
 
 class VarViewManager(VarManagerBase):
-    def __init__(self, parent_vm, sys_pathname,
-                 promotes, params, unknowns,
+    def __init__(self, parent_vm, sys_pathname, params, unknowns,
                  param_owners, connections):
 
         # parent_vm.unknowns is keyed on name relative to the parent system/varmanager
@@ -45,21 +44,6 @@ class VarViewManager(VarManagerBase):
                 else:
                     newrel = rel
                 umap[rel] = newrel
-
-        #for pathname, meta in unknowns.items():
-            #if pathname.startswith(sys_pathname+':'):
-                ## unknown is in this system
-                #loc_name = pathname[len(sys_pathname)+1:]
-                #our_name = meta['relative_name']
-                #if our_name in promotes:
-                    #umap[our_name] = our_name
-                #else:
-                    #if ':' in sys_pathname:
-                        #sys_name = sys_pathname.rsplit(':', 1)[1]
-                    #else:
-                        #sys_name = sys_pathname
-                    #parent_name = ':'.join([sys_name, our_name])
-                    #umap[parent_name] = our_name
 
         self.unknowns  = parent_vm.unknowns.get_view(umap)
         self.dunknowns = parent_vm.dunknowns.get_view(umap)

@@ -78,7 +78,6 @@ class Group(System):
         else:
             self.varmanager = VarViewManager(parent_vm,
                                              self.pathname,
-                                             self.promotes,
                                              self._params,
                                              self._unknowns,
                                              my_params,
