@@ -247,7 +247,7 @@ class TestGroup(unittest.TestCase):
         root._setup_vectors(param_owners, connections)
 
         expected_root_params   = ['G3:C3:x']
-        expected_root_unknowns = ['G2:C1:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
+        expected_root_unknowns = ['G2:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
 
         expected_G3_params   = ['x']
         expected_G3_unknowns = ['C3:y', 'C4:y']
@@ -288,11 +288,11 @@ class TestGroup(unittest.TestCase):
 
         # verify subsystem is using shared view of parent unknowns vector
         root.varmanager.unknowns['G2:x'] = 99.
-        self.assertEqual(G2.varmanager.unknowns['C1:y1'], 99.)
+        self.assertEqual(G2.varmanager.unknowns['x'], 99.)
 
         # verify subsystem is getting correct metadata from parent unknowns vector
-        self.assertEqual(root.varmanager.unknowns.metadata('G2:C1:y1'),
-                         G2.varmanager.unknowns.metadata('C1:y1'))
+        self.assertEqual(root.varmanager.unknowns.metadata('G2:x'),
+                         G2.varmanager.unknowns.metadata('x'))
 
     def test_setup(self):
         self.fail("Test not yet implemented")

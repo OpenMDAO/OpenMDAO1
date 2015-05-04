@@ -61,8 +61,8 @@ class VecWrapper(object):
             var_size = vmeta['size']
             if var_size > 0 or store_noflats:
                 if var_size > 0:
-                    self._slices[name] = (vec_size, vec_size + var_size)
-                self._vardict[name] = vmeta
+                    self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
+                self._vardict[meta['relative_name']] = vmeta
                 vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
@@ -77,7 +77,7 @@ class VecWrapper(object):
         # dicts.
         if store_noflats:
             for name, meta in unknowns.items():
-                self[name] = meta['val']
+                self[meta['relative_name']] = meta['val']
 
         return self
 
