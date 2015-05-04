@@ -134,3 +134,5 @@ class SimpleImplicitComp(Component):
 
         J[('z', 'z')] = np.array([unknowns['z'] + 1.0])
         J[('z', 'x')] = np.array([params['x'] + 1.0])
+
+        return J

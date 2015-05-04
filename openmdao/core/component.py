@@ -151,6 +151,6 @@ class Component(System):
 
             # Vectors are flipped during adjoint
             if mode == 'fwd':
-                result[:] = J.dot(arg.flatten()).reshape(result.shape)
+                result[:] += J.dot(arg.flatten()).reshape(result.shape)
             else:
-                arg[:] = J.T.dot(result.flatten()).reshape(arg.shape)
+                arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
