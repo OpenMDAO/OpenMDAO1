@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.core.group import Group
+from openmdao.core.group import Group, _get_implicit_connections
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
 
@@ -100,7 +100,7 @@ class TestGroup(unittest.TestCase):
                           ('G3:C4:y', {'val': 5.5, 'relative_name': 'G3:C4:y'})])
 
         # verify we get correct connection information
-        connections = root.get_connections()
+        connections = root._get_explicit_connections()
         expected_connections = {
             'G2:G1:C2:x': 'G2:C1:y1',
             'G3:C3:x':    'G2:G1:C2:y',
@@ -172,19 +172,17 @@ class TestGroup(unittest.TestCase):
         root = Group()
 
         G2 = root.add('G2', Group())
-        G2.add('C1', ParamComp('y1', 5.))
+        G2.add('C1', ParamComp('x', 5.), promotes=['x'])
 
-        G1 = G2.add('G1', Group())
-        G1.add('C2', SimpleComp())
+        G1 = G2.add('G1', Group(), promotes=['x'])
+        G1.add('C2', SimpleComp(), promotes=['x'])
 
-        G3 = root.add('G3', Group())
+        G3 = root.add('G3', Group(), promotes=['x'])
         G3.add('C3', SimpleComp())
-        G3.add('C4', SimpleComp())
+        G3.add('C4', SimpleComp(), promotes=['x'])
 
-        G2.connect('C1:y1', 'G1:C2:x')
-        #root.connect('G2:C1:y1', 'G2:G1:C2:x')
         root.connect('G2:G1:C2:y', 'G3:C3:x')
-        G3.connect('C3:y', 'C4:x')
+        G3.connect('C3:y', 'x')
 
         root._setup_paths('')
 
@@ -198,42 +196,43 @@ class TestGroup(unittest.TestCase):
 
         # TODO: check for expected results from _setup_variables
         self.assertEqual(list(G1._params.items()),
-                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'C2:x'})])
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'x'})])
         self.assertEqual(list(G1._unknowns.items()),
                          [('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'C2:y'})])
 
         self.assertEqual(list(G2._params.items()),
-                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G1:C2:x'})])
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'x'})])
         self.assertEqual(list(G2._unknowns.items()),
-                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'C1:y1'}),
+                         [('G2:C1:x', {'val': 5.0, 'relative_name': 'x'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
 
         self.assertEqual(list(G3._params.items()),
                          [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
-                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'C4:x'})])
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'x'})])
         self.assertEqual(list(G3._unknowns.items()),
                          [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
                           ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
 
         self.assertEqual(list(root._params.items()),
-                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:G1:C2:x'}),
+                         [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:x'}),
                           ('G3:C3:x', {'val': 3.0, 'relative_name': 'G3:C3:x'}),
-                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'G3:C4:x'})])
+                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'x'})])
 
         self.assertEqual(list(root._unknowns.items()),
-                         [('G2:C1:y1', {'val': 5.0, 'relative_name': 'G2:C1:y1'}),
+                         [('G2:C1:x', {'val': 5.0, 'relative_name': 'G2:x'}),
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G2:G1:C2:y'}),
                           ('G3:C3:y', {'val': 5.5, 'relative_name': 'G3:C3:y'}),
                           ('G3:C4:y', {'val': 5.5, 'relative_name': 'G3:C4:y'})])
 
         # verify we get correct connection information
-        connections = root.get_connections()
+        connections = root._get_explicit_connections()
         expected_connections = {
-            'G2:G1:C2:x': 'G2:C1:y1',
             'G3:C3:x':    'G2:G1:C2:y',
             'G3:C4:x':    'G3:C3:y'
         }
         self.assertEqual(connections, expected_connections)
+
+        connections.update(_get_implicit_connections(root._params, root._unknowns))
 
         from openmdao.core.problem import assign_parameters
         param_owners = assign_parameters(connections)
@@ -248,13 +247,13 @@ class TestGroup(unittest.TestCase):
         root._setup_vectors(param_owners, connections)
 
         expected_root_params   = ['G3:C3:x']
-        expected_root_unknowns = ['G2:C1:y1', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
+        expected_root_unknowns = ['G2:C1:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
 
-        expected_G3_params   = ['C4:x']
+        expected_G3_params   = ['x']
         expected_G3_unknowns = ['C3:y', 'C4:y']
 
-        expected_G2_params   = ['G1:C2:x']
-        expected_G2_unknowns = ['C1:y1', 'G1:C2:y']
+        expected_G2_params   = ['x']
+        expected_G2_unknowns = ['x', 'G1:C2:y']
 
         expected_G1_params   = []
         expected_G1_unknowns = ['C2:y']
