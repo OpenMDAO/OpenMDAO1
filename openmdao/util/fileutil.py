@@ -6,6 +6,7 @@ import itertools
 import os
 import stat
 import warnings
+from six import string_types
 
 from fnmatch import fnmatch
 from os.path import join, dirname, exists, abspath
@@ -85,33 +86,33 @@ def find_files(start, match=None, exclude=None,
     subject to directory filtering.
 
     """
-    startdirs = [start] if isinstance(start, basestring) else start
+    startdirs = [start] if isinstance(start, string_types) else start
     if len(startdirs) == 0:
         return iter([])
 
     gen = _file_dir_gen if showdirs else _file_gen
     if match is None:
         matcher = bool
-    elif isinstance(match, basestring):
+    elif isinstance(match, string_types):
         matcher = lambda name: fnmatch(name, match)
     else:
         matcher = match
 
     if dirmatch is None:
         dmatcher = bool
-    elif isinstance(dirmatch, basestring):
+    elif isinstance(dirmatch, string_types):
         dmatcher = lambda name: fnmatch(name, dirmatch)
     else:
         dmatcher = dirmatch
 
-    if isinstance(exclude, basestring):
+    if isinstance(exclude, string_types):
         fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
     elif exclude is not None:
         fmatch = lambda name: matcher(name) and not exclude(name)
     else:
         fmatch = matcher
 
-    if isinstance(direxclude, basestring):
+    if isinstance(direxclude, string_types):
         dmatch = lambda name: dmatcher(name) and not fnmatch(name, direxclude)
     elif direxclude is not None:
         dmatch = lambda name: dmatcher(name) and not direxclude(name)
@@ -222,5 +223,3 @@ def _file_dir_gen(dname, fmatch=bool, dmatch=None):
 
         for name in dirlist:
             yield join(path, name)
-
-

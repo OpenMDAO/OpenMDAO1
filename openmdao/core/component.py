@@ -1,6 +1,7 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
 from collections import OrderedDict
+from six import iteritems
 
 from openmdao.core.system import System
 
@@ -132,7 +133,7 @@ class Component(System):
             Derivative mode, can be 'fwd' or 'rev'
         """
 
-        for key, J in self._jacobian_cache.iteritems():
+        for key, J in iteritems(self._jacobian_cache):
             unknown, param = key
 
             # States are never in dparams.

@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import os
 import os.path
@@ -5,13 +6,13 @@ import sys
 import fnmatch
 import logging
 from subprocess import Popen
-import ConfigParser
+from six.moves.configparser import ConfigParser
 from optparse import OptionParser
 
 from openmdao.util.fileutil import find_files, find_up
 
 def _modify_wpr_file(template, outfile, version):
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser()
     config.read(template)
     if sys.platform == 'darwin':
         config.set('user attributes', 'proj.pyexec',
@@ -130,10 +131,10 @@ def run_wing():
             wingpath = _find_wing()
         cmd = [wingpath, projpath]
     try:
-        print "wing command: ",' '.join(cmd)
+        print("wing command: ",' '.join(cmd))
         Popen(cmd, env=env)
     except Exception as err:
-        print "Failed to run command '%s'." % ' '.join(cmd)
+        print("Failed to run command '%s'." % ' '.join(cmd))
 
 if __name__ == '__main__':
     run_wing()

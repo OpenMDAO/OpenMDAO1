@@ -1,6 +1,7 @@
 """ Unit test for the Problem class. """
 
 import unittest
+from six import text_type
 
 import numpy as np
 
@@ -22,7 +23,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            self.assertEquals(error.message,
+            self.assertEquals(text_type(error),
                 "Parameters ['ls:A','ls:b'] have no associated unknowns.")
         else:
             self.fail("Error expected")
@@ -37,7 +38,7 @@ class TestProblem(unittest.TestCase):
             prob.calc_gradient(['comp:x'], ['comp:y'], mode='junk')
         except Exception as error:
             msg = "mode must be 'auto', 'fwd', or 'rev'"
-            self.assertEquals(error.message, msg)
+            self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
 
@@ -45,7 +46,7 @@ class TestProblem(unittest.TestCase):
             prob.calc_gradient(['comp:x'], ['comp:y'], return_format='junk')
         except Exception as error:
             msg = "return_format must be 'array' or 'dict'"
-            self.assertEquals(error.message, msg)
+            self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
 

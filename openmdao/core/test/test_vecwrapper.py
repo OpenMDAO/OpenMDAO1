@@ -23,7 +23,7 @@ class TestVecWrapper(unittest.TestCase):
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
-        self.assertEqual(u.keys(), ['y1','y2','y3', 'y4', 's1'])
+        self.assertEqual(list(u.keys()), ['y1','y2','y3', 'y4', 's1'])
         self.assertTrue(np.all(u['y1']==np.ones((3,2))))
         self.assertEqual(u['y2'], 2.0)
         self.assertEqual(u['y3'], 'foo')
@@ -70,7 +70,7 @@ class TestVecWrapper(unittest.TestCase):
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)
-        self.assertEqual(p.keys(), ['y1','y2','y3', 'y4'])
+        self.assertEqual(list(p.keys()), ['y1','y2','y3', 'y4'])
         self.assertTrue(np.all(p['y1']==np.zeros((3,2))))
         self.assertEqual(p['y2'], 0.)
         self.assertEqual(p['y3'], 'bar')
