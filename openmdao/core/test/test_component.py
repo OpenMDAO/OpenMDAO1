@@ -17,7 +17,7 @@ class TestComponent(unittest.TestCase):
 
         params, unknowns = self.comp.setup_variables()
 
-        self.assertEquals(["x", "y"], params.keys())
+        self.assertEquals(["x", "y"], list(params.keys()))
 
         self.assertEquals(params["x"], {"val": 0.0, 'relative_name': 'x' })
         self.assertEquals(params["y"], {"val": 0.0, 'relative_name': 'y' })
@@ -28,7 +28,7 @@ class TestComponent(unittest.TestCase):
 
         params, unknowns = self.comp.setup_variables()
 
-        self.assertEquals(["x", "y"], unknowns.keys())
+        self.assertEquals(["x", "y"], list(unknowns.keys()))
 
         self.assertIsInstance(unknowns["x"]["val"], int)
         self.assertIsInstance(unknowns["y"]["val"], np.ndarray)
@@ -42,7 +42,7 @@ class TestComponent(unittest.TestCase):
 
         params, unknowns = self.comp.setup_variables()
 
-        self.assertEquals(["s1", "s2"], unknowns.keys())
+        self.assertEquals(["s1", "s2"], list(unknowns.keys()))
 
         self.assertEquals(unknowns["s1"], {"val": 0.0, 'state': True, 'relative_name': 's1' })
         self.assertEquals(unknowns["s2"], {"val": 6.0, 'state': True, 'relative_name': 's2' })

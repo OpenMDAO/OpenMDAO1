@@ -33,6 +33,9 @@ setup(name='openmdao',
           'openmdao.doegenerators',
           'openmdao.surrogatemodels',
       ],
+      install_requires=[
+        'six',
+      ],
       entry_points= """
         [console_scripts]
         wingproj=openmdao.devtools.wingproj:run_wing

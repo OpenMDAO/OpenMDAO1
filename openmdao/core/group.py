@@ -34,7 +34,7 @@ class Group(System):
 
     def subsystems(self):
         """ returns iterator over subsystems """
-        return self._subsystems.iteritems()
+        return self._subsystems.items()
 
     def subgroups(self):
         """ returns iterator over subgroups """
