@@ -36,34 +36,30 @@ class VarViewManager(VarManagerBase):
         # unknowns is keyed on absolute pathname
 
         umap = {}
-        for pathname in unknowns.keys():
-            if pathname.startswith(sys_pathname+':'):
-                # unknown is in this system
-                our_name = pathname[len(sys_pathname)+1:]
-                if our_name in promotes:
-                    umap[our_name] = our_name
+        for rel, meta in parent_vm.unknowns.items():
+            abspath = meta['pathname']
+            if abspath.startswith(sys_pathname+':'):
+                newmeta = unknowns.get(abspath)
+                if newmeta is not None:
+                    newrel = newmeta['relative_name']
                 else:
-                    if ':' in sys_pathname:
-                        sys_name = sys_pathname.rsplit(':', 1)[1]
-                    else:
-                        sys_name = sys_pathname
-                    parent_name = ':'.join([sys_name, our_name])
-                    umap[parent_name] = our_name
+                    newrel = rel
+                umap[rel] = newrel
 
-        pmap = {}
-        for pathname in params.keys():
-            if pathname.startswith(sys_pathname+':'):
-                # unknown is in this system
-                our_name = pathname[len(sys_pathname)+1:]
-                if our_name in promotes:
-                    pmap[our_name] = our_name
-                else:
-                    if ':' in sys_pathname:
-                        sys_name = sys_pathname.rsplit(':', 1)[1]
-                    else:
-                        sys_name = sys_pathname
-                    parent_name = ':'.join([sys_name, our_name])
-                    pmap[parent_name] = our_name
+        #for pathname, meta in unknowns.items():
+            #if pathname.startswith(sys_pathname+':'):
+                ## unknown is in this system
+                #loc_name = pathname[len(sys_pathname)+1:]
+                #our_name = meta['relative_name']
+                #if our_name in promotes:
+                    #umap[our_name] = our_name
+                #else:
+                    #if ':' in sys_pathname:
+                        #sys_name = sys_pathname.rsplit(':', 1)[1]
+                    #else:
+                        #sys_name = sys_pathname
+                    #parent_name = ':'.join([sys_name, our_name])
+                    #umap[parent_name] = our_name
 
         self.unknowns  = parent_vm.unknowns.get_view(umap)
         self.dunknowns = parent_vm.dunknowns.get_view(umap)
