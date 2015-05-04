@@ -1,6 +1,6 @@
-""" Defines the Problem class in OpenMDAO."""
 
 from openmdao.core.component import Component
+from openmdao.core.group import _get_implicit_connections
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -13,30 +13,52 @@ class Problem(Component):
 
     def setup(self):
         # Give every system an absolute pathname
-        self.root.setup_paths(self.pathname)
+        self.root._setup_paths(self.pathname)
 
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
-        # variable relative to that system.
+        # variable relative to that system as well as size and shape if
+        # known.
+
         # Returns the parameters and unknowns dictionaries for the root.
-        params, unknowns = self.root.setup_variables()
+        params_dict, unknowns_dict = self.root._setup_variables()
 
         # Get all explicit connections (stated with absolute pathnames)
-        connections = self.root.get_connections()
+        connections = self.root._get_explicit_connections()
 
         # go through relative names of all top level params/unknowns
         # if relative name in unknowns matches relative name in params
-        # that indicates an implicit connection
-        # make those names absolute and add to connections
-        # TODO: implement that
+        # that indicates an implicit connection. All connections are returned
+        # in absolute form.
+        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
+
+        # check for conflicting explicit/implicit connections
+        for tgt, src in connections.items():
+            if tgt in implicit_conns:
+                msg = '%s is explicitly connected to %s but implicitly connected to %s' % \
+                      (tgt, connections[tgt], implicit_conns[tgt])
+                raise RuntimeError(msg)
+
+        # combine implicit and explicit connections
+        connections.update(implicit_conns)
+
+        # check for parameters that are not connected to a source/unknown
+        hanging_params = []
+        for p in params_dict:
+            if p not in connections.keys():
+                hanging_params.append(p)
+
+        if hanging_params:
+            msg = 'Parameters %s have no associated unknowns.' % hanging_params
+            raise RuntimeError(msg)
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must perform scatters to
         param_owners = assign_parameters(connections)
 
-        #
-        self.root.setup_vectors(param_owners, connections)
+        # create VarManagers and VecWrappers for all groups in the system tree.
+        self.root._setup_vectors(param_owners, connections)
 
     def run(self):
         pass

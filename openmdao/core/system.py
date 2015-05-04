@@ -8,8 +8,8 @@ class System(object):
         self.name = ''
         self.pathname = ''
 
-        self._params = OrderedDict()
-        self._unknowns = OrderedDict()
+        self._params_dict = OrderedDict()
+        self._unknowns_dict = OrderedDict()
 
         # by default, don't promote any vars up to our parent
         self.promotes = ()
@@ -21,7 +21,7 @@ class System(object):
         # TODO: handle wildcards
         return name in self.promotes
 
-    def setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
         tree.
         """
@@ -42,10 +42,8 @@ class System(object):
     def apply_nonlinear(self, params, unknowns, resids):
         pass
 
-    def solve_linear(self, rhs, params, unknowns, resids, dparams, dunknowns,
-        dresids, mode="fwd"):
+    def solve_linear(self, rhs, params, unknowns, resids, dparams, dunknowns, dresids, mode="fwd"):
         pass
 
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns,
-        dresids, mode="fwd"):
+    def apply_linear(self, params, unknowns, resids, dparams, dunknowns, dresids, mode="fwd"):
         pass

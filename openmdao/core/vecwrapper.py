@@ -47,7 +47,7 @@ class VecWrapper(object):
         return self._vardict[name]
 
     @staticmethod
-    def create_source_vector(unknowns, store_noflats=False):
+    def create_source_vector(unknowns_dict, store_noflats=False):
         """Create a vector storing a flattened array of the variables in unknowns.
         If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -56,13 +56,13 @@ class VecWrapper(object):
         self = VecWrapper()
 
         vec_size = 0
-        for name, meta in unknowns.items():
+        for name, meta in unknowns_dict.items():
             vmeta = self._add_source_var(name, meta, vec_size)
             var_size = vmeta['size']
             if var_size > 0 or store_noflats:
                 if var_size > 0:
-                    self._slices[name] = (vec_size, vec_size + var_size)
-                self._vardict[name] = vmeta
+                    self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
+                self._vardict[meta['relative_name']] = vmeta
                 vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
@@ -76,8 +76,8 @@ class VecWrapper(object):
         # so initialize all of the values from the unknowns
         # dicts.
         if store_noflats:
-            for name, meta in unknowns.items():
-                self[name] = meta['val']
+            for name, meta in unknowns_dict.items():
+                self[meta['relative_name']] = meta['val']
 
         return self
 
@@ -125,14 +125,14 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(params, srcvec, my_params, connections, store_noflats=False):
+    def create_target_vector(params_dict, srcvec, my_params, connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """
         self = VecWrapper()
 
         vec_size = 0
-        for pathname, meta in params.items():
+        for pathname, meta in params_dict.items():
             if pathname in my_params:
                 # if connected, get metadata from the source
                 src_pathname = connections.get(pathname)
@@ -143,6 +143,8 @@ class VecWrapper(object):
 
                 #TODO: check for self-containment of src and param
                 vec_size += self._add_target_var(meta, vec_size, src_meta, store_noflats)
+
+                self._vardict[meta['relative_name']]['pathname'] = pathname
 
         self.vec = numpy.zeros(vec_size)
 
