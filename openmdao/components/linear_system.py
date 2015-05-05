@@ -13,7 +13,7 @@ class LinearSystem(Component):
         self.add_state("x", val=np.zeros(size))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        
+
         unknowns['x'] = np.linalg.solve(params['A'], params['b'])
 
     def apply_nonlinear(self, params, unknowns, resids):
@@ -21,7 +21,7 @@ class LinearSystem(Component):
 
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns, dresids):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids):
 
         dresids['x'] += params['A'].dot(dunknowns['x'])
         dresids['x'] += dparams['A'].dot(unknowns['x'])

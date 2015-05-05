@@ -25,23 +25,23 @@ class TestComponentDerivatives(unittest.TestCase):
 
         dparams = {}
         dparams['x'] = np.array([3.1])
-        dunknowns = {}
-        dunknowns['y'] = np.array([0.0])
+        dresids = {}
+        dresids['y'] = np.array([0.0])
 
-        mycomp.apply_linear(empty, empty, empty, dparams, dunknowns,
-                            empty, 'fwd')
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'fwd')
 
-        self.assertEqual(dunknowns['y'], 6.2)
+        self.assertEqual(dresids['y'], 6.2)
 
         # Reverse
 
         dparams = {}
         dparams['x'] = np.array([0.0])
-        dunknowns = {}
-        dunknowns['y'] = np.array([3.1])
+        dresids = {}
+        dresids['y'] = np.array([3.1])
 
-        mycomp.apply_linear(empty, empty, empty, dparams, dunknowns,
-                            empty, 'rev')
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'rev')
 
         self.assertEqual(dparams['x'], 6.2)
 
@@ -58,25 +58,25 @@ class TestComponentDerivatives(unittest.TestCase):
 
         dparams = {}
         dparams['x'] = np.array([1.5, 3.1])
-        dunknowns = {}
-        dunknowns['y'] = np.array([0.0, 0.0])
+        dresids = {}
+        dresids['y'] = np.array([0.0, 0.0])
 
-        mycomp.apply_linear(empty, empty, empty, dparams, dunknowns,
-                            empty, 'fwd')
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'fwd')
         target = mycomp._jacobian_cache[('y', 'x')].dot(dparams['x'])
-        diff = abs(dunknowns['y'] - target).max()
+        diff = abs(dresids['y'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
         # Reverse
 
         dparams = {}
         dparams['x'] = np.array([0.0, 0.0])
-        dunknowns = {}
-        dunknowns['y'] = np.array([1.5, 3.1])
+        dresids = {}
+        dresids['y'] = np.array([1.5, 3.1])
 
-        mycomp.apply_linear(empty, empty, empty, dparams, dunknowns,
-                            empty, 'rev')
-        target = mycomp._jacobian_cache[('y', 'x')].T.dot(dunknowns['y'])
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'rev')
+        target = mycomp._jacobian_cache[('y', 'x')].T.dot(dresids['y'])
         diff = abs(dparams['x'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
@@ -105,42 +105,42 @@ class TestComponentDerivatives(unittest.TestCase):
 
         dparams = {}
         dparams['x'] = np.array([1.3])
-        dstates = {}
-        dstates['z'] = np.array([2.5])
         dunknowns = {}
-        dunknowns['y'] = np.array([0.0])
-        dunknowns['z'] = np.array([0.0])
+        dunknowns['z'] = np.array([2.5])
+        dresids = {}
+        dresids['y'] = np.array([0.0])
+        dresids['z'] = np.array([0.0])
 
-        mycomp.apply_linear(params, unknowns, resids, dparams, dunknowns,
-                            dstates, 'fwd')
+        mycomp.apply_linear(params, unknowns, dparams, dunknowns,
+                            dresids, 'fwd')
 
-        target = J[('y', 'x')]*dparams['x'] + J[('y', 'z')]*dstates['z']
-        diff = abs(dunknowns['y'] - target).max()
+        target = J[('y', 'x')]*dparams['x'] + J[('y', 'z')]*dunknowns['z']
+        diff = abs(dresids['y'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
-        target = J[('z', 'x')]*dparams['x'] + J[('z', 'z')]*dstates['z']
-        diff = abs(dunknowns['z'] - target).max()
+        target = J[('z', 'x')]*dparams['x'] + J[('z', 'z')]*dunknowns['z']
+        diff = abs(dresids['z'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
         # Reverse
 
         dparams = {}
         dparams['x'] = np.array([0.0])
-        dstates = {}
-        dstates['z'] = np.array([0.0])
         dunknowns = {}
-        dunknowns['y'] = np.array([1.5])
-        dunknowns['z'] = np.array([2.3])
+        dunknowns['z'] = np.array([0.0])
+        dresids = {}
+        dresids['y'] = np.array([1.5])
+        dresids['z'] = np.array([2.3])
 
-        mycomp.apply_linear(params, unknowns, resids, dparams, dunknowns,
-                            dstates, 'rev')
+        mycomp.apply_linear(params, unknowns, dparams, dunknowns,
+                            dresids, 'rev')
 
-        target = J[('y', 'x')]*dunknowns['y'] + J[('z', 'x')]*dunknowns['z']
+        target = J[('y', 'x')]*dresids['y'] + J[('z', 'x')]*dresids['z']
         diff = abs(dparams['x'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
-        target = J[('y', 'z')]*dunknowns['y'] + J[('z', 'z')]*dunknowns['z']
-        diff = abs(dstates['z'] - target).max()
+        target = J[('y', 'z')]*dresids['y'] + J[('z', 'z')]*dresids['z']
+        diff = abs(dunknowns['z'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
 
 if __name__ == "__main__":

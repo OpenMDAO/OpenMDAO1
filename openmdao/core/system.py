@@ -62,5 +62,5 @@ class System(object):
     def solve_linear(self, rhs, params, unknowns, resids, dparams, dunknowns, dresids, mode="fwd"):
         pass
 
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns, dresids, mode="fwd"):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):
         pass
