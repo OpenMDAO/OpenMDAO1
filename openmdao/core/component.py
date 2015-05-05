@@ -101,8 +101,7 @@ class Component(System):
         """
         return None
 
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns,
-        dstates, mode):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
@@ -113,21 +112,18 @@ class Component(System):
         unknowns: vecwrapper
             VecWrapper containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals (f)
-
         dparams: vecwrapper
             VecWrapper containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
         dunknowns: vecwrapper
-            VecWrapper containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (df)
-
-        dstates: vecwrapper
             In forward mode, this VecWrapper contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
+
+        dresids: vecwrapper
+            VecWrapper containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
 
         mode: string
             Derivative mode, can be 'fwd' or 'rev'
@@ -139,15 +135,15 @@ class Component(System):
             # States are never in dparams.
             if param in dparams:
                 arg = dparams[param]
-            elif param in dstates:
-                arg = dstates[param]
+            elif param in dunknowns:
+                arg = dunknowns[param]
             else:
                 continue
 
-            if unknown not in dunknowns:
+            if unknown not in dresids:
                 continue
 
-            result = dunknowns[unknown]
+            result = dresids[unknown]
 
             # Vectors are flipped during adjoint
             if mode == 'fwd':
@@ -166,8 +162,8 @@ class Component(System):
         # Forward Mode
         if self.mode == 'fwd':
 
-            self.apply_linear(params, unknowns, resids, dparams, dunknowns,
-                              dstates, mode)
+            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
             dunknowns.array[:] *= -1.0
 
             for var in dunknowns:
@@ -182,8 +178,8 @@ class Component(System):
             # previous component's contributions, we can multiply
             # our local 'arg' by -1, and then revert it afterwards.
             dunknowns.array[:] *= -1.0
-            self.apply_linear(params, unknowns, resids, dparams, dunknowns,
-                              dstates, mode)
+            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
             dunknowns.array[:] *= -1.0
 
             for var in dunknowns:
