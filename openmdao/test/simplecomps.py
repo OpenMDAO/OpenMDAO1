@@ -27,8 +27,8 @@ class SimpleCompDerivMatVec(SimpleComp):
     """ The simplest component you can imagine, this time with derivatives
     defined using apply_linear. """
 
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns,
-                 dresids, mode):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                     mode):
         """Returns the product of the incoming vector with the Jacobian."""
 
         if mode == 'fwd':
