@@ -17,9 +17,6 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
-        self.ln_solver = None
-        self.nl_solver = None
-
     def promoted(self, name):
         """Return True if the named variable (relative name) is being promoted
         from this System.

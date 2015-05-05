@@ -1,6 +1,8 @@
+""" OpenMDAO Problem class defintion."""
 
 from openmdao.core.component import Component
 from openmdao.core.group import _get_implicit_connections
+
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO

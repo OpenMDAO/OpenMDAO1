@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, VarViewManager
+from openmdao.solvers.nl_gauss_seidel import NL_Gauss_Seidel
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 class Group(System):
     """A system that contains other systems"""
@@ -14,6 +16,10 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
+
+        # These solvers are the default
+        self.ln_solver = ScipyGMRES(self)
+        self.nl_solver = NL_Gauss_Seidel(self)
 
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None

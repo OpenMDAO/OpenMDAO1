@@ -7,7 +7,7 @@ class LinearSolver(object):
 
     def __init__(self, system):
         self.system = system
-        self.options = system.ln_options
+        #self.options = system.ln_options
         self.iter_count = 0
 
     def solve(self, rhs):
@@ -25,9 +25,9 @@ class NonLinearSolver(object):
     """ Base class for all nonlinear solvers. Inherit from this class to create a
     new custom nonlinear solver."""
 
-    def __init__(self):
+    def __init__(self, system):
         self.system = None
-        self.options = system.nl_options
+        #self.options = system.nl_options
         self.iter_count = 0
 
     def solve(self):
