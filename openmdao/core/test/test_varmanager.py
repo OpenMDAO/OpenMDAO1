@@ -28,10 +28,10 @@ class TestVarManager(unittest.TestCase):
         prob = Problem(root)
         prob.setup()
 
-        root.varmanager.unknowns['G2:G1:C2:y'] = 99.
+        root._varmanager.unknowns['G2:G1:C2:y'] = 99.
 
-        root.varmanager._scatter('G3')
-        self.assertEqual(root.varmanager.params['G3:C3:x'], 99.)
+        root._varmanager._scatter('G3')
+        self.assertEqual(root._varmanager.params['G3:C3:x'], 99.)
 
 
 if __name__ == "__main__":
