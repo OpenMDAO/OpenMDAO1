@@ -46,10 +46,10 @@ class Group(System):
                 yield name, subsystem
 
     def _setup_variables(self):
-        """Return params and unknowns for all subsystems and stores them
-        as attributes of the group
+        """Return parameters and unknowns for all subsystems and stores them
+        as attributes of the group. The relative name of subsystem variables
+        with respect to this group system is added to the metadata.
         """
-
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
@@ -81,10 +81,10 @@ class Group(System):
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self.varmanager = VarManager(self._params_dict, self._unknowns_dict,
+            self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
-            self.varmanager = VarViewManager(parent_vm,
+            self._varmanager = VarViewManager(parent_vm,
                                              self.pathname,
                                              self._params_dict,
                                              self._unknowns_dict,
@@ -92,7 +92,7 @@ class Group(System):
                                              connections)
 
         for name, sub in self.subgroups():
-            sub._setup_vectors(param_owners, connections, parent_vm=self.varmanager)
+            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each System in the
@@ -115,6 +115,7 @@ class Group(System):
             connections[tgt_pathname] = src_pathname
 
         return connections
+
 
 def _get_implicit_connections(params, unknowns):
     """Finds all matches between relative names of params and
@@ -147,6 +148,7 @@ def _get_implicit_connections(params, unknowns):
             connections[p] = uabs[0]
 
     return connections
+
 
 def get_absvarpathname(var_name, var_dict):
     """Returns the absolute pathname for the given relative variable
