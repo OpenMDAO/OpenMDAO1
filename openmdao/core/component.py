@@ -16,7 +16,7 @@ class Component(System):
         super(Component, self).__init__()
         self._post_setup = False
 
-        self.J = None
+        self._jacobian_cache = {}
 
     def add_param(self, name, val, **kwargs):
         self._check_name(name)
@@ -86,12 +86,12 @@ class Component(System):
         unknowns: vecwrapper
             VecWrapper containing outputs and states (u)
         """
-        self.J = self.jacobian(params, unknowns)
+        self._jacobian_cache = self.jacobian(params, unknowns)
 
     def jacobian(self, params, unknowns):
-        """ Returns Jacobian. Returns None unless component overides.
-        J should be a dictionary whose keys are tuples of the form
-        ('unknown', 'param') and whose values are ndarrays.
+        """ Returns Jacobian. Returns None unless component overides and
+        returns something. J should be a dictionary whose keys are tuples of
+        the form ('unknown', 'param') and whose values are ndarrays.
 
         params: vecwrapper
             VecWrapper containing parameters (p)
@@ -105,7 +105,7 @@ class Component(System):
         dstates, mode):
         """Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
-        method, then we just multiply by self.J.
+        method, then we just multiply by self._jacobian_cache.
 
         params: vecwrapper
             VecWrapper containing parameters (p)
@@ -133,7 +133,7 @@ class Component(System):
             Derivative mode, can be 'fwd' or 'rev'
         """
 
-        for key, J in iteritems(self.J):
+        for key, J in iteritems(self._jacobian_cache):
             unknown, param = key
 
             # States are never in dparams.
@@ -151,6 +151,40 @@ class Component(System):
 
             # Vectors are flipped during adjoint
             if mode == 'fwd':
-                result[:] = J.dot(arg.flatten()).reshape(result.shape)
+                result[:] += J.dot(arg.flatten()).reshape(result.shape)
             else:
-                arg[:] = J.T.dot(result.flatten()).reshape(arg.shape)
+                arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
+
+    def applyJ(self, params, unknowns, resids, dparams, dunknowns, dstates,
+               mode):
+        """ This method wraps apply_linear and adds the additional 1.0 on the
+        diagonal for explicit outputs.
+
+        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
+        """
+
+        # Forward Mode
+        if self.mode == 'fwd':
+
+            self.apply_linear(params, unknowns, resids, dparams, dunknowns,
+                              dstates, mode)
+            dunknowns.array[:] *= -1.0
+
+            for var in dunknowns:
+                dunknowns[var][:] += dparams[var][:]
+
+        # Adjoint Mode
+        elif self.mode == 'adjoint':
+
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'du' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # our local 'arg' by -1, and then revert it afterwards.
+            dunknowns.array[:] *= -1.0
+            self.apply_linear(params, unknowns, resids, dparams, dunknowns,
+                              dstates, mode)
+            dunknowns.array[:] *= -1.0
+
+            for var in dunknowns:
+                dparams[var][:] += dunknowns[var][:]
