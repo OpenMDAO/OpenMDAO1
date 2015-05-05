@@ -164,7 +164,7 @@ class Component(System):
 
             self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                               mode)
-            dunknowns.array[:] *= -1.0
+            dunknowns.vec[:] *= -1.0
 
             for var in dunknowns:
                 dunknowns[var][:] += dparams[var][:]
@@ -177,10 +177,10 @@ class Component(System):
             # the 'du' vector at this point without stomping on the
             # previous component's contributions, we can multiply
             # our local 'arg' by -1, and then revert it afterwards.
-            dunknowns.array[:] *= -1.0
+            dunknowns.vec[:] *= -1.0
             self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                               mode)
-            dunknowns.array[:] *= -1.0
+            dunknowns.vec[:] *= -1.0
 
             for var in dunknowns:
                 dparams[var][:] += dunknowns[var][:]
