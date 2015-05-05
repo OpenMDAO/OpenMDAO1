@@ -19,18 +19,12 @@ class Group(System):
         self.sol_vec = None
         self.rhs_vec = None
 
-    def __contains__(self, name):
-        """Return True if a system of the given name exists as a direct child of
-        this system.
-        """
-        return name in self._subsystems
-
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
         that it promotes to the parent level.
         """
         if promotes is not None:
-            system.promotes = promotes
+            system._promotes = promotes
         self._subsystems[name] = system
         system.name = name
         return system
@@ -60,17 +54,17 @@ class Group(System):
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
+                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
                 self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
                 meta = meta.copy()
-                meta['relative_name'] = self.var_pathname(meta['relative_name'], sub)
+                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
                 self._unknowns_dict[u] = meta
 
         return self._params_dict, self._unknowns_dict
 
-    def var_pathname(self, name, subsystem):
+    def _var_pathname(self, name, subsystem):
         """Return the name of the given variable, based on its
         promotion status.
         """

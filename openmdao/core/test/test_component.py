@@ -1,6 +1,7 @@
 """ Test for the Component class"""
 
 import unittest
+from six import text_type
 
 import numpy as np
 
@@ -10,6 +11,52 @@ class TestComponent(unittest.TestCase):
 
     def setUp(self):
         self.comp = Component()
+
+    def test_promotes(self):
+        self.comp.add_param("xxyyzz", 0.0)
+        self.comp.add_param("foobar", 0.0)
+        self.comp.add_output("a.bcd.efg", -1)
+        self.comp.add_output("x_y_z", np.zeros(10))
+
+        self.comp._promotes = ('*',)
+        for name in self.comp._params_dict:
+            self.assertTrue(self.comp.promoted(name))
+        for name in self.comp._unknowns_dict:
+            self.assertTrue(self.comp.promoted(name))
+
+        self.assertFalse(self.comp.promoted('blah'))
+
+        self.comp._promotes = ('x*',)
+        for name in self.comp._params_dict:
+            if name.startswith('x'):
+                self.assertTrue(self.comp.promoted(name))
+            else:
+                self.assertFalse(self.comp.promoted(name))
+        for name in self.comp._unknowns_dict:
+            if name.startswith('x'):
+                self.assertTrue(self.comp.promoted(name))
+            else:
+                self.assertFalse(self.comp.promoted(name))
+
+        self.comp._promotes = ('*.efg',)
+        for name in self.comp._params_dict:
+            if name.endswith('.efg'):
+                self.assertTrue(self.comp.promoted(name))
+            else:
+                self.assertFalse(self.comp.promoted(name))
+        for name in self.comp._unknowns_dict:
+            if name.endswith('.efg'):
+                self.assertTrue(self.comp.promoted(name))
+            else:
+                self.assertFalse(self.comp.promoted(name))
+
+        # catch bad type on _promotes
+        try:
+            self.comp._promotes = ('*')
+            self.comp.promoted('xxyyzz')
+        except Exception as err:
+            self.assertEqual(text_type(err),
+                             " promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
 
     def test_add_params(self):
         self.comp.add_param("x", 0.0)

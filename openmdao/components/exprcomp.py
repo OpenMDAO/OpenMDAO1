@@ -6,5 +6,5 @@ class ExprComp(Component):
         super(ExprComp, self).__init__()
 
         # by default, promote all vars to parent
-        self.promotes = ('*',)
-        
+        self._promotes = ('*',)
+
