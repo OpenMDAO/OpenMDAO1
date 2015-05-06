@@ -23,7 +23,7 @@ class Driver(object):
             System that our parent Problem owns.
         """
 
-        varmanager = system.varmanager
+        varmanager = system._varmanager
         params = varmanager.params
         unknowns = varmanager.unknowns
         resids = varmanager.resids

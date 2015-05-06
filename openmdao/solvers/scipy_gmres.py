@@ -58,7 +58,7 @@ class ScipyGMRES(LinearSolver):
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
-        system.varmanager.dparams[:] = 0.0
+        system._varmanager.dparams[:] = 0.0
 
         # TODO: Rename this?
         system.applyJ()

@@ -118,7 +118,21 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root.vecwrapper.unknowns['mycomp.y']
+        result = root._varmanager.unknowns['mycomp:y']
+        self.assertAlmostEqual(14.0, result, 3)
+
+    def test_simplest_run_w_promote(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        # ? Didn't we say that ParamComp by default promoted its variable?
+        root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
+        root.add('mycomp', SimpleComp(), promotes=['x'])
+
+        prob.setup()
+        prob.run()
+        result = root._varmanager.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     #def test_basic_run(self):
