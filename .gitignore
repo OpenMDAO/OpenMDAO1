@@ -60,3 +60,6 @@ target/
 
 # Wing IDE project
 wingproj.wpr
+
+# Testflo output
+test_report.out

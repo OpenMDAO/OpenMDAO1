@@ -3,7 +3,7 @@
 from openmdao.solvers.solverbase import NonLinearSolver
 
 
-class NL_Gauss_Seidel(NonLinearSolver):
+class NLGaussSeidel(NonLinearSolver):
     """ Nonlinear Gauss Seidel solver. This is the default solver for an
     OpenMDAO group. If there are no cycles, then the system will solve its
     subsystems once and terminate. Equivalent to fixed point iteration in
@@ -25,9 +25,24 @@ class NL_Gauss_Seidel(NonLinearSolver):
         system: system
             Parent system object.
         """
-
-        # TODO - Gauss Seidel stuff
+        self.iter_count = 0
+        #atol = self.options['atol']
+        #rtol = self.options['rtol']
+        #maxiter = self.options['maxiter']
 
         system.children_solve_nonlinear()
 
-        # TODO - Iterate
+        # TODO - turn into Gauss Seidel as follows
+
+        varmanager = system._varmanager
+        resids = varmanager.resids
+        #normval = resids.norm()
+
+        # while self.iter_count < maxiter and normval > self.atol
+
+            #"""Runs an iteration."""
+            #self.iter_count += 1
+            #self.children_solve_nonlinear()
+
+            #normval = resids.norm()
+
