@@ -132,41 +132,41 @@ class TestGroup(unittest.TestCase):
         expected_G1_params   = []
         expected_G1_unknowns = ['C2:y']
 
-        self.assertEqual(list(root.varmanager.params.keys()),    expected_root_params)
-        self.assertEqual(list(root.varmanager.dparams.keys()),   expected_root_params)
-        self.assertEqual(list(root.varmanager.unknowns.keys()),  expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.dunknowns.keys()), expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.resids.keys()),    expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.dresids.keys()),   expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.params.keys()),    expected_root_params)
+        self.assertEqual(list(root._varmanager.dparams.keys()),   expected_root_params)
+        self.assertEqual(list(root._varmanager.unknowns.keys()),  expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.dunknowns.keys()), expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.resids.keys()),    expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.dresids.keys()),   expected_root_unknowns)
 
-        self.assertEqual(list(G3.varmanager.params.keys()),    expected_G3_params)
-        self.assertEqual(list(G3.varmanager.dparams.keys()),   expected_G3_params)
-        self.assertEqual(list(G3.varmanager.unknowns.keys()),  expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.dunknowns.keys()), expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.resids.keys()),    expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.dresids.keys()),   expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.params.keys()),    expected_G3_params)
+        self.assertEqual(list(G3._varmanager.dparams.keys()),   expected_G3_params)
+        self.assertEqual(list(G3._varmanager.unknowns.keys()),  expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.dunknowns.keys()), expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.resids.keys()),    expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.dresids.keys()),   expected_G3_unknowns)
 
-        self.assertEqual(list(G2.varmanager.params.keys()),    expected_G2_params)
-        self.assertEqual(list(G2.varmanager.dparams.keys()),   expected_G2_params)
-        self.assertEqual(list(G2.varmanager.unknowns.keys()),  expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.dunknowns.keys()), expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.resids.keys()),    expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.dresids.keys()),   expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.params.keys()),    expected_G2_params)
+        self.assertEqual(list(G2._varmanager.dparams.keys()),   expected_G2_params)
+        self.assertEqual(list(G2._varmanager.unknowns.keys()),  expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.dunknowns.keys()), expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.resids.keys()),    expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.dresids.keys()),   expected_G2_unknowns)
 
-        self.assertEqual(list(G1.varmanager.params.keys()),    expected_G1_params)
-        self.assertEqual(list(G1.varmanager.dparams.keys()),   expected_G1_params)
-        self.assertEqual(list(G1.varmanager.unknowns.keys()),  expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.dunknowns.keys()), expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.resids.keys()),    expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.dresids.keys()),   expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.params.keys()),    expected_G1_params)
+        self.assertEqual(list(G1._varmanager.dparams.keys()),   expected_G1_params)
+        self.assertEqual(list(G1._varmanager.unknowns.keys()),  expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.dunknowns.keys()), expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.resids.keys()),    expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.dresids.keys()),   expected_G1_unknowns)
 
         # verify subsystem is using shared view of parent unknowns vector
-        root.varmanager.unknowns['G2:C1:y1'] = 99.
-        self.assertEqual(G2.varmanager.unknowns['C1:y1'], 99.)
+        root._varmanager.unknowns['G2:C1:y1'] = 99.
+        self.assertEqual(G2._varmanager.unknowns['C1:y1'], 99.)
 
         # verify subsystem is getting correct metadata from parent unknowns vector
-        self.assertEqual(root.varmanager.unknowns.metadata('G2:C1:y1'),
-                         G2.varmanager.unknowns.metadata('C1:y1'))
+        self.assertEqual(root._varmanager.unknowns.metadata('G2:C1:y1'),
+                         G2._varmanager.unknowns.metadata('C1:y1'))
 
     def test_promotes(self):
         root = Group()
@@ -258,41 +258,41 @@ class TestGroup(unittest.TestCase):
         expected_G1_params   = []
         expected_G1_unknowns = ['C2:y']
 
-        self.assertEqual(list(root.varmanager.params.keys()),    expected_root_params)
-        self.assertEqual(list(root.varmanager.dparams.keys()),   expected_root_params)
-        self.assertEqual(list(root.varmanager.unknowns.keys()),  expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.dunknowns.keys()), expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.resids.keys()),    expected_root_unknowns)
-        self.assertEqual(list(root.varmanager.dresids.keys()),   expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.params.keys()),    expected_root_params)
+        self.assertEqual(list(root._varmanager.dparams.keys()),   expected_root_params)
+        self.assertEqual(list(root._varmanager.unknowns.keys()),  expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.dunknowns.keys()), expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.resids.keys()),    expected_root_unknowns)
+        self.assertEqual(list(root._varmanager.dresids.keys()),   expected_root_unknowns)
 
-        self.assertEqual(list(G3.varmanager.params.keys()),    expected_G3_params)
-        self.assertEqual(list(G3.varmanager.dparams.keys()),   expected_G3_params)
-        self.assertEqual(list(G3.varmanager.unknowns.keys()),  expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.dunknowns.keys()), expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.resids.keys()),    expected_G3_unknowns)
-        self.assertEqual(list(G3.varmanager.dresids.keys()),   expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.params.keys()),    expected_G3_params)
+        self.assertEqual(list(G3._varmanager.dparams.keys()),   expected_G3_params)
+        self.assertEqual(list(G3._varmanager.unknowns.keys()),  expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.dunknowns.keys()), expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.resids.keys()),    expected_G3_unknowns)
+        self.assertEqual(list(G3._varmanager.dresids.keys()),   expected_G3_unknowns)
 
-        self.assertEqual(list(G2.varmanager.params.keys()),    expected_G2_params)
-        self.assertEqual(list(G2.varmanager.dparams.keys()),   expected_G2_params)
-        self.assertEqual(list(G2.varmanager.unknowns.keys()),  expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.dunknowns.keys()), expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.resids.keys()),    expected_G2_unknowns)
-        self.assertEqual(list(G2.varmanager.dresids.keys()),   expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.params.keys()),    expected_G2_params)
+        self.assertEqual(list(G2._varmanager.dparams.keys()),   expected_G2_params)
+        self.assertEqual(list(G2._varmanager.unknowns.keys()),  expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.dunknowns.keys()), expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.resids.keys()),    expected_G2_unknowns)
+        self.assertEqual(list(G2._varmanager.dresids.keys()),   expected_G2_unknowns)
 
-        self.assertEqual(list(G1.varmanager.params.keys()),    expected_G1_params)
-        self.assertEqual(list(G1.varmanager.dparams.keys()),   expected_G1_params)
-        self.assertEqual(list(G1.varmanager.unknowns.keys()),  expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.dunknowns.keys()), expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.resids.keys()),    expected_G1_unknowns)
-        self.assertEqual(list(G1.varmanager.dresids.keys()),   expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.params.keys()),    expected_G1_params)
+        self.assertEqual(list(G1._varmanager.dparams.keys()),   expected_G1_params)
+        self.assertEqual(list(G1._varmanager.unknowns.keys()),  expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.dunknowns.keys()), expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.resids.keys()),    expected_G1_unknowns)
+        self.assertEqual(list(G1._varmanager.dresids.keys()),   expected_G1_unknowns)
 
         # verify subsystem is using shared view of parent unknowns vector
-        root.varmanager.unknowns['G2:x'] = 99.
-        self.assertEqual(G2.varmanager.unknowns['x'], 99.)
+        root._varmanager.unknowns['G2:x'] = 99.
+        self.assertEqual(G2._varmanager.unknowns['x'], 99.)
 
         # verify subsystem is getting correct metadata from parent unknowns vector
-        self.assertEqual(root.varmanager.unknowns.metadata('G2:x'),
-                         G2.varmanager.unknowns.metadata('x'))
+        self.assertEqual(root._varmanager.unknowns.metadata('G2:x'),
+                         G2._varmanager.unknowns.metadata('x'))
 
     def test_setup(self):
         self.fail("Test not yet implemented")

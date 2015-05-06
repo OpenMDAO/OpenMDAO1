@@ -3,7 +3,11 @@
 from collections import OrderedDict
 
 from openmdao.core.system import System
-from openmdao.core.varmanager import VarManager, VarViewManager
+from openmdao.core.component import Component
+from openmdao.core.varmanager import VarManager, VarViewManager, create_views, \
+                                      ViewTuple, get_relname_map
+from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 class Group(System):
     """A system that contains other systems"""
@@ -15,6 +19,10 @@ class Group(System):
         self._local_subsystems = OrderedDict()
         self._src = {}
 
+        # These solvers are the default
+        self.ln_solver = ScipyGMRES()
+        self.nl_solver = NLGaussSeidel()
+
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
         self.rhs_vec = None
@@ -22,34 +30,81 @@ class Group(System):
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
         that it promotes to the parent level.
+
+        Parameters
+        ----------
+        name : str
+            the name by which the subsystem is to be known
+
+        system : `System`
+            the subsystem to be added
+
+        promotes : tuple, optional
+            the names of variables in the subsystem which are to be promoted
         """
         if promotes is not None:
             system._promotes = promotes
+
         self._subsystems[name] = system
         system.name = name
         return system
 
-    def connect(self, src, target):
+    def connect(self, source, target):
         """Connect the given source variable to the given target
         variable.
-        """
-        self._src[target] = src
 
-    def subsystems(self):
-        """ Returns an iterator over subsystems. """
+        Parameters
+        ----------
+        source : source
+            the name of the source variable
+
+        target : str
+            the name of the target variable
+        """
+        self._src[target] = source
+
+    def subsystems(self, local=False):
+        """ Returns an iterator over subsystems.
+
+        local: bool
+            Set to True to return only systems that are local.
+        """
+        if local == True:
+            return self._local_subsystems.items()
         return self._subsystems.items()
 
     def subgroups(self):
-        """ Returns an iterator over subgroups. """
+        """ Returns
+            -------
+            iterator
+                iterator over subgroups.
+        """
         for name, subsystem in self._subsystems.items():
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
-    def _setup_variables(self):
-        """Return params and unknowns for all subsystems and stores them
-        as attributes of the group
-        """
+    def components(self):
+        """ Returns
+                -------
+                iterator
+                    iterator over sub-`Component`s.
+            """
+        for name, comp in self._subsystems.items():
+            if isinstance(comp, Component):
+                yield name, comp
 
+    def _setup_variables(self):
+        """Create dictionaries of metadata for parameters and for unknowns for
+           this `Group` and stores them as attributes of the `Group'. The
+           relative name of subsystem variables with respect to this `Group`
+           system is included in the metadata.
+
+           Returns
+           -------
+           tuple
+               a dictionary of metadata for parameters and for unknowns
+               for all subsystems
+        """
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
@@ -65,8 +120,10 @@ class Group(System):
         return self._params_dict, self._unknowns_dict
 
     def _var_pathname(self, name, subsystem):
-        """Return the name of the given variable, based on its
-        promotion status.
+        """Returns
+           -------
+           str
+               the pathname of the given variable, based on its promotion status.
         """
         if subsystem.promoted(name):
             return name
@@ -76,34 +133,72 @@ class Group(System):
             return name
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None):
-        """Create a VarManager for this Group and all below it in the System
-        tree, along with their internal VecWrappers.
+        """Create a `VarManager` for this `Group` and all below it in the
+        `System` tree.
+
+        Parameters
+        ----------
+        param_owners : dict
+            a dictionary mapping `System` pathnames to the pathnames of parameters
+            they are reponsible for propagating
+
+        connections : dict
+            a dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to
+
+        parent_vm : `VarManager`, optional
+            the `VarManager` for the parent `Group`, if any, into which this
+            `VarManager` will provide a view.
+
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self.varmanager = VarManager(self._params_dict, self._unknowns_dict,
+            self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
-            self.varmanager = VarViewManager(parent_vm,
+            self._varmanager = VarViewManager(parent_vm,
                                              self.pathname,
                                              self._params_dict,
                                              self._unknowns_dict,
                                              my_params,
                                              connections)
 
+        self._views = {}
         for name, sub in self.subgroups():
-            sub._setup_vectors(param_owners, connections, parent_vm=self.varmanager)
+            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
+            vm = sub._varmanager
+            self._views[name] = ViewTuple(vm.unknowns, vm.dunknowns,
+                                          vm.resids, vm.dresids,
+                                          vm.params, vm.dparams)
+
+        for name, sub in self.components():
+            u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
+                                               sub._params_dict, sub._unknowns_dict, [], {})
+            relmap = get_relname_map(self._varmanager.params,
+                                     sub._params_dict, name)
+            self._views[name] = ViewTuple(u, du, r, dr,
+                                          self._varmanager.params.get_view(relmap),
+                                          self._varmanager.dparams.get_view(relmap))
 
     def _setup_paths(self, parent_path):
-        """Set the absolute pathname of each System in the
-        tree.
+        """Set the absolute pathname of each `System` in the tree.
+
+        Parameter
+        ---------
+        parent_path : str
+            the pathname of the parent `System`, which is to be prepended to the
+            name of this child `System` and all subsystems.
         """
         super(Group, self)._setup_paths(parent_path)
         for name, sub in self.subsystems():
             sub._setup_paths(self.pathname)
 
     def _get_explicit_connections(self):
-        """ Get all explicit connections stated with absolute pathnames
+        """ Returns
+            -------
+            dict
+                explicit connections in this `Group`, represented as a mapping
+                from the pathname of the target to the pathname of the source
         """
         connections = {}
         for _, sub in self.subgroups():
@@ -116,22 +211,74 @@ class Group(System):
 
         return connections
 
-def _get_implicit_connections(params, unknowns):
-    """Finds all matches between relative names of params and
+    def solve_nonlinear(self, params, unknowns, resids):
+        """Solves the group using the slotted nl_solver.
+
+        params: vecwrapper
+            VecWrapper containing parameters (p)
+
+        unknowns: vecwrapper
+            VecWrapper containing outputs and states (u)
+
+        resids: vecwrapper
+            VecWrapper containing residuals. (r)
+        """
+        self.nl_solver.solve(params, unknowns, resids, self)
+
+    def children_solve_nonlinear(self):
+        """Loops over our children systems and asks them to solve."""
+
+        varmanager = self._varmanager
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            # Local scatter
+            varmanager._transfer_data(name)
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.solve_nonlinear(params, unknowns, resids)
+
+def _get_implicit_connections(params_dict, unknowns_dict):
+    """Finds all matches between relative names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
     connections are expressed using absolute pathnames.
 
     This should only be called using params and unknowns from the
     top level Group in the system tree.
+
+    Parameters
+    ----------
+    params_dict : dict
+        dictionary of metadata for all parameters in this `Group`
+
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns in this `Group`
+
+    Returns
+    -------
+    dict
+        implicit connections in this `Group`, represented as a mapping
+        from the pathname of the target to the pathname of the source
+
+    Raises
+    ------
+    RuntimeError
+        if a a promoted variable name matches multiple unknowns
     """
 
     # collect all absolute names that map to each relative name
     abs_unknowns = {}
-    for abs_name, u in unknowns.items():
+    for abs_name, u in unknowns_dict.items():
         abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
 
     abs_params = {}
-    for abs_name, p in params.items():
+    for abs_name, p in params_dict.items():
         abs_params.setdefault(p['relative_name'], []).append(abs_name)
 
     # check if any relative names correspond to mutiple unknowns
@@ -148,9 +295,20 @@ def _get_implicit_connections(params, unknowns):
 
     return connections
 
+
 def get_absvarpathname(var_name, var_dict):
-    """Returns the absolute pathname for the given relative variable
-    name in the variable dictionary
+    """
+       Parameters
+       ----------
+       var_dict : dict
+           dictionary of variable metadata, keyed on the relative
+           variable's name relative to a `System`
+
+       Returns
+       -------
+       str
+           the absolute pathname for the given relative variable
+           name in the variable dictionary
     """
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:

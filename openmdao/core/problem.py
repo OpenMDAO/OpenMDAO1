@@ -1,6 +1,9 @@
+""" OpenMDAO Problem class defintion."""
 
 from openmdao.core.component import Component
+from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
+
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -9,7 +12,10 @@ class Problem(Component):
     def __init__(self, root=None, driver=None):
         super(Problem, self).__init__()
         self.root = root
-        self.driver = driver
+        if driver is None:
+            self.driver = Driver()
+        else:
+            self.driver = driver
 
     def setup(self):
         # Give every system an absolute pathname
@@ -54,14 +60,15 @@ class Problem(Component):
             raise RuntimeError(msg)
 
         # Given connection information, create mapping from system pathname
-        # to the parameters that system must perform scatters to
+        # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections)
 
     def run(self):
-        pass
+        """ Runs the Driver in self.driver. """
+        self.driver.run(self.root)
 
     def calc_gradient(self, params, unknowns, mode='auto',
                       return_format='array'):
