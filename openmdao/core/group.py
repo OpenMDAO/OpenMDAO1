@@ -154,6 +154,11 @@ class Group(System):
         for name, sub in self.subgroups():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
 
+        for name, sub in self.components():
+            # ...
+            _views[name] = \
+                create_views(parent_vm, self.pathname, params_dict, unknowns_dict, my_params, connections)
+
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
         
@@ -210,10 +215,13 @@ class Group(System):
             # Local scatter
             varmanager._transfer_data(name)
 
+            # at setup_vectors time.. create view for each comp
+            view = view[comp.name] 
+            
             # TODO: We need subviews of the vecwrappers
-            params = varmanager.params
-            unknowns = varmanager.unknowns
-            resids = varmanager.resids
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
 
             system.solve_nonlinear(params, unknowns, resids)
 

@@ -93,27 +93,33 @@ class VarViewManager(VarManagerBase):
     def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(VarViewManager, self).__init__(connections)
 
-        # parent_vm.unknowns is keyed on name relative to the parent system/varmanager
-        # unknowns_dict is keyed on absolute pathname
-        umap = {}
-        for rel, meta in parent_vm.unknowns.items():
-            abspath = meta['pathname']
-            if abspath.startswith(sys_pathname+':'):
-                newmeta = unknowns_dict.get(abspath)
-                if newmeta is not None:
-                    newrel = newmeta['relative_name']
-                else:
-                    newrel = rel
-                umap[rel] = newrel
-
-        self.unknowns  = parent_vm.unknowns.get_view(umap)
-        self.dunknowns = parent_vm.dunknowns.get_view(umap)
-        self.resids    = parent_vm.resids.get_view(umap)
-        self.dresids   = parent_vm.dresids.get_view(umap)
-        self.params    = VecWrapper.create_target_vector(params_dict, self.unknowns,
-                                                         my_params, connections, store_noflats=True)
-        self.dparams   = VecWrapper.create_target_vector(params_dict, self.unknowns,
-                                                         my_params, connections)
+        self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
+            create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
 
         self._setup_data_transfer(my_params)
 
+
+def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
+    # parent_vm.unknowns is keyed on name relative to the parent system/varmanager
+    # unknowns_dict is keyed on absolute pathname
+    umap = {}
+    for rel, meta in parent_vm.unknowns.items():
+        abspath = meta['pathname']
+        if abspath.startswith(sys_pathname+':'):
+            newmeta = unknowns_dict.get(abspath)
+            if newmeta is not None:
+                newrel = newmeta['relative_name']
+            else:
+                newrel = rel
+            umap[rel] = newrel
+
+    unknowns  = parent_vm.unknowns.get_view(umap)
+    dunknowns = parent_vm.dunknowns.get_view(umap)
+    resids    = parent_vm.resids.get_view(umap)
+    dresids   = parent_vm.dresids.get_view(umap)
+    params    = VecWrapper.create_target_vector(params_dict, unknowns,
+                                                     my_params, connections, store_noflats=True)
+    dparams   = VecWrapper.create_target_vector(params_dict, unknowns,
+                                                     my_params, connections)    
+    
+    return (())
