@@ -119,7 +119,7 @@ class TestProblem(unittest.TestCase):
         prob.setup()
         prob.run()
         result = root.vecwrapper.unknowns['mycomp.y']
-        self.assertAlmostEqual(28.0, result, 3)
+        self.assertAlmostEqual(14.0, result, 3)
 
     #def test_basic_run(self):
         #prob = Problem(root=Group())
