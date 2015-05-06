@@ -4,8 +4,9 @@ from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, VarViewManager, create_views, ViewTuple, get_relname_map
-from openmdao.solvers.nl_gauss_seidel import NL_Gauss_Seidel
+from openmdao.core.varmanager import VarManager, VarViewManager, create_views, \
+                                      ViewTuple, get_relname_map
+from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 class Group(System):
@@ -20,7 +21,7 @@ class Group(System):
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
-        self.nl_solver = NL_Gauss_Seidel()
+        self.nl_solver = NLGaussSeidel()
 
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
@@ -237,7 +238,6 @@ class Group(System):
 
             view = self._views[system.name]
 
-            # TODO: We need subviews of the vecwrappers
             params = view.params
             unknowns = view.unknowns
             resids = view.resids
