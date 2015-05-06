@@ -18,8 +18,8 @@ class Group(System):
         self._src = {}
 
         # These solvers are the default
-        self.ln_solver = ScipyGMRES(self)
-        self.nl_solver = NL_Gauss_Seidel(self)
+        self.ln_solver = ScipyGMRES()
+        self.nl_solver = NL_Gauss_Seidel()
 
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
@@ -41,8 +41,14 @@ class Group(System):
         """
         self._src[target] = src
 
-    def subsystems(self):
-        """ Returns an iterator over subsystems. """
+    def subsystems(self, local=False):
+        """ Returns an iterator over subsystems.
+
+        local: bool
+            Set to True to return only systems that are local.
+        """
+        if local == True:
+            return self._local_subsystems.items()
         return self._subsystems.items()
 
     def subgroups(self):
@@ -121,6 +127,38 @@ class Group(System):
             connections[tgt_pathname] = src_pathname
 
         return connections
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """Solves the group using the slotted nl_solver.
+
+        params: vecwrapper
+            VecWrapper containing parameters (p)
+
+        unknowns: vecwrapper
+            VecWrapper containing outputs and states (u)
+
+        resids: vecwrapper
+            VecWrapper containing residuals. (r)
+        """
+        self.nl_solver.solve(params, unknowns, resids, self)
+
+    def children_solve_nonlinear(self):
+        """Loops over our children systems and asks them to solve."""
+
+        varmanager = self.varmanager
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for system in self.subsystems():
+
+            # Local scatter
+            varmanager._scatter('u', 'p', system.name)
+
+            # TODO: We need subviews of the vecwrappers
+            params = varmanager.params
+            unknowns = varmanager.unknowns
+            resids = varmanager.resids
+
+            system.solve_nonlinear(params, unknowns, resids)
 
 def _get_implicit_connections(params, unknowns):
     """Finds all matches between relative names of params and

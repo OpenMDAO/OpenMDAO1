@@ -10,7 +10,7 @@ class NL_Gauss_Seidel(NonLinearSolver):
     cases with cycles.
     """
 
-    def solve(self, params, unknowns, resids):
+    def solve(self, params, unknowns, resids, system):
         """ Solves the system using Gauss Seidel.
 
         params: vecwrapper
@@ -22,4 +22,9 @@ class NL_Gauss_Seidel(NonLinearSolver):
         resids: vecwrapper
             VecWrapper containing residuals. (r)
         """
-        pass
+
+        # TODO - Gauss Seidel stuff
+
+        system.children_solve_nonlinear()
+
+        # TODO - Iterate

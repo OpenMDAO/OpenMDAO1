@@ -19,7 +19,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = group
-        top.root.lin_solver = ScipyGMRES(top.root)
+        top.root.lin_solver = ScipyGMRES()
         top.run()
 
         J = top.calc_gradient(['x'], ['y'], mode='fwd')
