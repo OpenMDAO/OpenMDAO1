@@ -1,6 +1,7 @@
 
 import numpy
 from openmdao.core.vecwrapper import VecWrapper, get_relative_varname
+from openmdao.core.dataxfer import DataXfer
 
 class VarManagerBase(object):
     """A manager of the data transfer of a possibly distributed
@@ -37,13 +38,13 @@ class VarManagerBase(object):
                 dest_comp = param.split(':',1)[0]
                 src_idx_list, dest_idx_list, noflat_conns = xfer_dict.setdefault(dest_comp, ([],[],[]))
                 urelname = get_relative_varname(unknown, self.unknowns)
+                prelname = get_relative_varname(param, self.params)
                 noflat = self.unknowns.metadata(urelname).get('noflat')
                 if noflat:
-                    noflat_conns.append(param, unknown)
+                    noflat_conns.append(prelname, urelname)
                 else:
-                    src_idx_list.append(self.unknowns.get_indices(urelname))
-                    dest_idx_list.append(self.params.get_indices(get_relative_varname(param,
-                                                    self.params)))
+                    src_idx_list.append(self.unknowns.get_idxs(urelname))
+                    dest_idx_list.append(self.params.get_idxs(prelname))
 
         for tgt_comp, (srcs, tgts, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
@@ -52,14 +53,26 @@ class VarManagerBase(object):
         #TODO: create a jacobi DataXfer object (if necessary) that combines all of the
         #      individual subsystem src_idxs, tgt_idxs, and noflat_conns
 
-    def _transfer_data(self, target_system):
-        # simple non-MPI version:
-        # propagate unknown values to the connected parameters
-        for p, pmeta in self.params.items():
-            if pmeta['pathname'].startswith(target_system+':'):
-                psource = self.connections[p]
-                unknown_name = get_relative_varname(psource, self.unknowns)
-                self.params[p] = self.unknowns[unknown_name]
+    def _transfer_data(self, target_system, mode='fwd', deriv=False):
+        """Transfer data to/from target_system depending on mode.
+
+        Parameters
+        ----------
+        target_system : str
+            Name of the target `System`.
+
+        mode : { 'fwd', 'rev' }, optional
+            Specifies forward or reverse data transfer.
+
+        deriv : bool, optional
+            If True, perform a data transfer between derivative `VecWrapper`s
+        """
+        x = self.data_xfer.get(target_system)
+        if x is not None:
+            if deriv:
+                x.transfer(self.dunknowns, self.dparams, mode)
+            else:
+                x.transfer(self.unknowns, self.params, mode)
 
 
 class VarManager(VarManagerBase):

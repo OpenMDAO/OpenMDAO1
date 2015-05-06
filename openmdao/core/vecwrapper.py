@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import numpy
 
-from openmdao.util.types import is_differentiable
+from openmdao.util.types import is_differentiable, int_types
 
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
@@ -50,6 +50,22 @@ class VecWrapper(object):
     def metadata(self, name):
         return self._vardict[name]
 
+    def get_idxs(self, name):
+        """
+        Returns
+        -------
+        ndarray
+            Index array containing all indices (possibly distributed) for the named variable.
+        """
+        # TODO: add support for returning slice objects
+
+        meta = self._vardict[name]
+        if meta.get('noflat'):
+            raise RuntimeError("No indices can be provided for %s" % name)
+
+        start, end = self._slices[name]
+        return self.make_idx_array(start, end)
+
     @staticmethod
     def create_source_vector(unknowns_dict, store_noflats=False):
         """Create a vector storing a flattened array of the variables in unknowns.
@@ -90,7 +106,7 @@ class VecWrapper(object):
         then allocate a range in the vector array to store it. Store the
         shape of the variable so it can be un-flattened later."""
 
-        vmeta = {}
+        vmeta = meta.copy()
         vmeta['state'] = state
         vmeta['pathname'] = name
 
@@ -101,6 +117,7 @@ class VecWrapper(object):
                 val = meta['val']
                 if not is_differentiable(val):
                     var_size = 0
+                    vmeta['noflat'] = True
                 else:
                     if val.shape != shape:
                         raise ValueError("specified shape != val shape")
@@ -121,6 +138,7 @@ class VecWrapper(object):
                     var_size = 1
             else:
                 var_size = 0
+                vmeta['noflat'] = True
         else:
             raise ValueError("No value or shape given for '%s'" % name)
 
@@ -164,7 +182,7 @@ class VecWrapper(object):
         and store the shape of the variable so it can be un-flattened later."""
 
         name = meta['relative_name']
-        vmeta = self._vardict[name] = {}
+        vmeta = self._vardict[name] = meta.copy()
 
         var_size = src_meta['size']
 
@@ -174,8 +192,9 @@ class VecWrapper(object):
 
         if var_size > 0:
             self._slices[name] = (index, index + var_size)
-        elif store_noflats:
+        elif src_meta.get('noflat') and store_noflats:
             vmeta['val'] = src_meta['val']
+            vmeta['noflat'] = True
 
         return var_size
 
