@@ -14,12 +14,13 @@ class TestScipyGMRES(unittest.TestCase):
     def test_simple(self):
 
         group = Group()
-        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
 
         top = Problem()
         top.root = group
-        top.root.lin_solver = ScipyGMRES(top.root)
+        top.root.lin_solver = ScipyGMRES()
+        top.setup()
         top.run()
 
         J = top.calc_gradient(['x'], ['y'], mode='fwd')

@@ -106,6 +106,21 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_simplest_run(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', ParamComp('x', 7.0))
+        root.add('mycomp', SimpleComp())
+
+        root.connect('x_param:x', 'mycomp:x')
+
+        prob.setup()
+        prob.run()
+        result = root.vecwrapper.unknowns['mycomp.y']
+        self.assertAlmostEqual(28.0, result, 3)
+
     #def test_basic_run(self):
         #prob = Problem(root=Group())
         #root = prob.root
