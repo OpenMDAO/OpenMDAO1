@@ -19,8 +19,9 @@ class VarManagerBase(object):
 
     def _setup_data_transfer(self, my_params):
         # collect all flattenable var sizes from self.unknowns
-        flats = [m['size'] for m in self.unknowns._vardict.values()
+        flats = [m['size'] for m in self.unknowns.values()
                      if not m.get('noflat')]
+        
         # create a 1x<num_flat_vars> numpy array with the sizes of each var
         self._local_sizes = numpy.array([[flats]])
 
@@ -39,7 +40,7 @@ class VarManagerBase(object):
                 src_idx_list, dest_idx_list, noflat_conns = xfer_dict.setdefault(dest_comp, ([],[],[]))
                 urelname = get_relative_varname(unknown, self.unknowns)
                 prelname = get_relative_varname(param, self.params)
-                noflat = self.unknowns.metadata(urelname).get('noflat')
+                noflat = self.unknowns.metadata(urelname)[0].get('noflat')
                 if noflat:
                     noflat_conns.append(prelname, urelname)
                 else:
