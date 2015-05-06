@@ -18,7 +18,7 @@ class VecWrapper(object):
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named var"""
-        meta = self._vardict[name]
+        meta = self._vardict[name][0]
         shape = meta.get('shape')
         if shape is None:
             return meta['val']
@@ -27,7 +27,7 @@ class VecWrapper(object):
 
     def __setitem__(self, name, value):
         """Set the value of the named var"""
-        meta = self._vardict[name]
+        meta = self._vardict[name][0]
         if meta['size'] > 0:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
@@ -45,7 +45,14 @@ class VecWrapper(object):
         return self._vardict.keys()
 
     def items(self):
-        return self._vardict.items()
+        """ iterate over the first metadata for each variable """
+        for name, metadata_entry in self._vardict.items():
+            yield name, metadata_entry[0]
+
+    def values(self):
+        """ iterate over the first metadata for each variable """
+        for  metadata_entry in self._vardict.values():
+            yield metadata_entry[0]
 
     def metadata(self, name):
         return self._vardict[name]
@@ -59,7 +66,7 @@ class VecWrapper(object):
         """
         # TODO: add support for returning slice objects
 
-        meta = self._vardict[name]
+        meta = self._vardict[name][0]
         if meta.get('noflat'):
             raise RuntimeError("No indices can be provided for %s" % name)
 
@@ -82,19 +89,24 @@ class VecWrapper(object):
             if var_size > 0 or store_noflats:
                 if var_size > 0:
                     self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
-                self._vardict[meta['relative_name']] = vmeta
+                # for a target (unknown) vector, there may be multiple 
+                # variables with relative name
+                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
                 vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
 
-        for name, meta in self._vardict.items():
+        # get the metadata from the first set of metadata in the list
+        # (there will actually be only one for source variables)
+
+        # map slices to the array
+        for name, meta in get_first_list_iter(self._vardict):
             if meta['size'] > 0:
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
 
         # if store_noflats is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the unknowns
-        # dicts.
+        # so initialize all of the values from the unknowns dicts.
         if store_noflats:
             for name, meta in unknowns_dict.items():
                 self[meta['relative_name']] = meta['val']
@@ -152,7 +164,7 @@ class VecWrapper(object):
         Variable shape and value are retrieved from srcvec
         """
         self = VecWrapper()
-
+      
         vec_size = 0
         for pathname, meta in params_dict.items():
             if pathname in my_params:
@@ -160,17 +172,24 @@ class VecWrapper(object):
                 src_pathname = connections.get(pathname)
                 if src_pathname is None:
                     raise RuntimeError("Parameter %s is not connected" % pathname)
-                relative_name = get_relative_varname(src_pathname, srcvec)
-                src_meta = srcvec.metadata(relative_name)
+                src_rel_name = get_relative_varname(src_pathname, srcvec)
+                src_meta = srcvec.metadata(src_rel_name)
 
-                #TODO: check for self-containment of src and param
-                vec_size += self._add_target_var(meta, vec_size, src_meta, store_noflats)
+                #TODO: check for self-containment of src and param                
+                vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
+                vmeta['pathname'] = pathname
+                
+                vec_size += vmeta['size']
 
-                self._vardict[meta['relative_name']]['pathname'] = pathname
+                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
 
         self.vec = numpy.zeros(vec_size)
 
-        for name, meta in self._vardict.items():
+        # get the size/val metadata from the first set of metadata in the list
+        # (there may be metadata for multiple source variables for a target)
+
+        # map slices to the array
+        for name, meta in get_first_list_iter(self._vardict):
             if meta['size'] > 0:
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
@@ -181,8 +200,7 @@ class VecWrapper(object):
         """Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later."""
 
-        name = meta['relative_name']
-        vmeta = self._vardict[name] = meta.copy()
+        vmeta = meta.copy()
 
         var_size = src_meta['size']
 
@@ -191,19 +209,19 @@ class VecWrapper(object):
             vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
-            self._slices[name] = (index, index + var_size)
+            self._slices[meta['relative_name']] = (index, index + var_size)
         elif src_meta.get('noflat') and store_noflats:
             vmeta['val'] = src_meta['val']
             vmeta['noflat'] = True
 
-        return var_size
+        return vmeta
 
     def get_view(self, varmap):
         view = VecWrapper()
         view_size = 0
 
         start = -1
-        for name, meta in self._vardict.items():
+        for name, meta in self.items():
             if name in varmap:
                 view._vardict[varmap[name]] = self._vardict[name]
                 if meta['size'] > 0:
@@ -266,10 +284,35 @@ def idx_merge(idxs):
                 return numpy.concatenate(idxs)
     return idxs
 
-def get_relative_varname(pathname, var_dict):
+def get_relative_varname(pathname, vec):
     """Returns the absolute pathname for the given relative variable
     name in the variable dictionary"""
-    for rel_name, meta in var_dict.items():
-        if meta['pathname'] == pathname:
-            return rel_name
+    for rel_name, meta_list in vec._vardict.items():
+        for meta in meta_list:
+            if meta['pathname'] == pathname:
+                return rel_name
     raise RuntimeError("Relative name not found for %s" % pathname)
+
+def get_first_list_iter(dict_of_lists):
+    """ get an iterator that returns tuples of key, value where
+        key is a key in dict_of_lists and val is the first entry in
+        the list value for that key in the dict.
+        
+        Parameters
+        ----------
+        dict_of_lists : dict
+            a dictionary mapping a key to a list
+            
+        Yields
+        ------
+        key : str
+            key from dict_of_lists
+            
+        entry : 
+            first entry from the list associated with key
+    """
+    for name, list_entry in dict_of_lists.items():
+        assert isinstance(list_entry, list)        
+        yield name, list_entry[0]
+        
+        
