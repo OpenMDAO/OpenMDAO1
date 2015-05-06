@@ -25,6 +25,13 @@ class Group(System):
         """
         if promotes is not None:
             system._promotes = promotes
+
+        # temporarily pull promoted var metadata into this system in order
+        # to allow connection on-the-fly connection checking.
+        pdict, udict = system.get_promoted()
+        self._params_dict.update(pdict)
+        self._unknowns_dict.update(udict)
+
         self._subsystems[name] = system
         system.name = name
         return system
