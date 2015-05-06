@@ -148,10 +148,10 @@ class Group(System):
         varmanager = self.varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
-        for system in self.subsystems():
+        for name, system in self.subsystems():
 
             # Local scatter
-            varmanager._scatter('u', 'p', system.name)
+            varmanager._scatter(name)
 
             # TODO: We need subviews of the vecwrappers
             params = varmanager.params

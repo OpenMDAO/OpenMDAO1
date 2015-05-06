@@ -21,6 +21,9 @@ class NL_Gauss_Seidel(NonLinearSolver):
 
         resids: vecwrapper
             VecWrapper containing residuals. (r)
+
+        system: system
+            Parent system object.
         """
 
         # TODO - Gauss Seidel stuff
