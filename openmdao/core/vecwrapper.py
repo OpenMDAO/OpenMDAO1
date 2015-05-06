@@ -7,6 +7,10 @@ class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
     collection of variables.
     """
+
+    # other impls (petsc, etc) will define this differently
+    idx_arr_type = 'i'
+
     def __init__(self):
         self.vec = None
         self._vardict = OrderedDict()
@@ -199,6 +203,49 @@ class VecWrapper(object):
         view.vec = self.vec[start:end]
 
         return view
+
+    def make_idx_array(self, start, end):
+        """ Return an index vector of the right int type for
+        parallel or serial computation.
+        """
+        return numpy.arange(start, end, dtype=self.idx_arr_type)
+
+    def merge_idxs(self, src_idxs, dest_idxs):
+        """Return source and destination index arrays, built up from
+        smaller index arrays and combined in order of ascending source
+        index (to allow us to convert src indices to a slice in some cases).
+        """
+        assert(len(src_idxs) == len(dest_idxs))
+
+        # filter out any zero length idx array entries
+        src_idxs = [i for i in src_idxs if len(i)]
+        dest_idxs = [i for i in dest_idxs if len(i)]
+
+        if len(src_idxs) == 0:
+            return make_idx_array(0, 0), make_idx_array(0,0)
+
+        src_tups = list(enumerate(src_idxs))
+
+        src_sorted = sorted(src_tups, key=lambda x: x[1].min())
+
+        new_src = [idxs for i, idxs in src_sorted]
+        new_dest = [dest_idxs[i] for i,_ in src_sorted]
+
+        return idx_merge(new_src), idx_merge(new_dest)
+
+def idx_merge(idxs):
+    """Combines a mixed iterator of int and iterator indices into an
+    array of int indices.
+    """
+    if len(idxs) > 0:
+        idxs = [i for i in idxs if isinstance(i, int_types) or
+                len(i)>0]
+        if len(idxs) > 0:
+            if isinstance(idxs[0], int_types):
+                return idxs
+            else:
+                return numpy.concatenate(idxs)
+    return idxs
 
 def get_relative_varname(pathname, var_dict):
     """Returns the absolute pathname for the given relative variable

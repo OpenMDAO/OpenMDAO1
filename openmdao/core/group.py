@@ -25,6 +25,7 @@ class Group(System):
         """
         if promotes is not None:
             system._promotes = promotes
+
         self._subsystems[name] = system
         system.name = name
         return system

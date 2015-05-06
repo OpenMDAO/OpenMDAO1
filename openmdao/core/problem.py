@@ -54,7 +54,7 @@ class Problem(Component):
             raise RuntimeError(msg)
 
         # Given connection information, create mapping from system pathname
-        # to the parameters that system must perform scatters to
+        # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
