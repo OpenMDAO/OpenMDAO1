@@ -1,6 +1,7 @@
 
 from openmdao.core.component import Component
 from openmdao.core.group import _get_implicit_connections
+from openmdao.core.checks.connections import check_connections
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -42,7 +43,9 @@ class Problem(Component):
 
         # combine implicit and explicit connections
         connections.update(implicit_conns)
-
+        
+        check_connections(connections, params_dict, unknowns_dict)
+        
         # check for parameters that are not connected to a source/unknown
         hanging_params = []
         for p in params_dict:
