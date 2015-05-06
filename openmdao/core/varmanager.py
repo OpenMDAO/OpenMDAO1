@@ -1,7 +1,10 @@
 
+from collections import namedtuple
 import numpy
 from openmdao.core.vecwrapper import VecWrapper, get_relative_varname
 from openmdao.core.dataxfer import DataXfer
+
+ViewTuple = namedtuple('ViewTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
 class VarManagerBase(object):
     """A manager of the data transfer of a possibly distributed
@@ -21,7 +24,7 @@ class VarManagerBase(object):
         # collect all flattenable var sizes from self.unknowns
         flats = [m['size'] for m in self.unknowns.values()
                      if not m.get('noflat')]
-        
+
         # create a 1x<num_flat_vars> numpy array with the sizes of each var
         self._local_sizes = numpy.array([[flats]])
 
@@ -102,16 +105,7 @@ class VarViewManager(VarManagerBase):
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
     # parent_vm.unknowns is keyed on name relative to the parent system/varmanager
     # unknowns_dict is keyed on absolute pathname
-    umap = {}
-    for rel, meta in parent_vm.unknowns.items():
-        abspath = meta['pathname']
-        if abspath.startswith(sys_pathname+':'):
-            newmeta = unknowns_dict.get(abspath)
-            if newmeta is not None:
-                newrel = newmeta['relative_name']
-            else:
-                newrel = rel
-            umap[rel] = newrel
+    umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
 
     unknowns  = parent_vm.unknowns.get_view(umap)
     dunknowns = parent_vm.dunknowns.get_view(umap)
@@ -120,6 +114,37 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     params    = VecWrapper.create_target_vector(params_dict, unknowns,
                                                      my_params, connections, store_noflats=True)
     dparams   = VecWrapper.create_target_vector(params_dict, unknowns,
-                                                     my_params, connections)    
-    
-    return (())
+                                                     my_params, connections)
+
+    return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)
+
+
+def get_relname_map(unknowns, unknowns_dict, child_name):
+    """
+    Parameters
+    ----------
+    unknowns : `VecWrapper`
+        A dict-like object containing variables keyed using relative names.
+
+    unknowns_dict : `OrderedDict`
+        An ordered mapping of absolute variable name to its metadata.
+
+    Returns
+    -------
+    dict
+        Maps relative name in parent (owner of unknowns and unknowns_dict) to
+        the corresponding relative name in the child, where relative name may
+        include the 'promoted' name of a variable.
+    """
+    umap = {}
+    for rel, meta in unknowns.items():
+        abspath = meta['pathname']
+        if abspath.startswith(child_name+':'):
+            newmeta = unknowns_dict.get(abspath)
+            if newmeta is not None:
+                newrel = newmeta['relative_name']
+            else:
+                newrel = rel
+            umap[rel] = newrel
+
+    return umap
