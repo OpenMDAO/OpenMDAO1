@@ -13,7 +13,7 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
-    def solve(self, rhs):
+    def solve(self, rhs, system):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
@@ -27,6 +27,7 @@ class ScipyGMRES(LinearSolver):
                            dtype=float)
 
         # TODO: Options dictionary?
+        self.system = system
         options = self.options
 
         # Call GMRES to solve the linear system
@@ -44,6 +45,7 @@ class ScipyGMRES(LinearSolver):
             #logger.error(msg, system.name)
 
         #print system.name, 'Linear solution vec', d_unknowns
+        self.system = None
         return d_unknowns
 
     def mult(self, arg):
@@ -56,7 +58,7 @@ class ScipyGMRES(LinearSolver):
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
-        system.varmanager.dparams[:] = 0.0
+        system._varmanager.dparams[:] = 0.0
 
         # TODO: Rename this?
         system.applyJ()

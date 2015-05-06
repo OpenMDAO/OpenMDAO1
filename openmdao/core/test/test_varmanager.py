@@ -9,7 +9,7 @@ from openmdao.test.simplecomps import SimpleComp
 
 class TestVarManager(unittest.TestCase):
 
-    def test_scatter(self):
+    def test_data_xfer(self):
         root = Group()
 
         G2 = root.add('G2', Group())
@@ -28,10 +28,10 @@ class TestVarManager(unittest.TestCase):
         prob = Problem(root)
         prob.setup()
 
-        root.varmanager.unknowns['G2:G1:C2:y'] = 99.
+        root._varmanager.unknowns['G2:G1:C2:y'] = 99.
 
-        root.varmanager._scatter('G3')
-        self.assertEqual(root.varmanager.params['G3:C3:x'], 99.)
+        root._varmanager._transfer_data('G3')
+        self.assertEqual(root._varmanager.params['G3:C3:x'], 99.)
 
 
 if __name__ == "__main__":

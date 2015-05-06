@@ -106,6 +106,35 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_simplest_run(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', ParamComp('x', 7.0))
+        root.add('mycomp', SimpleComp())
+
+        root.connect('x_param:x', 'mycomp:x')
+
+        prob.setup()
+        prob.run()
+        result = root._varmanager.unknowns['mycomp:y']
+        self.assertAlmostEqual(14.0, result, 3)
+
+    def test_simplest_run_w_promote(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        # ? Didn't we say that ParamComp by default promoted its variable?
+        root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
+        root.add('mycomp', SimpleComp(), promotes=['x'])
+
+        prob.setup()
+        prob.run()
+        result = root._varmanager.unknowns['mycomp:y']
+        self.assertAlmostEqual(14.0, result, 3)
+
     #def test_basic_run(self):
         #prob = Problem(root=Group())
         #root = prob.root

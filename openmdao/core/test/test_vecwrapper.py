@@ -7,19 +7,19 @@ from openmdao.core.vecwrapper import VecWrapper
 class TestVecWrapper(unittest.TestCase):
 
     def test_vecwrapper(self):
-        unknowns = OrderedDict()
+        unknowns_dict = OrderedDict()
 
-        unknowns['y1'] = { 'val': np.ones((3, 2)) }
-        unknowns['y2'] = { 'val': 2.0 }
-        unknowns['y3'] = { 'val': "foo" }
-        unknowns['y4'] = { 'shape': (2, 1), }
-        unknowns['s1'] = { 'val': -1.0, 'state': True, }
+        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['y2'] = { 'val': 2.0 }
+        unknowns_dict['y3'] = { 'val': "foo" }
+        unknowns_dict['y4'] = { 'shape': (2, 1), }
+        unknowns_dict['s1'] = { 'val': -1.0, 'state': True, }
 
-        for u, meta in unknowns.items():
+        for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns, store_noflats=True)
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
