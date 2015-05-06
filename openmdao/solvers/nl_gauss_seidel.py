@@ -26,25 +26,23 @@ class NLGaussSeidel(NonLinearSolver):
             Parent system object.
         """
         self.iter_count = 0
+        #atol = self.options['atol']
+        #rtol = self.options['rtol']
+        #maxiter = self.options['maxiter']
 
         system.children_solve_nonlinear()
 
         # TODO - turn into Gauss Seidel as follows
 
-        #self.children_solve_nonlinear()
-        #self.normval = get_norm(self.workflow._system.vec['f'],
-                                #self._norm_order)
-        #self.norm0 = self.normval if self.normval != 0.0 else 1.0
+        varmanager = system._varmanager
+        resids = varmanager.resids
+        #normval = resids.norm()
 
-        # while self.iter_count < self.maxiter and \
-               #self.normval > self.tolerance
+        # while self.iter_count < maxiter and normval > self.atol
 
             #"""Runs an iteration."""
             #self.iter_count += 1
-            #uvec = system.vec['u']
-            #fvec = system.vec['f']
             #self.children_solve_nonlinear()
 
-            #self.normval = get_norm(self.workflow._system.vec['f'],
-                                    #self._norm_order)
+            #normval = resids.norm()
 
