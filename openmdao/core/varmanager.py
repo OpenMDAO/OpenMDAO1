@@ -128,7 +128,7 @@ class VarManager(VarManagerBase):
 
         self._setup_data_transfer(my_params)
 
-class VarViewManager(VarManagerBase):
+class ViewVarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
     
@@ -152,7 +152,7 @@ class VarViewManager(VarManagerBase):
         pathname of the source variable that it is connected to            
     """
     def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
-        super(VarViewManager, self).__init__(connections)
+        super(ViewVarManager, self).__init__(connections)
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
             create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
@@ -161,8 +161,39 @@ class VarViewManager(VarManagerBase):
 
 
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
-    # parent_vm.unknowns is keyed on name relative to the parent system/varmanager
-    # unknowns_dict is keyed on absolute pathname
+    """A manager of the data transfer of a possibly distributed collection of
+    variables.  The variables are based on views into an existing VarManager.
+    
+    Parameters
+    ----------
+    parent_vm : `VarManager`
+        the `VarManager` which provides the `VecWrapper`s on which to create views
+        
+    sys_pathname : str
+        pathname of the system for which the views are being created
+    
+    params_dict : dict
+        dictionary of metadata for all parameters
+        
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns
+    
+    my_params : list
+        list of pathnames for parameters that this `VarManager` is
+        responsible for propagating
+        
+    connections : dict
+        a dictionary mapping the pathname of a target variable to the 
+        pathname of the source variable that it is connected to            
+        
+    Returns
+    -------
+    `ViewTuple`
+        a namedtuple of six (6) `VecWrapper`s: 
+        unknowns, dunknowns, resids, dresids, params, dparams
+    """
+    
+    # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
 
     unknowns  = parent_vm.unknowns.get_view(umap)
@@ -187,6 +218,9 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
     unknowns_dict : `OrderedDict`
         An ordered mapping of absolute variable name to its metadata.
 
+    child_name : str
+        The pathname of the child for which to get relative name
+    
     Returns
     -------
     dict
@@ -194,6 +228,8 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         the corresponding relative name in the child, where relative name may
         include the 'promoted' name of a variable.
     """
+    # unknowns is keyed on name relative to the parent system/varmanager
+    # unknowns_dict is keyed on absolute pathname
     umap = {}
     for rel, meta in unknowns.items():
         abspath = meta['pathname']

@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, VarViewManager, create_views, \
+from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
                                       ViewTuple, get_relname_map
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -156,7 +156,7 @@ class Group(System):
             self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
-            self._varmanager = VarViewManager(parent_vm,
+            self._varmanager = ViewVarManager(parent_vm,
                                              self.pathname,
                                              self._params_dict,
                                              self._unknowns_dict,
