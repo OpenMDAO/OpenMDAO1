@@ -133,6 +133,9 @@ class SimpleImplicitComp(Component):
         z = unknowns['z']
         resids['z'] = x*z + z - 4.0
 
+        # Output equations need to evaluate a residual just like an explicit comp.
+        resids['y'] = x + 2.0*z - unknowns['y']
+
     def jacobian(self, params, unknowns):
         """Analytical derivatives"""
 
