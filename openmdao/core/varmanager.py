@@ -4,20 +4,37 @@ from openmdao.core.vecwrapper import VecWrapper, get_relative_varname
 from openmdao.core.dataxfer import DataXfer
 
 class VarManagerBase(object):
-    """A manager of the data transfer of a possibly distributed
+    """Base class for a manager of the data transfer of a possibly distributed
     collection of variables.
+    
+    Parameters
+    ----------
+        connections : dict
+            a dictionary mapping the pathname of a target variable to the 
+            pathname of the source variable that it is connected to            
     """
     def __init__(self, connections):
-        self.params = None
-        self.dparams = None
-        self.unknowns = None
-        self.dunknowns = None
-        self.resids = None
-        self.dresids = None
         self.connections = connections
+        self.params    = None
+        self.dparams   = None
+        self.unknowns  = None
+        self.dunknowns = None
+        self.resids    = None
+        self.dresids   = None
         self.data_xfer = {}
 
     def _setup_data_transfer(self, my_params):
+        """Create `DataXfer` objects to handle data transfer for all of the
+           connections that involve paramaters for which this `VarManager` 
+           is responsible.
+           
+           Parameters
+           ----------
+           my_params : list
+               list of pathnames for parameters that the VarManager is
+               responsible for propagating
+        """
+        
         # collect all flattenable var sizes from self.unknowns
         flats = [m['size'] for m in self.unknowns.values()
                      if not m.get('noflat')]
@@ -29,7 +46,7 @@ class VarManagerBase(object):
         # processes would know the sizes of all variables (needed to determine distributed
         # indices)
 
-        #TODO: invesigate providing enough system info here to detrmine what types of scatters
+        #TODO: invesigate providing enough system info here to determine what types of scatters
         # are necessary (for example, full scatter isn't needed except when solving using jacobi,
         # so why allocate space for the index arrays?)
 
@@ -77,6 +94,25 @@ class VarManagerBase(object):
 
 
 class VarManager(VarManagerBase):
+    """A manager of the data transfer of a possibly distributed
+    collection of variables.
+    
+    Parameters
+    ----------
+    params_dict : dict
+        dictionary of metadata for all parameters
+        
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns
+    
+    my_params : list
+        list of pathnames for parameters that this `VarManager` is
+        responsible for propagating
+        
+    connections : dict
+        a dictionary mapping the pathname of a target variable to the 
+        pathname of the source variable that it is connected to            
+    """
     def __init__(self, params_dict, unknowns_dict, my_params, connections):
         super(VarManager, self).__init__(connections)
 
@@ -90,6 +126,28 @@ class VarManager(VarManagerBase):
         self._setup_data_transfer(my_params)
 
 class VarViewManager(VarManagerBase):
+    """A manager of the data transfer of a possibly distributed collection of
+    variables.  The variables are based on views into an existing VarManager.
+    
+    Parameters
+    ----------
+    parent_vm : `VarManager`
+        the `VarManager` which provides the `VecWrapper`s on which to create views
+        
+    params_dict : dict
+        dictionary of metadata for all parameters
+        
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns
+    
+    my_params : list
+        list of pathnames for parameters that this `VarManager` is
+        responsible for propagating
+        
+    connections : dict
+        a dictionary mapping the pathname of a target variable to the 
+        pathname of the source variable that it is connected to            
+    """
     def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(VarViewManager, self).__init__(connections)
 
