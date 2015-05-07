@@ -30,6 +30,10 @@ class TestVecWrapper(unittest.TestCase):
         self.assertTrue(np.all(u['y4']==np.zeros((2,1))))
         self.assertEqual(u['s1'], -1.0)
 
+        self.assertEqual(u.get_states(), ['s1'])
+        self.assertEqual(u.get_vecvars(), ['y1','y2','y4','s1'])
+        self.assertEqual(u.get_noflats(), ['y3'])
+
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
         u['y3'] = 'bar'
@@ -80,9 +84,42 @@ class TestVecWrapper(unittest.TestCase):
         self.assertTrue(np.all(p['y1']==np.ones((3,2))*9.))
 
     def test_view(self):
-        # TODO: test VecWrapper.get_view()
-        self.fail("Test not yet implemented")
+        unknowns_dict = OrderedDict()
 
+        unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['C1:y2'] = { 'val': 2.0 }
+        unknowns_dict['C1:y3'] = { 'val': "foo" }
+        unknowns_dict['C2:y4'] = { 'shape': (2, 1), }
+        unknowns_dict['C2:s1'] = { 'val': -1.0, 'state': True, }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+
+        varmap = {
+            'C1:y1':'y1',
+            'C1:y2':'y2',
+            'C1:y3':'y3',
+        }
+
+        uview = u.get_view(varmap)
+
+        self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
+
+        uview['y2'] = 77.
+        uview['y3'] = 'bar'
+
+        self.assertEqual(uview['y2'], 77.)
+        self.assertEqual(u['C1:y2'], 77.)
+
+        self.assertEqual(uview['y3'], 'bar')
+        self.assertEqual(u['C1:y3'], 'bar')
+
+        # now get a view that's empty
+        uview2 = u.get_view({})
+        self.assertEqual(list(uview2.keys()), [])
 
 if __name__ == "__main__":
     unittest.main()

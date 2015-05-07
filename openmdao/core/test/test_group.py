@@ -294,11 +294,6 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(root._varmanager.unknowns.metadata('G2:x'),
                          G2._varmanager.unknowns.metadata('x'))
 
-    def test_setup(self):
-        self.fail("Test not yet implemented")
-
-    def test_solve(self):
-        self.fail("Test not yet implemented")
 
 if __name__ == "__main__":
     unittest.main()

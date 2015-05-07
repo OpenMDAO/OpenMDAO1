@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, VarViewManager, create_views, \
+from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
                                       ViewTuple, get_relname_map
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -156,7 +156,7 @@ class Group(System):
             self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
-            self._varmanager = VarViewManager(parent_vm,
+            self._varmanager = ViewVarManager(parent_vm,
                                              self.pathname,
                                              self._params_dict,
                                              self._unknowns_dict,
@@ -252,7 +252,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     connections are expressed using absolute pathnames.
 
     This should only be called using params and unknowns from the
-    top level Group in the system tree.
+    top level `Group` in the system tree.
 
     Parameters
     ----------
@@ -302,15 +302,17 @@ def get_absvarpathname(var_name, var_dict):
     """
        Parameters
        ----------
+       var_name : str
+           name of a variable relative to a `System`
+           
        var_dict : dict
-           dictionary of variable metadata, keyed on the relative
-           variable's name relative to a `System`
+           dictionary of variable metadata, keyed on relative name
 
        Returns
        -------
        str
-           the absolute pathname for the given relative variable
-           name in the variable dictionary
+           the absolute pathname for the given variable in the
+           variable dictionary
     """
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
