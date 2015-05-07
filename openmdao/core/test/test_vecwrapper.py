@@ -30,6 +30,10 @@ class TestVecWrapper(unittest.TestCase):
         self.assertTrue(np.all(u['y4']==np.zeros((2,1))))
         self.assertEqual(u['s1'], -1.0)
 
+        self.assertEqual(u.get_states(), ['s1'])
+        self.assertEqual(u.get_vecvars(), ['y1','y2','y4','s1'])
+        self.assertEqual(u.get_noflats(), ['y3'])
+
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
         u['y3'] = 'bar'

@@ -113,13 +113,12 @@ class VecWrapper(object):
 
         return self
 
-    def _add_source_var(self, name, meta, index, state=False):
+    def _add_source_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
         then allocate a range in the vector array to store it. Store the
         shape of the variable so it can be un-flattened later."""
 
         vmeta = meta.copy()
-        vmeta['state'] = state
         vmeta['pathname'] = name
 
         if 'shape' in meta:
@@ -316,8 +315,6 @@ class VecWrapper(object):
             A list of names of 'unflattenable' variables.
         """
         return [n for n,meta in self.items() if meta.get('noflat')]
-
-
 
 
 
