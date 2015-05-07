@@ -172,7 +172,7 @@ class VecWrapper(object):
                 src_pathname = connections.get(pathname)
                 if src_pathname is None:
                     raise RuntimeError("Parameter %s is not connected" % pathname)
-                src_rel_name = get_relative_varname(src_pathname, srcvec)
+                src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
                 #TODO: check for self-containment of src and param
@@ -273,6 +273,54 @@ class VecWrapper(object):
 
         return idx_merge(new_src), idx_merge(new_dest)
 
+    def get_relative_varname(self, abs_name):
+        """Returns the relative pathname for the given absolute variable
+        pathname in the variable dictionary
+
+        Parameters
+        ----------
+        abs_name : str
+            Absolute pathname of a variable
+
+        Returns
+        -------
+        rel_name : str
+            Relative name mapped to the given absolute pathname
+        """
+        for rel_name, meta_list in self._vardict.items():
+            for meta in meta_list:
+                if meta['pathname'] == abs_name:
+                    return rel_name
+        raise RuntimeError("Relative name not found for %s" % abs_name)
+
+    def get_states(self):
+        """
+        Returns
+        -------
+            A list of names of state variables.
+        """
+        return [n for n,meta in self.items() if meta.get('state')]
+
+    def get_vecvars(self):
+        """
+        Returns
+        -------
+            A list of names of 'flattenable' variables.
+        """
+        return [n for n,meta in self.items() if not meta.get('noflat')]
+
+    def get_noflats(self):
+        """
+        Returns
+        -------
+            A list of names of 'unflattenable' variables.
+        """
+        return [n for n,meta in self.items() if meta.get('noflat')]
+
+
+
+
+
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
@@ -287,11 +335,3 @@ def idx_merge(idxs):
                 return numpy.concatenate(idxs)
     return idxs
 
-def get_relative_varname(pathname, vec):
-    """Returns the absolute pathname for the given relative variable
-    name in the variable dictionary"""
-    for rel_name, meta_list in vec._vardict.items():
-        for meta in meta_list:
-            if meta['pathname'] == pathname:
-                return rel_name
-    raise RuntimeError("Relative name not found for %s" % pathname)
