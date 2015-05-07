@@ -13,17 +13,19 @@ class NLGaussSeidel(NonLinearSolver):
     def solve(self, params, unknowns, resids, system):
         """ Solves the system using Gauss Seidel.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params: `VecWrapper`
+            `VecWrapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns: `VecWrapper`
+            `VecWrapper` containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals. (r)
+        resids: `VecWrapper`
+            `VecWrapper` containing residuals. (r)
 
-        system: system
-            Parent system object.
+        system: `System`
+            Parent `System` object.
         """
         self.iter_count = 0
         #atol = self.options['atol']

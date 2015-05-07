@@ -80,11 +80,13 @@ class Component(System):
         derivatives. Preconditioners will also be pre-calculated here if
         needed.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
         """
         self._jacobian_cache = self.jacobian(params, unknowns)
 
@@ -93,11 +95,19 @@ class Component(System):
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays
         """
         return None
 
@@ -106,26 +116,28 @@ class Component(System):
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
 
-        dparams: vecwrapper
-            VecWrapper containing either the incoming vector in forward mode
+        dparams : `VecwWapper`
+            `VecwWapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns: vecwrapper
-            In forward mode, this VecWrapper contains the incoming vector for
+        dunknowns : `VecwWapper`
+            In forward mode, this `VecwWapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids: vecwrapper
-            VecWrapper containing either the outgoing result in forward mode
+        dresids : `VecwWapper`
+            `VecwWapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
-        mode: string
+        mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
 
