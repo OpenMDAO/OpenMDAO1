@@ -118,28 +118,44 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root.vecwrapper.unknowns['mycomp.y']
-        self.assertAlmostEqual(28.0, result, 3)
+        result = root._varmanager.unknowns['mycomp:y']
+        self.assertAlmostEqual(14.0, result, 3)
 
-    #def test_basic_run(self):
-        #prob = Problem(root=Group())
-        #root = prob.root
+    def test_simplest_run_w_promote(self):
 
-        #G2 = root.add('G2', Group())
-        #G2.add('C1', ParamComp('y1', 5.))
+        prob = Problem(root=Group())
+        root = prob.root
 
-        #G1 = G2.add('G1', Group())
-        #G1.add('C2', SimpleComp())
+        # ? Didn't we say that ParamComp by default promoted its variable?
+        root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
+        root.add('mycomp', SimpleComp(), promotes=['x'])
 
-        #G3 = root.add('G3', Group())
-        #G3.add('C3', SimpleComp())
-        #G3.add('C4', SimpleComp())
+        prob.setup()
+        prob.run()
+        result = root._varmanager.unknowns['mycomp:y']
+        self.assertAlmostEqual(14.0, result, 3)
 
-        #G2.connect('C1:y1', 'G1:C2:x')
-        #root.connect('G2:G1:C2:y', 'G3:C3:x')
-        #G3.connect('C3:y', 'C4:x')
+    def test_basic_run(self):
+        prob = Problem(root=Group())
+        root = prob.root
 
-        #prob.setup()
+        G2 = root.add('G2', Group())
+        G2.add('C1', ParamComp('y1', 5.))
+
+        G1 = G2.add('G1', Group())
+        G1.add('C2', SimpleComp())
+
+        G3 = root.add('G3', Group())
+        G3.add('C3', SimpleComp())
+        G3.add('C4', SimpleComp())
+
+        G2.connect('C1:y1', 'G1:C2:x')
+        root.connect('G2:G1:C2:y', 'G3:C3:x')
+        G3.connect('C3:y', 'C4:x')
+
+        prob.setup()
+        prob.run()
+
 
         ## TODO: this needs Systems to be able to solve themselves
 
