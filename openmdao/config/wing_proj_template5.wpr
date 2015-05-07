@@ -6,7 +6,7 @@
 #!wing
 #!version=4.0
 [project attributes]
-proj.directory-list = [{'dirloc': loc('..'),
+proj.directory-list = [{'dirloc': loc('../..'),
                         'excludes': [u'docs/generated_images',
                                      u'docs/_build',
                                      u'docs/_static',

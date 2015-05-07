@@ -214,14 +214,16 @@ class Group(System):
     def solve_nonlinear(self, params, unknowns, resids):
         """Solves the group using the slotted nl_solver.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals. (r)
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
         self.nl_solver.solve(params, unknowns, resids, self)
 

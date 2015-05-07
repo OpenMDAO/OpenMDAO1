@@ -79,21 +79,28 @@ class Problem(Component):
         self.root. This function is used by the optimizer, but also can be
         used for testing derivatives on your model.
 
-        params: list of strings (optional)
+        Parameters
+        ----------
+        params : list of strings (optional)
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknowns: list of strings (optional)
+        unknowns : list of strings (optional)
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        mode: string (optional)
+        mode : string (optional)
             Deriviative direction, can be 'fwd', 'rev', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
-        return_format: string (optional)
+        return_format : string (optional)
             Format for the derivatives, can be 'array' or 'dict'.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params
         """
 
         if mode not in ['auto', 'fwd', 'rev']:
