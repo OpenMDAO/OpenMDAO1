@@ -135,25 +135,27 @@ class TestProblem(unittest.TestCase):
         result = root._varmanager.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
-    #def test_basic_run(self):
-        #prob = Problem(root=Group())
-        #root = prob.root
+    def test_basic_run(self):
+        prob = Problem(root=Group())
+        root = prob.root
 
-        #G2 = root.add('G2', Group())
-        #G2.add('C1', ParamComp('y1', 5.))
+        G2 = root.add('G2', Group())
+        G2.add('C1', ParamComp('y1', 5.))
 
-        #G1 = G2.add('G1', Group())
-        #G1.add('C2', SimpleComp())
+        G1 = G2.add('G1', Group())
+        G1.add('C2', SimpleComp())
 
-        #G3 = root.add('G3', Group())
-        #G3.add('C3', SimpleComp())
-        #G3.add('C4', SimpleComp())
+        G3 = root.add('G3', Group())
+        G3.add('C3', SimpleComp())
+        G3.add('C4', SimpleComp())
 
-        #G2.connect('C1:y1', 'G1:C2:x')
-        #root.connect('G2:G1:C2:y', 'G3:C3:x')
-        #G3.connect('C3:y', 'C4:x')
+        G2.connect('C1:y1', 'G1:C2:x')
+        root.connect('G2:G1:C2:y', 'G3:C3:x')
+        G3.connect('C3:y', 'C4:x')
 
-        #prob.setup()
+        prob.setup()
+        prob.run()
+
 
         ## TODO: this needs Systems to be able to solve themselves
 

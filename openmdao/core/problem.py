@@ -49,9 +49,9 @@ class Problem(Component):
 
         # combine implicit and explicit connections
         connections.update(implicit_conns)
-        
+
         check_connections(connections, params_dict, unknowns_dict)
-        
+
         # check for parameters that are not connected to a source/unknown
         hanging_params = []
         for p in params_dict:
@@ -111,7 +111,7 @@ class Problem(Component):
 
 def assign_parameters(connections):
     """Map absolute system names to the absolute names of the
-    parameters they control
+    parameters they control.
     """
     param_owners = {}
 
@@ -120,10 +120,12 @@ def assign_parameters(connections):
         unk_parts = unk.split(':')
 
         common_parts = []
-        i = 0
-        while(par_parts[i] == unk_parts[i]):
-            common_parts.append(par_parts[i])
-            i = i+1
+        for ppart, upart in zip(par_parts, unk_parts):
+            if ppart == upart:
+                common_parts.append(ppart)
+            else:
+                break
+
         owner = ':'.join(common_parts)
 
         if owner in param_owners:
