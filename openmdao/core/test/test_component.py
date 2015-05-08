@@ -94,5 +94,17 @@ class TestComponent(unittest.TestCase):
         self.assertEquals(unknowns["s1"], {"val": 0.0, 'state': True, 'relative_name': 's1' })
         self.assertEquals(unknowns["s2"], {"val": 6.0, 'state': True, 'relative_name': 's2' })
 
+    def test_variable_access(self):
+        self.comp.add_output("x_y_z", np.zeros(10))
+
+        try:
+            self.comp["x_y_z"]
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "Variables must be accessed from a containing Group")
+        else:
+            self.fail("Exception expected")
+
+
 if __name__ == "__main__":
     unittest.main()

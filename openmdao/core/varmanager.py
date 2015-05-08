@@ -26,6 +26,30 @@ class VarManagerBase(object):
         self.dresids   = None
         self.data_xfer = {}
 
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+        if isinstance(name, tuple):
+            name, vector = name
+        else:
+            vector = 'unknowns'
+        try:
+            return getattr(self, vector)[name]
+        except KeyError:
+            raise KeyError('%s is not in the %s vector for this system' %
+                           (name, vector))
+
     def _setup_data_transfer(self, sys_pathname, my_params):
         """Create `DataXfer` objects to handle data transfer for all of the
            connections that involve paramaters for which this `VarManager`
@@ -35,7 +59,7 @@ class VarManagerBase(object):
            ----------
            sys_pathname : str
                Absolute pathname of the `System` that will own this `VarManager`.
-               
+
            my_params : list
                list of pathnames for parameters that the VarManager is
                responsible for propagating
@@ -138,6 +162,7 @@ class VarManager(VarManagerBase):
 
         self._setup_data_transfer(sys_pathname, my_params)
 
+
 class ViewVarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
@@ -168,6 +193,7 @@ class ViewVarManager(VarManagerBase):
             create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
+
 
 
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
