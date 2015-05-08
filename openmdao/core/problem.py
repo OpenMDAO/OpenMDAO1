@@ -123,21 +123,14 @@ def assign_parameters(connections):
     param_owners = {}
 
     for par, unk in connections.items():
-        par_parts = par.split(':')
-        unk_parts = unk.split(':')
-
         common_parts = []
-        for ppart, upart in zip(par_parts, unk_parts):
+        for ppart, upart in zip(par.split(':'), unk.split(':')):
             if ppart == upart:
                 common_parts.append(ppart)
             else:
                 break
 
         owner = ':'.join(common_parts)
-
-        if owner in param_owners:
-            param_owners[owner].append(par)
-        else:
-            param_owners[owner] = [par]
+        param_owners.setdefault(owner, []).append(par)
 
     return param_owners

@@ -123,8 +123,10 @@ class VarManager(VarManagerBase):
         self.dunknowns = VecWrapper.create_source_vector(unknowns_dict)
         self.resids    = VecWrapper.create_source_vector(unknowns_dict)
         self.dresids   = VecWrapper.create_source_vector(unknowns_dict)
-        self.params    = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections, store_noflats=True)
-        self.dparams   = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections)
+        self.params    = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections, store_noflats=True)
+        self.dparams   = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections)
 
         self._setup_data_transfer(my_params)
 
@@ -200,9 +202,9 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     dunknowns = parent_vm.dunknowns.get_view(umap)
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
-    params    = VecWrapper.create_target_vector(params_dict, unknowns,
+    params    = VecWrapper.create_target_vector(parent_vm.params, params_dict, unknowns,
                                                      my_params, connections, store_noflats=True)
-    dparams   = VecWrapper.create_target_vector(params_dict, unknowns,
+    dparams   = VecWrapper.create_target_vector(parent_vm.dparams, params_dict, unknowns,
                                                      my_params, connections)
 
     return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)

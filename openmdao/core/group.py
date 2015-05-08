@@ -174,11 +174,7 @@ class Group(System):
         for name, sub in self.components():
             u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
                                                sub._params_dict, sub._unknowns_dict, [], {})
-            relmap = get_relname_map(self._varmanager.params,
-                                     sub._params_dict, name)
-            self._views[name] = ViewTuple(u, du, r, dr,
-                                          self._varmanager.params.get_view(relmap),
-                                          self._varmanager.dparams.get_view(relmap))
+            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -304,7 +300,7 @@ def get_absvarpathname(var_name, var_dict):
        ----------
        var_name : str
            name of a variable relative to a `System`
-           
+
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
 
