@@ -158,13 +158,15 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(params_dict, srcvec, my_params, connections, store_noflats=False):
+    def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,
+                             connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """
         self = VecWrapper()
 
         vec_size = 0
+        missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
             if pathname in my_params:
                 # if connected, get metadata from the source
@@ -181,6 +183,9 @@ class VecWrapper(object):
                 vec_size += vmeta['size']
 
                 self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+            else:
+                if parent_params_vec is not None:
+                    missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -192,6 +197,16 @@ class VecWrapper(object):
             if meta['size'] > 0:
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
+
+        # fill entries for missing params with views from the parent
+        for pathname in missing:
+            meta = params_dict[pathname]
+            prelname = parent_params_vec.get_relative_varname(pathname)
+            newmeta = parent_params_vec._vardict[prelname][0].copy()
+            newmeta['relative_name'] = meta['relative_name']
+            self._vardict.setdefault(meta['relative_name'],
+                                     []).append(newmeta)
+
 
         return self
 

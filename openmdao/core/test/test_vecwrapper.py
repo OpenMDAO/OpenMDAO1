@@ -69,7 +69,7 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = p
 
-        p = VecWrapper.create_target_vector(params, u, params.keys(),
+        p = VecWrapper.create_target_vector(None, params, u, params.keys(),
                                             connections, store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
