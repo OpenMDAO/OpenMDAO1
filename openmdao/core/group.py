@@ -273,6 +273,94 @@ class Group(System):
 
             system.apply_nonlinear(params, unknowns, resids)
 
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """Calls apply_linear on our children. If our child is a `Component`,
+        then we need to also take care of the additional 1.0 on the diagonal
+        for explicit outputs.
+
+        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
+
+        Parameters
+        ----------
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
+
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
+
+        dparams : `VecwWrapper`
+            `VecwWrapper` containing either the incoming vector in forward mode
+            or the outgoing result in reverse mode. (dp)
+
+        dunknowns : `VecwWrapper`
+            In forward mode, this `VecwWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
+
+        dresids : `VecwWrapper`
+            `VecwWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'
+        """
+
+        varmanager = self._varmanager
+
+        if mode == 'fwd':
+            # Full Scatter
+            varmanager._transfer_data()
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+            dparams = view.dparams
+            dunknowns = view.dunknowns
+            dresids = view.dresids
+
+            # Special handling for Components
+            if isinstance(system, Component):
+
+                # Forward Mode
+                if mode == 'fwd':
+
+                    system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+                    dunknowns.vec[:] *= -1.0
+
+                    for var in dunknowns:
+                        dunknowns[var][:] += dparams[var][:]
+
+                # Adjoint Mode
+                elif mode == 'rev':
+
+                    # Sign on the local Jacobian needs to be -1 before
+                    # we add in the fake residual. Since we can't modify
+                    # the 'du' vector at this point without stomping on the
+                    # previous component's contributions, we can multiply
+                    # our local 'arg' by -1, and then revert it afterwards.
+                    dunknowns.vec[:] *= -1.0
+                    system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+                    dunknowns.vec[:] *= -1.0
+
+                    for var in dunknowns:
+                        dparams[var][:] += dunknowns[var][:]
+
+            # Groups just recurse
+            else:
+                system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+
+        if mode == 'rev':
+            # Full Scatter
+            varmanager._transfer_data()
+
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and

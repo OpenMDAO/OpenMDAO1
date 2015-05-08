@@ -193,36 +193,3 @@ class Component(System):
             else:
                 arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
 
-    def applyJ(self, params, unknowns, resids, dparams, dunknowns, dstates,
-               mode):
-        """ This method wraps apply_linear and adds the additional 1.0 on the
-        diagonal for explicit outputs.
-
-        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
-        """
-
-        # Forward Mode
-        if self.mode == 'fwd':
-
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dunknowns[var][:] += dparams[var][:]
-
-        # Adjoint Mode
-        elif self.mode == 'adjoint':
-
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dunknowns.vec[:] *= -1.0
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dparams[var][:] += dunknowns[var][:]
