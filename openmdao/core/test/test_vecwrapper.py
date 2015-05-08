@@ -121,5 +121,19 @@ class TestVecWrapper(unittest.TestCase):
         uview2 = u.get_view({})
         self.assertEqual(list(uview2.keys()), [])
 
+    def test_norm(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['y1'] = { 'val' : np.array([2.0, 3.0]) }
+        unknowns_dict['y2'] = { 'val' : -4.0 }
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+
+        unorm = u.norm()
+        self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
+
 if __name__ == "__main__":
     unittest.main()
