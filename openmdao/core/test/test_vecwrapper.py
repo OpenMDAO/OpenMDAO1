@@ -19,7 +19,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
@@ -69,7 +70,8 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = p
 
-        p = VecWrapper.create_target_vector(None, params, u, params.keys(),
+        p = VecWrapper()
+        p.setup_target_vector(None, params, u, params.keys(),
                                             connections, store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
@@ -96,7 +98,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         varmap = {
             'C1:y1':'y1',
@@ -134,7 +137,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         self.assertTrue((np.array(u.flat('C1:y1'))==np.array([1., 1., 1., 1., 1., 1.])).all())
         self.assertTrue((np.array(u.flat('C1:y2'))==np.array([2.])).all())
@@ -158,7 +162,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         unorm = u.norm()
         self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
