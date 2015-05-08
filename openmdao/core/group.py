@@ -153,7 +153,7 @@ class Group(System):
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
+            self._varmanager = VarManager(self.pathname, self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
             self._varmanager = ViewVarManager(parent_vm,
