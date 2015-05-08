@@ -147,7 +147,7 @@ class TestProblem(unittest.TestCase):
 
         G3 = root.add('G3', Group())
         G3.add('C3', SimpleComp())
-        G3.add('C4', SimpleComp())
+        c4 = G3.add('C4', SimpleComp())
 
         G2.connect('C1:y1', 'G1:C2:x')
         root.connect('G2:G1:C2:y', 'G3:C3:x')
@@ -156,7 +156,7 @@ class TestProblem(unittest.TestCase):
         prob.setup()
         prob.run()
 
-
+        self.assertAlmostEqual(G3._views['C4'].unknowns['y'][0], 40.)
         ## TODO: this needs Systems to be able to solve themselves
 
         # ...
