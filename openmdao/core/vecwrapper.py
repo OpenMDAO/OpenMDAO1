@@ -32,6 +32,25 @@ class VecWrapper(object):
             else:
                 return meta['val'].reshape(shape)
 
+    def flat(self, name):
+        """Retrieve flattened value of named variable
+
+        Parameters
+        ----------
+        name - str
+            name of variable to get the value for
+
+        Returns
+        -------
+            array
+                the flattened value of the named variable
+        """
+        meta = self._vardict[name][0]
+        if meta.get('noflat'):
+            raise RuntimeError('%s is non flattenable' % name)
+        else:
+            return meta['val']
+
     def __setitem__(self, name, value):
         """Set the value of the named var"""
         meta = self._vardict[name][0]
