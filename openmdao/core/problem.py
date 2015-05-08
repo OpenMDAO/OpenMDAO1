@@ -18,6 +18,22 @@ class Problem(Component):
         else:
             self.driver = driver
 
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable from the root system
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+             
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+        return self.root[name]
+    
     def setup(self):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)

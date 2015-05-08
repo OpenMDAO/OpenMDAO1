@@ -22,11 +22,15 @@ class VecWrapper(object):
     def __getitem__(self, name):
         """Retrieve unflattened value of named var"""
         meta = self._vardict[name][0]
-        shape = meta.get('shape')
-        if shape is None:
+        if meta.get('noflat'):
             return meta['val']
         else:
-            return meta['val'].reshape(shape)
+            # if it doesn't have a shape, it's a float
+            shape = meta.get('shape')
+            if shape is None:
+                return meta['val'][0]
+            else:
+                return meta['val'].reshape(shape)
 
     def __setitem__(self, name, value):
         """Set the value of the named var"""
@@ -175,34 +179,34 @@ class VecWrapper(object):
                              connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
-        
+
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
             `VecWrapper` of parameters from the parent `System`
-        
+
         params_dict : `OrderedDict`
             Dictionary of parameter absolute name mapped to metadata dict
-            
+
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
-        
+
         my_params : list of str
             A list of absolute names of parameters that the `VecWrapper` we're building
             will 'own'.
-            
+
         connections : dict of str : str
             A dict of absolute target names mapped to the absolute name of their
             source variable.
-            
+
         store_noflats : bool
             If True, store unflattenable variables in the `VecWrapper` we're building.
-            
+
         Returns
         -------
         `VecWrapper`
             Newly built params `VecWrapper`
-            
+
         """
         self = VecWrapper()
 
