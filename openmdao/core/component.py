@@ -148,23 +148,23 @@ class Component(System):
 
         Parameters
         ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
 
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
 
-        dparams : `VecwWapper`
-            `VecwWapper` containing either the incoming vector in forward mode
+        dparams : `VecwWrapper`
+            `VecwWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns : `VecwWapper`
-            In forward mode, this `VecwWapper` contains the incoming vector for
+        dunknowns : `VecwWrapper`
+            In forward mode, this `VecwWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecwWapper`
-            `VecwWapper` containing either the outgoing result in forward mode
+        dresids : `VecwWrapper`
+            `VecwWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
         mode : string

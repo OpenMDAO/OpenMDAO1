@@ -175,6 +175,34 @@ class VecWrapper(object):
                              connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
+        
+        Parameters
+        ----------
+        parent_params_vec : `VecWrapper` or None
+            `VecWrapper` of parameters from the parent `System`
+        
+        params_dict : `OrderedDict`
+            Dictionary of parameter absolute name mapped to metadata dict
+            
+        srcvec : `VecWrapper`
+            Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
+        
+        my_params : list of str
+            A list of absolute names of parameters that the `VecWrapper` we're building
+            will 'own'.
+            
+        connections : dict of str : str
+            A dict of absolute target names mapped to the absolute name of their
+            source variable.
+            
+        store_noflats : bool
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+            
+        Returns
+        -------
+        `VecWrapper`
+            Newly built params `VecWrapper`
+            
         """
         self = VecWrapper()
 
