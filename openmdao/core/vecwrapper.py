@@ -99,15 +99,11 @@ class VecWrapper(object):
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
 
-    @staticmethod
-    def create_source_vector(unknowns_dict, store_noflats=False):
+    def setup_source_vector(self, unknowns_dict, store_noflats=False):
         """Create a vector storing a flattened array of the variables in unknowns.
         If store_noflats is True, then non-flattenable variables
         will also be stored.
         """
-
-        self = VecWrapper()
-
         vec_size = 0
         for name, meta in unknowns_dict.items():
             vmeta = self._add_source_var(name, meta, vec_size)
@@ -136,8 +132,6 @@ class VecWrapper(object):
         if store_noflats:
             for name, meta in unknowns_dict.items():
                 self[meta['relative_name']] = meta['val']
-
-        return self
 
     def _add_source_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
@@ -193,9 +187,9 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    @staticmethod
-    def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,
-                             connections, store_noflats=False):
+
+    def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
+                            connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
 
@@ -227,8 +221,6 @@ class VecWrapper(object):
             Newly built params `VecWrapper`
 
         """
-        self = VecWrapper()
-
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
@@ -270,9 +262,6 @@ class VecWrapper(object):
             newmeta['relative_name'] = meta['relative_name']
             self._vardict.setdefault(meta['relative_name'],
                                      []).append(newmeta)
-
-
-        return self
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
@@ -410,4 +399,3 @@ def idx_merge(idxs):
             else:
                 return numpy.concatenate(idxs)
     return idxs
-

@@ -1,8 +1,7 @@
 
 from collections import namedtuple
 import numpy
-from openmdao.core.vecwrapper import VecWrapper
-from openmdao.core.dataxfer import DataXfer
+from openmdao.core.basicimpl import BasicImpl
 
 ViewTuple = namedtuple('ViewTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
@@ -101,7 +100,7 @@ class VarManagerBase(object):
 
         for tgt_sys, (srcs, tgts, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            self.data_xfer[tgt_sys] = DataXfer(src_idxs, tgt_idxs, noflat_conns)
+            self.data_xfer[tgt_sys] =  self.implFactory.createDataXfer(src_idxs, tgt_idxs, noflat_conns)
 
         #TODO: create a jacobi DataXfer object (if necessary) that combines all of the
         #      individual subsystem src_idxs, tgt_idxs, and noflat_conns
@@ -148,17 +147,30 @@ class VarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params, connections):
+    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params, connections, impl=None):
         super(VarManager, self).__init__(connections)
 
-        self.unknowns  = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
-        self.dunknowns = VecWrapper.create_source_vector(unknowns_dict)
-        self.resids    = VecWrapper.create_source_vector(unknowns_dict)
-        self.dresids   = VecWrapper.create_source_vector(unknowns_dict)
-        self.params    = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
-                                                         my_params, connections, store_noflats=True)
-        self.dparams   = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
-                                                         my_params, connections)
+        if impl is None:
+            self.implFactory = BasicImpl
+        else:
+            raise RuntimeError('%s implementation of VecWrapper is not avaiable.')
+
+        self.unknowns  = self.implFactory.createVecWrapper()
+        self.dunknowns = self.implFactory.createVecWrapper()
+        self.resids    = self.implFactory.createVecWrapper()
+        self.dresids   = self.implFactory.createVecWrapper()
+        self.params    = self.implFactory.createVecWrapper()
+        self.dparams   = self.implFactory.createVecWrapper()
+
+        self.unknowns.setup_source_vector(unknowns_dict, store_noflats=True)
+        self.dunknowns.setup_source_vector(unknowns_dict)
+        self.resids.setup_source_vector(unknowns_dict)
+
+        self.dresids.setup_source_vector(unknowns_dict)
+        self.params.setup_target_vector(None, params_dict, self.unknowns,
+                                              my_params, connections, store_noflats=True)
+        self.dparams.setup_target_vector(None, params_dict, self.unknowns,
+                                               my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 
@@ -188,6 +200,8 @@ class ViewVarManager(VarManagerBase):
     """
     def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(ViewVarManager, self).__init__(connections)
+
+        self.implFactory = parent_vm.implFactory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
             create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
@@ -236,10 +250,14 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     dunknowns = parent_vm.dunknowns.get_view(umap)
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
-    params    = VecWrapper.create_target_vector(parent_vm.params, params_dict, unknowns,
-                                                     my_params, connections, store_noflats=True)
-    dparams   = VecWrapper.create_target_vector(parent_vm.dparams, params_dict, unknowns,
-                                                     my_params, connections)
+
+    params  = parent_vm.implFactory.createVecWrapper()
+    dparams = parent_vm.implFactory.createVecWrapper()
+
+    params.setup_target_vector(parent_vm.params, params_dict, unknowns,
+                               my_params, connections, store_noflats=True)
+    dparams.setup_target_vector(parent_vm.dparams, params_dict, unknowns,
+                                my_params, connections)
 
     return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)
 
