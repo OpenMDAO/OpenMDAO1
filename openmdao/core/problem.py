@@ -10,9 +10,10 @@ class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
     model."""
 
-    def __init__(self, root=None, driver=None):
+    def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+        self.impl = impl
         if driver is None:
             self.driver = Driver()
         else:
@@ -27,13 +28,13 @@ class Problem(Component):
              the name of the variable to retrieve from the unknowns vector OR
              a tuple of the name of the variable and the vector to get it's
              value from.
-             
+
         Returns
         -------
         the unflattened value of the given variable
         """
         return self.root[name]
-    
+
     def setup(self):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
@@ -83,7 +84,7 @@ class Problem(Component):
         param_owners = assign_parameters(connections)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections)
+        self.root._setup_vectors(param_owners, connections, impl=self.impl)
 
     def run(self):
         """ Runs the Driver in self.driver. """

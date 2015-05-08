@@ -179,7 +179,7 @@ class Group(System):
         else:
             return name
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None):
+    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=None):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
