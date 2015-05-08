@@ -29,7 +29,8 @@ class Group(System):
         self.rhs_vec = None
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable
+        """Retrieve unflattened value of named variable or a reference
+        to named subsystem.
 
         Parameters
         ----------
