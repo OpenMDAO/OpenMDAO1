@@ -6,7 +6,7 @@ from openmdao.core.system import System
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
                                       ViewTuple, get_relname_map
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 class Group(System):
@@ -21,7 +21,7 @@ class Group(System):
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
-        self.nl_solver = NLGaussSeidel()
+        self.nl_solver = RunOnce()
 
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None

@@ -12,7 +12,7 @@ class TestNLGaussSeidel(unittest.TestCase):
     def test_sellar(self):
 
         top = Problem()
-        top.root =SellarNoDerivatives()
+        top.root = SellarNoDerivatives()
         top.root.nl_solver = NLGaussSeidel()
 
         top.setup()
@@ -24,6 +24,9 @@ class TestNLGaussSeidel(unittest.TestCase):
 
         assert_rel_error(self, y1, 25.58830273, .00001)
         assert_rel_error(self, y2, 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(top.root.nl_solver.iter_count, 8)
 
 if __name__ == "__main__":
     unittest.main()

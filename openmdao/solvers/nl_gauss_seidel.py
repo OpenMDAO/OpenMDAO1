@@ -40,6 +40,7 @@ class NLGaussSeidel(NonLinearSolver):
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
 
+        # Initial run
         self.iter_count = 1
         system.children_solve_nonlinear()
 
@@ -50,6 +51,7 @@ class NLGaussSeidel(NonLinearSolver):
         varmanager = system._varmanager
         resids = varmanager.resids
 
+        # Evaluate Norm
         system.apply_nonlinear(params, unknowns, resids)
         normval = resids.norm()
         basenorm = normval if normval > atol else 1.0
@@ -59,9 +61,10 @@ class NLGaussSeidel(NonLinearSolver):
               normval/basenorm > rtol:
 
             # Runs an iteration
-            self.iter_count += 1
             system.children_solve_nonlinear()
+            self.iter_count += 1
 
+            # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
 
