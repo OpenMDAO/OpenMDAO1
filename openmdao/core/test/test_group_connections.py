@@ -22,9 +22,6 @@ class TestGroupConnect(unittest.TestCase):
 
         # Array to Array same size
 
-        self.src.add_output('y', np.zeros((2, 1)))
-        self.tgt.add_output('x', np.zeros((2, 1)))
-
         self.top.root.connect('src:y', "tgt:x")
 
         self.top.setup()
