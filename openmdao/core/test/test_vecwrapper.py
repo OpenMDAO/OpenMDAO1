@@ -121,5 +121,32 @@ class TestVecWrapper(unittest.TestCase):
         uview2 = u.get_view({})
         self.assertEqual(list(uview2.keys()), [])
 
+    def test_flat(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['C1:y2'] = { 'val': 2.0 }
+        unknowns_dict['C1:y3'] = { 'val': "foo" }
+        unknowns_dict['C2:y4'] = { 'shape': (2, 1), }
+        unknowns_dict['C2:s1'] = { 'val': -1.0, 'state': True, }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+
+        self.assertTrue((np.array(u.flat('C1:y1'))==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u.flat('C1:y2'))==np.array([2.])).all())
+        try:
+            u.flat('C1:y3')
+        except Exception as err:
+            self.assertEqual(str(err), 'C1:y3 is non flattenable')
+        else:
+            self.fail('Exception expected')
+        self.assertTrue((np.array(u.flat('C2:y4'))==np.array([0., 0.])).all())
+        self.assertTrue((np.array(u.flat('C2:s1'))==np.array([-1.])).all())
+
+
 if __name__ == "__main__":
     unittest.main()

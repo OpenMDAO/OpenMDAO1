@@ -181,11 +181,11 @@ class TestGroup(unittest.TestCase):
                           ('G2:G1:C2:y', {'val': 5.5, 'relative_name': 'G1:C2:y'})])
 
         self.assertEqual(list(root.G3._params_dict.items()),
-                         [('G3:C3:x', {'val': 3.0, 'relative_name': 'C3:x'}),
-                          ('G3:C4:x', {'val': 3.0, 'relative_name': 'x'})])
+                         [('G3:C3:x',    {'val': 3.0, 'relative_name': 'C3:x'}),
+                          ('G3:C4:x',    {'val': 3.0, 'relative_name': 'x'})])
         self.assertEqual(list(root.G3._unknowns_dict.items()),
-                         [('G3:C3:y', {'val': 5.5, 'relative_name': 'C3:y'}),
-                          ('G3:C4:y', {'val': 5.5, 'relative_name': 'C4:y'})])
+                         [('G3:C3:y',    {'val': 5.5, 'relative_name': 'C3:y'}),
+                          ('G3:C4:y',    {'val': 5.5, 'relative_name': 'C4:y'})])
 
         self.assertEqual(list(root._params_dict.items()),
                          [('G2:G1:C2:x', {'val': 3.0, 'relative_name': 'G2:x'}),
