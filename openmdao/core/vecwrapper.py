@@ -1,7 +1,10 @@
 from collections import OrderedDict
+
 import numpy
+from numpy.linalg import norm
 
 from openmdao.util.types import is_differentiable, int_types
+
 
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
@@ -179,6 +182,16 @@ class VecWrapper(object):
         vmeta['size'] = var_size
 
         return vmeta
+
+    def norm(self):
+        """ Calculates the norm of this vector.
+
+        Returns
+        -------
+        float
+            Norm of the flattenable values in this vector.
+        """
+        return norm(self.vec)
 
     @staticmethod
     def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,

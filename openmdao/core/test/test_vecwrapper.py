@@ -138,6 +138,7 @@ class TestVecWrapper(unittest.TestCase):
 
         self.assertTrue((np.array(u.flat('C1:y1'))==np.array([1., 1., 1., 1., 1., 1.])).all())
         self.assertTrue((np.array(u.flat('C1:y2'))==np.array([2.])).all())
+
         try:
             u.flat('C1:y3')
         except Exception as err:
@@ -147,6 +148,20 @@ class TestVecWrapper(unittest.TestCase):
         self.assertTrue((np.array(u.flat('C2:y4'))==np.array([0., 0.])).all())
         self.assertTrue((np.array(u.flat('C2:s1'))==np.array([-1.])).all())
 
+    def test_norm(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['y1'] = { 'val' : np.array([2.0, 3.0]) }
+        unknowns_dict['y2'] = { 'val' : -4.0 }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+
+        unorm = u.norm()
+        self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
 
 if __name__ == "__main__":
     unittest.main()

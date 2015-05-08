@@ -75,6 +75,36 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Evaluates the residuals for this component. For explicit
+        components, the residual is the output produced by the current params
+        minus the previously calculated output. Thus, an explicit component
+        must execute its solve nonlinear method. Implicit components should
+        override this and calculate their residuals in place.
+
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+        """
+
+        # Since explicit comps don't put anything in resids, we can use it to
+        # cache the old values of the unknowns.
+        resids.vec[:] = unknowns.vec[:]
+
+        self.solve_nonlinear(params, unknowns, resids)
+
+        # Unknwons are restored to the old values too; apply_nonlinear does
+        # not change the output vector.
+        resids.vec[:] -= unknowns.vec[:]
+        unknowns.vec[:] += resids.vec[:]
+
     def linearize(self, params, unknowns):
         """ Calculates the Jacobian of a component if it provides
         derivatives. Preconditioners will also be pre-calculated here if
@@ -163,36 +193,3 @@ class Component(System):
             else:
                 arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
 
-    def applyJ(self, params, unknowns, resids, dparams, dunknowns, dstates,
-               mode):
-        """ This method wraps apply_linear and adds the additional 1.0 on the
-        diagonal for explicit outputs.
-
-        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
-        """
-
-        # Forward Mode
-        if self.mode == 'fwd':
-
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dunknowns[var][:] += dparams[var][:]
-
-        # Adjoint Mode
-        elif self.mode == 'adjoint':
-
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dunknowns.vec[:] *= -1.0
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dparams[var][:] += dunknowns[var][:]
