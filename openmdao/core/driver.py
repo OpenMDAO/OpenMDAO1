@@ -19,8 +19,10 @@ class Driver(object):
     def run(self, system):
         """ Runs the driver. This function should be overriden when inheriting.
 
-        system: system
-            System that our parent Problem owns.
+        Parameters
+        ----------
+        system : `System`
+            `System` that our parent `Problem` owns.
         """
 
         varmanager = system._varmanager

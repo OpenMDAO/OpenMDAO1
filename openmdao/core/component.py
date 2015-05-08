@@ -75,16 +75,48 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Evaluates the residuals for this component. For explicit
+        components, the residual is the output produced by the current params
+        minus the previously calculated output. Thus, an explicit component
+        must execute its solve nonlinear method. Implicit components should
+        override this and calculate their residuals in place.
+
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+        """
+
+        # Since explicit comps don't put anything in resids, we can use it to
+        # cache the old values of the unknowns.
+        resids.vec[:] = unknowns.vec[:]
+
+        self.solve_nonlinear(params, unknowns, resids)
+
+        # Unknwons are restored to the old values too; apply_nonlinear does
+        # not change the output vector.
+        resids.vec[:] -= unknowns.vec[:]
+        unknowns.vec[:] += resids.vec[:]
+
     def linearize(self, params, unknowns):
         """ Calculates the Jacobian of a component if it provides
         derivatives. Preconditioners will also be pre-calculated here if
         needed.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
         """
         self._jacobian_cache = self.jacobian(params, unknowns)
 
@@ -93,11 +125,19 @@ class Component(System):
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays
         """
         return None
 
@@ -106,26 +146,28 @@ class Component(System):
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
 
-        dparams: vecwrapper
-            VecWrapper containing either the incoming vector in forward mode
+        dparams : `VecwWrapper`
+            `VecwWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns: vecwrapper
-            In forward mode, this VecWrapper contains the incoming vector for
+        dunknowns : `VecwWrapper`
+            In forward mode, this `VecwWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids: vecwrapper
-            VecWrapper containing either the outgoing result in forward mode
+        dresids : `VecwWrapper`
+            `VecwWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
-        mode: string
+        mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
 
@@ -151,36 +193,3 @@ class Component(System):
             else:
                 arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
 
-    def applyJ(self, params, unknowns, resids, dparams, dunknowns, dstates,
-               mode):
-        """ This method wraps apply_linear and adds the additional 1.0 on the
-        diagonal for explicit outputs.
-
-        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
-        """
-
-        # Forward Mode
-        if self.mode == 'fwd':
-
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dunknowns[var][:] += dparams[var][:]
-
-        # Adjoint Mode
-        elif self.mode == 'adjoint':
-
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dunknowns.vec[:] *= -1.0
-            self.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
-            dunknowns.vec[:] *= -1.0
-
-            for var in dunknowns:
-                dparams[var][:] += dunknowns[var][:]

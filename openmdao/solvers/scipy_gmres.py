@@ -13,10 +13,12 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
-    def solve(self, rhs, system):
+    def solve(self, rhs, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
+        Parameters
+        ----------
         rhs: ndarray
             Array containing the right hand side for the linear solve. Also
             possibly a 2D array with multiple right hand sides.
@@ -29,6 +31,7 @@ class ScipyGMRES(LinearSolver):
         # TODO: Options dictionary?
         self.system = system
         options = self.options
+        self.mode = mode
 
         # Call GMRES to solve the linear system
         d_unknowns, info = gmres(A, rhs,
@@ -52,16 +55,31 @@ class ScipyGMRES(LinearSolver):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
         system."""
 
-        # Set incoming vector
         system = self.system
-        system.sol_vec.array[:] = arg[:]
+        mode = self.mode
+
+        varmanager = system.varmanager
+        params = varmanager.params
+        unknowns = varmanager.unknowns
+        resids = varmanager.resids
+        dparams = varmanager.dparams
+        dunknowns = varmanager.dunknowns
+        dresids = varmanager.dresids
+
+        if mode=='fwd':
+            sol_vec, rhs_vec = unknowns, resids
+        else:
+            sol_vec, rhs_vec = resids, unknowns
+
+        # Set incoming vector
+        sol_vec.vec[:] = arg[:]
 
         # Start with a clean slate
-        system.rhs_vec.array[:] = 0.0
-        system._varmanager.dparams[:] = 0.0
+        rhs_vec.vec[:] = 0.0
+        dparams.vec[:] = 0.0
 
-        # TODO: Rename this?
-        system.applyJ()
+        system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
+                            mode)
 
         # TODO: Rename rhs_vec and sol_vec?
-        return system.rhs_vec.array[:]
+        return rhs_vec.vec[:]
