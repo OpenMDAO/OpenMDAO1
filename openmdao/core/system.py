@@ -17,15 +17,32 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
+    def __getitem__(self, name):
+        """
+        Return the variable or subsystem of the given name from this system.
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable or subsystem
+
+        Returns
+        -------
+        value OR `System`
+            the unflattened value of the given variable OR a reference to
+            the named `System`
+        """
+        raise RuntimeError('Variables must be accessed from a containing Group')
+
     def promoted(self, name):
         """Determine is the given variable name  is being promoted from this
         `System`.
-        
+
         Parameters
         ----------
         name : str
             the name of a variable, relative to this `System`
-            
+
         Returns
         -------
         bool
@@ -47,7 +64,7 @@ class System(object):
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
-        
+
         Parameter
         ---------
         parent_path : str

@@ -18,6 +18,7 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
+        self._varmanager = None
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
@@ -26,6 +27,51 @@ class Group(System):
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
         self.rhs_vec = None
+
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+
+        # if arg is not a tuple, then search for a subsystem by name
+        if not isinstance(name, tuple):
+            sys = self
+            parts = name.split(':')
+            for part in parts:
+                sys = getattr(sys, '_subsystems', {}).get(part)
+                if sys is None:
+                    break
+            else:
+                return sys
+
+        # if arg is a tuple or no subsystem found, then search for a variable
+        if not self._varmanager:
+            raise RuntimeError('setup() must be called before variables can be accessed')
+
+        try:
+            return self._varmanager[name]
+        except KeyError:
+            if isinstance(name, tuple):
+                name, vector = name
+                istuple = True
+            else:
+                vector = 'unknowns'
+                istuple = False
+            subsys, subname = name.split(':', 1)
+            if istuple:
+                return self._subsystems[subsys][subname, vector]
+            else:
+                return self.subsystems[name][subname]
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
