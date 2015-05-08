@@ -246,6 +246,38 @@ class Group(System):
 
             system.solve_nonlinear(params, unknowns, resids)
 
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Evaluates the residuals of our children systems.
+
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+        """
+
+        varmanager = self._varmanager
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            # Local scatter
+            varmanager._transfer_data(name)
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.apply_nonlinear(params, unknowns, resids)
+
+
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
@@ -304,7 +336,7 @@ def get_absvarpathname(var_name, var_dict):
        ----------
        var_name : str
            name of a variable relative to a `System`
-           
+
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
 

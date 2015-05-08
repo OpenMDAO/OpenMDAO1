@@ -75,6 +75,36 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Evaluates the residuals for this component. For explicit
+        components, the residual is the output produced by the current params
+        minus the previously calculated output. Thus, an explicit component
+        must execute its solve nonlinear method. Implicit components should
+        override this and calculate their residuals in place.
+
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+        """
+
+        # Since explicit comps don't put anything in resids, we can use it to
+        # cache the old values of the unknowns.
+        resids.vec[:] = unknowns.vec[:]
+
+        self.solve_nonlinear(params, unknowns, resids)
+
+        # Unknwons are restored to the old values too; apply_nonlinear does
+        # not change the output vector.
+        resids.vec[:] -= unknowns.vec[:]
+        unknowns.vec[:] += resids.vec[:]
+
     def linearize(self, params, unknowns):
         """ Calculates the Jacobian of a component if it provides
         derivatives. Preconditioners will also be pre-calculated here if

@@ -42,7 +42,6 @@ class NLGaussSeidel(NonLinearSolver):
 
         self.iter_count = 1
         system.children_solve_nonlinear()
-        return
 
         # Bail early if the user wants to.
         if maxiter == 1:
@@ -50,8 +49,10 @@ class NLGaussSeidel(NonLinearSolver):
 
         varmanager = system._varmanager
         resids = varmanager.resids
+
+        system.apply_nonlinear(params, unknowns, resids)
         normval = resids.norm()
-        basenorm = normval if normal > atol else 1.0
+        basenorm = normval if normval > atol else 1.0
 
         while self.iter_count < maxiter and \
               normval > atol and \
@@ -61,5 +62,6 @@ class NLGaussSeidel(NonLinearSolver):
             self.iter_count += 1
             self.children_solve_nonlinear()
 
+            system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
 
