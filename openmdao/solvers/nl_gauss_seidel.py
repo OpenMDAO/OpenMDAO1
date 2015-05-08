@@ -56,11 +56,11 @@ class NLGaussSeidel(NonLinearSolver):
 
         while self.iter_count < maxiter and \
               normval > atol and \
-              normal/basenorm > rtol:
+              normval/basenorm > rtol:
 
             # Runs an iteration
             self.iter_count += 1
-            self.children_solve_nonlinear()
+            system.children_solve_nonlinear()
 
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()

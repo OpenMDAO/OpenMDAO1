@@ -28,8 +28,8 @@ class SellarDis1(Component):
         # Coupling parameter
         self.add_param('y2', val=0.)
 
-        # Coupling unknown
-        self.add_unknown('y1', val=0.)
+        # Coupling output
+        self.add_output('y1', val=0.)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """Evaluates the equation
@@ -69,10 +69,10 @@ class SellarDis2(Component):
         # Coupling parameter
         self.add_param('y1', val=0.)
 
-        # Coupling unknown
-        self.add_unknown('y2', val=0.)
+        # Coupling output
+        self.add_output('y2', val=0.)
 
-    def apply_nonlinear(self, params, unknowns):
+    def solve_nonlinear(self, params, unknowns, resids):
         """Evaluates the equation
         y2 = y1**(.5) + z1 + z2"""
 
@@ -106,15 +106,13 @@ class SellarNoDerivatives(Group):
     without derivatives."""
 
     def __init__(self):
+        super(SellarNoDerivatives, self).__init__()
 
-        self.add('d1', SellarDis1(), promotes='*')
-        self.add('d2', SellarDis2(), promotes='*')
+        self.add('d1', SellarDis1(), promotes=['*'])
+        self.add('d2', SellarDis2(), promotes=['*'])
 
-        self.add('px', ParamComp('x1', 1.0), promotes='*')
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes='*')
-
-        self.connect('d1.y1', 'd2,y1')
-        self.connect('d2.y2', 'd1,y2')
+        self.add('px', ParamComp('x', 1.0), promotes=['*'])
+        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
 
 class SellarDerivatives(Group):
@@ -122,12 +120,10 @@ class SellarDerivatives(Group):
     with derivatives."""
 
     def __init__(self):
+        super(SellarDerivatives, self).__init__()
 
-        self.add('d1', SellarDis1withDerivatives(), promotes='*')
-        self.add('d2', SellarDis2withDerivatives(), promotes='*')
+        self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
+        self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
-        self.add('px', ParamComp('x1', 1.0), promotes='*')
+        self.add('px', ParamComp('x', 1.0), promotes='*')
         self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes='*')
-
-        self.connect('d1.y1', 'd2,y1')
-        self.connect('d2.y2', 'd1,y2')
