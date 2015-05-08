@@ -8,7 +8,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
-
+from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes
 
 class TestProblem(unittest.TestCase):
 
@@ -135,29 +135,37 @@ class TestProblem(unittest.TestCase):
         result = root._varmanager.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
+    def test_variable_access(self):
+        prob = Problem(root=ExampleGroup())
+
+        # set with a different shaped array
+        try:
+            prob['G2:C1:x']
+        except Exception as err:
+            msg = 'setup() must be called before variables can be accessed'
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
+
+        prob.setup()
+
+        self.assertEqual(prob['G2:C1:x'], 5.)                # default output from ParamComp
+        self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
+        self.assertEqual(prob['G3:C3:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)   # initial value for a parameter
+
+        prob = Problem(root=ExampleGroupWithPromotes())
+        prob.setup()
+        self.assertEqual(prob['G2:G1:x', 'params'], 0.)      # initial value for a parameter
+
     def test_basic_run(self):
-        prob = Problem(root=Group())
-        root = prob.root
-
-        G2 = root.add('G2', Group())
-        G2.add('C1', ParamComp('y1', 5.))
-
-        G1 = G2.add('G1', Group())
-        G1.add('C2', SimpleComp())
-
-        G3 = root.add('G3', Group())
-        G3.add('C3', SimpleComp())
-        G3.add('C4', SimpleComp())
-
-        G2.connect('C1:y1', 'G1:C2:x')
-        root.connect('G2:G1:C2:y', 'G3:C3:x')
-        G3.connect('C3:y', 'C4:x')
+        prob = Problem(root=ExampleGroup())
 
         prob.setup()
         prob.run()
 
-
-        ## TODO: this needs Systems to be able to solve themselves
+        self.assertAlmostEqual(prob['G3:C4:y'], 40.)
+        # TODO: this needs Systems to be able to solve themselves
 
         # ...
 

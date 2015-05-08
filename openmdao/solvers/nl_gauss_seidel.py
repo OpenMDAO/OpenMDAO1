@@ -10,39 +10,61 @@ class NLGaussSeidel(NonLinearSolver):
     cases with cycles.
     """
 
+    def __init__(self):
+        super(NLGaussSeidel, self).__init__()
+
+        self.options.add_option('atol', 1e-6)
+        self.options.add_option('rtol', 1e-6)
+        self.options.add_option('maxiter', 100)
+
+
     def solve(self, params, unknowns, resids, system):
         """ Solves the system using Gauss Seidel.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params: `VecWrapper`
+            `VecWrapper` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns: `VecWrapper`
+            `VecWrapper` containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals. (r)
+        resids: `VecWrapper`
+            `VecWrapper` containing residuals. (r)
 
-        system: system
-            Parent system object.
+        system: `System`
+            Parent `System` object.
         """
-        self.iter_count = 0
-        #atol = self.options['atol']
-        #rtol = self.options['rtol']
-        #maxiter = self.options['maxiter']
 
+        atol = self.options['atol']
+        rtol = self.options['rtol']
+        maxiter = self.options['maxiter']
+
+        # Initial run
+        self.iter_count = 1
         system.children_solve_nonlinear()
 
-        # TODO - turn into Gauss Seidel as follows
+        # Bail early if the user wants to.
+        if maxiter == 1:
+            return
 
         varmanager = system._varmanager
         resids = varmanager.resids
-        #normval = resids.norm()
 
-        # while self.iter_count < maxiter and normval > self.atol
+        # Evaluate Norm
+        system.apply_nonlinear(params, unknowns, resids)
+        normval = resids.norm()
+        basenorm = normval if normval > atol else 1.0
 
-            #"""Runs an iteration."""
-            #self.iter_count += 1
-            #self.children_solve_nonlinear()
+        while self.iter_count < maxiter and \
+              normval > atol and \
+              normval/basenorm > rtol:
 
-            #normval = resids.norm()
+            # Runs an iteration
+            system.children_solve_nonlinear()
+            self.iter_count += 1
+
+            # Evaluate Norm
+            system.apply_nonlinear(params, unknowns, resids)
+            normval = resids.norm()
 

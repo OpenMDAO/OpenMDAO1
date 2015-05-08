@@ -18,6 +18,22 @@ class Problem(Component):
         else:
             self.driver = driver
 
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable from the root system
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+             
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+        return self.root[name]
+    
     def setup(self):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
@@ -79,21 +95,28 @@ class Problem(Component):
         self.root. This function is used by the optimizer, but also can be
         used for testing derivatives on your model.
 
-        params: list of strings (optional)
+        Parameters
+        ----------
+        params : list of strings (optional)
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknowns: list of strings (optional)
+        unknowns : list of strings (optional)
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        mode: string (optional)
+        mode : string (optional)
             Deriviative direction, can be 'fwd', 'rev', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
-        return_format: string (optional)
+        return_format : string (optional)
             Format for the derivatives, can be 'array' or 'dict'.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params
         """
 
         if mode not in ['auto', 'fwd', 'rev']:
@@ -116,21 +139,14 @@ def assign_parameters(connections):
     param_owners = {}
 
     for par, unk in connections.items():
-        par_parts = par.split(':')
-        unk_parts = unk.split(':')
-
         common_parts = []
-        for ppart, upart in zip(par_parts, unk_parts):
+        for ppart, upart in zip(par.split(':'), unk.split(':')):
             if ppart == upart:
                 common_parts.append(ppart)
             else:
                 break
 
         owner = ':'.join(common_parts)
-
-        if owner in param_owners:
-            param_owners[owner].append(par)
-        else:
-            param_owners[owner] = [par]
+        param_owners.setdefault(owner, []).append(par)
 
     return param_owners

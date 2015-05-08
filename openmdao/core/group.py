@@ -6,7 +6,7 @@ from openmdao.core.system import System
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
                                       ViewTuple, get_relname_map
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 class Group(System):
@@ -18,14 +18,60 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
+        self._varmanager = None
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
-        self.nl_solver = NLGaussSeidel()
+        self.nl_solver = RunOnce()
 
         # These point to (du,df) or (df,du) depending on mode.
         self.sol_vec = None
         self.rhs_vec = None
+
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+
+        # if arg is not a tuple, then search for a subsystem by name
+        if not isinstance(name, tuple):
+            sys = self
+            parts = name.split(':')
+            for part in parts:
+                sys = getattr(sys, '_subsystems', {}).get(part)
+                if sys is None:
+                    break
+            else:
+                return sys
+
+        # if arg is a tuple or no subsystem found, then search for a variable
+        if not self._varmanager:
+            raise RuntimeError('setup() must be called before variables can be accessed')
+
+        try:
+            return self._varmanager[name]
+        except KeyError:
+            if isinstance(name, tuple):
+                name, vector = name
+                istuple = True
+            else:
+                vector = 'unknowns'
+                istuple = False
+            subsys, subname = name.split(':', 1)
+            if istuple:
+                return self._subsystems[subsys][subname, vector]
+            else:
+                return self.subsystems[name][subname]
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -153,7 +199,7 @@ class Group(System):
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self._varmanager = VarManager(self._params_dict, self._unknowns_dict,
+            self._varmanager = VarManager(self.pathname, self._params_dict, self._unknowns_dict,
                                          my_params, connections)
         else:
             self._varmanager = ViewVarManager(parent_vm,
@@ -174,11 +220,7 @@ class Group(System):
         for name, sub in self.components():
             u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
                                                sub._params_dict, sub._unknowns_dict, [], {})
-            relmap = get_relname_map(self._varmanager.params,
-                                     sub._params_dict, name)
-            self._views[name] = ViewTuple(u, du, r, dr,
-                                          self._varmanager.params.get_view(relmap),
-                                          self._varmanager.dparams.get_view(relmap))
+            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -214,14 +256,16 @@ class Group(System):
     def solve_nonlinear(self, params, unknowns, resids):
         """Solves the group using the slotted nl_solver.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals. (r)
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
         self.nl_solver.solve(params, unknowns, resids, self)
 
@@ -243,6 +287,126 @@ class Group(System):
             resids = view.resids
 
             system.solve_nonlinear(params, unknowns, resids)
+
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Evaluates the residuals of our children systems.
+
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+        """
+
+        varmanager = self._varmanager
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            # Local scatter
+            varmanager._transfer_data(name)
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.apply_nonlinear(params, unknowns, resids)
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """Calls apply_linear on our children. If our child is a `Component`,
+        then we need to also take care of the additional 1.0 on the diagonal
+        for explicit outputs.
+
+        df = du - dGdp * dp or du = df and dp = -dGdp^T * df
+
+        Parameters
+        ----------
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
+
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
+
+        dparams : `VecwWrapper`
+            `VecwWrapper` containing either the incoming vector in forward mode
+            or the outgoing result in reverse mode. (dp)
+
+        dunknowns : `VecwWrapper`
+            In forward mode, this `VecwWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
+
+        dresids : `VecwWrapper`
+            `VecwWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'
+        """
+
+        varmanager = self._varmanager
+
+        if mode == 'fwd':
+            # Full Scatter
+            varmanager._transfer_data()
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+            dparams = view.dparams
+            dunknowns = view.dunknowns
+            dresids = view.dresids
+
+            # Special handling for Components
+            if isinstance(system, Component):
+
+                # Forward Mode
+                if mode == 'fwd':
+
+                    system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+                    dunknowns.vec[:] *= -1.0
+
+                    for var in dunknowns:
+                        dunknowns[var][:] += dparams[var][:]
+
+                # Adjoint Mode
+                elif mode == 'rev':
+
+                    # Sign on the local Jacobian needs to be -1 before
+                    # we add in the fake residual. Since we can't modify
+                    # the 'du' vector at this point without stomping on the
+                    # previous component's contributions, we can multiply
+                    # our local 'arg' by -1, and then revert it afterwards.
+                    dunknowns.vec[:] *= -1.0
+                    system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+                    dunknowns.vec[:] *= -1.0
+
+                    for var in dunknowns:
+                        dparams[var][:] += dunknowns[var][:]
+
+            # Groups just recurse
+            else:
+                system.apply_linear(params, unknowns, dparams, dunknowns,
+                                      dresids, mode)
+
+        if mode == 'rev':
+            # Full Scatter
+            varmanager._transfer_data()
+
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and
@@ -302,7 +466,7 @@ def get_absvarpathname(var_name, var_dict):
        ----------
        var_name : str
            name of a variable relative to a `System`
-           
+
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
 

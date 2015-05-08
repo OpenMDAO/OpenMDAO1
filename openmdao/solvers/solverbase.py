@@ -1,5 +1,7 @@
 """ Base class for linear and nonlinear solvers."""
 
+from openmdao.core.options import OptionsDictionary
+
 
 class LinearSolver(object):
     """ Base class for all linear solvers. Inherit from this class to create a
@@ -7,7 +9,7 @@ class LinearSolver(object):
 
     def __init__(self):
         self.iter_count = 0
-        #self.options = OptionsDict()
+        self.options = OptionsDictionary()
 
     def solve(self, rhs):
         """ Solves the linear system for the problem in self.system. The
@@ -26,7 +28,7 @@ class NonLinearSolver(object):
 
     def __init__(self):
         self.iter_count = 0
-        #self.options = OptionsDict()
+        self.options = OptionsDictionary()
 
     def solve(self):
         """ Drive all residuals in self.system and all subsystems to zero.

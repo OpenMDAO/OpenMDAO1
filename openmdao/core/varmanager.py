@@ -26,13 +26,40 @@ class VarManagerBase(object):
         self.dresids   = None
         self.data_xfer = {}
 
-    def _setup_data_transfer(self, my_params):
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named variable
+
+        Parameters
+        ----------
+        name : str   OR   tuple : (name, vector)
+             the name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get it's
+             value from.
+
+        Returns
+        -------
+        the unflattened value of the given variable
+        """
+        if isinstance(name, tuple):
+            name, vector = name
+        else:
+            vector = 'unknowns'
+        try:
+            return getattr(self, vector)[name]
+        except KeyError:
+            raise KeyError('%s is not in the %s vector for this system' %
+                           (name, vector))
+
+    def _setup_data_transfer(self, sys_pathname, my_params):
         """Create `DataXfer` objects to handle data transfer for all of the
            connections that involve paramaters for which this `VarManager`
            is responsible.
 
            Parameters
            ----------
+           sys_pathname : str
+               Absolute pathname of the `System` that will own this `VarManager`.
+
            my_params : list
                list of pathnames for parameters that the VarManager is
                responsible for propagating
@@ -56,8 +83,13 @@ class VarManagerBase(object):
         xfer_dict = {}
         for param, unknown in self.connections.items():
             if param in my_params:
-                dest_comp = param.split(':',1)[0]
-                src_idx_list, dest_idx_list, noflat_conns = xfer_dict.setdefault(dest_comp, ([],[],[]))
+                # remove our system pathname from the abs pathname of the param and get subsystem name from that
+                if sys_pathname:
+                    start = len(sys_pathname)+1
+                else:
+                    start = 0
+                tgt_sys = param[start:].split(':', 1)[0]
+                src_idx_list, dest_idx_list, noflat_conns = xfer_dict.setdefault(tgt_sys, ([],[],[]))
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
                 noflat = self.unknowns.metadata(urelname)[0].get('noflat')
@@ -67,9 +99,9 @@ class VarManagerBase(object):
                     src_idx_list.append(self.unknowns.get_idxs(urelname))
                     dest_idx_list.append(self.params.get_idxs(prelname))
 
-        for tgt_comp, (srcs, tgts, noflat_conns) in xfer_dict.items():
+        for tgt_sys, (srcs, tgts, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            self.data_xfer[tgt_comp] = DataXfer(src_idxs, tgt_idxs, noflat_conns)
+            self.data_xfer[tgt_sys] = DataXfer(src_idxs, tgt_idxs, noflat_conns)
 
         #TODO: create a jacobi DataXfer object (if necessary) that combines all of the
         #      individual subsystem src_idxs, tgt_idxs, and noflat_conns
@@ -116,17 +148,20 @@ class VarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, params_dict, unknowns_dict, my_params, connections):
+    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(VarManager, self).__init__(connections)
 
         self.unknowns  = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
         self.dunknowns = VecWrapper.create_source_vector(unknowns_dict)
         self.resids    = VecWrapper.create_source_vector(unknowns_dict)
         self.dresids   = VecWrapper.create_source_vector(unknowns_dict)
-        self.params    = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections, store_noflats=True)
-        self.dparams   = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections)
+        self.params    = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections, store_noflats=True)
+        self.dparams   = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections)
 
-        self._setup_data_transfer(my_params)
+        self._setup_data_transfer(sys_pathname, my_params)
+
 
 class ViewVarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed collection of
@@ -157,7 +192,8 @@ class ViewVarManager(VarManagerBase):
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
             create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
 
-        self._setup_data_transfer(my_params)
+        self._setup_data_transfer(sys_pathname, my_params)
+
 
 
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
@@ -200,9 +236,9 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     dunknowns = parent_vm.dunknowns.get_view(umap)
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
-    params    = VecWrapper.create_target_vector(params_dict, unknowns,
+    params    = VecWrapper.create_target_vector(parent_vm.params, params_dict, unknowns,
                                                      my_params, connections, store_noflats=True)
-    dparams   = VecWrapper.create_target_vector(params_dict, unknowns,
+    dparams   = VecWrapper.create_target_vector(parent_vm.dparams, params_dict, unknowns,
                                                      my_params, connections)
 
     return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)

@@ -1,7 +1,10 @@
 from collections import OrderedDict
+
 import numpy
+from numpy.linalg import norm
 
 from openmdao.util.types import is_differentiable, int_types
+
 
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
@@ -19,11 +22,15 @@ class VecWrapper(object):
     def __getitem__(self, name):
         """Retrieve unflattened value of named var"""
         meta = self._vardict[name][0]
-        shape = meta.get('shape')
-        if shape is None:
+        if meta.get('noflat'):
             return meta['val']
         else:
-            return meta['val'].reshape(shape)
+            # if it doesn't have a shape, it's a float
+            shape = meta.get('shape')
+            if shape is None:
+                return meta['val'][0]
+            else:
+                return meta['val'].reshape(shape)
 
     def __setitem__(self, name, value):
         """Set the value of the named var"""
@@ -157,14 +164,54 @@ class VecWrapper(object):
 
         return vmeta
 
+    def norm(self):
+        """ Calculates the norm of this vector.
+
+        Returns
+        -------
+        float
+            Norm of the flattenable values in this vector.
+        """
+        return norm(self.vec)
+
     @staticmethod
-    def create_target_vector(params_dict, srcvec, my_params, connections, store_noflats=False):
+    def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,
+                             connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
+
+        Parameters
+        ----------
+        parent_params_vec : `VecWrapper` or None
+            `VecWrapper` of parameters from the parent `System`
+
+        params_dict : `OrderedDict`
+            Dictionary of parameter absolute name mapped to metadata dict
+
+        srcvec : `VecWrapper`
+            Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
+
+        my_params : list of str
+            A list of absolute names of parameters that the `VecWrapper` we're building
+            will 'own'.
+
+        connections : dict of str : str
+            A dict of absolute target names mapped to the absolute name of their
+            source variable.
+
+        store_noflats : bool
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+
+        Returns
+        -------
+        `VecWrapper`
+            Newly built params `VecWrapper`
+
         """
         self = VecWrapper()
 
         vec_size = 0
+        missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
             if pathname in my_params:
                 # if connected, get metadata from the source
@@ -181,6 +228,9 @@ class VecWrapper(object):
                 vec_size += vmeta['size']
 
                 self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+            else:
+                if parent_params_vec is not None:
+                    missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -192,6 +242,16 @@ class VecWrapper(object):
             if meta['size'] > 0:
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
+
+        # fill entries for missing params with views from the parent
+        for pathname in missing:
+            meta = params_dict[pathname]
+            prelname = parent_params_vec.get_relative_varname(pathname)
+            newmeta = parent_params_vec._vardict[prelname][0].copy()
+            newmeta['relative_name'] = meta['relative_name']
+            self._vardict.setdefault(meta['relative_name'],
+                                     []).append(newmeta)
+
 
         return self
 

@@ -69,7 +69,7 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = p
 
-        p = VecWrapper.create_target_vector(params, u, params.keys(),
+        p = VecWrapper.create_target_vector(None, params, u, params.keys(),
                                             connections, store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
@@ -120,6 +120,20 @@ class TestVecWrapper(unittest.TestCase):
         # now get a view that's empty
         uview2 = u.get_view({})
         self.assertEqual(list(uview2.keys()), [])
+
+    def test_norm(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['y1'] = { 'val' : np.array([2.0, 3.0]) }
+        unknowns_dict['y2'] = { 'val' : -4.0 }
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+
+        unorm = u.norm()
+        self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
 
 if __name__ == "__main__":
     unittest.main()
