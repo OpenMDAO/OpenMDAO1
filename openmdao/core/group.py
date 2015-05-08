@@ -174,11 +174,7 @@ class Group(System):
         for name, sub in self.components():
             u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
                                                sub._params_dict, sub._unknowns_dict, [], {})
-            relmap = get_relname_map(self._varmanager.params,
-                                     sub._params_dict, name)
-            self._views[name] = ViewTuple(u, du, r, dr,
-                                          self._varmanager.params.get_view(relmap),
-                                          self._varmanager.dparams.get_view(relmap))
+            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -214,14 +210,16 @@ class Group(System):
     def solve_nonlinear(self, params, unknowns, resids):
         """Solves the group using the slotted nl_solver.
 
-        params: vecwrapper
-            VecWrapper containing parameters (p)
+        Parameters
+        ----------
+        params : `VecWrapper`
+            ``VecWrapper` ` containing parameters (p)
 
-        unknowns: vecwrapper
-            VecWrapper containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper`  containing outputs and states (u)
 
-        resids: vecwrapper
-            VecWrapper containing residuals. (r)
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
         self.nl_solver.solve(params, unknowns, resids, self)
 
@@ -302,7 +300,7 @@ def get_absvarpathname(var_name, var_dict):
        ----------
        var_name : str
            name of a variable relative to a `System`
-           
+
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
 

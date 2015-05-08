@@ -113,13 +113,12 @@ class VecWrapper(object):
 
         return self
 
-    def _add_source_var(self, name, meta, index, state=False):
+    def _add_source_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
         then allocate a range in the vector array to store it. Store the
         shape of the variable so it can be un-flattened later."""
 
         vmeta = meta.copy()
-        vmeta['state'] = state
         vmeta['pathname'] = name
 
         if 'shape' in meta:
@@ -159,20 +158,22 @@ class VecWrapper(object):
         return vmeta
 
     @staticmethod
-    def create_target_vector(params_dict, srcvec, my_params, connections, store_noflats=False):
+    def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,
+                             connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
         """
         self = VecWrapper()
 
         vec_size = 0
+        missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
             if pathname in my_params:
                 # if connected, get metadata from the source
                 src_pathname = connections.get(pathname)
                 if src_pathname is None:
                     raise RuntimeError("Parameter %s is not connected" % pathname)
-                src_rel_name = get_relative_varname(src_pathname, srcvec)
+                src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
                 #TODO: check for self-containment of src and param
@@ -182,6 +183,9 @@ class VecWrapper(object):
                 vec_size += vmeta['size']
 
                 self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+            else:
+                if parent_params_vec is not None:
+                    missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -193,6 +197,16 @@ class VecWrapper(object):
             if meta['size'] > 0:
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
+
+        # fill entries for missing params with views from the parent
+        for pathname in missing:
+            meta = params_dict[pathname]
+            prelname = parent_params_vec.get_relative_varname(pathname)
+            newmeta = parent_params_vec._vardict[prelname][0].copy()
+            newmeta['relative_name'] = meta['relative_name']
+            self._vardict.setdefault(meta['relative_name'],
+                                     []).append(newmeta)
+
 
         return self
 
@@ -273,6 +287,52 @@ class VecWrapper(object):
 
         return idx_merge(new_src), idx_merge(new_dest)
 
+    def get_relative_varname(self, abs_name):
+        """Returns the relative pathname for the given absolute variable
+        pathname in the variable dictionary
+
+        Parameters
+        ----------
+        abs_name : str
+            Absolute pathname of a variable
+
+        Returns
+        -------
+        rel_name : str
+            Relative name mapped to the given absolute pathname
+        """
+        for rel_name, meta_list in self._vardict.items():
+            for meta in meta_list:
+                if meta['pathname'] == abs_name:
+                    return rel_name
+        raise RuntimeError("Relative name not found for %s" % abs_name)
+
+    def get_states(self):
+        """
+        Returns
+        -------
+            A list of names of state variables.
+        """
+        return [n for n,meta in self.items() if meta.get('state')]
+
+    def get_vecvars(self):
+        """
+        Returns
+        -------
+            A list of names of 'flattenable' variables.
+        """
+        return [n for n,meta in self.items() if not meta.get('noflat')]
+
+    def get_noflats(self):
+        """
+        Returns
+        -------
+            A list of names of 'unflattenable' variables.
+        """
+        return [n for n,meta in self.items() if meta.get('noflat')]
+
+
+
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
@@ -287,11 +347,3 @@ def idx_merge(idxs):
                 return numpy.concatenate(idxs)
     return idxs
 
-def get_relative_varname(pathname, vec):
-    """Returns the absolute pathname for the given relative variable
-    name in the variable dictionary"""
-    for rel_name, meta_list in vec._vardict.items():
-        for meta in meta_list:
-            if meta['pathname'] == pathname:
-                return rel_name
-    raise RuntimeError("Relative name not found for %s" % pathname)

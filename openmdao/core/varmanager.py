@@ -1,7 +1,7 @@
 
 from collections import namedtuple
 import numpy
-from openmdao.core.vecwrapper import VecWrapper, get_relative_varname
+from openmdao.core.vecwrapper import VecWrapper
 from openmdao.core.dataxfer import DataXfer
 
 ViewTuple = namedtuple('ViewTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
@@ -9,12 +9,12 @@ ViewTuple = namedtuple('ViewTuple', 'unknowns, dunknowns, resids, dresids, param
 class VarManagerBase(object):
     """Base class for a manager of the data transfer of a possibly distributed
     collection of variables.
-    
+
     Parameters
     ----------
         connections : dict
-            a dictionary mapping the pathname of a target variable to the 
-            pathname of the source variable that it is connected to            
+            a dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to
     """
     def __init__(self, connections):
         self.connections = connections
@@ -28,16 +28,16 @@ class VarManagerBase(object):
 
     def _setup_data_transfer(self, my_params):
         """Create `DataXfer` objects to handle data transfer for all of the
-           connections that involve paramaters for which this `VarManager` 
+           connections that involve paramaters for which this `VarManager`
            is responsible.
-           
+
            Parameters
            ----------
            my_params : list
                list of pathnames for parameters that the VarManager is
                responsible for propagating
         """
-        
+
         # collect all flattenable var sizes from self.unknowns
         flats = [m['size'] for m in self.unknowns.values()
                      if not m.get('noflat')]
@@ -58,8 +58,8 @@ class VarManagerBase(object):
             if param in my_params:
                 dest_comp = param.split(':',1)[0]
                 src_idx_list, dest_idx_list, noflat_conns = xfer_dict.setdefault(dest_comp, ([],[],[]))
-                urelname = get_relative_varname(unknown, self.unknowns)
-                prelname = get_relative_varname(param, self.params)
+                urelname = self.unknowns.get_relative_varname(unknown)
+                prelname = self.params.get_relative_varname(param)
                 noflat = self.unknowns.metadata(urelname)[0].get('noflat')
                 if noflat:
                     noflat_conns.append(prelname, urelname)
@@ -99,22 +99,22 @@ class VarManagerBase(object):
 class VarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed
     collection of variables.
-    
+
     Parameters
     ----------
     params_dict : dict
         dictionary of metadata for all parameters
-        
+
     unknowns_dict : dict
         dictionary of metadata for all unknowns
-    
+
     my_params : list
         list of pathnames for parameters that this `VarManager` is
         responsible for propagating
-        
+
     connections : dict
-        a dictionary mapping the pathname of a target variable to the 
-        pathname of the source variable that it is connected to            
+        a dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to
     """
     def __init__(self, params_dict, unknowns_dict, my_params, connections):
         super(VarManager, self).__init__(connections)
@@ -123,33 +123,35 @@ class VarManager(VarManagerBase):
         self.dunknowns = VecWrapper.create_source_vector(unknowns_dict)
         self.resids    = VecWrapper.create_source_vector(unknowns_dict)
         self.dresids   = VecWrapper.create_source_vector(unknowns_dict)
-        self.params    = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections, store_noflats=True)
-        self.dparams   = VecWrapper.create_target_vector(params_dict, self.unknowns, my_params, connections)
+        self.params    = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections, store_noflats=True)
+        self.dparams   = VecWrapper.create_target_vector(None, params_dict, self.unknowns,
+                                                         my_params, connections)
 
         self._setup_data_transfer(my_params)
 
 class ViewVarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
-    
+
     Parameters
     ----------
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
-        
+
     params_dict : dict
         dictionary of metadata for all parameters
-        
+
     unknowns_dict : dict
         dictionary of metadata for all unknowns
-    
+
     my_params : list
         list of pathnames for parameters that this `VarManager` is
         responsible for propagating
-        
+
     connections : dict
-        a dictionary mapping the pathname of a target variable to the 
-        pathname of the source variable that it is connected to            
+        a dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to
     """
     def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(ViewVarManager, self).__init__(connections)
@@ -163,36 +165,36 @@ class ViewVarManager(VarManagerBase):
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
     """A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
-    
+
     Parameters
     ----------
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
-        
+
     sys_pathname : str
         pathname of the system for which the views are being created
-    
+
     params_dict : dict
         dictionary of metadata for all parameters
-        
+
     unknowns_dict : dict
         dictionary of metadata for all unknowns
-    
+
     my_params : list
         list of pathnames for parameters that this `VarManager` is
         responsible for propagating
-        
+
     connections : dict
-        a dictionary mapping the pathname of a target variable to the 
-        pathname of the source variable that it is connected to            
-        
+        a dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to
+
     Returns
     -------
     `ViewTuple`
-        a namedtuple of six (6) `VecWrapper`s: 
+        a namedtuple of six (6) `VecWrapper`s:
         unknowns, dunknowns, resids, dresids, params, dparams
     """
-    
+
     # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
 
@@ -200,9 +202,9 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     dunknowns = parent_vm.dunknowns.get_view(umap)
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
-    params    = VecWrapper.create_target_vector(params_dict, unknowns,
+    params    = VecWrapper.create_target_vector(parent_vm.params, params_dict, unknowns,
                                                      my_params, connections, store_noflats=True)
-    dparams   = VecWrapper.create_target_vector(params_dict, unknowns,
+    dparams   = VecWrapper.create_target_vector(parent_vm.dparams, params_dict, unknowns,
                                                      my_params, connections)
 
     return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)
@@ -220,7 +222,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
 
     child_name : str
         The pathname of the child for which to get relative name
-    
+
     Returns
     -------
     dict
