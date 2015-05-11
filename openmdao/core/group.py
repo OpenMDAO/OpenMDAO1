@@ -413,13 +413,6 @@ class Group(System):
             varmanager._transfer_data()
 
     def dump(self, nest=0, file=sys.stdout, verbose=True):
-        #print(' '*(3*nest), self.pathname)
-        #for name, s in self.subsystems():
-            #if isinstance(s, Group):
-                #s.dump(nest+1, file=file)
-            #else:
-                #print(' '*(3*(nest+1)), s.pathname)
-
         file.write(" "*nest)
         file.write(self.name)
         klass = self.__class__.__name__
@@ -428,7 +421,7 @@ class Group(System):
         pvec = self._varmanager.params
 
         file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                     (klass.lower()[:5],
+                     (klass,
                       1, #self.get_req_cpus(),
                       0, #world_rank,
                       uvec.vec.size,
@@ -467,8 +460,23 @@ class Group(System):
             file.write("%s --> %s\n" % (src, dest))
 
         nest += 4
-        for name, sub in self.subgroups(local=True):
-            sub.dump(nest, file)
+        for name, sub in self.subsystems(local=True):
+            if isinstance(sub, Component):
+                uvec = self._views[name].unknowns
+                file.write(" "*nest)
+                file.write(name)
+                file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                           (sub.__class__.__name__,
+                            1, #sub.get_req_cpus(),
+                            0, #world_rank,
+                            uvec.vec.size,
+                            pvec.vec.size))
+                for v, meta in uvec.items():
+                    if verbose:
+                        file.write(" "*(nest+2))
+                        file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+            else:
+                sub.dump(nest, file)
 
 
 def _get_implicit_connections(params_dict, unknowns_dict):
