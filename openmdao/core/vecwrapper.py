@@ -232,7 +232,6 @@ class VecWrapper(object):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                #TODO: check for self-containment of src and param
                 vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
                 vmeta['pathname'] = pathname
 
@@ -260,6 +259,7 @@ class VecWrapper(object):
             prelname = parent_params_vec.get_relative_varname(pathname)
             newmeta = parent_params_vec._vardict[prelname][0].copy()
             newmeta['relative_name'] = meta['relative_name']
+            newmeta['owned'] = False # mark this param as not 'owned' by this VW
             self._vardict.setdefault(meta['relative_name'],
                                      []).append(newmeta)
 
@@ -329,7 +329,7 @@ class VecWrapper(object):
         dest_idxs = [i for i in dest_idxs if len(i)]
 
         if len(src_idxs) == 0:
-            return make_idx_array(0, 0), make_idx_array(0,0)
+            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
 
         src_tups = list(enumerate(src_idxs))
 
