@@ -376,8 +376,7 @@ class Group(System):
             # Full Scatter
             varmanager._transfer_data(deriv=True)
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             view = self._views[system.name]
 
