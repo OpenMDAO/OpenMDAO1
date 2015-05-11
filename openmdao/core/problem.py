@@ -3,29 +3,51 @@
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
-from openmdao.core.checks.connections import check_connections
 
 from collections import namedtuple
 
 class ConnectError(Exception):
-    pass
-
-def make_var_metadata(path, metadata):
-    return VarMetadata(path, metadata['val'], type(metadata['val']), metadata.get('shape'))
+    @classmethod
+    def type_mismatch_error(cls, src, target):
+        msg = "Type '{src[type]}' of source '{src[relative_name]}' must be the same as type '{target[type]}' of target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def shape_mismatch_error(cls, src, target):
+        msg  = "Shape '{src[shape]}' of the source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def val_and_shape_mismatch_error(cls, src, target):
+        msg = "Shape of the initial value '{src[val].shape}' of source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+    
+def make_metadata(metadata):
+    '''
+    Add type field to metadata dict.
+    Returns a modified copy of `metadata`.
+    '''
+    metadata = dict(metadata)
+    metadata['type'] = type(metadata['val'])
+        
+    return metadata
 
 def check_types_match(src, target):
-    if src.type != target.type:
-        msg = "Type '{src.path} of source '{src.type}' must be the same as type '{target.path}' of target '{target.type}'"
-        msg = msg.format(src=src, target=target)
-
-        raise ConnectError(msg)
+    if src['type'] != target['type']:
+        raise ConnectError.type_mismatch_error(src, target)
 
 def check_connections(connections, params, unknowns):
     # Get metadata for all sources
-    sources = map(make_var_metadata, connections.values(), map(unknowns.get, connections.values()))
+    sources = map(make_metadata, map(unknowns.get, connections.values()))
     
     #Get metadata for all targets
-    targets = map(make_var_metadata, connections.keys(), map(params.get, connections.keys()))
+    targets = map(make_metadata, map(params.get, connections.keys()))
     
     for source, target in zip(sources, targets):
         check_types_match(source, target)
@@ -33,28 +55,18 @@ def check_connections(connections, params, unknowns):
 
 def check_shapes_match(source, target):
     #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
-    source_shape_type = type(source.shape)
-    target_shape_type = type(target.shape)
     
-    check_shape_function = __shape_checks.get((source_shape_type, target_shape_type), lambda x, y: None)
+    check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
     
     check_shape_function(source, target)
 
 def __check_shapes_match(src, target):
-    if src.shape != target.shape:
-        msg  = "Shape '{src.shape}' of the source '{src.path}' must match the shape '{target.shape}' of the target '{target.path}'"
-        msg = msg.format(src=src, target=target)
-
-        raise ConnectError(msg)
+    if src['shape'] != target['shape']:
+        raise ConnectError.shape_mismatch_error(src, target)
 
 def __check_val_and_shape_match(src, target):
-    if src.val.shape != target.shape:
-        msg = "Shape of the initial value '{src.val.shape}' of source '{src.path}' must match the shape '{target.shape}' of the target '{target.path}'"
-        msg = msg.format(src=src, target=target)
-
-        raise ConnectError(msg)
-
-VarMetadata = namedtuple('VarMetadata', 'path val type shape')
+    if src['val'].shape != target['shape']:
+        raise ConnectError.val_and_shape_mismatch_error(src, target)
         
 __shape_checks = {
     (tuple, tuple) : __check_shapes_match,
