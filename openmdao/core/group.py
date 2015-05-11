@@ -4,8 +4,7 @@ from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
-                                      ViewTuple, get_relname_map
+from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
@@ -116,7 +115,7 @@ class Group(System):
         local: bool
             Set to True to return only systems that are local.
         """
-        if local == True:
+        if local is True:
             return self._local_subsystems.items()
         return self._subsystems.items()
 
@@ -213,15 +212,11 @@ class Group(System):
         self._views = {}
         for name, sub in self.subgroups():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
-            vm = sub._varmanager
-            self._views[name] = ViewTuple(vm.unknowns, vm.dunknowns,
-                                          vm.resids, vm.dresids,
-                                          vm.params, vm.dparams)
+            self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
-                                               sub._params_dict, sub._unknowns_dict, [], {})
-            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
+            self._views[name] = create_views(self._varmanager, sub.pathname,
+                                             sub._params_dict, sub._unknowns_dict, [], {})
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -363,12 +358,12 @@ class Group(System):
 
             view = self._views[system.name]
 
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-            dparams = view.dparams
+            params    = view.params
+            unknowns  = view.unknowns
+            resids    = view.resids
+            dparams   = view.dparams
             dunknowns = view.dunknowns
-            dresids = view.dresids
+            dresids   = view.dresids
 
             # Special handling for Components
             if isinstance(system, Component):

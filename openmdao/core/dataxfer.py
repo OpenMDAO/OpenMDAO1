@@ -22,4 +22,3 @@ class DataXfer(object):
 
             for src, tgt in self.noflat_conns:
                 tgtvec[tgt] = srcvec[src]
-

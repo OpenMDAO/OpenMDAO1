@@ -77,7 +77,7 @@ class VecWrapper(object):
 
     def values(self):
         """ iterate over the first metadata for each variable """
-        for  metadata_entry in self._vardict.values():
+        for metadata_entry in self._vardict.values():
             yield metadata_entry[0]
 
     def metadata(self, name):
@@ -186,7 +186,6 @@ class VecWrapper(object):
             Norm of the flattenable values in this vector.
         """
         return norm(self.vec)
-
 
     def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
@@ -329,7 +328,7 @@ class VecWrapper(object):
         dest_idxs = [i for i in dest_idxs if len(i)]
 
         if len(src_idxs) == 0:
-            return make_idx_array(0, 0), make_idx_array(0,0)
+            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
 
         src_tups = list(enumerate(src_idxs))
 
@@ -383,7 +382,6 @@ class VecWrapper(object):
             A list of names of 'unflattenable' variables.
         """
         return [n for n,meta in self.items() if meta.get('noflat')]
-
 
 
 def idx_merge(idxs):
