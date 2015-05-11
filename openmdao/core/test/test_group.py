@@ -325,5 +325,10 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(prob.root['G3:C3'], prob.root.C3)
         self.assertEqual(prob.root['G3:C4'], prob.root.C4)
 
+    def test_dump(self):
+        prob = Problem(root=ExampleGroup())
+        prob.setup()
+        prob.root.dump()
+
 if __name__ == "__main__":
     unittest.main()

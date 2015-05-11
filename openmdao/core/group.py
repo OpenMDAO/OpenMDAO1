@@ -1,5 +1,8 @@
 """ Defines the base class for a Group in OpenMDAO."""
 
+from __future__ import print_function
+
+import sys
 from collections import OrderedDict
 
 from openmdao.core.system import System
@@ -116,27 +119,28 @@ class Group(System):
         local: bool
             Set to True to return only systems that are local.
         """
-        if local == True:
-            return self._local_subsystems.items()
+        #TODO: once we add MPI stuff, maintain local subsystems
+        #if local == True:
+            #return self._local_subsystems.items()
         return self._subsystems.items()
 
-    def subgroups(self):
+    def subgroups(self, local=False):
         """ Returns
             -------
             iterator
                 iterator over subgroups.
         """
-        for name, subsystem in self._subsystems.items():
+        for name, subsystem in self.subsystems(local=local):
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
-    def components(self):
+    def components(self, local=False):
         """ Returns
                 -------
                 iterator
                     iterator over sub-`Component`s.
             """
-        for name, comp in self._subsystems.items():
+        for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
                 yield name, comp
 
@@ -248,8 +252,8 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, src in self._src.items():
-            src_pathname = get_absvarpathname(src, self._unknowns_dict)
-            tgt_pathname = get_absvarpathname(tgt, self._params_dict)
+            src_pathname = get_absvarpathname(src, self._unknowns_dict, 'unknowns')
+            tgt_pathname = get_absvarpathname(tgt, self._params_dict, 'params')
             connections[tgt_pathname] = src_pathname
 
         return connections
@@ -408,6 +412,64 @@ class Group(System):
             # Full Scatter
             varmanager._transfer_data()
 
+    def dump(self, nest=0, file=sys.stdout, verbose=True):
+        #print(' '*(3*nest), self.pathname)
+        #for name, s in self.subsystems():
+            #if isinstance(s, Group):
+                #s.dump(nest+1, file=file)
+            #else:
+                #print(' '*(3*(nest+1)), s.pathname)
+
+        file.write(" "*nest)
+        file.write(self.name)
+        klass = self.__class__.__name__
+
+        uvec = self._varmanager.unknowns
+        pvec = self._varmanager.params
+
+        file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                     (klass.lower()[:5],
+                      1, #self.get_req_cpus(),
+                      0, #world_rank,
+                      uvec.vec.size,
+                      pvec.vec.size))
+
+        flat_conns = dict(self._varmanager.data_xfer[''].flat_conns)
+        noflat_conns = dict(self._varmanager.data_xfer[''].noflat_conns)
+
+        for v, meta in uvec.items():
+            if verbose:
+                file.write(" "*(nest+2))
+                pnames = [p for p,u in flat_conns.items() if u==v]
+                if pnames:
+                    if len(pnames) == 1:
+                        pname = pnames[0]
+                        pslice = pvec._slices[pname]
+                    else:
+                        pslice = [pvec._slices[p] for p in pnames]
+                    file.write("u (%s)  p (%s): %s --> %s\n" %
+                                 (str(uvec._slices[v]),
+                                  str(pslice), v, pnames))
+                else:
+                    file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+
+        for v, meta in pvec.items():
+            if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
+                file.write(" "*(nest+2))
+                file.write("           p (%s): %s\n" %
+                                   (str(pvec._slices[v]), v))
+
+        if noflat_conns:
+            file.write(' '*(nest+2) + "= noflat connections =\n")
+
+        for dest, src in noflat_conns.items():
+            file.write(" "*(nest+2))
+            file.write("%s --> %s\n" % (src, dest))
+
+        nest += 4
+        for name, sub in self.subgroups(local=True):
+            sub.dump(nest, file)
+
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and
@@ -461,7 +523,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     return connections
 
 
-def get_absvarpathname(var_name, var_dict):
+def get_absvarpathname(var_name, var_dict, dict_name):
     """
        Parameters
        ----------
@@ -470,6 +532,9 @@ def get_absvarpathname(var_name, var_dict):
 
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
+
+       dict_name : str
+           name of var_dict (used for error reporting)
 
        Returns
        -------
@@ -480,4 +545,5 @@ def get_absvarpathname(var_name, var_dict):
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
             return pathname
-    raise RuntimeError("Absolute pathname not found for %s" % var_name)
+
+    raise RuntimeError("'%s' not found in %s" % (var_name, dict_name))
