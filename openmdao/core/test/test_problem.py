@@ -327,9 +327,7 @@ class TestProblem(unittest.TestCase):
         prob.run()
 
         self.assertAlmostEqual(prob['G3:C4:y'], 40.)
-        # TODO: this needs Systems to be able to solve themselves
 
-        # ...
 
 if __name__ == "__main__":
     unittest.main()
