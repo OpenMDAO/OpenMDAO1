@@ -9,5 +9,5 @@ class BasicImpl(object):
         return VecWrapper()
 
     @staticmethod
-    def createDataXfer(src_idxs, tgt_idxs, noflat_conns):
-        return DataXfer(src_idxs, tgt_idxs, noflat_conns)
+    def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
+        return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
