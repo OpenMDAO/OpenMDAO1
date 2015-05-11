@@ -192,4 +192,3 @@ class Component(System):
                 result[:] += J.dot(arg.flatten()).reshape(result.shape)
             else:
                 arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
-
