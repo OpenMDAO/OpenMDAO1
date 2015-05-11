@@ -17,12 +17,36 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
-        self.ln_solver = None
-        self.nl_solver = None
+    def __getitem__(self, name):
+        """
+        Return the variable or subsystem of the given name from this system.
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable or subsystem
+
+        Returns
+        -------
+        value OR `System`
+            the unflattened value of the given variable OR a reference to
+            the named `System`
+        """
+        raise RuntimeError('Variables must be accessed from a containing Group')
 
     def promoted(self, name):
-        """Return True if the named variable (relative name) is being promoted
-        from this System.
+        """Determine is the given variable name  is being promoted from this
+        `System`.
+
+        Parameters
+        ----------
+        name : str
+            the name of a variable, relative to this `System`
+
+        Returns
+        -------
+        bool
+            True if the named variable is being promoted from this `System`.
         """
         if isinstance(self._promotes, string_types):
             raise TypeError("%s promotes must be specified as a list, "
@@ -39,8 +63,13 @@ class System(object):
         return False
 
     def _setup_paths(self, parent_path):
-        """Set the absolute pathname of each System in the
-        tree.
+        """Set the absolute pathname of each `System` in the tree.
+
+        Parameter
+        ---------
+        parent_path : str
+            the pathname of the parent `System`, which is to be prepended to the
+            name of this child `System`
         """
         if parent_path:
             self.pathname = ':'.join((parent_path, self.name))
