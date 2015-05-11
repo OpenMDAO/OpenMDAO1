@@ -1,6 +1,7 @@
 """ Test for the Component class"""
 
 import unittest
+from collections import OrderedDict
 from six import text_type
 
 import numpy as np
@@ -11,7 +12,14 @@ class TestComponent(unittest.TestCase):
 
     def setUp(self):
         self.comp = Component()
-
+        
+    def test_properties(self):
+        self.comp.add_param('x', 1)
+        self.comp.add_state('y', 1)
+        self.comp.add_output('z', 1)
+        
+        self.assertEqual(self.comp.params, OrderedDict([('x', {'val': 1})]))
+        self.assertEqual(self.comp.unknowns, OrderedDict([('y', {'state': True, 'val': 1}), ('z', {'val': 1})]))
     def test_promotes(self):
         self.comp.add_param("xxyyzz", 0.0)
         self.comp.add_param("foobar", 0.0)

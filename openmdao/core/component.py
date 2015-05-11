@@ -37,6 +37,20 @@ class Component(System):
         args['state'] = True
         self._unknowns_dict[name] = args
 
+    @property
+    def params(self):
+        '''
+        Returns `OrderedDict` of all parameters for the component
+        '''
+        return self._params_dict
+        
+    @property
+    def unknowns(self):
+        '''
+        Returns `OrderedDict` of all unknowns (states and outputs) for the component
+        '''
+        return self._unknowns_dict
+        
     def _check_name(self, name):
         if self._post_setup:
             raise RuntimeError("%s: can't add variable %s because setup has already been called",
