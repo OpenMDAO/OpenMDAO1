@@ -1,7 +1,6 @@
 Package openmdao.core
 ---------------------
 
-####################component
 .. index:: component.py
 
 .. _openmdao.core.component.py:
@@ -17,7 +16,6 @@ component.py
 .. toctree::
    :maxdepth: 2
 
-####################dataxfer
 .. index:: dataxfer.py
 
 .. _openmdao.core.datxfer.py:
@@ -33,7 +31,6 @@ dataxfer.py
 .. toctree::
    :maxdepth: 2
 
-####################driver
 .. index:: driver.py
 
 .. _openmdao.core.driver.py:
@@ -49,7 +46,6 @@ driver.py
 .. toctree::
    :maxdepth: 2
 
-####################group
 .. index:: group.py
 
 .. _openmdao.core.group.py:
@@ -65,7 +61,6 @@ group.py
 .. toctree::
    :maxdepth: 2
 
-####################options
 .. index:: options.py
 
 .. _openmdao.core.options.py:
@@ -81,7 +76,6 @@ options.py
 .. toctree::
    :maxdepth: 2
 
-####################parallelgroup
 .. index:: parallelgroup.py
 
 .. _openmdao.core.parallelgroup.py:
@@ -97,8 +91,6 @@ parallelgroup.py
 .. toctree::
    :maxdepth: 2
 
-
-####################problem
 .. index:: problem.py
 
 .. _openmdao.core.problem.py:
@@ -114,7 +106,6 @@ problem.py
 .. toctree::
    :maxdepth: 2
 
-####################system
 .. index:: system.py
 
 .. _openmdao.core.system.py:
@@ -130,7 +121,6 @@ system.py
 .. toctree::
    :maxdepth: 2
 
-####################varmanager
 .. index:: varmanager.py
 
 .. _openmdao.core.varmanager.py:
@@ -146,7 +136,6 @@ varmanager.py
 .. toctree::
    :maxdepth: 2
 
-####################vecwrapper
 .. index:: vecwrapper.py
 
 .. _openmdao.core.vecwrapper.py:
@@ -161,7 +150,6 @@ vecwrapper.py
 
 .. toctree::
    :maxdepth: 2
-
 
 Indices and tables
 ==================
