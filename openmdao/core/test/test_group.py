@@ -1,7 +1,7 @@
 """ Unit test for Groups. """
 
 import unittest
-from six import text_type
+from six import text_type, StringIO
 
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group, _get_implicit_connections
@@ -324,6 +324,15 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(prob.root['G3'], prob.root.G3)
         self.assertEqual(prob.root['G3:C3'], prob.root.C3)
         self.assertEqual(prob.root['G3:C4'], prob.root.C4)
+
+    def test_dump(self):
+        prob = Problem(root=ExampleGroup())
+        prob.setup()
+        save = StringIO()
+        prob.root.dump(file=save)
+
+        # don't want to write a test that does a string compare of a dump, so
+        # for now, just verify that calling dump doesn't raise an exception.
 
 if __name__ == "__main__":
     unittest.main()
