@@ -32,10 +32,10 @@ class SimpleCompDerivMatVec(SimpleComp):
         """Returns the product of the incoming vector with the Jacobian."""
 
         if mode == 'fwd':
-            dunknowns['y'] = 2.0*dparams['x']
+            dresids['y'] = 2.0*dparams['x']
 
         elif mode == 'rev':
-            dunknowns['x'] = 2.0*dparams['y']
+            dresids['x'] = 2.0*dparams['y']
 
 
 class SimpleCompDerivJac(SimpleComp):

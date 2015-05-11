@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
@@ -23,10 +24,6 @@ class Group(System):
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
-
-        # These point to (du,df) or (df,du) depending on mode.
-        self.sol_vec = None
-        self.rhs_vec = None
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named variable or a reference
@@ -356,7 +353,7 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data('', deriv=True)
 
         # TODO: Should be local subs only, but local dict isn't filled yet
         for name, system in self.subsystems():
@@ -370,18 +367,24 @@ class Group(System):
             dunknowns = view.dunknowns
             dresids = view.dresids
 
+            print 'apply_linear on', name, 'BEFORE'
+            print 'dunknowns', varmanager.dunknowns.vec
+            print 'dparams', varmanager.dparams.vec
+            print 'dresids', varmanager.dresids.vec
+
             # Special handling for Components
-            if isinstance(system, Component):
+            if isinstance(system, Component) and \
+               not isinstance(system, ParamComp):
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                       dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dunknowns[var][:] += dparams[var][:]
+                    for var in dunknowns.keys():
+                        dresids.flat(var)[:] += dunknowns.flat(var)[:]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -391,23 +394,63 @@ class Group(System):
                     # the 'du' vector at this point without stomping on the
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                       dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
 
                     for var in dunknowns:
-                        dparams[var][:] += dunknowns[var][:]
+                        dunknowns[var][:] += dresids[var][:]
 
-            # Groups just recurse
+            # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
+                                    dresids, mode)
+
+            print 'apply_linear on', name, 'AFTER'
+            print 'dunknowns', varmanager.dunknowns.vec
+            print 'dparams', varmanager.dparams.vec
+            print 'dresids', varmanager.dresids.vec
 
         if mode == 'rev':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data('', deriv=True)
 
+
+    def solve_linear(self, rhs, params, unknowns, mode="auto"):
+        """ Single linear solution applied to whatever input is sitting in
+        the rhs vector.
+
+        Parameters
+        ----------
+        rhs: `ndarray`
+            Right hand side for our linear solve.
+
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
+
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev', but generally should be
+            called wihtout mode so that the user can set the mode in this
+            system's ln_solver.options.
+        """
+
+        if rhs.norm() < 1e-15:
+            self.sol_vec.array[:] = 0.0
+            return self.sol_vec.array
+
+        #print "solving linear sys", self.name
+        if mode=='auto':
+            mode = self.ln_solver.options['mode']
+
+        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        self.rhs_buf[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
+        self.sol_vec.array[:] = self.sol_buf[:]
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and
