@@ -393,10 +393,10 @@ class Group(System):
             dunknowns = view.dunknowns
             dresids = view.dresids
 
-            print('apply_linear on', name, 'BEFORE')
-            print('dunknowns', varmanager.dunknowns.vec)
-            print('dparams', varmanager.dparams.vec)
-            print('dresids', varmanager.dresids.vec)
+            #print('apply_linear on', name, 'BEFORE')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
 
             # Special handling for Components
             if isinstance(system, Component) and \
@@ -406,7 +406,7 @@ class Group(System):
                 if mode == 'fwd':
 
                     system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
+                                        dresids, mode)
                     dresids.vec[:] *= -1.0
 
                     for var in dunknowns.keys():
@@ -433,15 +433,14 @@ class Group(System):
                 system.apply_linear(params, unknowns, dparams, dunknowns,
                                     dresids, mode)
 
-            print('apply_linear on', name, 'AFTER')
-            print('dunknowns', varmanager.dunknowns.vec)
-            print('dparams', varmanager.dparams.vec)
-            print('dresids', varmanager.dresids.vec)
+            #print('apply_linear on', name, 'AFTER')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
 
         if mode == 'rev':
             # Full Scatter
             varmanager._transfer_data(mode='rev', deriv=True)
-
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
         """ Single linear solution applied to whatever input is sitting in
