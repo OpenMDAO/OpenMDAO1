@@ -108,7 +108,7 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
-    def test_check_shapes_match(self):
+    def test_check_connections(self):
         class A(Component):
             def __init__(self):
                 super(A, self).__init__()
