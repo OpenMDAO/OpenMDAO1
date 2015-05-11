@@ -1,25 +1,31 @@
-.. OpenMDAO documentation master file, created by
-   sphinx-quickstart on Thu May  7 15:52:54 2015.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+======================
+OpenMDAO User Guide
+======================
 
-Welcome to OpenMDAO's documentation!
-====================================
-
-Contents:
+Current version: |version|
 
 .. toctree::
    :maxdepth: 2
+   
+   srcdocs/index
 
-.. automodule::  openmdao.core 
+=========================
+OpenMDAO Developer Guide
+=========================
 
-.. autoclass:: Component
+.. toctree::
+   :maxdepth: 1
 
 
-Indices and tables
-==================
+==============================
+Appendix and Glossary
+==============================
+
+.. toctree::
+   :maxdepth: 1
+
+==============================
+Index
+==============================
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-

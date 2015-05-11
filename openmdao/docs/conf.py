@@ -119,6 +119,11 @@ todo_include_todos = True
 # a list of builtin themes.
 #html_theme = 'alabaster'
 html_theme = 'classic'
+
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
 html_theme_options = {
      "headtextcolor": "#000099",
      "headbgcolor": "#e2b530",
@@ -135,11 +140,6 @@ html_theme_options = {
      "codebgcolor": "#ffffa7",
      "linkcolor": "#005ce6",
     }
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -172,7 +172,7 @@ html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = '%b %d, %Y'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
