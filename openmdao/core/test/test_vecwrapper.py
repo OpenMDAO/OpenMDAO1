@@ -19,7 +19,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
@@ -69,7 +70,8 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = p
 
-        p = VecWrapper.create_target_vector(None, params, u, params.keys(),
+        p = VecWrapper()
+        p.setup_target_vector(None, params, u, params.keys(),
                                             connections, store_noflats=True)
 
         self.assertEqual(p.vec.size, 9)
@@ -96,7 +98,8 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         varmap = {
             'C1:y1':'y1',
@@ -121,16 +124,46 @@ class TestVecWrapper(unittest.TestCase):
         uview2 = u.get_view({})
         self.assertEqual(list(uview2.keys()), [])
 
+    def test_flat(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['C1:y2'] = { 'val': 2.0 }
+        unknowns_dict['C1:y3'] = { 'val': "foo" }
+        unknowns_dict['C2:y4'] = { 'shape': (2, 1), }
+        unknowns_dict['C2:s1'] = { 'val': -1.0, 'state': True, }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
+
+        self.assertTrue((np.array(u.flat('C1:y1'))==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u.flat('C1:y2'))==np.array([2.])).all())
+
+        try:
+            u.flat('C1:y3')
+        except Exception as err:
+            self.assertEqual(str(err), 'C1:y3 is non flattenable')
+        else:
+            self.fail('Exception expected')
+        self.assertTrue((np.array(u.flat('C2:y4'))==np.array([0., 0.])).all())
+        self.assertTrue((np.array(u.flat('C2:s1'))==np.array([-1.])).all())
+
     def test_norm(self):
         unknowns_dict = OrderedDict()
 
         unknowns_dict['y1'] = { 'val' : np.array([2.0, 3.0]) }
         unknowns_dict['y2'] = { 'val' : -4.0 }
+
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = VecWrapper.create_source_vector(unknowns_dict, store_noflats=True)
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
 
         unorm = u.norm()
         self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))

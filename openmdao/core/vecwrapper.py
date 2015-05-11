@@ -32,6 +32,25 @@ class VecWrapper(object):
             else:
                 return meta['val'].reshape(shape)
 
+    def flat(self, name):
+        """Retrieve flattened value of named variable
+
+        Parameters
+        ----------
+        name - str
+            name of variable to get the value for
+
+        Returns
+        -------
+            array
+                the flattened value of the named variable
+        """
+        meta = self._vardict[name][0]
+        if meta.get('noflat'):
+            raise RuntimeError('%s is non flattenable' % name)
+        else:
+            return meta['val']
+
     def __setitem__(self, name, value):
         """Set the value of the named var"""
         meta = self._vardict[name][0]
@@ -58,7 +77,7 @@ class VecWrapper(object):
 
     def values(self):
         """ iterate over the first metadata for each variable """
-        for  metadata_entry in self._vardict.values():
+        for metadata_entry in self._vardict.values():
             yield metadata_entry[0]
 
     def metadata(self, name):
@@ -80,15 +99,11 @@ class VecWrapper(object):
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
 
-    @staticmethod
-    def create_source_vector(unknowns_dict, store_noflats=False):
+    def setup_source_vector(self, unknowns_dict, store_noflats=False):
         """Create a vector storing a flattened array of the variables in unknowns.
         If store_noflats is True, then non-flattenable variables
         will also be stored.
         """
-
-        self = VecWrapper()
-
         vec_size = 0
         for name, meta in unknowns_dict.items():
             vmeta = self._add_source_var(name, meta, vec_size)
@@ -117,8 +132,6 @@ class VecWrapper(object):
         if store_noflats:
             for name, meta in unknowns_dict.items():
                 self[meta['relative_name']] = meta['val']
-
-        return self
 
     def _add_source_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
@@ -174,9 +187,8 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    @staticmethod
-    def create_target_vector(parent_params_vec, params_dict, srcvec, my_params,
-                             connections, store_noflats=False):
+    def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
+                            connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
         Variable shape and value are retrieved from srcvec
 
@@ -208,8 +220,6 @@ class VecWrapper(object):
             Newly built params `VecWrapper`
 
         """
-        self = VecWrapper()
-
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
@@ -221,7 +231,6 @@ class VecWrapper(object):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                #TODO: check for self-containment of src and param
                 vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
                 vmeta['pathname'] = pathname
 
@@ -238,22 +247,24 @@ class VecWrapper(object):
         # (there may be metadata for multiple source variables for a target)
 
         # map slices to the array
-        for name, meta in self.items():
-            if meta['size'] > 0:
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
+        for name, metas in self._vardict.items():
+            for meta in metas:
+                if meta['size'] > 0:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
             meta = params_dict[pathname]
             prelname = parent_params_vec.get_relative_varname(pathname)
-            newmeta = parent_params_vec._vardict[prelname][0].copy()
-            newmeta['relative_name'] = meta['relative_name']
-            self._vardict.setdefault(meta['relative_name'],
-                                     []).append(newmeta)
-
-
-        return self
+            newmetas = parent_params_vec._vardict[prelname]
+            for newmeta in newmetas:
+                if newmeta['pathname'] == pathname:
+                    newmeta = newmeta.copy()
+                    newmeta['relative_name'] = meta['relative_name']
+                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                    self._vardict.setdefault(meta['relative_name'],
+                                             []).append(newmeta)
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
@@ -321,7 +332,7 @@ class VecWrapper(object):
         dest_idxs = [i for i in dest_idxs if len(i)]
 
         if len(src_idxs) == 0:
-            return make_idx_array(0, 0), make_idx_array(0,0)
+            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
 
         src_tups = list(enumerate(src_idxs))
 
@@ -377,7 +388,6 @@ class VecWrapper(object):
         return [n for n,meta in self.items() if meta.get('noflat')]
 
 
-
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
@@ -391,4 +401,3 @@ def idx_merge(idxs):
             else:
                 return numpy.concatenate(idxs)
     return idxs
-

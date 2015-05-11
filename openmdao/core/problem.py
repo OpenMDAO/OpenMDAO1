@@ -3,16 +3,95 @@
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
-from openmdao.core.checks.connections import check_connections
 
+from collections import namedtuple
+
+class ConnectError(Exception):
+    @classmethod
+    def type_mismatch_error(cls, src, target):
+        msg = "Type '{src[type]}' of source '{src[relative_name]}' must be the same as type '{target[type]}' of target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def shape_mismatch_error(cls, src, target):
+        msg  = "Shape '{src[shape]}' of the source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def val_and_shape_mismatch_error(cls, src, target):
+        msg = "Shape of the initial value '{src[val].shape}' of source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+    
+def __make_metadata(metadata):
+    '''
+    Add type field to metadata dict.
+    Returns a modified copy of `metadata`.
+    '''
+    metadata = dict(metadata)
+    metadata['type'] = type(metadata['val'])
+        
+    return metadata
+
+def __get_metadata(paths, metadata_dict):
+    metadata = []
+    
+    for path in paths:
+        var_metadata = metadata_dict[path]
+        metadata.append(__make_metadata(var_metadata))
+        
+    return metadata
+    
+    
+def check_types_match(src, target):
+    if src['type'] != target['type']:
+        raise ConnectError.type_mismatch_error(src, target)
+
+def check_connections(connections, params, unknowns):
+    # Get metadata for all sources
+    sources = __get_metadata(connections.values(), unknowns)
+    
+    #Get metadata for all targets
+    targets = __get_metadata(connections.keys(), params)
+    
+    for source, target in zip(sources, targets):
+        check_types_match(source, target)
+        check_shapes_match(source, target)
+
+def check_shapes_match(source, target):
+    #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
+    
+    check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
+    
+    check_shape_function(source, target)
+
+def __check_shapes_match(src, target):
+    if src['shape'] != target['shape']:
+        raise ConnectError.shape_mismatch_error(src, target)
+
+def __check_val_and_shape_match(src, target):
+    if src['val'].shape != target['shape']:
+        raise ConnectError.val_and_shape_mismatch_error(src, target)
+        
+__shape_checks = {
+    (tuple, tuple) : __check_shapes_match,
+    (type(None), tuple)  : __check_val_and_shape_match
+}
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
-    model."""
+    model.
+    """
 
-    def __init__(self, root=None, driver=None):
+    def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+        self.impl = impl
         if driver is None:
             self.driver = Driver()
         else:
@@ -27,14 +106,27 @@ class Problem(Component):
              the name of the variable to retrieve from the unknowns vector OR
              a tuple of the name of the variable and the vector to get it's
              value from.
-             
+
         Returns
         -------
         the unflattened value of the given variable
         """
         return self.root[name]
-    
+
+    def __setitem__(self, name, val):
+        """Sets the given value into the appropriate `VecWrapper`.
+
+        Parameters
+        ----------
+        name : str
+             the name of the variable to set into the unknowns vector
+        """
+        self.root_varmanager.unknowns[name] = val
+
     def setup(self):
+        """Performs all setup of vector storage, data transfer, etc.,
+        necessary to perform calculations.
+        """
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
@@ -83,7 +175,7 @@ class Problem(Component):
         param_owners = assign_parameters(connections)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections)
+        self.root._setup_vectors(param_owners, connections, impl=self.impl)
 
     def run(self):
         """ Runs the Driver in self.driver. """
@@ -134,7 +226,7 @@ class Problem(Component):
 
 def assign_parameters(connections):
     """Map absolute system names to the absolute names of the
-    parameters they control.
+    parameters they transfer data to.
     """
     param_owners = {}
 

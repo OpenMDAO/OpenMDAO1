@@ -1,11 +1,13 @@
 """ Defines the base class for a Group in OpenMDAO."""
 
+from __future__ import print_function
+
+import sys
 from collections import OrderedDict
 
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
-                                      ViewTuple, get_relname_map
+from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
@@ -29,7 +31,8 @@ class Group(System):
         self.rhs_vec = None
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable
+        """Retrieve unflattened value of named variable or a reference
+        to named subsystem.
 
         Parameters
         ----------
@@ -115,27 +118,28 @@ class Group(System):
         local: bool
             Set to True to return only systems that are local.
         """
-        if local == True:
-            return self._local_subsystems.items()
+        #TODO: once we add MPI stuff, maintain local subsystems
+        #if local is True:
+            #return self._local_subsystems.items()
         return self._subsystems.items()
 
-    def subgroups(self):
+    def subgroups(self, local=False):
         """ Returns
             -------
             iterator
                 iterator over subgroups.
         """
-        for name, subsystem in self._subsystems.items():
+        for name, subsystem in self.subsystems(local=local):
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
-    def components(self):
+    def components(self, local=False):
         """ Returns
                 -------
                 iterator
                     iterator over sub-`Component`s.
             """
-        for name, comp in self._subsystems.items():
+        for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
                 yield name, comp
 
@@ -178,7 +182,7 @@ class Group(System):
         else:
             return name
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None):
+    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=None):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -212,15 +216,11 @@ class Group(System):
         self._views = {}
         for name, sub in self.subgroups():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
-            vm = sub._varmanager
-            self._views[name] = ViewTuple(vm.unknowns, vm.dunknowns,
-                                          vm.resids, vm.dresids,
-                                          vm.params, vm.dparams)
+            self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
-                                               sub._params_dict, sub._unknowns_dict, [], {})
-            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
+            self._views[name] = create_views(self._varmanager, sub.pathname,
+                                             sub._params_dict, sub._unknowns_dict, [], {})
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -247,9 +247,9 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, src in self._src.items():
-            src_pathname = get_absvarpathname(src, self._unknowns_dict)
-            tgt_pathname = get_absvarpathname(tgt, self._params_dict)
-            connections[tgt_pathname] = src_pathname
+            src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
+            for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
+                connections[tgt_pathname] = src_pathname
 
         return connections
 
@@ -362,12 +362,12 @@ class Group(System):
 
             view = self._views[system.name]
 
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-            dparams = view.dparams
+            params    = view.params
+            unknowns  = view.unknowns
+            resids    = view.resids
+            dparams   = view.dparams
             dunknowns = view.dunknowns
-            dresids = view.dresids
+            dresids   = view.dresids
 
             # Special handling for Components
             if isinstance(system, Component):
@@ -406,6 +406,72 @@ class Group(System):
         if mode == 'rev':
             # Full Scatter
             varmanager._transfer_data()
+
+    def dump(self, nest=0, file=sys.stdout, verbose=True):
+        file.write(" "*nest)
+        file.write(self.name)
+        klass = self.__class__.__name__
+
+        uvec = self._varmanager.unknowns
+        pvec = self._varmanager.params
+
+        file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                     (klass,
+                      1, #self.get_req_cpus(),
+                      0, #world_rank,
+                      uvec.vec.size,
+                      pvec.vec.size))
+
+        flat_conns = dict(self._varmanager.data_xfer[''].flat_conns)
+        noflat_conns = dict(self._varmanager.data_xfer[''].noflat_conns)
+
+        for v, meta in uvec.items():
+            if verbose:
+                file.write(" "*(nest+2))
+                pnames = [p for p,u in flat_conns.items() if u==v]
+                if pnames:
+                    if len(pnames) == 1:
+                        pname = pnames[0]
+                        pslice = pvec._slices[pname]
+                    else:
+                        pslice = [pvec._slices[p] for p in pnames]
+                    file.write("u (%s)  p (%s): %s --> %s\n" %
+                                 (str(uvec._slices[v]),
+                                  str(pslice), v, pnames))
+                else:
+                    file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+
+        for v, meta in pvec.items():
+            if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
+                file.write(" "*(nest+2))
+                file.write("           p (%s): %s\n" %
+                                   (str(pvec._slices[v]), v))
+
+        if noflat_conns:
+            file.write(' '*(nest+2) + "= noflat connections =\n")
+
+        for dest, src in noflat_conns.items():
+            file.write(" "*(nest+2))
+            file.write("%s --> %s\n" % (src, dest))
+
+        nest += 4
+        for name, sub in self.subsystems(local=True):
+            if isinstance(sub, Component):
+                uvec = self._views[name].unknowns
+                file.write(" "*nest)
+                file.write(name)
+                file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                           (sub.__class__.__name__,
+                            1, #sub.get_req_cpus(),
+                            0, #world_rank,
+                            uvec.vec.size,
+                            pvec.vec.size))
+                for v, meta in uvec.items():
+                    if verbose:
+                        file.write(" "*(nest+2))
+                        file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+            else:
+                sub.dump(nest, file)
 
 
 def _get_implicit_connections(params_dict, unknowns_dict):
@@ -460,7 +526,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     return connections
 
 
-def get_absvarpathname(var_name, var_dict):
+def get_absvarpathnames(var_name, var_dict, dict_name):
     """
        Parameters
        ----------
@@ -470,13 +536,21 @@ def get_absvarpathname(var_name, var_dict):
        var_dict : dict
            dictionary of variable metadata, keyed on relative name
 
+       dict_name : str
+           name of var_dict (used for error reporting)
+
        Returns
        -------
-       str
-           the absolute pathname for the given variable in the
-           variable dictionary
+       list of str
+           the absolute pathnames for the given variables in the
+           variable dictionary that map to the given relative name.
     """
+    pnames = []
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
-            return pathname
-    raise RuntimeError("Absolute pathname not found for %s" % var_name)
+            pnames.append(pathname)
+
+    if not pnames:
+        raise RuntimeError("'%s' not found in %s" % (var_name, dict_name))
+
+    return pnames

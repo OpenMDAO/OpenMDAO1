@@ -31,4 +31,3 @@ class Driver(object):
         resids = varmanager.resids
 
         system.solve_nonlinear(params, unknowns, resids)
-
