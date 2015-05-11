@@ -7,6 +7,7 @@ import fnmatch
 import logging
 from subprocess import Popen
 from six.moves.configparser import ConfigParser
+from six import text_type
 from optparse import OptionParser
 
 from openmdao.util.fileutil import find_files, find_up
@@ -16,9 +17,9 @@ def _modify_wpr_file(template, outfile, version):
     config.read(template)
     if sys.platform == 'darwin':
         config.set('user attributes', 'proj.pyexec',
-                   dict({None: ('custom', sys.executable)}))
+                   text_type(dict({None: ('custom', sys.executable)})))
         config.set('user attributes', 'proj.pypath',
-                   dict({None: ('custom',os.pathsep.join(sys.path))}))
+                   text_type(dict({None: ('custom',os.pathsep.join(sys.path))})))
 
     with open(outfile, 'w') as fp:
         fp.write('#!wing\n#!version=%s\n' % version)
