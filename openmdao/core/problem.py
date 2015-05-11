@@ -28,7 +28,7 @@ class ConnectError(Exception):
         
         return cls(msg)
     
-def make_metadata(metadata):
+def __make_metadata(metadata):
     '''
     Add type field to metadata dict.
     Returns a modified copy of `metadata`.
@@ -38,16 +38,26 @@ def make_metadata(metadata):
         
     return metadata
 
+def __get_metadata(paths, metadata_dict):
+    metadata = []
+    
+    for path in paths:
+        var_metadata = metadata_dict[path]
+        metadata.append(__make_metadata(var_metadata))
+        
+    return metadata
+    
+    
 def check_types_match(src, target):
     if src['type'] != target['type']:
         raise ConnectError.type_mismatch_error(src, target)
 
 def check_connections(connections, params, unknowns):
     # Get metadata for all sources
-    sources = map(make_metadata, map(unknowns.get, connections.values()))
+    sources = __get_metadata(connections.values(), unknowns)
     
     #Get metadata for all targets
-    targets = map(make_metadata, map(params.get, connections.keys()))
+    targets = __get_metadata(connections.keys(), params)
     
     for source, target in zip(sources, targets):
         check_types_match(source, target)
