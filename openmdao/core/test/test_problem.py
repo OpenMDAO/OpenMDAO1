@@ -1,10 +1,12 @@
 """ Unit test for the Problem class. """
 
 import unittest
+import numpy as np
 from six import text_type
 
 from openmdao.components.linear_system import LinearSystem
-from openmdao.core.problem import Problem
+from openmdao.core.component import Component
+from openmdao.core.problem import ConnectError, Problem
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
