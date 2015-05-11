@@ -3,7 +3,7 @@ from collections import namedtuple, OrderedDict
 import numpy
 from openmdao.core.basicimpl import BasicImpl
 
-ViewTuple = namedtuple('ViewTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
+VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
 class VarManagerBase(object):
     """Base class for a manager of the data transfer of a possibly distributed
@@ -149,6 +149,19 @@ class VarManagerBase(object):
             else:
                 x.transfer(self.unknowns, self.params, mode)
 
+    def vectors(self):
+        """Return the set of variable vectors being managed by this `VarManager`
+
+        Returns
+        -------
+        `VecTuple`
+            a namedtuple of six (6) `VecWrapper`s:
+            unknowns, dunknowns, resids, dresids, params, dparams
+        """
+        return VecTuple(self.unknowns, self.dunknowns,
+                        self.resids, self.dresids,
+                        self.params, self.dparams)
+
 
 class VarManager(VarManagerBase):
     """A manager of the data transfer of a possibly distributed
@@ -234,7 +247,6 @@ class ViewVarManager(VarManagerBase):
         self._setup_data_transfer(sys_pathname, my_params)
 
 
-
 def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
     """A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
@@ -263,7 +275,7 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
 
     Returns
     -------
-    `ViewTuple`
+    `VecTuple`
         a namedtuple of six (6) `VecWrapper`s:
         unknowns, dunknowns, resids, dresids, params, dparams
     """
@@ -284,7 +296,7 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     dparams.setup_target_vector(parent_vm.dparams, params_dict, unknowns,
                                 my_params, connections)
 
-    return ViewTuple(unknowns, dunknowns, resids, dresids, params, dparams)
+    return VecTuple(unknowns, dunknowns, resids, dresids, params, dparams)
 
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
