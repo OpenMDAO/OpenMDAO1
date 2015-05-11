@@ -35,7 +35,7 @@ class SimpleCompDerivMatVec(SimpleComp):
             dresids['y'] = 2.0*dparams['x']
 
         elif mode == 'rev':
-            dresids['x'] = 2.0*dparams['y']
+            dparams['x'] = 2.0*dresids['y']
 
 
 class SimpleCompDerivJac(SimpleComp):

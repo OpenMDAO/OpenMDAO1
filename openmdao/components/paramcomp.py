@@ -11,7 +11,7 @@ class ParamComp(Component):
         self.add_output(name, val)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-        """For `ParamComp`, just pass.
+        """For `ParamComp`, just pass on the incoming values.
 
         Parameters
         ----------
@@ -37,4 +37,9 @@ class ParamComp(Component):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
-        pass
+        if mode=='fwd':
+            sol_vec, rhs_vec = dunknowns, dresids
+        else:
+            sol_vec, rhs_vec = dresids, dunknowns
+
+        rhs_vec.vec[:] += sol_vec.vec[:]

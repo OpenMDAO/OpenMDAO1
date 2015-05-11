@@ -23,8 +23,6 @@ class TestScipyGMRES(unittest.TestCase):
         top.setup()
         top.run()
 
-        raise SkipTest('calc_gradient not implemented yet')
-
         J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
         self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
 

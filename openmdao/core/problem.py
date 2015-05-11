@@ -149,9 +149,13 @@ class Problem(Component):
 
         root = self.root
         varmanager = root._varmanager
+        params = varmanager.params
         unknowns = varmanager.unknowns
         n_edge = len(unknowns.vec)
         rhs = np.zeros((n_edge, ))
+
+        # Linearize the model
+        root.linearize(params, unknowns)
 
         # Initialized Jacobian
         if return_format == 'dict':

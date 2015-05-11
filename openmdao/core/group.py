@@ -304,7 +304,6 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-
         varmanager = self._varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
@@ -320,6 +319,29 @@ class Group(System):
             resids = view.resids
 
             system.apply_nonlinear(params, unknowns, resids)
+
+    def linearize(self, params, unknowns):
+        """ Linearize all our subsystems.
+
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
+
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+        """
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.linearize(params, unknowns)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -357,7 +379,7 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            varmanager._transfer_data('', deriv=True)
+            varmanager._transfer_data(deriv=True)
 
         # TODO: Should be local subs only, but local dict isn't filled yet
         for name, system in self.subsystems():
@@ -403,8 +425,8 @@ class Group(System):
                                       dresids, mode)
                     dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dunknowns[var][:] += dresids[var][:]
+                    for var in dunknowns.keys():
+                        dunknowns.flat(var)[:] += dresids.flat(var)[:]
 
             # Groups and all other systems just call their own apply_linear.
             else:
@@ -418,7 +440,7 @@ class Group(System):
 
         if mode == 'rev':
             # Full Scatter
-            varmanager._transfer_data('', deriv=True)
+            varmanager._transfer_data(mode='rev', deriv=True)
 
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
