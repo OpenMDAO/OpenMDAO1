@@ -8,7 +8,8 @@ from openmdao.core.checks.connections import check_connections
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
-    model."""
+    model.
+    """
 
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
@@ -35,7 +36,20 @@ class Problem(Component):
         """
         return self.root[name]
 
+    def __setitem__(self, name, val):
+        """Sets the given value into the appropriate `VecWrapper`.
+
+        Parameters
+        ----------
+        name : str
+             the name of the variable to set into the unknowns vector
+        """
+        self.root_varmanager.unknowns[name] = val
+
     def setup(self):
+        """Performs all setup of vector storage, data transfer, etc.,
+        necessary to perform calculations.
+        """
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
@@ -135,7 +149,7 @@ class Problem(Component):
 
 def assign_parameters(connections):
     """Map absolute system names to the absolute names of the
-    parameters they control.
+    parameters they transfer data to.
     """
     param_owners = {}
 

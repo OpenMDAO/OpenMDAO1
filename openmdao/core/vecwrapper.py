@@ -231,7 +231,6 @@ class VecWrapper(object):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                #TODO: check for self-containment of src and param
                 vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
                 vmeta['pathname'] = pathname
 
@@ -248,19 +247,24 @@ class VecWrapper(object):
         # (there may be metadata for multiple source variables for a target)
 
         # map slices to the array
-        for name, meta in self.items():
-            if meta['size'] > 0:
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
+        for name, metas in self._vardict.items():
+            for meta in metas:
+                if meta['size'] > 0:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
             meta = params_dict[pathname]
             prelname = parent_params_vec.get_relative_varname(pathname)
-            newmeta = parent_params_vec._vardict[prelname][0].copy()
-            newmeta['relative_name'] = meta['relative_name']
-            self._vardict.setdefault(meta['relative_name'],
-                                     []).append(newmeta)
+            newmetas = parent_params_vec._vardict[prelname]
+            for newmeta in newmetas:
+                if newmeta['pathname'] == pathname:
+                    newmeta = newmeta.copy()
+                    newmeta['relative_name'] = meta['relative_name']
+                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                    self._vardict.setdefault(meta['relative_name'],
+                                             []).append(newmeta)
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array

@@ -2,12 +2,13 @@
 #from openmdao.util.arrayutil import to_slice
 
 class DataXfer(object):
-    def __init__(self, src_idxs, tgt_idxs, noflat_conns):
+    def __init__(self, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         # TODO: change to_slice to to_slices. (should never return an index array)
         #self.src_idxs = to_slice(src_idxs)
         #self.tgt_idxs = to_slice(tgt_idxs)
         self.src_idxs = src_idxs
         self.tgt_idxs = tgt_idxs
+        self.flat_conns = flat_conns
         self.noflat_conns = noflat_conns
 
     def transfer(self, srcvec, tgtvec, mode='fwd'):
