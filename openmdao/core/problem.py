@@ -187,14 +187,14 @@ class Problem(Component):
             input_list, output_list = unknown_list, param_list
 
         # If Forward mode, solve linear system for each param
-        # If Adjoint mode, solve linear system for each unkown
+        # If Adjoint mode, solve linear system for each unknown
         j = 0
         for param in input_list:
 
-            in_indices = unknowns.get_idxs(param)
+            in_idx = unknowns.get_idxs(param)
             jbase = j
 
-            for irhs in in_indices:
+            for irhs in in_idx:
 
                 rhs[irhs] = 1.0
 
@@ -206,18 +206,18 @@ class Problem(Component):
                 i = 0
                 for item in output_list:
 
-                    out_indices = unknowns.get_idxs(item)
-                    nk = len(out_indices)
+                    out_idx = unknowns.get_idxs(item)
+                    nk = len(out_idx)
 
                     if return_format == 'dict':
                         if mode == 'fwd':
                             if J[item][param] is None:
-                                J[item][param] = np.zeros((nk, len(in_indices)))
-                            J[item][param][:, j-jbase] = dx[out_indices]
+                                J[item][param] = np.zeros((nk, len(in_idx)))
+                            J[item][param][:, j-jbase] = dx[out_idx]
                         else:
                             if J[param][item] is None:
-                                J[param][item] = np.zeros((len(in_indices), nk))
-                            J[param][item][j-jbase, :] = dx[out_indices]
+                                J[param][item] = np.zeros((len(in_idx), nk))
+                            J[param][item][j-jbase, :] = dx[out_idx]
 
                     else:
                         if mode == 'fwd':
