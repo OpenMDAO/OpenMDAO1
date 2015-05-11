@@ -128,11 +128,50 @@ class TestProblem(unittest.TestCase):
             def __init__(self):
                 super(D, self).__init__()
                 self.add_param('y', np.zeros((3,)))
+                
+        class E(Component):
+            def __init__(self):
+                super(E, self).__init__()
+                self.add_param('y', 1.0)
         
+        #Explicit
+        expected_error_message = ("Type '<type 'numpy.ndarray'>' of source "
+                                  "'A:y' must be the same as type "
+                                  "'<type 'float'>' of target "
+                                  "'E:y'")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('E', E())
+        
+        problem.root.connect('A:y', 'E:y')
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        
+        self.assertEqual(str(cm.exception), expected_error_message)
+        
+        #Implicit
+        expected_error_message = ("Type '<type 'numpy.ndarray'>' of source "
+                                  "'y' must be the same as type "
+                                  "'<type 'float'>' of target "
+                                  "'y'")
+        
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A(), promotes=['y'])
+        problem.root.add('E', E(), promotes=['y'])
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+            
+        self.assertEqual(str(cm.exception), expected_error_message)
+        
+
+        # Explicit
         expected_error_message = ("Shape '(2,)' of the source 'A:y' "
                                   "must match the shape '(3,)' "
                                   "of the target 'B:y'")
-        # Explicit
         problem = Problem()
         problem.root = Group()
 
@@ -146,6 +185,10 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
         
         # Implicit
+        expected_error_message = ("Shape '(2,)' of the source 'y' "
+                                  "must match the shape '(3,)' "
+                                  "of the target 'y'")
+                                  
         problem = Problem()
         problem.root = Group()
 
@@ -156,12 +199,12 @@ class TestProblem(unittest.TestCase):
             problem.setup()
         
         self.assertEqual(str(cm.exception), expected_error_message)
-        
+                              
+        # Explicit
         expected_error_message = ("Shape of the initial value '(2,)' of source "
                                   "'C:y' must match the shape '(3,)' "
                                   "of the target 'B:y'")
                                   
-        # Explicit
         problem = Problem()
         problem.root = Group()
         problem.root.add('B', B())
@@ -174,6 +217,10 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Implicit
+        expected_error_message = ("Shape of the initial value '(2,)' of source "
+                                  "'y' must match the shape '(3,)' "
+                                  "of the target 'y'")
+                                  
         problem = Problem()
         problem.root = Group()
         problem.root.add('B', B(), promotes=['y'])
