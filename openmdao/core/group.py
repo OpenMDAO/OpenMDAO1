@@ -252,9 +252,9 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, src in self._src.items():
-            src_pathname = get_absvarpathname(src, self._unknowns_dict, 'unknowns')
-            tgt_pathname = get_absvarpathname(tgt, self._params_dict, 'params')
-            connections[tgt_pathname] = src_pathname
+            src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
+            for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
+                connections[tgt_pathname] = src_pathname
 
         return connections
 
@@ -523,7 +523,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     return connections
 
 
-def get_absvarpathname(var_name, var_dict, dict_name):
+def get_absvarpathnames(var_name, var_dict, dict_name):
     """
        Parameters
        ----------
@@ -538,12 +538,16 @@ def get_absvarpathname(var_name, var_dict, dict_name):
 
        Returns
        -------
-       str
-           the absolute pathname for the given variable in the
-           variable dictionary
+       list of str
+           the absolute pathnames for the given variables in the
+           variable dictionary that map to the given relative name.
     """
+    pnames = []
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
-            return pathname
+            pnames.append(pathname)
 
-    raise RuntimeError("'%s' not found in %s" % (var_name, dict_name))
+    if not pnames:
+        raise RuntimeError("'%s' not found in %s" % (var_name, dict_name))
+
+    return pnames
