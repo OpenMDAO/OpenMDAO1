@@ -371,10 +371,10 @@ class Group(System):
             dunknowns = view.dunknowns
             dresids = view.dresids
 
-            print 'apply_linear on', name, 'BEFORE'
-            print 'dunknowns', varmanager.dunknowns.vec
-            print 'dparams', varmanager.dparams.vec
-            print 'dresids', varmanager.dresids.vec
+            print('apply_linear on', name, 'BEFORE')
+            print('dunknowns', varmanager.dunknowns.vec)
+            print('dparams', varmanager.dparams.vec)
+            print('dresids', varmanager.dresids.vec)
 
             # Special handling for Components
             if isinstance(system, Component) and \
@@ -411,10 +411,10 @@ class Group(System):
                 system.apply_linear(params, unknowns, dparams, dunknowns,
                                     dresids, mode)
 
-            print 'apply_linear on', name, 'AFTER'
-            print 'dunknowns', varmanager.dunknowns.vec
-            print 'dparams', varmanager.dparams.vec
-            print 'dresids', varmanager.dresids.vec
+            print('apply_linear on', name, 'AFTER')
+            print('dunknowns', varmanager.dunknowns.vec)
+            print('dparams', varmanager.dparams.vec)
+            print('dresids', varmanager.dresids.vec)
 
         if mode == 'rev':
             # Full Scatter
