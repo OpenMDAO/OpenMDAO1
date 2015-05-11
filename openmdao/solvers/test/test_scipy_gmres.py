@@ -23,13 +23,11 @@ class TestScipyGMRES(unittest.TestCase):
         top.setup()
         top.run()
 
-        raise SkipTest('calc_gradient not implemented yet')
+        J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
 
-        J = top.calc_gradient(['x'], ['y'], mode='fwd')
-        self.assertAlmostEqual(J[0][0], 2.0, places=4)
-
-        J = top.calc_gradient(['x'], ['y'], mode='rev')
-        self.assertAlmostEqual(J[0][0], 2.0, places=4)
+        J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
 
 
 if __name__ == "__main__":
