@@ -329,7 +329,7 @@ class TestGroup(unittest.TestCase):
         prob = Problem(root=ExampleGroup())
         prob.setup()
         save = StringIO()
-        prob.root.dump(file=save)
+        prob.root.dump()#file=save)
 
         # don't want to write a test that does a string compare of a dump, so
         # for now, just verify that calling dump doesn't raise an exception.
