@@ -5,6 +5,7 @@ from __future__ import print_function
 import sys
 from collections import OrderedDict
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
@@ -25,10 +26,6 @@ class Group(System):
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
-
-        # These point to (du,df) or (df,du) depending on mode.
-        self.sol_vec = None
-        self.rhs_vec = None
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named variable or a reference
@@ -302,7 +299,6 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-
         varmanager = self._varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
@@ -318,6 +314,29 @@ class Group(System):
             resids = view.resids
 
             system.apply_nonlinear(params, unknowns, resids)
+
+    def linearize(self, params, unknowns):
+        """ Linearize all our subsystems.
+
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
+
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+        """
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.linearize(params, unknowns)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -355,10 +374,9 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data(deriv=True)
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             view = self._views[system.name]
 
@@ -369,18 +387,24 @@ class Group(System):
             dunknowns = view.dunknowns
             dresids   = view.dresids
 
+            #print('apply_linear on', name, 'BEFORE')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
+
             # Special handling for Components
-            if isinstance(system, Component):
+            if isinstance(system, Component) and \
+               not isinstance(system, ParamComp):
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                                        dresids, mode)
+                    dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dunknowns[var][:] += dparams[var][:]
+                    for var in dunknowns.keys():
+                        dresids.flat(var)[:] += dunknowns.flat(var)[:]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -390,22 +414,62 @@ class Group(System):
                     # the 'du' vector at this point without stomping on the
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                       dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dparams[var][:] += dunknowns[var][:]
+                    for var in dunknowns.keys():
+                        dunknowns.flat(var)[:] += dresids.flat(var)[:]
 
-            # Groups just recurse
+            # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
+                                    dresids, mode)
+
+            #print('apply_linear on', name, 'AFTER')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
 
         if mode == 'rev':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data(mode='rev', deriv=True)
+
+    def solve_linear(self, rhs, params, unknowns, mode="auto"):
+        """ Single linear solution applied to whatever input is sitting in
+        the rhs vector.
+
+        Parameters
+        ----------
+        rhs: `ndarray`
+            Right hand side for our linear solve.
+
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
+
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev', but generally should be
+            called wihtout mode so that the user can set the mode in this
+            system's ln_solver.options.
+        """
+
+        if rhs.norm() < 1e-15:
+            self.sol_vec.array[:] = 0.0
+            return self.sol_vec.array
+
+        #print "solving linear sys", self.name
+        if mode=='auto':
+            mode = self.ln_solver.options['mode']
+
+        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        self.rhs_buf[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
+        self.sol_vec.array[:] = self.sol_buf[:]
 
     def dump(self, nest=0, file=sys.stdout, verbose=True):
         file.write(" "*nest)
@@ -435,17 +499,19 @@ class Group(System):
                         pslice = pvec._slices[pname]
                     else:
                         pslice = [pvec._slices[p] for p in pnames]
-                    file.write("u (%s)  p (%s): %s --> %s\n" %
-                                 (str(uvec._slices[v]),
-                                  str(pslice), v, pnames))
+                    file.write("%s --> %s:  u (%s)  p (%s): %s\n" %
+                                 (v, pnames,
+                                  str(uvec._slices[v]),
+                                  str(pslice), str(uvec[v])[:15]))
                 else:
-                    file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+                    file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
+                                                      str(uvec[v])[:15]))
 
         for v, meta in pvec.items():
             if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
                 file.write(" "*(nest+2))
-                file.write("           p (%s): %s\n" %
-                                   (str(pvec._slices[v]), v))
+                file.write("%s           p (%s): %s\n" %
+                                   (v,str(pvec._slices[v]), str(pvec[v])[:15]))
 
         if noflat_conns:
             file.write(' '*(nest+2) + "= noflat connections =\n")
@@ -469,7 +535,8 @@ class Group(System):
                 for v, meta in uvec.items():
                     if verbose:
                         file.write(" "*(nest+2))
-                        file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+                        file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
+                                                          str(uvec[v])[:15]))
             else:
                 sub.dump(nest, file)
 

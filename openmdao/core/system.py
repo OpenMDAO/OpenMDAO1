@@ -88,7 +88,7 @@ class System(object):
     def apply_nonlinear(self, params, unknowns, resids):
         pass
 
-    def solve_linear(self, rhs, params, unknowns, resids, dparams, dunknowns, dresids, mode="fwd"):
+    def solve_linear(self, rhs, params, unknowns, mode="fwd"):
         pass
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):

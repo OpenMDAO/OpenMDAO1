@@ -13,22 +13,40 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
+    def __init__(self):
+        super(ScipyGMRES, self).__init__()
+
+        self.options.add_option('atol', 1e-12)
+        self.options.add_option('rtol', 1e-12)
+        self.options.add_option('maxiter', 100)
+        self.options.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'])
+
     def solve(self, rhs, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
         Parameters
         ----------
-        rhs: ndarray
+        rhs : ndarray
             Array containing the right hand side for the linear solve. Also
             possibly a 2D array with multiple right hand sides.
+
+        system : `System`
+            Parent `System` object.
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'
+
+        Returns
+        -------
+        ndarray : Solution vector
         """
 
+        n_edge = len(rhs)
         A = LinearOperator((n_edge, n_edge),
                            matvec=self.mult,
                            dtype=float)
 
-        # TODO: Options dictionary?
         self.system = system
         options = self.options
         self.mode = mode
@@ -58,7 +76,7 @@ class ScipyGMRES(LinearSolver):
         system = self.system
         mode = self.mode
 
-        varmanager = system.varmanager
+        varmanager = system._varmanager
         params = varmanager.params
         unknowns = varmanager.unknowns
         resids = varmanager.resids
@@ -67,9 +85,9 @@ class ScipyGMRES(LinearSolver):
         dresids = varmanager.dresids
 
         if mode=='fwd':
-            sol_vec, rhs_vec = unknowns, resids
+            sol_vec, rhs_vec = dunknowns, dresids
         else:
-            sol_vec, rhs_vec = resids, unknowns
+            sol_vec, rhs_vec = dresids, dunknowns
 
         # Set incoming vector
         sol_vec.vec[:] = arg[:]
@@ -81,5 +99,6 @@ class ScipyGMRES(LinearSolver):
         system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                             mode)
 
-        # TODO: Rename rhs_vec and sol_vec?
+        #print "arg", arg
+        #print "result", rhs_vec.vec
         return rhs_vec.vec[:]
