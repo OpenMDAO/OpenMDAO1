@@ -56,34 +56,36 @@ def find_files(start, match=None, exclude=None,
                showdirs=False, dirmatch=None, direxclude=None):
     """Return filenames (using a generator).
 
-    start: str or list of str
+    Walks all subdirectories below each specified starting directory,
+    subject to directory filtering.
+
+    Parameters
+    ----------
+    start : str or list of str
         Starting directory or list of directories.
 
-    match: str or predicate funct
+    match : str or predicate funct
         Either a string containing a glob pattern to match
         or a predicate function that returns True on a match.
         This is used to match files only.
 
-    exclude: str or predicate funct
+    exclude : str or predicate funct
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
         This is used to exclude files only.
 
-    showdirs: bool
+    showdirs : bool
         If True, return names of files AND directories.
 
-    dirmatch: str or predicate funct
+    dirmatch : str or predicate funct
         Either a string containing a glob pattern to match
         or a predicate function that returns True on a match.
         This is used to match directories only.
 
-    direxclude: str or predicate funct
+    direxclude : str or predicate funct
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
         This is used to exclude directories only.
-
-    Walks all subdirectories below each specified starting directory,
-    subject to directory filtering.
 
     """
     startdirs = [start] if isinstance(start, string_types) else start
@@ -132,10 +134,12 @@ def find_up(name, path=None):
     assumed to be a basename, not a path.  Returns the absolute path
     of the file or directory if found, or None otherwise.
 
-    name: str
+    Parameters
+    ----------
+    name : str
         Base name of the file or directory being searched for.
 
-    path: str (optional)
+    path : str (optional)
         Starting directory.  If not supplied, current directory is used.
     """
     if not path:
@@ -176,11 +180,13 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
     file and directory filtering.
 
-    fmatch: predicate funct
+    Parameters
+    ----------
+    fmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match files only.
 
-    dmatch: predicate funct
+    dmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match directories only.
     """
@@ -201,11 +207,13 @@ def _file_dir_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files and directories under
     the given directory, with optional file and directory filtering..
 
-    fmatch: predicate funct
+    Parameters
+    ----------
+    fmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match files only.
 
-    dmatch: predicate funct
+    dmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match directories only.
     """
