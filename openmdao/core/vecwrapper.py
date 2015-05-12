@@ -19,9 +19,15 @@ class _flat_dict(object):
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
     collection of variables.
+
+    Attributes
+    ----------
+    idx_arr_type : dtype
+        string indicating how index arrays are to be represented
+        (the value 'i' indicates an numpy integer array, other
+        implementations (petsc, etc) will define this differently)
     """
 
-    # other impls (petsc, etc) will define this differently
     idx_arr_type = 'i'
 
     def __init__(self):
@@ -34,7 +40,17 @@ class VecWrapper(object):
         self.flat = _flat_dict(self._vardict)
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named var"""
+        """Retrieve unflattened value of named var
+
+        Parameters
+        ----------
+        name : str
+            name of variable to get the value for
+
+        Returns
+        -------
+            the unflattened value of the named variable
+        """
         meta = self._vardict[name][0]
         if meta.get('noflat'):
             return meta['val']
@@ -47,7 +63,16 @@ class VecWrapper(object):
                 return meta['val'].reshape(shape)
 
     def __setitem__(self, name, value):
-        """Set the value of the named var"""
+        """Set the value of the named variable
+
+        Parameters
+        ----------
+        name : str
+            name of variable to get the value for
+
+        value :
+            the unflattened value of the named variable
+        """
         meta = self._vardict[name][0]
         if meta['size'] > 0:
             if isinstance(value, numpy.ndarray):
@@ -58,28 +83,68 @@ class VecWrapper(object):
             meta['val'] = value
 
     def __len__(self):
-        """Return the number of keys (variables)"""
+        """
+        Returns
+        -------
+            the number of keys (variables) in this vector
+        """
         return len(self._vardict)
 
     def keys(self):
-        """Return the keys (variable names)"""
+        """
+        Returns
+        -------
+            the keys (variable names) in this vector
+        """
         return self._vardict.keys()
 
     def items(self):
-        """ iterate over the first metadata for each variable """
+        """Iterate over the first metadata for each variable
+
+        Returns
+        -------
+            iterator
+                iterator over the first metadata for each variable
+        """
         for name, metadata_entry in self._vardict.items():
             yield name, metadata_entry[0]
 
     def values(self):
-        """ iterate over the first metadata for each variable """
+        """Iterate over the first metadata for each variable
+
+        Returns
+        -------
+            iterator
+                iterator over the first metadata for each variable
+        """
         for metadata_entry in self._vardict.values():
             yield metadata_entry[0]
 
     def metadata(self, name):
+        """Returns the metadata for the named variable. A target variable may
+        have multiple sets of metadata due to having connections to multiple
+        source variables, therefore a list of metadata dictionaries is returned.
+
+        Parameters
+        ----------
+        name : str
+            name of variable to get the metadata for
+
+        Returns
+        -------
+            list of dict
+                a list of the metadata dictionaries for the named variable
+        """
         return self._vardict[name]
 
     def get_idxs(self, name):
-        """
+        """Returns all of the indices for the named variable in this vector
+
+        Parameters
+        ----------
+        name : str
+            name of variable to get the indices for
+
         Returns
         -------
         ndarray
@@ -95,9 +160,18 @@ class VecWrapper(object):
         return self.make_idx_array(start, end)
 
     def setup_source_vector(self, unknowns_dict, store_noflats=False):
-        """Create a vector storing a flattened array of the variables in unknowns.
-        If store_noflats is True, then non-flattenable variables
+        """Configure this vector to store a flattened array of the variables
+        in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
+
+        Parameters
+        ----------
+        unknowns_dict : dict
+            dictionary of metadata for unknown variables
+
+        store_noflats : bool (optional)
+            if True, then store non-flattenable (non-differentiable) variables
+            by default only flattenable variables will be stired
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
@@ -131,7 +205,20 @@ class VecWrapper(object):
     def _add_source_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
         then allocate a range in the vector array to store it. Store the
-        shape of the variable so it can be un-flattened later."""
+        shape of the variable so it can be un-flattened later.
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable to add
+
+        meta : dict
+            metadata for the variable
+
+        index : int
+            index into the array where the variable value is to be stored
+            (if flattenable)
+        """
 
         vmeta = meta.copy()
         vmeta['pathname'] = name
@@ -184,8 +271,8 @@ class VecWrapper(object):
 
     def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
-        """Create a vector storing a flattened array of the variables in params.
-        Variable shape and value are retrieved from srcvec
+        """Configure this vector to store a flattened array of the variables
+        in params. Variable shape and value are retrieved from srcvec.
 
         Parameters
         ----------
@@ -206,14 +293,8 @@ class VecWrapper(object):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
-        store_noflats : bool
+        store_noflats : bool (optional)
             If True, store unflattenable variables in the `VecWrapper` we're building.
-
-        Returns
-        -------
-        `VecWrapper`
-            Newly built params `VecWrapper`
-
         """
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
@@ -263,7 +344,24 @@ class VecWrapper(object):
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
-        and store the shape of the variable so it can be un-flattened later."""
+        and store the shape of the variable so it can be un-flattened later.
+
+        Parameters
+        ----------
+        meta : dict
+            metadata for the variable
+
+        index : int
+            index into the array where the variable value is to be stored
+            (if flattenable)
+
+        src_meta : dict
+            metadata for the source variable that this target variable is
+            connected to
+
+        store_noflats : bool (optional)
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+        """
 
         vmeta = meta.copy()
 
@@ -282,6 +380,19 @@ class VecWrapper(object):
         return vmeta
 
     def get_view(self, varmap):
+        """Return a new `VecWrapper` that is a view into this one
+
+        Parameters
+        ----------
+        varmap : dict
+            mapping of variable names in the old `VecWrapper` to the names
+            they will have in the new `VecWrapper`
+
+        Returns
+        -------
+        `VecWrapper`
+            a new `VecWrapper` that is a view into this one
+        """
         view = VecWrapper()
         view_size = 0
 
@@ -312,19 +423,40 @@ class VecWrapper(object):
     def make_idx_array(self, start, end):
         """ Return an index vector of the right int type for
         parallel or serial computation.
+
+        Parameters
+        ----------
+        start : int
+            the starting index
+
+        end : int
+            the ending index
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
 
-    def merge_idxs(self, src_idxs, dest_idxs):
-        """Return source and destination index arrays, built up from
+    def merge_idxs(self, src_idxs, tgt_idxs):
+        """Return source and target index arrays, built up from
         smaller index arrays and combined in order of ascending source
         index (to allow us to convert src indices to a slice in some cases).
+
+        Parameters
+        ----------
+        src_idxs : array
+            source indices
+
+        tgt_idxs : array
+            target indices
+
+        Returns
+        -------
+        array
+            the merged index arrays
         """
-        assert(len(src_idxs) == len(dest_idxs))
+        assert(len(src_idxs) == len(tgt_idxs))
 
         # filter out any zero length idx array entries
         src_idxs = [i for i in src_idxs if len(i)]
-        dest_idxs = [i for i in dest_idxs if len(i)]
+        tgt_idxs = [i for i in tgt_idxs if len(i)]
 
         if len(src_idxs) == 0:
             return self.make_idx_array(0, 0), self.make_idx_array(0,0)
@@ -334,9 +466,9 @@ class VecWrapper(object):
         src_sorted = sorted(src_tups, key=lambda x: x[1].min())
 
         new_src = [idxs for i, idxs in src_sorted]
-        new_dest = [dest_idxs[i] for i,_ in src_sorted]
+        new_tgt = [tgt_idxs[i] for i,_ in src_sorted]
 
-        return idx_merge(new_src), idx_merge(new_dest)
+        return idx_merge(new_src), idx_merge(new_tgt)
 
     def get_relative_varname(self, abs_name):
         """Returns the relative pathname for the given absolute variable
@@ -362,6 +494,7 @@ class VecWrapper(object):
         """
         Returns
         -------
+        list
             A list of names of state variables.
         """
         return [n for n,meta in self.items() if meta.get('state')]
@@ -378,6 +511,7 @@ class VecWrapper(object):
         """
         Returns
         -------
+        list
             A list of names of 'unflattenable' variables.
         """
         return [n for n,meta in self.items() if meta.get('noflat')]
