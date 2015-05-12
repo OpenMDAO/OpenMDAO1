@@ -72,16 +72,25 @@ class TestComponent(unittest.TestCase):
     def test_add_outputs(self):
         self.comp.add_output("x", -1)
         self.comp.add_output("y", np.zeros(10))
+        self.comp.add_output("z", shape=(10,))
+        
+        with self.assertRaises(ValueError) as cm:
+            self.comp.add_output("w")
+            
+        self.assertEquals(str(cm.exception), "Shape must be specified when 'val' is `NotSet`")
 
         params, unknowns = self.comp._setup_variables()
 
-        self.assertEquals(["x", "y"], list(unknowns.keys()))
+        self.assertEquals(["x", "y", "z"], list(unknowns.keys()))
 
         self.assertIsInstance(unknowns["x"]["val"], int)
         self.assertIsInstance(unknowns["y"]["val"], np.ndarray)
+        self.assertIsInstance(unknowns["z"]["val"], np.ndarray)
 
         self.assertEquals(unknowns["x"], {"val": -1, 'relative_name': 'x' })
         self.assertEquals(list(unknowns["y"]["val"]), 10*[0])
+        np.testing.assert_array_equal(unknowns["z"]["val"],
+                                np.zeros((10,)))
 
     def test_add_states(self):
         self.comp.add_state("s1", 0.0)
@@ -104,7 +113,6 @@ class TestComponent(unittest.TestCase):
                              "Variables must be accessed from a containing Group")
         else:
             self.fail("Exception expected")
-
 
 if __name__ == "__main__":
     unittest.main()
