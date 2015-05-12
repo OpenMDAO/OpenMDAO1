@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 from six import iteritems
+import numpy as np
 
 from openmdao.core.system import System
 
@@ -175,20 +176,21 @@ class Component(System):
             unknown, param = key
 
             # States are never in dparams.
-            if param in dparams:
+            if param in dparams.keys():
                 arg = dparams[param]
-            elif param in dunknowns:
+            elif param in dunknowns.keys():
                 arg = dunknowns[param]
             else:
                 continue
 
-            if unknown not in dresids:
+            if unknown not in dresids.keys():
                 continue
 
             result = dresids[unknown]
 
             # Vectors are flipped during adjoint
+
             if mode == 'fwd':
-                result[:] += J.dot(arg.flatten()).reshape(result.shape)
+                dresids[unknown] += J.dot(arg.flatten()).reshape(result.shape)
             else:
-                arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
+                dparams[param] += J.T.dot(result.flatten()).reshape(arg.shape)

@@ -38,6 +38,7 @@ class SimpleCompDerivMatVec(SimpleComp):
             dparams['x'] = 2.0*dresids['y']
 
 
+
 class SimpleCompDerivJac(SimpleComp):
     """ The simplest component you can imagine, this time with derivatives
     defined using Jacobian to return a jacobian. """
