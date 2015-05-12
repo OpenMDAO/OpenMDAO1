@@ -46,7 +46,7 @@ class Problem(Component):
         name : str
              the name of the variable to set into the unknowns vector
         """
-        self.root_varmanager.unknowns[name] = val
+        self.root._varmanager.unknowns[name] = val
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
