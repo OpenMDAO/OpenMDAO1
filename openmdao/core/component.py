@@ -177,9 +177,9 @@ class Component(System):
 
             # States are never in dparams.
             if param in dparams.keys():
-                arg = dparams[param]
+                arg_vec = dparams
             elif param in dunknowns.keys():
-                arg = dunknowns[param]
+                arg_vec = dunknowns
             else:
                 continue
 
@@ -191,6 +191,6 @@ class Component(System):
             # Vectors are flipped during adjoint
 
             if mode == 'fwd':
-                dresids[unknown] += J.dot(arg.flatten()).reshape(result.shape)
+                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
-                dparams[param] += J.T.dot(result.flatten()).reshape(arg.shape)
+                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
