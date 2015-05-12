@@ -39,6 +39,13 @@ class VecWrapper(object):
         # with non-flat access  (__getitem__)
         self.flat = _flat_dict(self._vardict)
 
+    def _get_metadata(self, name):
+        try:
+            return self._vardict[name][0]
+        except KeyError as error:
+            msg  = "Variable '{name}' does not exist".format(name=name)
+            raise KeyError(msg)
+            
     def __getitem__(self, name):
         """Retrieve unflattened value of named var
 
@@ -51,7 +58,8 @@ class VecWrapper(object):
         -------
             the unflattened value of the named variable
         """
-        meta = self._vardict[name][0]
+        meta = self._get_metadata(name)
+            
         if meta.get('noflat'):
             return meta['val']
         else:
@@ -73,7 +81,8 @@ class VecWrapper(object):
         value :
             the unflattened value of the named variable
         """
-        meta = self._vardict[name][0]
+        meta = self._get_metadata(name)
+        
         if meta['size'] > 0:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]

@@ -167,6 +167,50 @@ class TestVecWrapper(unittest.TestCase):
 
         unorm = u.norm()
         self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
+        
+    def test_bad_get_unknown(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
+
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
+
+        try:
+            u['A:y1']
+        except KeyError as err:
+            self.assertEqual(str(err), '"Variable \'A:y1\' does not exist"')
+        else:
+            self.fail('KeyError expected')
+            
+    def test_bad_set_unknown(self):
+        unknowns_dict = OrderedDict()
+
+        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
+
+        for u, meta in unknowns_dict.items():
+            meta['pathname'] = u
+            meta['relative_name'] = u
+
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
+
+        u = VecWrapper()
+        u.setup_source_vector(unknowns_dict, store_noflats=True)
+
+        try:
+            u['A:y1'] = np.zeros((3, 2))
+        except KeyError as err:
+            self.assertEqual(str(err), '"Variable \'A:y1\' does not exist"')
+        else:
+            self.fail('KeyError expected')
 
 if __name__ == "__main__":
     unittest.main()
