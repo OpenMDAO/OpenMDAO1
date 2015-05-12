@@ -5,6 +5,16 @@ from numpy.linalg import norm
 
 from openmdao.util.types import is_differentiable, int_types
 
+class _flat_dict(object):
+    def __init__(self, vardict):
+        self._dict = vardict
+
+    def __getitem__(self, name):
+        meta = self._dict[name][0]
+        if meta.get('noflat'):
+            raise ValueError("%s is non-flattenable" % name)
+        return self._dict[name][0]['val']
+
 
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
@@ -24,6 +34,10 @@ class VecWrapper(object):
         self.vec = None
         self._vardict = OrderedDict()
         self._slices = OrderedDict()
+
+        # add a flat attribute that will have access method consistent
+        # with non-flat access  (__getitem__)
+        self.flat = _flat_dict(self._vardict)
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named var
@@ -47,25 +61,6 @@ class VecWrapper(object):
                 return meta['val'][0]
             else:
                 return meta['val'].reshape(shape)
-
-    def flat(self, name):
-        """Retrieve flattened value of named variable
-
-        Parameters
-        ----------
-        name : str
-            name of variable to get the value for
-
-        Returns
-        -------
-            array
-                the flattened value of the named variable
-        """
-        meta = self._vardict[name][0]
-        if meta.get('noflat'):
-            raise RuntimeError('%s is non flattenable' % name)
-        else:
-            return meta['val']
 
     def __setitem__(self, name, value):
         """Set the value of the named variable
