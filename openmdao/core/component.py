@@ -105,21 +105,6 @@ class Component(System):
         resids.vec[:] -= unknowns.vec[:]
         unknowns.vec[:] += resids.vec[:]
 
-    def linearize(self, params, unknowns):
-        """ Calculates the Jacobian of a component if it provides
-        derivatives. Preconditioners will also be pre-calculated here if
-        needed.
-
-        Parameters
-        ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
-
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
-        """
-        self._jacobian_cache = self.jacobian(params, unknowns)
-
     def jacobian(self, params, unknowns):
         """ Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
