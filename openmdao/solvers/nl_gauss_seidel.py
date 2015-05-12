@@ -5,7 +5,7 @@ from openmdao.solvers.solverbase import NonLinearSolver
 
 class NLGaussSeidel(NonLinearSolver):
     """ Nonlinear Gauss Seidel solver. This is the default solver for an
-    OpenMDAO group. If there are no cycles, then the system will solve its
+    `Group`. If there are no cycles, then the system will solve its
     subsystems once and terminate. Equivalent to fixed point iteration in
     cases with cycles.
     """
@@ -23,16 +23,16 @@ class NLGaussSeidel(NonLinearSolver):
 
         Parameters
         ----------
-        params: `VecWrapper`
+        params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 
-        unknowns: `VecWrapper`
+        unknowns : `VecWrapper`
             `VecWrapper` containing outputs and states (u)
 
-        resids: `VecWrapper`
+        resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
 
-        system: `System`
+        system : `System`
             Parent `System` object.
         """
 

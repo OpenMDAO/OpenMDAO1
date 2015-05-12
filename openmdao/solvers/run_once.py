@@ -13,20 +13,20 @@ class RunOnce(NonLinearSolver):
         super(RunOnce, self).__init__()
 
     def solve(self, params, unknowns, resids, system):
-        """ Solves the system using Gauss Seidel.
+        """ Executes each item in the system hierarchy sequentially.
 
         Parameters
         ----------
-        params: `VecWrapper`
+        params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 
-        unknowns: `VecWrapper`
+        unknowns : `VecWrapper`
             `VecWrapper` containing outputs and states (u)
 
-        resids: `VecWrapper`
+        resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
 
-        system: `System`
+        system : `System`
             Parent `System` object.
         """
         system.children_solve_nonlinear()
