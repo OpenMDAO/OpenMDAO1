@@ -51,7 +51,8 @@ class VecWrapper(object):
         -------
             the unflattened value of the named variable
         """
-        meta = self._vardict[name][0]
+        meta = self._get_metadata(name)
+            
         if meta.get('noflat'):
             return meta['val']
         else:
@@ -73,7 +74,8 @@ class VecWrapper(object):
         value :
             the unflattened value of the named variable
         """
-        meta = self._vardict[name][0]
+        meta = self._get_metadata(name)
+        
         if meta['size'] > 0:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
