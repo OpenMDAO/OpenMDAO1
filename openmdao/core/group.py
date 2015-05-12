@@ -401,10 +401,10 @@ class Group(System):
 
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                         dresids, mode)
-                    dresids.vec[:] *= -1.0
+                    dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dresids.flat(var)[:] += dunknowns.flat(var)[:]
+                        dresids[var] += dunknowns.flat[var]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -414,13 +414,13 @@ class Group(System):
                     # the 'du' vector at this point without stomping on the
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
-                    dresids.vec[:] *= -1.0
+                    dresids.vec *= -1.0
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                       dresids, mode)
-                    dresids.vec[:] *= -1.0
+                    dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dunknowns.flat(var)[:] += dresids.flat(var)[:]
+                        dunknowns[var] += dresids.flat[var]
 
             # Groups and all other systems just call their own apply_linear.
             else:

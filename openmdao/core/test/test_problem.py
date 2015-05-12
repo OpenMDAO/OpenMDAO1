@@ -321,6 +321,11 @@ class TestProblem(unittest.TestCase):
         prob.setup()
         self.assertEqual(prob['G2:G1:x', 'params'], 0.)      # initial value for a parameter
 
+        # __setitem__
+        prob['G2:G1:C2:y'] = 99.
+        self.assertEqual(prob['G2:G1:C2:y'], 99.)
+
+
     def test_basic_run(self):
         prob = Problem(root=ExampleGroup())
 

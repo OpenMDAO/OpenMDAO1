@@ -140,17 +140,17 @@ class TestVecWrapper(unittest.TestCase):
         u = VecWrapper()
         u.setup_source_vector(unknowns_dict, store_noflats=True)
 
-        self.assertTrue((np.array(u.flat('C1:y1'))==np.array([1., 1., 1., 1., 1., 1.])).all())
-        self.assertTrue((np.array(u.flat('C1:y2'))==np.array([2.])).all())
+        self.assertTrue((np.array(u.flat['C1:y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u.flat['C1:y2'])==np.array([2.])).all())
 
         try:
-            u.flat('C1:y3')
+            u.flat['C1:y3']
         except Exception as err:
-            self.assertEqual(str(err), 'C1:y3 is non flattenable')
+            self.assertEqual(str(err), 'C1:y3 is non-flattenable')
         else:
             self.fail('Exception expected')
-        self.assertTrue((np.array(u.flat('C2:y4'))==np.array([0., 0.])).all())
-        self.assertTrue((np.array(u.flat('C2:s1'))==np.array([-1.])).all())
+        self.assertTrue((np.array(u.flat['C2:y4'])==np.array([0., 0.])).all())
+        self.assertTrue((np.array(u.flat['C2:s1'])==np.array([-1.])).all())
 
     def test_norm(self):
         unknowns_dict = OrderedDict()
