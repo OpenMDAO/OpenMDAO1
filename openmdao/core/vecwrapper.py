@@ -39,6 +39,13 @@ class VecWrapper(object):
         # with non-flat access  (__getitem__)
         self.flat = _flat_dict(self._vardict)
 
+    def _get_metadata(self, name):
+        try:
+            return self._vardict[name][0]
+        except KeyError as error:
+            msg  = "Variable '{name}' does not exist".format(name=name)
+            raise KeyError(msg)
+            
     def __getitem__(self, name):
         """Retrieve unflattened value of named var
 
