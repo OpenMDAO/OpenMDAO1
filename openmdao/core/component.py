@@ -1,10 +1,14 @@
 """ Defines the base class for a Component in OpenMDAO."""
-
+import numpy as np
 from collections import OrderedDict
 from six import iteritems
 
 from openmdao.core.system import System
 
+'''
+Object to represent default value for `add_output`.
+'''
+NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -24,7 +28,13 @@ class Component(System):
         args['val'] = val
         self._params_dict[name] = args
 
-    def add_output(self, name, val, **kwargs):
+    def add_output(self, name, val=NotSet, **kwargs):
+        try:
+            if val is NotSet:
+                val = np.zeros(kwargs['shape'])
+        except KeyError as error:
+            raise ValueError("Shape must be specified when 'val' is `NotSet`")
+        
         self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
