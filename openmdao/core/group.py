@@ -499,17 +499,19 @@ class Group(System):
                         pslice = pvec._slices[pname]
                     else:
                         pslice = [pvec._slices[p] for p in pnames]
-                    file.write("u (%s)  p (%s): %s --> %s\n" %
-                                 (str(uvec._slices[v]),
-                                  str(pslice), v, pnames))
+                    file.write("%s --> %s:  u (%s)  p (%s): %s\n" %
+                                 (v, pnames,
+                                  str(uvec._slices[v]),
+                                  str(pslice), str(uvec[v])[:15]))
                 else:
-                    file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+                    file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
+                                                      str(uvec[v])[:15]))
 
         for v, meta in pvec.items():
             if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
                 file.write(" "*(nest+2))
-                file.write("           p (%s): %s\n" %
-                                   (str(pvec._slices[v]), v))
+                file.write("%s           p (%s): %s\n" %
+                                   (v,str(pvec._slices[v]), str(pvec[v])[:15]))
 
         if noflat_conns:
             file.write(' '*(nest+2) + "= noflat connections =\n")
@@ -533,7 +535,8 @@ class Group(System):
                 for v, meta in uvec.items():
                     if verbose:
                         file.write(" "*(nest+2))
-                        file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+                        file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
+                                                          str(uvec[v])[:15]))
             else:
                 sub.dump(nest, file)
 

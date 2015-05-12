@@ -7,9 +7,9 @@
 #!version=4.0
 [project attributes]
 proj.directory-list = [{'dirloc': loc('../..'),
-                        'excludes': [u'docs/generated_images',
-                                     u'docs/_build',
-                                     u'docs/_static',
+                        'excludes': [u'openmdao/docs/generated_images',
+                                     u'openmdao/docs/_build',
+                                     u'openmdao/docs/_static',
                                      u'openmdao.egg-info',
                                      u'devenv',
                                      u'config',
