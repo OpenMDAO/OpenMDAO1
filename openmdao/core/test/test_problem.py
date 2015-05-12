@@ -1,14 +1,23 @@
 """ Unit test for the Problem class. """
 
 import unittest
-from six import text_type
+import numpy as np
+from six import text_type, PY3
 
 from openmdao.components.linear_system import LinearSystem
-from openmdao.core.problem import Problem
+from openmdao.core.component import Component
+from openmdao.core.problem import ConnectError, Problem
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes
+
+if PY3:
+    def py3fix(s):
+        return s.replace('<type', '<class')
+else:
+    def py3fix(s):
+        return s
 
 class TestProblem(unittest.TestCase):
 
@@ -106,6 +115,159 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_check_connections(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_state('y', np.zeros((2,)), shape=(2,))
+
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('y', np.zeros((3,)), shape=(3,))
+
+        class C(Component):
+            def __init__(self):
+                super(C, self).__init__()
+                self.add_state('y', np.zeros((2,)))
+
+        class D(Component):
+            def __init__(self):
+                super(D, self).__init__()
+                self.add_param('y', np.zeros((3,)))
+
+        class E(Component):
+            def __init__(self):
+                super(E, self).__init__()
+                self.add_param('y', 1.0)
+
+        #Explicit
+        expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
+                                  "'A:y' must be the same as type "
+                                  "'<type 'float'>' of target "
+                                  "'E:y'")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('E', E())
+
+        problem.root.connect('A:y', 'E:y')
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        #Implicit
+        expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
+                                  "'y' must be the same as type "
+                                  "'<type 'float'>' of target "
+                                  "'y'")
+
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A(), promotes=['y'])
+        problem.root.add('E', E(), promotes=['y'])
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+
+        # Explicit
+        expected_error_message = ("Shape '(2,)' of the source 'A:y' "
+                                  "must match the shape '(3,)' "
+                                  "of the target 'B:y'")
+        problem = Problem()
+        problem.root = Group()
+
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        problem.root.connect('A:y', 'B:y')
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        # Implicit
+        expected_error_message = ("Shape '(2,)' of the source 'y' "
+                                  "must match the shape '(3,)' "
+                                  "of the target 'y'")
+
+        problem = Problem()
+        problem.root = Group()
+
+        problem.root.add('A', A(), promotes=['y'])
+        problem.root.add('B', B(), promotes=['y'])
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        # Explicit
+        expected_error_message = ("Shape of the initial value '(2,)' of source "
+                                  "'C:y' must match the shape '(3,)' "
+                                  "of the target 'B:y'")
+
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('B', B())
+        problem.root.add('C', C())
+        problem.root.connect('C:y', 'B:y')
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        # Implicit
+        expected_error_message = ("Shape of the initial value '(2,)' of source "
+                                  "'y' must match the shape '(3,)' "
+                                  "of the target 'y'")
+
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('B', B(), promotes=['y'])
+        problem.root.add('C', C(), promotes=['y'])
+
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        # Explicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('D', D())
+        problem.root.connect('A:y', 'D:y')
+        problem.setup()
+
+        # Implicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A(), promotes=['y'])
+        problem.root.add('D', D(), promotes=['y'])
+        problem.setup()
+
+        # Explicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('C', A())
+        problem.root.add('D', D())
+        problem.root.connect('C:y', 'D:y')
+        problem.setup()
+
+        # Implicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('C', A(), promotes=['y'])
+        problem.root.add('D', D(), promotes=['y'])
+        problem.setup()
+
     def test_simplest_run(self):
 
         prob = Problem(root=Group())
@@ -165,9 +327,7 @@ class TestProblem(unittest.TestCase):
         prob.run()
 
         self.assertAlmostEqual(prob['G3:C4:y'], 40.)
-        # TODO: this needs Systems to be able to solve themselves
 
-        # ...
 
 if __name__ == "__main__":
     unittest.main()

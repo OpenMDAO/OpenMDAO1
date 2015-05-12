@@ -77,7 +77,7 @@ class VecWrapper(object):
 
     def values(self):
         """ iterate over the first metadata for each variable """
-        for  metadata_entry in self._vardict.values():
+        for metadata_entry in self._vardict.values():
             yield metadata_entry[0]
 
     def metadata(self, name):
@@ -187,7 +187,6 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-
     def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
         """Create a vector storing a flattened array of the variables in params.
@@ -248,20 +247,24 @@ class VecWrapper(object):
         # (there may be metadata for multiple source variables for a target)
 
         # map slices to the array
-        for name, meta in self.items():
-            if meta['size'] > 0:
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
+        for name, metas in self._vardict.items():
+            for meta in metas:
+                if meta['size'] > 0:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
             meta = params_dict[pathname]
             prelname = parent_params_vec.get_relative_varname(pathname)
-            newmeta = parent_params_vec._vardict[prelname][0].copy()
-            newmeta['relative_name'] = meta['relative_name']
-            newmeta['owned'] = False # mark this param as not 'owned' by this VW
-            self._vardict.setdefault(meta['relative_name'],
-                                     []).append(newmeta)
+            newmetas = parent_params_vec._vardict[prelname]
+            for newmeta in newmetas:
+                if newmeta['pathname'] == pathname:
+                    newmeta = newmeta.copy()
+                    newmeta['relative_name'] = meta['relative_name']
+                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                    self._vardict.setdefault(meta['relative_name'],
+                                             []).append(newmeta)
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
@@ -383,7 +386,6 @@ class VecWrapper(object):
             A list of names of 'unflattenable' variables.
         """
         return [n for n,meta in self.items() if meta.get('noflat')]
-
 
 
 def idx_merge(idxs):

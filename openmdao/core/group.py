@@ -5,10 +5,10 @@ from __future__ import print_function
 import sys
 from collections import OrderedDict
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.component import Component
-from openmdao.core.varmanager import VarManager, ViewVarManager, create_views, \
-                                      ViewTuple, get_relname_map
+from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
@@ -26,10 +26,6 @@ class Group(System):
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
-
-        # These point to (du,df) or (df,du) depending on mode.
-        self.sol_vec = None
-        self.rhs_vec = None
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named variable or a reference
@@ -120,7 +116,7 @@ class Group(System):
             Set to True to return only systems that are local.
         """
         #TODO: once we add MPI stuff, maintain local subsystems
-        #if local == True:
+        #if local is True:
             #return self._local_subsystems.items()
         return self._subsystems.items()
 
@@ -217,15 +213,11 @@ class Group(System):
         self._views = {}
         for name, sub in self.subgroups():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
-            vm = sub._varmanager
-            self._views[name] = ViewTuple(vm.unknowns, vm.dunknowns,
-                                          vm.resids, vm.dresids,
-                                          vm.params, vm.dparams)
+            self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            u, du, r, dr, p, dp = create_views(self._varmanager, sub.pathname,
-                                               sub._params_dict, sub._unknowns_dict, [], {})
-            self._views[name] = ViewTuple(u, du, r, dr, p, dp)
+            self._views[name] = create_views(self._varmanager, sub.pathname,
+                                             sub._params_dict, sub._unknowns_dict, [], {})
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -307,7 +299,6 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-
         varmanager = self._varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
@@ -323,6 +314,29 @@ class Group(System):
             resids = view.resids
 
             system.apply_nonlinear(params, unknowns, resids)
+
+    def linearize(self, params, unknowns):
+        """ Linearize all our subsystems.
+
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
+
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+        """
+
+        # TODO: Should be local subs only, but local dict isn't filled yet
+        for name, system in self.subsystems():
+
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            system.linearize(params, unknowns)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -360,32 +374,37 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data(deriv=True)
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             view = self._views[system.name]
 
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-            dparams = view.dparams
+            params    = view.params
+            unknowns  = view.unknowns
+            resids    = view.resids
+            dparams   = view.dparams
             dunknowns = view.dunknowns
-            dresids = view.dresids
+            dresids   = view.dresids
+
+            #print('apply_linear on', name, 'BEFORE')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
 
             # Special handling for Components
-            if isinstance(system, Component):
+            if isinstance(system, Component) and \
+               not isinstance(system, ParamComp):
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                                        dresids, mode)
+                    dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dunknowns[var][:] += dparams[var][:]
+                    for var in dunknowns.keys():
+                        dresids.flat(var)[:] += dunknowns.flat(var)[:]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -395,31 +414,64 @@ class Group(System):
                     # the 'du' vector at this point without stomping on the
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
                     system.apply_linear(params, unknowns, dparams, dunknowns,
                                       dresids, mode)
-                    dunknowns.vec[:] *= -1.0
+                    dresids.vec[:] *= -1.0
 
-                    for var in dunknowns:
-                        dparams[var][:] += dunknowns[var][:]
+                    for var in dunknowns.keys():
+                        dunknowns.flat(var)[:] += dresids.flat(var)[:]
 
-            # Groups just recurse
+            # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
+                                    dresids, mode)
+
+            #print('apply_linear on', name, 'AFTER')
+            #print('dunknowns', varmanager.dunknowns.vec)
+            #print('dparams', varmanager.dparams.vec)
+            #print('dresids', varmanager.dresids.vec)
 
         if mode == 'rev':
             # Full Scatter
-            varmanager._transfer_data()
+            varmanager._transfer_data(mode='rev', deriv=True)
+
+    def solve_linear(self, rhs, params, unknowns, mode="auto"):
+        """ Single linear solution applied to whatever input is sitting in
+        the rhs vector.
+
+        Parameters
+        ----------
+        rhs: `ndarray`
+            Right hand side for our linear solve.
+
+        params : `VecwWrapper`
+            `VecwWrapper` containing parameters (p)
+
+        unknowns : `VecwWrapper`
+            `VecwWrapper` containing outputs and states (u)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev', but generally should be
+            called wihtout mode so that the user can set the mode in this
+            system's ln_solver.options.
+        """
+
+        if rhs.norm() < 1e-15:
+            self.sol_vec.array[:] = 0.0
+            return self.sol_vec.array
+
+        #print "solving linear sys", self.name
+        if mode=='auto':
+            mode = self.ln_solver.options['mode']
+
+        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        self.rhs_buf[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
+        self.sol_vec.array[:] = self.sol_buf[:]
 
     def dump(self, nest=0, file=sys.stdout, verbose=True):
-        #print(' '*(3*nest), self.pathname)
-        #for name, s in self.subsystems():
-            #if isinstance(s, Group):
-                #s.dump(nest+1, file=file)
-            #else:
-                #print(' '*(3*(nest+1)), s.pathname)
-
         file.write(" "*nest)
         file.write(self.name)
         klass = self.__class__.__name__
@@ -428,7 +480,7 @@ class Group(System):
         pvec = self._varmanager.params
 
         file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                     (klass.lower()[:5],
+                     (klass,
                       1, #self.get_req_cpus(),
                       0, #world_rank,
                       uvec.vec.size,
@@ -467,8 +519,23 @@ class Group(System):
             file.write("%s --> %s\n" % (src, dest))
 
         nest += 4
-        for name, sub in self.subgroups(local=True):
-            sub.dump(nest, file)
+        for name, sub in self.subsystems(local=True):
+            if isinstance(sub, Component):
+                uvec = self._views[name].unknowns
+                file.write(" "*nest)
+                file.write(name)
+                file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                           (sub.__class__.__name__,
+                            1, #sub.get_req_cpus(),
+                            0, #world_rank,
+                            uvec.vec.size,
+                            pvec.vec.size))
+                for v, meta in uvec.items():
+                    if verbose:
+                        file.write(" "*(nest+2))
+                        file.write("u (%s): %s\n" % (str(uvec._slices[v]), v))
+            else:
+                sub.dump(nest, file)
 
 
 def _get_implicit_connections(params_dict, unknowns_dict):
