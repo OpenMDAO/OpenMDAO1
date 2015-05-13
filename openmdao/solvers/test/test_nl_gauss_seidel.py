@@ -18,12 +18,8 @@ class TestNLGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        unknowns = top.root._varmanager.unknowns
-        y1 = unknowns['y1']
-        y2 = unknowns['y2']
-
-        assert_rel_error(self, y1, 25.58830273, .00001)
-        assert_rel_error(self, y2, 12.05848819, .00001)
+        assert_rel_error(self, top['y1'], 25.58830273, .00001)
+        assert_rel_error(self, top['y2'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
         self.assertLess(top.root.nl_solver.iter_count, 8)

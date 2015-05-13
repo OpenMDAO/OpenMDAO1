@@ -40,7 +40,8 @@ class Group(System):
 
         Returns
         -------
-        the unflattened value of the given variable
+        the unflattened value of the given variable or a reference to the
+        named subsystem.
         """
 
         # if arg is not a tuple, then search for a subsystem by name
@@ -63,15 +64,21 @@ class Group(System):
         except KeyError:
             if isinstance(name, tuple):
                 name, vector = name
+                if not getattr(self._varmanager.vectors(), vector, False):
+                    raise NameError("'%s' is not a valid vector name" % vector)
                 istuple = True
             else:
                 vector = 'unknowns'
                 istuple = False
             subsys, subname = name.split(':', 1)
-            if istuple:
-                return self._subsystems[subsys][subname, vector]
-            else:
-                return self.subsystems[name][subname]
+            try:
+                if istuple:
+                    return self._subsystems[subsys][subname, vector]
+                else:
+                    return self._subsystems[subsys][subname]
+            except:
+                raise KeyError("Can't find variable '%s' in %s vector in system '%s'" %
+                               (name, vector, self.pathname))
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -197,6 +204,9 @@ class Group(System):
             the `VarManager` for the parent `Group`, if any, into which this
             `VarManager` will provide a view.
 
+        impl : an implementation factory, optional
+            Specifies the factory object used to create `VecWrapper` and
+            `DataXfer` objects.
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
@@ -584,7 +594,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     # check if any relative names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():
         if len(lst) > 1:
-            raise RuntimeError("Promoted name %s matches multiple unknowns: %s" %
+            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
                                (name, lst))
 
     connections = {}
