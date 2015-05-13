@@ -8,7 +8,7 @@ from openmdao.core.system import System
 '''
 Object to represent default value for `add_output`.
 '''
-NotSet = object()
+_NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -28,12 +28,15 @@ class Component(System):
         args['val'] = val
         self._params_dict[name] = args
 
-    def add_output(self, name, val=NotSet, **kwargs):
+    def add_output(self, name, val=_NotSet, **kwargs):
         try:
-            if val is NotSet:
+            if val is _NotSet:
                 val = np.zeros(kwargs['shape'])
         except KeyError as error:
-            raise ValueError("Shape must be specified when 'val' is `NotSet`")
+            msg = ("Shape of output '{}' must be specified because "
+                   "'val' is not set")
+            msg = msg.format(name)
+            raise ValueError(msg)
         
         self._check_name(name)
         args = kwargs.copy()
