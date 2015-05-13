@@ -146,7 +146,7 @@ class TestVecWrapper(unittest.TestCase):
         try:
             u.flat['C1:y3']
         except Exception as err:
-            self.assertEqual(str(err), 'C1:y3 is non-flattenable')
+            self.assertEqual(str(err), "'C1:y3' is non-flattenable")
         else:
             self.fail('Exception expected')
         self.assertTrue((np.array(u.flat['C2:y4'])==np.array([0., 0.])).all())
@@ -167,7 +167,7 @@ class TestVecWrapper(unittest.TestCase):
 
         unorm = u.norm()
         self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
-        
+
     def test_bad_get_unknown(self):
         unknowns_dict = OrderedDict()
 
@@ -189,7 +189,7 @@ class TestVecWrapper(unittest.TestCase):
             self.assertEqual(str(err), '"Variable \'A:y1\' does not exist"')
         else:
             self.fail('KeyError expected')
-            
+
     def test_bad_set_unknown(self):
         unknowns_dict = OrderedDict()
 

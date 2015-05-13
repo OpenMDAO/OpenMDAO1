@@ -80,7 +80,7 @@ class Problem(Component):
         # check for conflicting explicit/implicit connections
         for tgt, src in connections.items():
             if tgt in implicit_conns:
-                msg = '%s is explicitly connected to %s but implicitly connected to %s' % \
+                msg = "'%s' is explicitly connected to '%s' but implicitly connected to '%s'" % \
                       (tgt, connections[tgt], implicit_conns[tgt])
                 raise RuntimeError(msg)
 

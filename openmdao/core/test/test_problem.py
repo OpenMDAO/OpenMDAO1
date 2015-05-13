@@ -47,7 +47,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            msg = 'G3:C4:x is explicitly connected to G3:C3:y but implicitly connected to G2:C1:x'
+            msg = "'G3:C4:x' is explicitly connected to 'G3:C3:y' but implicitly connected to 'G2:C1:x'"
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
@@ -74,7 +74,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            msg = "Promoted name G3:y matches multiple unknowns: ['G3:C3:y', 'G3:C4:y']"
+            msg = "Promoted name 'G3:y' matches multiple unknowns: ['G3:C3:y', 'G3:C4:y']"
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")

@@ -56,7 +56,7 @@ class TestComponent(unittest.TestCase):
             self.comp.promoted('xxyyzz')
         except Exception as err:
             self.assertEqual(text_type(err),
-                             " promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
+                             "'' promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
 
     def test_add_params(self):
         self.comp.add_param("x", 0.0)
@@ -101,7 +101,7 @@ class TestComponent(unittest.TestCase):
             self.comp["x_y_z"]
         except Exception as err:
             self.assertEqual(str(err),
-                             "Variables must be accessed from a containing Group")
+                             "Variable 'x_y_z' must be accessed from a containing Group")
         else:
             self.fail("Exception expected")
 

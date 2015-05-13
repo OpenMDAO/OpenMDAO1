@@ -65,7 +65,7 @@ class Group(System):
             if isinstance(name, tuple):
                 name, vector = name
                 if not getattr(self._varmanager.vectors(), vector, False):
-                    raise NameError("%s is not a valid vector name" % vector)
+                    raise NameError("'%s' is not a valid vector name" % vector)
                 istuple = True
             else:
                 vector = 'unknowns'
@@ -591,7 +591,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     # check if any relative names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():
         if len(lst) > 1:
-            raise RuntimeError("Promoted name %s matches multiple unknowns: %s" %
+            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
                                (name, lst))
 
     connections = {}
