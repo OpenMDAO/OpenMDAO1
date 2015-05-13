@@ -325,7 +325,7 @@ class Group(System):
 
             system.apply_nonlinear(params, unknowns, resids)
 
-    def linearize(self, params, unknowns):
+    def jacobian(self, params, unknowns):
         """ Linearize all our subsystems.
 
         Parameters
@@ -337,8 +337,7 @@ class Group(System):
             `VecwWapper` containing outputs and states (u)
         """
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             view = self._views[system.name]
 
@@ -346,7 +345,11 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            system.linearize(params, unknowns)
+            jacobian_cache = system.jacobian(params, unknowns)
+
+            if isinstance(system, Component) and \
+               not isinstance(system, ParamComp):
+                system._jacobian_cache = jacobian_cache
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
