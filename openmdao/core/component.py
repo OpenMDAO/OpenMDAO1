@@ -23,11 +23,14 @@ class Component(System):
 
         self._jacobian_cache = {}
     
-    def _check_val(self, name, var_type, kargs):
-        try:
-            if kargs['val'] is _NotSet:
-                kargs['val'] = np.zeros(kargs['shape'])
-        except KeyError as error:
+    def _get_initial_val(self, val, shape):
+        if val is _NotSet:
+            return np.zeros(shape)
+            
+        return val
+            
+    def _check_val(self, name, var_type, val, shape):
+        if val is _NotSet and shape is None:
             msg = ("Shape of {var_type} '{name}' must be specified because "
                    "'val' is not set")
             msg = msg.format(var_type=var_type, name=name)
@@ -37,29 +40,29 @@ class Component(System):
         def wrap(add_function):
             @functools.wraps(add_function)
             def wrapper(self, name, val=_NotSet, **kargs):
-                kargs['val'] = val
                 self._check_name(name)
-                self._check_val(name, var_type, kargs)
-                return add_function(self, name, **kargs)
+                self._check_val(name, var_type, val, kargs.get('shape'))
+                
+                return add_function(self, name, val, **kargs)
             return wrapper
         return wrap
     
     @_check_args('param')
     def add_param(self, name, val=_NotSet, **kwargs):
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._params_dict[name] = args
 
     @_check_args('output')
     def add_output(self, name, val=_NotSet, **kwargs):
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._unknowns_dict[name] = args
 
     @_check_args('state')
     def add_state(self, name, val, **kwargs):
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         args['state'] = True
         self._unknowns_dict[name] = args
 
