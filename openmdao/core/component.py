@@ -37,31 +37,23 @@ class Component(System):
             msg = msg.format(var_type=var_type, name=name)
             raise ValueError(msg)
     
-    def _check_args(var_type):
-        def wrap(add_function):
-            @functools.wraps(add_function)
-            def wrapper(self, name, val=_NotSet, **kargs):
-                self._check_name(name)
-                self._check_val(name, var_type, val, kargs.get('shape'))
-                
-                return add_function(self, name, val, **kargs)
-            return wrapper
-        return wrap
-    
-    @_check_args('param')
     def add_param(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'param', val, kwargs.get('shape'))
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._params_dict[name] = args
 
-    @_check_args('output')
     def add_output(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'output', val, kwargs.get('shape'))
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._unknowns_dict[name] = args
 
-    @_check_args('state')
-    def add_state(self, name, val, **kwargs):
+    def add_state(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'state', val, kwargs.get('shape'))
+        self._check_name(name)
         args = kwargs.copy()
         args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         args['state'] = True
