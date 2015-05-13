@@ -151,3 +151,22 @@ class SimpleImplicitComp(Component):
         J[('z', 'x')] = np.array([unknowns['z']])
 
         return J
+
+
+class SimpleNoflatComp(Component):
+    """ The simplest component you can imagine. """
+
+    def __init__(self):
+        super(SimpleNoflatComp, self).__init__()
+
+        # Params
+        self.add_param('x', '')
+
+        # Unknowns
+        self.add_output('y', '')
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'] = params['x']+self.name
+
