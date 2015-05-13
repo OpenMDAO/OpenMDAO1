@@ -104,17 +104,17 @@ class TestComponent(unittest.TestCase):
         self.comp.add_state("s3", shape=(1, ))
         
         with self.assertRaises(ValueError) as cm:
-            self.comp.add_output("s4")
+            self.comp.add_state("s4")
             
         self.assertEquals(str(cm.exception), "Shape of state 's4' must be specified because 'val' is not set")
 
         params, unknowns = self.comp._setup_variables()
 
-        self.assertEquals(["s1", "s2"], list(unknowns.keys()))
+        self.assertEquals(["s1", "s2", "s3"], list(unknowns.keys()))
 
         self.assertEquals(unknowns["s1"], {"val": 0.0, 'state': True, 'relative_name': 's1' })
         self.assertEquals(unknowns["s2"], {"val": 6.0, 'state': True, 'relative_name': 's2' })
-        np.testing.assert_array_equal(unknowns["s4"]["val"], np.zeros((1,)))
+        np.testing.assert_array_equal(unknowns["s3"]["val"], np.zeros((1,)))
 
     def test_variable_access(self):
         self.comp.add_output("x_y_z", np.zeros(10))
