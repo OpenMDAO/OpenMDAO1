@@ -109,6 +109,15 @@ class VecWrapper(object):
         """
         return len(self._vardict)
 
+    def __contains__(self, key):
+        """
+        Returns
+        _______
+            a boolean indicating if the given key (variable name) is in this vector
+        """
+
+        return key in self._vardict
+
     def keys(self):
         """
         Returns

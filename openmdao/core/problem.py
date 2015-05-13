@@ -166,7 +166,7 @@ class Problem(Component):
         dparams.vec[:] = 0.0
         dunknowns.vec[:] = 0.0
         dresids.vec[:] = 0.0
-        root.linearize(params, unknowns)
+        root.jacobian(params, unknowns)
 
         # Initialized Jacobian
         if return_format == 'dict':

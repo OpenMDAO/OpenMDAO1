@@ -1,10 +1,16 @@
 """ Defines the base class for a Component in OpenMDAO."""
-
+import functools
+import numpy as np
 from collections import OrderedDict
 from six import iteritems
+import numpy as np
 
 from openmdao.core.system import System
 
+'''
+Object to represent default value for `add_output`.
+'''
+_NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -17,23 +23,39 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
-
-    def add_param(self, name, val, **kwargs):
+    
+    def _get_initial_val(self, val, shape):
+        if val is _NotSet:
+            return np.zeros(shape)
+            
+        return val
+            
+    def _check_val(self, name, var_type, val, shape):
+        if val is _NotSet and shape is None:
+            msg = ("Shape of {var_type} '{name}' must be specified because "
+                   "'val' is not set")
+            msg = msg.format(var_type=var_type, name=name)
+            raise ValueError(msg)
+    
+    def add_param(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'param', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._params_dict[name] = args
 
-    def add_output(self, name, val, **kwargs):
+    def add_output(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'output', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._unknowns_dict[name] = args
 
-    def add_state(self, name, val, **kwargs):
+    def add_state(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'state', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         args['state'] = True
         self._unknowns_dict[name] = args
 
@@ -105,21 +127,6 @@ class Component(System):
         resids.vec[:] -= unknowns.vec[:]
         unknowns.vec[:] += resids.vec[:]
 
-    def linearize(self, params, unknowns):
-        """ Calculates the Jacobian of a component if it provides
-        derivatives. Preconditioners will also be pre-calculated here if
-        needed.
-
-        Parameters
-        ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
-
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
-        """
-        self._jacobian_cache = self.jacobian(params, unknowns)
-
     def jacobian(self, params, unknowns):
         """ Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
@@ -142,7 +149,8 @@ class Component(System):
         return None
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-        """Multiplies incoming vector by the Jacobian (fwd mode) or the
+        """
+        Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
@@ -176,9 +184,9 @@ class Component(System):
 
             # States are never in dparams.
             if param in dparams:
-                arg = dparams[param]
+                arg_vec = dparams
             elif param in dunknowns:
-                arg = dunknowns[param]
+                arg_vec = dunknowns
             else:
                 continue
 
@@ -188,7 +196,8 @@ class Component(System):
             result = dresids[unknown]
 
             # Vectors are flipped during adjoint
+
             if mode == 'fwd':
-                result[:] += J.dot(arg.flatten()).reshape(result.shape)
+                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
-                arg[:] += J.T.dot(result.flatten()).reshape(arg.shape)
+                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
