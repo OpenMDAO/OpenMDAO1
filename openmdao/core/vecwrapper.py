@@ -86,7 +86,7 @@ class VecWrapper(object):
             if shape is None:
                 return scale*(meta['val'][0] + offset)
             else:
-                return scale*(meta['val'].reshape(shape))
+                return scale*(meta['val'].reshape(shape) + offset)
 
         else:
             # if it doesn't have a shape, it's a float
