@@ -62,5 +62,5 @@ class DataXfer(object):
         else:  # forward
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
 
-            for src, tgt in self.noflat_conns:
+            for tgt, src in self.noflat_conns:
                 tgtvec[tgt] = srcvec[src]
