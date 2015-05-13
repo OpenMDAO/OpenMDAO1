@@ -1,4 +1,5 @@
 """ Defines the base class for a Component in OpenMDAO."""
+import functools
 import numpy as np
 from collections import OrderedDict
 from six import iteritems
@@ -21,24 +22,37 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
-
+    
+    def _check_val(self, name, var_type, kargs):
+        try:
+            if kargs['val'] is _NotSet:
+                kargs['val'] = np.zeros(kargs['shape'])
+        except KeyError as error:
+            msg = ("Shape of {var_type} '{name}' must be specified because "
+                   "'val' is not set")
+            msg = msg.format(var_type=var_type, name=name)
+            raise ValueError(msg)
+    
+    def _check_args(var_type):
+        def wrap(add_function):
+            @functools.wraps(add_function)
+            def wrapper(self, name, val=_NotSet, **kargs):
+                kargs['val'] = val
+                self._check_name(name)
+                self._check_val(name, var_type, kargs)
+                return add_function(self, name, **kargs)
+            return wrapper
+        return wrap
+        
+                
     def add_param(self, name, val, **kwargs):
         self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
         self._params_dict[name] = args
 
+    @_check_args('output')
     def add_output(self, name, val=_NotSet, **kwargs):
-        try:
-            if val is _NotSet:
-                val = np.zeros(kwargs['shape'])
-        except KeyError as error:
-            msg = ("Shape of output '{}' must be specified because "
-                   "'val' is not set")
-            msg = msg.format(name)
-            raise ValueError(msg)
-        
-        self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
         self._unknowns_dict[name] = args
