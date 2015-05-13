@@ -178,109 +178,6 @@ class VecWrapper(object):
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
 
-    def setup_source_vector(self, unknowns_dict, store_noflats=False):
-        """Configure this vector to store a flattened array of the variables
-        in unknowns. If store_noflats is True, then non-flattenable variables
-        will also be stored.
-
-        Parameters
-        ----------
-        unknowns_dict : dict
-            dictionary of metadata for unknown variables
-
-        store_noflats : bool (optional)
-            if True, then store non-flattenable (non-differentiable) variables
-            by default only flattenable variables will be stired
-        """
-        vec_size = 0
-        for name, meta in unknowns_dict.items():
-            vmeta = self._add_source_var(name, meta, vec_size)
-            var_size = vmeta['size']
-            if var_size > 0 or store_noflats:
-                if var_size > 0:
-                    self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
-                # for a target (unknown) vector, there may be multiple
-                # variables with relative name
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
-                vec_size += var_size
-
-        self.vec = numpy.zeros(vec_size)
-
-        # get the metadata from the first set of metadata in the list
-        # (there will actually be only one for source variables)
-
-        # map slices to the array
-        for name, meta in self.items():
-            if meta['size'] > 0:
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
-
-        # if store_noflats is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the unknowns dicts.
-        if store_noflats:
-            for name, meta in unknowns_dict.items():
-                self[meta['relative_name']] = meta['val']
-
-    def _add_source_var(self, name, meta, index):
-        """Add a variable to the vector. If the variable is differentiable,
-        then allocate a range in the vector array to store it. Store the
-        shape of the variable so it can be un-flattened later.
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable to add
-
-        meta : dict
-            metadata for the variable
-
-        index : int
-            index into the array where the variable value is to be stored
-            (if flattenable)
-        """
-
-        vmeta = meta.copy()
-        vmeta['pathname'] = name
-
-        if 'shape' in meta:
-            shape = meta['shape']
-            vmeta['shape'] = shape
-            if 'val' in meta:
-                val = meta['val']
-                if not is_differentiable(val):
-                    var_size = 0
-                    vmeta['noflat'] = True
-                    vmeta['val'] = _NoflatWrapper(val)
-                else:
-                    if val.shape != shape:
-                        raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
-                                         name)
-                    var_size = val.size
-            else:
-                # no val given, so assume they want a numpy float array
-                meta['val'] = numpy.zeros(shape)
-                var_size = meta['val'].size
-        elif 'val' in meta:
-            val = meta['val']
-            if is_differentiable(val):
-                if isinstance(val, numpy.ndarray):
-                    var_size = val.size
-                    # if they didn't specify the shape, get it here so we
-                    # can unflatten the value we return from __getitem__
-                    vmeta['shape'] = val.shape
-                else:
-                    var_size = 1
-            else:
-                var_size = 0
-                vmeta['noflat'] = True
-                vmeta['val'] = _NoflatWrapper(val)
-        else:
-            raise ValueError("No value or shape given for variable '%s'" % name)
-
-        vmeta['size'] = var_size
-
-        return vmeta
-
     def norm(self):
         """ Calculates the norm of this vector.
 
@@ -290,116 +187,6 @@ class VecWrapper(object):
             Norm of the flattenable values in this vector.
         """
         return norm(self.vec)
-
-    def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
-                            connections, store_noflats=False):
-        """Configure this vector to store a flattened array of the variables
-        in params. Variable shape and value are retrieved from srcvec.
-
-        Parameters
-        ----------
-        parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
-
-        params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
-
-        srcvec : `VecWrapper`
-            Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
-
-        my_params : list of str
-            A list of absolute names of parameters that the `VecWrapper` we're building
-            will 'own'.
-
-        connections : dict of str : str
-            A dict of absolute target names mapped to the absolute name of their
-            source variable.
-
-        store_noflats : bool (optional)
-            If True, store unflattenable variables in the `VecWrapper` we're building.
-        """
-        vec_size = 0
-        missing = []  # names of our params that we don't 'own'
-        for pathname, meta in params_dict.items():
-            if pathname in my_params:
-                # if connected, get metadata from the source
-                src_pathname = connections.get(pathname)
-                if src_pathname is None:
-                    raise RuntimeError("Parameter '%s' is not connected" % pathname)
-                src_rel_name = srcvec.get_relative_varname(src_pathname)
-                src_meta = srcvec.metadata(src_rel_name)
-
-                vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
-                vmeta['pathname'] = pathname
-
-                vec_size += vmeta['size']
-
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
-            else:
-                if parent_params_vec is not None:
-                    missing.append(pathname)
-
-        self.vec = numpy.zeros(vec_size)
-
-        # get the size/val metadata from the first set of metadata in the list
-        # (there may be metadata for multiple source variables for a target)
-
-        # map slices to the array
-        for name, metas in self._vardict.items():
-            for meta in metas:
-                if meta['size'] > 0:
-                    start, end = self._slices[name]
-                    meta['val'] = self.vec[start:end]
-
-        # fill entries for missing params with views from the parent
-        for pathname in missing:
-            meta = params_dict[pathname]
-            prelname = parent_params_vec.get_relative_varname(pathname)
-            newmetas = parent_params_vec._vardict[prelname]
-            for newmeta in newmetas:
-                if newmeta['pathname'] == pathname:
-                    newmeta = newmeta.copy()
-                    newmeta['relative_name'] = meta['relative_name']
-                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
-                    self._vardict.setdefault(meta['relative_name'],
-                                             []).append(newmeta)
-
-    def _add_target_var(self, meta, index, src_meta, store_noflats):
-        """Add a variable to the vector. Allocate a range in the vector array
-        and store the shape of the variable so it can be un-flattened later.
-
-        Parameters
-        ----------
-        meta : dict
-            metadata for the variable
-
-        index : int
-            index into the array where the variable value is to be stored
-            (if flattenable)
-
-        src_meta : dict
-            metadata for the source variable that this target variable is
-            connected to
-
-        store_noflats : bool (optional)
-            If True, store unflattenable variables in the `VecWrapper` we're building.
-        """
-
-        vmeta = meta.copy()
-
-        var_size = src_meta['size']
-
-        vmeta['size'] = var_size
-        if 'shape' in src_meta:
-            vmeta['shape'] = src_meta['shape']
-
-        if var_size > 0:
-            self._slices[meta['relative_name']] = (index, index + var_size)
-        elif src_meta.get('noflat') and store_noflats:
-            vmeta['val'] = src_meta['val']
-            vmeta['noflat'] = True
-
-        return vmeta
 
     def get_view(self, varmap):
         """Return a new `VecWrapper` that is a view into this one
@@ -415,7 +202,7 @@ class VecWrapper(object):
         `VecWrapper`
             a new `VecWrapper` that is a view into this one
         """
-        view = VecWrapper()
+        view = self.__class__()
         view_size = 0
 
         start = -1
@@ -537,6 +324,249 @@ class VecWrapper(object):
             A list of names of 'unflattenable' variables.
         """
         return [n for n,meta in self.items() if meta.get('noflat')]
+
+
+class SrcVecWrapper(VecWrapper):
+    def setup(self, unknowns_dict, store_noflats=False):
+        """Configure this vector to store a flattened array of the variables
+        in unknowns. If store_noflats is True, then non-flattenable variables
+        will also be stored.
+
+        Parameters
+        ----------
+        unknowns_dict : dict
+            dictionary of metadata for unknown variables
+
+        store_noflats : bool (optional)
+            if True, then store non-flattenable (non-differentiable) variables
+            by default only flattenable variables will be stired
+        """
+        vec_size = 0
+        for name, meta in unknowns_dict.items():
+            vmeta = self._add_var(name, meta, vec_size)
+            var_size = vmeta['size']
+            if var_size > 0 or store_noflats:
+                if var_size > 0:
+                    self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
+                # for a target (unknown) vector, there may be multiple
+                # variables with relative name
+                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+                vec_size += var_size
+
+        self.vec = numpy.zeros(vec_size)
+
+        # get the metadata from the first set of metadata in the list
+        # (there will actually be only one for source variables)
+
+        # map slices to the array
+        for name, meta in self.items():
+            if meta['size'] > 0:
+                start, end = self._slices[name]
+                meta['val'] = self.vec[start:end]
+
+        # if store_noflats is True, this is the unknowns vecwrapper,
+        # so initialize all of the values from the unknowns dicts.
+        if store_noflats:
+            for name, meta in unknowns_dict.items():
+                self[meta['relative_name']] = meta['val']
+
+    def _add_var(self, name, meta, index):
+        """Add a variable to the vector. If the variable is differentiable,
+        then allocate a range in the vector array to store it. Store the
+        shape of the variable so it can be un-flattened later.
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable to add
+
+        meta : dict
+            metadata for the variable
+
+        index : int
+            index into the array where the variable value is to be stored
+            (if flattenable)
+        """
+
+        vmeta = meta.copy()
+        vmeta['pathname'] = name
+
+        if 'shape' in meta:
+            shape = meta['shape']
+            vmeta['shape'] = shape
+            if 'val' in meta:
+                val = meta['val']
+                if not is_differentiable(val):
+                    var_size = 0
+                    vmeta['noflat'] = True
+                    vmeta['val'] = _NoflatWrapper(val)
+                else:
+                    if val.shape != shape:
+                        raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                         name)
+                    var_size = val.size
+            else:
+                # no val given, so assume they want a numpy float array
+                meta['val'] = numpy.zeros(shape)
+                var_size = meta['val'].size
+        elif 'val' in meta:
+            val = meta['val']
+            if is_differentiable(val):
+                if isinstance(val, numpy.ndarray):
+                    var_size = val.size
+                    # if they didn't specify the shape, get it here so we
+                    # can unflatten the value we return from __getitem__
+                    vmeta['shape'] = val.shape
+                else:
+                    var_size = 1
+            else:
+                var_size = 0
+                vmeta['noflat'] = True
+                vmeta['val'] = _NoflatWrapper(val)
+        else:
+            raise ValueError("No value or shape given for variable '%s'" % name)
+
+        vmeta['size'] = var_size
+
+        return vmeta
+
+    def _get_flattened_sizes(self):
+        """
+        Collect all flattenable var sizes.
+
+        Returns
+        -------
+        ndarray
+            1x<num_flattenable_vars> array of sizes.
+        """
+        sizes = [m['size'] for m in self.values() if not m.get('noflat')]
+        return numpy.array([sizes])
+
+
+class TgtVecWrapper(VecWrapper):
+    def setup(self, parent_params_vec, params_dict, srcvec, my_params,
+                            connections, store_noflats=False):
+        """Configure this vector to store a flattened array of the variables
+        in params. Variable shape and value are retrieved from srcvec.
+
+        Parameters
+        ----------
+        parent_params_vec : `VecWrapper` or None
+            `VecWrapper` of parameters from the parent `System`
+
+        params_dict : `OrderedDict`
+            Dictionary of parameter absolute name mapped to metadata dict
+
+        srcvec : `VecWrapper`
+            Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
+
+        my_params : list of str
+            A list of absolute names of parameters that the `VecWrapper` we're building
+            will 'own'.
+
+        connections : dict of str : str
+            A dict of absolute target names mapped to the absolute name of their
+            source variable.
+
+        store_noflats : bool (optional)
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+        """
+        vec_size = 0
+        missing = []  # names of our params that we don't 'own'
+        for pathname, meta in params_dict.items():
+            if pathname in my_params:
+                # if connected, get metadata from the source
+                src_pathname = connections.get(pathname)
+                if src_pathname is None:
+                    raise RuntimeError("Parameter '%s' is not connected" % pathname)
+                src_rel_name = srcvec.get_relative_varname(src_pathname)
+                src_meta = srcvec.metadata(src_rel_name)
+
+                vmeta = self._add_var(meta, vec_size, src_meta[0], store_noflats)
+                vmeta['pathname'] = pathname
+
+                vec_size += vmeta['size']
+
+                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+            else:
+                if parent_params_vec is not None:
+                    missing.append(pathname)
+
+        self.vec = numpy.zeros(vec_size)
+
+        # get the size/val metadata from the first set of metadata in the list
+        # (there may be metadata for multiple source variables for a target)
+
+        # map slices to the array
+        for name, metas in self._vardict.items():
+            for meta in metas:
+                if meta['size'] > 0:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
+
+        # fill entries for missing params with views from the parent
+        for pathname in missing:
+            meta = params_dict[pathname]
+            prelname = parent_params_vec.get_relative_varname(pathname)
+            newmetas = parent_params_vec._vardict[prelname]
+            for newmeta in newmetas:
+                if newmeta['pathname'] == pathname:
+                    newmeta = newmeta.copy()
+                    newmeta['relative_name'] = meta['relative_name']
+                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                    self._vardict.setdefault(meta['relative_name'],
+                                             []).append(newmeta)
+
+    def _add_var(self, meta, index, src_meta, store_noflats):
+        """Add a variable to the vector. Allocate a range in the vector array
+        and store the shape of the variable so it can be un-flattened later.
+
+        Parameters
+        ----------
+        meta : dict
+            metadata for the variable
+
+        index : int
+            index into the array where the variable value is to be stored
+            (if flattenable)
+
+        src_meta : dict
+            metadata for the source variable that this target variable is
+            connected to
+
+        store_noflats : bool (optional)
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+        """
+
+        vmeta = meta.copy()
+
+        var_size = src_meta['size']
+
+        vmeta['size'] = var_size
+        if 'shape' in src_meta:
+            vmeta['shape'] = src_meta['shape']
+
+        if var_size > 0:
+            self._slices[meta['relative_name']] = (index, index + var_size)
+        elif src_meta.get('noflat') and store_noflats:
+            vmeta['val'] = src_meta['val']
+            vmeta['noflat'] = True
+
+        return vmeta
+
+    def _get_flattened_sizes(self):
+        """
+            Create a 1x1 numpy array to hold the sum of the sizes of local
+            flattenable params.
+
+            Returns
+            -------
+            ndarray
+                array containing sum of local sizes of flattenable params.
+        """
+        psize = sum([m['size'] for m in self.values()
+                     if m.get('owned') and not m.get('noflat')])
+        return numpy.array([[psize]])
 
 
 def idx_merge(idxs):
