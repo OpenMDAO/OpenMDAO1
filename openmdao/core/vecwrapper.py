@@ -1,8 +1,11 @@
+""" Class definition for VecWrapper"""
+
 from collections import OrderedDict
 
 import numpy
 from numpy.linalg import norm
 
+from openmdao.units.units import get_conversion_tuple
 from openmdao.util.types import is_differentiable, int_types
 
 class _flat_dict(object):
@@ -49,6 +52,9 @@ class VecWrapper(object):
         # with non-flat access  (__getitem__)
         self.flat = _flat_dict(self._vardict)
 
+        # Automatic unit conversion in target vectors
+        self._unit_conversion = {}
+
     def _get_metadata(self, name):
         try:
             return self._vardict[name][0]
@@ -72,6 +78,16 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             return meta['val'].val
+
+        elif self._unit_conversion.get(name) is not None:
+            scale, offset = self._unit_conversion[name]
+            # if it doesn't have a shape, it's a float
+            shape = meta.get('shape')
+            if shape is None:
+                return scale*(meta['val'][0] + offset)
+            else:
+                return scale*(meta['val'].reshape(shape))
+
         else:
             # if it doesn't have a shape, it's a float
             shape = meta.get('shape')
@@ -372,6 +388,33 @@ class VecWrapper(object):
                     newmeta['owned'] = False # mark this param as not 'owned' by this VW
                     self._vardict.setdefault(meta['relative_name'],
                                              []).append(newmeta)
+
+        # Finally, set up unit conversions, if any exist.
+        for pathname, meta in params_dict.items():
+
+            if 'units' not in meta:
+                continue
+
+            # Pull from parents if we are a view.
+            if parent_params_vec is not None and pathname in parent_params_vec:
+                newname = meta['relative_name']
+                self._unit_conversion[newname] = parent_params_vec._unit_conversion[pathname]
+
+            # Figure them out for the first time.
+            elif pathname in connections:
+
+                # Get source units
+                src_pathname = connections.get(pathname)
+                src_rel_name = srcvec.get_relative_varname(src_pathname)
+                src_meta = srcvec.metadata(src_rel_name)
+                src_unit = src_meta[0].get('units')
+                if src_unit is None:
+                    continue
+
+                tgt_unit = meta['units']
+
+                self._unit_conversion[pathname] = \
+                    get_conversion_tuple(src_unit, tgt_unit)
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
