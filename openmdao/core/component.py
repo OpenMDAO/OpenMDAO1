@@ -1,11 +1,16 @@
 """ Defines the base class for a Component in OpenMDAO."""
-
+import functools
+import numpy as np
 from collections import OrderedDict
 from six import iteritems
 import numpy as np
 
 from openmdao.core.system import System
 
+'''
+Object to represent default value for `add_output`.
+'''
+_NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -18,23 +23,39 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
-
-    def add_param(self, name, val, **kwargs):
+    
+    def _get_initial_val(self, val, shape):
+        if val is _NotSet:
+            return np.zeros(shape)
+            
+        return val
+            
+    def _check_val(self, name, var_type, val, shape):
+        if val is _NotSet and shape is None:
+            msg = ("Shape of {var_type} '{name}' must be specified because "
+                   "'val' is not set")
+            msg = msg.format(var_type=var_type, name=name)
+            raise ValueError(msg)
+    
+    def add_param(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'param', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._params_dict[name] = args
 
-    def add_output(self, name, val, **kwargs):
+    def add_output(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'output', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         self._unknowns_dict[name] = args
 
-    def add_state(self, name, val, **kwargs):
+    def add_state(self, name, val=_NotSet, **kwargs):
+        self._check_val(name, 'state', val, kwargs.get('shape'))
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = val
+        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
         args['state'] = True
         self._unknowns_dict[name] = args
 
