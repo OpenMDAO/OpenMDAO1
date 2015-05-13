@@ -43,8 +43,7 @@ class Component(System):
                 return add_function(self, name, **kargs)
             return wrapper
         return wrap
-        
-                
+            
     def add_param(self, name, val, **kwargs):
         self._check_name(name)
         args = kwargs.copy()
@@ -57,8 +56,8 @@ class Component(System):
         args['val'] = val
         self._unknowns_dict[name] = args
 
+    @_check_args('state')
     def add_state(self, name, val, **kwargs):
-        self._check_name(name)
         args = kwargs.copy()
         args['val'] = val
         args['state'] = True
