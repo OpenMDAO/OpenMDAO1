@@ -128,21 +128,23 @@ class Group(System):
         return self._subsystems.items()
 
     def subgroups(self, local=False):
-        """ Returns
-            -------
-            iterator
-                iterator over subgroups.
+        """
+        Returns
+        -------
+        iterator
+            iterator over subgroups.
         """
         for name, subsystem in self.subsystems(local=local):
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
     def components(self, local=False):
-        """ Returns
-                -------
-                iterator
-                    iterator over sub-`Component`s.
-            """
+        """
+        Returns
+        -------
+        iterator
+            iterator over sub-`Component`s.
+        """
         for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
                 yield name, comp
@@ -174,10 +176,11 @@ class Group(System):
         return self._params_dict, self._unknowns_dict
 
     def _var_pathname(self, name, subsystem):
-        """Returns
-           -------
-           str
-               the pathname of the given variable, based on its promotion status.
+        """
+        Returns
+        -------
+        str
+            the pathname of the given variable, based on its promotion status.
         """
         if subsystem.promoted(name):
             return name
