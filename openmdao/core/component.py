@@ -143,7 +143,8 @@ class Component(System):
         return None
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-        """Multiplies incoming vector by the Jacobian (fwd mode) or the
+        """
+        Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
