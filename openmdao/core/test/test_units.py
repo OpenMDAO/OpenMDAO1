@@ -82,6 +82,8 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtC:x3'], 100.0, 1e-6)
         assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
 
+        # Make sure we don't convert equal units
+        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
 
 if __name__ == "__main__":
     unittest.main()

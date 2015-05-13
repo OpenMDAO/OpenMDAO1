@@ -395,12 +395,14 @@ class VecWrapper(object):
             if 'units' not in meta:
                 continue
 
-            # Pull from parents if we are a view.
-            if parent_params_vec is not None and pathname in parent_params_vec:
+            # Pull conversion from parents if we are a view.
+            if parent_params_vec is not None and \
+               parent_params_vec._unit_conversion.get(pathname) is not None:
+
                 newname = meta['relative_name']
                 self._unit_conversion[newname] = parent_params_vec._unit_conversion[pathname]
 
-            # Figure them out for the first time.
+            # Figure out conversions if we are the top target vector.
             elif pathname in connections:
 
                 # Get source units
@@ -413,8 +415,14 @@ class VecWrapper(object):
 
                 tgt_unit = meta['units']
 
-                self._unit_conversion[pathname] = \
-                    get_conversion_tuple(src_unit, tgt_unit)
+                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+
+                # Skip if we are equivalent units.
+                if scale == 1.0 and offset == 0.0:
+                    continue
+
+                self._unit_conversion[pathname] = (scale, offset)
+
 
     def _add_target_var(self, meta, index, src_meta, store_noflats):
         """Add a variable to the vector. Allocate a range in the vector array
