@@ -337,6 +337,8 @@ class Group(System):
                 unknowns = view.unknowns
                 resids = view.resids
 
+                system._jacobian_cache = system.jacobian(params, unknowns)
+            else:
                 system.jacobian(params, unknowns)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
