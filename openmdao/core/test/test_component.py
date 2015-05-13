@@ -64,17 +64,17 @@ class TestComponent(unittest.TestCase):
         self.comp.add_param("z", shape=(1,))
 
         with self.assertRaises(ValueError) as cm:
-            self.comp.add_output("w")
+            self.comp.add_param("w")
             
-        self.assertEquals(str(cm.exception), "Shape of output 'w' must be specified because 'val' is not set")
+        self.assertEquals(str(cm.exception), "Shape of param 'w' must be specified because 'val' is not set")
         
         params, unknowns = self.comp._setup_variables()
 
-        self.assertEquals(["x", "y"], list(params.keys()))
+        self.assertEquals(["x", "y", "z"], list(params.keys()))
 
         self.assertEquals(params["x"], {"val": 0.0, 'relative_name': 'x' })
         self.assertEquals(params["y"], {"val": 0.0, 'relative_name': 'y' })
-        np.testing.assert_array_equal(unknowns["z"]["val"], np.zeros((10,)))
+        np.testing.assert_array_equal(params["z"]["val"], np.zeros((1,)))
         
     def test_add_outputs(self):
         self.comp.add_output("x", -1)
