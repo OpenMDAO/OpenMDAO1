@@ -1,4 +1,3 @@
-""" Unit test for Groups. """
 
 import unittest
 from six import text_type, StringIO

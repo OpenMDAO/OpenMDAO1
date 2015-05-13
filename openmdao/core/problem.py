@@ -1,12 +1,13 @@
 """ OpenMDAO Problem class defintion."""
 
 import numpy as np
+from collections import namedtuple
 
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
 from openmdao.core.checks import check_connections
-from collections import namedtuple
+from openmdao.core.basicimpl import BasicImpl
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -16,7 +17,10 @@ class Problem(Component):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
-        self.impl = impl
+        if impl is None:
+            self.impl = BasicImpl
+        else:
+            self.impl = impl
         if driver is None:
             self.driver = Driver()
         else:
@@ -76,7 +80,7 @@ class Problem(Component):
         # check for conflicting explicit/implicit connections
         for tgt, src in connections.items():
             if tgt in implicit_conns:
-                msg = '%s is explicitly connected to %s but implicitly connected to %s' % \
+                msg = "'%s' is explicitly connected to '%s' but implicitly connected to '%s'" % \
                       (tgt, connections[tgt], implicit_conns[tgt])
                 raise RuntimeError(msg)
 

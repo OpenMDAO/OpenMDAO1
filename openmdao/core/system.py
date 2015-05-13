@@ -32,7 +32,7 @@ class System(object):
             the unflattened value of the given variable OR a reference to
             the named `System`
         """
-        raise RuntimeError('Variables must be accessed from a containing Group')
+        raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
 
     def promoted(self, name):
         """Determine is the given variable name  is being promoted from this
@@ -49,7 +49,7 @@ class System(object):
             True if the named variable is being promoted from this `System`.
         """
         if isinstance(self._promotes, string_types):
-            raise TypeError("%s promotes must be specified as a list, "
+            raise TypeError("'%s' promotes must be specified as a list, "
                             "tuple or other iterator of strings, but '%s' was specified" %
                              (self.name, self._promotes))
 
