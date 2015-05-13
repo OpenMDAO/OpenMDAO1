@@ -6,6 +6,9 @@ from numpy.linalg import norm
 from openmdao.util.types import is_differentiable, int_types
 
 class _flat_dict(object):
+    """This is here to allow the user to use vec.flat['foo'] syntax instead
+    of vec.flat('foo').
+    """
     def __init__(self, vardict):
         self._dict = vardict
 
@@ -15,6 +18,13 @@ class _flat_dict(object):
             raise ValueError("'%s' is non-flattenable" % name)
         return self._dict[name][0]['val']
 
+class _NoflatWrapper(object):
+    """We have to wrap noflat values in these in order to have param vec entries
+    that are shared between parents and children all shared the same object
+    reference, which would not be true for an unwrapped value.
+    """
+    def __init__(self, val):
+        self.val = val
 
 class VecWrapper(object):
     """A manager of the data transfer of a possibly distributed
@@ -61,7 +71,7 @@ class VecWrapper(object):
         meta = self._get_metadata(name)
 
         if meta.get('noflat'):
-            return meta['val']
+            return meta['val'].val
         else:
             # if it doesn't have a shape, it's a float
             shape = meta.get('shape')
@@ -83,13 +93,13 @@ class VecWrapper(object):
         """
         meta = self._get_metadata(name)
 
-        if meta['size'] > 0:
+        if meta.get('noflat'):
+            meta['val'].val = value
+        else:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
             else:
                 meta['val'][:] = value
-        else:
-            meta['val'] = value
 
     def __len__(self):
         """
@@ -240,6 +250,7 @@ class VecWrapper(object):
                 if not is_differentiable(val):
                     var_size = 0
                     vmeta['noflat'] = True
+                    vmeta['val'] = _NoflatWrapper(val)
                 else:
                     if val.shape != shape:
                         raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
@@ -262,6 +273,7 @@ class VecWrapper(object):
             else:
                 var_size = 0
                 vmeta['noflat'] = True
+                vmeta['val'] = _NoflatWrapper(val)
         else:
             raise ValueError("No value or shape given for variable '%s'" % name)
 
