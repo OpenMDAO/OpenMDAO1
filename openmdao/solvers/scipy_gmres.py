@@ -99,6 +99,6 @@ class ScipyGMRES(LinearSolver):
         system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                             mode)
 
-        #print "arg", arg
-        #print "result", rhs_vec.vec
+        # print "arg", arg
+        # print "result", rhs_vec.vec
         return rhs_vec.vec[:]

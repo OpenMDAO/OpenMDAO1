@@ -176,14 +176,14 @@ class Component(System):
             unknown, param = key
 
             # States are never in dparams.
-            if param in dparams.keys():
+            if param in dparams:
                 arg_vec = dparams
-            elif param in dunknowns.keys():
+            elif param in dunknowns:
                 arg_vec = dunknowns
             else:
                 continue
 
-            if unknown not in dresids.keys():
+            if unknown not in dresids:
                 continue
 
             result = dresids[unknown]
