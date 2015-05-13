@@ -43,9 +43,9 @@ class Component(System):
                 return add_function(self, name, **kargs)
             return wrapper
         return wrap
-            
-    def add_param(self, name, val, **kwargs):
-        self._check_name(name)
+    
+    @_check_args('param')
+    def add_param(self, name, val=_NotSet, **kwargs):
         args = kwargs.copy()
         args['val'] = val
         self._params_dict[name] = args
