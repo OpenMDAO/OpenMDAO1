@@ -183,7 +183,8 @@ class VarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params, connections, impl=None):
+    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params,
+                 connections, impl=None):
         super(VarManager, self).__init__(connections)
 
         if impl is None:
