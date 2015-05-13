@@ -39,10 +39,10 @@ class Component(System):
 
     def _check_name(self, name):
         if self._post_setup:
-            raise RuntimeError("%s: can't add variable %s because setup has already been called",
+            raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
                                (self.pathname, name))
         if name in self._params_dict or name in self._unknowns_dict:
-            raise RuntimeError("%s: variable %s already exists" %
+            raise RuntimeError("%s: variable '%s' already exists" %
                                (self.pathname, name))
 
     def _setup_variables(self):

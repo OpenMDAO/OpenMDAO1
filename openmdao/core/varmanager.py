@@ -46,7 +46,7 @@ class VarManagerBase(object):
         try:
             return getattr(self, vector)[name]
         except KeyError:
-            raise KeyError('%s is not in the %s vector for this system' %
+            raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
 
     def _setup_data_transfer(self, sys_pathname, my_params):
@@ -182,15 +182,16 @@ class VarManager(VarManagerBase):
     connections : dict
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
+
+    impl : an implementation factory, optional
+        Specifies the factory object used to create `VecWrapper` and
+        `DataXfer` objects.
     """
     def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params,
-                 connections, impl=None):
+                 connections, impl=BasicImpl):
         super(VarManager, self).__init__(connections)
 
-        if impl is None:
-            self.implFactory = BasicImpl
-        else:
-            raise RuntimeError('%s implementation of VecWrapper is not avaiable.')
+        self.implFactory = impl
 
         # create implementation specific VecWrappers
         self.unknowns  = self.implFactory.createVecWrapper()

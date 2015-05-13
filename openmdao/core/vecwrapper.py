@@ -12,7 +12,7 @@ class _flat_dict(object):
     def __getitem__(self, name):
         meta = self._dict[name][0]
         if meta.get('noflat'):
-            raise ValueError("%s is non-flattenable" % name)
+            raise ValueError("'%s' is non-flattenable" % name)
         return self._dict[name][0]['val']
 
 
@@ -45,7 +45,7 @@ class VecWrapper(object):
         except KeyError as error:
             msg  = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
-            
+
     def __getitem__(self, name):
         """Retrieve unflattened value of named var
 
@@ -59,7 +59,7 @@ class VecWrapper(object):
             the unflattened value of the named variable
         """
         meta = self._get_metadata(name)
-            
+
         if meta.get('noflat'):
             return meta['val']
         else:
@@ -82,7 +82,7 @@ class VecWrapper(object):
             the unflattened value of the named variable
         """
         meta = self._get_metadata(name)
-        
+
         if meta['size'] > 0:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
@@ -163,7 +163,7 @@ class VecWrapper(object):
 
         meta = self._vardict[name][0]
         if meta.get('noflat'):
-            raise RuntimeError("No indices can be provided for %s" % name)
+            raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
 
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
@@ -242,7 +242,8 @@ class VecWrapper(object):
                     vmeta['noflat'] = True
                 else:
                     if val.shape != shape:
-                        raise ValueError("specified shape != val shape")
+                        raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                         name)
                     var_size = val.size
             else:
                 # no val given, so assume they want a numpy float array
@@ -262,7 +263,7 @@ class VecWrapper(object):
                 var_size = 0
                 vmeta['noflat'] = True
         else:
-            raise ValueError("No value or shape given for '%s'" % name)
+            raise ValueError("No value or shape given for variable '%s'" % name)
 
         vmeta['size'] = var_size
 
@@ -312,7 +313,7 @@ class VecWrapper(object):
                 # if connected, get metadata from the source
                 src_pathname = connections.get(pathname)
                 if src_pathname is None:
-                    raise RuntimeError("Parameter %s is not connected" % pathname)
+                    raise RuntimeError("Parameter '%s' is not connected" % pathname)
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
@@ -497,7 +498,7 @@ class VecWrapper(object):
             for meta in meta_list:
                 if meta['pathname'] == abs_name:
                     return rel_name
-        raise RuntimeError("Relative name not found for %s" % abs_name)
+        raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
 
     def get_states(self):
         """
