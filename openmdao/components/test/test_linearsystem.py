@@ -50,14 +50,14 @@ class TestLinearSystem(unittest.TestCase):
 
     def test_apply_nonlinear(self):
 
-       self.unknowns['x'] = np.array([0,1,2,3,4,5,6,7,8,9])
-       self.s.apply_nonlinear(self.params, self.unknowns, self.resids)
+        self.unknowns['x'] = np.array([0,1,2,3,4,5,6,7,8,9])
+        self.s.apply_nonlinear(self.params, self.unknowns, self.resids)
 
-       actual = np.array([0,1,2,3,4,5,6,7,8,9]) - 1
+        actual = np.array([0,1,2,3,4,5,6,7,8,9]) - 1
 
-       rel = np.linalg.norm(actual - self.resids['x'])/np.linalg.norm(actual)
+        rel = np.linalg.norm(actual - self.resids['x'])/np.linalg.norm(actual)
 
-       assert rel < 1e-6
+        assert rel < 1e-6
 
     def test_apply_linear(self):
 
