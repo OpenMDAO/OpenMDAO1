@@ -339,17 +339,17 @@ class Group(System):
 
         for name, system in self.subsystems(local=True):
 
+            view = self._views[system.name]
+
+            params = view.params
+            unknowns = view.unknowns
+            resids = view.resids
+
+            jacobian_cache = system.jacobian(params, unknowns)
+
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
-                view = self._views[system.name]
-
-                params = view.params
-                unknowns = view.unknowns
-                resids = view.resids
-
-                system._jacobian_cache = system.jacobian(params, unknowns)
-            else:
-                system.jacobian(params, unknowns)
+                system._jacobian_cache = jacobian_cache
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
