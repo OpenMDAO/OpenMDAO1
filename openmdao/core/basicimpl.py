@@ -1,19 +1,28 @@
-from openmdao.core.vecwrapper import VecWrapper
+from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 
 class BasicImpl(object):
     """Basic vector and data transfer implementation factory"""
 
     @staticmethod
-    def createVecWrapper():
-        """Create an empty `VecWrapper`
+    def create_src_vecwrapper():
+        """Create a`SrcVecWrapper`
 
         Returns
         -------
-        `VecWrapper`
-            an empty `VecWrapper`
+        `SrcVecWrapper`
         """
-        return VecWrapper()
+        return SrcVecWrapper()
+
+    @staticmethod
+    def create_tgt_vecwrapper():
+        """Create a `TgtVecWrapper`
+
+        Returns
+        -------
+        `TgtVecWrapper`
+        """
+        return TgtVecWrapper()
 
     @staticmethod
     def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
