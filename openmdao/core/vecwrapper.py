@@ -22,16 +22,19 @@ class _flat_dict(object):
         return self._dict[name][0]['val']
 
 class _NoflatWrapper(object):
-    """We have to wrap noflat values in these in order to have param vec entries
-    that are shared between parents and children all shared the same object
-    reference, which would not be true for an unwrapped value.
+    """
+    We have to wrap noflat values in these in order to have param vec entries
+    that are shared between parents and children all share the same object
+    reference, so that when the internal val attribute is changed, all
+    `VecWrappers` that contain a reference to the wrapper will see the updated
+    value.
     """
     def __init__(self, val):
         self.val = val
 
 class VecWrapper(object):
-    """A manager of the data transfer of a possibly distributed
-    collection of variables.
+    """
+    A dict-like container of a collection of variables.
 
     Attributes
     ----------
@@ -222,7 +225,177 @@ class VecWrapper(object):
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
 
-    def setup_source_vector(self, unknowns_dict, store_noflats=False):
+    def norm(self):
+        """
+        Calculates the norm of this vector.
+
+        Returns
+        -------
+        float
+            Norm of the flattenable values in this vector.
+        """
+        return norm(self.vec)
+
+    def get_view(self, varmap):
+        """
+        Return a new `VecWrapper` that is a view into this one
+
+        Parameters
+        ----------
+        varmap : dict
+            mapping of variable names in the old `VecWrapper` to the names
+            they will have in the new `VecWrapper`
+
+        Returns
+        -------
+        `VecWrapper`
+            a new `VecWrapper` that is a view into this one
+        """
+        view = self.__class__()
+        view_size = 0
+
+        start = -1
+        for name, meta in self.items():
+            if name in varmap:
+                view._vardict[varmap[name]] = self._vardict[name]
+                if meta['size'] > 0:
+                    pstart, pend = self._slices[name]
+                    if start == -1:
+                        start = pstart
+                        end = pend
+                    else:
+                        assert pstart == end, \
+                               "%s not contiguous in block containing %s" % \
+                               (name, varmap.keys())
+                    end = pend
+                    view._slices[varmap[name]] = (view_size, view_size + meta['size'])
+                    view_size += meta['size']
+
+        if start == -1: # no items found
+            view.vec = self.vec[0:0]
+        else:
+            view.vec = self.vec[start:end]
+
+        return view
+
+    def make_idx_array(self, start, end):
+        """
+        Return an index vector of the right int type for
+        the current implementation.
+
+        Parameters
+        ----------
+        start : int
+            the starting index
+
+        end : int
+            the ending index
+        """
+        return numpy.arange(start, end, dtype=self.idx_arr_type)
+
+    def to_idx_array(indices):
+        """
+        Given some iterator of indices, return an index array of the
+        right int type for the current implementation.
+
+        Parameters
+        ----------
+        indices : iterator of ints
+            An iterator of indices
+
+        Returns
+        -------
+        ndarray of idx_arr_type
+            Index array
+        """
+        return numpy.array(indices, dtype=idx_arr_type)
+
+    def merge_idxs(self, src_idxs, tgt_idxs):
+        """Return source and target index arrays, built up from
+        smaller index arrays and combined in order of ascending source
+        index (to allow us to convert src indices to a slice in some cases).
+
+        Parameters
+        ----------
+        src_idxs : array
+            source indices
+
+        tgt_idxs : array
+            target indices
+
+        Returns
+        -------
+        array
+            the merged index arrays
+        """
+        assert(len(src_idxs) == len(tgt_idxs))
+
+        # filter out any zero length idx array entries
+        src_idxs = [i for i in src_idxs if len(i)]
+        tgt_idxs = [i for i in tgt_idxs if len(i)]
+
+        if len(src_idxs) == 0:
+            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
+
+        src_tups = list(enumerate(src_idxs))
+
+        src_sorted = sorted(src_tups, key=lambda x: x[1].min())
+
+        new_src = [idxs for i, idxs in src_sorted]
+        new_tgt = [tgt_idxs[i] for i,_ in src_sorted]
+
+        return idx_merge(new_src), idx_merge(new_tgt)
+
+    def get_relative_varname(self, abs_name):
+        """
+        Returns the relative pathname for the given absolute variable
+        pathname.
+
+        Parameters
+        ----------
+        abs_name : str
+            Absolute pathname of a variable
+
+        Returns
+        -------
+        rel_name : str
+            Relative name mapped to the given absolute pathname
+        """
+        for rel_name, meta_list in self._vardict.items():
+            for meta in meta_list:
+                if meta['pathname'] == abs_name:
+                    return rel_name
+        raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
+
+    def get_states(self):
+        """
+        Returns
+        -------
+        list
+            A list of names of state variables.
+        """
+        return [n for n,meta in self.items() if meta.get('state')]
+
+    def get_vecvars(self):
+        """
+        Returns
+        -------
+            A list of names of 'flattenable' variables.
+        """
+        return [(n,meta) for n,meta in self.items() if not meta.get('noflat')]
+
+    def get_noflats(self):
+        """
+        Returns
+        -------
+        list
+            A list of names of 'unflattenable' variables.
+        """
+        return [(n,meta) for n,meta  in self.items() if meta.get('noflat')]
+
+
+class SrcVecWrapper(VecWrapper):
+    def setup(self, unknowns_dict, comm=None, store_noflats=False):
         """Configure this vector to store a flattened array of the variables
         in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -238,7 +411,7 @@ class VecWrapper(object):
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
-            vmeta = self._add_source_var(name, meta, vec_size)
+            vmeta = self._add_var(name, meta, vec_size)
             var_size = vmeta['size']
             if var_size > 0 or store_noflats:
                 if var_size > 0:
@@ -265,7 +438,7 @@ class VecWrapper(object):
             for name, meta in unknowns_dict.items():
                 self[meta['relative_name']] = meta['val']
 
-    def _add_source_var(self, name, meta, index):
+    def _add_var(self, name, meta, index):
         """Add a variable to the vector. If the variable is differentiable,
         then allocate a range in the vector array to store it. Store the
         shape of the variable so it can be un-flattened later.
@@ -325,20 +498,25 @@ class VecWrapper(object):
 
         return vmeta
 
-    def norm(self):
-        """ Calculates the norm of this vector.
+    def _get_flattened_sizes(self):
+        """
+        Collect all flattenable var sizes.
 
         Returns
         -------
-        float
-            Norm of the flattenable values in this vector.
+        ndarray
+            1x<num_flattenable_vars> array of sizes.
         """
-        return norm(self.vec)
+        sizes = [m['size'] for m in self.values() if not m.get('noflat')]
+        return numpy.array([sizes])
 
-    def setup_target_vector(self, parent_params_vec, params_dict, srcvec, my_params,
+
+class TgtVecWrapper(VecWrapper):
+    def setup(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
-        """Configure this vector to store a flattened array of the variables
-        in params. Variable shape and value are retrieved from srcvec.
+        """
+        Configure this vector to store a flattened array of the variables
+        in params_dict. Variable shape and value are retrieved from srcvec.
 
         Parameters
         ----------
@@ -373,7 +551,7 @@ class VecWrapper(object):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                vmeta = self._add_target_var(meta, vec_size, src_meta[0], store_noflats)
+                vmeta = self._add_var(meta, vec_size, src_meta[0], store_noflats)
                 vmeta['pathname'] = pathname
 
                 vec_size += vmeta['size']
@@ -446,9 +624,9 @@ class VecWrapper(object):
 
                 self._unit_conversion[pathname] = (scale, offset)
 
-
-    def _add_target_var(self, meta, index, src_meta, store_noflats):
-        """Add a variable to the vector. Allocate a range in the vector array
+    def _add_var(self, meta, index, src_meta, store_noflats):
+        """
+        Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later.
 
         Parameters
@@ -484,146 +662,24 @@ class VecWrapper(object):
 
         return vmeta
 
-    def get_view(self, varmap):
-        """Return a new `VecWrapper` that is a view into this one
-
-        Parameters
-        ----------
-        varmap : dict
-            mapping of variable names in the old `VecWrapper` to the names
-            they will have in the new `VecWrapper`
-
-        Returns
-        -------
-        `VecWrapper`
-            a new `VecWrapper` that is a view into this one
+    def _get_flattened_sizes(self):
         """
-        view = VecWrapper()
-        view_size = 0
+            Create a 1x1 numpy array to hold the sum of the sizes of local
+            flattenable params.
 
-        start = -1
-        for name, meta in self.items():
-            if name in varmap:
-                view._vardict[varmap[name]] = self._vardict[name]
-                if meta['size'] > 0:
-                    pstart, pend = self._slices[name]
-                    if start == -1:
-                        start = pstart
-                        end = pend
-                    else:
-                        assert pstart == end, \
-                               "%s not contiguous in block containing %s" % \
-                               (name, varmap.keys())
-                    end = pend
-                    view._slices[varmap[name]] = (view_size, view_size + meta['size'])
-                    view_size += meta['size']
-
-        if start == -1: # no items found
-            view.vec = self.vec[0:0]
-        else:
-            view.vec = self.vec[start:end]
-
-        return view
-
-    def make_idx_array(self, start, end):
-        """ Return an index vector of the right int type for
-        parallel or serial computation.
-
-        Parameters
-        ----------
-        start : int
-            the starting index
-
-        end : int
-            the ending index
+            Returns
+            -------
+            ndarray
+                array containing sum of local sizes of flattenable params.
         """
-        return numpy.arange(start, end, dtype=self.idx_arr_type)
-
-    def merge_idxs(self, src_idxs, tgt_idxs):
-        """Return source and target index arrays, built up from
-        smaller index arrays and combined in order of ascending source
-        index (to allow us to convert src indices to a slice in some cases).
-
-        Parameters
-        ----------
-        src_idxs : array
-            source indices
-
-        tgt_idxs : array
-            target indices
-
-        Returns
-        -------
-        array
-            the merged index arrays
-        """
-        assert(len(src_idxs) == len(tgt_idxs))
-
-        # filter out any zero length idx array entries
-        src_idxs = [i for i in src_idxs if len(i)]
-        tgt_idxs = [i for i in tgt_idxs if len(i)]
-
-        if len(src_idxs) == 0:
-            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
-
-        src_tups = list(enumerate(src_idxs))
-
-        src_sorted = sorted(src_tups, key=lambda x: x[1].min())
-
-        new_src = [idxs for i, idxs in src_sorted]
-        new_tgt = [tgt_idxs[i] for i,_ in src_sorted]
-
-        return idx_merge(new_src), idx_merge(new_tgt)
-
-    def get_relative_varname(self, abs_name):
-        """Returns the relative pathname for the given absolute variable
-        pathname in the variable dictionary
-
-        Parameters
-        ----------
-        abs_name : str
-            Absolute pathname of a variable
-
-        Returns
-        -------
-        rel_name : str
-            Relative name mapped to the given absolute pathname
-        """
-        for rel_name, meta_list in self._vardict.items():
-            for meta in meta_list:
-                if meta['pathname'] == abs_name:
-                    return rel_name
-        raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
-
-    def get_states(self):
-        """
-        Returns
-        -------
-        list
-            A list of names of state variables.
-        """
-        return [n for n,meta in self.items() if meta.get('state')]
-
-    def get_vecvars(self):
-        """
-        Returns
-        -------
-            A list of names of 'flattenable' variables.
-        """
-        return [n for n,meta in self.items() if not meta.get('noflat')]
-
-    def get_noflats(self):
-        """
-        Returns
-        -------
-        list
-            A list of names of 'unflattenable' variables.
-        """
-        return [n for n,meta in self.items() if meta.get('noflat')]
+        psize = sum([m['size'] for m in self.values()
+                     if m.get('owned') and not m.get('noflat')])
+        return numpy.array([[psize]])
 
 
 def idx_merge(idxs):
-    """Combines a mixed iterator of int and iterator indices into an
+    """
+    Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
     if len(idxs) > 0:

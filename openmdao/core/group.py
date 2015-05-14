@@ -7,10 +7,13 @@ from collections import OrderedDict
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
+from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+
+from openmdao.core.mpiwrap import get_comm_if_active, world_rank
 
 class Group(System):
     """A system that contains other systems"""
@@ -122,10 +125,10 @@ class Group(System):
         local: bool
             Set to True to return only systems that are local.
         """
-        #TODO: once we add MPI stuff, maintain local subsystems
-        #if local is True:
-            #return self._local_subsystems.items()
-        return self._subsystems.items()
+        if local:
+            return self._local_subsystems.items()
+        else:
+            return self._subsystems.items()
 
     def subgroups(self, local=False):
         """
@@ -148,6 +151,19 @@ class Group(System):
         for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
                 yield name, comp
+
+    def _setup_paths(self, parent_path):
+        """Set the absolute pathname of each `System` in the tree.
+
+        Parameter
+        ---------
+        parent_path : str
+            the pathname of the parent `System`, which is to be prepended to the
+            name of this child `System` and all subsystems.
+        """
+        super(Group, self)._setup_paths(parent_path)
+        for name, sub in self.subsystems():
+            sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
         """Create dictionaries of metadata for parameters and for unknowns for
@@ -189,7 +205,28 @@ class Group(System):
         else:
             return name
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=None):
+    def _setup_communicators(self, comm):
+        """
+        Assign communicator to this `Group` and all of it's subsystems
+
+        Parameters
+        ----------
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+        """
+        self._local_subsystems = OrderedDict()
+
+        self.comm = get_comm_if_active(self, comm)
+
+        if not self.is_active():
+            return
+
+        for name, sub in self.subsystems():
+            sub._setup_communicators(comm)
+            if sub.is_active():
+                self._local_subsystems[name] = sub
+
+    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -213,15 +250,17 @@ class Group(System):
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self._varmanager = VarManager(self.pathname, self._params_dict, self._unknowns_dict,
-                                         my_params, connections)
+            self._varmanager = VarManager(self.comm,
+                                          self.pathname, self._params_dict, self._unknowns_dict,
+                                          my_params, connections, impl=impl)
         else:
             self._varmanager = ViewVarManager(parent_vm,
-                                             self.pathname,
-                                             self._params_dict,
-                                             self._unknowns_dict,
-                                             my_params,
-                                             connections)
+                                              self.comm,
+                                              self.pathname,
+                                              self._params_dict,
+                                              self._unknowns_dict,
+                                              my_params,
+                                              connections)
 
         self._views = {}
         for name, sub in self.subgroups():
@@ -229,21 +268,8 @@ class Group(System):
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            self._views[name] = create_views(self._varmanager, sub.pathname,
+            self._views[name] = create_views(self._varmanager, self.comm, sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], {})
-
-    def _setup_paths(self, parent_path):
-        """Set the absolute pathname of each `System` in the tree.
-
-        Parameter
-        ---------
-        parent_path : str
-            the pathname of the parent `System`, which is to be prepended to the
-            name of this child `System` and all subsystems.
-        """
-        super(Group, self)._setup_paths(parent_path)
-        for name, sub in self.subsystems():
-            sub._setup_paths(self.pathname)
 
     def _get_explicit_connections(self):
         """ Returns
@@ -502,7 +528,7 @@ class Group(System):
 
         file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                      (klass,
-                      1, #self.get_req_cpus(),
+                      1, #self.get_req_procs(),
                       0, #world_rank,
                       uvec.vec.size,
                       pvec.vec.size))
@@ -549,8 +575,8 @@ class Group(System):
                 file.write(name)
                 file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                            (sub.__class__.__name__,
-                            1, #sub.get_req_cpus(),
-                            0, #world_rank,
+                            sub.get_req_procs(),
+                            world_rank(),
                             uvec.vec.size,
                             pvec.vec.size))
                 for v, meta in uvec.items():
@@ -561,6 +587,27 @@ class Group(System):
             else:
                 sub.dump(nest, file)
 
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the min and max
+            processors usable by this `Group`
+        """
+        min_procs = 1
+        max_procs = 1
+
+        for name, sub in self.subsystems():
+            sub_min, sub_max = sub.get_req_procs()
+            min_procs = max(min_procs, sub_min)
+            if max_procs is not None:
+                if sub_max is None:
+                    max_procs = None
+                else:
+                    max_procs = max(max_procs, sub_max)
+
+        return (min_procs, max_procs)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and

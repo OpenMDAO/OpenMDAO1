@@ -1,6 +1,6 @@
 """ Unit tests for the units library."""
 
-import cStringIO
+from six.moves import cStringIO
 import math
 import os
 import unittest
@@ -99,21 +99,21 @@ class test__PhysicalQuantity(unittest.TestCase):
         #error for improper init argument
         try:
             x = PhysicalQuantity('m')
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), "No number found in input argument: 'm'")
         else:
             self.fail("Expecting TypeError")
 
         try:
             x = PhysicalQuantity('1in')
-        except ValueError,err:
+        except ValueError as err:
             self.assertEqual(str(err), "no unit named 'in' is defined")
         else:
             self.fail("Expecting ValueError")
 
         try:
             x = PhysicalQuantity(1, None)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), "None is not a unit")
         else:
             self.fail("Expecting TypeError")
@@ -134,7 +134,7 @@ class test__PhysicalQuantity(unittest.TestCase):
 
         try:
             cmp(x, 2)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual("Incompatible types", str(err))
         else:
             self.fail('Expecting TypeError')
@@ -224,7 +224,7 @@ class test__PhysicalQuantity(unittest.TestCase):
 
         try:
             q1 + q2
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Incompatible units")
         else:
             self.fail("expecting TypeError")
@@ -240,7 +240,7 @@ class test__PhysicalQuantity(unittest.TestCase):
 
         try:
             q3 + q2
-        except TypeError, err:
+        except TypeError as err:
             msg = "Unit conversion (degR to degC) cannot be expressed as a simple multiplicative factor"
             self.assertEqual(str(err), msg)
         else:
@@ -268,7 +268,7 @@ class test__PhysicalQuantity(unittest.TestCase):
 
         try:
             q1 - q2
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), "Incompatible units")
         else:
             self.fail("expecting TypeError")
@@ -284,7 +284,7 @@ class test__PhysicalQuantity(unittest.TestCase):
 
         try:
             q3 - q2
-        except TypeError, err:
+        except TypeError as err:
             msg = "Unit conversion (degR to degC) cannot be expressed as a simple multiplicative factor"
             self.assertEqual(str(err), msg)
         else:
@@ -323,7 +323,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         z = PhysicalQuantity('1degC')
         try:
             x*z
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"cannot multiply units with non-zero offset")
         else:
             self.fail("TypeError expected")
@@ -380,7 +380,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         #test for error from non integer exponent
         try:
             x**2.5
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Only integer and inverse integer exponents allowed")
         else:
             self.fail("Expecting TypeError")
@@ -389,7 +389,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = PhysicalQuantity('1degC')
         try:
             x**2
-        except TypeError, err:
+        except TypeError as err:
             self.assertEqual(str(err), 'cannot exponentiate units with non-zero offset')
         else:
             self.fail("expected TypeError")
@@ -397,13 +397,13 @@ class test__PhysicalQuantity(unittest.TestCase):
         #test for error if exponent is a PhysicalQuantity
         try:
             x**x
-        except TypeError, err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Exponents must be dimensionless')
         else:
             self.fail("expected TypeError")
         try: #__rpow__
             2**x
-        except TypeError, err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Exponents must be dimensionless')
         else:
             self.fail("expected TypeError")
@@ -453,21 +453,21 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = PhysicalQuantity('1m')
         try:
             x.sin()
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Argument of sin must be an angle")
         else:
             self.fail("TypeError expected")
 
         try:
             x.cos()
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Argument of cos must be an angle")
         else:
             self.fail("TypeError expected")
 
         try:
             x.tan()
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Argument of tan must be an angle")
         else:
             self.fail("TypeError expected")
@@ -488,7 +488,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = PhysicalQuantity('5cm')
         try:
             x.convert_to_unit('kg')
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Incompatible units')
         else:
             self.fail("TypeError expected")
@@ -509,7 +509,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = PhysicalQuantity('5cm')
         try:
             y = x.in_units_of('degC')
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Incompatible units')
         else:
             self.fail("TypeError expected")
@@ -578,7 +578,7 @@ class test__PhysicalUnit(unittest.TestCase):
 
         try:
             cmp(x, z)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Incompatible units")
         else:
             self.fail("Expecting TypeError")
@@ -600,7 +600,7 @@ class test__PhysicalUnit(unittest.TestCase):
 
         try:
             x.unit * z.unit
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"cannot multiply units with non-zero offset")
         else:
             self.fail("Expecting TypeError")
@@ -629,7 +629,7 @@ class test__PhysicalUnit(unittest.TestCase):
                                                  _get_powers(time=-1),0))
         try:
             x.unit / z.unit
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"cannot divide units with non-zero offset")
         else:
             self.fail("Expecting TypeError")
@@ -651,7 +651,7 @@ class test__PhysicalUnit(unittest.TestCase):
         #test offset units:
         try:
             y**17
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), 'cannot exponentiate units with non-zero offset')
         else:
             self.fail('Expecting TypeError')
@@ -659,13 +659,13 @@ class test__PhysicalUnit(unittest.TestCase):
         #test non-integer powers
         try:
             x**1.2
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Only integer and inverse integer exponents allowed')
         else:
             self.fail('Expecting TypeError')
         try:
             x**(5.0/2.0)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), 'Only integer and inverse integer exponents allowed')
         else:
             self.fail('Expecting TypeError')
@@ -688,7 +688,7 @@ class test__PhysicalUnit(unittest.TestCase):
         self.assertEqual(w.unit.conversion_factor_to(x.unit), 1/100.0)
         try: #incompatible units
             w.unit.conversion_factor_to(y.unit)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err),"Incompatible units")
         else:
             self.fail("Expecting TypeError")
@@ -696,7 +696,7 @@ class test__PhysicalUnit(unittest.TestCase):
         self.assertEqual(z1.unit.conversion_factor_to(z2.unit), 1.0)
         try: #incompatible offset units
             y.unit.conversion_factor_to(z2.unit)
-        except TypeError,err:
+        except TypeError as err:
             msg = "Unit conversion (degF to degK) cannot be expressed as a simple multiplicative factor"
             self.assertEqual(str(err), msg)
         else:
@@ -725,7 +725,7 @@ class test__PhysicalUnit(unittest.TestCase):
         #check for incompatible units
         try:
             x.unit.conversion_tuple_to(z1.unit)
-        except TypeError,err:
+        except TypeError as err:
             self.assertEqual(str(err), "Incompatible units")
         else:
             self.fail("Expecting TypeError")
@@ -748,14 +748,14 @@ class test__moduleFunctions(unittest.TestCase):
     def test_add_unit(self):
         try:
             add_unit('ft', '20*m')
-        except KeyError,err:
+        except KeyError as err:
             self.assertEqual(str(err),"'Unit ft already defined with different factor or powers'")
         else:
             self.fail("Expecting Key Error")
 
         try:
             add_offset_unit('degR', 'degK',20,10)
-        except KeyError,err:
+        except KeyError as err:
             self.assertEqual(str(err),"'Unit degR already defined with different factor or powers'")
         else:
             self.fail("Expecting Key Error")

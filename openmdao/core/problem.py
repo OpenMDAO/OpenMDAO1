@@ -8,6 +8,7 @@ from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
 from openmdao.core.checks import check_connections
 from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.mpiwrap import MPI, FakeComm
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -102,6 +103,12 @@ class Problem(Component):
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
+
+        # divide MPI communicators among subsystems
+        if MPI:
+            self.root._setup_communicators(MPI.COMM_WORLD)
+        else:
+            self.root._setup_communicators(FakeComm())
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)

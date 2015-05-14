@@ -3,6 +3,8 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
 
+from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
+
 class System(object):
     """ Base class for systems in OpenMDAO."""
 
@@ -16,6 +18,8 @@ class System(object):
         # specify which variables are promoted up to the parent.  Wildcards
         # are allowed.
         self._promotes = ()
+
+        self.comm = FakeComm()
 
     def __getitem__(self, name):
         """
@@ -93,3 +97,34 @@ class System(object):
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):
         pass
+
+    def is_active(self):
+        """
+        Returns
+        -------
+        bool
+            If running under MPI, returns True if this `System` has a valid
+            communicator. Always returns True if not running under MPI.
+        """
+        return MPI is None or self.comm != MPI.COMM_NULL
+
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the min and max
+            processors usable by this `System`
+        """
+        return (1, 1)
+
+    def _setup_communicators(self, comm):
+        """
+        Assign communicator to this `System` and all of it's subsystems
+        
+        Parameters
+        ----------
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+        """
+        self.comm = get_comm_if_active(comm)
