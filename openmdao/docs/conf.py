@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.abspath('../srcdocs'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -39,6 +40,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'numpydoc'
 ]
+
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
+from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
@@ -128,24 +129,39 @@ class Group(System):
         return self._subsystems.items()
 
     def subgroups(self, local=False):
-        """ Returns
-            -------
-            iterator
-                iterator over subgroups.
+        """
+        Returns
+        -------
+        iterator
+            iterator over subgroups.
         """
         for name, subsystem in self.subsystems(local=local):
             if isinstance(subsystem, Group):
                 yield name, subsystem
 
     def components(self, local=False):
-        """ Returns
-                -------
-                iterator
-                    iterator over sub-`Component`s.
-            """
+        """
+        Returns
+        -------
+        iterator
+            iterator over sub-`Component`s.
+        """
         for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
                 yield name, comp
+
+    def _setup_paths(self, parent_path):
+        """Set the absolute pathname of each `System` in the tree.
+
+        Parameter
+        ---------
+        parent_path : str
+            the pathname of the parent `System`, which is to be prepended to the
+            name of this child `System` and all subsystems.
+        """
+        super(Group, self)._setup_paths(parent_path)
+        for name, sub in self.subsystems():
+            sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
         """Create dictionaries of metadata for parameters and for unknowns for
@@ -174,10 +190,11 @@ class Group(System):
         return self._params_dict, self._unknowns_dict
 
     def _var_pathname(self, name, subsystem):
-        """Returns
-           -------
-           str
-               the pathname of the given variable, based on its promotion status.
+        """
+        Returns
+        -------
+        str
+            the pathname of the given variable, based on its promotion status.
         """
         if subsystem.promoted(name):
             return name
@@ -186,7 +203,20 @@ class Group(System):
         else:
             return name
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=None):
+    def _setup_communicators(self, comm):
+        self._local_subsystems = OrderedDict()
+
+        self.mpi.comm = get_comm_if_active(self, comm)
+
+        if not self.is_active():
+            return
+
+        for name, sub in self.subsystems():
+            sub.setup_communicators(comm)
+            if sub.is_active():
+                self._local_subsystems.append(sub)
+
+    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -210,15 +240,17 @@ class Group(System):
         """
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
-            self._varmanager = VarManager(self.pathname, self._params_dict, self._unknowns_dict,
-                                         my_params, connections)
+            self._varmanager = VarManager(self.comm,
+                                          self.pathname, self._params_dict, self._unknowns_dict,
+                                          my_params, connections, impl=impl)
         else:
             self._varmanager = ViewVarManager(parent_vm,
-                                             self.pathname,
-                                             self._params_dict,
-                                             self._unknowns_dict,
-                                             my_params,
-                                             connections)
+                                              self.comm,
+                                              self.pathname,
+                                              self._params_dict,
+                                              self._unknowns_dict,
+                                              my_params,
+                                              connections)
 
         self._views = {}
         for name, sub in self.subgroups():
@@ -226,21 +258,9 @@ class Group(System):
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            self._views[name] = create_views(self._varmanager, sub.pathname,
+            self._views[name] = create_views(self._varmanager, self.comm, sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], {})
 
-    def _setup_paths(self, parent_path):
-        """Set the absolute pathname of each `System` in the tree.
-
-        Parameter
-        ---------
-        parent_path : str
-            the pathname of the parent `System`, which is to be prepended to the
-            name of this child `System` and all subsystems.
-        """
-        super(Group, self)._setup_paths(parent_path)
-        for name, sub in self.subsystems():
-            sub._setup_paths(self.pathname)
 
     def _get_explicit_connections(self):
         """ Returns
@@ -325,7 +345,7 @@ class Group(System):
 
             system.apply_nonlinear(params, unknowns, resids)
 
-    def linearize(self, params, unknowns):
+    def jacobian(self, params, unknowns):
         """ Linearize all our subsystems.
 
         Parameters
@@ -337,8 +357,7 @@ class Group(System):
             `VecwWapper` containing outputs and states (u)
         """
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             view = self._views[system.name]
 
@@ -346,7 +365,11 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            system.linearize(params, unknowns)
+            jacobian_cache = system.jacobian(params, unknowns)
+
+            if isinstance(system, Component) and \
+               not isinstance(system, ParamComp):
+                system._jacobian_cache = jacobian_cache
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,

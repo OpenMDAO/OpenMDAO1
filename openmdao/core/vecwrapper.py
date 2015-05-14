@@ -1,8 +1,11 @@
+""" Class definition for VecWrapper"""
+
 from collections import OrderedDict
 
 import numpy
 from numpy.linalg import norm
 
+from openmdao.units.units import get_conversion_tuple
 from openmdao.util.types import is_differentiable, int_types
 
 class _flat_dict(object):
@@ -19,16 +22,19 @@ class _flat_dict(object):
         return self._dict[name][0]['val']
 
 class _NoflatWrapper(object):
-    """We have to wrap noflat values in these in order to have param vec entries
-    that are shared between parents and children all shared the same object
-    reference, which would not be true for an unwrapped value.
+    """
+    We have to wrap noflat values in these in order to have param vec entries
+    that are shared between parents and children all share the same object
+    reference, so that when the internal val attribute is changed, all
+    `VecWrappers` that contain a reference to the wrapper will see the updated
+    value.
     """
     def __init__(self, val):
         self.val = val
 
 class VecWrapper(object):
-    """A manager of the data transfer of a possibly distributed
-    collection of variables.
+    """
+    A dict-like container of a collection of variables.
 
     Attributes
     ----------
@@ -48,6 +54,10 @@ class VecWrapper(object):
         # add a flat attribute that will have access method consistent
         # with non-flat access  (__getitem__)
         self.flat = _flat_dict(self._vardict)
+
+        # Automatic unit conversion in target vectors
+        self._unit_conversion = {}
+        self.deriv_units = False
 
     def _get_metadata(self, name):
         try:
@@ -72,6 +82,22 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             return meta['val'].val
+
+        # Convert units
+        elif self._unit_conversion.get(name) is not None:
+            scale, offset = self._unit_conversion[name]
+
+            # Gradient is just the scale
+            if self.deriv_units is True:
+                offset = 0.0
+
+            # if it doesn't have a shape, it's a float
+            shape = meta.get('shape')
+            if shape is None:
+                return scale*(meta['val'][0] + offset)
+            else:
+                return scale*(meta['val'].reshape(shape) + offset)
+
         else:
             # if it doesn't have a shape, it's a float
             shape = meta.get('shape')
@@ -95,6 +121,18 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             meta['val'].val = value
+
+        # Convert Units
+        elif self.deriv_units is True and \
+             self._unit_conversion.get(name) is not None:
+
+            scale, offset = self._unit_conversion[name]
+
+            if isinstance(value, numpy.ndarray):
+                meta['val'][:] = scale*value.flat[:]
+            else:
+                meta['val'][:] = scale*value
+
         else:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
@@ -188,7 +226,8 @@ class VecWrapper(object):
         return self.make_idx_array(start, end)
 
     def norm(self):
-        """ Calculates the norm of this vector.
+        """
+        Calculates the norm of this vector.
 
         Returns
         -------
@@ -198,7 +237,8 @@ class VecWrapper(object):
         return norm(self.vec)
 
     def get_view(self, varmap):
-        """Return a new `VecWrapper` that is a view into this one
+        """
+        Return a new `VecWrapper` that is a view into this one
 
         Parameters
         ----------
@@ -239,8 +279,9 @@ class VecWrapper(object):
         return view
 
     def make_idx_array(self, start, end):
-        """ Return an index vector of the right int type for
-        parallel or serial computation.
+        """
+        Return an index vector of the right int type for
+        the current implementation.
 
         Parameters
         ----------
@@ -251,6 +292,23 @@ class VecWrapper(object):
             the ending index
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
+
+    def to_idx_array(indices):
+        """
+        Given some iterator of indices, return an index array of the
+        right int type for the current implementation.
+
+        Parameters
+        ----------
+        indices : iterator of ints
+            An iterator of indices
+
+        Returns
+        -------
+        ndarray of idx_arr_type
+            Index array
+        """
+        return numpy.array(indices, dtype=idx_arr_type)
 
     def merge_idxs(self, src_idxs, tgt_idxs):
         """Return source and target index arrays, built up from
@@ -289,8 +347,9 @@ class VecWrapper(object):
         return idx_merge(new_src), idx_merge(new_tgt)
 
     def get_relative_varname(self, abs_name):
-        """Returns the relative pathname for the given absolute variable
-        pathname in the variable dictionary
+        """
+        Returns the relative pathname for the given absolute variable
+        pathname.
 
         Parameters
         ----------
@@ -336,7 +395,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, store_noflats=False):
+    def setup(self, unknowns_dict, comm=None, store_noflats=False):
         """Configure this vector to store a flattened array of the variables
         in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -455,8 +514,9 @@ class SrcVecWrapper(VecWrapper):
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
-        """Configure this vector to store a flattened array of the variables
-        in params. Variable shape and value are retrieved from srcvec.
+        """
+        Configure this vector to store a flattened array of the variables
+        in params_dict. Variable shape and value are retrieved from srcvec.
 
         Parameters
         ----------
@@ -526,8 +586,47 @@ class TgtVecWrapper(VecWrapper):
                     self._vardict.setdefault(meta['relative_name'],
                                              []).append(newmeta)
 
+        # Finally, set up unit conversions, if any exist.
+        for pathname, meta in params_dict.items():
+
+            if 'units' not in meta:
+                continue
+
+            # dparams vector has some additional behavior
+            if store_noflats == False:
+                self.deriv_units = True
+
+            # Pull conversion from parents if we are a view.
+            if parent_params_vec is not None and \
+               parent_params_vec._unit_conversion.get(pathname) is not None:
+
+                newname = meta['relative_name']
+                self._unit_conversion[newname] = parent_params_vec._unit_conversion[pathname]
+
+            # Figure out conversions if we are the top target vector.
+            elif pathname in connections:
+
+                # Get source units
+                src_pathname = connections.get(pathname)
+                src_rel_name = srcvec.get_relative_varname(src_pathname)
+                src_meta = srcvec.metadata(src_rel_name)
+                src_unit = src_meta[0].get('units')
+                if src_unit is None:
+                    continue
+
+                tgt_unit = meta['units']
+
+                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+
+                # Skip if we are equivalent units.
+                if scale == 1.0 and (offset == 0.0 or store_noflats == False):
+                    continue
+
+                self._unit_conversion[pathname] = (scale, offset)
+
     def _add_var(self, meta, index, src_meta, store_noflats):
-        """Add a variable to the vector. Allocate a range in the vector array
+        """
+        Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later.
 
         Parameters
@@ -579,7 +678,8 @@ class TgtVecWrapper(VecWrapper):
 
 
 def idx_merge(idxs):
-    """Combines a mixed iterator of int and iterator indices into an
+    """
+    Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
     if len(idxs) > 0:

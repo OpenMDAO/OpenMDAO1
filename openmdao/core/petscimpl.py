@@ -2,28 +2,30 @@
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 
+from petsc4py import PETSc
+
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory"""
 
     @staticmethod
-    def create_src_vecwrapper():
+    def create_src_vecwrapper(comm):
         """Create a`PetscSrcVecWrapper`
 
         Returns
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper()
+        return PetscSrcVecWrapper(comm)
 
     @staticmethod
-    def create_tgt_vecwrapper():
+    def create_tgt_vecwrapper(comm):
         """Create a `PetscTgtVecWrapper`
 
         Returns
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper()
+        return PetscTgtVecWrapper(comm)
 
     @staticmethod
     def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
@@ -55,7 +57,23 @@ class PetscImpl(object):
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
-    def _get_flattened_unknown_sizes(self):
+
+    idx_arr_type = PETSc.IntType
+
+    def setup(self, unknowns_dict):
+        """
+        Create internal data storage for variables in unknowns_dict.
+
+        Parameters
+        ----------
+        unknowns_dict : `OrderedDict`
+            A dictionary of absolute variable names keyed to an associated
+            metadata dictionary.
+        """
+        super(PetscSrcVecWrapper, self).setup(unknowns_dict)
+        self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+
+    def _get_flattened_sizes(self):
         """
         Collect all flattenable var sizes.
 
@@ -65,21 +83,32 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             array containing local sizes of flattenable unknown variables
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
+
+        self.local_var_sizes = numpy.zeros((size, len(sizes)), int)
+
+        # create a vec indicating whether a nonflat variable is active
+        # in this rank or not
+        self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
+
+        ours = numpy.zeros((1, len(self.vector_vars)), int)
+        for i, (name, var) in enumerate(self.vector_vars.items()):
+            ours[0, i] = var['size']
+
+        our_noflats = numpy.zeros((1, len(self.noflat_vars)), int)
+        for i, name in enumerate(self.noflat_vars.keys()):
+            our_noflats[0, i] = int(self.is_variable_local(name[0]))
+
+        # collect local var sizes from all of the processes in our comm
+        # these sizes will be the same in all processes except in cases
+        # where a variable belongs to a multiprocessor component.  In that
+        # case, the part of the component that runs in a given process will
+        # only have a slice of each of the component's variables.
+        comm.Allgather(ours[0,:], self.local_var_sizes)
+        comm.Allgather(our_noflats[0,:], self.noflat_isactive)
+
+        self.local_var_sizes[rank, :] = ours[0, :]
+
         return numpy.array([sizes])
-
-    def _get_flattened_param_sizes(self):
-        """
-        Create a 1x1 numpy array to hold the sum of the sizes of local
-        flattenable params.
-
-        Returns
-        -------
-        ndarray
-            array containing sum of local sizes of flattenable params.
-        """
-        psize = sum([m['size'] for m in self.params.values()
-                     if m.get('owned') and not m.get('noflat')])
-        return numpy.array([[psize]])
 
     def get_idxs(self, name):
         """Returns all of the indices for the named variable in this vector
@@ -94,8 +123,6 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         ndarray
             Index array containing all indices (possibly distributed) for the named variable.
         """
-        # TODO: add support for returning slice objects
-
         meta = self._vardict[name][0]
         if meta.get('noflat'):
             raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
@@ -104,31 +131,33 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         return self.make_idx_array(start, end)
 
     def norm(self):
-        """ Calculates the norm of this vector.
-
+        """
         Returns
         -------
         float
-            Norm of the flattenable values in this vector.
+            The norm of the distributed vector
         """
-        return norm(self.vec)
+        self.petsc_vec.assemble()
+        return self.petsc_vec.norm()
 
-    def make_idx_array(self, start, end):
-        """ Return an index vector of the right int type for
-        parallel or serial computation.
-
-        Parameters
-        ----------
-        start : int
-            the starting index
-
-        end : int
-            the ending index
-        """
-        return numpy.arange(start, end, dtype=self.idx_arr_type)
 
 class PetscTgtVecWrapper(TgtVecWrapper):
-    pass
+    idx_arr_type = PETSc.IntType
+
+    def _get_flattened_sizes(self):
+        """
+        Create a 1x1 numpy array to hold the sum of the sizes of local
+        flattenable params.
+
+        Returns
+        -------
+        ndarray
+            array containing sum of local sizes of flattenable params.
+        """
+        psize = sum([m['size'] for m in self.params.values()
+                     if m.get('owned') and not m.get('noflat')])
+        return numpy.array([[psize]])
+
 
 class PetscDataXfer(DataXfer):
     pass

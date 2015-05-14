@@ -5,8 +5,14 @@ class BasicImpl(object):
     """Basic vector and data transfer implementation factory"""
 
     @staticmethod
-    def create_src_vecwrapper():
-        """Create a`SrcVecWrapper`
+    def create_src_vecwrapper(comm):
+        """
+        Create a vecwrapper for source variables.
+
+        Parameters
+        ----------
+        comm : a fake communicator or None
+            This arg is ignored
 
         Returns
         -------
@@ -15,8 +21,14 @@ class BasicImpl(object):
         return SrcVecWrapper()
 
     @staticmethod
-    def create_tgt_vecwrapper():
-        """Create a `TgtVecWrapper`
+    def create_tgt_vecwrapper(comm):
+        """
+        Create a vecwrapper for target variables.
+
+        Parameters
+        ----------
+        comm : a fake communicator or None
+            This arg is ignored
 
         Returns
         -------
@@ -26,7 +38,8 @@ class BasicImpl(object):
 
     @staticmethod
     def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
-        """Create an object for performing data transfer between source
+        """
+        Create an object for performing data transfer between source
         and target vectors
 
         Parameters
