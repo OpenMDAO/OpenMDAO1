@@ -16,8 +16,10 @@ This module is based on the PhysicalQuantities module
 in Scientific Python, by Konrad Hinsen. Modifications by
 Justin Gray."""
 
-import re, ConfigParser
+import re
 import os.path
+from six import iteritems
+from six.moves.configparser import RawConfigParser as ConfigParser
 
 # pylint: disable=E0611, F0401
 from math import sin, cos, tan, floor, pi
@@ -51,23 +53,31 @@ class NumberDict(dict):
 
     def __add__(self, other):
         sum_dict = NumberDict()
-        for k, v in self.iteritems():
+        for k, v in iteritems(self):
             sum_dict[k] = v
-        for k, v in other.iteritems():
+        for k, v in iteritems(other):
             sum_dict[k] = sum_dict[k] + v
         return sum_dict
 
     def __sub__(self, other):
         sum_dict = NumberDict()
-        for k, v in self.iteritems():
+        for k, v in iteritems(self):
             sum_dict[k] = v
-        for k, v in other.iteritems():
+        for k, v in iteritems(other):
+            sum_dict[k] = sum_dict[k] - v
+        return sum_dict
+
+    def __rsub__(self, other):
+        sum_dict = NumberDict()
+        for k, v in iteritems(other):
+            sum_dict[k] = v
+        for k, v in iteritems(self):
             sum_dict[k] = sum_dict[k] - v
         return sum_dict
 
     def __mul__(self, other):
         new = NumberDict()
-        for key, value in self.iteritems():
+        for key, value in iteritems(self):
             new[key] = other*value
         return new
 
@@ -75,7 +85,7 @@ class NumberDict(dict):
 
     def __div__(self, other):
         new = NumberDict()
-        for key, value in self.iteritems():
+        for key, value in iteritems(self):
             new[key] = value/other
         return new
 
@@ -443,10 +453,14 @@ class PhysicalUnit(object):
             return PhysicalUnit(self.names+{str(other): -1},
                                 self.factor/float(other), self.powers)
 
+    __truediv__ = __div__   # for python 3
+
     def __rdiv__(self, other):
         return PhysicalUnit({str(other): 1}-self.names,
                           float(other)/self.factor,
                           [-x for x in self.powers])
+
+    __rtruediv__ = __rdiv__
 
     def __pow__(self, other):
         if self.offset != 0:
@@ -641,8 +655,8 @@ def add_offset_unit(name, baseunit, factor, offset, comment=''):
     if name in _UNIT_LIB.unit_table:
         if (_UNIT_LIB.unit_table[name].factor!=unit.factor or \
             _UNIT_LIB.unit_table[name].powers!=unit.powers):
-            raise KeyError, "Unit %s already defined with " % name + \
-                            "different factor or powers"
+            raise KeyError("Unit %s already defined with " % name +
+                            "different factor or powers")
     _UNIT_LIB.unit_table[name] = unit
     _UNIT_LIB.set('units', name, unit)
     if comment:
@@ -660,14 +674,14 @@ def add_unit(name, unit, comment=''):
     if name in _UNIT_LIB.unit_table:
         if (_UNIT_LIB.unit_table[name].factor!=unit.factor or \
             _UNIT_LIB.unit_table[name].powers!=unit.powers):
-            raise KeyError, "Unit %s already defined with " % name + \
-                            "different factor or powers"
+            raise KeyError("Unit %s already defined with " % name +
+                            "different factor or powers")
 
     _UNIT_LIB.unit_table[name] = unit
     _UNIT_LIB.set('units', name, unit)
 
 
-_UNIT_LIB = ConfigParser.ConfigParser()
+_UNIT_LIB = ConfigParser()
 
 def _do_nothing(string):
     """Makes the ConfigParser case sensitive."""
@@ -681,7 +695,7 @@ def import_library(libfilepointer):
     global _UNIT_LIB
     global _UNIT_CACHE
     _UNIT_CACHE = {}
-    _UNIT_LIB = ConfigParser.ConfigParser()
+    _UNIT_LIB = ConfigParser()
     _UNIT_LIB.optionxform = _do_nothing
     _UNIT_LIB.readfp(libfilepointer)
     required_base_types = ['length', 'mass', 'time', 'temperature', 'angle']
@@ -734,7 +748,7 @@ def update_library(filename):
     else:
         inp = filename
     try:
-        cfg = ConfigParser.ConfigParser()
+        cfg = ConfigParser()
         cfg.optionxform = _do_nothing
         cfg.readfp(inp)
         _update_library(cfg)
