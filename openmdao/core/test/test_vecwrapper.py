@@ -32,8 +32,8 @@ class TestVecWrapper(unittest.TestCase):
         self.assertEqual(u['s1'], -1.0)
 
         self.assertEqual(u.get_states(), ['s1'])
-        self.assertEqual(u.get_vecvars(), ['y1','y2','y4','s1'])
-        self.assertEqual(u.get_noflats(), ['y3'])
+        self.assertEqual([t[0] for t in u.get_vecvars()], ['y1','y2','y4','s1'])
+        self.assertEqual([t[0] for t in u.get_noflats()], ['y3'])
 
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
