@@ -150,12 +150,12 @@ class TestUnitConversion(unittest.TestCase):
 
         param_list = ['x1']
         unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
-                               #return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+                               return_format='dict')
 
-        #assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        #assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        #assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
