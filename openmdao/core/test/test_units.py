@@ -2,6 +2,8 @@
 
 import unittest
 
+import numpy as np
+
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
@@ -20,6 +22,12 @@ class SrcComp(Component):
         """ No action."""
         unknowns['x2'] = params['x1']
 
+    def jacobian(self, params, unknowns):
+        """ Derivative is 1.0"""
+        J = {}
+        J[('x2', 'x1')] = np.array([1.0])
+        return J
+
 class TgtCompF(Component):
 
     def __init__(self):
@@ -31,6 +39,12 @@ class TgtCompF(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
         unknowns['x3'] = params['x2']
+
+    def jacobian(self, params, unknowns):
+        """ Derivative is 1.0"""
+        J = {}
+        J[('x3', 'x2')] = np.array([1.0])
+        return J
 
 class TgtCompC(Component):
 
@@ -44,6 +58,12 @@ class TgtCompC(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
+    def jacobian(self, params, unknowns):
+        """ Derivative is 1.0"""
+        J = {}
+        J[('x3', 'x2')] = np.array([1.0])
+        return J
+
 class TgtCompK(Component):
 
     def __init__(self):
@@ -55,6 +75,12 @@ class TgtCompK(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
         unknowns['x3'] = params['x2']
+
+    def jacobian(self, params, unknowns):
+        """ Derivative is 1.0"""
+        J = {}
+        J[('x3', 'x2')] = np.array([1.0])
+        return J
 
 
 class TestUnitConversion(unittest.TestCase):
@@ -84,6 +110,44 @@ class TestUnitConversion(unittest.TestCase):
 
         # Make sure we don't convert equal units
         self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+
+        param_list = ['src:x2']
+        unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF:x3']['src:x2'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC:x3']['src:x2'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK:x3']['src:x2'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF:x3']['src:x2'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC:x3']['src:x2'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK:x3']['src:x2'][0][0], 1.0, 1e-6)
+
+    def test_basic_implicit_conn(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp(), promotes=['x1', 'x2'])
+        prob.root.add('tgtF', TgtCompF(), promotes=['x2'])
+        prob.root.add('tgtC', TgtCompC(), promotes=['x2'])
+        prob.root.add('tgtK', TgtCompK(), promotes=['x2'])
+        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+
+        prob.setup()
+        prob.run()
+
+        assert_rel_error(self, prob['x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF:x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC:x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
+
+        # Make sure we don't convert equal units
+        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+
 
 if __name__ == "__main__":
     unittest.main()

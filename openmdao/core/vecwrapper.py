@@ -54,6 +54,7 @@ class VecWrapper(object):
 
         # Automatic unit conversion in target vectors
         self._unit_conversion = {}
+        self.deriv_units = False
 
     def _get_metadata(self, name):
         try:
@@ -79,8 +80,14 @@ class VecWrapper(object):
         if meta.get('noflat'):
             return meta['val'].val
 
+        # Convert units
         elif self._unit_conversion.get(name) is not None:
             scale, offset = self._unit_conversion[name]
+
+            # Gradient is just the scale
+            if self.deriv_units is True:
+                offset = 0.0
+
             # if it doesn't have a shape, it's a float
             shape = meta.get('shape')
             if shape is None:
@@ -111,6 +118,18 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             meta['val'].val = value
+
+        # Convert Units
+        elif self.deriv_units is True and \
+             self._unit_conversion.get(name) is not None:
+
+            scale, offset = self._unit_conversion[name]
+
+            if isinstance(value, numpy.ndarray):
+                meta['val'][:] = scale*value.flat[:]
+            else:
+                meta['val'][:] = scale*value
+
         else:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
@@ -395,6 +414,10 @@ class VecWrapper(object):
             if 'units' not in meta:
                 continue
 
+            # dparams vector has some additional behavior
+            if store_noflats == False:
+                self.deriv_units = True
+
             # Pull conversion from parents if we are a view.
             if parent_params_vec is not None and \
                parent_params_vec._unit_conversion.get(pathname) is not None:
@@ -418,7 +441,7 @@ class VecWrapper(object):
                 scale, offset = get_conversion_tuple(src_unit, tgt_unit)
 
                 # Skip if we are equivalent units.
-                if scale == 1.0 and offset == 0.0:
+                if scale == 1.0 and (offset == 0.0 or store_noflats == False):
                     continue
 
                 self._unit_conversion[pathname] = (scale, offset)
