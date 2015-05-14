@@ -89,6 +89,8 @@ class NumberDict(dict):
             new[key] = value/other
         return new
 
+    __truediv__ = __div__  # for python 3
+
 class PhysicalQuantity(object):
     """ Physical quantity with units
 
@@ -185,6 +187,8 @@ class PhysicalQuantity(object):
         else:
             return self.__class__(value, unit)
 
+    __truediv__ = __div__
+
     def __rdiv__(self, other):
         if not isinstance(other, PhysicalQuantity):
             return self.__class__(other/self.value, pow(self.unit, -1))
@@ -194,6 +198,8 @@ class PhysicalQuantity(object):
             return value*unit.factor
         else:
             return self.__class__(value, unit)
+
+    __rtruediv__ = __rdiv__
 
     def __pow__(self, other):
         if isinstance(other, PhysicalQuantity):
@@ -567,7 +573,7 @@ class PhysicalUnit(object):
         """Looks like it's parsing fractions."""
         num = ''
         denom = ''
-        for unit, power in self.names.iteritems():
+        for unit, power in iteritems(self.names):
             if power < 0:
                 denom = denom + '/' + unit
                 if power < -1:
