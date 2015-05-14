@@ -64,23 +64,8 @@ class VarManagerBase(object):
                responsible for propagating
         """
 
-        # collect all flattenable var sizes from self.unknowns
-        usize = [m['size'] for m in self.unknowns.values()
-                     if not m.get('noflat')]
-
-        # create a 1x<num_flat_vars> numpy array with the sizes of each var
-        self._local_sizes = numpy.array([[usize]])
-
-        # we would do an Allgather of the local_sizes in the distributed case so all
-        # processes would know the sizes of all variables (needed to determine distributed
-        # indices)
-
-        # create a 1x1 numpy array to hold the param values when they're
-        # transferred from their sources.
-        owned = OrderedDict()
-        psize = sum([m['size'] for n,m in self.params.items()
-                             if m.get('owned') and not m.get('noflat')])
-        self._param_sizes = numpy.array([[psize]])
+        self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
+        self._local_param_sizes = self.params._get_flattened_sizes()
 
         #TODO: invesigate providing enough system info here to determine what types of scatters
         # are necessary (for example, full scatter isn't needed except when solving using jacobi,
@@ -187,29 +172,29 @@ class VarManager(VarManagerBase):
         Specifies the factory object used to create `VecWrapper` and
         `DataXfer` objects.
     """
-    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params,
+    def __init__(self, comm, sys_pathname, params_dict, unknowns_dict, my_params,
                  connections, impl=BasicImpl):
         super(VarManager, self).__init__(connections)
 
         self.implFactory = impl
 
         # create implementation specific VecWrappers
-        self.unknowns  = self.implFactory.createVecWrapper()
-        self.dunknowns = self.implFactory.createVecWrapper()
-        self.resids    = self.implFactory.createVecWrapper()
-        self.dresids   = self.implFactory.createVecWrapper()
-        self.params    = self.implFactory.createVecWrapper()
-        self.dparams   = self.implFactory.createVecWrapper()
+        self.unknowns  = self.implFactory.create_src_vecwrapper(comm)
+        self.dunknowns = self.implFactory.create_src_vecwrapper(comm)
+        self.resids    = self.implFactory.create_src_vecwrapper(comm)
+        self.dresids   = self.implFactory.create_src_vecwrapper(comm)
+        self.params    = self.implFactory.create_tgt_vecwrapper(comm)
+        self.dparams   = self.implFactory.create_tgt_vecwrapper(comm)
 
         # populate the VecWrappers with data
-        self.unknowns.setup_source_vector(unknowns_dict, store_noflats=True)
-        self.dunknowns.setup_source_vector(unknowns_dict)
-        self.resids.setup_source_vector(unknowns_dict)
-        self.dresids.setup_source_vector(unknowns_dict)
+        self.unknowns.setup(unknowns_dict, store_noflats=True)
+        self.dunknowns.setup(unknowns_dict)
+        self.resids.setup(unknowns_dict)
+        self.dresids.setup(unknowns_dict)
 
-        self.params.setup_target_vector(None, params_dict, self.unknowns,
+        self.params.setup(None, params_dict, self.unknowns,
                                               my_params, connections, store_noflats=True)
-        self.dparams.setup_target_vector(None, params_dict, self.unknowns,
+        self.dparams.setup(None, params_dict, self.unknowns,
                                                my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
@@ -238,25 +223,31 @@ class ViewVarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
+    def __init__(self, parent_vm, comm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(ViewVarManager, self).__init__(connections)
 
         self.implFactory = parent_vm.implFactory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
-            create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
+            create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+                         my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 
 
-def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
-    """A manager of the data transfer of a possibly distributed collection of
+def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+                 my_params, connections):
+    """
+    A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
 
     Parameters
     ----------
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
+
+    comm : an MPI communicator (real or fake)
+        communicator to be used for any distributed operations
 
     sys_pathname : str
         pathname of the system for which the views are being created
@@ -290,12 +281,12 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
 
-    params  = parent_vm.implFactory.createVecWrapper()
-    dparams = parent_vm.implFactory.createVecWrapper()
+    params  = parent_vm.implFactory.create_tgt_vecwrapper(comm)
+    dparams = parent_vm.implFactory.create_tgt_vecwrapper(comm)
 
-    params.setup_target_vector(parent_vm.params, params_dict, unknowns,
+    params.setup(parent_vm.params, params_dict, unknowns,
                                my_params, connections, store_noflats=True)
-    dparams.setup_target_vector(parent_vm.dparams, params_dict, unknowns,
+    dparams.setup(parent_vm.dparams, params_dict, unknowns,
                                 my_params, connections)
 
     return VecTuple(unknowns, dunknowns, resids, dresids, params, dparams)
