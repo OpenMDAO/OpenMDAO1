@@ -23,20 +23,20 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
-    
+
     def _get_initial_val(self, val, shape):
         if val is _NotSet:
             return np.zeros(shape)
-            
+
         return val
-            
+
     def _check_val(self, name, var_type, val, shape):
         if val is _NotSet and shape is None:
             msg = ("Shape of {var_type} '{name}' must be specified because "
                    "'val' is not set")
             msg = msg.format(var_type=var_type, name=name)
             raise ValueError(msg)
-    
+
     def add_param(self, name, val=_NotSet, **kwargs):
         self._check_val(name, 'param', val, kwargs.get('shape'))
         self._check_name(name)
