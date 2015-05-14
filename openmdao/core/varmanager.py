@@ -172,19 +172,19 @@ class VarManager(VarManagerBase):
         Specifies the factory object used to create `VecWrapper` and
         `DataXfer` objects.
     """
-    def __init__(self, sys_pathname, params_dict, unknowns_dict, my_params,
+    def __init__(self, comm, sys_pathname, params_dict, unknowns_dict, my_params,
                  connections, impl=BasicImpl):
         super(VarManager, self).__init__(connections)
 
         self.implFactory = impl
 
         # create implementation specific VecWrappers
-        self.unknowns  = self.implFactory.create_src_vecwrapper()
-        self.dunknowns = self.implFactory.create_src_vecwrapper()
-        self.resids    = self.implFactory.create_src_vecwrapper()
-        self.dresids   = self.implFactory.create_src_vecwrapper()
-        self.params    = self.implFactory.create_tgt_vecwrapper()
-        self.dparams   = self.implFactory.create_tgt_vecwrapper()
+        self.unknowns  = self.implFactory.create_src_vecwrapper(comm)
+        self.dunknowns = self.implFactory.create_src_vecwrapper(comm)
+        self.resids    = self.implFactory.create_src_vecwrapper(comm)
+        self.dresids   = self.implFactory.create_src_vecwrapper(comm)
+        self.params    = self.implFactory.create_tgt_vecwrapper(comm)
+        self.dparams   = self.implFactory.create_tgt_vecwrapper(comm)
 
         # populate the VecWrappers with data
         self.unknowns.setup(unknowns_dict, store_noflats=True)
@@ -223,25 +223,31 @@ class ViewVarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
+    def __init__(self, parent_vm, comm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
         super(ViewVarManager, self).__init__(connections)
 
         self.implFactory = parent_vm.implFactory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
-            create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections)
+            create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+                         my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 
 
-def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
-    """A manager of the data transfer of a possibly distributed collection of
+def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+                 my_params, connections):
+    """
+    A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
 
     Parameters
     ----------
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
+
+    comm : an MPI communicator (real or fake)
+        communicator to be used for any distributed operations
 
     sys_pathname : str
         pathname of the system for which the views are being created
@@ -275,8 +281,8 @@ def create_views(parent_vm, sys_pathname, params_dict, unknowns_dict, my_params,
     resids    = parent_vm.resids.get_view(umap)
     dresids   = parent_vm.dresids.get_view(umap)
 
-    params  = parent_vm.implFactory.create_tgt_vecwrapper()
-    dparams = parent_vm.implFactory.create_tgt_vecwrapper()
+    params  = parent_vm.implFactory.create_tgt_vecwrapper(comm)
+    dparams = parent_vm.implFactory.create_tgt_vecwrapper(comm)
 
     params.setup(parent_vm.params, params_dict, unknowns,
                                my_params, connections, store_noflats=True)

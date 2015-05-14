@@ -19,16 +19,19 @@ class _flat_dict(object):
         return self._dict[name][0]['val']
 
 class _NoflatWrapper(object):
-    """We have to wrap noflat values in these in order to have param vec entries
-    that are shared between parents and children all shared the same object
-    reference, which would not be true for an unwrapped value.
+    """
+    We have to wrap noflat values in these in order to have param vec entries
+    that are shared between parents and children all share the same object
+    reference, so that when the internal val attribute is changed, all
+    `VecWrappers` that contain a reference to the wrapper will see the updated
+    value.
     """
     def __init__(self, val):
         self.val = val
 
 class VecWrapper(object):
-    """A manager of the data transfer of a possibly distributed
-    collection of variables.
+    """
+    A dict-like container of a collection of variables.
 
     Attributes
     ----------
@@ -188,7 +191,8 @@ class VecWrapper(object):
         return self.make_idx_array(start, end)
 
     def norm(self):
-        """ Calculates the norm of this vector.
+        """
+        Calculates the norm of this vector.
 
         Returns
         -------
@@ -198,7 +202,8 @@ class VecWrapper(object):
         return norm(self.vec)
 
     def get_view(self, varmap):
-        """Return a new `VecWrapper` that is a view into this one
+        """
+        Return a new `VecWrapper` that is a view into this one
 
         Parameters
         ----------
@@ -239,8 +244,9 @@ class VecWrapper(object):
         return view
 
     def make_idx_array(self, start, end):
-        """ Return an index vector of the right int type for
-        parallel or serial computation.
+        """
+        Return an index vector of the right int type for
+        the current implementation.
 
         Parameters
         ----------
@@ -251,6 +257,23 @@ class VecWrapper(object):
             the ending index
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
+
+    def to_idx_array(indices):
+        """
+        Given some iterator of indices, return an index array of the
+        right int type for the current implementation.
+
+        Parameters
+        ----------
+        indices : iterator of ints
+            An iterator of indices
+
+        Returns
+        -------
+        ndarray of idx_arr_type
+            Index array
+        """
+        return numpy.array(indices, dtype=idx_arr_type)
 
     def merge_idxs(self, src_idxs, tgt_idxs):
         """Return source and target index arrays, built up from
@@ -289,8 +312,9 @@ class VecWrapper(object):
         return idx_merge(new_src), idx_merge(new_tgt)
 
     def get_relative_varname(self, abs_name):
-        """Returns the relative pathname for the given absolute variable
-        pathname in the variable dictionary
+        """
+        Returns the relative pathname for the given absolute variable
+        pathname.
 
         Parameters
         ----------
@@ -336,7 +360,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, store_noflats=False):
+    def setup(self, unknowns_dict, comm=None, store_noflats=False):
         """Configure this vector to store a flattened array of the variables
         in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -455,7 +479,8 @@ class SrcVecWrapper(VecWrapper):
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
                             connections, store_noflats=False):
-        """Configure this vector to store a flattened array of the variables
+        """
+        Configure this vector to store a flattened array of the variables
         in params. Variable shape and value are retrieved from srcvec.
 
         Parameters
