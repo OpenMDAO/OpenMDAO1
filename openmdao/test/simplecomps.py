@@ -2,7 +2,9 @@
 
 import numpy as np
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
+from openmdao.core.group import Group
 
 
 class SimpleComp(Component):
@@ -169,4 +171,90 @@ class SimpleNoflatComp(Component):
         """ Doesn't do much. """
 
         unknowns['y'] = params['x']+self.name
+
+
+class FanOutComp1(Component):
+
+    def __init__(self):
+        super(FanOutComp1, self).__init__()
+
+        # Params
+        self.add_param('x', 0.0)
+
+        # Unknowns
+        self.add_output('y', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'] = 3.0*params['x']
+
+    def jacobian(self, params, unknowns):
+        """Analytical derivatives"""
+        J = {}
+        J[('y', 'x')] = np.array([3.0])
+        return J
+
+
+class FanOutComp2(Component):
+
+    def __init__(self):
+        super(FanOutComp2, self).__init__()
+
+        # Params
+        self.add_param('x', 0.0)
+
+        # Unknowns
+        self.add_output('y', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'] = -2.0*params['x']
+
+    def jacobian(self, params, unknowns):
+        """Analytical derivatives"""
+        J = {}
+        J[('y', 'x')] = np.array([-2.0])
+        return J
+
+
+class FanOutComp3(Component):
+
+    def __init__(self):
+        super(FanOutComp3, self).__init__()
+
+        # Params
+        self.add_param('x', 0.0)
+
+        # Unknowns
+        self.add_output('y', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'] = 5.0*params['x']
+
+    def jacobian(self, params, unknowns):
+        """Analytical derivatives"""
+        J = {}
+        J[('y', 'x')] = np.array([5.0])
+        return J
+
+
+class FanOut(Group):
+    """ Topology where one comp broadcasts an output to two target
+    components."""
+
+    def __init__(self):
+        super(FanOut, self).__init__()
+
+        self.add('comp1', FanOutComp1())
+        self.add('comp2', FanOutComp2())
+        self.add('comp3', FanOutComp3())
+        self.add('p', ParamComp('x', 1.0))
+
+        self.connect("comp1:y", "comp2:x")
+        self.connect("comp1:y", "comp3:x")
+        self.connect("p:x", "comp1:x")
 

@@ -1,5 +1,6 @@
 """ OpenMDAO LinearSolver that uses Scipy's GMRES to solve for derivatives."""
 
+from __future__ import print_function
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -99,6 +100,6 @@ class ScipyGMRES(LinearSolver):
         system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                             mode)
 
-        # print "arg", arg
-        # print "result", rhs_vec.vec
+        #print ("arg", arg)
+        #print ("result", rhs_vec.vec)
         return rhs_vec.vec[:]

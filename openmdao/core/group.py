@@ -432,7 +432,7 @@ class Group(System):
                     # our local 'arg' by -1, and then revert it afterwards.
                     dresids.vec *= -1.0
                     system.apply_linear(params, unknowns, dparams, dunknowns,
-                                      dresids, mode)
+                                        dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
@@ -451,6 +451,11 @@ class Group(System):
         if mode == 'rev':
             # Full Scatter
             varmanager._transfer_data(mode='rev', deriv=True)
+
+        #print('apply_linear on', name, 'POST SCATTER')
+        #print('dunknowns', varmanager.dunknowns.vec)
+        #print('dparams', varmanager.dparams.vec)
+        #print('dresids', varmanager.dresids.vec)
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
         """ Single linear solution applied to whatever input is sitting in

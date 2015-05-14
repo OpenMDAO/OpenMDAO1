@@ -1,4 +1,6 @@
 
+import numpy as np
+
 #from openmdao.util.arrayutil import to_slice
 
 class DataXfer(object):
@@ -54,8 +56,13 @@ class DataXfer(object):
             or target to source ('rev').
         """
         if mode == 'rev':
-            # in reverse mode, srcvec and tgtvec are switched
-            srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
+            # in reverse mode, srcvec and tgtvec are switched. Note, we only
+            # run in reverse for derivatives, and derivatives accumulate from
+            # all targets. This requires numpy's new add command.
+            np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
+
+            # formerly
+            #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
 
             # noflats are never scattered in reverse, so skip that part
 
