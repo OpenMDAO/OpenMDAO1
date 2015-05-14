@@ -5,6 +5,8 @@ from __future__ import print_function
 import sys
 from collections import OrderedDict
 
+import numpy as np
+
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.component import Component
@@ -353,6 +355,14 @@ class Group(System):
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
                 system._jacobian_cache = jacobian_cache
+
+            # The user might submit a scalar Jacobian as a float.
+            # It is really inconvenient
+            if jacobian_cache is not None:
+                for key, J in jacobian_cache.items():
+                    if isinstance(J, float):
+                        jacobian_cache[key] = np.array([[J]])
+
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
