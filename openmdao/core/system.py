@@ -3,7 +3,7 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
 
-from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
 
 class System(object):
     """ Base class for systems in OpenMDAO."""
@@ -108,13 +108,23 @@ class System(object):
         """
         return MPI is None or self.comm != MPI.COMM_NULL
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         """
         Returns
         -------
         tuple
-            A tuple of the form (min_cpu, max_cpu), incicating the min and max
+            A tuple of the form (min_procs, max_procs), indicating the min and max
             processors usable by this `System`
         """
         return (1, 1)
 
+    def _setup_communicators(self, comm):
+        """
+        Assign communicator to this `System` and all of it's subsystems
+        
+        Parameters
+        ----------
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+        """
+        self.comm = get_comm_if_active(comm)

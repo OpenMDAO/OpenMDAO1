@@ -13,6 +13,8 @@ from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
+from openmdao.core.mpiwrap import get_comm_if_active, world_rank
+
 class Group(System):
     """A system that contains other systems"""
 
@@ -123,10 +125,10 @@ class Group(System):
         local: bool
             Set to True to return only systems that are local.
         """
-        #TODO: once we add MPI stuff, maintain local subsystems
-        #if local is True:
-            #return self._local_subsystems.items()
-        return self._subsystems.items()
+        if local:
+            return self._local_subsystems.items()
+        else:
+            return self._subsystems.items()
 
     def subgroups(self, local=False):
         """
@@ -204,17 +206,25 @@ class Group(System):
             return name
 
     def _setup_communicators(self, comm):
+        """
+        Assign communicator to this `Group` and all of it's subsystems
+
+        Parameters
+        ----------
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+        """
         self._local_subsystems = OrderedDict()
 
-        self.mpi.comm = get_comm_if_active(self, comm)
+        self.comm = get_comm_if_active(self, comm)
 
         if not self.is_active():
             return
 
         for name, sub in self.subsystems():
-            sub.setup_communicators(comm)
+            sub._setup_communicators(comm)
             if sub.is_active():
-                self._local_subsystems.append(sub)
+                self._local_subsystems[name] = sub
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
@@ -260,7 +270,6 @@ class Group(System):
         for name, sub in self.components():
             self._views[name] = create_views(self._varmanager, self.comm, sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], {})
-
 
     def _get_explicit_connections(self):
         """ Returns
@@ -519,7 +528,7 @@ class Group(System):
 
         file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                      (klass,
-                      1, #self.get_req_cpus(),
+                      1, #self.get_req_procs(),
                       0, #world_rank,
                       uvec.vec.size,
                       pvec.vec.size))
@@ -566,8 +575,8 @@ class Group(System):
                 file.write(name)
                 file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                            (sub.__class__.__name__,
-                            1, #sub.get_req_cpus(),
-                            0, #world_rank,
+                            sub.get_req_procs(),
+                            world_rank(),
                             uvec.vec.size,
                             pvec.vec.size))
                 for v, meta in uvec.items():
@@ -578,6 +587,27 @@ class Group(System):
             else:
                 sub.dump(nest, file)
 
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the min and max
+            processors usable by this `Group`
+        """
+        min_procs = 1
+        max_procs = 1
+
+        for name, sub in self.subsystems():
+            sub_min, sub_max = sub.get_req_procs()
+            min_procs = max(min_procs, sub_min)
+            if max_procs is not None:
+                if sub_max is None:
+                    max_procs = None
+                else:
+                    max_procs = max(max_procs, sub_max)
+
+        return (min_procs, max_procs)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and

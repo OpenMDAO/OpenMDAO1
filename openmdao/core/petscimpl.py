@@ -60,6 +60,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
 
+    def __init__(self, comm=comm):
+        super(PetscSrcVecWrapper, self).__init__()
+        self.comm = comm
+        
     def setup(self, unknowns_dict):
         """
         Create internal data storage for variables in unknowns_dict.
@@ -84,18 +88,20 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
 
-        self.local_var_sizes = numpy.zeros((size, len(sizes)), int)
+        # create 2D array of variable sizes per process
+        self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
 
         # create a vec indicating whether a nonflat variable is active
         # in this rank or not
-        self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
+        #self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
 
-        ours = numpy.zeros((1, len(self.vector_vars)), int)
-        for i, (name, var) in enumerate(self.vector_vars.items()):
-            ours[0, i] = var['size']
+        # create our row in the local_unknown_sizes table
+        ours = numpy.zeros((1, len(sizes)), int)
+        for i, (name, meta) in enumerate(self.get_vecvars()):
+            ours[0, i] = meta['size']
 
-        our_noflats = numpy.zeros((1, len(self.noflat_vars)), int)
-        for i, name in enumerate(self.noflat_vars.keys()):
+        our_noflats = numpy.zeros((1, len(self.get_noflats())), int)
+        for i, (name, meta) in enumerate(self.get_noflats()):
             our_noflats[0, i] = int(self.is_variable_local(name[0]))
 
         # collect local var sizes from all of the processes in our comm
@@ -103,10 +109,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        comm.Allgather(ours[0,:], self.local_var_sizes)
+        comm.Allgather(ours[0,:], self.local_unknown_sizes)
         comm.Allgather(our_noflats[0,:], self.noflat_isactive)
 
-        self.local_var_sizes[rank, :] = ours[0, :]
+        self.local_unknown_sizes[rank, :] = ours[0, :]
 
         return numpy.array([sizes])
 
@@ -144,6 +150,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
+    def __init__(self, comm=comm):
+        super(PetscTgtVecWrapper, self).__init__()
+        self.comm = comm
+        
     def _get_flattened_sizes(self):
         """
         Create a 1x1 numpy array to hold the sum of the sizes of local

@@ -382,7 +382,7 @@ class VecWrapper(object):
         -------
             A list of names of 'flattenable' variables.
         """
-        return [n for n,meta in self.items() if not meta.get('noflat')]
+        return [(n,meta) for n,meta in self.items() if not meta.get('noflat')]
 
     def get_noflats(self):
         """
@@ -391,7 +391,7 @@ class VecWrapper(object):
         list
             A list of names of 'unflattenable' variables.
         """
-        return [n for n,meta in self.items() if meta.get('noflat')]
+        return [(n,meta) for n,meta  in self.items() if meta.get('noflat')]
 
 
 class SrcVecWrapper(VecWrapper):

@@ -62,6 +62,7 @@ class FakeComm(object):
         self.rank = 0
         self.size = 1
 
+
 def get_comm_if_active(system, comm=None):
     """
     Return an MPI communicator or a fake communicator if not running under MPI.
@@ -81,21 +82,20 @@ def get_comm_if_active(system, comm=None):
     MPI communicator or a fake MPI commmunicator
     """
     if MPI:
-        if comm is None or comm == MPI.COMM_NULL:
-            return comm
-
-        req, max_req = system.get_req_cpus()
+        req, max_req = system.get_req_procs()
         if max_req is None or max_req >= comm.size:
             return comm
-
-        if comm.rank+1 > max_req:
-            color = MPI.UNDEFINED
         else:
-            color = 1
-
-        return comm.Split(color)
+            return MPI.COMM_NULL
     else:
         return FakeComm()
+
+
+def world_rank():
+    if MPI:
+        return MPI.COMM_WORLD.rank
+    else:
+        return 0
 
 
 def evenly_distrib_idxs(num_divisions, arr_size):
@@ -118,7 +118,6 @@ def evenly_distrib_idxs(num_divisions, arr_size):
     offsets[1:] = numpy.cumsum(sizes)[:-1]
 
     return sizes, offsets
-
 
 @contextmanager
 def MPIContext():
