@@ -7,12 +7,14 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, SimpleCompDerivJac
+from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, \
+                                      SimpleCompDerivJac
+from openmdao.test.testutil import assert_rel_error
 
 
 class TestScipyGMRES(unittest.TestCase):
 
-    def _test_simple_matvec(self):
+    def test_simple_matvec(self):
         group = Group()
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
         group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
@@ -24,10 +26,10 @@ class TestScipyGMRES(unittest.TestCase):
         top.run()
 
         J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
         J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
     def test_simple_jac(self):
         group = Group()
@@ -41,10 +43,29 @@ class TestScipyGMRES(unittest.TestCase):
         top.run()
 
         J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
         J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        self.assertAlmostEqual(J['y']['x'][0][0], 2.0, places=4)
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_fan_out(self):
+
+        top = Problem()
+        top.root = FanOut()
+        top.root.lin_solver = ScipyGMRES()
+        top.setup()
+        top.run()
+
+        param_list = ['p:x']
+        unknown_list = ['comp2:y', "comp3:y"]
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp2:y']['p:x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3:y']['p:x'][0][0], 15.0, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp2:y']['p:x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3:y']['p:x'][0][0], 15.0, 1e-6)
 
 
 if __name__ == "__main__":
