@@ -7,6 +7,7 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, \
                                       SimpleCompDerivJac
 from openmdao.test.testutil import assert_rel_error
@@ -66,6 +67,23 @@ class TestScipyGMRES(unittest.TestCase):
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp2:y']['p:x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3:y']['p:x'][0][0], 15.0, 1e-6)
+
+    def test_converge_diverge(self):
+
+        top = Problem()
+        top.root = ConvergeDiverge()
+        top.root.lin_solver = ScipyGMRES()
+        top.setup()
+        top.run()
+
+        param_list = ['p:x']
+        unknown_list = ['comp7:y1']
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
 
 if __name__ == "__main__":
