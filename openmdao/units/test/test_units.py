@@ -125,15 +125,15 @@ class test__PhysicalQuantity(unittest.TestCase):
         self.assertEqual(repr(PhysicalQuantity('1 d')),
                          "PhysicalQuantity(1.0,'d')")
 
-    def test_cmp(self):
+    def test_lt(self):
         x = PhysicalQuantity('1 d')
         y = PhysicalQuantity('2 d')
-        self.assertEqual(cmp(x, y), -1)
-        self.assertEqual(cmp(y, x), 1)
-        self.assertEqual(cmp(x, x), 0)
+        self.assertTrue(x < y)
+        self.assertTrue(y > x)
+        self.assertEqual(x, x)
 
         try:
-            cmp(x, 2)
+            x < 2
         except TypeError as err:
             self.assertEqual("Incompatible types", str(err))
         else:
@@ -317,7 +317,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         y = PhysicalQuantity('10.5m')
         self.assertEqual((x*y).value, 73.5)
         self.assertEqual((x*y).unit, x.unit*y.unit)
-        self.assertEqual(str(x*y), '73.5 m*kg')
+        self.assertEqual(str(x*y), '73.5 kg*m')
 
         #test for error from offset units
         z = PhysicalQuantity('1degC')
@@ -572,12 +572,12 @@ class test__PhysicalUnit(unittest.TestCase):
         y = PhysicalQuantity('1 s')
         z = PhysicalQuantity('1 ft')
 
-        self.assertEqual(cmp(x, y), 1)
-        self.assertEqual(cmp(x, x), 0)
-        self.assertEqual(cmp(y, x), -1)
+        self.assertTrue(x > y)
+        self.assertEqual(x, x)
+        self.assertTrue(y < x)
 
         try:
-            cmp(x, z)
+            x < z
         except TypeError as err:
             self.assertEqual(str(err),"Incompatible units")
         else:
