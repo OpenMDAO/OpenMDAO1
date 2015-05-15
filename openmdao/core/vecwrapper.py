@@ -203,7 +203,7 @@ class VecWrapper(object):
         """
         return self._vardict[name]
 
-    def get_idxs(self, name):
+    def get_local_idxs(self, name):
         """Returns all of the indices for the named variable in this vector
 
         Parameters
@@ -214,7 +214,7 @@ class VecWrapper(object):
         Returns
         -------
         ndarray
-            Index array containing all indices (possibly distributed) for the named variable.
+            Index array containing all local indices for the named variable.
         """
         # TODO: add support for returning slice objects
 
@@ -224,6 +224,10 @@ class VecWrapper(object):
 
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
+
+    # for distributed vecwrappers, get_global_idxs will return the indices w.r.t. the
+    # full distributed vector. For this class, both methods return the local indices.
+    get_global_idxs = get_local_idxs
 
     def norm(self):
         """

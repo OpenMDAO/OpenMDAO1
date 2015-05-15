@@ -90,8 +90,8 @@ class VarManagerBase(object):
                     noflat_conns.append((prelname, urelname))
                 else:
                     flat_conns.append((prelname, urelname))
-                    src_idx_list.append(self.unknowns.get_idxs(urelname))
-                    dest_idx_list.append(self.params.get_idxs(prelname))
+                    src_idx_list.append(self.unknowns.get_global_idxs(urelname))
+                    dest_idx_list.append(self.params.get_global_idxs(prelname))
 
         for tgt_sys, (srcs, tgts, flat_conns, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)

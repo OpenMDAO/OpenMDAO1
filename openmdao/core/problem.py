@@ -209,7 +209,7 @@ class Problem(Component):
         j = 0
         for param in input_list:
 
-            in_idx = unknowns.get_idxs(param)
+            in_idx = unknowns.get_local_idxs(param)
             jbase = j
 
             for irhs in in_idx:
@@ -224,7 +224,7 @@ class Problem(Component):
                 i = 0
                 for item in output_list:
 
-                    out_idx = unknowns.get_idxs(item)
+                    out_idx = unknowns.get_local_idxs(item)
                     nk = len(out_idx)
 
                     if return_format == 'dict':

@@ -9,7 +9,8 @@ class PetscImpl(object):
 
     @staticmethod
     def create_src_vecwrapper(comm):
-        """Create a`PetscSrcVecWrapper`
+        """
+        Create a`PetscSrcVecWrapper`
 
         Returns
         -------
@@ -19,7 +20,8 @@ class PetscImpl(object):
 
     @staticmethod
     def create_tgt_vecwrapper(comm):
-        """Create a `PetscTgtVecWrapper`
+        """
+        Create a `PetscTgtVecWrapper`
 
         Returns
         -------
@@ -29,7 +31,8 @@ class PetscImpl(object):
 
     @staticmethod
     def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
-        """Create an object for performing data transfer between source
+        """
+        Create an object for performing data transfer between source
         and target vectors
 
         Parameters
@@ -50,10 +53,10 @@ class PetscImpl(object):
 
         Returns
         -------
-        `DataXfer`
-            a `DataXfer` object
+        `PetscDataXfer`
+            a `PetscDataXfer` object
         """
-        return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
+        return PetscDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
@@ -63,7 +66,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     def __init__(self, comm=comm):
         super(PetscSrcVecWrapper, self).__init__()
         self.comm = comm
-        
+
     def setup(self, unknowns_dict):
         """
         Create internal data storage for variables in unknowns_dict.
@@ -116,8 +119,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         return numpy.array([sizes])
 
-    def get_idxs(self, name):
-        """Returns all of the indices for the named variable in this vector
+    def get_global_idxs(self, name):
+        """
+        Get all of the indices for the named variable into the full distributed
+        vector.
 
         Parameters
         ----------
@@ -127,7 +132,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         ndarray
-            Index array containing all indices (possibly distributed) for the named variable.
+            Index array containing all distributed indices for the named variable.
         """
         meta = self._vardict[name][0]
         if meta.get('noflat'):
@@ -153,7 +158,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     def __init__(self, comm=comm):
         super(PetscTgtVecWrapper, self).__init__()
         self.comm = comm
-        
+
     def _get_flattened_sizes(self):
         """
         Create a 1x1 numpy array to hold the sum of the sizes of local
