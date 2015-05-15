@@ -18,6 +18,7 @@ Justin Gray."""
 
 import re
 import os.path
+from collections import OrderedDict
 from six import iteritems
 from six.moves.configparser import RawConfigParser as ConfigParser
 
@@ -27,7 +28,7 @@ from math import sin, cos, tan, floor, pi
 
 #Class definitions
 
-class NumberDict(dict):
+class NumberDict(OrderedDict):
     """
     Dictionary storing numerical values.
 
@@ -91,6 +92,9 @@ class NumberDict(dict):
 
     __truediv__ = __div__  # for python 3
 
+    def __repr__(self):
+        return repr(dict(self))
+
 class PhysicalQuantity(object):
     """ Physical quantity with units
 
@@ -132,8 +136,6 @@ class PhysicalQuantity(object):
             self.value = float(match.group(0))
             self.unit = _find_unit(s[len(match.group(0)):].strip())
 
-
-
     def __str__(self):
         return str(self.value) + ' ' + self.unit.name()
 
@@ -141,6 +143,11 @@ class PhysicalQuantity(object):
         return (self.__class__.__name__ + '(' + repr(self.value) + ',' +
                 repr(self.unit.name()) + ')')
 
+    def __eq__(self, other):
+        try:
+            return self.value == other.value*other.unit.conversion_factor_to(self.unit)
+        except TypeError:
+            return False
 
     def _sum(self, other, sign1, sign2):
         """sums units"""
@@ -161,9 +168,9 @@ class PhysicalQuantity(object):
     def __rsub__(self, other):
         return self._sum(other, -1, 1)
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         diff = self._sum(other, 1, -1)
-        return cmp(diff.value, 0)
+        return diff.value < 0
 
     def __mul__(self, other):
         if not isinstance(other, PhysicalQuantity):
@@ -430,6 +437,11 @@ class PhysicalUnit(object):
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
         return cmp(self.factor, other.factor)
+
+    def __eq__(self, other):
+        return self.factor == other.factor and \
+               self.offset == other.offset and \
+               self.powers == other.powers
 
     def __mul__(self, other):
         if self.offset != 0 or (isinstance(other, PhysicalUnit) and \
