@@ -288,7 +288,7 @@ class Group(System):
                 connections[tgt_pathname] = src_pathname
 
         return connections
-
+        
     def solve_nonlinear(self, params, unknowns, resids):
         """Solves the group using the slotted nl_solver.
 
