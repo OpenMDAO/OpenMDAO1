@@ -12,7 +12,7 @@ if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
 else:
     from openmdao.core.basicimpl import BasicImpl as impl
-    
+
 
 from openmdao.components.paramcomp import ParamComp
 
@@ -30,26 +30,26 @@ class ABCDArrayComp(Component):
         self.add_output('d', np.ones(arr_size, float))
         self.add_output('out_string', '')
         self.add_output('out_list', [])
-        
+
         self.delay = 0.01
 
     def solve_nonlinear(self, params, unknowns, resids):
         time.sleep(self.delay)
-        
+
         unknowns['c'] = params['a'] + params['b']
         unknowns['d'] = params['a'] - params['b']
-        
+
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
 
 
 class MPITests1(TestCase):
 
-    N_PROCS = 2
-    
+    N_PROCS = 1
+
     def test_simple(self):
         prob = Problem(Group(), impl=impl)
-       
+
         size = 5
         A1 = prob.root.add('A1', ParamComp('a', np.zeros(size, float)))
         B1 = prob.root.add('B1', ParamComp('b', np.zeros(size, float)))
@@ -77,10 +77,14 @@ class MPITests1(TestCase):
         prob['B2:b'] = np.ones(size, float) * 5.0
 
         prob.run()
-    
+
         #if self.comm.rank == 0:
         self.assertTrue(all(prob['C2:a', 'params']==np.ones(size, float)*10.))
         self.assertTrue(all(prob['C2:b', 'params']==np.ones(size, float)*5.))
         self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))
         self.assertTrue(all(prob['C2:d']==np.ones(size, float)*5.))
 
+
+if __name__ == '__main__':
+    from openmdao.test.mpiunittest import mpirun_tests
+    mpirun_tests()

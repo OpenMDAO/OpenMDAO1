@@ -121,10 +121,10 @@ class System(object):
     def _setup_communicators(self, comm):
         """
         Assign communicator to this `System` and all of it's subsystems
-        
+
         Parameters
         ----------
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self.comm = get_comm_if_active(comm)
+        self.comm = get_comm_if_active(self, comm)

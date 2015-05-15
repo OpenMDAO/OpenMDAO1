@@ -1,3 +1,6 @@
+
+from six.moves import zip
+
 class ConnectError(Exception):
     @classmethod
     def type_mismatch_error(cls, src, target):

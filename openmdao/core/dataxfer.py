@@ -1,29 +1,33 @@
 
+from six.moves import zip
+
 import numpy as np
 
 #from openmdao.util.arrayutil import to_slice
 
 class DataXfer(object):
-    """An object that performs data transfer between a source vector and a
+    """
+    An object that performs data transfer between a source vector and a
     target vector.
-
-    Parameters
-    ----------
-    src_idxs : array
-        indices of the source variables in the source vector
-
-    tgt_idxs : array
-        indices of the target variables in the target vector
-
-    flat_conns : dict
-        mapping of flattenable variables to the source variables that
-        they are connected to
-
-    noflat_conns : dict
-        mapping of non-flattenable variables to the source variables that
-        they are connected to
     """
     def __init__(self, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+        """
+        Parameters
+        ----------
+        src_idxs : array
+            indices of the source variables in the source vector
+
+        tgt_idxs : array
+            indices of the target variables in the target vector
+
+        flat_conns : dict
+            mapping of flattenable variables to the source variables that
+            they are connected to
+
+        noflat_conns : dict
+            mapping of non-flattenable variables to the source variables that
+            they are connected to
+        """
 
         # We don't want any duplicate (src,tgt) pairs.
         #TODO - Probably need to do this for the scatters too, so it might
@@ -42,7 +46,8 @@ class DataXfer(object):
         self.noflat_conns = noflat_conns
 
     def transfer(self, srcvec, tgtvec, mode='fwd'):
-        """Performs data transfer between a source vector and a target vector.
+        """
+        Performs data transfer between a source vector and a target vector.
 
         Parameters
         ----------

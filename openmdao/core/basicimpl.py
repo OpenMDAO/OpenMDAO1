@@ -37,13 +37,17 @@ class BasicImpl(object):
         return TgtVecWrapper()
 
     @staticmethod
-    def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def create_data_xfer(comm, src_idxs, tgt_idxs, flat_conns, noflat_conns,
+                         unknowns, params):
         """
         Create an object for performing data transfer between source
         and target vectors
 
         Parameters
         ----------
+        comm : a fake mpi communicator
+            communicator used for transfer of data
+
         src_idxs : array
             indices of the source variables in the source vector
 
@@ -58,9 +62,19 @@ class BasicImpl(object):
             mapping of non-flattenable variables to the source variables that
             they are connected to
 
+        unknowns : `VecWrapper`
+            `VecWrapper` containing unknown variables
+
+        params : `VecWrapper`
+            `VecWrapper` containing parameters
+
         Returns
         -------
         `DataXfer`
             a `DataXfer` object
         """
         return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
+
+    @staticmethod
+    def create_app_ordering(comm, unknowns_vec, local_unknown_sizes):
+        pass

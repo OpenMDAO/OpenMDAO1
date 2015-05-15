@@ -399,7 +399,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, comm=None, store_noflats=False):
+    def setup(self, unknowns_dict, store_noflats=False):
         """Configure this vector to store a flattened array of the variables
         in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -412,6 +412,7 @@ class SrcVecWrapper(VecWrapper):
         store_noflats : bool (optional)
             if True, then store non-flattenable (non-differentiable) variables
             by default only flattenable variables will be stired
+
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
@@ -512,7 +513,7 @@ class SrcVecWrapper(VecWrapper):
             1x<num_flattenable_vars> array of sizes.
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
-        return numpy.array([sizes])
+        return numpy.array([sizes], int)
 
 
 class TgtVecWrapper(VecWrapper):
@@ -678,7 +679,7 @@ class TgtVecWrapper(VecWrapper):
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('noflat')])
-        return numpy.array([[psize]])
+        return numpy.array([psize], int)
 
 
 def idx_merge(idxs):

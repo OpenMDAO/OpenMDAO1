@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 from collections import OrderedDict
+from six import iteritems
 
 import numpy as np
 
@@ -14,6 +15,7 @@ from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.util.types import real_types
 
 from openmdao.core.mpiwrap import get_comm_if_active, world_rank
 
@@ -385,8 +387,8 @@ class Group(System):
             # The user might submit a scalar Jacobian as a float.
             # It is really inconvenient
             if jacobian_cache is not None:
-                for key, J in jacobian_cache.items():
-                    if isinstance(J, float):
+                for key, J in iteritems(jacobian_cache):
+                    if isinstance(J, real_types):
                         jacobian_cache[key] = np.array([[J]])
 
 
