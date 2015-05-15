@@ -46,7 +46,8 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self):
+    def __init__(self, comm=None):
+        self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
         self._slices = OrderedDict()
@@ -240,12 +241,15 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, varmap):
+    def get_view(self, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one
 
         Parameters
         ----------
+        comm : an MPI communicator (real or fake)
+            a communicator that is used in the creation of the view
+
         varmap : dict
             mapping of variable names in the old `VecWrapper` to the names
             they will have in the new `VecWrapper`
@@ -255,7 +259,7 @@ class VecWrapper(object):
         `VecWrapper`
             a new `VecWrapper` that is a view into this one
         """
-        view = self.__class__()
+        view = self.__class__(comm)
         view_size = 0
 
         start = -1
@@ -518,7 +522,7 @@ class SrcVecWrapper(VecWrapper):
 
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-                            connections, store_noflats=False):
+              connections, store_noflats=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.

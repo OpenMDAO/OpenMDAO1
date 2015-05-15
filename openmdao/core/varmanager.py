@@ -48,35 +48,25 @@ class VarManagerBase(object):
             raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
 
-    def _setup_data_transfer(self, comm, sys_pathname, my_params, unknowns_vec, params_vec):
+    def _setup_data_transfer(self, sys_pathname, my_params):
         """Create `DataXfer` objects to handle data transfer for all of the
            connections that involve paramaters for which this `VarManager`
            is responsible.
 
            Parameters
            ----------
-           comm : an MPI communicator (real or fake)
-               communicator passed down to `VecWrapper`s and `DataXfer`s
-
            sys_pathname : str
                Absolute pathname of the `System` that will own this `VarManager`.
 
            my_params : list
                list of pathnames for parameters that the VarManager is
                responsible for propagating
-
-           unknowns_vec : `VecWrapper`
-              `VecWrapper` containing unknown variables
-
-           params_vec : `VecWrapper`
-              `VecWrapper` containing parameters
         """
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
 
-        self.app_ordering = self.impl_factory.create_app_ordering(comm, unknowns_vec,
-                                                                  self._local_unknown_sizes)
+        self.app_ordering = self.impl_factory.create_app_ordering(self)
 
         xfer_dict = {}
         for param, unknown in self.connections.items():
@@ -102,13 +92,11 @@ class VarManagerBase(object):
 
         for tgt_sys, (srcs, tgts, flat_conns, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(comm, src_idxs, tgt_idxs,
-                                                                        flat_conns, noflat_conns,
-                                                                        unknowns_vec, params_vec)
+            self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                                         flat_conns, noflat_conns)
 
         # create a jacobi DataXfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and noflat_conns
-        # TODO: this is only needed for jacobi, so only create if we're using jacobi
         full_srcs = []
         full_tgts = []
         full_flats = []
@@ -121,9 +109,8 @@ class VarManagerBase(object):
             full_noflats.extend(noflats)
 
         src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-        self.data_xfer[''] = self.impl_factory.create_data_xfer(comm, src_idxs, tgt_idxs,
-                                                               full_flats, full_noflats,
-                                                               unknowns_vec, params_vec)
+        self.data_xfer[''] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                                full_flats, full_noflats)
 
     def _transfer_data(self, target_system='', mode='fwd', deriv=False):
         """Transfer data to/from target_system depending on mode.
@@ -190,6 +177,7 @@ class VarManager(VarManagerBase):
         super(VarManager, self).__init__(connections)
 
         self.impl_factory = impl
+        self.comm = comm
 
         # create implementation specific VecWrappers
         self.unknowns  = self.impl_factory.create_src_vecwrapper(comm)
@@ -210,7 +198,7 @@ class VarManager(VarManagerBase):
         self.dparams.setup(None, params_dict, self.unknowns,
                                                my_params, connections)
 
-        self._setup_data_transfer(comm, sys_pathname, my_params, self.unknowns, self.params)
+        self._setup_data_transfer(sys_pathname, my_params)
 
 
 class ViewVarManager(VarManagerBase):
@@ -245,7 +233,7 @@ class ViewVarManager(VarManagerBase):
             create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
                          my_params, connections)
 
-        self._setup_data_transfer(comm, sys_pathname, my_params, self.unknowns, self.params)
+        self._setup_data_transfer(sys_pathname, my_params)
 
 
 def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
@@ -289,10 +277,10 @@ def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
     # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
 
-    unknowns  = parent_vm.unknowns.get_view(umap)
-    dunknowns = parent_vm.dunknowns.get_view(umap)
-    resids    = parent_vm.resids.get_view(umap)
-    dresids   = parent_vm.dresids.get_view(umap)
+    unknowns  = parent_vm.unknowns.get_view(comm, umap)
+    dunknowns = parent_vm.dunknowns.get_view(comm, umap)
+    resids    = parent_vm.resids.get_view(comm, umap)
+    dresids   = parent_vm.dresids.get_view(comm, umap)
 
     params  = parent_vm.impl_factory.create_tgt_vecwrapper(comm)
     dparams = parent_vm.impl_factory.create_tgt_vecwrapper(comm)

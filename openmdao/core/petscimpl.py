@@ -33,16 +33,15 @@ class PetscImpl(object):
         return PetscTgtVecWrapper(comm)
 
     @staticmethod
-    def create_data_xfer(comm, src_idxs, tgt_idxs, flat_conns, noflat_conns,
-                         unknowns, params):
+    def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         """
         Create an object for performing data transfer between source
         and target vectors
 
         Parameters
         ----------
-        comm : an mpi communicator
-            communicator used for transfer of data
+        varmanager : `VarManager`
+            The `VarManager` that managers this data transfer
 
         src_idxs : array
             indices of the source variables in the source vector
@@ -58,22 +57,19 @@ class PetscImpl(object):
             mapping of non-flattenable variables to the source variables that
             they are connected to
 
-        unknowns : `VecWrapper`
-            `VecWrapper` containing unknown variables
-
-        params : `VecWrapper`
-            `VecWrapper` containing parameters
-
         Returns
         -------
         `PetscDataXfer`
             a `PetscDataXfer` object
         """
-        return PetscDataXfer(comm, src_idxs, tgt_idxs, flat_conns, noflat_conns)
+        return PetscDataXfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns)
 
     @staticmethod
-    def create_app_ordering(comm, unknowns_vec, local_unknown_sizes):
+    def create_app_ordering(varmanager):
         """Creates a PETSc application ordering."""
+        comm = varmanager.comm
+        local_unknown_sizes = varmanager._local_unknown_sizes
+        unknowns_vec = varmanager.unknowns
         rank = comm.rank
 
         start = numpy.sum(local_unknown_sizes[:rank])
@@ -98,10 +94,6 @@ class PetscImpl(object):
 class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
-
-    def __init__(self, comm):
-        super(PetscSrcVecWrapper, self).__init__()
-        self.comm = comm
 
     def setup(self, unknowns_dict, store_noflats=False):
         """
@@ -196,9 +188,38 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
-    def __init__(self, comm):
-        super(PetscTgtVecWrapper, self).__init__()
-        self.comm = comm
+    def setup(self, parent_params_vec, params_dict, srcvec, my_params,
+              connections, store_noflats=False):
+        """
+        Configure this vector to store a flattened array of the variables
+        in params_dict. Variable shape and value are retrieved from srcvec.
+
+        Parameters
+        ----------
+        parent_params_vec : `VecWrapper` or None
+            `VecWrapper` of parameters from the parent `System`
+
+        params_dict : `OrderedDict`
+            Dictionary of parameter absolute name mapped to metadata dict
+
+        srcvec : `VecWrapper`
+            Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
+
+        my_params : list of str
+            A list of absolute names of parameters that the `VecWrapper` we're building
+            will 'own'.
+
+        connections : dict of str : str
+            A dict of absolute target names mapped to the absolute name of their
+            source variable.
+
+        store_noflats : bool (optional)
+            If True, store unflattenable variables in the `VecWrapper` we're building.
+        """
+        super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
+                                              srcvec, my_params,
+                                              connections, store_noflats)
+        self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
         """
@@ -217,12 +238,12 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
 
 class PetscDataXfer(DataXfer):
-    def __init__(self, comm, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def __init__(self, varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         """
         Parameters
         ----------
-        comm : an MPI communicator
-            communicator used for data transfer
+        varmanager : `VarManager`
+            The `VarManager` that managers this data transfer
 
         src_idxs : array
             indices of the source variables in the source vector
@@ -241,20 +262,23 @@ class PetscDataXfer(DataXfer):
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
                                             flat_conns, noflat_conns)
 
-        self.comm = comm
+        self.comm = comm = varmanager.comm
+        uvec = varmanager.unknowns.petsc_vec
+        pvec = varmanager.params.petsc_vec
+
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
-        src_idx_set = self.app_ordering.app2petsc(src_idx_set)
+        src_idx_set = varmanager.app_ordering.app2petsc(src_idx_set)
 
         try:
-            self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
-                                                  system.vec['p'].petsc_vec, input_idx_set)
+            self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
+                                                  pvec, tgt_idx_set)
         except Exception as err:
-            raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" %
-                               (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
-                                system.vec['p'].array.size, str(err)))
-
+            raise RuntimeError("ERROR in %s (src_idxs=%s, tgt_idxs=%s, usize=%d, psize=%d): %s" %
+                               (system.name, src_idxs, tgt_idxs,
+                                varmanager.unknowns.vec.size,
+                                varmanager.params.vec.size, str(err)))
 
     def transfer(self, srcvec, tgtvec, mode='fwd'):
         """Performs data transfer between a distributed source vector and

@@ -7,6 +7,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.mpiwrap import MPI, MPIContext
+from openmdao.test.mpiunittest import MPITestCase
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
@@ -43,9 +44,9 @@ class ABCDArrayComp(Component):
         unknowns['out_list']   = params['in_list'] + [1.5]
 
 
-class MPITests1(TestCase):
+class MPITests1(MPITestCase):
 
-    N_PROCS = 1
+    N_PROCS = 2
 
     def test_simple(self):
         prob = Problem(Group(), impl=impl)
@@ -78,11 +79,11 @@ class MPITests1(TestCase):
 
         prob.run()
 
-        #if self.comm.rank == 0:
-        self.assertTrue(all(prob['C2:a', 'params']==np.ones(size, float)*10.))
-        self.assertTrue(all(prob['C2:b', 'params']==np.ones(size, float)*5.))
-        self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))
-        self.assertTrue(all(prob['C2:d']==np.ones(size, float)*5.))
+        if not MPI or self.comm.rank == 0:
+            self.assertTrue(all(prob['C2:a', 'params']==np.ones(size, float)*10.))
+            self.assertTrue(all(prob['C2:b', 'params']==np.ones(size, float)*5.))
+            self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))
+            self.assertTrue(all(prob['C2:d']==np.ones(size, float)*5.))
 
 
 if __name__ == '__main__':

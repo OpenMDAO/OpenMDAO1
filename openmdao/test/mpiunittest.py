@@ -10,7 +10,8 @@ import sys
 import time
 import traceback
 import subprocess
-from cStringIO import StringIO
+from six.moves import cStringIO as StringIO
+import unittest
 from unittest import TestCase, SkipTest
 from os.path import join, dirname, abspath
 from inspect import getmembers, ismethod, isclass, getargspec
@@ -21,7 +22,11 @@ from openmdao.core.mpiwrap import under_mpirun
 try:
     from mpi4py import MPI
 except ImportError:
-    pass
+    class MPITestCase(TestCase):
+        pass
+
+    mpirun_tests = unittest.main
+
 else:
 
     class MPITestCase(TestCase):
