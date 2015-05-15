@@ -28,16 +28,9 @@ class DataXfer(object):
         # We don't want any duplicate (src,tgt) pairs.
         #TODO - Probably need to do this for the scatters too, so it might
         #need to be at a higher level
-        new_src = []
-        new_tgt = []
-        seen_pairs = []
-        for src, tgt in zip(src_idxs, tgt_idxs):
-            if (src, tgt) not in seen_pairs:
-                new_src.append(src)
-                new_tgt.append(tgt)
-                seen_pairs.append((src, tgt))
-        src_idxs = new_src
-        tgt_idxs = new_tgt
+        pairs = set(zip(src_idxs, tgt_idxs))
+        src_idxs = [src for src, tgt in pairs]
+        tgt_idxs = [tgt for src, tgt in pairs]
 
         # TODO: change to_slice to to_slices. (should never return an index array)
         #self.src_idxs = to_slice(src_idxs)
