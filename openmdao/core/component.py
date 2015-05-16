@@ -196,7 +196,7 @@ class Component(System):
                     else:
                         jac[u_name, p_name][:,idx] = fd_deriv
 
-        # compute dRdU (resids)
+        # compute dRdU (resids) and dRdP
         for s_name in states:
             #make a work vector to take steps in
             s_size = np.size(unknowns[s_name])
