@@ -73,6 +73,16 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
 
     """
 
+    computed_up_set = set(computed_jac.keys())
+    expected_up_set = set(expected_jac.keys())
+
+    for up_pair in expected_jac:
+        try:
+            computed_jac[up_pair]
+        except KeyError:
+            test_case.fail('deriv "%s" in second jacobian, but not in first' % str(up_pair))
+
+
     for up_pair, computed in iteritems(computed_jac):
         try:
             expected = expected_jac[up_pair]

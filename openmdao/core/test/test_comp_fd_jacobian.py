@@ -82,6 +82,9 @@ class SysFDTestCase(unittest.TestCase):
         expected_jac[('z', 'z')] = params['x'] + 1
         expected_jac[('z', 'x')] = unknowns['z']
 
+        print(jac)
+        print
+        print(expected_jac)
         assert_equal_jacobian(self, jac, expected_jac, 1e-8)
 
 if __name__ == "__main__":
