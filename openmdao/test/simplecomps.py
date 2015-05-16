@@ -68,9 +68,9 @@ class SimpleArrayComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
 
-        params['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][1]
-        params['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
-        #print "ran", params['x'], params['y']
+        unknowns['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][1]
+        unknowns['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
+        # print(self.name, "ran", params['x'], unknowns['y'])
 
     def jacobian(self, params, unknowns):
         """Analytical derivatives"""
@@ -257,4 +257,3 @@ class FanOut(Group):
         self.connect("comp1:y", "comp2:x")
         self.connect("comp1:y", "comp3:x")
         self.connect("p:x", "comp1:x")
-

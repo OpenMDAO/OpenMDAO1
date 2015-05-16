@@ -1,6 +1,7 @@
 from __future__ import print_function
 import sys
 import numpy as np
+import copy
 from six import iteritems
 
 from openmdao.core.system import System
@@ -25,6 +26,28 @@ def _find_all_components(group):
             comps.extend(sub_comps)
 
     return comps
+
+def pull_unknowns(prob):
+    """grabs all the keys and values from an unknowns vector and returns a copy of it"""
+    root = prob.root
+    u_vars = root._unknowns_dict
+
+    u_vals = {}
+    for var_name, meta in iteritems(u_vars):
+        rel_var_name = meta['relative_name']
+        u_vals[rel_var_name] = copy.deepcopy(prob[rel_var_name])
+
+    return u_vals
+
+def push_unknowns(prob, u_vals):
+    """pushes saved u vector values back into the problem"""
+    root = prob.root
+    u_vars = root._unknowns_dict
+
+    for var_name, meta in iteritems(u_vars):
+        rel_var_name = meta['relative_name']
+        prob[rel_var_name] = u_vals[rel_var_name]
+    pass
 
 def check_partial_derivs(prob, mode="fwd", out_stream=sys.stdout):
     """Recurses down the system tree to find all components, then checks
@@ -55,6 +78,11 @@ def check_partial_derivs(prob, mode="fwd", out_stream=sys.stdout):
         group_unknowns = root._unknowns_dict
 
         conns = root._varmanager.connections
+        prob.run()
+
+        base_u_vals = pull_unknowns(prob)
+        # push_unknowns(prob, base_u_vals)
+
 
         for pathname, comp in comps:
             if isinstance(comp, ParamComp):
@@ -63,13 +91,20 @@ def check_partial_derivs(prob, mode="fwd", out_stream=sys.stdout):
             comp_params = comp._params_dict
             comp_unknowns = comp._unknowns_dict
 
+            print(pathname)
             for p_name, meta in iteritems(comp_params):
-                u_name = conns[p_name]
-                x_base = root[u_name].copy()
+                root_u_name = conns[p_name]
+                x_base = root[root_u_name].copy()
                 x_shape = x_base.shape
                 delta_x = x_base * 1.001
-
-
+                prob[root_u_name] = delta_x
+                local_rel_p_name = comp_params[p_name]['relative_name']
+                prob.run()
+                for u_name, meta in iteritems(comp_unknowns):
+                    global_rel_u_name = group_unknowns[u_name]['relative_name']
+                    local_rel_u_name = comp_unknowns[u_name]['relative_name']
+                    print("  ",local_rel_u_name, local_rel_p_name, prob[global_rel_u_name], base_u_vals[global_rel_u_name])
+                push_unknowns(prob, base_u_vals)
         return
 
     else:

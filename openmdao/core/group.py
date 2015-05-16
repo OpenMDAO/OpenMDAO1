@@ -288,7 +288,7 @@ class Group(System):
                 connections[tgt_pathname] = src_pathname
 
         return connections
-        
+
     def solve_nonlinear(self, params, unknowns, resids):
         """Solves the group using the slotted nl_solver.
 
@@ -310,8 +310,7 @@ class Group(System):
 
         varmanager = self._varmanager
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             # Local scatter
             varmanager._transfer_data(name)

@@ -73,23 +73,17 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
 
     """
 
-    for unknown, computed in iteritems(computed_jac):
+    for up_pair, computed in iteritems(computed_jac):
         try:
-            expected = expected_jac[unknown]
+            expected = expected_jac[up_pair]
         except KeyError:
-            test_case.fail('unknown "%s" in first jacobian, but not in second' % unknown)
+            test_case.fail('deriv "%s" in first jacobian, but not in second' % str(up_pair))
 
-        for param, J in iteritems(computed):
-            try:
-                J_expected = expected[param]
-            except KeyError:
-                test_case.fail('param "%s", for unknown "%s", in first jacobian, but not in second' % (param, unknown))
+        rel_err = np.linalg.norm(computed - expected)/np.linalg.norm(expected)
+        abs_err = np.linalg.norm(computed - expected)
 
-            rel_err = np.linalg.norm(J - J_expected)/np.linalg.norm(J_expected)
-            abs_err = np.linalg.norm(J - J_expected)
+        err = min(rel_err, abs_err)
 
-            err = min(rel_err, abs_err)
-
-            if err > tolerance:
-                test_case.fail('error for d_%s/d_%s is %.3e, is larger than'
-                    'tolerance %.3e' % (unknown, param, err, tolerance))
+        if err > tolerance:
+            test_case.fail('error for %s is %.3e, is larger than'
+                'tolerance %.3e' % (str(up_pair), err, tolerance))

@@ -1,9 +1,14 @@
-from six import string_types
+import copy
+from six import string_types, iteritems
 from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
 
+import numpy as np
+
 from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
+from openmdao.core.options import OptionsDictionary
+
 
 class System(object):
     """ Base class for systems in OpenMDAO."""
@@ -21,6 +26,8 @@ class System(object):
 
         self.comm = FakeComm()
 
+        self.fd_options = OptionsDictionary()
+
     def __getitem__(self, name):
         """
         Return the variable or subsystem of the given name from this system.
@@ -37,6 +44,7 @@ class System(object):
             the named `System`
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
+
 
     def promoted(self, name):
         """Determine is the given variable name  is being promoted from this
@@ -121,7 +129,7 @@ class System(object):
     def _setup_communicators(self, comm):
         """
         Assign communicator to this `System` and all of it's subsystems
-        
+
         Parameters
         ----------
         comm : an MPI communicator (real or fake)
