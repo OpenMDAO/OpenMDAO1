@@ -13,28 +13,6 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleArrayComp, SimpleCompDerivJac, SimpleImplicitComp
 from openmdao.test.testutil import assert_equal_jacobian
 
-# class TestProb(Problem):
-#
-#     def __init__(self):
-#         super(TestProb, self).__init__()
-#
-#
-#         self.root = root = Group()
-#         root.add('c1', SimpleArrayComp())
-#         g1 = root.add('g1', Group())
-#         g1.add('c2', SimpleArrayComp(), promotes=['*',])
-#
-#         g2 = root.add('g2', Group())
-#         sg1 = g2.add('sg1', Group())
-#         sg1.add('c3', SimpleCompDerivJac())
-#
-#         root.add('p1', ParamComp('p', 1*np.ones(2)))
-#         root.add('p2', ParamComp('p', 2*np.ones(2)))
-#         root.add('p3', ParamComp('p', 3.0))
-#         root.connect('p1:p','c1:x')
-#         root.connect('p2:p','g1:x')
-#         root.connect('p3:p','g2:sg1:c3:x')
-
 
 class TestProb(Problem):
 
@@ -73,26 +51,22 @@ class SysFDTestCase(unittest.TestCase):
 
         expected_jac = {('y', 'x'): np.array([[ 2.,  7.],[ 5., -3.]])}
 
-        print(jac)
-        print
-        print(expected_jac)
-
         assert_equal_jacobian(self, jac, expected_jac, 1e-8)
 
         #Got lucky that the way this comp was written, it would accept any square
         # matrix. But provided jacobian would be really wrong!
-        # params = {'x': np.ones((2,2))}
-        # unknowns = {'y': np.zeros((2,2))}
-        # resids = {}
-        # jac = self.p['c1']._fd_jacobian(params, unknowns, resids)
-        #
-        # expected_jac = {('y', 'x'): np.array([[ 2,  0,  7,  0],
-        #                                       [ 0,  2,  0,  7],
-        #                                       [ 5,  0, -3,  0],
-        #                                       [ 0,  5,  0, -3]
-        #                                      ])}
-        #
-        # assert_equal_jacobian(self, jac, expected_jac, 1e-8)
+        params = {'x': np.ones((2,2))}
+        unknowns = {'y': np.zeros((2,2))}
+        resids = {'y': np.zeros((2,2))}
+        jac = self.p['c1']._fd_jacobian(params, unknowns, resids)
+
+        expected_jac = {('y', 'x'): np.array([[ 2,  0,  7,  0],
+                                              [ 0,  2,  0,  7],
+                                              [ 5,  0, -3,  0],
+                                              [ 0,  5,  0, -3]
+                                             ])}
+
+        assert_equal_jacobian(self, jac, expected_jac, 1e-8)
 
     def test_correct_vals_in_jac_implicit(self):
         params = {'x': .5}

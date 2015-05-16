@@ -152,9 +152,6 @@ class Component(System):
         """
 
         self.solve_nonlinear(params, unknowns, resids)
-        #make a work vector
-        fd_u = _copy_vec(unknowns)
-        fd_r = _copy_vec(resids)
         jac = {}
 
         outputs = []
@@ -167,7 +164,6 @@ class Component(System):
 
         #compute dUdP (outputs)
         for p_name in params:
-            #make a work vector to take steps in
             p_size = np.size(params[p_name])
             p_shape = np.shape(params[p_name])
 
@@ -176,6 +172,7 @@ class Component(System):
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
             for idx in xrange(p_size):
+                #make work vectors to take steps in
                 fd_p = _copy_vec(params)
                 fd_u = _copy_vec(unknowns)
                 fd_r = _copy_vec(resids)
@@ -187,20 +184,11 @@ class Component(System):
                 else: # scalar
                     fd_p[p_name] *= 1.001
                     step = fd_p[p_name] - params[p_name]
-                print("######", u_name, p_name, idx ,"######")
-                print("foo", fd_u)
-                print("bar", fd_r)
+
                 self.apply_nonlinear(fd_p, fd_u, fd_r)
-                print ()
-                print("foo", fd_u)
-                print("bar", fd_r)
-                print()
-                print()
 
                 for u_name in unknowns:
                     new_u_val = fd_r[u_name]
-                    # print(nd_idx, fd_p)
-                    # print(u_name, p_name, fd_r[u_name], unknowns[u_name])
                     fd_deriv = (new_u_val - resids[u_name])/step
 
                     if p_shape:
@@ -208,36 +196,34 @@ class Component(System):
                     else:
                         jac[u_name, p_name][:,idx] = fd_deriv
 
-        #TODO: Fix this... broken right now, and I need to do dRdP
-        #    note, maybe I can do this all with apply_nonlinear? solve_nonlinear won't work if its an implicit comp, even for dUdP
-        #compute dRdU (resids)
-        # for s_name in states:
-        #     #make a work vector to take steps in
-        #     s_size = np.size(unknowns[s_name])
-        #     s_shape = np.shape(unknowns[s_name])
-        #
-        #     for u_name in unknowns:
-        #         u_size = np.size(unknowns[u_name])
-        #         jac[u_name, s_name] = np.ones((u_size, s_size))
-        #
-        #     for idx in xrange(s_size):
-        #         fd_u = _copy_vec(unknowns)
-        #         if s_shape:
-        #             nd_idx = np.unravel_index(idx, s_shape)
-        #             fd_u[s_name][nd_idx] *= 1.001
-        #             step = fd_u[s_name][nd_idx] - unknowns[s_name][nd_idx]
-        #         else:
-        #             fd_u[s_name] *= 1.001
-        #             step = fd_u[s_name] - unknowns[s_name]
-        #         self.apply_nonlinear(params, fd_u, fd_r)
-        #         for u_name in unknowns:
-        #             new_r_val = fd_r[u_name]
-        #             fd_deriv = (new_r_val - resids[u_name])/step
-        #             # print(fd_deriv)
-        #             if s_shape:
-        #                 jac[u_name, s_name][:,idx] = fd_deriv.flatten()
-        #             else:
-        #                 jac[u_name, s_name][:,idx] = fd_deriv
+        # compute dRdU (resids)
+        for s_name in states:
+            #make a work vector to take steps in
+            s_size = np.size(unknowns[s_name])
+            s_shape = np.shape(unknowns[s_name])
+
+            for u_name in unknowns:
+                u_size = np.size(unknowns[u_name])
+                jac[u_name, s_name] = np.ones((u_size, s_size))
+
+            for idx in xrange(s_size):
+                fd_u = _copy_vec(unknowns)
+                if s_shape:
+                    nd_idx = np.unravel_index(idx, s_shape)
+                    fd_u[s_name][nd_idx] *= 1.001
+                    step = fd_u[s_name][nd_idx] - unknowns[s_name][nd_idx]
+                else:
+                    fd_u[s_name] *= 1.001
+                    step = fd_u[s_name] - unknowns[s_name]
+                self.apply_nonlinear(params, fd_u, fd_r)
+                for u_name in unknowns:
+                    new_r_val = fd_r[u_name]
+                    fd_deriv = (new_r_val - resids[u_name])/step
+                    # print(fd_deriv)
+                    if s_shape:
+                        jac[u_name, s_name][:,idx] = fd_deriv.flatten()
+                    else:
+                        jac[u_name, s_name][:,idx] = fd_deriv
 
         return jac
 
