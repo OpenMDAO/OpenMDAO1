@@ -153,6 +153,8 @@ class Component(System):
 
         self.solve_nonlinear(params, unknowns, resids)
         jac = {}
+        fd_r = _copy_vec(resids)
+
 
         outputs = []
         states = []
@@ -175,7 +177,6 @@ class Component(System):
                 #make work vectors to take steps in
                 fd_p = _copy_vec(params)
                 fd_u = _copy_vec(unknowns)
-                fd_r = _copy_vec(resids)
 
                 if p_shape: # array
                     nd_idx = np.unravel_index(idx, p_shape)
@@ -219,7 +220,7 @@ class Component(System):
                 for u_name in unknowns:
                     new_r_val = fd_r[u_name]
                     fd_deriv = (new_r_val - resids[u_name])/step
-                    # print(fd_deriv)
+
                     if s_shape:
                         jac[u_name, s_name][:,idx] = fd_deriv.flatten()
                     else:
