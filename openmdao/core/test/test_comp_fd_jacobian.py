@@ -40,14 +40,14 @@ class SysFDTestCase(unittest.TestCase):
         params = {'x': np.ones(2)}
         unknowns = {'y': np.zeros(2)}
         resids = {'y': np.zeros(2)}
-        jac = self.p['c1']._fd_jacobian(params, unknowns, resids)
+        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
         self.assertEqual(set(expected_keys), set(jac.keys()))
 
     def test_correct_vals_in_jac(self):
         params = {'x': np.ones(2)}
         unknowns = {'y': np.zeros(2)}
         resids = {'y': np.zeros(2)}
-        jac = self.p['c1']._fd_jacobian(params, unknowns, resids)
+        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2.,  7.],[ 5., -3.]])}
 
@@ -58,7 +58,7 @@ class SysFDTestCase(unittest.TestCase):
         params = {'x': np.ones((2,2))}
         unknowns = {'y': np.zeros((2,2))}
         resids = {'y': np.zeros((2,2))}
-        jac = self.p['c1']._fd_jacobian(params, unknowns, resids)
+        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2,  0,  7,  0],
                                               [ 0,  2,  0,  7],
@@ -73,7 +73,7 @@ class SysFDTestCase(unittest.TestCase):
         unknowns = {'y': 0., 'z':0}
         resids = {'y':0., 'z': 0}
 
-        jac = self.p['ci1']._fd_jacobian(params, unknowns, resids)
+        jac = self.p['ci1'].fd_jacobian(params, unknowns, resids)
         expected_jac = {}
         # Output equation
         expected_jac[('y', 'x')] = 1.
