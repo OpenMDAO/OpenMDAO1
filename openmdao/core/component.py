@@ -140,7 +140,7 @@ class Component(System):
         # not change the output vector.
         for u_name in unknowns:
             resids[u_name] += unknowns[u_name]
-            unknowns[u_name] += resids[u_name]
+            unknowns[u_name] -= resids[u_name]
 
     def _fd_jacobian(self, params, unknowns, resids):
         """Finite difference across all unknonws in component w.r.t. all params
