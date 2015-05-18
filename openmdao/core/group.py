@@ -385,7 +385,7 @@ class Group(System):
                 system._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
-            # It is really inconvenient
+            # It is really inconvenient if we don't allow it.
             if jacobian_cache is not None:
                 for key, J in jacobian_cache.items():
                     if isinstance(J, float):

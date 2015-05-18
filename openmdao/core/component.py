@@ -19,7 +19,7 @@ def _copy_vec(vec):
     """grabs all the keys and values from an unknowns vector and returns a copy of it"""
 
     new_vec = {}
-    for var_name, val in iteritems(vec):
+    for var_name in vec:
         new_vec[var_name] = copy.deepcopy(vec[var_name])
 
     return new_vec
@@ -145,10 +145,22 @@ class Component(System):
     def fd_jacobian(self, params, unknowns, resids):
         """Finite difference across all unknonws in component w.r.t. all params
 
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
+
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+
         Returns
         -------
         dict
-            jacobian dictionary
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays
         """
 
         self.solve_nonlinear(params, unknowns, resids)
