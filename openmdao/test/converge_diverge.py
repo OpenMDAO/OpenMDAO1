@@ -163,3 +163,35 @@ class ConvergeDiverge(Group):
         self.connect('comp4:y2', 'comp6:x1')
         self.connect('comp5:y1', 'comp7:x1')
         self.connect('comp6:y1', 'comp7:x2')
+
+
+class ConvergeDivergeGroups(Group):
+    """ Topology one - two - one - two - one. This model was critical in
+    testing parallel reverse scatters."""
+
+    def __init__(self):
+        super(ConvergeDivergeGroups, self).__init__()
+
+        sub1 = self.add('sub1', Group())
+        sub2 = sub1.add('sub2', Group())
+        sub3 = self.add('sub3', Group())
+
+        sub1.add('comp1', Comp1())
+        sub2.add('comp2', Comp2())
+        sub2.add('comp3', Comp3())
+        sub1.add('comp4', Comp4())
+        sub3.add('comp5', Comp5())
+        sub3.add('comp6', Comp6())
+        self.add('comp7', Comp7())
+
+        self.add('p', ParamComp('x', 2.0))
+
+        self.connect("p:x", "sub1:comp1:x1")
+        self.connect('sub1:comp1:y1', 'sub1:sub2:comp2:x1')
+        self.connect('sub1:comp1:y2', 'sub1:sub2:comp3:x1')
+        self.connect('sub1:sub2:comp2:y1', 'sub1:comp4:x1')
+        self.connect('sub1:sub2:comp3:y1', 'sub1:comp4:x2')
+        self.connect('sub1:comp4:y1', 'sub3:comp5:x1')
+        self.connect('sub1:comp4:y2', 'sub3:comp6:x1')
+        self.connect('sub3:comp5:y1', 'comp7:x1')
+        self.connect('sub3:comp6:y1', 'comp7:x2')

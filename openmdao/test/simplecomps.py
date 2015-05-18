@@ -258,3 +258,21 @@ class FanOut(Group):
         self.connect("comp1:y", "comp3:x")
         self.connect("p:x", "comp1:x")
 
+
+class FanOutGrouped(Group):
+    """ Topology where one comp broadcasts an output to two target
+    components."""
+
+    def __init__(self):
+        super(FanOutGrouped, self).__init__()
+
+        sub = self.add('sub', Group())
+        self.add('comp1', FanOutComp1())
+        sub.add('comp2', FanOutComp2())
+        sub.add('comp3', FanOutComp3())
+        self.add('p', ParamComp('x', 1.0))
+
+        self.connect("comp1:y", "sub:comp2:x")
+        self.connect("comp1:y", "sub:comp3:x")
+        self.connect("p:x", "comp1:x")
+
