@@ -312,8 +312,7 @@ class Group(System):
 
         varmanager = self._varmanager
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             # Local scatter
             varmanager._transfer_data(name)

@@ -1,5 +1,6 @@
 """ Defines the base class for a Component in OpenMDAO."""
 import functools
+import copy
 import numpy as np
 from collections import OrderedDict
 from six import iteritems
@@ -11,6 +12,17 @@ from openmdao.core.system import System
 Object to represent default value for `add_output`.
 '''
 _NotSet = object()
+
+
+#note, doing this because I don't know if its safe to deep copy the vectors
+def _copy_vec(vec):
+    """grabs all the keys and values from an unknowns vector and returns a copy of it"""
+
+    new_vec = {}
+    for var_name, val in iteritems(vec):
+        new_vec[var_name] = copy.deepcopy(vec[var_name])
+
+    return new_vec
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -118,14 +130,103 @@ class Component(System):
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
-        resids.vec[:] = unknowns.vec[:]
+        for u_name in unknowns:
+            #obtuse, but necessary to handle scalar and array cases and make sure we don't loose the pointer
+            resids.__setitem__(u_name, -unknowns[u_name])
 
         self.solve_nonlinear(params, unknowns, resids)
 
         # Unknwons are restored to the old values too; apply_nonlinear does
         # not change the output vector.
-        resids.vec[:] -= unknowns.vec[:]
-        unknowns.vec[:] += resids.vec[:]
+        for u_name in unknowns:
+            resids[u_name] += unknowns[u_name]
+            unknowns[u_name] -= resids[u_name]
+
+    def fd_jacobian(self, params, unknowns, resids):
+        """Finite difference across all unknonws in component w.r.t. all params
+
+        Returns
+        -------
+        dict
+            jacobian dictionary
+        """
+
+        self.solve_nonlinear(params, unknowns, resids)
+        jac = {}
+        fd_r = _copy_vec(resids)
+
+
+        outputs = []
+        states = []
+        for u_name, meta in iteritems(self._unknowns_dict):
+            if meta.get('state'):
+                states.append(meta['relative_name'])
+            else:
+                outputs.append(meta['relative_name'])
+
+        #compute dUdP (outputs)
+        for p_name in params:
+            p_size = np.size(params[p_name])
+            p_shape = np.shape(params[p_name])
+
+            for u_name in unknowns:
+                u_size = np.size(unknowns[u_name])
+                jac[u_name, p_name] = np.ones((u_size, p_size))
+
+            for idx in xrange(p_size):
+                #make work vectors to take steps in
+                fd_p = _copy_vec(params)
+                fd_u = _copy_vec(unknowns)
+
+                if p_shape: # array
+                    nd_idx = np.unravel_index(idx, p_shape)
+                    fd_p[p_name][nd_idx] *= 1.001
+                    step = fd_p[p_name][nd_idx] - params[p_name][nd_idx]
+                else: # scalar
+                    fd_p[p_name] *= 1.001
+                    step = fd_p[p_name] - params[p_name]
+
+                self.apply_nonlinear(fd_p, fd_u, fd_r)
+
+                for u_name in unknowns:
+                    new_u_val = fd_r[u_name]
+                    fd_deriv = (new_u_val - resids[u_name])/step
+
+                    if p_shape:
+                        jac[u_name, p_name][:,idx] = fd_deriv.flatten()
+                    else:
+                        jac[u_name, p_name][:,idx] = fd_deriv
+
+        # compute dRdU (resids) and dRdP
+        for s_name in states:
+            #make a work vector to take steps in
+            s_size = np.size(unknowns[s_name])
+            s_shape = np.shape(unknowns[s_name])
+
+            for u_name in unknowns:
+                u_size = np.size(unknowns[u_name])
+                jac[u_name, s_name] = np.ones((u_size, s_size))
+
+            for idx in xrange(s_size):
+                fd_u = _copy_vec(unknowns)
+                if s_shape:
+                    nd_idx = np.unravel_index(idx, s_shape)
+                    fd_u[s_name][nd_idx] *= 1.001
+                    step = fd_u[s_name][nd_idx] - unknowns[s_name][nd_idx]
+                else:
+                    fd_u[s_name] *= 1.001
+                    step = fd_u[s_name] - unknowns[s_name]
+                self.apply_nonlinear(params, fd_u, fd_r)
+                for u_name in unknowns:
+                    new_r_val = fd_r[u_name]
+                    fd_deriv = (new_r_val - resids[u_name])/step
+
+                    if s_shape:
+                        jac[u_name, s_name][:,idx] = fd_deriv.flatten()
+                    else:
+                        jac[u_name, s_name][:,idx] = fd_deriv
+
+        return jac
 
     def jacobian(self, params, unknowns):
         """ Returns Jacobian. Returns None unless component overides and
