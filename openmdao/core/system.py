@@ -1,3 +1,5 @@
+""" Base class for all systems in OpenMDAO."""
+
 import copy
 from six import string_types, iteritems
 from collections import OrderedDict
@@ -27,6 +29,8 @@ class System(object):
         self.comm = FakeComm()
 
         self.fd_options = OptionsDictionary()
+        self.fd_options.add_option('force_fd', False,
+                                   doc = "Set to True to finite difference this system.")
 
     def __getitem__(self, name):
         """
@@ -91,7 +95,7 @@ class System(object):
     def preconditioner(self):
         pass
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         pass
 
     def solve_nonlinear(self, params, unknowns, resids):

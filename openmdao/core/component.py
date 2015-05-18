@@ -228,7 +228,7 @@ class Component(System):
 
         return jac
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
@@ -240,6 +240,9 @@ class Component(System):
 
         unknowns : `VecwWapper`
             `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
 
         Returns
         -------

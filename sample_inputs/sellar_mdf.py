@@ -17,7 +17,7 @@ class SellarDis1(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['y1'] = params['z'][0]**2 + params['z'][1] + params['x'] - .2*params['y2']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         J = {}
 
         J['y1','y2'] = -.2
@@ -50,11 +50,11 @@ class SellarDis2(Component):
 
         self.add_unknown('y2', val=0.)
 
-        def apply_nonlinear(self, params, unknowns):
+        def apply_nonlinear(self, params, unknowns, resids):
             unknowns['y2'] = params['y1']**.5 + np.sum(params['z'])
 
 
-        def jacobian(self, params, unknowns):
+        def jacobian(self, params, unknowns, resids):
             J = {}
 
             J['y2', 'y1'] = .5*params['y1']**-.5

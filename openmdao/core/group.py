@@ -355,7 +355,7 @@ class Group(System):
 
             system.apply_nonlinear(params, unknowns, resids)
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Linearize all our subsystems.
 
         Parameters
@@ -365,6 +365,9 @@ class Group(System):
 
         unknowns : `VecwWapper`
             `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
 
         for name, system in self.subsystems(local=True):
@@ -375,7 +378,7 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            jacobian_cache = system.jacobian(params, unknowns)
+            jacobian_cache = system.jacobian(params, unknowns, resids)
 
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
