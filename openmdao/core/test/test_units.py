@@ -164,6 +164,50 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
 
+    def test_basic(self):
+
+        prob = Problem()
+        prob.root = Group()
+        sub1 = prob.root.add('sub1', Group())
+        sub2 = prob.root.add('sub2', Group())
+        sub1.add('src', SrcComp())
+        sub2.add('tgtF', TgtCompF())
+        sub2.add('tgtC', TgtCompC())
+        sub2.add('tgtK', TgtCompK())
+        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'sub1:src:x1')
+        prob.root.connect('sub1:src:x2', 'sub2:tgtF:x2')
+        prob.root.connect('sub1:src:x2', 'sub2:tgtC:x2')
+        prob.root.connect('sub1:src:x2', 'sub2:tgtK:x2')
+
+        prob.setup()
+        prob.run()
+
+        assert_rel_error(self, prob['sub1:src:x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2:tgtF:x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['sub2:tgtC:x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2:tgtK:x3'], 373.15, 1e-6)
+
+        # Make sure we don't convert equal units
+        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+
+        param_list = ['x1']
+        unknown_list = ['sub2:tgtF:x3', 'sub2:tgtC:x3', 'sub2:tgtK:x3']
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2:tgtF:x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2:tgtC:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2:tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2:tgtF:x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2:tgtC:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2:tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+
+
 
 if __name__ == "__main__":
     unittest.main()
