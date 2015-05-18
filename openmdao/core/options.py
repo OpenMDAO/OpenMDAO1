@@ -1,9 +1,16 @@
+""" OptionsDictionary class definition. """
 
-class OptionsDictionary(object ):
+
+class OptionsDictionary(object):
+    """ A dictionary for storing options for components/drivers/solvers. It
+    is generally used like a standard python dictionary, except that 1) you
+    can only set or get keys that have been registered with add_option, and
+    2) type is enforced."""
+
     def __init__(self):
         self._options = {}
 
-    def add_option(self, name, value, low=None, high=None, values=None):
+    def add_option(self, name, value, low=None, high=None, values=None, doc=''):
 
         if name in self._options:
             raise ValueError("Option '{}' already exists".format(name))
@@ -13,6 +20,7 @@ class OptionsDictionary(object ):
             'low':    low,
             'high':   high,
             'values': values,
+            'doc' : doc,
         }
 
         self.check(name, value)
