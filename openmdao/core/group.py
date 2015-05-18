@@ -230,7 +230,8 @@ class Group(System):
             if sub.is_active():
                 self._local_subsystems[name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=BasicImpl):
+    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+                       top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -248,6 +249,9 @@ class Group(System):
             the `VarManager` for the parent `Group`, if any, into which this
             `VarManager` will provide a view.
 
+        top_unknowns : `VecWrapper`, optional
+            the `Problem` level unknowns `VecWrapper`
+
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
@@ -257,8 +261,10 @@ class Group(System):
             self._varmanager = VarManager(self.comm,
                                           self.pathname, self._params_dict, self._unknowns_dict,
                                           my_params, connections, impl=impl)
+            top_unknowns = self._varmanager.unknowns
         else:
-            self._varmanager = ViewVarManager(parent_vm,
+            self._varmanager = ViewVarManager(top_unknowns,
+                                              parent_vm,
                                               self.comm,
                                               self.pathname,
                                               self._params_dict,
@@ -268,11 +274,13 @@ class Group(System):
 
         self._views = {}
         for name, sub in self.subgroups():
-            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
+            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
+                               top_unknowns=top_unknowns)
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            self._views[name] = create_views(self._varmanager, self.comm, sub.pathname,
+            self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
+                                             sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], {})
 
     def _get_explicit_connections(self):

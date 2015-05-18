@@ -207,6 +207,9 @@ class ViewVarManager(VarManagerBase):
 
     Parameters
     ----------
+    top_unknowns : `VecWrapper`
+        the `Problem` level unknowns `VecWrapper`
+
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
 
@@ -224,19 +227,20 @@ class ViewVarManager(VarManagerBase):
         a dictionary mapping the pathname of a target variable to the
         pathname of the source variable that it is connected to
     """
-    def __init__(self, parent_vm, comm, sys_pathname, params_dict, unknowns_dict, my_params, connections):
+    def __init__(self, top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+                 my_params, connections):
         super(ViewVarManager, self).__init__(connections)
 
         self.impl_factory = parent_vm.impl_factory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
-            create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+            create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
                          my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 
 
-def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
+def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
                  my_params, connections):
     """
     A manager of the data transfer of a possibly distributed collection of
@@ -244,6 +248,9 @@ def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
 
     Parameters
     ----------
+    top_unknowns : `VecWrapper`
+        the `Problem` level unknowns `VecWrapper`
+
     parent_vm : `VarManager`
         the `VarManager` which provides the `VecWrapper`s on which to create views
 
@@ -285,9 +292,9 @@ def create_views(parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
     params  = parent_vm.impl_factory.create_tgt_vecwrapper(comm)
     dparams = parent_vm.impl_factory.create_tgt_vecwrapper(comm)
 
-    params.setup(parent_vm.params, params_dict, unknowns,
+    params.setup(parent_vm.params, params_dict, top_unknowns,
                                my_params, connections, store_noflats=True)
-    dparams.setup(parent_vm.dparams, params_dict, unknowns,
+    dparams.setup(parent_vm.dparams, params_dict, top_unknowns,
                                 my_params, connections)
 
     return VecTuple(unknowns, dunknowns, resids, dresids, params, dparams)
