@@ -12,6 +12,7 @@ Object to represent default value for `add_output`.
 '''
 _NotSet = object()
 
+
 class Component(System):
     """ Base class for a Component system. The Component can declare
     variables and operates on its inputs to produce unknowns, which can be
@@ -118,16 +119,83 @@ class Component(System):
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
-        resids.vec[:] = unknowns.vec[:]
+        resids.vec[:] = -unknowns.vec[:]
 
         self.solve_nonlinear(params, unknowns, resids)
 
-        # Unknwons are restored to the old values too; apply_nonlinear does
+        # Unknowns are restored to the old values too; apply_nonlinear does
         # not change the output vector.
-        resids.vec[:] -= unknowns.vec[:]
-        unknowns.vec[:] += resids.vec[:]
+        resids.vec[:] += unknowns.vec[:]
+        unknowns.vec[:] -= resids.vec[:]
 
-    def jacobian(self, params, unknowns):
+    def fd_jacobian(self, params, unknowns, resids):
+        """Finite difference across all unknonws in component w.r.t. all params
+
+        Parameters
+        ----------
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
+
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays
+        """
+
+        jac = {}
+        resid_cache = resids.vec.copy()
+
+        states = []
+        for u_name, meta in iteritems(self._unknowns_dict):
+            if meta.get('state'):
+                states.append(meta['relative_name'])
+
+        # Compute gradient for this param or state.
+        for p_name in params.keys() + states:
+
+            if p_name in states:
+                inputs = unknowns
+            else:
+                inputs = params
+
+            # Size our Inputs
+            p_size = np.size(inputs[p_name])
+
+            # Size our Outputs
+            for u_name in unknowns:
+                u_size = np.size(unknowns[u_name])
+                jac[u_name, p_name] = np.ones((u_size, p_size))
+
+            # Finite Difference each index in array
+            for idx in xrange(p_size):
+
+                step = inputs[p_name].flat[idx] * 0.001
+                inputs[p_name].flat[idx] += step
+
+                self.apply_nonlinear(params, unknowns, resids)
+
+                inputs[p_name].flat[idx] -= step
+
+                # delta resid is delta unknown
+                resids.vec[:] -= resid_cache
+                resids.vec[:] *= (1/step)
+
+                for u_name in unknowns:
+                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
+
+                # Restore old residual
+                resids.vec[:] = resid_cache
+
+        return jac
+
+    def jacobian(self, params, unknowns, resids):
         """ Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
@@ -139,6 +207,9 @@ class Component(System):
 
         unknowns : `VecwWapper`
             `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
 
         Returns
         -------

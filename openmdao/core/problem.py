@@ -162,6 +162,7 @@ class Problem(Component):
         varmanager = root._varmanager
         params = varmanager.params
         unknowns = varmanager.unknowns
+        resids = varmanager.resids
         dparams = varmanager.dparams
         dunknowns = varmanager.dunknowns
         dresids = varmanager.dresids
@@ -173,7 +174,7 @@ class Problem(Component):
         dparams.vec[:] = 0.0
         dunknowns.vec[:] = 0.0
         dresids.vec[:] = 0.0
-        root.jacobian(params, unknowns)
+        root.jacobian(params, unknowns, resids)
 
         # Initialized Jacobian
         if return_format == 'dict':
