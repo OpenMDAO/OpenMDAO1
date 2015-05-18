@@ -378,7 +378,11 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            jacobian_cache = system.jacobian(params, unknowns, resids)
+            # Instigate finite difference on child if user requests.
+            if system.fd_options['force_fd'] == True:
+                jacobian_cache = system.fd_jacobian(params, unknowns, resids)
+            else:
+                jacobian_cache = system.jacobian(params, unknowns, resids)
 
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
