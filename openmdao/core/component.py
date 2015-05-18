@@ -14,16 +14,6 @@ Object to represent default value for `add_output`.
 _NotSet = object()
 
 
-#note, doing this because I don't know if its safe to deep copy the vectors
-def _copy_vec(vec):
-    """grabs all the keys and values from an unknowns vector and returns a copy of it"""
-
-    new_vec = {}
-    for var_name in vec:
-        new_vec[var_name] = copy.deepcopy(vec[var_name])
-
-    return new_vec
-
 class Component(System):
     """ Base class for a Component system. The Component can declare
     variables and operates on its inputs to produce unknowns, which can be
@@ -161,15 +151,28 @@ class Component(System):
         """
 
         jac = {}
+        resid_cache = resids.vec.copy()
 
-        # Compute dUdP (outputs)
-        for p_name in params:
-            p_size = np.size(params[p_name])
+        states = []
+        for u_name, meta in iteritems(self._unknowns_dict):
+            if meta.get('state'):
+                states.append(meta['relative_name'])
 
+        # Compute gradient for this param or state.
+        for p_name in params.keys() + states:
+
+            # Size our Inputs
+            if p_name in states:
+                p_size = np.size(unknowns[p_name])
+            else:
+                p_size = np.size(params[p_name])
+
+            # Size our Outputs
             for u_name in unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
+            # Finite Difference each index in array
             for idx in xrange(p_size):
 
                 step = params[p_name].flat[idx] * 0.001
@@ -179,37 +182,15 @@ class Component(System):
 
                 params[p_name].flat[idx] -= step
 
+                # delta resid is delta unknown
+                resids.vec[:] -= resid_cache
+
                 for u_name in unknowns:
                     fd_deriv = resids.flat[u_name]/step
                     jac[u_name, p_name][:, idx] = fd_deriv
 
-        states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
-
-        # Compute dRdU (resids) and dRdP
-        for s_name in states:
-            s_size = np.size(unknowns[s_name])
-
-            for u_name in unknowns:
-                u_size = np.size(unknowns[u_name])
-                jac[u_name, s_name] = np.ones((u_size, s_size))
-
-            for idx in xrange(s_size):
-
-                resids.vec[:] = 0.0
-
-                step = unknowns[s_name].flat[idx] * 0.001
-                unknowns[s_name].flat[idx] += step
-
-                self.apply_nonlinear(params, unknowns, resids)
-
-                unknowns[s_name].flat[idx] -= step
-
-                for u_name in unknowns:
-                    fd_deriv = resids.flat[u_name]/step
-                    jac[u_name, s_name][:, idx] = fd_deriv
+                # Restore old residual
+                resids.vec[:] = resid_cache
 
         return jac
 
