@@ -1,6 +1,5 @@
 """ Defines the base class for a Component in OpenMDAO."""
 import functools
-import copy
 import numpy as np
 from collections import OrderedDict
 from six import iteritems
@@ -161,12 +160,12 @@ class Component(System):
         # Compute gradient for this param or state.
         for p_name in params.keys() + states:
 
-            # Size our Inputs
             if p_name in states:
                 inputs = unknowns
             else:
                 inputs = params
 
+            # Size our Inputs
             p_size = np.size(inputs[p_name])
 
             # Size our Outputs
