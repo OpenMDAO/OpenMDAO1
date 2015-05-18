@@ -29,3 +29,6 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(root.nl_solver.iter_count, 3)
         self.assertEqual(prob['C4:y'], 40.)
+
+if __name__ == "__main__":
+    unittest.main()

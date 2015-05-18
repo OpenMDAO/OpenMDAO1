@@ -20,7 +20,7 @@ class Simple(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['z'] = params['x']**2 + params['y'] + np.sum(params['A'] - 3.0)
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         J = {}
 
         J['z','x'] = 2*params['x'] * params['y']

@@ -22,7 +22,7 @@ class SrcComp(Component):
         """ No action."""
         unknowns['x2'] = params['x1']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x2', 'x1')] = np.array([1.0])
@@ -40,7 +40,7 @@ class TgtCompF(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
@@ -58,7 +58,7 @@ class TgtCompC(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
@@ -76,7 +76,7 @@ class TgtCompK(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])

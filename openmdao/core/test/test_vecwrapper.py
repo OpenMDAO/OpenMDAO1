@@ -19,7 +19,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         self.assertEqual(u.vec.size, 10)
@@ -70,7 +70,7 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = p
 
-        p = TgtVecWrapper('')
+        p = TgtVecWrapper()
         p.setup(None, params, u, params.keys(),
                                             connections, store_noflats=True)
 
@@ -98,7 +98,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         varmap = {
@@ -137,7 +137,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         self.assertTrue((np.array(u.flat['C1:y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
@@ -162,7 +162,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         unorm = u.norm()
@@ -177,10 +177,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         try:
@@ -199,10 +199,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['relative_name'] = u
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
-        u = SrcVecWrapper('')
+        u = SrcVecWrapper()
         u.setup(unknowns_dict, store_noflats=True)
 
         try:

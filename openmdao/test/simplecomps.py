@@ -45,7 +45,7 @@ class SimpleCompDerivJac(SimpleComp):
     """ The simplest component you can imagine, this time with derivatives
     defined using Jacobian to return a jacobian. """
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Returns the Jacobian."""
 
         J = {}
@@ -68,11 +68,11 @@ class SimpleArrayComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
 
-        params['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][1]
-        params['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
-        #print "ran", params['x'], params['y']
+        unknowns['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][1]
+        unknowns['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
+        # print(self.name, "ran", params['x'], unknowns['y'])
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Analytical derivatives"""
 
         dy1_dx1 = 2.0
@@ -139,7 +139,7 @@ class SimpleImplicitComp(Component):
         # Output equations need to evaluate a residual just like an explicit comp.
         resids['y'] = x + 2.0*z - unknowns['y']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Analytical derivatives"""
 
         J = {}
@@ -189,7 +189,7 @@ class FanOutComp1(Component):
 
         unknowns['y'] = 3.0*params['x']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Analytical derivatives"""
         J = {}
         J[('y', 'x')] = np.array([3.0])
@@ -212,7 +212,7 @@ class FanOutComp2(Component):
 
         unknowns['y'] = -2.0*params['x']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Analytical derivatives"""
         J = {}
         J[('y', 'x')] = np.array([-2.0])
@@ -235,7 +235,7 @@ class FanOutComp3(Component):
 
         unknowns['y'] = 5.0*params['x']
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """Analytical derivatives"""
         J = {}
         J[('y', 'x')] = np.array([5.0])
@@ -275,4 +275,3 @@ class FanOutGrouped(Group):
         self.connect("comp1:y", "sub:comp2:x")
         self.connect("comp1:y", "sub:comp3:x")
         self.connect("p:x", "comp1:x")
-

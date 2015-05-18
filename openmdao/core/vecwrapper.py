@@ -46,7 +46,7 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, pathname, comm=None):
+    def __init__(self, pathname='', comm=None):
         self.pathname = pathname
         self.comm = comm
         self.vec = None
@@ -157,6 +157,15 @@ class VecWrapper(object):
         """
 
         return key in self._vardict
+
+    def __iter__(self):
+        """
+        Returns
+        _______
+            a dictionary iterator over the items in _vardict
+        """
+        return self._vardict.__iter__()
+
 
     def keys(self):
         """

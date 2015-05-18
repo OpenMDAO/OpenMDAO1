@@ -322,8 +322,7 @@ class Group(System):
 
         varmanager = self._varmanager
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             # Local scatter
             varmanager._transfer_data(name)
@@ -366,7 +365,7 @@ class Group(System):
 
             system.apply_nonlinear(params, unknowns, resids)
 
-    def jacobian(self, params, unknowns):
+    def jacobian(self, params, unknowns, resids):
         """ Linearize all our subsystems.
 
         Parameters
@@ -376,6 +375,9 @@ class Group(System):
 
         unknowns : `VecwWapper`
             `VecwWapper` containing outputs and states (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
 
         for name, system in self.subsystems(local=True):
@@ -386,14 +388,14 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            jacobian_cache = system.jacobian(params, unknowns)
+            jacobian_cache = system.jacobian(params, unknowns, resids)
 
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
                 system._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
-            # It is really inconvenient
+            # It is really inconvenient if we don't allow it.
             if jacobian_cache is not None:
                 for key, J in iteritems(jacobian_cache):
                     if isinstance(J, real_types):
