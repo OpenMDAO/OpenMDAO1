@@ -136,7 +136,7 @@ class Component(System):
 
         self.solve_nonlinear(params, unknowns, resids)
 
-        # Unknwons are restored to the old values too; apply_nonlinear does
+        # Unknowns are restored to the old values too; apply_nonlinear does
         # not change the output vector.
         for u_name in unknowns:
             resids[u_name] += unknowns[u_name]
@@ -164,78 +164,55 @@ class Component(System):
         """
 
         jac = {}
-        fd_r = _copy_vec(resids)
 
-
-        outputs = []
-        states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
-            else:
-                outputs.append(meta['relative_name'])
-
-        #compute dUdP (outputs)
+        # Compute dUdP (outputs)
         for p_name in params:
             p_size = np.size(params[p_name])
-            p_shape = np.shape(params[p_name])
 
             for u_name in unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
             for idx in xrange(p_size):
-                #make work vectors to take steps in
-                fd_p = _copy_vec(params)
-                fd_u = _copy_vec(unknowns)
 
-                if p_shape: # array
-                    nd_idx = np.unravel_index(idx, p_shape)
-                    fd_p[p_name][nd_idx] *= 1.001
-                    step = fd_p[p_name][nd_idx] - params[p_name][nd_idx]
-                else: # scalar
-                    fd_p[p_name] *= 1.001
-                    step = fd_p[p_name] - params[p_name]
+                step = params[p_name].flat[idx] * 0.001
+                params[p_name].flat[idx] += step
 
-                self.apply_nonlinear(fd_p, fd_u, fd_r)
+                self.apply_nonlinear(params, unknowns, resids)
+
+                params[p_name].flat[idx] -= step
 
                 for u_name in unknowns:
-                    new_u_val = fd_r[u_name]
-                    fd_deriv = (new_u_val - resids[u_name])/step
+                    fd_deriv = resids.flat[u_name]/step
+                    jac[u_name, p_name][:, idx] = fd_deriv
 
-                    if p_shape:
-                        jac[u_name, p_name][:,idx] = fd_deriv.flatten()
-                    else:
-                        jac[u_name, p_name][:,idx] = fd_deriv
+        states = []
+        for u_name, meta in iteritems(self._unknowns_dict):
+            if meta.get('state'):
+                states.append(meta['relative_name'])
 
-        # compute dRdU (resids) and dRdP
+        # Compute dRdU (resids) and dRdP
         for s_name in states:
-            #make a work vector to take steps in
             s_size = np.size(unknowns[s_name])
-            s_shape = np.shape(unknowns[s_name])
 
             for u_name in unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, s_name] = np.ones((u_size, s_size))
 
             for idx in xrange(s_size):
-                fd_u = _copy_vec(unknowns)
-                if s_shape:
-                    nd_idx = np.unravel_index(idx, s_shape)
-                    fd_u[s_name][nd_idx] *= 1.001
-                    step = fd_u[s_name][nd_idx] - unknowns[s_name][nd_idx]
-                else:
-                    fd_u[s_name] *= 1.001
-                    step = fd_u[s_name] - unknowns[s_name]
-                self.apply_nonlinear(params, fd_u, fd_r)
-                for u_name in unknowns:
-                    new_r_val = fd_r[u_name]
-                    fd_deriv = (new_r_val - resids[u_name])/step
 
-                    if s_shape:
-                        jac[u_name, s_name][:,idx] = fd_deriv.flatten()
-                    else:
-                        jac[u_name, s_name][:,idx] = fd_deriv
+                resids.vec[:] = 0.0
+
+                step = unknowns[s_name].flat[idx] * 0.001
+                unknowns[s_name].flat[idx] += step
+
+                self.apply_nonlinear(params, unknowns, resids)
+
+                unknowns[s_name].flat[idx] -= step
+
+                for u_name in unknowns:
+                    fd_deriv = resids.flat[u_name]/step
+                    jac[u_name, s_name][:, idx] = fd_deriv
 
         return jac
 

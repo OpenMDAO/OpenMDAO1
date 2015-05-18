@@ -176,7 +176,7 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_noflats=True)
 
-        self.p['c1'].solve_nonlinear(params, unknowns, resids)
+        self.p['ci1'].solve_nonlinear(params, unknowns, resids)
 
         jac = self.p['ci1'].fd_jacobian(params, unknowns, resids)
         expected_jac = {}
