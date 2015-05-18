@@ -185,10 +185,10 @@ class Component(System):
 
                 # delta resid is delta unknown
                 resids.vec[:] -= resid_cache
+                resids.vec[:] *= (1/step)
 
                 for u_name in unknowns:
-                    fd_deriv = resids.flat[u_name]/step
-                    jac[u_name, p_name][:, idx] = fd_deriv
+                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
 
                 # Restore old residual
                 resids.vec[:] = resid_cache
