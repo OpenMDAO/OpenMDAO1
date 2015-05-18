@@ -163,9 +163,11 @@ class Component(System):
 
             # Size our Inputs
             if p_name in states:
-                p_size = np.size(unknowns[p_name])
+                inputs = unknowns
             else:
-                p_size = np.size(params[p_name])
+                inputs = params
+
+            p_size = np.size(inputs[p_name])
 
             # Size our Outputs
             for u_name in unknowns:
@@ -175,12 +177,12 @@ class Component(System):
             # Finite Difference each index in array
             for idx in xrange(p_size):
 
-                step = params[p_name].flat[idx] * 0.001
-                params[p_name].flat[idx] += step
+                step = inputs[p_name].flat[idx] * 0.001
+                inputs[p_name].flat[idx] += step
 
                 self.apply_nonlinear(params, unknowns, resids)
 
-                params[p_name].flat[idx] -= step
+                inputs[p_name].flat[idx] -= step
 
                 # delta resid is delta unknown
                 resids.vec[:] -= resid_cache
