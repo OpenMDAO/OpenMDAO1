@@ -221,13 +221,13 @@ class TestGroup(unittest.TestCase):
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
 
-        expected_G3_params   = ['x', 'C3:x']
+        expected_G3_params   = ['C4:x', 'C3:x']
         expected_G3_unknowns = ['C3:y', 'C4:y']
 
-        expected_G2_params   = ['x']
+        expected_G2_params   = ['G1:C2:x']
         expected_G2_unknowns = ['x', 'G1:C2:y']
 
-        expected_G1_params   = ['x']
+        expected_G1_params   = ['C2:x']
         expected_G1_unknowns = ['C2:y']
 
         self.assertEqual(list(root._varmanager.params.keys()),    expected_root_params)
@@ -293,13 +293,11 @@ class TestGroup(unittest.TestCase):
         prob.root.G2._varmanager.unknowns['x'] = 99.
 
         self.assertEqual(prob.root['G2:x'],   99.)
-        self.assertEqual(prob.root['G2:x',    'params'], 0.)      # initial value for a parameter
-        self.assertEqual(prob.root['G2:G1:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root['G2:G1:C2:x', 'params'], 0.)   # initial value for a parameter
 
         # and make sure we get the correct value after a transfer
         prob.root.G2._varmanager._transfer_data('G1')
-        self.assertEqual(prob.root['G2:x',    'params'], 99.)     # transferred value of parameter
-        self.assertEqual(prob.root['G2:G1:x', 'params'], 99.)     # transferred value of parameter
+        self.assertEqual(prob.root['G2:G1:C2:x', 'params'], 99.)   # transferred value of parameter
 
     def test_subsystem_access(self):
         prob = Problem(root=ExampleGroup())

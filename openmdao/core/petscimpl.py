@@ -11,7 +11,7 @@ class PetscImpl(object):
     """PETSc vector and data transfer implementation factory"""
 
     @staticmethod
-    def create_src_vecwrapper(comm):
+    def create_src_vecwrapper(pathname, comm):
         """
         Create a`PetscSrcVecWrapper`
 
@@ -19,10 +19,10 @@ class PetscImpl(object):
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper(comm)
+        return PetscSrcVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(comm):
+    def create_tgt_vecwrapper(pathname, comm):
         """
         Create a `PetscTgtVecWrapper`
 
@@ -30,7 +30,7 @@ class PetscImpl(object):
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper(comm)
+        return PetscTgtVecWrapper(pathname, comm)
 
     @staticmethod
     def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
@@ -167,7 +167,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         ndarray
             Index array containing all distributed indices for the named variable.
         """
-        meta = self._vardict[name][0]
+        meta = self._vardict[name]
         if meta.get('noflat'):
             raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
 

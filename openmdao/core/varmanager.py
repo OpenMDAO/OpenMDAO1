@@ -82,7 +82,7 @@ class VarManagerBase(object):
                                    xfer_dict.setdefault(tgt_sys, ([],[],[],[]))
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
-                noflat = self.unknowns.metadata(urelname)[0].get('noflat')
+                noflat = self.unknowns.metadata(urelname).get('noflat')
                 if noflat:
                     noflat_conns.append((prelname, urelname))
                 else:
@@ -180,12 +180,12 @@ class VarManager(VarManagerBase):
         self.comm = comm
 
         # create implementation specific VecWrappers
-        self.unknowns  = self.impl_factory.create_src_vecwrapper(comm)
-        self.dunknowns = self.impl_factory.create_src_vecwrapper(comm)
-        self.resids    = self.impl_factory.create_src_vecwrapper(comm)
-        self.dresids   = self.impl_factory.create_src_vecwrapper(comm)
-        self.params    = self.impl_factory.create_tgt_vecwrapper(comm)
-        self.dparams   = self.impl_factory.create_tgt_vecwrapper(comm)
+        self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        self.dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        self.resids    = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        self.dresids   = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        self.params    = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+        self.dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
         # populate the VecWrappers with data
         self.unknowns.setup(unknowns_dict, store_noflats=True)
@@ -289,8 +289,8 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     resids    = parent_vm.resids.get_view(comm, umap)
     dresids   = parent_vm.dresids.get_view(comm, umap)
 
-    params  = parent_vm.impl_factory.create_tgt_vecwrapper(comm)
-    dparams = parent_vm.impl_factory.create_tgt_vecwrapper(comm)
+    params  = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+    dparams = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
     params.setup(parent_vm.params, params_dict, top_unknowns,
                                my_params, connections, store_noflats=True)

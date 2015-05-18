@@ -16,10 +16,10 @@ class _flat_dict(object):
         self._dict = vardict
 
     def __getitem__(self, name):
-        meta = self._dict[name][0]
+        meta = self._dict[name]
         if meta.get('noflat'):
             raise ValueError("'%s' is non-flattenable" % name)
-        return self._dict[name][0]['val']
+        return self._dict[name]['val']
 
 class _NoflatWrapper(object):
     """
@@ -46,7 +46,8 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, comm=None):
+    def __init__(self, pathname, comm=None):
+        self.pathname = pathname
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
@@ -62,7 +63,7 @@ class VecWrapper(object):
 
     def _get_metadata(self, name):
         try:
-            return self._vardict[name][0]
+            return self._vardict[name]
         except KeyError as error:
             msg  = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
@@ -174,7 +175,7 @@ class VecWrapper(object):
                 iterator over the first metadata for each variable
         """
         for name, metadata_entry in self._vardict.items():
-            yield name, metadata_entry[0]
+            yield name, metadata_entry
 
     def values(self):
         """Iterate over the first metadata for each variable
@@ -185,7 +186,7 @@ class VecWrapper(object):
                 iterator over the first metadata for each variable
         """
         for metadata_entry in self._vardict.values():
-            yield metadata_entry[0]
+            yield metadata_entry
 
     def metadata(self, name):
         """Returns the metadata for the named variable. A target variable may
@@ -219,7 +220,7 @@ class VecWrapper(object):
         """
         # TODO: add support for returning slice objects
 
-        meta = self._vardict[name][0]
+        meta = self._vardict[name]
         if meta.get('noflat'):
             raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
 
@@ -369,10 +370,9 @@ class VecWrapper(object):
         rel_name : str
             Relative name mapped to the given absolute pathname
         """
-        for rel_name, meta_list in self._vardict.items():
-            for meta in meta_list:
-                if meta['pathname'] == abs_name:
-                    return rel_name
+        for rel_name, meta in self._vardict.items():
+            if meta['pathname'] == abs_name:
+                return rel_name
         raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
 
     def get_states(self):
@@ -401,6 +401,24 @@ class VecWrapper(object):
         """
         return [(n,meta) for n,meta  in self.items() if meta.get('noflat')]
 
+    def _scoped_abs_name(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            The absolute pathname of a variable.
+
+        Returns
+        -------
+        str
+            The given name as seen from the 'scope' of the `System` that
+            contains this `VecWrapper`
+        """
+        if self.pathname:
+            start = len(self.pathname)+1
+        else:
+            start = 0
+        return name[start:]
 
 class SrcVecWrapper(VecWrapper):
     def setup(self, unknowns_dict, store_noflats=False):
@@ -427,7 +445,7 @@ class SrcVecWrapper(VecWrapper):
                     self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
                 # for a target (unknown) vector, there may be multiple
                 # variables with relative name
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+                self._vardict[meta['relative_name']] = vmeta
                 vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
@@ -560,12 +578,12 @@ class TgtVecWrapper(VecWrapper):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                vmeta = self._add_var(meta, vec_size, src_meta[0], store_noflats)
+                vmeta = self._add_var(pathname, meta, vec_size, src_meta, store_noflats)
                 vmeta['pathname'] = pathname
 
                 vec_size += vmeta['size']
 
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+                self._vardict[self._scoped_abs_name(pathname)] = vmeta
             else:
                 if parent_params_vec is not None:
                     missing.append(pathname)
@@ -576,24 +594,20 @@ class TgtVecWrapper(VecWrapper):
         # (there may be metadata for multiple source variables for a target)
 
         # map slices to the array
-        for name, metas in self._vardict.items():
-            for meta in metas:
-                if meta['size'] > 0:
-                    start, end = self._slices[name]
-                    meta['val'] = self.vec[start:end]
+        for name, meta in self._vardict.items():
+            if meta['size'] > 0:
+                start, end = self._slices[name]
+                meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
             meta = params_dict[pathname]
-            prelname = parent_params_vec.get_relative_varname(pathname)
-            newmetas = parent_params_vec._vardict[prelname]
-            for newmeta in newmetas:
-                if newmeta['pathname'] == pathname:
-                    newmeta = newmeta.copy()
-                    newmeta['relative_name'] = meta['relative_name']
-                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
-                    self._vardict.setdefault(meta['relative_name'],
-                                             []).append(newmeta)
+            newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
+            if newmeta['pathname'] == pathname:
+                newmeta = newmeta.copy()
+                newmeta['relative_name'] = meta['relative_name']
+                newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
@@ -619,7 +633,7 @@ class TgtVecWrapper(VecWrapper):
                 src_pathname = connections.get(pathname)
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
-                src_unit = src_meta[0].get('units')
+                src_unit = src_meta.get('units')
                 if src_unit is None:
                     continue
 
@@ -633,13 +647,16 @@ class TgtVecWrapper(VecWrapper):
 
                 self._unit_conversion[pathname] = (scale, offset)
 
-    def _add_var(self, meta, index, src_meta, store_noflats):
+    def _add_var(self, pathname, meta, index, src_meta, store_noflats):
         """
         Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later.
 
         Parameters
         ----------
+        pathname : str
+            absolute name of the var being added
+
         meta : dict
             metadata for the variable
 
@@ -664,7 +681,7 @@ class TgtVecWrapper(VecWrapper):
             vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
-            self._slices[meta['relative_name']] = (index, index + var_size)
+            self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
         elif src_meta.get('noflat') and store_noflats:
             vmeta['val'] = src_meta['val']
             vmeta['noflat'] = True
