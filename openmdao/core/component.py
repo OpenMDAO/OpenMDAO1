@@ -130,17 +130,14 @@ class Component(System):
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
-        for u_name in unknowns:
-            #obtuse, but necessary to handle scalar and array cases and make sure we don't loose the pointer
-            resids.__setitem__(u_name, -unknowns[u_name])
+        resids.vec[:] = -unknowns.vec[:]
 
         self.solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too; apply_nonlinear does
         # not change the output vector.
-        for u_name in unknowns:
-            resids[u_name] += unknowns[u_name]
-            unknowns[u_name] -= resids[u_name]
+        resids.vec[:] += unknowns.vec[:]
+        unknowns.vec[:] -= resids.vec[:]
 
     def fd_jacobian(self, params, unknowns, resids):
         """Finite difference across all unknonws in component w.r.t. all params
