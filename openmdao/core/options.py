@@ -15,7 +15,6 @@ class OptionsDictionary(object):
 
         Parameters
         ----------
-
         name: str
             Name of the option.
 

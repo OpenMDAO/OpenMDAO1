@@ -4,7 +4,7 @@ from openmdao.solvers.solverbase import NonLinearSolver
 
 
 class NLGaussSeidel(NonLinearSolver):
-    """ Nonlinear Gauss Seidel solver. This is the default solver for an
+    """ Nonlinear Gauss Seidel solver. This is the default solver for a
     `Group`. If there are no cycles, then the system will solve its
     subsystems once and terminate. Equivalent to fixed point iteration in
     cases with cycles.
@@ -17,7 +17,7 @@ class NLGaussSeidel(NonLinearSolver):
         opt.add_option('atol', 1e-6,
                        doc='Absolute convergence tolerance.')
         opt.add_option('rtol', 1e-6,
-                       doc='relative convergence tolerance.')
+                       doc='Relative convergence tolerance.')
         opt.add_option('maxiter', 100,
                        doc='Maximum number of iterations.')
 
