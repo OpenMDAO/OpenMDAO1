@@ -42,7 +42,7 @@ class CompFDTestCase(unittest.TestCase):
 
     def test_correct_keys_in_jac(self):
 
-        expected_keys=[('y','x')]
+        expected_keys=[('y', 'x')]
 
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
@@ -50,32 +50,55 @@ class CompFDTestCase(unittest.TestCase):
                              'relative_name' : 'x' }
 
         unknowns_dict = OrderedDict()
-        unknowns_dict['y'] = { 'val': np.ones((2)),
+        unknowns_dict['y'] = { 'val': np.zeros((2)),
                                'pathname' : 'y',
                                'relative_name' : 'y' }
 
         resids_dict = OrderedDict()
-        resids_dict['y'] = { 'val': np.ones((2)),
+        resids_dict['y'] = { 'val': np.zeros((2)),
                              'pathname' : 'y',
                              'relative_name' : 'y' }
 
         params = SrcVecWrapper()
-        params.setup(params_dict)
+        params.setup(params_dict, store_noflats=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict)
+        unknowns.setup(unknowns_dict, store_noflats=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict)
+        resids.setup(resids_dict, store_noflats=True)
 
         jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
         self.assertEqual(set(expected_keys), set(jac.keys()))
 
     def test_correct_vals_in_jac(self):
 
-        params = {'x': np.ones(2)}
-        unknowns = {'y': np.zeros(2)}
-        resids = {'y': np.zeros(2)}
+        params_dict = OrderedDict()
+        params_dict['x'] = { 'val': np.ones((2)),
+                             'pathname' : 'x',
+                             'relative_name' : 'x' }
+
+        unknowns_dict = OrderedDict()
+        unknowns_dict['y'] = { 'val': np.zeros((2)),
+                               'pathname' : 'y',
+                               'relative_name' : 'y' }
+
+        resids_dict = OrderedDict()
+        resids_dict['y'] = { 'val': np.zeros((2)),
+                             'pathname' : 'y',
+                             'relative_name' : 'y' }
+
+        params = SrcVecWrapper()
+        params.setup(params_dict, store_noflats=True)
+
+        unknowns = SrcVecWrapper()
+        unknowns.setup(unknowns_dict, store_noflats=True)
+
+        resids = SrcVecWrapper()
+        resids.setup(resids_dict, store_noflats=True)
+
+        self.p['c1'].solve_nonlinear(params, unknowns, resids)
+
         jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2.,  7.],[ 5., -3.]])}
@@ -84,9 +107,33 @@ class CompFDTestCase(unittest.TestCase):
 
         #Got lucky that the way this comp was written, it would accept any square
         # matrix. But provided jacobian would be really wrong!
-        params = {'x': np.ones((2,2))}
-        unknowns = {'y': np.zeros((2,2))}
-        resids = {'y': np.zeros((2,2))}
+
+        params_dict = OrderedDict()
+        params_dict['x'] = { 'val': np.ones((2, 2)),
+                             'pathname' : 'x',
+                             'relative_name' : 'x' }
+
+        unknowns_dict = OrderedDict()
+        unknowns_dict['y'] = { 'val': np.zeros((2, 2)),
+                               'pathname' : 'y',
+                               'relative_name' : 'y' }
+
+        resids_dict = OrderedDict()
+        resids_dict['y'] = { 'val': np.zeros((2, 2)),
+                             'pathname' : 'y',
+                             'relative_name' : 'y' }
+
+        params = SrcVecWrapper()
+        params.setup(params_dict, store_noflats=True)
+
+        unknowns = SrcVecWrapper()
+        unknowns.setup(unknowns_dict, store_noflats=True)
+
+        resids = SrcVecWrapper()
+        resids.setup(resids_dict, store_noflats=True)
+
+        self.p['c1'].solve_nonlinear(params, unknowns, resids)
+
         jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2,  0,  7,  0],
@@ -99,9 +146,37 @@ class CompFDTestCase(unittest.TestCase):
 
     def test_correct_vals_in_jac_implicit(self):
 
-        params = {'x': .5}
-        unknowns = {'y': 0., 'z':0}
-        resids = {'y':0., 'z': 0}
+        params_dict = OrderedDict()
+        params_dict['x'] = { 'val': np.array([0.5]),
+                             'pathname' : 'x',
+                             'relative_name' : 'x' }
+
+        unknowns_dict = OrderedDict()
+        unknowns_dict['y'] = { 'val': np.array([0.0]),
+                               'pathname' : 'y',
+                               'relative_name' : 'y' }
+        unknowns_dict['z'] = { 'val': np.array([0.0]),
+                               'pathname' : 'z',
+                               'relative_name' : 'z' }
+
+        resids_dict = OrderedDict()
+        resids_dict['y'] = { 'val': np.array([0.0]),
+                             'pathname' : 'y',
+                             'relative_name' : 'y' }
+        resids_dict['z'] = { 'val': np.array([0.0]),
+                             'pathname' : 'z',
+                             'relative_name' : 'z' }
+
+        params = SrcVecWrapper()
+        params.setup(params_dict, store_noflats=True)
+
+        unknowns = SrcVecWrapper()
+        unknowns.setup(unknowns_dict, store_noflats=True)
+
+        resids = SrcVecWrapper()
+        resids.setup(resids_dict, store_noflats=True)
+
+        self.p['c1'].solve_nonlinear(params, unknowns, resids)
 
         jac = self.p['ci1'].fd_jacobian(params, unknowns, resids)
         expected_jac = {}

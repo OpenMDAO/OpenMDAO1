@@ -163,7 +163,6 @@ class Component(System):
             and whose values are ndarrays
         """
 
-        self.solve_nonlinear(params, unknowns, resids)
         jac = {}
         fd_r = _copy_vec(resids)
 
