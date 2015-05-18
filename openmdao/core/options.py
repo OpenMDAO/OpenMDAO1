@@ -11,6 +11,29 @@ class OptionsDictionary(object):
         self._options = {}
 
     def add_option(self, name, value, low=None, high=None, values=None, doc=''):
+        """ Adds an option to this options dictionary.
+
+        Parameters
+        ----------
+
+        name: str
+            Name of the option.
+
+        value: object
+            Default value for this option. The type of this value will be enforced.
+
+        low: float (optional)
+            Lower bounds for a float value.
+
+        high: float (optional)
+            upper bound for a float value.
+
+        values: list (optional)
+            list of all possible values for an enumeration option
+
+        doc: str (optional)
+            Doc string for documentation of this option.
+        """
 
         if name in self._options:
             raise ValueError("Option '{}' already exists".format(name))

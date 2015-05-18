@@ -13,9 +13,13 @@ class NLGaussSeidel(NonLinearSolver):
     def __init__(self):
         super(NLGaussSeidel, self).__init__()
 
-        self.options.add_option('atol', 1e-6)
-        self.options.add_option('rtol', 1e-6)
-        self.options.add_option('maxiter', 100)
+        opt = self.options
+        opt.add_option('atol', 1e-6,
+                       doc='Absolute convergence tolerance.')
+        opt.add_option('rtol', 1e-6,
+                       doc='relative convergence tolerance.')
+        opt.add_option('maxiter', 100,
+                       doc='Maximum number of iterations.')
 
 
     def solve(self, params, unknowns, resids, system):
