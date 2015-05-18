@@ -5,7 +5,6 @@ from collections import OrderedDict
 import numpy
 from numpy.linalg import norm
 
-from openmdao.units.units import get_conversion_tuple
 from openmdao.util.types import is_differentiable, int_types
 
 class _flat_dict(object):
@@ -58,7 +57,7 @@ class VecWrapper(object):
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
-        self._unit_conversion = {}
+        #self._unit_conversion = {}
         self.deriv_units = False
 
     def _get_metadata(self, name):
@@ -85,24 +84,24 @@ class VecWrapper(object):
         if meta.get('noflat'):
             return meta['val'].val
 
-        # Convert units
-        elif self._unit_conversion.get(name) is not None:
-            scale, offset = self._unit_conversion[name]
+        unitconv = meta.get('unit_conv')
+        shape = meta.get('shape')
+
+        # convert units
+        if unitconv:
+            scale, offset = unitconv
 
             # Gradient is just the scale
-            if self.deriv_units is True:
+            if self.deriv_units:
                 offset = 0.0
 
             # if it doesn't have a shape, it's a float
-            shape = meta.get('shape')
             if shape is None:
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
-
         else:
             # if it doesn't have a shape, it's a float
-            shape = meta.get('shape')
             if shape is None:
                 return meta['val'][0]
             else:
@@ -123,12 +122,13 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             meta['val'].val = value
+            return
+
+        unitconv = meta.get('unit_conv')
 
         # Convert Units
-        elif self.deriv_units is True and \
-             self._unit_conversion.get(name) is not None:
-
-            scale, offset = self._unit_conversion[name]
+        if self.deriv_units and unitconv:
+            scale, offset = unitconv
 
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = scale*value.flat[:]
@@ -576,6 +576,10 @@ class TgtVecWrapper(VecWrapper):
         store_noflats : bool (optional)
             If True, store unflattenable variables in the `VecWrapper` we're building.
         """
+        # dparams vector has some additional behavior
+        if not store_noflats:
+            self.deriv_units = True
+
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
@@ -599,9 +603,6 @@ class TgtVecWrapper(VecWrapper):
 
         self.vec = numpy.zeros(vec_size)
 
-        # get the size/val metadata from the first set of metadata in the list
-        # (there may be metadata for multiple source variables for a target)
-
         # map slices to the array
         for name, meta in self._vardict.items():
             if meta['size'] > 0:
@@ -620,41 +621,13 @@ class TgtVecWrapper(VecWrapper):
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
+            unitconv = meta.get('unit_conv')
+            if unitconv:
+                scale, offset = unitconv
+                if self.deriv_units:
+                    offset = 0.0
 
-            if 'units' not in meta:
-                continue
-
-            # dparams vector has some additional behavior
-            if store_noflats == False:
-                self.deriv_units = True
-
-            # Pull conversion from parents if we are a view.
-            if parent_params_vec is not None and \
-               parent_params_vec._unit_conversion.get(pathname) is not None:
-
-                newname = meta['relative_name']
-                self._unit_conversion[newname] = parent_params_vec._unit_conversion[pathname]
-
-            # Figure out conversions if we are the top target vector.
-            elif pathname in connections:
-
-                # Get source units
-                src_pathname = connections.get(pathname)
-                src_rel_name = srcvec.get_relative_varname(src_pathname)
-                src_meta = srcvec.metadata(src_rel_name)
-                src_unit = src_meta.get('units')
-                if src_unit is None:
-                    continue
-
-                tgt_unit = meta['units']
-
-                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
-
-                # Skip if we are equivalent units.
-                if scale == 1.0 and (offset == 0.0 or store_noflats == False):
-                    continue
-
-                self._unit_conversion[pathname] = (scale, offset)
+                self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
     def _add_var(self, pathname, meta, index, src_meta, store_noflats):
         """

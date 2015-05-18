@@ -92,11 +92,14 @@ class VarManagerBase(object):
 
         for tgt_sys, (srcs, tgts, flat_conns, noflat_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                         flat_conns, noflat_conns)
+            if flat_conns or noflat_conns:
+                self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                                             flat_conns, noflat_conns)
 
-        # create a jacobi DataXfer object that combines all of the
-        # individual subsystem src_idxs, tgt_idxs, and noflat_conns
+        # create a DataXfer object that combines all of the
+        # individual subsystem src_idxs, tgt_idxs, and noflat_conns, so that a 'full'
+        # scatter to all subsystems can be done at the same time.  Store that DataXfer
+        # object under the name ''.
         full_srcs = []
         full_tgts = []
         full_flats = []
@@ -130,7 +133,7 @@ class VarManagerBase(object):
         x = self.data_xfer.get(target_system)
         if x is not None:
             if deriv:
-                x.transfer(self.dunknowns, self.dparams, mode)
+                x.transfer(self.dunknowns, self.dparams, mode, deriv=True)
             else:
                 x.transfer(self.unknowns, self.params, mode)
 
@@ -223,19 +226,16 @@ class ViewVarManager(VarManagerBase):
         list of pathnames for parameters that this `VarManager` is
         responsible for propagating
 
-    connections : dict
-        a dictionary mapping the pathname of a target variable to the
-        pathname of the source variable that it is connected to
     """
     def __init__(self, top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                 my_params, connections):
-        super(ViewVarManager, self).__init__(connections)
+                 my_params):
+        super(ViewVarManager, self).__init__(parent_vm.connections)
 
         self.impl_factory = parent_vm.impl_factory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
             create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                         my_params, connections)
+                         my_params, parent_vm.connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 

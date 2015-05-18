@@ -269,8 +269,7 @@ class Group(System):
                                               self.pathname,
                                               self._params_dict,
                                               self._unknowns_dict,
-                                              my_params,
-                                              connections)
+                                              my_params)
 
         self._views = {}
         for name, sub in self.subgroups():
@@ -630,6 +629,19 @@ class Group(System):
                     max_procs = max(max_procs, sub_max)
 
         return (min_procs, max_procs)
+
+    def _update_sub_unit_conv(self, parent_params_dict=None):
+        """
+        Propagate unit conversion factors down the system tree.
+        """
+        if parent_params_dict:
+            for name, meta in self._params_dict.items():
+                pmeta = parent_params_dict.get(name)
+                if pmeta and 'unit_conv' in pmeta:
+                    meta['unit_conv'] = pmeta['unit_conv']
+
+        for name, sub in self.subgroups():
+            sub._update_sub_unit_conv(self._params_dict)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and
