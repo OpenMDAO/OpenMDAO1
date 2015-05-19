@@ -128,8 +128,8 @@ class Component(System):
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
-    def fd_jacobian(self, params, unknowns, resids):
-        """Finite difference across all unknonws in component w.r.t. all params.
+    def fd_jacobian(self, params, unknowns, resids, fdstep=None):
+        """Finite difference across all unknowns in component w.r.t. all params.
 
         Parameters
         ----------
@@ -142,6 +142,9 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
+        fdstep : float, optional
+            Override all other specifications of step size.
+
         Returns
         -------
         dict
@@ -151,6 +154,10 @@ class Component(System):
 
         jac = {}
         resid_cache = resids.vec.copy()
+
+        # TODO - Support specification of options.
+        if fdstep == None:
+            fdstep = 0.001
 
         states = []
         for u_name, meta in iteritems(self._unknowns_dict):
@@ -176,7 +183,7 @@ class Component(System):
             # Finite Difference each index in array
             for idx in xrange(p_size):
 
-                step = inputs.flat[p_name][idx] * 0.001
+                step = inputs.flat[p_name][idx] * fdstep
                 inputs.flat[p_name][idx] += step
 
                 self.apply_nonlinear(params, unknowns, resids)
