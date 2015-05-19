@@ -14,8 +14,9 @@ from openmdao.core.system import System
 from openmdao.core.vecwrapper import SrcVecWrapper
 
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.simplecomps import SimpleArrayComp, SimpleCompDerivJac, SimpleImplicitComp
-from openmdao.test.testutil import assert_equal_jacobian
+from openmdao.test.simplecomps import SimpleArrayComp, SimpleCompDerivJac, \
+                                      SimpleImplicitComp, SimpleComp
+from openmdao.test.testutil import assert_equal_jacobian, assert_rel_error
 
 
 class TestProb(Problem):
@@ -188,6 +189,50 @@ class CompFDTestCase(unittest.TestCase):
         expected_jac[('z', 'x')] = unknowns['z']
 
         assert_equal_jacobian(self, jac, expected_jac, 1e-8)
+
+
+class CompFDinSystemTestCase(unittest.TestCase):
+    """ Tests automatic finite difference of a component in a full problem."""
+
+    def test_error_no_derivatives(self):
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', SimpleComp())
+        top.root.add('p1', ParamComp('x', 2.0))
+        top.root.connect('p1:x', 'comp:x')
+
+        comp.fd_options['force_fd'] = False
+
+        top.setup()
+        top.run()
+
+        try:
+            J = top.calc_gradient(['p1:x'], ['comp:y'], mode='fwd', return_format='dict')
+        except Exception as err:
+            msg = "No derivatives defined for Component 'comp'"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
+    def test_no_derivatives(self):
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', SimpleComp())
+        top.root.add('p1', ParamComp('x', 2.0))
+        top.root.connect('p1:x', 'comp:x')
+
+        comp.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['p1:x'], ['comp:y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp:y']['p1:x'][0][0], 2.0, 1e-6)
+
+        J = top.calc_gradient(['p1:x'], ['comp:y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp:y']['p1:x'][0][0], 2.0, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

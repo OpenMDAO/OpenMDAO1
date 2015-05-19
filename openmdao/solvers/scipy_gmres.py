@@ -100,7 +100,7 @@ class ScipyGMRES(LinearSolver):
 
         # Start with a clean slate
         rhs_vec.vec[:] = 0.0
-        dparams.vec[:] = 0.0
+        system.clear_dparams()
 
         system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
                             mode)

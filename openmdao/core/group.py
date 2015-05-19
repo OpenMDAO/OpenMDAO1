@@ -387,7 +387,11 @@ class Group(System):
             unknowns = view.unknowns
             resids = view.resids
 
-            jacobian_cache = system.jacobian(params, unknowns, resids)
+            # Instigate finite difference on child if user requests.
+            if system.fd_options['force_fd'] == True:
+                jacobian_cache = system.fd_jacobian(params, unknowns, resids)
+            else:
+                jacobian_cache = system.jacobian(params, unknowns, resids)
 
             if isinstance(system, Component) and \
                not isinstance(system, ParamComp):
@@ -499,7 +503,7 @@ class Group(System):
             # Full Scatter
             varmanager._transfer_data(mode='rev', deriv=True)
 
-        #print('apply_linear on', name, 'POST SCATTER')
+        #print('apply_linear on', self.name, 'POST SCATTER')
         #print('dunknowns', varmanager.dunknowns.vec)
         #print('dparams', varmanager.dparams.vec)
         #print('dresids', varmanager.dresids.vec)
@@ -538,6 +542,23 @@ class Group(System):
         self.sol_buf[:] = self.sol_vec.array[:]
         self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
         self.sol_vec.array[:] = self.sol_buf[:]
+
+    def clear_dparams(self):
+        """ Zeros out the dparams (dp) vector."""
+
+        varmanager = self._varmanager
+        varmanager.dparams.vec[:] = 0.0
+
+        # Recurse to clear all dparams vectors.
+        for name, system in self.subsystems(local=True):
+
+            if isinstance(system, Component):
+                view = self._views[system.name]
+                view.dparams.vec[:] = 0.0
+
+            else:
+                system.clear_dparams()
+
 
     def dump(self, nest=0, file=sys.stdout, verbose=True):
         file.write(" "*nest)
