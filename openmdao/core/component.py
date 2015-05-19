@@ -258,6 +258,11 @@ class Component(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
+        self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
+
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. """
 
         if self._jacobian_cache is None:
             msg = ("No derivatives defined for Component '{name}'")

@@ -234,5 +234,51 @@ class CompFDinSystemTestCase(unittest.TestCase):
         J = top.calc_gradient(['p1:x'], ['comp:y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['comp:y']['p1:x'][0][0], 2.0, 1e-6)
 
+    def test_overrides(self):
+
+        class OverrideComp(Component):
+
+            def __init__(self):
+                super(OverrideComp, self).__init__()
+
+                # Params
+                self.add_param('x', 3.0)
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+
+                unknowns['y'] = 7.0*params['x']
+
+            def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                             mode):
+                """Never Call."""
+                raise RuntimeError("This should have been overridden by force_fd.")
+
+
+            def jacobian(self, params, unknowns, resids):
+                """Never Call."""
+                raise RuntimeError("This should have been overridden by force_fd.")
+
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', OverrideComp())
+        top.root.add('p1', ParamComp('x', 2.0))
+        top.root.connect('p1:x', 'comp:x')
+
+        comp.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['p1:x'], ['comp:y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp:y']['p1:x'][0][0], 7.0, 1e-6)
+
+        J = top.calc_gradient(['p1:x'], ['comp:y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp:y']['p1:x'][0][0], 7.0, 1e-6)
+
 if __name__ == "__main__":
     unittest.main()

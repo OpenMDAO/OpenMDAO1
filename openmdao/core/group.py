@@ -466,8 +466,12 @@ class Group(System):
                 # Forward Mode
                 if mode == 'fwd':
 
-                    system.apply_linear(params, unknowns, dparams, dunknowns,
-                                        dresids, mode)
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(params, unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(params, unknowns, dparams,
+                                            dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
@@ -482,8 +486,13 @@ class Group(System):
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
                     dresids.vec *= -1.0
-                    system.apply_linear(params, unknowns, dparams, dunknowns,
-                                        dresids, mode)
+
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(params, unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(params, unknowns, dparams,
+                                            dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
