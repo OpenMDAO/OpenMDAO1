@@ -6,6 +6,7 @@ import logging
 import os.path
 import sys
 import unittest
+import numpy as np
 
 from openmdao.test.testutil import assert_rel_error
 
@@ -39,7 +40,22 @@ class TestCase(unittest.TestCase):
         # We may actually want this to work for some tests.
         assert_rel_error(self, float('nan'), float('nan'), 0.0001)
 
+    def test_rel_error_array(self):
+
+        try:
+            assert_rel_error(self, 1e-2*np.ones(3), np.zeros(3), 1e-3)
+        except AssertionError as exc:
+            msg="arrays do not match, rel error 1.732e-02 > tol (1.000e-03)"
+            self.assertEqual(msg, str(exc))
+        else:
+            self.fail("Expected Assertion Error")
+
+        err = assert_rel_error(self, 1e-2*np.ones(3), 1e-2*np.ones(3), 1e-10)
+        self.assertEquals(err, 0.0)
+
+        err = assert_rel_error(self, 1e-2*np.ones(3), 1.00001e-2*np.ones(3), 1e-3)
+        self.assertLessEqual(err, 1e-5)
+
+
 if __name__ == "__main__":
     unittest.main()
-
-
