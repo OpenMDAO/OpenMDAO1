@@ -33,7 +33,7 @@ def assert_rel_error(test_case, actual, desired, tolerance):
         if desired != 0:
             error = (actual - desired) / desired
         else:
-            error = np.linalg.norm(actual)
+            error = actual
         if abs(error) > tolerance:
             test_case.fail('actual %s, desired %s, rel error %s, tolerance %s'
                            % (actual, desired, error, tolerance))
