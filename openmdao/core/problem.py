@@ -227,7 +227,7 @@ class Problem(Component):
 
                 # Call GMRES to solve the linear system
                 dx = root.ln_solver.solve(rhs, root, mode)
-                print "dx",dx
+                #print "dx",dx
 
                 rhs[irhs] = 0.0
 

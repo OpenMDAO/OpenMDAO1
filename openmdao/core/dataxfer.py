@@ -70,7 +70,7 @@ class DataXfer(object):
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This requires numpy's new add command.
             np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
-            print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.flat_conns, 'noflat',self.noflat_conns
+            #print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.flat_conns, 'noflat',self.noflat_conns
 
             # formerly
             #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
@@ -79,7 +79,7 @@ class DataXfer(object):
 
         else:  # forward
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
-            print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.flat_conns, 'noflat',self.noflat_conns
+            #print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.flat_conns, 'noflat',self.noflat_conns
 
             if not deriv:
                 for tgt, src in self.noflat_conns:
