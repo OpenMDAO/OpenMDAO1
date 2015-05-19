@@ -2,16 +2,17 @@
 
 from __future__ import print_function
 
-import sys
 from collections import OrderedDict
+import sys
 from six import iteritems
 
+# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
-from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
+from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES

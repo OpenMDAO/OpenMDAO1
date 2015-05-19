@@ -8,24 +8,8 @@ from openmdao.core.system import System
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-
 from openmdao.components.paramcomp import ParamComp
 
-
-def _find_all_components(group):
-    """recurse down through the hiearchy and find all components"""
-
-    comps = list(group.components())
-    name = group.name
-
-    sub_groups = group.subgroups()
-    for name, sg in sub_groups:
-        sub_comps = _find_all_components(sg)
-        sub_comps = [(c.pathname, c) for name, c in sub_comps]
-        if sub_comps:
-            comps.extend(sub_comps)
-
-    return comps
 
 def pull_unknowns(prob):
     """grabs all the keys and values from an unknowns vector and returns a copy of it"""

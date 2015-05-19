@@ -1,11 +1,13 @@
 """ Defines the base class for a Component in OpenMDAO."""
-import functools
-import numpy as np
+
 from collections import OrderedDict
+import functools
+from itertools import chain
 from six import iteritems
 from six.moves import range
+
+# pylint: disable=E0611, F0401
 import numpy as np
-from itertools import chain
 
 from openmdao.core.system import System
 

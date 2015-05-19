@@ -1,13 +1,17 @@
 """ OpenMDAO Problem class defintion."""
 
-import numpy as np
 from collections import namedtuple
+from itertools import chain
+from six import iteritems
 
+# pylint: disable=E0611, F0401
+import numpy as np
+
+from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
-from openmdao.core.checks import check_connections
-from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
@@ -259,6 +263,58 @@ class Problem(Component):
         #print params, '\n', unknowns, '\n', J
         return J
 
+    def check_partial_derivatives(self):
+        """ Checks partial derivatives comprehensively for all components in
+        your model.
+
+        Returns
+        -------
+        Dict of Dicts of Dicts of Tuples of Floats
+
+        First key is the component name; 2nd key is the (output, input) tuple
+        of strings; third key is one of ['rel error', 'abs error',
+        'magnitude', 'fdstep']; Tuple contains norms for forward - fd,
+        adjoint - fd, forward - adjoint using the best case fdstep.
+        """
+
+        data = {}
+        model_hierarchy = _find_all_comps(self.root)
+
+        for group, comps in model_hierarchy.items():
+
+            for comp in comps:
+
+                # No need to check comps that don't have any derivs.
+                if comp.fd_options['force_fd'] == True:
+                    continue
+
+                cname = comp.pathname
+                data[cname] = {}
+
+                view = group._views[comp.name]
+                params = view.params
+                unknowns = view.unknowns
+                resids = view.resids
+                dparams = view.dparams
+                dunknowns = view.dunknowns
+                dresids = view.dresids
+
+                # Figure out implicit states for this comp
+                states = []
+                for u_name, meta in iteritems(comp._unknowns_dict):
+                    if meta.get('state'):
+                        states.append(meta['relative_name'])
+
+                # Create all our keys
+                for p_name in chain(params, states):
+                    for u_name in unknowns:
+                        data[cname][(u_name, p_name)] = {}
+
+                # Reverse derivatives first
+                #Jfwd =
+
+        return data
+
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
@@ -307,4 +363,20 @@ def assign_parameters(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
+
+
+def _find_all_comps(group):
+    """ Recursive function that assembles a dictionary whose keys are Group
+    instances and whos values are lists of Component instances."""
+
+    components = group.components()
+    subgroups = group.subgroups()
+
+    data = {group:[]}
+    for c_name, c in components:
+        data[group].append(c)
+    for sg_name, sg in subgroups:
+        sub_data = _find_all_comps(sg)
+        data.update(sub_data)
+    return data
 
