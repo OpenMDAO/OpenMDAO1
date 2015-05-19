@@ -37,18 +37,19 @@ def assert_rel_error(test_case, actual, desired, tolerance):
         if abs(error) > tolerance:
             test_case.fail('actual %s, desired %s, rel error %s, tolerance %s'
                            % (actual, desired, error, tolerance))
-    else:
-        for i, (act, des) in enumerate(zip(actual, desired)):
-            if isnan(act) and not isnan(des):
-                test_case.fail('at %d: actual nan, desired %s, rel error nan,'
-                               ' tolerance %s' % (i, des, tolerance))
-            if des != 0:
-                error = (act - des) / des
-            else:
-                error = act
-            if abs(error) > tolerance:
-                test_case.fail('at %d: actual %s, desired %s, rel error %s,'
-                               ' tolerance %s' % (i, act, des, error, tolerance))
+    else: #array values
+        if not np.all(np.isnan(actual)==np.isnan(desired)):
+            test_case.fail('actual and desired values have non-matching nan values')
+
+        if np.linalg.norm(desired) == 0:
+            error = np.linalg.norm(actual)
+        else:
+            error = np.linalg.norm(actual - desired) / np.linalg.norm(desired)
+
+        if abs(error) > tolerance:
+            test_case.fail('arrays do not match, rel error %.3e > tol (%.3e)'  % (error, tolerance))
+
+    return error
 
 
 def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
