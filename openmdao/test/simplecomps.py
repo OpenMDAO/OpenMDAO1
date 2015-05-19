@@ -241,6 +241,30 @@ class FanOutComp3(Component):
         J[('y', 'x')] = np.array([5.0])
         return J
 
+class FanInTarget(Component):
+
+    def __init__(self):
+        super(FanInTarget, self).__init__()
+
+        # Params
+        self.add_param('x1', 0.0)
+        self.add_param('x2', 0.0)
+
+        # Unknowns
+        self.add_output('y', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'] = 3.0*params['x1'] * 7.0*params['x2']
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
+        J = {}
+        J[('y', 'x1')] = np.array([3.0])
+        J[('y', 'x2')] = np.array([7.0])
+        return J
+
 
 class FanOut(Group):
     """ Topology where one comp broadcasts an output to two target
@@ -275,3 +299,42 @@ class FanOutGrouped(Group):
         self.connect("comp1:y", "sub:comp2:x")
         self.connect("comp1:y", "sub:comp3:x")
         self.connect("p:x", "comp1:x")
+
+
+class FanIn(Group):
+    """ Topology where two comp feed a single comp."""
+
+    def __init__(self):
+        super(FanIn, self).__init__()
+
+        self.add('comp1', FanOutComp2())
+        self.add('comp2', FanOutComp3())
+        self.add('comp3', FanInTarget())
+        self.add('p1', ParamComp('x1', 1.0))
+        self.add('p2', ParamComp('x2', 1.0))
+
+        self.connect("comp1:y", "comp3:x1")
+        self.connect("comp2:y", "comp3:x2")
+        self.connect("p1:x1", "comp1:x")
+        self.connect("p2:x2", "comp2:x")
+
+
+class FanInGrouped(Group):
+    """ Topology where two comp feed a single comp."""
+
+    def __init__(self):
+        super(FanInGrouped, self).__init__()
+
+        sub = self.add('sub', Group()
+                       )
+        sub.add('comp1', FanOutComp2())
+        sub.add('comp2', FanOutComp3())
+        self.add('comp3', FanInTarget())
+        self.add('p1', ParamComp('x1', 1.0))
+        self.add('p2', ParamComp('x2', 1.0))
+
+        self.connect("sub:comp1:y", "comp3:x1")
+        self.connect("sub:comp2:y", "comp3:x2")
+        self.connect("p1:x1", "sub:comp1:x")
+        self.connect("p2:x2", "sub:comp2:x")
+

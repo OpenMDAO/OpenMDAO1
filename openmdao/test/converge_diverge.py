@@ -195,3 +195,44 @@ class ConvergeDivergeGroups(Group):
         self.connect('sub1:comp4:y2', 'sub3:comp6:x1')
         self.connect('sub3:comp5:y1', 'comp7:x1')
         self.connect('sub3:comp6:y1', 'comp7:x2')
+
+
+class SingleDiamond(Group):
+    """ Topology one - two - one."""
+
+    def __init__(self):
+        super(SingleDiamond, self).__init__()
+
+        self.add('comp1', Comp1())
+        self.add('comp2', Comp2())
+        self.add('comp3', Comp3())
+        self.add('comp4', Comp4())
+
+        self.add('p', ParamComp('x', 2.0))
+
+        self.connect("p:x", "comp1:x1")
+        self.connect('comp1:y1', 'comp2:x1')
+        self.connect('comp1:y2', 'comp3:x1')
+        self.connect('comp2:y1', 'comp4:x1')
+        self.connect('comp3:y1', 'comp4:x2')
+
+class SingleDiamondGrouped(Group):
+    """ Topology one - two - one."""
+
+    def __init__(self):
+        super(SingleDiamondGrouped, self).__init__()
+
+        sub1 = self.add('sub1', Group())
+        sub1.add('comp1', Comp1())
+        sub1.add('comp2', Comp2())
+        sub1.add('comp3', Comp3())
+        self.add('comp4', Comp4())
+
+        self.add('p', ParamComp('x', 2.0))
+
+        self.connect("p:x", "sub1:comp1:x1")
+        self.connect('sub1:comp1:y1', 'sub1:comp2:x1')
+        self.connect('sub1:comp1:y2', 'sub1:comp3:x1')
+        self.connect('sub1:comp2:y1', 'comp4:x1')
+        self.connect('sub1:comp3:y1', 'comp4:x2')
+

@@ -278,3 +278,4 @@ class Component(System):
                 dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
+
