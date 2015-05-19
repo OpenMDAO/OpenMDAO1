@@ -9,6 +9,8 @@ from openmdao.core.group import _get_implicit_connections
 from openmdao.core.checks import check_connections
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.units.units import get_conversion_tuple
+from openmdao.util.strutil import get_common_ancestor
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -88,6 +90,9 @@ class Problem(Component):
         # combine implicit and explicit connections
         connections.update(implicit_conns)
 
+        # calculate unit conversions and store in param metadata
+        _setup_units(connections, params_dict, unknowns_dict)
+
         check_connections(connections, params_dict, unknowns_dict)
 
         # check for parameters that are not connected to a source/unknown
@@ -99,6 +104,9 @@ class Problem(Component):
         if hanging_params:
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
             raise RuntimeError(msg)
+
+        # propagate top level metadata, e.g., unit_conv to subsystems
+        self.root._update_sub_unit_conv()
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
@@ -210,7 +218,7 @@ class Problem(Component):
         j = 0
         for param in input_list:
 
-            in_idx = unknowns.get_idxs(param)
+            in_idx = unknowns.get_local_idxs(param)
             jbase = j
 
             for irhs in in_idx:
@@ -219,13 +227,14 @@ class Problem(Component):
 
                 # Call GMRES to solve the linear system
                 dx = root.ln_solver.solve(rhs, root, mode)
+                #print "dx",dx
 
                 rhs[irhs] = 0.0
 
                 i = 0
                 for item in output_list:
 
-                    out_idx = unknowns.get_idxs(item)
+                    out_idx = unknowns.get_local_idxs(item)
                     nk = len(out_idx)
 
                     if return_format == 'dict':
@@ -250,6 +259,44 @@ class Problem(Component):
         #print params, '\n', unknowns, '\n', J
         return J
 
+
+def _setup_units(connections, params_dict, unknowns_dict):
+    """
+    Calculate unit conversion factors for any connected
+    variables having different units and stores them in params_dict.
+
+    Parameters
+    ----------
+    connections : dict
+        A dict of target variables (absolute name) mapped
+        to the absolute name of their source variable.
+
+    params_dict : OrderedDict
+        A dict of parameter metadata for the whole `Problem`
+
+    unknowns_dict : OrderedDict
+        A dict of unknowns metadata for the whole `Problem`
+    """
+
+    for target, source in connections.items():
+        tmeta = params_dict[target]
+        smeta = unknowns_dict[source]
+
+        # units must be in both src and target to have a conversion
+        if 'units' not in tmeta or 'units' not in smeta:
+            continue
+
+        src_unit = smeta['units']
+        tgt_unit = tmeta['units']
+
+        scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+
+        # If units are not equivalent, store unit conversion tuple
+        # in the parameter metadata
+        if scale != 1.0 or offset != 0.0:
+            tmeta['unit_conv'] = (scale, offset)
+
+
 def assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
@@ -257,14 +304,7 @@ def assign_parameters(connections):
     param_owners = {}
 
     for par, unk in connections.items():
-        common_parts = []
-        for ppart, upart in zip(par.split(':'), unk.split(':')):
-            if ppart == upart:
-                common_parts.append(ppart)
-            else:
-                break
-
-        owner = ':'.join(common_parts)
-        param_owners.setdefault(owner, []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
+

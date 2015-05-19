@@ -109,7 +109,8 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+        self.assertEqual(prob.root._varmanager.params._get_metadata('tgtC:x2').get('unit_conv'),
+                         None)
 
         param_list = ['x1']
         unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
@@ -146,7 +147,8 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+        self.assertEqual(prob.root._varmanager.params._get_metadata('tgtC:x2').get('unit_conv'),
+                         None)
 
         param_list = ['x1']
         unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
@@ -189,7 +191,8 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['sub2:tgtK:x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root._views['tgtC'].params._unit_conversion, {})
+        self.assertEqual(prob.root['sub2']._varmanager.params._get_metadata('tgtC:x2').get('unit_conv'),
+                         None)
 
         param_list = ['x1']
         unknown_list = ['sub2:tgtF:x3', 'sub2:tgtC:x3', 'sub2:tgtK:x3']

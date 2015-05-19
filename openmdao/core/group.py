@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 from collections import OrderedDict
+from six import iteritems
 
 import numpy as np
 
@@ -14,6 +15,7 @@ from openmdao.core.component import Component
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.util.types import real_types
 
 from openmdao.core.mpiwrap import get_comm_if_active, world_rank
 
@@ -228,7 +230,8 @@ class Group(System):
             if sub.is_active():
                 self._local_subsystems[name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None, impl=BasicImpl):
+    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+                       top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -246,6 +249,9 @@ class Group(System):
             the `VarManager` for the parent `Group`, if any, into which this
             `VarManager` will provide a view.
 
+        top_unknowns : `VecWrapper`, optional
+            the `Problem` level unknowns `VecWrapper`
+
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
@@ -255,23 +261,26 @@ class Group(System):
             self._varmanager = VarManager(self.comm,
                                           self.pathname, self._params_dict, self._unknowns_dict,
                                           my_params, connections, impl=impl)
+            top_unknowns = self._varmanager.unknowns
         else:
-            self._varmanager = ViewVarManager(parent_vm,
+            self._varmanager = ViewVarManager(top_unknowns,
+                                              parent_vm,
                                               self.comm,
                                               self.pathname,
                                               self._params_dict,
                                               self._unknowns_dict,
-                                              my_params,
-                                              connections)
+                                              my_params)
 
         self._views = {}
         for name, sub in self.subgroups():
-            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager)
+            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
+                               top_unknowns=top_unknowns)
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            self._views[name] = create_views(self._varmanager, self.comm, sub.pathname,
-                                             sub._params_dict, sub._unknowns_dict, [], {})
+            self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
+                                             sub.pathname,
+                                             sub._params_dict, sub._unknowns_dict, [], connections)
 
     def _get_explicit_connections(self):
         """ Returns
@@ -391,8 +400,8 @@ class Group(System):
             # The user might submit a scalar Jacobian as a float.
             # It is really inconvenient if we don't allow it.
             if jacobian_cache is not None:
-                for key, J in jacobian_cache.items():
-                    if isinstance(J, float):
+                for key, J in iteritems(jacobian_cache):
+                    if isinstance(J, real_types):
                         jacobian_cache[key] = np.array([[J]])
 
 
@@ -624,6 +633,19 @@ class Group(System):
                     max_procs = max(max_procs, sub_max)
 
         return (min_procs, max_procs)
+
+    def _update_sub_unit_conv(self, parent_params_dict=None):
+        """
+        Propagate unit conversion factors down the system tree.
+        """
+        if parent_params_dict:
+            for name, meta in self._params_dict.items():
+                pmeta = parent_params_dict.get(name)
+                if pmeta and 'unit_conv' in pmeta:
+                    meta['unit_conv'] = pmeta['unit_conv']
+
+        for name, sub in self.subgroups():
+            sub._update_sub_unit_conv(self._params_dict)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """Finds all matches between relative names of parameters and

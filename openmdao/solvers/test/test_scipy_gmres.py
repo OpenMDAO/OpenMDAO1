@@ -134,9 +134,11 @@ class TestScipyGMRES(unittest.TestCase):
         param_list = ['p:x']
         unknown_list = ['comp7:y1']
 
+        #print "---------"
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
+        #print "---------"
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 

@@ -319,7 +319,7 @@ class TestProblem(unittest.TestCase):
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob['G2:G1:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)      # initial value for a parameter
 
         # __setitem__
         prob['G2:G1:C2:y'] = 99.

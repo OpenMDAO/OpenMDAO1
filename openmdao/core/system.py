@@ -150,4 +150,4 @@ class System(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self.comm = get_comm_if_active(comm)
+        self.comm = get_comm_if_active(self, comm)
