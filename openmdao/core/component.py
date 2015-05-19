@@ -3,7 +3,9 @@ import functools
 import numpy as np
 from collections import OrderedDict
 from six import iteritems
+from six.moves import range
 import numpy as np
+from itertools import chain
 
 from openmdao.core.system import System
 
@@ -158,7 +160,7 @@ class Component(System):
                 states.append(meta['relative_name'])
 
         # Compute gradient for this param or state.
-        for p_name in params.keys() + states:
+        for p_name in chain(params, states):
 
             if p_name in states:
                 inputs = unknowns
@@ -174,7 +176,7 @@ class Component(System):
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
             # Finite Difference each index in array
-            for idx in xrange(p_size):
+            for idx in range(p_size):
 
                 step = inputs.flat[p_name][idx] * 0.001
                 inputs.flat[p_name][idx] += step

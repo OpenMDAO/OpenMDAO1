@@ -110,7 +110,7 @@ class System(object):
         pass
 
     def solve_nonlinear(self, params, unknowns, resids):
-        pass
+        raise NotImplementedError("solve_nonlinear")
 
     def apply_nonlinear(self, params, unknowns, resids):
         pass
