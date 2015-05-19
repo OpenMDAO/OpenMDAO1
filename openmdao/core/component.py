@@ -129,7 +129,7 @@ class Component(System):
         unknowns.vec[:] -= resids.vec[:]
 
     def fd_jacobian(self, params, unknowns, resids):
-        """Finite difference across all unknonws in component w.r.t. all params
+        """Finite difference across all unknonws in component w.r.t. all params.
 
         Parameters
         ----------
@@ -176,16 +176,16 @@ class Component(System):
             # Finite Difference each index in array
             for idx in xrange(p_size):
 
-                step = inputs[p_name].flat[idx] * 0.001
-                inputs[p_name].flat[idx] += step
+                step = inputs.flat[p_name][idx] * 0.001
+                inputs.flat[p_name][idx] += step
 
                 self.apply_nonlinear(params, unknowns, resids)
 
-                inputs[p_name].flat[idx] -= step
+                inputs.flat[p_name][idx] -= step
 
                 # delta resid is delta unknown
                 resids.vec[:] -= resid_cache
-                resids.vec[:] *= (1/step)
+                resids.vec[:] *= (1.0/step)
 
                 for u_name in unknowns:
                     jac[u_name, p_name][:, idx] = resids.flat[u_name]
@@ -250,6 +250,12 @@ class Component(System):
             Derivative mode, can be 'fwd' or 'rev'
         """
 
+        if self._jacobian_cache is None:
+            msg = ("No derivatives defined for Component '{name}'")
+            msg = msg.format(name=self.name)
+            raise ValueError(msg)
+
+
         for key, J in iteritems(self._jacobian_cache):
             unknown, param = key
 
@@ -272,3 +278,4 @@ class Component(System):
                 dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
+
