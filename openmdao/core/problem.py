@@ -179,7 +179,7 @@ class Problem(Component):
         rhs = np.zeros((n_edge, ))
 
         # Prepare model for calculation
-        #root.clear_dparams()
+        root.clear_dparams()
         dunknowns.vec[:] = 0.0
         dresids.vec[:] = 0.0
         root.jacobian(params, unknowns, resids)
