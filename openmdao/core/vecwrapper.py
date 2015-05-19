@@ -5,8 +5,8 @@ from collections import OrderedDict
 import numpy
 from numpy.linalg import norm
 
-from openmdao.units.units import get_conversion_tuple
 from openmdao.util.types import is_differentiable, int_types
+from openmdao.util.strutil import get_common_ancestor
 
 class _flat_dict(object):
     """This is here to allow the user to use vec.flat['foo'] syntax instead
@@ -16,10 +16,10 @@ class _flat_dict(object):
         self._dict = vardict
 
     def __getitem__(self, name):
-        meta = self._dict[name][0]
+        meta = self._dict[name]
         if meta.get('noflat'):
             raise ValueError("'%s' is non-flattenable" % name)
-        return self._dict[name][0]['val']
+        return self._dict[name]['val']
 
 class _NoflatWrapper(object):
     """
@@ -46,7 +46,9 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self):
+    def __init__(self, pathname='', comm=None):
+        self.pathname = pathname
+        self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
         self._slices = OrderedDict()
@@ -56,12 +58,12 @@ class VecWrapper(object):
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
-        self._unit_conversion = {}
+        #self._unit_conversion = {}
         self.deriv_units = False
 
     def _get_metadata(self, name):
         try:
-            return self._vardict[name][0]
+            return self._vardict[name]
         except KeyError as error:
             msg  = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
@@ -83,24 +85,24 @@ class VecWrapper(object):
         if meta.get('noflat'):
             return meta['val'].val
 
-        # Convert units
-        elif self._unit_conversion.get(name) is not None:
-            scale, offset = self._unit_conversion[name]
+        unitconv = meta.get('unit_conv')
+        shape = meta.get('shape')
+
+        # convert units
+        if unitconv:
+            scale, offset = unitconv
 
             # Gradient is just the scale
-            if self.deriv_units is True:
+            if self.deriv_units:
                 offset = 0.0
 
             # if it doesn't have a shape, it's a float
-            shape = meta.get('shape')
             if shape is None:
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
-
         else:
             # if it doesn't have a shape, it's a float
-            shape = meta.get('shape')
             if shape is None:
                 return meta['val'][0]
             else:
@@ -121,12 +123,13 @@ class VecWrapper(object):
 
         if meta.get('noflat'):
             meta['val'].val = value
+            return
+
+        unitconv = meta.get('unit_conv')
 
         # Convert Units
-        elif self.deriv_units is True and \
-             self._unit_conversion.get(name) is not None:
-
-            scale, offset = self._unit_conversion[name]
+        if self.deriv_units and unitconv:
+            scale, offset = unitconv
 
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = scale*value.flat[:]
@@ -161,7 +164,7 @@ class VecWrapper(object):
         Returns
         _______
             a dictionary iterator over the items in _vardict
-        """ 
+        """
         return self._vardict.__iter__()
 
 
@@ -182,7 +185,7 @@ class VecWrapper(object):
                 iterator over the first metadata for each variable
         """
         for name, metadata_entry in self._vardict.items():
-            yield name, metadata_entry[0]
+            yield name, metadata_entry
 
     def values(self):
         """Iterate over the first metadata for each variable
@@ -193,7 +196,7 @@ class VecWrapper(object):
                 iterator over the first metadata for each variable
         """
         for metadata_entry in self._vardict.values():
-            yield metadata_entry[0]
+            yield metadata_entry
 
     def metadata(self, name):
         """Returns the metadata for the named variable. A target variable may
@@ -212,7 +215,7 @@ class VecWrapper(object):
         """
         return self._vardict[name]
 
-    def get_idxs(self, name):
+    def get_local_idxs(self, name):
         """Returns all of the indices for the named variable in this vector
 
         Parameters
@@ -223,16 +226,20 @@ class VecWrapper(object):
         Returns
         -------
         ndarray
-            Index array containing all indices (possibly distributed) for the named variable.
+            Index array containing all local indices for the named variable.
         """
         # TODO: add support for returning slice objects
 
-        meta = self._vardict[name][0]
+        meta = self._vardict[name]
         if meta.get('noflat'):
             raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
 
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
+
+    # for distributed vecwrappers, get_global_idxs will return the indices w.r.t. the
+    # full distributed vector. For this class, both methods return the local indices.
+    get_global_idxs = get_local_idxs
 
     def norm(self):
         """
@@ -245,12 +252,15 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, varmap):
+    def get_view(self, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one
 
         Parameters
         ----------
+        comm : an MPI communicator (real or fake)
+            a communicator that is used in the creation of the view
+
         varmap : dict
             mapping of variable names in the old `VecWrapper` to the names
             they will have in the new `VecWrapper`
@@ -260,7 +270,7 @@ class VecWrapper(object):
         `VecWrapper`
             a new `VecWrapper` that is a view into this one
         """
-        view = self.__class__()
+        view = self.__class__(comm)
         view_size = 0
 
         start = -1
@@ -370,10 +380,9 @@ class VecWrapper(object):
         rel_name : str
             Relative name mapped to the given absolute pathname
         """
-        for rel_name, meta_list in self._vardict.items():
-            for meta in meta_list:
-                if meta['pathname'] == abs_name:
-                    return rel_name
+        for rel_name, meta in self._vardict.items():
+            if meta['pathname'] == abs_name:
+                return rel_name
         raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
 
     def get_states(self):
@@ -402,9 +411,27 @@ class VecWrapper(object):
         """
         return [(n,meta) for n,meta  in self.items() if meta.get('noflat')]
 
+    def _scoped_abs_name(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            The absolute pathname of a variable.
+
+        Returns
+        -------
+        str
+            The given name as seen from the 'scope' of the `System` that
+            contains this `VecWrapper`
+        """
+        if self.pathname:
+            start = len(self.pathname)+1
+        else:
+            start = 0
+        return name[start:]
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, comm=None, store_noflats=False):
+    def setup(self, unknowns_dict, store_noflats=False):
         """Configure this vector to store a flattened array of the variables
         in unknowns. If store_noflats is True, then non-flattenable variables
         will also be stored.
@@ -417,6 +444,7 @@ class SrcVecWrapper(VecWrapper):
         store_noflats : bool (optional)
             if True, then store non-flattenable (non-differentiable) variables
             by default only flattenable variables will be stired
+
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
@@ -427,7 +455,7 @@ class SrcVecWrapper(VecWrapper):
                     self._slices[meta['relative_name']] = (vec_size, vec_size + var_size)
                 # for a target (unknown) vector, there may be multiple
                 # variables with relative name
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+                self._vardict[meta['relative_name']] = vmeta
                 vec_size += var_size
 
         self.vec = numpy.zeros(vec_size)
@@ -517,12 +545,12 @@ class SrcVecWrapper(VecWrapper):
             1x<num_flattenable_vars> array of sizes.
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
-        return numpy.array([sizes])
+        return numpy.array([sizes], int)
 
 
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-                            connections, store_noflats=False):
+              connections, store_noflats=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -549,6 +577,10 @@ class TgtVecWrapper(VecWrapper):
         store_noflats : bool (optional)
             If True, store unflattenable variables in the `VecWrapper` we're building.
         """
+        # dparams vector has some additional behavior
+        if not store_noflats:
+            self.deriv_units = True
+
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
@@ -560,86 +592,57 @@ class TgtVecWrapper(VecWrapper):
                 src_rel_name = srcvec.get_relative_varname(src_pathname)
                 src_meta = srcvec.metadata(src_rel_name)
 
-                vmeta = self._add_var(meta, vec_size, src_meta[0], store_noflats)
+                vmeta = self._add_var(pathname, meta, vec_size, src_meta, store_noflats)
                 vmeta['pathname'] = pathname
 
                 vec_size += vmeta['size']
 
-                self._vardict.setdefault(meta['relative_name'], []).append(vmeta)
+                self._vardict[self._scoped_abs_name(pathname)] = vmeta
             else:
                 if parent_params_vec is not None:
-                    missing.append(pathname)
+                    src = connections[pathname]
+                    common = get_common_ancestor(src, pathname)
+                    if common == self.pathname or (self.pathname+':') not in common:
+                        missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
-        # get the size/val metadata from the first set of metadata in the list
-        # (there may be metadata for multiple source variables for a target)
-
         # map slices to the array
-        for name, metas in self._vardict.items():
-            for meta in metas:
-                if meta['size'] > 0:
-                    start, end = self._slices[name]
-                    meta['val'] = self.vec[start:end]
+        for name, meta in self._vardict.items():
+            if meta['size'] > 0:
+                start, end = self._slices[name]
+                meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
             meta = params_dict[pathname]
-            prelname = parent_params_vec.get_relative_varname(pathname)
-            newmetas = parent_params_vec._vardict[prelname]
-            for newmeta in newmetas:
-                if newmeta['pathname'] == pathname:
-                    newmeta = newmeta.copy()
-                    newmeta['relative_name'] = meta['relative_name']
-                    newmeta['owned'] = False # mark this param as not 'owned' by this VW
-                    self._vardict.setdefault(meta['relative_name'],
-                                             []).append(newmeta)
+            newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
+            if newmeta['pathname'] == pathname:
+                newmeta = newmeta.copy()
+                newmeta['relative_name'] = meta['relative_name']
+                newmeta['owned'] = False # mark this param as not 'owned' by this VW
+                self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
+            unitconv = meta.get('unit_conv')
+            if unitconv:
+                scale, offset = unitconv
+                if self.deriv_units:
+                    offset = 0.0
 
-            if 'units' not in meta:
-                continue
+                self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
-            # dparams vector has some additional behavior
-            if store_noflats == False:
-                self.deriv_units = True
-
-            # Pull conversion from parents if we are a view.
-            if parent_params_vec is not None and \
-               parent_params_vec._unit_conversion.get(pathname) is not None:
-
-                newname = meta['relative_name']
-                self._unit_conversion[newname] = parent_params_vec._unit_conversion[pathname]
-
-            # Figure out conversions if we are the top target vector.
-            elif pathname in connections:
-
-                # Get source units
-                src_pathname = connections.get(pathname)
-                src_rel_name = srcvec.get_relative_varname(src_pathname)
-                src_meta = srcvec.metadata(src_rel_name)
-                src_unit = src_meta[0].get('units')
-                if src_unit is None:
-                    continue
-
-                tgt_unit = meta['units']
-
-                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
-
-                # Skip if we are equivalent units.
-                if scale == 1.0 and (offset == 0.0 or store_noflats == False):
-                    continue
-
-                self._unit_conversion[pathname] = (scale, offset)
-
-    def _add_var(self, meta, index, src_meta, store_noflats):
+    def _add_var(self, pathname, meta, index, src_meta, store_noflats):
         """
         Add a variable to the vector. Allocate a range in the vector array
         and store the shape of the variable so it can be un-flattened later.
 
         Parameters
         ----------
+        pathname : str
+            absolute name of the var being added
+
         meta : dict
             metadata for the variable
 
@@ -664,7 +667,7 @@ class TgtVecWrapper(VecWrapper):
             vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
-            self._slices[meta['relative_name']] = (index, index + var_size)
+            self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
         elif src_meta.get('noflat') and store_noflats:
             vmeta['val'] = src_meta['val']
             vmeta['noflat'] = True
@@ -683,7 +686,7 @@ class TgtVecWrapper(VecWrapper):
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('noflat')])
-        return numpy.array([[psize]])
+        return numpy.array([psize], int)
 
 
 def idx_merge(idxs):

@@ -5,7 +5,7 @@ class BasicImpl(object):
     """Basic vector and data transfer implementation factory"""
 
     @staticmethod
-    def create_src_vecwrapper(comm):
+    def create_src_vecwrapper(pathname, comm):
         """
         Create a vecwrapper for source variables.
 
@@ -18,10 +18,10 @@ class BasicImpl(object):
         -------
         `SrcVecWrapper`
         """
-        return SrcVecWrapper()
+        return SrcVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(comm):
+    def create_tgt_vecwrapper(pathname, comm):
         """
         Create a vecwrapper for target variables.
 
@@ -34,16 +34,19 @@ class BasicImpl(object):
         -------
         `TgtVecWrapper`
         """
-        return TgtVecWrapper()
+        return TgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def createDataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         """
         Create an object for performing data transfer between source
         and target vectors
 
         Parameters
         ----------
+        varmanager : `VarManager`
+            The `VarManager` that managers this data transfer
+
         src_idxs : array
             indices of the source variables in the source vector
 
@@ -64,3 +67,7 @@ class BasicImpl(object):
             a `DataXfer` object
         """
         return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
+
+    @staticmethod
+    def create_app_ordering(varmanager):
+        pass
