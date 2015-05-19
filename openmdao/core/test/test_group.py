@@ -322,6 +322,18 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(prob.root['G3:C3'], prob.root.C3)
         self.assertEqual(prob.root['G3:C4'], prob.root.C4)
 
+    def test_nested_conn(self):
+        # tests a self contained connection under a Group nested at least 3 levels
+        # down from the Problem
+        prob = Problem(root=Group())
+        root = prob.root
+        G1 = root.add('G1', Group())
+        G2 = G1.add('G2', Group())
+        C1 = G2.add('C1', ParamComp('x', 5.))
+        C2 = G2.add('C2', SimpleComp())
+        G2.connect('C1:x', 'C2:x')
+        prob.setup()
+
     def test_dump(self):
         prob = Problem(root=ExampleGroup())
         prob.setup()

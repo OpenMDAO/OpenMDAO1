@@ -6,6 +6,7 @@ import numpy
 from numpy.linalg import norm
 
 from openmdao.util.types import is_differentiable, int_types
+from openmdao.util.strutil import get_common_ancestor
 
 class _flat_dict(object):
     """This is here to allow the user to use vec.flat['foo'] syntax instead
@@ -599,7 +600,10 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = vmeta
             else:
                 if parent_params_vec is not None:
-                    missing.append(pathname)
+                    src = connections[pathname]
+                    common = get_common_ancestor(src, pathname)
+                    if common == self.pathname or (self.pathname+':') not in common:
+                        missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 

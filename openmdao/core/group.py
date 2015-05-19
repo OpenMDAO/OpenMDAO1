@@ -280,7 +280,7 @@ class Group(System):
         for name, sub in self.components():
             self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
                                              sub.pathname,
-                                             sub._params_dict, sub._unknowns_dict, [], {})
+                                             sub._params_dict, sub._unknowns_dict, [], connections)
 
     def _get_explicit_connections(self):
         """ Returns

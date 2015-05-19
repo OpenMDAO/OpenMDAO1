@@ -10,6 +10,7 @@ from openmdao.core.checks import check_connections
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
+from openmdao.util.strutil import get_common_ancestor
 
 class Problem(Component):
     """ The Problem is always the top object for running an OpenMDAO
@@ -303,14 +304,7 @@ def assign_parameters(connections):
     param_owners = {}
 
     for par, unk in connections.items():
-        common_parts = []
-        for ppart, upart in zip(par.split(':'), unk.split(':')):
-            if ppart == upart:
-                common_parts.append(ppart)
-            else:
-                break
-
-        owner = ':'.join(common_parts)
-        param_owners.setdefault(owner, []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
+
