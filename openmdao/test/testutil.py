@@ -31,9 +31,9 @@ def assert_rel_error(test_case, actual, desired, tolerance):
             test_case.fail('actual nan, desired %s, rel error nan, tolerance %s'
                            % (desired, tolerance))
         if desired != 0:
-            error = (actual - desired) / desired
+            error = np.linalg.norm(actual - desired) / np.linalg.norm(desired)
         else:
-            error = actual
+            error = np.linalg.norm(actual)
         if abs(error) > tolerance:
             test_case.fail('actual %s, desired %s, rel error %s, tolerance %s'
                            % (actual, desired, error, tolerance))
@@ -43,7 +43,7 @@ def assert_rel_error(test_case, actual, desired, tolerance):
                 test_case.fail('at %d: actual nan, desired %s, rel error nan,'
                                ' tolerance %s' % (i, des, tolerance))
             if des != 0:
-                error = (act - des) / des
+                error = act - des / des
             else:
                 error = act
             if abs(error) > tolerance:
