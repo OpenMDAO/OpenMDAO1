@@ -43,7 +43,6 @@ class TestGroup(unittest.TestCase):
         self.assertEqual([m['relative_name'] for n,m in params_dict.items()], ['x', 'C2:x'])
         self.assertEqual([m['relative_name'] for n,m in unknowns_dict.items()], ['C1:y', 'y'])
 
-
     def test_multiple_connect(self):
         root = Group()
         C1 = root.add('C1', SimpleComp())
@@ -54,7 +53,7 @@ class TestGroup(unittest.TestCase):
 
         root._setup_paths('')
         params_dict, unknowns_dict = root._setup_variables()
-        
+
         # verify we get correct connection information
         connections = root._get_explicit_connections()
         expected_connections = {
