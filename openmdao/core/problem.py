@@ -333,18 +333,17 @@ class Problem(Component):
                         u_size = np.size(dunknowns[u_name])
                         jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
                         jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
-                        jac_fd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
 
                 # Reverse derivatives first
-                dresids.vec[:] = 0.0
-                dparams.vec[:] = 0.0
-                dunknowns.vec[:] = 0.0
                 for u_name in dresids:
-                    dresids.vec[:] = 0.0
                     u_size = np.size(dunknowns[u_name])
 
                     # Send columns of identity
                     for idx in range(u_size):
+                        dresids.vec[:] = 0.0
+                        for item in dparams:
+                            dparams.flat[item][:] = 0.0
+                        dunknowns.vec[:] = 0.0
 
                         dresids.flat[u_name][idx] = 1.0
                         comp.apply_linear(params, unknowns, dparams,
@@ -360,9 +359,6 @@ class Problem(Component):
                             jac_rev[cname][(u_name, p_name)][:, idx] = dinputs[p_name]
 
                 # Forward derivatives second
-                dresids.vec[:] = 0.0
-                dparams.vec[:] = 0.0
-                dunknowns.vec[:] = 0.0
                 for p_name in chain(params, states):
 
                     if p_name in states:
@@ -371,10 +367,13 @@ class Problem(Component):
                         dinputs = dparams
 
                     p_size = np.size(dinputs[p_name])
-                    dinputs.vec[:] = 0.0
 
                     # Send columns of identity
                     for idx in range(p_size):
+                        dresids.vec[:] = 0.0
+                        for item in dparams:
+                            dparams.flat[item][:] = 0.0
+                        dunknowns.vec[:] = 0.0
 
                         dinputs.flat[p_name][idx] = 1.0
                         comp.apply_linear(params, unknowns, dparams,
@@ -383,8 +382,39 @@ class Problem(Component):
                         for u_name in dresids:
                             jac_fwd[cname][(u_name, p_name)][idx, :] = dresids[u_name]
 
-        print jac_fwd
-        print jac_rev
+                # Finite Difference goes last
+                dresids.vec[:] = 0.0
+                dparams.vec[:] = 0.0
+                dunknowns.vec[:] = 0.0
+                jac_fd[cname] = comp.fd_jacobian(params, unknowns, resids, 1e-6)
+
+                # Start computing our metrics.
+                for p_name in chain(params, states):
+                    for u_name in resids:
+                        ldata = data[cname][(u_name, p_name)]
+
+                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
+                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
+                        Jsub_fd = jac_fd[cname][(u_name, p_name)]
+
+                        magfor = np.linalg.norm(Jsub_for)
+                        magrev = np.linalg.norm(Jsub_rev)
+                        magfd = np.linalg.norm(Jsub_fd)
+
+                        ldata['magnitude'] = (magfor, magrev, magfd)
+
+                        abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+                        abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+                        abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+
+                        ldata['abs error'] = (abs1, abs2, abs3)
+
+                        rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                        rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                        rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+
+                        ldata['rel error'] = (rel1, rel2, rel3)
+
         return data
 
 
