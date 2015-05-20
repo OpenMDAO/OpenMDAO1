@@ -47,7 +47,9 @@ def under_mpirun():
     # no consistent set of environment vars between MPI
     # implementations.
     for name in os.environ.keys():
-        if name.startswith('OMPI_COMM') or name.startswith('MPIR_'):
+        if name.startswith('OMPI_COMM') or \
+           name.startswith('MPIR_')     or \
+           name.startswith('MPICH_'):
             return True
     return False
 
@@ -83,7 +85,7 @@ def get_comm_if_active(system, comm=None):
     """
     if MPI:
         req, max_req = system.get_req_procs()
-        if max_req is None or max_req >= comm.size:
+        if max_req is None or max_req >= comm.rank:
             return comm
         else:
             return MPI.COMM_NULL
