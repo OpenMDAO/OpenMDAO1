@@ -393,8 +393,8 @@ class Problem(Component):
                     for u_name in resids:
                         ldata = data[cname][(u_name, p_name)]
 
-                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
-                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
+                        Jsub_for = jac_fwd[cname][(u_name, p_name)].T
+                        Jsub_rev = jac_rev[cname][(u_name, p_name)].T
                         Jsub_fd = jac_fd[cname][(u_name, p_name)]
 
                         magfor = np.linalg.norm(Jsub_for)
