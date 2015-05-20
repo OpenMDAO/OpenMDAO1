@@ -20,7 +20,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertEqual(u.vec.size, 10)
         self.assertEqual(len(u), 5)
@@ -33,7 +33,7 @@ class TestVecWrapper(unittest.TestCase):
 
         self.assertEqual(u.get_states(), ['s1'])
         self.assertEqual([t[0] for t in u.get_vecvars()], ['y1','y2','y4','s1'])
-        self.assertEqual([t[0] for t in u.get_noflats()], ['y3'])
+        self.assertEqual([t[0] for t in u.get_byobjs()], ['y3'])
 
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
@@ -72,7 +72,7 @@ class TestVecWrapper(unittest.TestCase):
 
         p = TgtVecWrapper()
         p.setup(None, params, u, params.keys(),
-                                            connections, store_noflats=True)
+                                            connections, store_byobjs=True)
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)
@@ -99,7 +99,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = {
             'C1:y1':'y1',
@@ -138,7 +138,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertTrue((np.array(u.flat['C1:y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
         self.assertTrue((np.array(u.flat['C1:y2'])==np.array([2.])).all())
@@ -146,7 +146,7 @@ class TestVecWrapper(unittest.TestCase):
         try:
             u.flat['C1:y3']
         except Exception as err:
-            self.assertEqual(str(err), "'C1:y3' is non-flattenable")
+            self.assertEqual(str(err), "'C1:y3' is a 'pass by object' variable. Flat value not found.")
         else:
             self.fail('Exception expected')
         self.assertTrue((np.array(u.flat['C2:y4'])==np.array([0., 0.])).all())
@@ -163,7 +163,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         unorm = u.norm()
         self.assertAlmostEqual(unorm, np.linalg.norm(np.array([2.0, 3.0, -4.0])))
@@ -178,10 +178,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         try:
             u['A:y1']
@@ -200,10 +200,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['relative_name'] = u
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         u = SrcVecWrapper()
-        u.setup(unknowns_dict, store_noflats=True)
+        u.setup(unknowns_dict, store_byobjs=True)
 
         try:
             u['A:y1'] = np.zeros((3, 2))

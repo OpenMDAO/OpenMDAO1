@@ -10,7 +10,7 @@ class DataXfer(object):
     An object that performs data transfer between a source vector and a
     target vector.
     """
-    def __init__(self, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Parameters
         ----------
@@ -20,12 +20,12 @@ class DataXfer(object):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
         """
 
@@ -35,8 +35,8 @@ class DataXfer(object):
 
         self.src_idxs = src_idxs
         self.tgt_idxs = tgt_idxs
-        self.flat_conns = flat_conns
-        self.noflat_conns = noflat_conns
+        self.vec_conns = vec_conns
+        self.byobj_conns = byobj_conns
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
@@ -50,12 +50,12 @@ class DataXfer(object):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
 
         mode : 'fwd' or 'rev' (optional)
@@ -63,24 +63,24 @@ class DataXfer(object):
             or target to source ('rev')
 
         deriv : bool
-            If True, this is a derivative scatter, so noflats should not be transferred
+            If True, this is a derivative scatter, so byobjs should not be transferred
         """
         if mode == 'rev':
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This requires numpy's new add command.
             np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
-            #print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.flat_conns, 'noflat',self.noflat_conns
+            #print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.vec_conns, 'byobj',self.byobj_conns
 
             # formerly
             #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
 
-            # noflats are never scattered in reverse, so skip that part
+            # byobjs are never scattered in reverse, so skip that part
 
         else:  # forward
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
-            #print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.flat_conns, 'noflat',self.noflat_conns
+            #print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.vec_conns, 'byobj',self.byobj_conns
 
             if not deriv:
-                for tgt, src in self.noflat_conns:
+                for tgt, src in self.byobj_conns:
                     tgtvec[tgt] = srcvec[src]

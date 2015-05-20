@@ -155,11 +155,11 @@ class SimpleImplicitComp(Component):
         return J
 
 
-class SimpleNoflatComp(Component):
+class SimplePassByObjComp(Component):
     """ The simplest component you can imagine. """
 
     def __init__(self):
-        super(SimpleNoflatComp, self).__init__()
+        super(SimplePassByObjComp, self).__init__()
 
         # Params
         self.add_param('x', '')

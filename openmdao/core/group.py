@@ -603,12 +603,12 @@ class Group(System):
                       uvec.vec.size,
                       pvec.vec.size))
 
-        flat_conns = dict(self._varmanager.data_xfer[''].flat_conns)
-        noflat_conns = dict(self._varmanager.data_xfer[''].noflat_conns)
+        vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
+        byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
 
         # collect width info
         lens = [len(u)+sum(map(len,v)) for u,v in
-                          chain(flat_conns.items(), noflat_conns.items())]
+                          chain(vec_conns.items(), byobj_conns.items())]
         if lens:
             nwid = max(lens) + 9
         else:
@@ -617,11 +617,11 @@ class Group(System):
 
         for v, meta in uvec.items():
             if verbose:
-                if 'noflat' in meta:
+                if meta.get('pass_by_obj'):
                     continue
                 file.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                pnames = [p for p,u in flat_conns.items() if u==v]
+                pnames = [p for p,u in vec_conns.items() if u==v]
 
                 if pnames:
                     if len(pnames) == 1:
@@ -650,7 +650,7 @@ class Group(System):
                                                                   nwid=nwid))
 
         if not dvecs:
-            for dest, src in noflat_conns.items():
+            for dest, src in byobj_conns.items():
                 file.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
                 file.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
