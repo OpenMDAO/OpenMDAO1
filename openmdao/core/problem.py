@@ -277,7 +277,17 @@ class Problem(Component):
         adjoint - fd, forward - adjoint using the best case fdstep.
         """
 
+        root = self.root
+        varmanager = root._varmanager
+        params = varmanager.params
+        unknowns = varmanager.unknowns
+        resids = varmanager.resids
+        root.jacobian(params, unknowns, resids)
+
         data = {}
+        jac_fwd = {}
+        jac_rev = {}
+        jac_fd = {}
         model_hierarchy = _find_all_comps(self.root)
 
         for group, comps in model_hierarchy.items():
@@ -290,6 +300,9 @@ class Problem(Component):
 
                 cname = comp.pathname
                 data[cname] = {}
+                jac_fwd[cname] = {}
+                jac_rev[cname] = {}
+                jac_fd[cname] = {}
 
                 view = group._views[comp.name]
                 params = view.params
@@ -305,14 +318,73 @@ class Problem(Component):
                     if meta.get('state'):
                         states.append(meta['relative_name'])
 
-                # Create all our keys
+                # Create all our keys and allocate Jacs
                 for p_name in chain(params, states):
+                    if p_name in states:
+                        dinputs = dunknowns
+                    else:
+                        dinputs = dparams
+
+                        p_size = np.size(dinputs[p_name])
+
                     for u_name in unknowns:
                         data[cname][(u_name, p_name)] = {}
 
-                # Reverse derivatives first
-                #Jfwd =
+                        u_size = np.size(dunknowns[u_name])
+                        jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_fd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
 
+                # Reverse derivatives first
+                dresids.vec[:] = 0.0
+                dparams.vec[:] = 0.0
+                dunknowns.vec[:] = 0.0
+                for u_name in dresids:
+                    dresids.vec[:] = 0.0
+                    u_size = np.size(dunknowns[u_name])
+
+                    # Send columns of identity
+                    for idx in range(u_size):
+
+                        dresids.flat[u_name][idx] = 1.0
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'rev')
+
+                        for p_name in chain(params, states):
+
+                            if p_name in states:
+                                dinputs = dunknowns
+                            else:
+                                dinputs = dparams
+
+                            jac_rev[cname][(u_name, p_name)][:, idx] = dinputs[p_name]
+
+                # Forward derivatives second
+                dresids.vec[:] = 0.0
+                dparams.vec[:] = 0.0
+                dunknowns.vec[:] = 0.0
+                for p_name in chain(params, states):
+
+                    if p_name in states:
+                        dinputs = dunknowns
+                    else:
+                        dinputs = dparams
+
+                    p_size = np.size(dinputs[p_name])
+                    dinputs.vec[:] = 0.0
+
+                    # Send columns of identity
+                    for idx in range(p_size):
+
+                        dinputs.flat[p_name][idx] = 1.0
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'fwd')
+
+                        for u_name in dresids:
+                            jac_fwd[cname][(u_name, p_name)][idx, :] = dresids[u_name]
+
+        print jac_fwd
+        print jac_rev
         return data
 
 
