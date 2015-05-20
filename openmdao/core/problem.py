@@ -290,6 +290,7 @@ class Problem(Component):
         jac_fd = {}
         model_hierarchy = _find_all_comps(self.root)
 
+        # Check derivative calculations
         for group, comps in model_hierarchy.items():
 
             for comp in comps:
@@ -333,6 +334,17 @@ class Problem(Component):
                         u_size = np.size(dunknowns[u_name])
                         jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
                         jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+
+                        # Check dimensions of user-supplied Jacobian
+                        if comp._jacobian_cache is not None:
+                            user = comp._jacobian_cache[(u_name, p_name)].shape
+                            if user[0] != u_size or user[1] != p_size:
+                                msg = "Jacobian in component '{}' between the" + \
+                                " variables '{}' and '{}' is the wrong size. " + \
+                                "It should be {} by {}"
+                                msg = msg.format(cname, p_name, u_name, p_size,
+                                                 u_size)
+                                raise ValueError(msg)
 
                 # Reverse derivatives first
                 for u_name in dresids:
