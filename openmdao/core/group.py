@@ -109,7 +109,7 @@ class Group(System):
         system.name = name
         return system
 
-    def connect(self, source, target):
+    def connect(self, source, targets):
         """Connect the given source variable to the given target
         variable.
 
@@ -118,10 +118,14 @@ class Group(System):
         source : source
             the name of the source variable
 
-        target : str
-            the name of the target variable
+        targets : str OR iterable
+            the name of one or more target variables
         """
-        self._src[target] = source
+        if type(targets) is str:
+            self._src[targets] = source
+        else:
+            for target in targets:
+                self._src[target] = source
 
     def subsystems(self, local=False):
         """ Returns an iterator over subsystems.
