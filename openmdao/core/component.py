@@ -31,6 +31,9 @@ class Component(System):
 
     def _get_initial_val(self, val, shape):
         if val is _NotSet:
+            # Interpret a shape of 1 to mean scalar.
+            if shape == 1:
+                return 0.
             return np.zeros(shape)
 
         return val
@@ -294,4 +297,3 @@ class Component(System):
                 dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
-
