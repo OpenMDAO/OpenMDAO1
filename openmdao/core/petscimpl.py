@@ -168,7 +168,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Index array containing all distributed indices for the named variable.
         """
         meta = self._vardict[name]
-        if m.get('pass_by_obj'):
+        if meta.get('pass_by_obj'):
             raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
 
         start, end = self._slices[name]

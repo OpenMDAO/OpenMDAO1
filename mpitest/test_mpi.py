@@ -6,7 +6,7 @@ import numpy as np
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.component import Component
-from openmdao.core.mpiwrap import MPI, MPIContext
+from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 from openmdao.test.mpiunittest import MPITestCase
 
 if MPI:

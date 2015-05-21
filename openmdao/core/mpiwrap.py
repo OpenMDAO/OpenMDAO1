@@ -85,20 +85,12 @@ def get_comm_if_active(system, comm=None):
     """
     if MPI:
         req, max_req = system.get_req_procs()
-        if max_req is None or max_req >= comm.rank:
+        if max_req is None or max_req > comm.rank:
             return comm
         else:
             return MPI.COMM_NULL
     else:
         return FakeComm()
-
-
-def world_rank():
-    if MPI:
-        return MPI.COMM_WORLD.rank
-    else:
-        return 0
-
 
 def evenly_distrib_idxs(num_divisions, arr_size):
     """
@@ -121,29 +113,33 @@ def evenly_distrib_idxs(num_divisions, arr_size):
 
     return sizes, offsets
 
+
 @contextmanager
-def MPIContext():
+def MultiProcFailCheck():
     """Wrap this around code that you want to globally fail if it fails
-    on any MPI process in MPI_WORLD.
+    on any MPI process in MPI_WORLD.  If not running under MPI, don't
+    handle any exceptions.
     """
-    try:
+    if MPI is None:
         yield
-    except:
-        exc_type, exc_val, exc_tb = sys.exc_info()
-        if exc_val is not None:
-            fail = True
-        else:
-            fail = False
+    else:
+        try:
+            yield
+        except:
+            exc_type, exc_val, exc_tb = sys.exc_info()
+            if exc_val is not None:
+                fail = True
+            else:
+                fail = False
 
-        fails = MPI.COMM_WORLD.allgather(fail)
+            fails = MPI.COMM_WORLD.allgather(fail)
 
-        if fail or not any(fails):
-            six.reraise(exc_type, exc_val, exc_tb)
-        else:
-            for i,f in enumerate(fails):
-                if f:
-                    raise RuntimeError("a test failed in (at least) rank %d" % i)
-
+            if fail or not any(fails):
+                six.reraise(exc_type, exc_val, exc_tb)
+            else:
+                for i,f in enumerate(fails):
+                    if f:
+                        raise RuntimeError("a test failed in (at least) rank %d" % i)
 
 
 if os.environ.get('USE_PROC_FILES'):

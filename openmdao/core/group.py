@@ -18,7 +18,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
-from openmdao.core.mpiwrap import get_comm_if_active, world_rank
+from openmdao.core.mpiwrap import get_comm_if_active
 
 class Group(System):
     """A system that contains other systems"""
@@ -352,7 +352,7 @@ class Group(System):
         varmanager = self._varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             # Local scatter
             varmanager._transfer_data(name)
