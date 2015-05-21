@@ -12,6 +12,7 @@ from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleNoflatGroup
+from openmdao.units.units import PhysicalQuantity
 
 if PY3:
     def py3fix(s):
@@ -142,6 +143,21 @@ class TestProblem(unittest.TestCase):
                 super(E, self).__init__()
                 self.add_param('y', 1.0)
 
+        class F(Component):
+            def __init__(self):
+                super(F, self).__init__()
+                self.add_state('y', PhysicalQuantity("1m"))
+
+        class G(Component):
+            def __init__(self):
+                super(G, self).__init__()
+                self.add_param('y', PhysicalQuantity("1ft"))
+
+        class H(Component):
+            def __init__(self):
+                super(H, self).__init__()
+                self.add_param('y', PhysicalQuantity("1s"))
+
         #Explicit
         expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
                                   "'A:y' must be the same as type "
@@ -257,7 +273,7 @@ class TestProblem(unittest.TestCase):
         # Explicit
         problem = Problem()
         problem.root = Group()
-        problem.root.add('C', A())
+        problem.root.add('C', C())
         problem.root.add('D', D())
         problem.root.connect('C:y', 'D:y')
         problem.setup()
@@ -265,9 +281,52 @@ class TestProblem(unittest.TestCase):
         # Implicit
         problem = Problem()
         problem.root = Group()
-        problem.root.add('C', A(), promotes=['y'])
+        problem.root.add('C', C(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
+
+        # Explicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('F', F())
+        problem.root.add('G', G())
+        problem.root.connect('F:y', 'G:y')
+        problem.setup()
+
+        # Implicit
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('F', F(), promotes=['y'])
+        problem.root.add('G', G(), promotes=['y'])
+        problem.setup()
+
+        # Explicit
+        expected_error_message = py3fix("Unit '<PhysicalUnit m>' of the source "
+                                  "'F:y' must be compatible with the unit "
+                                  "'<PhysicalUnit s>' of the target "
+                                  "'H:y'")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('F', F())
+        problem.root.add('H', H())
+        problem.root.connect('F:y', 'H:y')
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+
+        self.assertEqual(str(cm.exception), expected_error_message)
+
+        # Implicit
+        expected_error_message = py3fix("Unit '<PhysicalUnit m>' of the source "
+                                  "'y' must be compatible with the unit "
+                                  "'<PhysicalUnit s>' of the target "
+                                  "'y'")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('F', F(), promotes=['y'])
+        problem.root.add('H', H(), promotes=['y'])
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        self.assertEqual(str(cm.exception), expected_error_message)
 
     def test_simplest_run(self):
 

@@ -1,5 +1,6 @@
 
 from six.moves import zip
+from openmdao.units.units import PhysicalQuantity
 
 class ConnectError(Exception):
     @classmethod
@@ -23,6 +24,13 @@ class ConnectError(Exception):
 
         return cls(msg)
 
+    @classmethod
+    def unit_mismatch_error(cls, src, target):
+        msg = "Unit '{src[val].unit}' of the source '{src[relative_name]}' must be compatible with the unit '{target[val].unit}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+
+        return cls(msg)
+
 def __make_metadata(metadata):
     '''
     Add type field to metadata dict.
@@ -42,6 +50,10 @@ def __get_metadata(paths, metadata_dict):
 
     return metadata
 
+def check_units_match(src, target):
+    if isinstance(src['val'], PhysicalQuantity) and isinstance(target['val'], PhysicalQuantity):
+        if not src['val'].is_compatible(target['val'].unit):
+            raise ConnectError.unit_mismatch_error(src, target)
 
 def check_types_match(src, target):
     if src['type'] != target['type']:
@@ -57,6 +69,7 @@ def check_connections(connections, params, unknowns):
     for source, target in zip(sources, targets):
         check_types_match(source, target)
         check_shapes_match(source, target)
+        check_units_match(source, target)
 
 def check_shapes_match(source, target):
     #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
