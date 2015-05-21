@@ -429,13 +429,13 @@ class Problem(Component):
                 for p_name in chain(params, states):
                     for u_name in resids:
 
+                        ldata = data[cname][(u_name, p_name)]
+
                         if (u_name, p_name) in skip_keys:
                             ldata['magnitude'] = {}
                             ldata['abs error'] = {}
                             ldata['rel error'] = {}
                             continue
-
-                        ldata = data[cname][(u_name, p_name)]
 
                         Jsub_for = jac_fwd[cname][(u_name, p_name)]
                         Jsub_rev = jac_rev[cname][(u_name, p_name)]
