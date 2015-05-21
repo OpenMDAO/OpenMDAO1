@@ -35,6 +35,17 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
+    def __setitem__(self, name, val):
+        """Sets the given value into the appropriate `VecWrapper`.
+
+        Parameters
+        ----------
+        name : str
+             the name of the variable to set into the unknowns vector
+        """
+        if self.is_active():
+            self._varmanager.unknowns[name] = val
+
     def __getitem__(self, name):
         """Retrieve unflattened value of named variable or a reference
         to named subsystem.
@@ -62,6 +73,10 @@ class Group(System):
                     break
             else:
                 return sys
+
+        # if system is not active, then it's not valid to access it's variables
+        if not self.is_active():
+            return None
 
         # if arg is a tuple or no subsystem found, then search for a variable
         if not self._varmanager:
@@ -327,75 +342,70 @@ class Group(System):
 
         return connections
 
-    def solve_nonlinear(self, params, unknowns, resids):
-        """Solves the group using the slotted nl_solver.
+    def solve_nonlinear(self, params=None, unknowns=None, resids=None):
+        """
+        Solves the group using the slotted nl_solver.
 
         Parameters
         ----------
-        params : `VecWrapper`
+        params : `VecWrapper`, optional
             ``VecWrapper` ` containing parameters (p)
 
-        unknowns : `VecWrapper`
+        unknowns : `VecWrapper`, optional
             `VecWrapper`  containing outputs and states (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-        self.nl_solver.solve(params, unknowns, resids, self)
+        if self.is_active():
+            params   = params   if params   is not None else self._varmanager.params
+            unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
+            resids   = resids   if resids   is not None else self._varmanager.resids
+
+            self.nl_solver.solve(params, unknowns, resids, self)
 
     def children_solve_nonlinear(self):
-        """Loops over our children systems and asks them to solve."""
+        """
+        Loops over our children systems and asks them to solve.
+        """
 
-        varmanager = self._varmanager
-        import sys
-        print (self.pathname, "children solve nonlin"); sys.stdout.flush();sys.stderr.flush()
+        # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems(local=True):
-
-            # Local scatter
-            print ("xfter data to",name);sys.stdout.flush();sys.stderr.flush()
-            varmanager._transfer_data(name)
-            print ("xfer done");sys.stdout.flush();sys.stderr.flush()
-
+            self._varmanager._transfer_data(name)
             view = self._views[sub.name]
+            sub.solve_nonlinear(view.params, view.unknowns, view.resids)
 
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-
-            sub.solve_nonlinear(params, unknowns, resids)
-
-    def apply_nonlinear(self, params, unknowns, resids):
-        """ Evaluates the residuals of our children systems.
+    def apply_nonlinear(self, params=None, unknowns=None, resids=None):
+        """
+        Evaluates the residuals of our children systems.
 
         Parameters
         ----------
-        params : `VecWrapper`
+        params : `VecWrapper`, optional
             ``VecWrapper` ` containing parameters (p)
 
-        unknowns : `VecWrapper`
+        unknowns : `VecWrapper`, optional
             `VecWrapper`  containing outputs and states (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-        varmanager = self._varmanager
+        if not self.is_active():
+            return
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems(local=True):
+        params   = params   if params   is not None else self._varmanager.params
+        unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
+        resids   = resids   if resids   is not None else self._varmanager.resids
 
-            # Local scatter
-            varmanager._transfer_data(name)
-
-            view = self._views[system.name]
-
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-
-            system.apply_nonlinear(params, unknowns, resids)
+        # transfer data to each subsystem and then apply_nonlinear to it
+        for name, sub in self.subsystems(local=True):
+            self._varmanager._transfer_data(name)
+            view = self._views[sub.name]
+            sub.apply_nonlinear(view.params, view.unknowns, view.resids)
 
     def jacobian(self, params, unknowns, resids):
-        """ Linearize all our subsystems.
+        """
+        Linearize all our subsystems.
 
         Parameters
         ----------
@@ -466,6 +476,8 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
+        if not self.is_active():
+            return
 
         varmanager = self._varmanager
 
@@ -558,6 +570,8 @@ class Group(System):
             called wihtout mode so that the user can set the mode in this
             system's ln_solver.options.
         """
+        if not self.is_active():
+            return
 
         if rhs.norm() < 1e-15:
             self.sol_vec.array[:] = 0.0

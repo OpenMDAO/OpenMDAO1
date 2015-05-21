@@ -24,10 +24,4 @@ class Driver(object):
         system : `System`
             `System` that our parent `Problem` owns.
         """
-
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-
-        system.solve_nonlinear(params, unknowns, resids)
+        system.solve_nonlinear()
