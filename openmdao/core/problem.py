@@ -93,6 +93,7 @@ class Problem(Component):
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
 
+        # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
         # check for parameters that are not connected to a source/unknown
@@ -105,7 +106,7 @@ class Problem(Component):
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
             raise RuntimeError(msg)
 
-        # propagate top level metadata, e.g., unit_conv to subsystems
+        # propagate top level metadata, e.g. unit_conv, to subsystems
         self.root._update_sub_unit_conv()
 
         # Given connection information, create mapping from system pathname
