@@ -432,14 +432,20 @@ class Problem(Component):
                         ldata = data[cname][(u_name, p_name)]
 
                         if (u_name, p_name) in skip_keys:
-                            ldata['magnitude'] = {}
-                            ldata['abs error'] = {}
-                            ldata['rel error'] = {}
+                            ldata['magnitude'] = None
+                            ldata['abs error'] = None
+                            ldata['rel error'] = None
+                            ldata['J_fd'] = None
+                            ldata['J_fwd'] = None
+                            ldata['J_rev'] = None
                             continue
 
                         Jsub_for = jac_fwd[cname][(u_name, p_name)]
                         Jsub_rev = jac_rev[cname][(u_name, p_name)]
                         Jsub_fd = jac_fd[cname][(u_name, p_name)]
+                        ldata['J_fd'] = Jsub_fd
+                        ldata['J_fwd'] = Jsub_for
+                        ldata['J_rev'] = Jsub_rev
 
                         magfor = np.linalg.norm(Jsub_for)
                         magrev = np.linalg.norm(Jsub_rev)

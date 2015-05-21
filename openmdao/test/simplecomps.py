@@ -85,6 +85,44 @@ class SimpleArrayComp(Component):
 
         return J
 
+
+class ArrayComp2D(Component):
+    '''2D Array component'''
+
+    def __init__(self):
+        super(SimpleArrayComp, self).__init__()
+
+        # Params
+        self.add_param('x', np.zeros((2, 2)))
+
+        # Unknowns
+        self.add_output('y', np.zeros((2, 2)))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        self.y[0][0] = 2.0*self.x[0][0] + 1.0*self.x[0][1] + \
+                       3.0*self.x[1][0] + 7.0*self.x[1][1]
+
+        self.y[0][1] = 4.0*self.x[0][0] + 2.0*self.x[0][1] + \
+                       6.0*self.x[1][0] + 5.0*self.x[1][1]
+
+        self.y[1][0] = 3.0*self.x[0][0] + 6.0*self.x[0][1] + \
+                       9.0*self.x[1][0] + 8.0*self.x[1][1]
+
+        self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
+                       2.0*self.x[1][0] + 4.0*self.x[1][1]
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        self.J = array([[2.0, 1.0, 3.0, 7.0],
+                        [4.0, 2.0, 6.0, 5.0],
+                        [3.0, 6.0, 9.0, 8.0],
+                        [1.0, 3.0, 2.0, 4.0]])
+        return self.J
+
+
 class SimpleSparseArrayComp(Component):
     '''A fairly simple sparse array component'''
 
