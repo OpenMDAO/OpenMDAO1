@@ -182,6 +182,8 @@ class VarManager(VarManagerBase):
         self.impl_factory = impl
         self.comm = comm
 
+        import sys
+        print "VM for",sys_pathname;sys.stdout.flush();sys.stderr.flush()
         # create implementation specific VecWrappers
         self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         self.dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
@@ -231,6 +233,8 @@ class ViewVarManager(VarManagerBase):
                  my_params):
         super(ViewVarManager, self).__init__(parent_vm.connections)
 
+        import sys
+        print "VM for",sys_pathname;sys.stdout.flush();sys.stderr.flush()
         self.impl_factory = parent_vm.impl_factory
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \

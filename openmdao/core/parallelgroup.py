@@ -137,7 +137,7 @@ class ParallelGroup(Group):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._add_local_subsystem(sub)
 
         for sub in self._local_subsystems.values():
             sub.setup_communicators(sub_comm)
