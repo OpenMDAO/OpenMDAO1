@@ -1,5 +1,7 @@
 """ OpenMDAO Problem class defintion."""
 
+from __future__ import print_function
+
 from collections import namedtuple
 from itertools import chain
 from six import iteritems
@@ -290,6 +292,7 @@ class Problem(Component):
         jac_fd = {}
         model_hierarchy = _find_all_comps(self.root)
 
+        # Check derivative calculations
         for group, comps in model_hierarchy.items():
 
             for comp in comps:
@@ -303,6 +306,7 @@ class Problem(Component):
                 jac_fwd[cname] = {}
                 jac_rev[cname] = {}
                 jac_fd[cname] = {}
+                skip_keys = []
 
                 view = group._views[comp.name]
                 params = view.params
@@ -331,6 +335,32 @@ class Problem(Component):
                         data[cname][(u_name, p_name)] = {}
 
                         u_size = np.size(dunknowns[u_name])
+                        # Check dimensions of user-supplied Jacobian
+                        if comp._jacobian_cache is not None:
+
+                            # Big boy rules
+                            if (u_name, p_name) not in comp._jacobian_cache:
+                                msg = "No derivatives defined between the" + \
+                                " variables '{}' and '{}', in '{}' so it " + \
+                                "will be skipped."
+                                msg = msg.format(p_name, u_name, cname)
+                                print(msg)
+                                skip_keys.append((u_name, p_name))
+                                continue
+
+                            user = comp._jacobian_cache[(u_name, p_name)].shape
+
+                            if len(user) < 2:
+                                user = (user[0], 1 )
+
+                            if user[0] != u_size or user[1] != p_size:
+                                msg = "Jacobian in component '{}' between the" + \
+                                " variables '{}' and '{}' is the wrong size. " + \
+                                "It should be {} by {}"
+                                msg = msg.format(cname, p_name, u_name, p_size,
+                                                 u_size)
+                                raise ValueError(msg)
+
                         jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
                         jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
 
@@ -351,12 +381,15 @@ class Problem(Component):
 
                         for p_name in chain(params, states):
 
+                            if (u_name, p_name) in skip_keys:
+                                continue
+
                             if p_name in states:
                                 dinputs = dunknowns
                             else:
                                 dinputs = dparams
 
-                            jac_rev[cname][(u_name, p_name)][:, idx] = dinputs[p_name]
+                            jac_rev[cname][(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
                 for p_name in chain(params, states):
@@ -380,7 +413,11 @@ class Problem(Component):
                                           dunknowns, dresids, 'fwd')
 
                         for u_name in dresids:
-                            jac_fwd[cname][(u_name, p_name)][idx, :] = dresids[u_name]
+
+                            if (u_name, p_name) in skip_keys:
+                                continue
+
+                            jac_fwd[cname][(u_name, p_name)][:, idx] = dresids.flat[u_name]
 
                 # Finite Difference goes last
                 dresids.vec[:] = 0.0
@@ -391,10 +428,14 @@ class Problem(Component):
                 # Start computing our metrics.
                 for p_name in chain(params, states):
                     for u_name in resids:
+
+                        if (u_name, p_name) in skip_keys:
+                            continue
+
                         ldata = data[cname][(u_name, p_name)]
 
-                        Jsub_for = jac_fwd[cname][(u_name, p_name)].T
-                        Jsub_rev = jac_rev[cname][(u_name, p_name)].T
+                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
+                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
                         Jsub_fd = jac_fd[cname][(u_name, p_name)]
 
                         magfor = np.linalg.norm(Jsub_for)
