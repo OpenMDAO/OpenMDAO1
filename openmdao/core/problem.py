@@ -122,8 +122,13 @@ class Problem(Component):
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)
 
+        import sys
+        print "SETUP DONE!";sys.stdout.flush();sys.stderr.flush()
+
     def run(self):
         """ Runs the Driver in self.driver. """
+        import sys
+        print "problem.run";sys.stdout.flush();sys.stderr.flush()
         self.driver.run(self.root)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',

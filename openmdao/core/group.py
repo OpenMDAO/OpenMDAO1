@@ -227,9 +227,9 @@ class Group(System):
             return
 
         for name, sub in self.subsystems():
-            sub._setup_communicators(comm)
+            sub._setup_communicators(self.comm)
             if sub.is_active():
-                self._local_subsystems[name] = sub
+                self._add_local_subsystem(sub)
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):
@@ -257,6 +257,10 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
         """
+        if not self.is_active():
+            return
+
+        print (self.pathname,' setup_vectors');sys.stdout.flush();sys.stderr.flush()
 
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
@@ -280,9 +284,30 @@ class Group(System):
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
+            print ("create_views sub",name);sys.stdout.flush();sys.stderr.flush()
             self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
                                              sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], connections)
+
+    def _add_local_subsystem(self, sub):
+        """
+        Add a subsystem that is local to this process and mark corresponding
+        variables as local.
+
+        Parameters
+        ----------
+        sub : `System`
+            `System` being added.
+        """
+        name = sub.name
+        self._local_subsystems[name] = sub
+        for name, meta in self._params_dict.items():
+            if name.startswith(sub.pathname+':'):
+                meta['local'] = True
+
+        for name, meta in self._unknowns_dict.items():
+            if name.startswith(sub.pathname+':'):
+                meta['local'] = True
 
     def _get_explicit_connections(self):
         """ Returns
@@ -322,19 +347,22 @@ class Group(System):
         """Loops over our children systems and asks them to solve."""
 
         varmanager = self._varmanager
-
-        for name, system in self.subsystems(local=True):
+        import sys
+        print (self.pathname, "children solve nonlin"); sys.stdout.flush();sys.stderr.flush()
+        for name, sub in self.subsystems(local=True):
 
             # Local scatter
+            print ("xfter data to",name);sys.stdout.flush();sys.stderr.flush()
             varmanager._transfer_data(name)
+            print ("xfer done");sys.stdout.flush();sys.stderr.flush()
 
-            view = self._views[system.name]
+            view = self._views[sub.name]
 
             params = view.params
             unknowns = view.unknowns
             resids = view.resids
 
-            system.solve_nonlinear(params, unknowns, resids)
+            sub.solve_nonlinear(params, unknowns, resids)
 
     def apply_nonlinear(self, params, unknowns, resids):
         """ Evaluates the residuals of our children systems.

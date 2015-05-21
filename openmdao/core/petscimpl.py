@@ -113,7 +113,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             for the unknowns vecwrapper.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
+        print 'creating vec', self.pathname, self.vec; sys.stdout.flush();sys.stderr.flush()
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        print "done with",self.pathname;sys.stdout.flush();sys.stderr.flush()
 
     def _get_flattened_sizes(self):
         """
@@ -225,7 +227,9 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_byobjs)
+        print 'creating vec', self.pathname, self.vec; sys.stdout.flush();sys.stderr.flush()
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        print "done with",self.pathname;sys.stdout.flush();sys.stderr.flush()
 
     def _get_flattened_sizes(self):
         """
