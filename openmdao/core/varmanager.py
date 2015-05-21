@@ -182,8 +182,6 @@ class VarManager(VarManagerBase):
         self.impl_factory = impl
         self.comm = comm
 
-        print ('varmanager:',self, comm)
-
         # create implementation specific VecWrappers
         self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         self.dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
@@ -198,14 +196,10 @@ class VarManager(VarManagerBase):
         self.resids.setup(unknowns_dict)
         self.dresids.setup(unknowns_dict)
 
-        print ('populate the params VecWrappers with data')
-
         self.params.setup(None, params_dict, self.unknowns,
-                                              my_params, connections, store_byobjs=True)
+                                my_params, connections, store_byobjs=True)
         self.dparams.setup(None, params_dict, self.unknowns,
-                                               my_params, connections)
-
-        print ('calling setup_data_xfer...')
+                                 my_params, connections)
 
         self._setup_data_transfer(sys_pathname, my_params)
 
@@ -299,9 +293,9 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     dparams = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
     params.setup(parent_vm.params, params_dict, top_unknowns,
-                               my_params, connections, store_byobjs=True)
+                 my_params, connections, store_byobjs=True)
     dparams.setup(parent_vm.dparams, params_dict, top_unknowns,
-                                my_params, connections)
+                  my_params, connections)
 
     return VecTuple(unknowns, dunknowns, resids, dresids, params, dparams)
 

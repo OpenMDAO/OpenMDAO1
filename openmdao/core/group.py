@@ -221,24 +221,15 @@ class Group(System):
         """
         self._local_subsystems = OrderedDict()
 
-        print (self.name, '_setup_communicators')
-
         self.comm = get_comm_if_active(self, comm)
-        print (self.name, 'is_active?', self.is_active())
-        print (self.name, 'is_active?', self.is_active())
 
         if not self.is_active():
-            print(self.name, 'not active() not setting up comm for children')
             return
 
         for name, sub in self.subsystems():
-            print (self.name, 'setup_comm() for ', sub.name)
             sub._setup_communicators(comm)
             if sub.is_active():
-                print (sub.name, 'is_active/local')
                 self._local_subsystems[name] = sub
-            else:
-                print (sub.name, 'is NOT active/local')
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):
@@ -266,12 +257,9 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
         """
-        print (self.name, '_setup_vectors')
 
         my_params = param_owners.get(self.pathname, [])
-        print (self.name, 'my_params:', my_params)
         if parent_vm is None:
-            print (self.name, 'creating _varmanager...',)
             self._varmanager = VarManager(self.comm,
                                           self.pathname, self._params_dict, self._unknowns_dict,
                                           my_params, connections, impl=impl)
@@ -285,18 +273,13 @@ class Group(System):
                                               self._unknowns_dict,
                                               my_params)
 
-        print (self.name, '_varmanager:', self._varmanager)
-
         self._views = {}
         for name, sub in self.subgroups():
-            print ('calling',name, '_setup_vectors...', self._varmanager)
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
-            print (name, '_varmanager:', sub._varmanager)
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            print ('create_views for',name)
             self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
                                              sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], connections)
