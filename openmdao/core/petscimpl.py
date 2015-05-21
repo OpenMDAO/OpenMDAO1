@@ -80,6 +80,14 @@ class PetscImpl(object):
         to_idx_array = unknowns_vec.make_idx_array(start, end)
 
         app_idxs = []
+
+        # each column in the _local_unknown_sizes table contains the sizes
+        # corresponds to a fully distributed variable. (col=var, row=proc)
+        # so in order to get the offset into the full distributed vector
+        # containing all variables, you need to add the full distributed
+        # sizes of all the variables up to the current variable (ivar)
+        # plus the sizes of all of the distributed parts of ivar in the
+        # current column for ranks below the current rank
         for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
             start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
                     numpy.sum(local_unknown_sizes[:rank, ivar])
@@ -137,24 +145,24 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # in this rank or not
         #self.byobj_isactive = numpy.zeros((size, len(self.byobj_vars)), int)
 
-        # create our row in the local_unknown_sizes table
-        ours = numpy.zeros((1, len(sizes)), int)
+        # create row in the local_unknown_sizes table for this process
+        our_row = numpy.zeros((1, len(sizes)), int)
         for i, (name, meta) in enumerate(self.get_vecvars()):
-            ours[0, i] = meta['size']
+            our_row[0, i] = meta['size']
 
         #our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
         #for i, (name, meta) in enumerate(self.get_byobjs()):
             #our_byobjs[0, i] = int(self.is_variable_local(name[0]))
 
-        # collect local var sizes from all of the processes in our comm
+        # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        self.comm.Allgather(ours[0,:], self.local_unknown_sizes)
+        self.comm.Allgather(our_row[0,:], self.local_unknown_sizes)
         #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
-        self.local_unknown_sizes[self.comm.rank, :] = ours[0, :]
+        self.local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
 
         return self.local_unknown_sizes
 
@@ -190,6 +198,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
+    def get_view(self, sys_pathname, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        return view
 
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
@@ -245,6 +257,10 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         return numpy.array(self.comm.allgather(psize), int)
 
+    def get_view(self, sys_pathname, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        return view
 
 class PetscDataXfer(DataXfer):
     def __init__(self, varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):

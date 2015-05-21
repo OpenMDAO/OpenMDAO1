@@ -5,6 +5,7 @@ import numpy as np
 
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
+from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.component import Component
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 
@@ -88,6 +89,35 @@ class MPITests1(MPITestCase):
             self.assertTrue(prob['C2:out_string']=='_C1_C2')
             self.assertTrue(prob['C2:out_list']==[1.5, 1.5])
 
+    def test_parallel_fan_in(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        pgrp = prob.root.add('pgrp', ParallelGroup())
+        pgrp.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
+        pgrp.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('S1', ParamComp('s', ''))
+        prob.root.add('L1', ParamComp('l', []))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('pgrp:P1:x', 'C1:a')
+        prob.root.connect('pgrp:P2:x', 'C1:b')
+
+        prob.root.connect('S1:s', 'C1:in_string')
+        prob.root.connect('L1:l', 'C1:in_list')
+
+        prob.setup()
+        prob.run()
+
+        if not MPI or self.comm.rank == 0:
+            self.assertTrue(all(prob['C1:a', 'params']==np.ones(size, float)*1.0))
+            self.assertTrue(all(prob['C1:b', 'params']==np.ones(size, float)*2.0))
+            self.assertTrue(all(prob['C1:c']==np.ones(size, float)*3.0))
+            self.assertTrue(all(prob['C1:d']==np.ones(size, float)*-1.0))
+            # TODO: not handling non-flattenable vars yet
 
 
 if __name__ == '__main__':

@@ -269,12 +269,15 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, comm, varmap):
+    def get_view(self, sys_pathname, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one
 
         Parameters
         ----------
+        sys_pathname : str
+            pathname of the system for which the view is being created
+
         comm : an MPI communicator (real or fake)
             a communicator that is used in the creation of the view
 
@@ -287,7 +290,7 @@ class VecWrapper(object):
         `VecWrapper`
             a new `VecWrapper` that is a view into this one
         """
-        view = self.__class__(comm)
+        view = self.__class__(sys_pathname, comm)
         view_size = 0
 
         start = -1

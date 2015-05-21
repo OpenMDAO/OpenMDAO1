@@ -232,6 +232,7 @@ class ViewVarManager(VarManagerBase):
         super(ViewVarManager, self).__init__(parent_vm.connections)
 
         self.impl_factory = parent_vm.impl_factory
+        self.comm = comm
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
             create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
@@ -284,10 +285,10 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
 
-    unknowns  = parent_vm.unknowns.get_view(comm, umap)
-    dunknowns = parent_vm.dunknowns.get_view(comm, umap)
-    resids    = parent_vm.resids.get_view(comm, umap)
-    dresids   = parent_vm.dresids.get_view(comm, umap)
+    unknowns  = parent_vm.unknowns.get_view(sys_pathname, comm, umap)
+    dunknowns = parent_vm.dunknowns.get_view(sys_pathname, comm, umap)
+    resids    = parent_vm.resids.get_view(sys_pathname, comm, umap)
+    dresids   = parent_vm.dresids.get_view(sys_pathname, comm, umap)
 
     params  = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
     dparams = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)

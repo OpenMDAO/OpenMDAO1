@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
 
@@ -110,7 +112,7 @@ class ParallelGroup(Group):
                         if assigned == limit:
                             break
 
-        self._local_subsystems = []
+        self._local_subsystems = OrderedDict()
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > assigned_procs[i]:
@@ -140,4 +142,4 @@ class ParallelGroup(Group):
                 self._add_local_subsystem(sub)
 
         for sub in self._local_subsystems.values():
-            sub.setup_communicators(sub_comm)
+            sub._setup_communicators(sub_comm)
