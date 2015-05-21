@@ -404,6 +404,9 @@ class Group(System):
                 for key, J in iteritems(jacobian_cache):
                     if isinstance(J, real_types):
                         jacobian_cache[key] = np.array([[J]])
+                    shape = jacobian_cache[key].shape
+                    if len(shape) < 2:
+                        jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):

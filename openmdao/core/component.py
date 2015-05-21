@@ -191,6 +191,8 @@ class Component(System):
             for idx in range(p_size):
 
                 step = inputs.flat[p_name][idx] * fdstep
+                if step < fdstep:
+                    step = fdstep
                 inputs.flat[p_name][idx] += step
 
                 self.apply_nonlinear(params, unknowns, resids)
