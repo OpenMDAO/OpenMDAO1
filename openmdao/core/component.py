@@ -1,5 +1,4 @@
 """ Defines the base class for a Component in OpenMDAO."""
-import functools
 import numpy as np
 from collections import OrderedDict
 from six import iteritems

@@ -496,14 +496,8 @@ class Group(System):
             dunknowns = view.dunknowns
             dresids   = view.dresids
 
-            #print('apply_linear on', name, 'BEFORE')
-            #print('dunknowns', varmanager.dunknowns.vec)
-            #print('dparams', varmanager.dparams.vec)
-            #print('dresids', varmanager.dresids.vec)
-
             # Special handling for Components
-            if isinstance(system, Component) and \
-               not isinstance(system, ParamComp):
+            if isinstance(system, Component) and not isinstance(system, ParamComp):
 
                 # Forward Mode
                 if mode == 'fwd':
@@ -536,22 +530,13 @@ class Group(System):
                 system.apply_linear(params, unknowns, dparams, dunknowns,
                                     dresids, mode)
 
-            #print('apply_linear on', name, 'AFTER')
-            #print('dunknowns', varmanager.dunknowns.vec)
-            #print('dparams', varmanager.dparams.vec)
-            #print('dresids', varmanager.dresids.vec)
-
         if mode == 'rev':
             # Full Scatter
             varmanager._transfer_data(mode='rev', deriv=True)
 
-        #print('apply_linear on', self.name, 'POST SCATTER')
-        #print('dunknowns', varmanager.dunknowns.vec)
-        #print('dparams', varmanager.dparams.vec)
-        #print('dresids', varmanager.dresids.vec)
-
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
-        """ Single linear solution applied to whatever input is sitting in
+        """
+        Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
         Parameters
@@ -577,11 +562,10 @@ class Group(System):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
-        #print "solving linear sys", self.name
         if mode=='auto':
             mode = self.ln_solver.options['mode']
 
-        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         self.rhs_buf[:] = self.rhs_vec.array[:]
         self.sol_buf[:] = self.sol_vec.array[:]
         self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
@@ -764,7 +748,8 @@ class Group(System):
             sub._update_sub_unit_conv(self._params_dict)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
-    """Finds all matches between relative names of parameters and
+    """
+    Finds all matches between relative names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
     connections are expressed using absolute pathnames.
 
@@ -817,22 +802,22 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
-       Parameters
-       ----------
-       var_name : str
-           name of a variable relative to a `System`
+    Parameters
+    ----------
+    var_name : str
+        name of a variable relative to a `System`
 
-       var_dict : dict
-           dictionary of variable metadata, keyed on relative name
+    var_dict : dict
+        dictionary of variable metadata, keyed on relative name
 
-       dict_name : str
-           name of var_dict (used for error reporting)
+    dict_name : str
+        name of var_dict (used for error reporting)
 
-       Returns
-       -------
-       list of str
-           the absolute pathnames for the given variables in the
-           variable dictionary that map to the given relative name.
+    Returns
+    -------
+    list of str
+        the absolute pathnames for the given variables in the
+        variable dictionary that map to the given relative name.
     """
     pnames = []
     for pathname, meta in var_dict.items():
