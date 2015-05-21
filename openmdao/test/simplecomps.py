@@ -49,7 +49,7 @@ class SimpleCompDerivJac(SimpleComp):
         """Returns the Jacobian."""
 
         J = {}
-        J[('y', 'x')] = np.array(2.0)
+        J[('y', 'x')] = np.array([2.0])
         return J
 
 
