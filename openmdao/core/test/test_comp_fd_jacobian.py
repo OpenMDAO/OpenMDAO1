@@ -61,13 +61,13 @@ class CompFDTestCase(unittest.TestCase):
                              'relative_name' : 'y' }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_noflats=True)
+        params.setup(params_dict, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_noflats=True)
+        unknowns.setup(unknowns_dict, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_noflats=True)
+        resids.setup(resids_dict, store_byobjs=True)
 
         jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
         self.assertEqual(set(expected_keys), set(jac.keys()))
@@ -90,13 +90,13 @@ class CompFDTestCase(unittest.TestCase):
                              'relative_name' : 'y' }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_noflats=True)
+        params.setup(params_dict, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_noflats=True)
+        unknowns.setup(unknowns_dict, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_noflats=True)
+        resids.setup(resids_dict, store_byobjs=True)
 
         self.p['c1'].solve_nonlinear(params, unknowns, resids)
 
@@ -125,13 +125,13 @@ class CompFDTestCase(unittest.TestCase):
                              'relative_name' : 'y' }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_noflats=True)
+        params.setup(params_dict, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_noflats=True)
+        unknowns.setup(unknowns_dict, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_noflats=True)
+        resids.setup(resids_dict, store_byobjs=True)
 
         self.p['c1'].solve_nonlinear(params, unknowns, resids)
 
@@ -169,13 +169,13 @@ class CompFDTestCase(unittest.TestCase):
                              'relative_name' : 'z' }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_noflats=True)
+        params.setup(params_dict, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_noflats=True)
+        unknowns.setup(unknowns_dict, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_noflats=True)
+        resids.setup(resids_dict, store_byobjs=True)
 
         self.p['ci1'].solve_nonlinear(params, unknowns, resids)
 

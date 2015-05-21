@@ -78,42 +78,42 @@ class VarManagerBase(object):
                 else:
                     start = 0
                 tgt_sys = param[start:].split(':', 1)[0]
-                src_idx_list, dest_idx_list, flat_conns, noflat_conns = \
+                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault(tgt_sys, ([],[],[],[]))
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
-                noflat = self.unknowns.metadata(urelname).get('noflat')
-                if noflat:
-                    noflat_conns.append((prelname, urelname))
+
+                if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                    byobj_conns.append((prelname, urelname))
                 else:
-                    flat_conns.append((prelname, urelname))
+                    vec_conns.append((prelname, urelname))
                     src_idx_list.append(self.unknowns.get_global_idxs(urelname))
                     dest_idx_list.append(self.params.get_global_idxs(prelname))
 
-        for tgt_sys, (srcs, tgts, flat_conns, noflat_conns) in xfer_dict.items():
+        for tgt_sys, (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            if flat_conns or noflat_conns:
+            if vec_conns or byobj_conns:
                 self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                             flat_conns, noflat_conns)
+                                                                             vec_conns, byobj_conns)
 
         # create a DataXfer object that combines all of the
-        # individual subsystem src_idxs, tgt_idxs, and noflat_conns, so that a 'full'
+        # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataXfer
         # object under the name ''.
         full_srcs = []
         full_tgts = []
         full_flats = []
-        full_noflats = []
+        full_byobjs = []
 
-        for src, tgts, flats, noflats in xfer_dict.values():
+        for src, tgts, flats, byobjs in xfer_dict.values():
             full_srcs.extend(src)
             full_tgts.extend(tgts)
             full_flats.extend(flats)
-            full_noflats.extend(noflats)
+            full_byobjs.extend(byobjs)
 
         src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
         self.data_xfer[''] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                full_flats, full_noflats)
+                                                                full_flats, full_byobjs)
 
     def _transfer_data(self, target_system='', mode='fwd', deriv=False):
         """Transfer data to/from target_system depending on mode.
@@ -193,9 +193,7 @@ class VarManager(VarManagerBase):
         self.dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
         # populate the VecWrappers with data
-        print ('populate the unknowns VecWrappers with data')
-        self.unknowns.setup(unknowns_dict, store_noflats=True)
-        print ('populate the dunknowns VecWrappers with data')
+        self.unknowns.setup(unknowns_dict, store_byobjs=True)
         self.dunknowns.setup(unknowns_dict)
         self.resids.setup(unknowns_dict)
         self.dresids.setup(unknowns_dict)
@@ -203,7 +201,7 @@ class VarManager(VarManagerBase):
         print ('populate the params VecWrappers with data')
 
         self.params.setup(None, params_dict, self.unknowns,
-                                              my_params, connections, store_noflats=True)
+                                              my_params, connections, store_byobjs=True)
         self.dparams.setup(None, params_dict, self.unknowns,
                                                my_params, connections)
 
@@ -301,7 +299,7 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     dparams = parent_vm.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
     params.setup(parent_vm.params, params_dict, top_unknowns,
-                               my_params, connections, store_noflats=True)
+                               my_params, connections, store_byobjs=True)
     dparams.setup(parent_vm.dparams, params_dict, top_unknowns,
                                 my_params, connections)
 

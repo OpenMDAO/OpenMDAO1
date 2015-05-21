@@ -11,7 +11,7 @@ from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
-from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleNoflatGroup
+from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 
 if PY3:
     def py3fix(s):
@@ -334,8 +334,8 @@ class TestProblem(unittest.TestCase):
 
         self.assertAlmostEqual(prob['G3:C4:y'], 40.)
 
-    def test_noflat_run(self):
-        prob = Problem(root=ExampleNoflatGroup())
+    def test_byobj_run(self):
+        prob = Problem(root=ExampleByObjGroup())
 
         prob.setup()
         prob.run()

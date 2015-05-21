@@ -37,7 +37,7 @@ class BasicImpl(object):
         return TgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors
@@ -53,12 +53,12 @@ class BasicImpl(object):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
 
         Returns
@@ -66,7 +66,7 @@ class BasicImpl(object):
         `DataXfer`
             a `DataXfer` object
         """
-        return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
+        return DataXfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
     @staticmethod
     def create_app_ordering(varmanager):

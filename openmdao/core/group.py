@@ -5,6 +5,7 @@ from __future__ import print_function
 import sys
 from collections import OrderedDict
 from six import iteritems
+from itertools import chain
 
 import numpy as np
 
@@ -17,7 +18,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
-from openmdao.core.mpiwrap import get_comm_if_active, world_rank
+from openmdao.core.mpiwrap import get_comm_if_active
 
 class Group(System):
     """A system that contains other systems"""
@@ -369,7 +370,7 @@ class Group(System):
         varmanager = self._varmanager
 
         # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
+        for name, system in self.subsystems(local=True):
 
             # Local scatter
             varmanager._transfer_data(name)
@@ -577,75 +578,130 @@ class Group(System):
             else:
                 system.clear_dparams()
 
+    def dump(self, nest=0, file=sys.stdout, verbose=True, dvecs=False):
+        """
+        Writes a formated dump of the `System` tree to file.
 
-    def dump(self, nest=0, file=sys.stdout, verbose=True):
-        file.write(" "*nest)
-        file.write(self.name)
+        Parameters
+        ----------
+        nest : int, optional
+            Starting nesting level.  Defaults to 0.
+
+        file : an open file, optional
+            Where output is written.  Defaults to sys.stdout.
+
+        verbose : bool, optional
+            If True (the default), output additional info beyond
+            just the tree structure.
+
+        dvecs : bool, optional
+            If True, show contents of du and dp vectors instead of
+            u and p (the default).
+        """
         klass = self.__class__.__name__
+        if dvecs:
+            ulabel = 'du'
+            plabel = 'dp'
+            uvecname = 'dunknowns'
+            pvecname = 'dparams'
+        else:
+            ulabel = 'u'
+            plabel = 'p'
+            uvecname = 'unknowns'
+            pvecname = 'params'
 
-        uvec = self._varmanager.unknowns
-        pvec = self._varmanager.params
+        uvec = getattr(self._varmanager, uvecname)
+        pvec = getattr(self._varmanager, pvecname)
 
-        file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                     (klass,
-                      1, #self.get_req_procs(),
-                      0, #world_rank,
+        file.write("%s %s '%s'    req: %s  usize:%d  psize:%d\n" %
+                     (" "*nest,
+                      klass,
+                      self.name,
+                      self.get_req_procs(),
                       uvec.vec.size,
                       pvec.vec.size))
 
-        flat_conns = dict(self._varmanager.data_xfer[''].flat_conns)
-        noflat_conns = dict(self._varmanager.data_xfer[''].noflat_conns)
+        vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
+        byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
+
+        # collect width info
+        lens = [len(u)+sum(map(len,v)) for u,v in
+                          chain(vec_conns.items(), byobj_conns.items())]
+        if lens:
+            nwid = max(lens) + 9
+        else:
+            lens = [len(n) for n in uvec.keys()]
+            nwid = max(lens) if lens else 12
 
         for v, meta in uvec.items():
             if verbose:
-                file.write(" "*(nest+2))
-                pnames = [p for p,u in flat_conns.items() if u==v]
+                if meta.get('pass_by_obj'):
+                    continue
+                file.write(" "*(nest+8))
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                pnames = [p for p,u in vec_conns.items() if u==v]
+
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
                         pslice = pvec._slices[pname]
+                        pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [pvec._slices[p] for p in pnames]
-                    file.write("%s --> %s:  u (%s)  p (%s): %s\n" %
-                                 (v, pnames,
-                                  str(uvec._slices[v]),
-                                  str(pslice), str(uvec[v])[:15]))
+                        pslice = [('%d:%d' % pvec._slices[p]) for p in pnames]
+                        if len(pslice) > 1:
+                            pslice = ','.join(pslice)
+                        else:
+                            pslice = pslice[0]
+
+                    pslice = '{}[{}]'.format(plabel, pslice)
+
+                    connstr = '%s -> %s' % (v, pnames)
+                    file.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
+                                                                    uslice,
+                                                                    pslice,
+                                                                    repr(uvec[v]),
+                                                                    nwid=nwid))
                 else:
-                    file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
-                                                      str(uvec[v])[:15]))
+                    file.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
+                                                                  uslice,
+                                                                  repr(uvec[v]),
+                                                                  nwid=nwid))
 
-        for v, meta in pvec.items():
-            if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
-                file.write(" "*(nest+2))
-                file.write("%s           p (%s): %s\n" %
-                                   (v,str(pvec._slices[v]), str(pvec[v])[:15]))
+        if not dvecs:
+            for dest, src in byobj_conns.items():
+                file.write(" "*(nest+8))
+                connstr = '%s -> %s:' % (src, dest)
+                file.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
+                                                                  repr(uvec[src]),
+                                                                  nwid=nwid))
 
-        if noflat_conns:
-            file.write(' '*(nest+2) + "= noflat connections =\n")
-
-        for dest, src in noflat_conns.items():
-            file.write(" "*(nest+2))
-            file.write("%s --> %s\n" % (src, dest))
-
-        nest += 4
+        # now do the Components
+        nest += 3
         for name, sub in self.subsystems(local=True):
             if isinstance(sub, Component):
-                uvec = self._views[name].unknowns
-                file.write(" "*nest)
-                file.write(name)
-                file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                           (sub.__class__.__name__,
+                uvec = getattr(self._views[name], uvecname)
+                file.write("%s %s '%s'    req: %s  usize:%d\n" %
+                           (" "*nest,
+                            sub.__class__.__name__,
+                            name,
                             sub.get_req_procs(),
-                            world_rank(),
-                            uvec.vec.size,
-                            pvec.vec.size))
+                            uvec.vec.size))
                 for v, meta in uvec.items():
                     if verbose:
-                        file.write(" "*(nest+2))
-                        file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
-                                                          str(uvec[v])[:15]))
+                        if v in uvec._slices:
+                            uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                            file.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
+                                                                             v,
+                                                                             uslice,
+                                                                             repr(uvec[v]),
+                                                                             nwid=nwid))
+                        elif not dvecs: # deriv vecs don't have passing by obj
+                            file.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
+                                                                                 v,
+                                                                                 repr(uvec[v]),
+                                                                                 nwid=nwid))
             else:
-                sub.dump(nest, file)
+                sub.dump(nest, file=file, verbose=verbose, dvecs=dvecs)
 
     def get_req_procs(self):
         """
