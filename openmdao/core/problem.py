@@ -1,13 +1,19 @@
 """ OpenMDAO Problem class defintion."""
 
-import numpy as np
-from collections import namedtuple
+from __future__ import print_function
 
+from collections import namedtuple
+from itertools import chain
+from six import iteritems
+
+# pylint: disable=E0611, F0401
+import numpy as np
+
+from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import _get_implicit_connections
-from openmdao.core.checks import check_connections
-from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
@@ -259,6 +265,208 @@ class Problem(Component):
         #print params, '\n', unknowns, '\n', J
         return J
 
+    def check_partial_derivatives(self):
+        """ Checks partial derivatives comprehensively for all components in
+        your model.
+
+        Returns
+        -------
+        Dict of Dicts of Dicts of Tuples of Floats
+
+        First key is the component name; 2nd key is the (output, input) tuple
+        of strings; third key is one of ['rel error', 'abs error',
+        'magnitude', 'fdstep']; Tuple contains norms for forward - fd,
+        adjoint - fd, forward - adjoint using the best case fdstep.
+        """
+
+        root = self.root
+        varmanager = root._varmanager
+        params = varmanager.params
+        unknowns = varmanager.unknowns
+        resids = varmanager.resids
+        root.jacobian(params, unknowns, resids)
+
+        data = {}
+        jac_fwd = {}
+        jac_rev = {}
+        jac_fd = {}
+        model_hierarchy = _find_all_comps(self.root)
+
+        # Check derivative calculations
+        for group, comps in model_hierarchy.items():
+
+            for comp in comps:
+
+                # No need to check comps that don't have any derivs.
+                if comp.fd_options['force_fd'] == True:
+                    continue
+
+                cname = comp.pathname
+                data[cname] = {}
+                jac_fwd[cname] = {}
+                jac_rev[cname] = {}
+                jac_fd[cname] = {}
+                skip_keys = []
+
+                view = group._views[comp.name]
+                params = view.params
+                unknowns = view.unknowns
+                resids = view.resids
+                dparams = view.dparams
+                dunknowns = view.dunknowns
+                dresids = view.dresids
+
+                # Figure out implicit states for this comp
+                states = []
+                for u_name, meta in iteritems(comp._unknowns_dict):
+                    if meta.get('state'):
+                        states.append(meta['relative_name'])
+
+                # Create all our keys and allocate Jacs
+                for p_name in chain(params, states):
+                    if p_name in states:
+                        dinputs = dunknowns
+                    else:
+                        dinputs = dparams
+
+                        p_size = np.size(dinputs[p_name])
+
+                    for u_name in unknowns:
+                        data[cname][(u_name, p_name)] = {}
+
+                        u_size = np.size(dunknowns[u_name])
+                        # Check dimensions of user-supplied Jacobian
+                        if comp._jacobian_cache is not None:
+
+                            # Big boy rules
+                            if (u_name, p_name) not in comp._jacobian_cache:
+                                msg = "No derivatives defined between the" + \
+                                " variables '{}' and '{}', in '{}' so it " + \
+                                "will be skipped."
+                                msg = msg.format(p_name, u_name, cname)
+                                print(msg)
+                                skip_keys.append((u_name, p_name))
+                                continue
+
+                            user = comp._jacobian_cache[(u_name, p_name)].shape
+
+                            if len(user) < 2:
+                                user = (user[0], 1 )
+
+                            if user[0] != u_size or user[1] != p_size:
+                                msg = "Jacobian in component '{}' between the" + \
+                                " variables '{}' and '{}' is the wrong size. " + \
+                                "It should be {} by {}"
+                                msg = msg.format(cname, p_name, u_name, p_size,
+                                                 u_size)
+                                raise ValueError(msg)
+
+                        jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+
+                # Reverse derivatives first
+                for u_name in dresids:
+                    u_size = np.size(dunknowns[u_name])
+
+                    # Send columns of identity
+                    for idx in range(u_size):
+                        dresids.vec[:] = 0.0
+                        for item in dparams:
+                            dparams.flat[item][:] = 0.0
+                        dunknowns.vec[:] = 0.0
+
+                        dresids.flat[u_name][idx] = 1.0
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'rev')
+
+                        for p_name in chain(params, states):
+
+                            if (u_name, p_name) in skip_keys:
+                                continue
+
+                            if p_name in states:
+                                dinputs = dunknowns
+                            else:
+                                dinputs = dparams
+
+                            jac_rev[cname][(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+
+                # Forward derivatives second
+                for p_name in chain(params, states):
+
+                    if p_name in states:
+                        dinputs = dunknowns
+                    else:
+                        dinputs = dparams
+
+                    p_size = np.size(dinputs[p_name])
+
+                    # Send columns of identity
+                    for idx in range(p_size):
+                        dresids.vec[:] = 0.0
+                        for item in dparams:
+                            dparams.flat[item][:] = 0.0
+                        dunknowns.vec[:] = 0.0
+
+                        dinputs.flat[p_name][idx] = 1.0
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'fwd')
+
+                        for u_name in dresids:
+
+                            if (u_name, p_name) in skip_keys:
+                                continue
+
+                            jac_fwd[cname][(u_name, p_name)][:, idx] = dresids.flat[u_name]
+
+                # Finite Difference goes last
+                dresids.vec[:] = 0.0
+                dparams.vec[:] = 0.0
+                dunknowns.vec[:] = 0.0
+                jac_fd[cname] = comp.fd_jacobian(params, unknowns, resids, 1e-6)
+
+                # Start computing our metrics.
+                for p_name in chain(params, states):
+                    for u_name in resids:
+
+                        ldata = data[cname][(u_name, p_name)]
+
+                        if (u_name, p_name) in skip_keys:
+                            ldata['magnitude'] = None
+                            ldata['abs error'] = None
+                            ldata['rel error'] = None
+                            ldata['J_fd'] = None
+                            ldata['J_fwd'] = None
+                            ldata['J_rev'] = None
+                            continue
+
+                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
+                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
+                        Jsub_fd = jac_fd[cname][(u_name, p_name)]
+                        ldata['J_fd'] = Jsub_fd
+                        ldata['J_fwd'] = Jsub_for
+                        ldata['J_rev'] = Jsub_rev
+
+                        magfor = np.linalg.norm(Jsub_for)
+                        magrev = np.linalg.norm(Jsub_rev)
+                        magfd = np.linalg.norm(Jsub_fd)
+
+                        ldata['magnitude'] = (magfor, magrev, magfd)
+
+                        abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+                        abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+                        abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+
+                        ldata['abs error'] = (abs1, abs2, abs3)
+
+                        rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                        rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                        rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+
+                        ldata['rel error'] = (rel1, rel2, rel3)
+
+        return data
+
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
@@ -307,4 +515,20 @@ def assign_parameters(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
+
+
+def _find_all_comps(group):
+    """ Recursive function that assembles a dictionary whose keys are Group
+    instances and whos values are lists of Component instances."""
+
+    components = group.components()
+    subgroups = group.subgroups()
+
+    data = {group:[]}
+    for c_name, c in components:
+        data[group].append(c)
+    for sg_name, sg in subgroups:
+        sub_data = _find_all_comps(sg)
+        data.update(sub_data)
+    return data
 

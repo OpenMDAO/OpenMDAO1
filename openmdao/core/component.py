@@ -1,11 +1,13 @@
 """ Defines the base class for a Component in OpenMDAO."""
-import functools
-import numpy as np
+
 from collections import OrderedDict
+import functools
+from itertools import chain
 from six import iteritems
 from six.moves import range
+
+# pylint: disable=E0611, F0401
 import numpy as np
-from itertools import chain
 
 from openmdao.core.system import System
 
@@ -133,8 +135,8 @@ class Component(System):
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
-    def fd_jacobian(self, params, unknowns, resids):
-        """Finite difference across all unknonws in component w.r.t. all params.
+    def fd_jacobian(self, params, unknowns, resids, fdstep=None):
+        """Finite difference across all unknowns in component w.r.t. all params.
 
         Parameters
         ----------
@@ -147,6 +149,9 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
+        fdstep : float, optional
+            Override all other specifications of step size.
+
         Returns
         -------
         dict
@@ -156,6 +161,10 @@ class Component(System):
 
         jac = {}
         resid_cache = resids.vec.copy()
+
+        # TODO - Support specification of options.
+        if fdstep == None:
+            fdstep = 0.001
 
         states = []
         for u_name, meta in iteritems(self._unknowns_dict):
@@ -181,7 +190,9 @@ class Component(System):
             # Finite Difference each index in array
             for idx in range(p_size):
 
-                step = inputs.flat[p_name][idx] * 0.001
+                step = inputs.flat[p_name][idx] * fdstep
+                if step < fdstep:
+                    step = fdstep
                 inputs.flat[p_name][idx] += step
 
                 self.apply_nonlinear(params, unknowns, resids)
@@ -254,6 +265,11 @@ class Component(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
+        self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
+
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. """
 
         if self._jacobian_cache is None:
             msg = ("No derivatives defined for Component '{name}'")

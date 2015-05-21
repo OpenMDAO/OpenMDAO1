@@ -1,6 +1,7 @@
 """ Some simple test components. """
 
 import numpy as np
+import scipy.sparse
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
@@ -49,7 +50,7 @@ class SimpleCompDerivJac(SimpleComp):
         """Returns the Jacobian."""
 
         J = {}
-        J[('y', 'x')] = np.array(2.0)
+        J[('y', 'x')] = np.array([2.0])
         return J
 
 
@@ -81,6 +82,85 @@ class SimpleArrayComp(Component):
         dy2_dx2 = -3.0
         J = {}
         J[('y', 'x')] = np.array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+        return J
+
+
+class ArrayComp2D(Component):
+    '''2D Array component'''
+
+    def __init__(self):
+        super(ArrayComp2D, self).__init__()
+
+        # Params
+        self.add_param('x', np.zeros((2, 2)))
+
+        # Unknowns
+        self.add_output('y', np.zeros((2, 2)))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        x = params['x']
+        y = np.zeros((2, 2))
+
+        y[0][0] = 2.0*x[0][0] + 1.0*x[0][1] + \
+                  3.0*x[1][0] + 7.0*x[1][1]
+
+        y[0][1] = 4.0*x[0][0] + 2.0*x[0][1] + \
+                  6.0*x[1][0] + 5.0*x[1][1]
+
+        y[1][0] = 3.0*x[0][0] + 6.0*x[0][1] + \
+                  9.0*x[1][0] + 8.0*x[1][1]
+
+        y[1][1] = 1.0*x[0][0] + 3.0*x[0][1] + \
+                  2.0*x[1][0] + 4.0*x[1][1]
+
+        unknowns['y'] = y
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
+
+        J = {}
+        J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
+                                [4.0, 2.0, 6.0, 5.0],
+                                [3.0, 6.0, 9.0, 8.0],
+                                [1.0, 3.0, 2.0, 4.0]])
+        return J
+
+
+class SimpleSparseArrayComp(Component):
+    '''A fairly simple sparse array component'''
+
+    def __init__(self):
+        super(SimpleSparseArrayComp, self).__init__()
+
+        # Params
+        self.add_param('x', np.zeros([4]))
+
+        # Unknowns
+        self.add_output('y', np.zeros([4]))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][3]
+        unknowns['y'][2] = 5.0*params['x'][1] - 3.0*params['x'][2]
+        # print(self.name, "ran", params['x'], unknowns['y'])
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
+
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 5.0
+        dy2_dx2 = -3.0
+        data = [dy1_dx1, dy1_dx2, dy2_dx1, dy2_dx2]
+        row = [0, 0, 2, 2]
+        col = [0, 3, 1, 2]
+        J = {}
+        J[('y', 'x')] = scipy.sparse.csc_matrix((data, (row, col)),
+                                                shape=(4, 4))
 
         return J
 

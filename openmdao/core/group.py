@@ -2,16 +2,17 @@
 
 from __future__ import print_function
 
-import sys
 from collections import OrderedDict
+import sys
 from six import iteritems
 
+# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
-from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
+from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -407,6 +408,9 @@ class Group(System):
                 for key, J in iteritems(jacobian_cache):
                     if isinstance(J, real_types):
                         jacobian_cache[key] = np.array([[J]])
+                    shape = jacobian_cache[key].shape
+                    if len(shape) < 2:
+                        jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
@@ -470,12 +474,16 @@ class Group(System):
                 # Forward Mode
                 if mode == 'fwd':
 
-                    system.apply_linear(params, unknowns, dparams, dunknowns,
-                                        dresids, mode)
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(params, unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(params, unknowns, dparams,
+                                            dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dresids[var] += dunknowns.flat[var]
+                        dresids[var] += dunknowns[var]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -486,12 +494,17 @@ class Group(System):
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
                     dresids.vec *= -1.0
-                    system.apply_linear(params, unknowns, dparams, dunknowns,
-                                        dresids, mode)
+
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(params, unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(params, unknowns, dparams,
+                                            dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dunknowns[var] += dresids.flat[var]
+                        dunknowns[var] += dresids[var]
 
             # Groups and all other systems just call their own apply_linear.
             else:
