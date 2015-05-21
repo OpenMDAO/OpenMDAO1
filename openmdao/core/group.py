@@ -483,7 +483,7 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dresids[var] += dunknowns.flat[var]
+                        dresids[var] += dunknowns[var]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -504,7 +504,7 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dunknowns[var] += dresids.flat[var]
+                        dunknowns[var] += dresids[var]
 
             # Groups and all other systems just call their own apply_linear.
             else:
