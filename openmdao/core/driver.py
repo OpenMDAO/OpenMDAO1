@@ -4,7 +4,7 @@
 class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
     Problem, and every problem has a Driver. Driver is the simplest driver that
-    runs (solves using solve_nonlinder) a problem once.
+    runs (solves using solve_nonlinear) a problem once.
     """
 
     def add_param(self, name, low=None, high=None):
