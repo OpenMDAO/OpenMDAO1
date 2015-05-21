@@ -370,7 +370,9 @@ class Group(System):
         for name, sub in self.subsystems(local=True):
             self._varmanager._transfer_data(name)
             view = self._views[sub.name]
+            print('solving',name,'in rank',self.comm.rank)
             sub.solve_nonlinear(view.params, view.unknowns, view.resids)
+            print('done solving',name,'in rank',self.comm.rank)
 
     def apply_nonlinear(self, params=None, unknowns=None, resids=None):
         """

@@ -119,6 +119,23 @@ class MPITests1(MPITestCase):
             self.assertTrue(all(prob['C1:d']==np.ones(size, float)*-1.0))
             # TODO: not handling non-flattenable vars yet
 
+    def test_parallel_diamond(self):
+        size = 3
+        prob = Problem(Group(), impl=impl)
+        root = prob.root
+        root.add('P1', ParamComp('x', np.ones(size, float)))
+        G1 = root.add('G1', ParallelGroup())
+        G1.add('C1', ABCDArrayComp(size))
+        G1.add('C2', ABCDArrayComp(size))
+        root.add('C3', ABCDArrayComp(size))
+
+        root.connect('P1:x', 'G1:C1:a')
+        root.connect('P1:x', 'G1:C2:b')
+        root.connect('G1:C1:c', 'C3:a')
+        root.connect('G1:C2:c', 'C3:b')
+
+
+
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests
