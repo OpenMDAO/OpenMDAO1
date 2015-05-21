@@ -90,7 +90,7 @@ class ArrayComp2D(Component):
     '''2D Array component'''
 
     def __init__(self):
-        super(SimpleArrayComp, self).__init__()
+        super(ArrayComp2D, self).__init__()
 
         # Params
         self.add_param('x', np.zeros((2, 2)))
@@ -118,15 +118,15 @@ class ArrayComp2D(Component):
 
         unknowns['y'] = y
 
-    def provideJ(self):
-        """Analytical first derivatives"""
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
 
         J = {}
-        J['y', 'x'] = array([[2.0, 1.0, 3.0, 7.0],
-                             [4.0, 2.0, 6.0, 5.0],
-                             [3.0, 6.0, 9.0, 8.0],
-                             [1.0, 3.0, 2.0, 4.0]])
-        return self.J
+        J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
+                                [4.0, 2.0, 6.0, 5.0],
+                                [3.0, 6.0, 9.0, 8.0],
+                                [1.0, 3.0, 2.0, 4.0]])
+        return J
 
 
 class SimpleSparseArrayComp(Component):
