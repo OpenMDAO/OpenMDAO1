@@ -182,6 +182,8 @@ class VarManager(VarManagerBase):
         self.impl_factory = impl
         self.comm = comm
 
+        print ('varmanager:',self, comm)
+
         # create implementation specific VecWrappers
         self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         self.dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
@@ -191,15 +193,21 @@ class VarManager(VarManagerBase):
         self.dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
         # populate the VecWrappers with data
+        print ('populate the unknowns VecWrappers with data')
         self.unknowns.setup(unknowns_dict, store_noflats=True)
+        print ('populate the dunknowns VecWrappers with data')
         self.dunknowns.setup(unknowns_dict)
         self.resids.setup(unknowns_dict)
         self.dresids.setup(unknowns_dict)
+
+        print ('populate the params VecWrappers with data')
 
         self.params.setup(None, params_dict, self.unknowns,
                                               my_params, connections, store_noflats=True)
         self.dparams.setup(None, params_dict, self.unknowns,
                                                my_params, connections)
+
+        print ('calling setup_data_xfer...')
 
         self._setup_data_transfer(sys_pathname, my_params)
 

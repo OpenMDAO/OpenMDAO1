@@ -79,7 +79,12 @@ class MPITests1(MPITestCase):
 
         prob.run()
 
-        if not MPI or self.comm.rank == 0:
+        print('test:', self.comm.rank, prob['C2:a', 'params'])
+        print('test:', self.comm.rank, prob['C2:b', 'params'])
+        print('test:', self.comm.rank, prob['C2:c'])
+        print('test:', self.comm.rank, prob['C2:d'])
+
+        if not MPI or self.comm.rank >= 0:
             self.assertTrue(all(prob['C2:a', 'params']==np.ones(size, float)*10.))
             self.assertTrue(all(prob['C2:b', 'params']==np.ones(size, float)*5.))
             self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))

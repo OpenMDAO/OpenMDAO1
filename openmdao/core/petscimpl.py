@@ -68,6 +68,9 @@ class PetscImpl(object):
     def create_app_ordering(varmanager):
         """Creates a PETSc application ordering."""
         comm = varmanager.comm
+        if not comm:
+            return None
+
         local_unknown_sizes = varmanager._local_unknown_sizes
         unknowns_vec = varmanager.unknowns
         rank = comm.rank
@@ -110,7 +113,11 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             for the unknowns vecwrapper.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_noflats=store_noflats)
-        self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        print ('calling petsc_vec create, comm:', self.comm, self.vec)
+        if self.comm:
+            print ('calling petsc_vec create:', self.comm, self.comm.rank, self.comm.size)
+            self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+            print ('petsc_vec:', self.petsc_vec)
 
     def _get_flattened_sizes(self):
         """
@@ -123,6 +130,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             every process in our communicator.
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
+
+        if not self.comm:
+            return sizes
 
         # create 2D array of variable sizes per process
         self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
@@ -219,7 +229,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_noflats)
-        self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        if self.comm:
+            self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
         """
@@ -233,6 +244,9 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('noflat')])
+
+        if not self.comm:
+            return psize
 
         return numpy.array(self.comm.allgather(psize), int)
 
@@ -263,6 +277,9 @@ class PetscDataXfer(DataXfer):
                                             flat_conns, noflat_conns)
 
         self.comm = comm = varmanager.comm
+        if not self.comm:
+            return None
+
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
 
