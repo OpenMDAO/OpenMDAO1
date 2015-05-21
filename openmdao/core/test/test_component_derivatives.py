@@ -8,7 +8,7 @@ import numpy as np
 
 from openmdao.core.component import Component
 from openmdao.test.simplecomps import SimpleCompDerivJac, SimpleArrayComp, \
-                                      SimpleImplicitComp
+                                      SimpleImplicitComp, SimpleSparseArrayComp
 
 
 class TestComponentDerivatives(unittest.TestCase):
@@ -73,6 +73,41 @@ class TestComponentDerivatives(unittest.TestCase):
         dparams['x'] = np.array([0.0, 0.0])
         dresids = {}
         dresids['y'] = np.array([1.5, 3.1])
+
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'rev')
+        target = mycomp._jacobian_cache[('y', 'x')].T.dot(dresids['y'])
+        diff = abs(dparams['x'] - target).max()
+        self.assertAlmostEqual(diff, 0.0, places=3)
+
+    def test_sparse_array_Jacobian(self):
+
+        # Tests that we can correctly handle user-defined Jacobians.
+        # Now with arrays
+
+        empty = {}
+        mycomp = SimpleSparseArrayComp()
+        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+
+        # Forward
+
+        dparams = {}
+        dparams['x'] = np.array([1.5, 7.4, 3.1, 2.6])
+        dresids = {}
+        dresids['y'] = np.array([0.0, 0.0, 0.0, 0.0])
+
+        mycomp.apply_linear(empty, empty, dparams, empty,
+                            dresids, 'fwd')
+        target = mycomp._jacobian_cache[('y', 'x')].dot(dparams['x'])
+        diff = abs(dresids['y'] - target).max()
+        self.assertAlmostEqual(diff, 0.0, places=3)
+
+        # Reverse
+
+        dparams = {}
+        dparams['x'] = np.array([0.0, 0.0, 0.0, 0.0])
+        dresids = {}
+        dresids['y'] = np.array([1.5, 7.4, 3.1, 2.6])
 
         mycomp.apply_linear(empty, empty, dparams, empty,
                             dresids, 'rev')

@@ -430,6 +430,9 @@ class Problem(Component):
                     for u_name in resids:
 
                         if (u_name, p_name) in skip_keys:
+                            ldata['magnitude'] = {}
+                            ldata['abs error'] = {}
+                            ldata['rel error'] = {}
                             continue
 
                         ldata = data[cname][(u_name, p_name)]
