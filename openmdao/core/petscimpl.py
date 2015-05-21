@@ -68,8 +68,6 @@ class PetscImpl(object):
     def create_app_ordering(varmanager):
         """Creates a PETSc application ordering."""
         comm = varmanager.comm
-        if not comm:
-            return None
 
         local_unknown_sizes = varmanager._local_unknown_sizes
         unknowns_vec = varmanager.unknowns
@@ -134,9 +132,6 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             every process in our communicator.
         """
         sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
-
-        if not self.comm:
-            return sizes
 
         # create 2D array of variable sizes per process
         self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
@@ -252,9 +247,6 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('pass_by_obj')])
 
-        if not self.comm:
-            return psize
-
         return numpy.array(self.comm.allgather(psize), int)
 
     def get_view(self, sys_pathname, comm, varmap):
@@ -288,8 +280,6 @@ class PetscDataXfer(DataXfer):
                                             vec_conns, byobj_conns)
 
         self.comm = comm = varmanager.comm
-        if not self.comm:
-            return None
 
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
