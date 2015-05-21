@@ -168,9 +168,7 @@ else:
                                   parent, method, nocap=nocap)
 
                 if under_mpirun():
-                    print ("gathering results");sys.stdout.flush();sys.stderr.flush()
                     results = MPI.COMM_WORLD.gather(result, root=0)
-                    print ("done gathering results");sys.stdout.flush();sys.stderr.flush()
 
                     if MPI.COMM_WORLD.rank == 0:
                         for i,r in enumerate(results):
@@ -182,7 +180,6 @@ else:
                         else:
                             print(r)
                 else:
-                    print ("print results (not MPI)")
                     print(result)
 
         else: # find all test methods in the file and mpi run ourselves for each one
@@ -197,7 +194,6 @@ else:
                             else:
                                 retcode = run_in_sub(v, testspec, options)
 
-        print ("DONE DONE DONE");sys.stdout.flush();sys.stderr.flush()
 
 def run_in_sub(testcase, testspec, options):
     mod = __import__('__main__')

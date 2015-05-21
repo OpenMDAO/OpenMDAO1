@@ -88,6 +88,7 @@ def get_comm_if_active(system, comm=None):
             return comm
 
         req, max_req = system.get_req_procs()
+
         # if we can use every proc in comm, then we're good
         if max_req is None or max_req >= comm.size:
             return comm
@@ -96,17 +97,10 @@ def get_comm_if_active(system, comm=None):
         # doesn't include the unutilized processes.
         if comm.rank+1 > max_req:
             color = MPI.UNDEFINED
-            print "color undefined"
         else:
             color = 1
-            print "color 1"
 
-        print "about to split";sys.stdout.flush();sys.stderr.flush()
-        c = comm.Split(color)
-        if c == MPI.COMM_NULL:
-            print "NULL COMM!"
-        print "split done, c=",c;sys.stdout.flush();sys.stderr.flush()
-        return c
+        return comm.Split(color)
     else:
         return FakeComm()
 

@@ -275,8 +275,6 @@ class Group(System):
         if not self.is_active():
             return
 
-        print (self.pathname,' setup_vectors');sys.stdout.flush();sys.stderr.flush()
-
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self._varmanager = VarManager(self.comm,
@@ -299,7 +297,6 @@ class Group(System):
             self._views[name] = sub._varmanager.vectors()
 
         for name, sub in self.components():
-            print ("create_views sub",name);sys.stdout.flush();sys.stderr.flush()
             self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
                                              sub.pathname,
                                              sub._params_dict, sub._unknowns_dict, [], connections)
@@ -423,9 +420,9 @@ class Group(System):
 
             view = self._views[system.name]
 
-            params = view.params
+            params   = view.params
             unknowns = view.unknowns
-            resids = view.resids
+            resids   = view.resids
 
             # Instigate finite difference on child if user requests.
             if system.fd_options['force_fd'] == True:
