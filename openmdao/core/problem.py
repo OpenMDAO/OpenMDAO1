@@ -423,7 +423,8 @@ class Problem(Component):
                 dresids.vec[:] = 0.0
                 dparams.vec[:] = 0.0
                 dunknowns.vec[:] = 0.0
-                jac_fd[cname] = comp.fd_jacobian(params, unknowns, resids, 1e-6)
+                jac_fd[cname] = comp.fd_jacobian(params, unknowns, resids,
+                                                 step_size = 1e-6)
 
                 # Start computing our metrics.
                 for p_name in chain(params, states):

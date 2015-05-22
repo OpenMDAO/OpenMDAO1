@@ -15,7 +15,8 @@ from openmdao.core.vecwrapper import SrcVecWrapper
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleArrayComp, SimpleCompDerivJac, \
-                                      SimpleImplicitComp, SimpleComp
+                                      SimpleImplicitComp, SimpleComp, \
+                                      Paraboloid
 from openmdao.test.testutil import assert_equal_jacobian, assert_rel_error
 
 
@@ -277,8 +278,140 @@ class CompFDinSystemTestCase(unittest.TestCase):
         J = top.calc_gradient(['p1:x'], ['comp:y'], mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp:y']['p1:x'][0][0], 7.0, 1e-6)
 
-        J = top.calc_gradient(['p1:x'], ['comp:y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['comp:y']['p1:x'][0][0], 7.0, 1e-6)
+    def test_fd_options_step_size(self):
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', Paraboloid())
+        top.root.add('p1', ParamComp('x', 15.0))
+        top.root.add('p2', ParamComp('y', 15.0))
+        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p2:y', 'comp:y')
+
+        comp.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp:f_xy']['p1:x'][0][0], 39.0, 1e-6)
+
+        # Make sure step_size is used
+        # Derivative should be way high with this.
+        comp.fd_options['step_size'] = 1e5
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        self.assertGreater(J['comp:f_xy']['p1:x'][0][0], 1000.0)
+
+    def test_fd_options_form(self):
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', Paraboloid())
+        top.root.add('p1', ParamComp('x', 15.0))
+        top.root.add('p2', ParamComp('y', 15.0))
+        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p2:y', 'comp:y')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['form'] = 'forward'
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp:f_xy']['p1:x'][0][0], 39.0, 1e-6)
+
+        # Make sure it gives good result with small stepsize
+        comp.fd_options['form'] = 'backward'
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp:f_xy']['p1:x'][0][0], 39.0, 1e-6)
+
+        # Make sure it gives good result with small stepsize
+        comp.fd_options['form'] = 'central'
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp:f_xy']['p1:x'][0][0], 39.0, 1e-6)
+
+        # Now, Make sure we really are going foward and backward
+        comp.fd_options['form'] = 'forward'
+        comp.fd_options['step_size'] = 1e3
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        self.assertGreater(J['comp:f_xy']['p1:x'][0][0], 0.0)
+
+        comp.fd_options['form'] = 'backward'
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        self.assertLess(J['comp:f_xy']['p1:x'][0][0], 0.0)
+
+        # Central should get pretty close even for the bad stepsize
+        comp.fd_options['form'] = 'central'
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp:f_xy']['p1:x'][0][0], 39.0, 1e-1)
+
+    def test_fd_options_step_type(self):
+
+        class ScaledParaboloid(Component):
+            """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+            def __init__(self):
+                super(ScaledParaboloid, self).__init__()
+
+                # Params
+                self.add_param('x', 1.0)
+                self.add_param('y', 1.0)
+
+                # Unknowns
+                self.add_output('f_xy', 0.0)
+
+                self.scale = 1.0e-6
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+                Optimal solution (minimum): x = 6.6667; y = -7.3333
+                """
+
+                x = params['x']
+                y = params['y']
+
+                f_xy = ((x-3.0)**2 + x*y + (y+4.0)**2 - 3.0)
+                unknowns['f_xy'] = self.scale*f_xy
+
+            def jacobian(self, params, unknowns, resids):
+                """Analytical derivatives"""
+
+                x = params['x']
+                y = params['y']
+                J = {}
+
+                J['f_xy', 'x'] = (2.0*x - 6.0 + y) * self.scale
+                J['f_xy', 'y'] = (2.0*y + 8.0 + x) * self.scale
+
+                return J
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', ScaledParaboloid())
+        top.root.add('p1', ParamComp('x', 8.0*comp.scale))
+        top.root.add('p2', ParamComp('y', 8.0*comp.scale))
+        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p2:y', 'comp:y')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_type'] = 'absolute'
+
+        top.setup()
+        top.run()
+
+        J1 = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+
+        comp.fd_options['step_type'] = 'relative'
+        J2 = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+
+        # Couldnt put together a case where one is much worse, so just make sure they
+        # are not equal.
+        self.assertNotEqual(self, J1['comp:f_xy']['p1:x'][0][0],
+                                  J2['comp:f_xy']['p1:x'][0][0])
 
 if __name__ == "__main__":
     unittest.main()
