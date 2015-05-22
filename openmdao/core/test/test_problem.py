@@ -257,7 +257,7 @@ class TestProblem(unittest.TestCase):
         # Explicit
         problem = Problem()
         problem.root = Group()
-        problem.root.add('C', A())
+        problem.root.add('C', C())
         problem.root.add('D', D())
         problem.root.connect('C:y', 'D:y')
         problem.setup()
@@ -265,7 +265,7 @@ class TestProblem(unittest.TestCase):
         # Implicit
         problem = Problem()
         problem.root = Group()
-        problem.root.add('C', A(), promotes=['y'])
+        problem.root.add('C', C(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
 
