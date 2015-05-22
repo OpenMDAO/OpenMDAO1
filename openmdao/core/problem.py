@@ -497,7 +497,16 @@ def _setup_units(connections, params_dict, unknowns_dict):
         src_unit = smeta['units']
         tgt_unit = tmeta['units']
 
-        scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+        try:
+            scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+        except TypeError as err:
+            if str(err) == "Incompatible units":
+                msg = "Unit '{s[units]}' in source '{s[relative_name]}' "\
+                    "is incompatible with unit '{t[units]}' "\
+                    "in target '{t[relative_name]}'.".format(s=smeta, t=tmeta)
+                raise TypeError(msg)
+            else:
+                raise
 
         # If units are not equivalent, store unit conversion tuple
         # in the parameter metadata
@@ -531,4 +540,3 @@ def _find_all_comps(group):
         sub_data = _find_all_comps(sg)
         data.update(sub_data)
     return data
-
