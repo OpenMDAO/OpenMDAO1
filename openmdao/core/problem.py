@@ -500,7 +500,7 @@ def _setup_units(connections, params_dict, unknowns_dict):
         try:
             scale, offset = get_conversion_tuple(src_unit, tgt_unit)
         except TypeError as err:
-            if err.message == "Incompatible units":
+            if str(err) == "Incompatible units":
                 msg = "Unit '{s[units]}' in source '{s[relative_name]}' "\
                     "is incompatible with unit '{t[units]}' "\
                     "in target '{t[relative_name]}'.".format(s=smeta, t=tmeta)
