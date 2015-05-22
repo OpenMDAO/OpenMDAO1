@@ -106,6 +106,11 @@ class Group(System):
         if promotes is not None:
             system._promotes = promotes
 
+
+        if name in self._subsystems.keys():
+            msg = "Group '{gname}' already contains a component with name"\
+                            " '{cname}'.".format(gname=self.name, cname=name)
+            raise NameError(msg)
         self._subsystems[name] = system
         system.name = name
         return system
