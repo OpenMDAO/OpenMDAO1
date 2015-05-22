@@ -413,5 +413,62 @@ class CompFDinSystemTestCase(unittest.TestCase):
         self.assertNotEqual(self, J1['comp:f_xy']['p1:x'][0][0],
                                   J2['comp:f_xy']['p1:x'][0][0])
 
+    def test_fd_options_meta_step_size(self):
+
+        class MetaParaboloid(Component):
+            """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+            def __init__(self):
+                super(MetaParaboloid, self).__init__()
+
+                # Params
+                self.add_param('x', 1.0, fd_step_size = 1.0e5)
+                self.add_param('y', 1.0, fd_step_size = 1.0e5)
+
+                # Unknowns
+                self.add_output('f_xy', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+                Optimal solution (minimum): x = 6.6667; y = -7.3333
+                """
+
+                x = params['x']
+                y = params['y']
+
+                f_xy = ((x-3.0)**2 + x*y + (y+4.0)**2 - 3.0)
+                unknowns['f_xy'] = f_xy
+
+            def jacobian(self, params, unknowns, resids):
+                """Analytical derivatives"""
+
+                x = params['x']
+                y = params['y']
+                J = {}
+
+                J['f_xy', 'x'] = (2.0*x - 6.0 + y)
+                J['f_xy', 'y'] = (2.0*y + 8.0 + x)
+
+                return J
+
+        top = Problem()
+        top.root = Group()
+        comp = top.root.add('comp', MetaParaboloid())
+        top.root.add('p1', ParamComp('x', 15.0))
+        top.root.add('p2', ParamComp('y', 15.0))
+        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p2:y', 'comp:y')
+
+        comp.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        # Make sure bad meta step_size is used
+        # Derivative should be way high with this.
+
+        J = top.calc_gradient(['p1:x'], ['comp:f_xy'], return_format='dict')
+        self.assertGreater(J['comp:f_xy']['p1:x'][0][0], 1000.0)
+
 if __name__ == "__main__":
     unittest.main()

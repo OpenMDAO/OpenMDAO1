@@ -193,10 +193,25 @@ class Component(System):
             else:
                 inputs = params
 
+            mydict = {}
+            for key, val in self._params_dict.items():
+                if val['relative_name'] == p_name:
+                    mydict = val
+                    break
+
             # Local settings for this var
-            fdstep = step_size
-            fdtype = step_type
-            fdform = form
+            if 'fd_step_size' in mydict:
+                fdstep = mydict['fd_step_size']
+            else:
+                fdstep = step_size
+            if 'fd_step_type' in mydict:
+                fdtype = mydict['fd_step_type']
+            else:
+                fdtype = step_type
+            if 'fd_form' in mydict:
+                fdform = mydict['fd_form']
+            else:
+                fdform = form
 
             # Size our Inputs
             p_size = np.size(inputs[p_name])
