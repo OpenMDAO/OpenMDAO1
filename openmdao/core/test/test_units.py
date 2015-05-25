@@ -210,7 +210,39 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['sub2:tgtC:x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['sub2:tgtK:x3']['x1'][0][0], 1.0, 1e-6)
 
+    def test_incompatible_connections(self):
 
+        class BadComp(Component):
+            def __init__(self):
+                super(BadComp, self).__init__()
+
+                self.add_param('x2', 100.0, units='m')
+                self.add_output('x3', 100.0)
+
+        # Explicit Connection
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp())
+        prob.root.add('dest', BadComp())
+        prob.root.connect('src:x2', 'dest:x2')
+        with self.assertRaises(TypeError) as cm:
+            prob.setup()
+
+        expected_msg = "Unit 'degC' in source 'src:x2' is incompatible with unit 'm' in target 'dest:x2'."
+
+        self.assertEquals(str(cm.exception), expected_msg)
+
+        # Implicit Connection
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp(), promotes=['x2'])
+        prob.root.add('dest', BadComp(),promotes=['x2'])
+        with self.assertRaises(TypeError) as cm:
+            prob.setup()
+
+        expected_msg = "Unit 'degC' in source 'x2' is incompatible with unit 'm' in target 'x2'."
+
+        self.assertEquals(str(cm.exception), expected_msg)
 
 if __name__ == "__main__":
     unittest.main()

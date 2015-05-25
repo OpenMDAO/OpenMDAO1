@@ -90,7 +90,7 @@ class ArrayComp2D(Component):
     '''2D Array component'''
 
     def __init__(self):
-        super(SimpleArrayComp, self).__init__()
+        super(ArrayComp2D, self).__init__()
 
         # Params
         self.add_param('x', np.zeros((2, 2)))
@@ -101,26 +101,32 @@ class ArrayComp2D(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
 
-        self.y[0][0] = 2.0*self.x[0][0] + 1.0*self.x[0][1] + \
-                       3.0*self.x[1][0] + 7.0*self.x[1][1]
+        x = params['x']
+        y = np.zeros((2, 2))
 
-        self.y[0][1] = 4.0*self.x[0][0] + 2.0*self.x[0][1] + \
-                       6.0*self.x[1][0] + 5.0*self.x[1][1]
+        y[0][0] = 2.0*x[0][0] + 1.0*x[0][1] + \
+                  3.0*x[1][0] + 7.0*x[1][1]
 
-        self.y[1][0] = 3.0*self.x[0][0] + 6.0*self.x[0][1] + \
-                       9.0*self.x[1][0] + 8.0*self.x[1][1]
+        y[0][1] = 4.0*x[0][0] + 2.0*x[0][1] + \
+                  6.0*x[1][0] + 5.0*x[1][1]
 
-        self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
-                       2.0*self.x[1][0] + 4.0*self.x[1][1]
+        y[1][0] = 3.0*x[0][0] + 6.0*x[0][1] + \
+                  9.0*x[1][0] + 8.0*x[1][1]
 
-    def provideJ(self):
-        """Analytical first derivatives"""
+        y[1][1] = 1.0*x[0][0] + 3.0*x[0][1] + \
+                  2.0*x[1][0] + 4.0*x[1][1]
 
-        self.J = array([[2.0, 1.0, 3.0, 7.0],
-                        [4.0, 2.0, 6.0, 5.0],
-                        [3.0, 6.0, 9.0, 8.0],
-                        [1.0, 3.0, 2.0, 4.0]])
-        return self.J
+        unknowns['y'] = y
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
+
+        J = {}
+        J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
+                                [4.0, 2.0, 6.0, 5.0],
+                                [3.0, 6.0, 9.0, 8.0],
+                                [1.0, 3.0, 2.0, 4.0]])
+        return J
 
 
 class SimpleSparseArrayComp(Component):
@@ -245,6 +251,42 @@ class SimpleNoflatComp(Component):
         """ Doesn't do much. """
 
         unknowns['y'] = params['x']+self.name
+
+
+class Paraboloid(Component):
+    """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+    def __init__(self):
+        super(Paraboloid, self).__init__()
+
+        # Params
+        self.add_param('x', 1.0)
+        self.add_param('y', 1.0)
+
+        # Unknowns
+        self.add_output('f_xy', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+        Optimal solution (minimum): x = 6.6667; y = -7.3333
+        """
+
+        x = params['x']
+        y = params['y']
+
+        unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives"""
+
+        x = params['x']
+        y = params['y']
+        J = {}
+
+        J['f_xy', 'x'] = 2.0*x - 6.0 + y
+        J['f_xy', 'y']  = 2.0*y + 8.0 + x
+
+        return J
 
 
 class FanOutComp1(Component):
