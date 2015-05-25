@@ -7,6 +7,10 @@ class Driver(object):
     runs (solves using solve_nonlinder) a problem once.
     """
 
+    def __init__(self):
+        super(Driver, self).__init__()
+        self.recorders = []
+
     def add_param(self, name, low=None, high=None):
         pass
 
@@ -15,6 +19,11 @@ class Driver(object):
 
     def add_constraint(self, name):
         pass
+
+    def add_recorder(self, recorder):
+                
+        #TODO: only allowed to add recorders to the Driver associated with the top Problem?
+        self.recorders.append(recorder)
 
     def run(self, system):
         """ Runs the driver. This function should be overriden when inheriting.
