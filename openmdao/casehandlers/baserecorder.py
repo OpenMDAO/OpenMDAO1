@@ -5,10 +5,11 @@ from openmdao.core.options import OptionsDictionary
 class _BaseRecorder(object):
     """ Base class for all case recorders. """
 
-    def __init__(self):
+    def __init__(self, driver):
         # self._cfg_map = {}
-        self._cases = None
+        # self._cases = None
         # self.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
+        self.driver = driver
         self.options = OptionsDictionary()
         self.options.add_option('includes', ['*'], doc='Patterns for variables to include in recording')
         self.options.add_option('excludes', [], doc='Patterns for variables to exclude from recording '
@@ -28,25 +29,28 @@ class _BaseRecorder(object):
     #     """ Register names for later record call from `driver`. """
     #     self._cfg_map[driver] = (inputs, outputs)
 
-    def get_simulation_info(self, constants):
+    def get_simulation_info(self):
         """ Return simulation info dictionary. """
 
         # dep_graph = top.get_graph(format='json')
         # comp_graph = top.get_graph(components_only=True, format='json')
 
-        return dict(OpenMDAO_Version=__version__)
+        openmdao_version = '1.0' # TODO: how do I get this info?
+        return dict(OpenMDAO_Version=openmdao_version)
 
     def get_driver_info(self):
         """ Return list of driver info dictionaries. """
 
+        class_name = type(self.driver).__name__
+        return dict(class_name=class_name)
         # Locate top level assembly from first driver registered.
-        top = self._cfg_map.keys()[0].parent
-        while top.parent:
-            top = top.parent
-        #prefix_drop = len(top.name) + 1 if top.name else 0
-        prefix_drop = 0
+        # top = self._cfg_map.keys()[0].parent
+        # while top.parent:
+        #     top = top.parent
+        # #prefix_drop = len(top.name) + 1 if top.name else 0
+        # prefix_drop = 0
 
-        driver_info = []
+        # driver_info = []
         # for driver, (ins, outs) in sorted(self._cfg_map.items(),
         #                                   key=lambda item: item[0].get_pathname()):
         #     name = driver.get_pathname()[prefix_drop:]
@@ -67,7 +71,7 @@ class _BaseRecorder(object):
         #         info['ineq_constraints'] = \
         #             [str(con) for con in driver.get_ineq_constraints().values()]
         #     driver_info.append(info)
-        return driver_info
+        # return driver_info
 
     def _check_path(self,path):
         """ Return True if `path` should be recorded. """

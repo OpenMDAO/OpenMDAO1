@@ -15,8 +15,8 @@ class DumpCaseRecorder(_BaseRecorder):
     If `out` is None, cases will be ignored.
     """
 
-    def __init__(self, out='stdout'):
-        super(DumpCaseRecorder, self).__init__()
+    def __init__(self, driver, out='stdout'):
+        super(DumpCaseRecorder, self).__init__(driver)
         if isinstance(out, basestring):
             if out == 'stdout':
                 out = sys.stdout
@@ -28,8 +28,14 @@ class DumpCaseRecorder(_BaseRecorder):
         # self._cfg_map = {}
 
     def startup(self):
-        """ Nothing needed for a dumpcase."""
-        pass
+        """ Write out info that applies to the entire run"""
+        write = self.out.write
+        sim_info = self.get_simulation_info()
+        write("Simulation Info:\n")
+        write("  OpenMDAO Version: %s\n" % sim_info['OpenMDAO_Version'])
+        driver_info = self.get_driver_info()
+        write("Driver Info:\n")
+        write("  Driver Class: %s\n" % driver_info['class_name'])
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
@@ -62,17 +68,17 @@ class DumpCaseRecorder(_BaseRecorder):
         write("  Params:\n")
         for param, meta in params.items():
             if self._check_path(param):
-                write("%s: %s" % ( param, str(meta['val'])))
+                write("%s: %s\n" % ( param, str(meta['val'])))
 
         write("  Unknowns:\n")
         for unknown, meta in unknowns.items():
             if self._check_path(unknown):
-                write("%s: %s" % ( unknown, str(meta['val'])))
+                write("%s: %s\n" % ( unknown, str(meta['val'])))
 
         write("  Resids:\n")
         for resid, meta in resids.items():
             if self._check_path(resid):
-                write("%s: %s" % ( resid, str(meta['val'])))
+                write("%s: %s\n" % ( resid, str(meta['val'])))
 
 
         # in_names, out_names = self._cfg_map[driver]
