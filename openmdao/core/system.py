@@ -36,12 +36,11 @@ class System(object):
                                    doc = "Finite difference mode. (forward, backward, central) "
                                    "You can also set to 'complex_step' to peform the complex "
                                    "step method if your components support it.")
-        self.fd_options.add_option("step", 1.0e-6,
+        self.fd_options.add_option("step_size", 1.0e-6,
                                     doc = "Default finite difference stepsize")
         self.fd_options.add_option("step_type", 'absolute',
-                                   values = ['absolute', 'relative', 'bounds_scaled'],
-                                   doc = 'Set to absolute, relative, '
-                                   'or scaled to the bounds (high-low) step sizes')
+                                   values = ['absolute', 'relative'],
+                                   doc = 'Set to absolute, relative')
 
     def __getitem__(self, name):
         """

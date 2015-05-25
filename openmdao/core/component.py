@@ -1,11 +1,13 @@
 """ Defines the base class for a Component in OpenMDAO."""
-import functools
-import numpy as np
+
 from collections import OrderedDict
+import functools
+from itertools import chain
 from six import iteritems
 from six.moves import range
+
+# pylint: disable=E0611, F0401
 import numpy as np
-from itertools import chain
 
 from openmdao.core.system import System
 
@@ -133,8 +135,9 @@ class Component(System):
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
-    def fd_jacobian(self, params, unknowns, resids):
-        """Finite difference across all unknonws in component w.r.t. all params.
+    def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
+                    step_type=None):
+        """Finite difference across all unknowns in component w.r.t. all params.
 
         Parameters
         ----------
@@ -147,6 +150,17 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
+        step_size : float, optional
+            Override all other specifications of finite difference step size.
+
+        form : float, optional
+            Override all other specifications of form. Can be forward,
+            backward, or central.
+
+        step_type : float, optional
+            Override all other specifications of step type. Can be absollute
+            or relative..
+
         Returns
         -------
         dict
@@ -154,8 +168,17 @@ class Component(System):
             and whose values are ndarrays
         """
 
+        # Function call arguments have precedence over the system dict.
+        if step_size == None:
+            step_size = self.fd_options['step_size']
+        if form == None:
+            form = self.fd_options['form']
+        if step_type == None:
+            step_type = self.fd_options['step_type']
+
         jac = {}
         resid_cache = resids.vec.copy()
+        resid_cache2 = None
 
         states = []
         for u_name, meta in iteritems(self._unknowns_dict):
@@ -170,6 +193,26 @@ class Component(System):
             else:
                 inputs = params
 
+            mydict = {}
+            for key, val in self._params_dict.items():
+                if val['relative_name'] == p_name:
+                    mydict = val
+                    break
+
+            # Local settings for this var
+            if 'fd_step_size' in mydict:
+                fdstep = mydict['fd_step_size']
+            else:
+                fdstep = step_size
+            if 'fd_step_type' in mydict:
+                fdtype = mydict['fd_step_type']
+            else:
+                fdtype = step_type
+            if 'fd_form' in mydict:
+                fdform = mydict['fd_form']
+            else:
+                fdform = form
+
             # Size our Inputs
             p_size = np.size(inputs[p_name])
 
@@ -181,16 +224,51 @@ class Component(System):
             # Finite Difference each index in array
             for idx in range(p_size):
 
-                step = inputs.flat[p_name][idx] * 0.001
-                inputs.flat[p_name][idx] += step
+                # Relative or Absolute step size
+                if fdtype == 'relative':
+                    step = inputs.flat[p_name][idx] * fdstep
+                    if step < fdstep:
+                        step = fdstep
+                else:
+                    step = fdstep
 
-                self.apply_nonlinear(params, unknowns, resids)
+                if fdform == 'forward':
 
-                inputs.flat[p_name][idx] -= step
+                    inputs.flat[p_name][idx] += step
 
-                # delta resid is delta unknown
-                resids.vec[:] -= resid_cache
-                resids.vec[:] *= (1.0/step)
+                    self.apply_nonlinear(params, unknowns, resids)
+
+                    inputs.flat[p_name][idx] -= step
+
+                    # delta resid is delta unknown
+                    resids.vec[:] -= resid_cache
+                    resids.vec[:] *= (1.0/step)
+
+                elif fdform == 'backward':
+
+                    inputs.flat[p_name][idx] -= step
+
+                    self.apply_nonlinear(params, unknowns, resids)
+
+                    inputs.flat[p_name][idx] += step
+
+                    # delta resid is delta unknown
+                    resids.vec[:] -= resid_cache
+                    resids.vec[:] *= (-1.0/step)
+
+                elif fdform == 'central':
+
+                    inputs.flat[p_name][idx] += step
+                    self.apply_nonlinear(params, unknowns, resids)
+                    resids2 = resids.vec - resid_cache
+
+                    resids.vec[:] = resid_cache
+
+                    inputs.flat[p_name][idx] -= 2.0*step
+                    self.apply_nonlinear(params, unknowns, resids)
+
+                    resids.vec[:] -= resid_cache + resids2
+                    resids.vec[:] *= (-0.5/step)
 
                 for u_name in unknowns:
                     jac[u_name, p_name][:, idx] = resids.flat[u_name]
@@ -254,6 +332,11 @@ class Component(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
+        self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
+
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. """
 
         if self._jacobian_cache is None:
             msg = ("No derivatives defined for Component '{name}'")

@@ -13,7 +13,7 @@ from openmdao.units.units import import_library, NumberDict, convert_units, \
 
 class test_NumberDict(unittest.TestCase):
 
-    def test__UknownKeyGives0(self):
+    def test__UnknownKeyGives0(self):
         #a NumberDict instance should initilize using integer and non-integer indices
         #a NumberDict instance should initilize all entries with an initial value of 0
         x = NumberDict()
