@@ -290,6 +290,7 @@ class Problem(Component):
         jac_fwd = {}
         jac_rev = {}
         jac_fd = {}
+        skip_keys = []
         model_hierarchy = _find_all_comps(self.root)
 
         # Check derivative calculations
@@ -306,7 +307,6 @@ class Problem(Component):
                 jac_fwd[cname] = {}
                 jac_rev[cname] = {}
                 jac_fd[cname] = {}
-                skip_keys = []
 
                 view = group._views[comp.name]
                 params = view.params
@@ -338,7 +338,7 @@ class Problem(Component):
                         # Check dimensions of user-supplied Jacobian
                         if comp._jacobian_cache is not None:
 
-                            # Big boy rules
+                            # Give the user a message for any undeclared derivs
                             if (u_name, p_name) not in comp._jacobian_cache:
                                 msg = "No derivatives defined between the" + \
                                 " variables '{}' and '{}', in '{}' so it " + \
@@ -432,18 +432,15 @@ class Problem(Component):
 
                         ldata = data[cname][(u_name, p_name)]
 
-                        if (u_name, p_name) in skip_keys:
-                            ldata['magnitude'] = None
-                            ldata['abs error'] = None
-                            ldata['rel error'] = None
-                            ldata['J_fd'] = None
-                            ldata['J_fwd'] = None
-                            ldata['J_rev'] = None
-                            continue
-
-                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
-                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
                         Jsub_fd = jac_fd[cname][(u_name, p_name)]
+
+                        if (u_name, p_name) in skip_keys:
+                            Jsub_for = np.zeros(Jsub_fd.shape)
+                            Jsub_rev = np.zeros(Jsub_fd.shape)
+                        else:
+                            Jsub_for = jac_fwd[cname][(u_name, p_name)]
+                            Jsub_rev = jac_rev[cname][(u_name, p_name)]
+
                         ldata['J_fd'] = Jsub_fd
                         ldata['J_fwd'] = Jsub_for
                         ldata['J_rev'] = Jsub_rev
