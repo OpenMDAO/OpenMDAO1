@@ -30,17 +30,17 @@ class System(object):
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
-                                   doc = "Set to True to finite difference this system.")
+                                   desc = "Set to True to finite difference this system.")
         self.fd_options.add_option('form', 'forward',
                                    values = ['forward', 'backward', 'central', 'complex_step'],
-                                   doc = "Finite difference mode. (forward, backward, central) "
+                                   desc = "Finite difference mode. (forward, backward, central) "
                                    "You can also set to 'complex_step' to peform the complex "
                                    "step method if your components support it.")
         self.fd_options.add_option("step_size", 1.0e-6,
-                                    doc = "Default finite difference stepsize")
+                                    desc = "Default finite difference stepsize")
         self.fd_options.add_option("step_type", 'absolute',
                                    values = ['absolute', 'relative'],
-                                   doc = 'Set to absolute, relative')
+                                   desc = 'Set to absolute, relative')
 
     def __getitem__(self, name):
         """

@@ -150,16 +150,16 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
-        step_size : float, optional
+        step_size : float (optional)
             Override all other specifications of finite difference step size.
 
-        form : float, optional
+        form : float (optional)
             Override all other specifications of form. Can be forward,
             backward, or central.
 
-        step_type : float, optional
-            Override all other specifications of step type. Can be absollute
-            or relative..
+        step_type : float (optional)
+            Override all other specifications of step_type. Can be absolute
+            or relative.
 
         Returns
         -------
@@ -269,6 +269,8 @@ class Component(System):
 
                     resids.vec[:] -= resid_cache + resids2
                     resids.vec[:] *= (-0.5/step)
+
+                    inputs.flat[p_name][idx] += step
 
                 for u_name in unknowns:
                     jac[u_name, p_name][:, idx] = resids.flat[u_name]
