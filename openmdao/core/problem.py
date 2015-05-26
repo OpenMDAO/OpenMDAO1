@@ -303,9 +303,9 @@ class Problem(Component):
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
 
-        # Check derivative calculations
+        # Check derivative calculations for all comps at every level of the
+        # system hierarchy.
         for group, comps in model_hierarchy.items():
-
             for comp in comps:
 
                 # No need to check comps that don't have any derivs.
@@ -339,21 +339,18 @@ class Problem(Component):
 
                 # Create all our keys and allocate Jacs
                 for p_name in chain(params, states):
-                    if p_name in states:
-                        dinputs = dunknowns
-                    else:
-                        dinputs = dparams
 
-                        p_size = np.size(dinputs[p_name])
+                    dinputs = dunknowns if p_name in states else dparams
+                    p_size = np.size(dinputs[p_name])
 
+                    # Check dimensions of user-supplied Jacobian
                     for u_name in unknowns:
                         data[cname][(u_name, p_name)] = {}
 
                         u_size = np.size(dunknowns[u_name])
-                        # Check dimensions of user-supplied Jacobian
                         if comp._jacobian_cache is not None:
 
-                            # Don't pre-allocate if we aren't defined.
+                            # Go no further if we aren't defined.
                             if (u_name, p_name) not in comp._jacobian_cache:
                                 skip_keys.append((u_name, p_name))
                                 continue
@@ -395,21 +392,14 @@ class Problem(Component):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
-                            if p_name in states:
-                                dinputs = dunknowns
-                            else:
-                                dinputs = dparams
+                            dinputs = dunknowns if p_name in states else dparams
 
                             jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
                 for p_name in chain(params, states):
 
-                    if p_name in states:
-                        dinputs = dunknowns
-                    else:
-                        dinputs = dparams
-
+                    dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
 
                     # Send columns of identity
