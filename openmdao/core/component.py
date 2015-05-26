@@ -199,7 +199,7 @@ class Component(System):
                     mydict = val
                     break
 
-            # Local settings for this var
+            # Local settings for this var trump all
             if 'fd_step_size' in mydict:
                 fdstep = mydict['fd_step_size']
             else:
@@ -267,6 +267,7 @@ class Component(System):
                     inputs.flat[p_name][idx] -= 2.0*step
                     self.apply_nonlinear(params, unknowns, resids)
 
+                    # central difference formula
                     resids.vec[:] -= resid_cache + resids2
                     resids.vec[:] *= (-0.5/step)
 

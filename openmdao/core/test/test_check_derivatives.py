@@ -23,7 +23,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.setup()
         top.run()
 
-        data = top.check_partial_derivatives()
+        data = top.check_partial_derivatives(out_stream=None)
         #print data
 
         for key1, val1 in iteritems(data):
@@ -47,7 +47,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.setup()
         top.run()
 
-        data = top.check_partial_derivatives()
+        data = top.check_partial_derivatives(out_stream=None)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -70,7 +70,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.setup()
         top.run()
 
-        data = top.check_partial_derivatives()
+        data = top.check_partial_derivatives(out_stream=None)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -102,7 +102,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.run()
 
         try:
-            data = top.check_partial_derivatives()
+            data = top.check_partial_derivatives(out_stream=None)
         except Exception as err:
             msg = "Jacobian in component 'comp' between the" + \
                 " variables 'x' and 'y' is the wrong size. " + \
