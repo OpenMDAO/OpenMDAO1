@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import namedtuple
 from itertools import chain
 from six import iteritems
+import sys
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -265,9 +266,16 @@ class Problem(Component):
         #print params, '\n', unknowns, '\n', J
         return J
 
-    def check_partial_derivatives(self):
+    def check_partial_derivatives(self, out_stream=sys.stdout):
         """ Checks partial derivatives comprehensively for all components in
         your model.
+
+        Parameters
+        ----------
+
+        out_stream : file_like
+            Where to send human readable output. Default is sys.stdout. Set to
+            None to suppress.
 
         Returns
         -------
@@ -284,14 +292,15 @@ class Problem(Component):
         params = varmanager.params
         unknowns = varmanager.unknowns
         resids = varmanager.resids
+
+        # Linearize the model
         root.jacobian(params, unknowns, resids)
 
         data = {}
-        jac_fwd = {}
-        jac_rev = {}
-        jac_fd = {}
         skip_keys = []
         model_hierarchy = _find_all_comps(self.root)
+
+        out_stream.write('Partial Derivatives Check\n\n')
 
         # Check derivative calculations
         for group, comps in model_hierarchy.items():
@@ -304,9 +313,9 @@ class Problem(Component):
 
                 cname = comp.pathname
                 data[cname] = {}
-                jac_fwd[cname] = {}
-                jac_rev[cname] = {}
-                jac_fd[cname] = {}
+                jac_fwd = {}
+                jac_rev = {}
+                jac_fd = {}
 
                 view = group._views[comp.name]
                 params = view.params
@@ -315,6 +324,9 @@ class Problem(Component):
                 dparams = view.dparams
                 dunknowns = view.dunknowns
                 dresids = view.dresids
+
+                out_stream.write('Component: %s\n' % cname)
+                out_stream.write('------------------------------\n\n')
 
                 # Figure out implicit states for this comp
                 states = []
@@ -338,18 +350,14 @@ class Problem(Component):
                         # Check dimensions of user-supplied Jacobian
                         if comp._jacobian_cache is not None:
 
-                            # Give the user a message for any undeclared derivs
+                            # Don't pre-allocate if we aren't defined.
                             if (u_name, p_name) not in comp._jacobian_cache:
-                                msg = "No derivatives defined between the" + \
-                                " variables '{}' and '{}', in '{}' so it " + \
-                                "will be skipped."
-                                msg = msg.format(p_name, u_name, cname)
-                                print(msg)
                                 skip_keys.append((u_name, p_name))
                                 continue
 
                             user = comp._jacobian_cache[(u_name, p_name)].shape
 
+                            # User may use floats for scalar jacobians
                             if len(user) < 2:
                                 user = (user[0], 1 )
 
@@ -361,8 +369,8 @@ class Problem(Component):
                                                  u_size)
                                 raise ValueError(msg)
 
-                        jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
-                        jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
                 # Reverse derivatives first
                 for u_name in dresids:
@@ -389,7 +397,7 @@ class Problem(Component):
                             else:
                                 dinputs = dparams
 
-                            jac_rev[cname][(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+                            jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
                 for p_name in chain(params, states):
@@ -417,7 +425,7 @@ class Problem(Component):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
-                            jac_fwd[cname][(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                            jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
 
                 # Finite Difference goes last
                 dresids.vec[:] = 0.0
@@ -438,8 +446,8 @@ class Problem(Component):
                             Jsub_for = np.zeros(Jsub_fd.shape)
                             Jsub_rev = np.zeros(Jsub_fd.shape)
                         else:
-                            Jsub_for = jac_fwd[cname][(u_name, p_name)]
-                            Jsub_rev = jac_rev[cname][(u_name, p_name)]
+                            Jsub_for = jac_fwd[(u_name, p_name)]
+                            Jsub_rev = jac_rev[(u_name, p_name)]
 
                         ldata['J_fd'] = Jsub_fd
                         ldata['J_fwd'] = Jsub_for
@@ -462,6 +470,38 @@ class Problem(Component):
                         rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
 
                         ldata['rel error'] = (rel1, rel2, rel3)
+
+                        if out_stream is None:
+                            continue
+
+                        # Optional file_like output
+                        out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
+
+                        out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                        out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                        out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+
+                        out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                        out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                        out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+
+                        out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                        out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                        out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+
+                        out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                        out_stream.write(str(Jsub_for))
+                        out_stream.write('\n\n')
+                        out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                        out_stream.write(str(Jsub_rev))
+                        out_stream.write('\n\n')
+                        out_stream.write('    Raw FD Derivative (Jfor)\n\n')
+                        out_stream.write(str(Jsub_fd))
+                        out_stream.write('\n\n')
+
+                        out_stream.write('\n')
+
+
 
         return data
 
