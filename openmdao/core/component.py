@@ -270,6 +270,8 @@ class Component(System):
                     resids.vec[:] -= resid_cache + resids2
                     resids.vec[:] *= (-0.5/step)
 
+                    inputs.flat[p_name][idx] += step
+
                 for u_name in unknowns:
                     jac[u_name, p_name][:, idx] = resids.flat[u_name]
 
