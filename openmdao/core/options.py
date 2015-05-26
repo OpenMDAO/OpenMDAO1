@@ -10,7 +10,7 @@ class OptionsDictionary(object):
     def __init__(self):
         self._options = {}
 
-    def add_option(self, name, value, low=None, high=None, values=None, doc=''):
+    def add_option(self, name, value, low=None, high=None, values=None, desc=''):
         """ Adds an option to this options dictionary.
 
         Parameters
@@ -30,8 +30,8 @@ class OptionsDictionary(object):
         values: list (optional)
             list of all possible values for an enumeration option
 
-        doc: str (optional)
-            Doc string for documentation of this option.
+        desc: str (optional)
+            string containing documentation of this option.
         """
 
         if name in self._options:
@@ -42,7 +42,7 @@ class OptionsDictionary(object):
             'low':    low,
             'high':   high,
             'values': values,
-            'doc' : doc,
+            'desc' : desc,
         }
 
         self.check(name, value)
