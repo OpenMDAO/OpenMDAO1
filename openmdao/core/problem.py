@@ -300,7 +300,8 @@ class Problem(Component):
         skip_keys = []
         model_hierarchy = _find_all_comps(self.root)
 
-        out_stream.write('Partial Derivatives Check\n\n')
+        if out_stream is not None:
+            out_stream.write('Partial Derivatives Check\n\n')
 
         # Check derivative calculations
         for group, comps in model_hierarchy.items():
@@ -325,9 +326,10 @@ class Problem(Component):
                 dunknowns = view.dunknowns
                 dresids = view.dresids
 
-                out_stream.write('------------------------------\n')
-                out_stream.write("Component: '%s'\n" % cname)
-                out_stream.write('------------------------------\n\n')
+                if out_stream is not None:
+                    out_stream.write('------------------------------\n')
+                    out_stream.write("Component: '%s'\n" % cname)
+                    out_stream.write('------------------------------\n\n')
 
                 # Figure out implicit states for this comp
                 states = []
