@@ -325,7 +325,8 @@ class Problem(Component):
                 dunknowns = view.dunknowns
                 dresids = view.dresids
 
-                out_stream.write('Component: %s\n' % cname)
+                out_stream.write('------------------------------\n')
+                out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('------------------------------\n\n')
 
                 # Figure out implicit states for this comp
