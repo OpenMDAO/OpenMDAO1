@@ -245,6 +245,8 @@ class Group(System):
             sub._setup_communicators(self.comm)
             if sub.is_active():
                 self._add_local_subsystem(sub)
+            else:
+                self._add_remote_subsystem(sub)
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):
@@ -303,8 +305,7 @@ class Group(System):
 
     def _add_local_subsystem(self, sub):
         """
-        Add a subsystem that is local to this process and mark corresponding
-        variables as local.
+        Add a subsystem that is local to this process.
 
         Parameters
         ----------
@@ -313,13 +314,25 @@ class Group(System):
         """
         name = sub.name
         self._local_subsystems[name] = sub
+
+    def _add_remote_subsystem(self, sub):
+        """
+        Add a subsystem that is remote to this process and set variable
+        'remote' flag in metadata.
+
+        Parameters
+        ----------
+        sub : `System`
+            `System` being added.
+        """
+        sub_pname = sub.pathname + ':'
         for name, meta in self._params_dict.items():
-            if name.startswith(sub.pathname+':'):
-                meta['local'] = True
+            if name.startswith(sub_pname):
+                meta['remote'] = True
 
         for name, meta in self._unknowns_dict.items():
-            if name.startswith(sub.pathname+':'):
-                meta['local'] = True
+            if name.startswith(sub_pname):
+                meta['remote'] = True
 
     def _get_explicit_connections(self):
         """ Returns

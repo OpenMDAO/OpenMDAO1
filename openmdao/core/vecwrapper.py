@@ -297,7 +297,7 @@ class VecWrapper(object):
         for name, meta in self.items():
             if name in varmap:
                 view._vardict[varmap[name]] = self._vardict[name]
-                if meta['size'] > 0 and meta.get('local'):
+                if meta['size'] > 0 and not meta.get('remote'):
                     pstart, pend = self._slices[name]
                     if start == -1:
                         start = pstart
@@ -481,7 +481,7 @@ class SrcVecWrapper(VecWrapper):
             vmeta = self._setup_var_meta(name, meta)
             var_size = vmeta['size']
 
-            if meta.get('local') and not vmeta.get('pass_by_obj'):
+            if not meta.get('remote') and not vmeta.get('pass_by_obj'):
                 self._slices[relname] = (vec_size, vec_size + var_size)
                 vec_size += var_size
 
@@ -491,7 +491,7 @@ class SrcVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in self.items():
-            if meta.get('local') and not meta.get('pass_by_obj'):
+            if not meta.get('remote') and not meta.get('pass_by_obj'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
 
@@ -499,7 +499,7 @@ class SrcVecWrapper(VecWrapper):
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
             for name, meta in unknowns_dict.items():
-                if meta.get('local'):
+                if not meta.get('remote'):
                     self[meta['relative_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
@@ -537,6 +537,7 @@ class SrcVecWrapper(VecWrapper):
             else:
                 # no val given, so use shape to determine size of the array value
                 var_size = numpy.prod(shape)
+                vmeta['val'] = meta['val'] = numpy.zeros(shape)
         elif 'val' in meta:
             val = meta['val']
             if is_differentiable(val):
@@ -618,7 +619,7 @@ class TgtVecWrapper(VecWrapper):
                 vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
                 vmeta['pathname'] = pathname
 
-                if meta.get('local'):
+                if not meta.get('remote'):
                     vec_size += vmeta['size']
 
                 self._vardict[self._scoped_abs_name(pathname)] = vmeta
@@ -633,7 +634,7 @@ class TgtVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in self._vardict.items():
-            if meta.get('local') and not meta.get('pass_by_obj'):
+            if not meta.get('remote') and not meta.get('pass_by_obj'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
 
@@ -690,10 +691,10 @@ class TgtVecWrapper(VecWrapper):
             vmeta['shape'] = src_meta['shape']
 
         if var_size > 0:
-            if meta.get('local'):
+            if not meta.get('remote'):
                 self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
         elif src_meta.get('pass_by_obj'):
-            if meta.get('local') and store_byobjs:
+            if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
 
