@@ -56,7 +56,6 @@ class TestScipyGMRES(unittest.TestCase):
         diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
         assert_rel_error(self, diff, 0.0, 1e-8)
 
-
     def test_simple_in_group_matvec(self):
         group = Group()
         sub = group.add('sub', Group(), promotes=['x', 'y'])

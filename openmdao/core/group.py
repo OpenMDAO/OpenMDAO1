@@ -391,7 +391,7 @@ class Group(System):
         unknowns : `VecWrapper`, optional
             `VecWrapper`  containing outputs and states (u)
 
-        resids : `VecWrapper`
+        resids : `VecWrapper`, optional
             `VecWrapper`  containing residuals. (r)
         """
         if self.is_active():
@@ -413,16 +413,16 @@ class Group(System):
             sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
             #print('done solving',name,'in rank',self.comm.rank)
 
-    def apply_nonlinear(self, params=None, unknowns=None, resids=None):
+    def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals of our children systems.
 
         Parameters
         ----------
-        params : `VecWrapper`, optional
+        params : `VecWrapper`
             ``VecWrapper` ` containing parameters (p)
 
-        unknowns : `VecWrapper`, optional
+        unknowns : `VecWrapper`
             `VecWrapper`  containing outputs and states (u)
 
         resids : `VecWrapper`
@@ -430,10 +430,6 @@ class Group(System):
         """
         if not self.is_active():
             return
-
-        params   = params   if params   is not None else self._varmanager.params
-        unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
-        resids   = resids   if resids   is not None else self._varmanager.resids
 
         # transfer data to each subsystem and then apply_nonlinear to it
         for name, sub in self.subsystems(local=True):
