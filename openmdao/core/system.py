@@ -152,7 +152,7 @@ class System(object):
         self.comm = get_comm_if_active(self, comm)
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None):
+                    step_type=None, total_derivs=False):
         """Finite difference across all unknowns in this system w.r.t. all
         params.
 
@@ -177,6 +177,10 @@ class System(object):
         step_type : float (optional)
             Override all other specifications of step_type. Can be absolute
             or relative.
+
+        total_derivs : bool
+            Set to true to calculate total derivatives. Otherwise, partial
+            derivatives are returned.
 
         Returns
         -------
@@ -298,3 +302,36 @@ class System(object):
 
         return jac
 
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. This method allows the framework to override
+        any derivative specification in any `Component` or `Group` to perform
+        finite difference."""
+
+        if self._jacobian_cache is None:
+            msg = ("No derivatives defined for Component '{name}'")
+            msg = msg.format(name=self.name)
+            raise ValueError(msg)
+
+
+        for key, J in iteritems(self._jacobian_cache):
+            unknown, param = key
+
+            # States are never in dparams.
+            if param in dparams:
+                arg_vec = dparams
+            elif param in dunknowns:
+                arg_vec = dunknowns
+            else:
+                continue
+
+            if unknown not in dresids:
+                continue
+
+            result = dresids[unknown]
+
+            # Vectors are flipped during adjoint
+
+            if mode == 'fwd':
+                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
+            else:
+                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)

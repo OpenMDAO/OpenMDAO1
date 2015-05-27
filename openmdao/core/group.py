@@ -403,7 +403,10 @@ class Group(System):
             else:
                 jacobian_cache = system.jacobian(params, unknowns, resids)
 
-            if isinstance(system, Component) and \
+            # Cache the Jacobian for Components that aren't Paramcomps.
+            # Also cache it for systems that are finite differenced.
+            if (isinstance(system, Component) or \
+                system.fd_options['force_fd'] == True) and \
                not isinstance(system, ParamComp):
                 system._jacobian_cache = jacobian_cache
 
@@ -472,9 +475,12 @@ class Group(System):
             #print('dparams', varmanager.dparams.vec)
             #print('dresids', varmanager.dresids.vec)
 
-            # Special handling for Components
-            if isinstance(system, Component) and \
-               not isinstance(system, ParamComp):
+            # Components that are not paramcomps perform a matrix-vector
+            # product on their variables. Any group where the user requests
+            # a finite difference is also treated as a component.
+            if (isinstance(system, Component) or \
+                system.fd_options['force_fd'] == True) and \
+                not isinstance(system, ParamComp):
 
                 # Forward Mode
                 if mode == 'fwd':
