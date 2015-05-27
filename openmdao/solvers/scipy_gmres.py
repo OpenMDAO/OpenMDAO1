@@ -19,11 +19,11 @@ class ScipyGMRES(LinearSolver):
 
         opt = self.options
         opt.add_option('atol', 1e-12,
-                       doc='Absolute convergence tolerance.')
+                       desc='Absolute convergence tolerance.')
         opt.add_option('maxiter', 100,
-                       doc='Maximum number of iterations.')
+                       desc='Maximum number of iterations.')
         opt.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'],
-                       doc="Derivative calculation mode, set to 'fwd' for " + \
+                       desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
 

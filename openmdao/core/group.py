@@ -2,17 +2,18 @@
 
 from __future__ import print_function
 
-import sys
 from collections import OrderedDict
+import sys
 from six import iteritems
 from itertools import chain
 
+# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
-from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
+from openmdao.core.system import System
 from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -145,11 +146,16 @@ class Group(System):
         if promotes is not None:
             system._promotes = promotes
 
+
+        if name in self._subsystems.keys():
+            msg = "Group '{gname}' already contains a component with name"\
+                            " '{cname}'.".format(gname=self.name, cname=name)
+            raise RuntimeError(msg)
         self._subsystems[name] = system
         system.name = name
         return system
 
-    def connect(self, source, target):
+    def connect(self, source, targets):
         """Connect the given source variable to the given target
         variable.
 
@@ -158,10 +164,14 @@ class Group(System):
         source : source
             the name of the source variable
 
-        target : str
-            the name of the target variable
+        targets : str OR iterable
+            the name of one or more target variables
         """
-        self._src[target] = source
+        if type(targets) is str:
+            self._src[targets] = source
+        else:
+            for target in targets:
+                self._src[target] = source
 
     def subsystems(self, local=False):
         """ Returns an iterator over subsystems.
@@ -464,6 +474,9 @@ class Group(System):
                 for key, J in iteritems(jacobian_cache):
                     if isinstance(J, real_types):
                         jacobian_cache[key] = np.array([[J]])
+                    shape = jacobian_cache[key].shape
+                    if len(shape) < 2:
+                        jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -503,23 +516,27 @@ class Group(System):
             # Full Scatter
             self._varmanager._transfer_data(deriv=True)
 
-        for name, sub in self.subsystems(local=True):
+        for name, system in self.subsystems(local=True):
 
             # Special handling for Components
-            if isinstance(sub, Component) and not isinstance(sub, ParamComp):
+            if isinstance(system, Component) and not isinstance(system, ParamComp):
 
-                dresids = sub.dresids
-                dunknowns = sub.dunknowns
+                dresids = system.dresids
+                dunknowns = system.dunknowns
 
                 # Forward Mode
                 if mode == 'fwd':
 
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams, dunknowns,
-                                     dresids, mode)
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                                            dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dresids[var] += dunknowns.flat[var]
+                        dresids[var] += dunknowns[var]
 
                 # Adjoint Mode
                 elif mode == 'rev':
@@ -530,17 +547,24 @@ class Group(System):
                     # previous component's contributions, we can multiply
                     # our local 'arg' by -1, and then revert it afterwards.
                     dresids.vec *= -1.0
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams, dunknowns,
-                                     dresids, mode)
+
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                                            dunknowns, dresids, mode)
+
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        dunknowns[var] += dresids.flat[var]
+                        dunknowns[var] += dresids[var]
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                sub.apply_linear(sub.params, sub.unknowns, sub.dparams, sub.dunknowns,
-                                 sub.dresids, mode)
+                system.apply_linear(system.params, system.unknowns,
+                                    system.dparams, system.dunknowns,
+                                    system.dresids, mode)
 
         if mode == 'rev':
             # Full Scatter

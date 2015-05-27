@@ -1,10 +1,12 @@
 """ Defines the base class for a Component in OpenMDAO."""
-import numpy as np
+
 from collections import OrderedDict
+import functools
 from six import iteritems
 from six.moves import range
+
+# pylint: disable=E0611, F0401
 import numpy as np
-from itertools import chain
 
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
@@ -32,6 +34,9 @@ class Component(System):
 
     def _get_initial_val(self, val, shape):
         if val is _NotSet:
+            # Interpret a shape of 1 to mean scalar.
+            if shape == 1:
+                return 0.
             return np.zeros(shape)
 
         return val
@@ -206,74 +211,6 @@ class Component(System):
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
-    def fd_jacobian(self, params, unknowns, resids):
-        """
-        Finite difference across all unknonws in component w.r.t. all params.
-
-        Parameters
-        ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
-
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
-
-        resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
-
-        Returns
-        -------
-        dict
-            Dictionary whose keys are tuples of the form ('unknown', 'param')
-            and whose values are ndarrays
-        """
-
-        jac = {}
-        resid_cache = resids.vec.copy()
-
-        states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
-
-        # Compute gradient for this param or state.
-        for p_name in chain(params, states):
-
-            if p_name in states:
-                inputs = unknowns
-            else:
-                inputs = params
-
-            # Size our Inputs
-            p_size = np.size(inputs[p_name])
-
-            # Size our Outputs
-            for u_name in unknowns:
-                u_size = np.size(unknowns[u_name])
-                jac[u_name, p_name] = np.ones((u_size, p_size))
-
-            # Finite Difference each index in array
-            for idx in range(p_size):
-
-                step = inputs.flat[p_name][idx] * 0.001
-                inputs.flat[p_name][idx] += step
-
-                self.apply_nonlinear(params, unknowns, resids)
-
-                inputs.flat[p_name][idx] -= step
-
-                # delta resid is delta unknown
-                resids.vec[:] -= resid_cache
-                resids.vec[:] *= (1.0/step)
-
-                for u_name in unknowns:
-                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
-
-                # Restore old residual
-                resids.vec[:] = resid_cache
-
-        return jac
-
     def jacobian(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides and
@@ -329,6 +266,11 @@ class Component(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
+        self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
+                              mode)
+
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. """
 
         if self._jacobian_cache is None:
             msg = ("No derivatives defined for Component '{name}'")
@@ -358,4 +300,3 @@ class Component(System):
                 dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
-

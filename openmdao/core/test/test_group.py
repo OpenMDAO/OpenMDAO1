@@ -28,6 +28,13 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(subs['mycomp'], comp)
         self.assertEqual(subs['nextcomp'], comp2)
 
+        with self.assertRaises(RuntimeError) as cm:
+            group.add('mycomp', comp)
+
+        expected_msg = "Group '' already contains a component with name 'mycomp'."
+
+        self.assertEqual(str(cm.exception), expected_msg)
+
     def test_variables(self):
         group = Group()
         group.add('C1', SimpleComp(), promotes=['x'])
@@ -42,6 +49,25 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual([m['relative_name'] for n,m in params_dict.items()], ['x', 'C2:x'])
         self.assertEqual([m['relative_name'] for n,m in unknowns_dict.items()], ['C1:y', 'y'])
+
+    def test_multiple_connect(self):
+        root = Group()
+        C1 = root.add('C1', SimpleComp())
+        C2 = root.add('C2', SimpleComp())
+        C3 = root.add('C3', SimpleComp())
+
+        root.connect('C1:y',['C2:x', 'C3:x'])
+
+        root._setup_paths('')
+        params_dict, unknowns_dict = root._setup_variables()
+
+        # verify we get correct connection information
+        connections = root._get_explicit_connections()
+        expected_connections = {
+            'C2:x': 'C1:y',
+            'C3:x': 'C1:y'
+        }
+        self.assertEqual(connections, expected_connections)
 
     def test_connect(self):
         root = ExampleGroup()

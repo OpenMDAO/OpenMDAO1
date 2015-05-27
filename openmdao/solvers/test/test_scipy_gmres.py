@@ -3,6 +3,8 @@
 import unittest
 from unittest import SkipTest
 
+import numpy as np
+
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
@@ -11,7 +13,7 @@ from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                       SimpleCompDerivJac, FanOutGrouped, \
-                                      FanInGrouped
+                                      FanInGrouped, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
 
@@ -33,6 +35,27 @@ class TestScipyGMRES(unittest.TestCase):
 
         J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_array2D(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])
+        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+
+        top = Problem()
+        top.root = group
+        top.root.lin_solver = ScipyGMRES()
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        Jbase = top.subsystem('mycomp')._jacobian_cache
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
 
     def test_simple_in_group_matvec(self):
         group = Group()
