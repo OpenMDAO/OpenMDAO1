@@ -82,27 +82,45 @@ class Group(System):
 
     @property
     def unknowns(self):
-        return self._varmanager.unknowns
+        try:
+            return self._varmanager.unknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dunknowns(self):
-        return self._varmanager.dunknowns
+        try:
+            return self._varmanager.dunknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def params(self):
-        return self._varmanager.params
+        try:
+            return self._varmanager.params
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dparams(self):
-        return self._varmanager.dparams
+        try:
+            return self._varmanager.dparams
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def resids(self):
-        return self._varmanager.resids
+        try:
+            return self._varmanager.resids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dresids(self):
-        return self._varmanager.dresids
+        try:
+            return self._varmanager.dresids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     def subsystem(self, name):
         """
@@ -278,7 +296,7 @@ class Group(System):
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)
             if sub.is_active():
-                self._add_local_subsystem(sub)
+                self._local_subsystems[sub.name] = sub
             else:
                 self._add_remote_subsystem(sub)
 
@@ -329,18 +347,6 @@ class Group(System):
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
-
-    def _add_local_subsystem(self, sub):
-        """
-        Add a subsystem that is local to this process.
-
-        Parameters
-        ----------
-        sub : `System`
-            `System` being added.
-        """
-        name = sub.name
-        self._local_subsystems[name] = sub
 
     def _add_remote_subsystem(self, sub):
         """
