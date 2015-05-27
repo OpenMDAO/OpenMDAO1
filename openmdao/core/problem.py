@@ -327,9 +327,9 @@ class Problem(Component):
                 dresids = view.dresids
 
                 if out_stream is not None:
-                    out_stream.write('------------------------------\n')
+                    out_stream.write('-'*(len(cname)+15) + '\n')
                     out_stream.write("Component: '%s'\n" % cname)
-                    out_stream.write('------------------------------\n\n')
+                    out_stream.write('-'*(len(cname)+15) + '\n')
 
                 # Figure out implicit states for this comp
                 states = []
@@ -428,6 +428,7 @@ class Problem(Component):
                                                  step_size = 1e-6)
 
                 # Start computing our metrics.
+                started = False
                 for p_name in chain(params, states):
                     for u_name in resids:
 
@@ -467,6 +468,11 @@ class Problem(Component):
                         if out_stream is None:
                             continue
 
+                        if started is True:
+                            out_stream.write(' -'*30 + '\n')
+                        else:
+                            started = True
+
                         # Optional file_like output
                         out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
 
@@ -491,8 +497,6 @@ class Problem(Component):
                         out_stream.write('    Raw FD Derivative (Jfor)\n\n')
                         out_stream.write(str(Jsub_fd))
                         out_stream.write('\n\n')
-
-                        out_stream.write('\n')
 
 
 
