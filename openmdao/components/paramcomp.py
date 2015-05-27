@@ -5,10 +5,10 @@ from openmdao.core.component import Component
 class ParamComp(Component):
     """A Component that provides an output to connect to a parameter."""
 
-    def __init__(self, name, val):
+    def __init__(self, name, val, **kwargs):
         super(ParamComp, self).__init__()
 
-        self.add_output(name, val)
+        self.add_output(name, val, **kwargs)
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """For `ParamComp`, just pass on the incoming values.
