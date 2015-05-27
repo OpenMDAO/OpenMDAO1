@@ -530,10 +530,16 @@ class SrcVecWrapper(VecWrapper):
                     vmeta['pass_by_obj'] = True
                     vmeta['val'] = _ByObjWrapper(val)
                 else:
-                    if val.shape != shape:
-                        raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
-                                         name)
-                    vmeta['size'] = val.size
+                    if isinstance(val, numpy.ndarray):
+                        if val.shape != shape:
+                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                             name)
+                        vmeta['size']= val.size
+                    else:
+                        if shape != 1:
+                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                             name)
+                        vmeta['size'] = 1
             else:
                 # no val given, so use shape to determine size of the array value
                 vmeta['size'] = numpy.prod(shape)
