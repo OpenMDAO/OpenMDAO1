@@ -506,10 +506,16 @@ class SrcVecWrapper(VecWrapper):
                     vmeta['noflat'] = True
                     vmeta['val'] = _NoflatWrapper(val)
                 else:
-                    if val.shape != shape:
-                        raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
-                                         name)
-                    var_size = val.size
+                    if isinstance(val, numpy.ndarray):
+                        if val.shape != shape:
+                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                             name)
+                        var_size = val.size
+                    else:
+                        if shape != 1:
+                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
+                                             name)
+                        var_size = 1
             else:
                 # no val given, so assume they want a numpy float array
                 meta['val'] = numpy.zeros(shape)

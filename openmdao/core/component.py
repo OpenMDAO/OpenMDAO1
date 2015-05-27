@@ -44,25 +44,25 @@ class Component(System):
             msg = msg.format(var_type=var_type, name=name)
             raise ValueError(msg)
 
-    def add_param(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'param', val, kwargs.get('shape'))
+    def _add_variable(self, name, val, var_type, **kwargs):
+        shape = kwargs.get('shape')
+        self._check_val(name, var_type, val, shape)
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
-        self._params_dict[name] = args
+        args['val'] = self._get_initial_val(val, shape)
+        if shape is not None and isinstance(shape, int):
+            if shape > 1:
+                args['shape'] = (shape,)
+        return args
+
+    def add_param(self, name, val=_NotSet, **kwargs):
+        self._params_dict[name] = self._add_variable(name, val, 'param', **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'output', val, kwargs.get('shape'))
-        self._check_name(name)
-        args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
-        self._unknowns_dict[name] = args
+        self._unknowns_dict[name] = self._add_variable(name, val, 'output', **kwargs)
 
     def add_state(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'state', val, kwargs.get('shape'))
-        self._check_name(name)
-        args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
+        args = self._add_variable(name, val, 'state', **kwargs)
         args['state'] = True
         self._unknowns_dict[name] = args
 
