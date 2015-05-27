@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import OrderedDict
 import sys
 from six import iteritems
+from itertools import chain
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -18,7 +19,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
-from openmdao.core.mpiwrap import get_comm_if_active, world_rank
+from openmdao.core.mpiwrap import get_comm_if_active
 
 class Group(System):
     """A system that contains other systems"""
@@ -35,33 +36,35 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
-    def __getitem__(self, name):
-        """Retrieve unflattened value of named variable or a reference
-        to named subsystem.
+    def __setitem__(self, name, val):
+        """Sets the given value into the appropriate `VecWrapper`.
 
         Parameters
         ----------
-        name : str   OR   tuple : (name, vector)
-             the name of the variable to retrieve from the unknowns vector OR
-             a tuple of the name of the variable and the vector to get it's
-             value from.
+        name : str
+             the name of the variable to set into the unknowns vector
+        """
+        if self.is_active():
+            self._varmanager.unknowns[name] = val
+
+    def __getitem__(self, name):
+        """Retrieve unflattened value of named unknown or unconnected
+        param variable.
+
+        Parameters
+        ----------
+        name : str
+             the name of the variable to retrieve from the unknowns vector.
 
         Returns
         -------
-        the unflattened value of the given variable or a reference to the
-        named subsystem.
+        the unflattened value of the given variable.
         """
 
-        # if arg is not a tuple, then search for a subsystem by name
-        if not isinstance(name, tuple):
-            sys = self
-            parts = name.split(':')
-            for part in parts:
-                sys = getattr(sys, '_subsystems', {}).get(part)
-                if sys is None:
-                    break
-            else:
-                return sys
+        # if system is not active, then it's not valid to access it's variables
+        if not self.is_active():
+            raise AttributeError("System '%s' is inactive, so can't access variable '%s'" %
+                                 (self.pathname, name))
 
         # if arg is a tuple or no subsystem found, then search for a variable
         if not self._varmanager:
@@ -70,23 +73,60 @@ class Group(System):
         try:
             return self._varmanager[name]
         except KeyError:
-            if isinstance(name, tuple):
-                name, vector = name
-                if not getattr(self._varmanager.vectors(), vector, False):
-                    raise NameError("'%s' is not a valid vector name" % vector)
-                istuple = True
-            else:
-                vector = 'unknowns'
-                istuple = False
             subsys, subname = name.split(':', 1)
             try:
-                if istuple:
-                    return self._subsystems[subsys][subname, vector]
-                else:
-                    return self._subsystems[subsys][subname]
+                return self._subsystems[subsys][subname]
             except:
-                raise KeyError("Can't find variable '%s' in %s vector in system '%s'" %
-                               (name, vector, self.pathname))
+                raise KeyError("Can't find variable '%s' in unknowns vector in system '%s'" %
+                               (name, self.pathname))
+
+    @property
+    def unknowns(self):
+        return self._varmanager.unknowns
+
+    @property
+    def dunknowns(self):
+        return self._varmanager.dunknowns
+
+    @property
+    def params(self):
+        return self._varmanager.params
+
+    @property
+    def dparams(self):
+        return self._varmanager.dparams
+
+    @property
+    def resids(self):
+        return self._varmanager.resids
+
+    @property
+    def dresids(self):
+        return self._varmanager.dresids
+
+    def subsystem(self, name):
+        """
+        Returns a reference to a named subsystem that is a direct or an indirect
+        subsystem of the this system.
+
+        Parameters
+        ----------
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        sys = self
+        parts = name.split(':')
+        for part in parts:
+            sys = getattr(sys, '_subsystems', {}).get(part)
+            if sys is None:
+                break
+        else:
+            return sys
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -236,9 +276,11 @@ class Group(System):
             return
 
         for name, sub in self.subsystems():
-            sub._setup_communicators(comm)
+            sub._setup_communicators(self.comm)
             if sub.is_active():
-                self._local_subsystems[name] = sub
+                self._add_local_subsystem(sub)
+            else:
+                self._add_remote_subsystem(sub)
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):
@@ -266,6 +308,9 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
         """
+        if not self.is_active():
+            return
+
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self._varmanager = VarManager(self.comm,
@@ -281,16 +326,40 @@ class Group(System):
                                               self._unknowns_dict,
                                               my_params)
 
-        self._views = {}
-        for name, sub in self.subgroups():
+        for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
-            self._views[name] = sub._varmanager.vectors()
 
-        for name, sub in self.components():
-            self._views[name] = create_views(top_unknowns, self._varmanager, self.comm,
-                                             sub.pathname,
-                                             sub._params_dict, sub._unknowns_dict, [], connections)
+    def _add_local_subsystem(self, sub):
+        """
+        Add a subsystem that is local to this process.
+
+        Parameters
+        ----------
+        sub : `System`
+            `System` being added.
+        """
+        name = sub.name
+        self._local_subsystems[name] = sub
+
+    def _add_remote_subsystem(self, sub):
+        """
+        Add a subsystem that is remote to this process and set variable
+        'remote' flag in metadata.
+
+        Parameters
+        ----------
+        sub : `System`
+            `System` being added.
+        """
+        sub_pname = sub.pathname + ':'
+        for name, meta in self._params_dict.items():
+            if name.startswith(sub_pname):
+                meta['remote'] = True
+
+        for name, meta in self._unknowns_dict.items():
+            if name.startswith(sub_pname):
+                meta['remote'] = True
 
     def _get_explicit_connections(self):
         """ Returns
@@ -310,42 +379,43 @@ class Group(System):
 
         return connections
 
-    def solve_nonlinear(self, params, unknowns, resids):
-        """Solves the group using the slotted nl_solver.
+    def solve_nonlinear(self, params=None, unknowns=None, resids=None):
+        """
+        Solves the group using the slotted nl_solver.
 
         Parameters
         ----------
-        params : `VecWrapper`
+        params : `VecWrapper`, optional
             ``VecWrapper` ` containing parameters (p)
 
-        unknowns : `VecWrapper`
+        unknowns : `VecWrapper`, optional
             `VecWrapper`  containing outputs and states (u)
 
-        resids : `VecWrapper`
+        resids : `VecWrapper`, optional
             `VecWrapper`  containing residuals. (r)
         """
-        self.nl_solver.solve(params, unknowns, resids, self)
+        if self.is_active():
+            params   = params   if params   is not None else self._varmanager.params
+            unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
+            resids   = resids   if resids   is not None else self._varmanager.resids
+
+            self.nl_solver.solve(params, unknowns, resids, self)
 
     def children_solve_nonlinear(self):
-        """Loops over our children systems and asks them to solve."""
+        """
+        Loops over our children systems and asks them to solve.
+        """
 
-        varmanager = self._varmanager
-
-        for name, system in self.subsystems(local=True):
-
-            # Local scatter
-            varmanager._transfer_data(name)
-
-            view = self._views[system.name]
-
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-
-            system.solve_nonlinear(params, unknowns, resids)
+        # transfer data to each subsystem and then solve_nonlinear it
+        for name, sub in self.subsystems(local=True):
+            self._varmanager._transfer_data(name)
+            #print('solving',name,'in rank',self.comm.rank)
+            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+            #print('done solving',name,'in rank',self.comm.rank)
 
     def apply_nonlinear(self, params, unknowns, resids):
-        """ Evaluates the residuals of our children systems.
+        """
+        Evaluates the residuals of our children systems.
 
         Parameters
         ----------
@@ -358,24 +428,17 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
         """
-        varmanager = self._varmanager
+        if not self.is_active():
+            return
 
-        # TODO: Should be local subs only, but local dict isn't filled yet
-        for name, system in self.subsystems():
-
-            # Local scatter
-            varmanager._transfer_data(name)
-
-            view = self._views[system.name]
-
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
-
-            system.apply_nonlinear(params, unknowns, resids)
+        # transfer data to each subsystem and then apply_nonlinear to it
+        for name, sub in self.subsystems(local=True):
+            self._varmanager._transfer_data(name)
+            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def jacobian(self, params, unknowns, resids):
-        """ Linearize all our subsystems.
+        """
+        Linearize all our subsystems.
 
         Parameters
         ----------
@@ -389,23 +452,17 @@ class Group(System):
             `VecWrapper`  containing residuals. (r)
         """
 
-        for name, system in self.subsystems(local=True):
-
-            view = self._views[system.name]
-
-            params = view.params
-            unknowns = view.unknowns
-            resids = view.resids
+        for name, sub in self.subsystems(local=True):
 
             # Instigate finite difference on child if user requests.
-            if system.fd_options['force_fd'] == True:
-                jacobian_cache = system.fd_jacobian(params, unknowns, resids)
+            if sub.fd_options['force_fd'] == True:
+                jacobian_cache = sub.fd_jacobian(sub.params, sub.unknowns, sub.resids)
             else:
-                jacobian_cache = system.jacobian(params, unknowns, resids)
+                jacobian_cache = sub.jacobian(sub.params, sub.unknowns, sub.resids)
 
-            if isinstance(system, Component) and \
-               not isinstance(system, ParamComp):
-                system._jacobian_cache = jacobian_cache
+            if isinstance(sub, Component) and \
+               not isinstance(sub, ParamComp):
+                sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
             # It is really inconvenient if we don't allow it.
@@ -416,7 +473,6 @@ class Group(System):
                     shape = jacobian_cache[key].shape
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
-
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -449,41 +505,29 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'
         """
-
-        varmanager = self._varmanager
+        if not self.is_active():
+            return
 
         if mode == 'fwd':
             # Full Scatter
-            varmanager._transfer_data(deriv=True)
+            self._varmanager._transfer_data(deriv=True)
 
         for name, system in self.subsystems(local=True):
 
-            view = self._views[system.name]
-
-            params    = view.params
-            unknowns  = view.unknowns
-            resids    = view.resids
-            dparams   = view.dparams
-            dunknowns = view.dunknowns
-            dresids   = view.dresids
-
-            #print('apply_linear on', name, 'BEFORE')
-            #print('dunknowns', varmanager.dunknowns.vec)
-            #print('dparams', varmanager.dparams.vec)
-            #print('dresids', varmanager.dresids.vec)
-
             # Special handling for Components
-            if isinstance(system, Component) and \
-               not isinstance(system, ParamComp):
+            if isinstance(system, Component) and not isinstance(system, ParamComp):
+
+                dresids = system.dresids
+                dunknowns = system.dunknowns
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(params, unknowns, dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(params, unknowns, dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dparams,
                                             dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
@@ -501,11 +545,12 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(params, unknowns, dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(params, unknowns, dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dparams,
                                             dunknowns, dresids, mode)
+
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
@@ -513,25 +558,17 @@ class Group(System):
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                system.apply_linear(params, unknowns, dparams, dunknowns,
-                                    dresids, mode)
-
-            #print('apply_linear on', name, 'AFTER')
-            #print('dunknowns', varmanager.dunknowns.vec)
-            #print('dparams', varmanager.dparams.vec)
-            #print('dresids', varmanager.dresids.vec)
+                system.apply_linear(system.params, system.unknowns,
+                                    system.dparams, system.dunknowns,
+                                    system.dresids, mode)
 
         if mode == 'rev':
             # Full Scatter
-            varmanager._transfer_data(mode='rev', deriv=True)
-
-        #print('apply_linear on', self.name, 'POST SCATTER')
-        #print('dunknowns', varmanager.dunknowns.vec)
-        #print('dparams', varmanager.dparams.vec)
-        #print('dresids', varmanager.dresids.vec)
+            self._varmanager._transfer_data(mode='rev', deriv=True)
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
-        """ Single linear solution applied to whatever input is sitting in
+        """
+        Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
         Parameters
@@ -550,16 +587,17 @@ class Group(System):
             called wihtout mode so that the user can set the mode in this
             system's ln_solver.options.
         """
+        if not self.is_active():
+            return
 
         if rhs.norm() < 1e-15:
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
-        #print "solving linear sys", self.name
         if mode=='auto':
             mode = self.ln_solver.options['mode']
 
-        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         self.rhs_buf[:] = self.rhs_vec.array[:]
         self.sol_buf[:] = self.sol_vec.array[:]
         self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
@@ -568,88 +606,140 @@ class Group(System):
     def clear_dparams(self):
         """ Zeros out the dparams (dp) vector."""
 
-        varmanager = self._varmanager
-        varmanager.dparams.vec[:] = 0.0
+        self.dparams.vec[:] = 0.0
 
         # Recurse to clear all dparams vectors.
         for name, system in self.subsystems(local=True):
 
             if isinstance(system, Component):
-                view = self._views[system.name]
-                view.dparams.vec[:] = 0.0
-
+                system.dparams.vec[:] = 0.0
             else:
                 system.clear_dparams()
 
+    def dump(self, nest=0, file=sys.stdout, verbose=True, dvecs=False):
+        """
+        Writes a formated dump of the `System` tree to file.
 
-    def dump(self, nest=0, file=sys.stdout, verbose=True):
-        file.write(" "*nest)
-        file.write(self.name)
+        Parameters
+        ----------
+        nest : int, optional
+            Starting nesting level.  Defaults to 0.
+
+        file : an open file, optional
+            Where output is written.  Defaults to sys.stdout.
+
+        verbose : bool, optional
+            If True (the default), output additional info beyond
+            just the tree structure.
+
+        dvecs : bool, optional
+            If True, show contents of du and dp vectors instead of
+            u and p (the default).
+        """
         klass = self.__class__.__name__
+        if dvecs:
+            ulabel = 'du'
+            plabel = 'dp'
+            uvecname = 'dunknowns'
+            pvecname = 'dparams'
+        else:
+            ulabel = 'u'
+            plabel = 'p'
+            uvecname = 'unknowns'
+            pvecname = 'params'
 
-        uvec = self._varmanager.unknowns
-        pvec = self._varmanager.params
+        uvec = getattr(self, uvecname)
+        pvec = getattr(self, pvecname)
 
-        file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                     (klass,
-                      1, #self.get_req_procs(),
-                      0, #world_rank,
+        file.write("%s %s '%s'    req: %s  usize:%d  psize:%d\n" %
+                     (" "*nest,
+                      klass,
+                      self.name,
+                      self.get_req_procs(),
                       uvec.vec.size,
                       pvec.vec.size))
 
-        flat_conns = dict(self._varmanager.data_xfer[''].flat_conns)
-        noflat_conns = dict(self._varmanager.data_xfer[''].noflat_conns)
+        vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
+        byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
+
+        # collect width info
+        lens = [len(u)+sum(map(len,v)) for u,v in
+                          chain(vec_conns.items(), byobj_conns.items())]
+        if lens:
+            nwid = max(lens) + 9
+        else:
+            lens = [len(n) for n in uvec.keys()]
+            nwid = max(lens) if lens else 12
 
         for v, meta in uvec.items():
             if verbose:
-                file.write(" "*(nest+2))
-                pnames = [p for p,u in flat_conns.items() if u==v]
+                if meta.get('pass_by_obj'):
+                    continue
+                file.write(" "*(nest+8))
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                pnames = [p for p,u in vec_conns.items() if u==v]
+
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
                         pslice = pvec._slices[pname]
+                        pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [pvec._slices[p] for p in pnames]
-                    file.write("%s --> %s:  u (%s)  p (%s): %s\n" %
-                                 (v, pnames,
-                                  str(uvec._slices[v]),
-                                  str(pslice), str(uvec[v])[:15]))
+                        pslice = [('%d:%d' % pvec._slices[p]) for p in pnames]
+                        if len(pslice) > 1:
+                            pslice = ','.join(pslice)
+                        else:
+                            pslice = pslice[0]
+
+                    pslice = '{}[{}]'.format(plabel, pslice)
+
+                    connstr = '%s -> %s' % (v, pnames)
+                    file.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
+                                                                    uslice,
+                                                                    pslice,
+                                                                    repr(uvec[v]),
+                                                                    nwid=nwid))
                 else:
-                    file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
-                                                      str(uvec[v])[:15]))
+                    file.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
+                                                                  uslice,
+                                                                  repr(uvec[v]),
+                                                                  nwid=nwid))
 
-        for v, meta in pvec.items():
-            if v not in flat_conns and v not in noflat_conns and meta.get('owned'):
-                file.write(" "*(nest+2))
-                file.write("%s           p (%s): %s\n" %
-                                   (v,str(pvec._slices[v]), str(pvec[v])[:15]))
+        if not dvecs:
+            for dest, src in byobj_conns.items():
+                file.write(" "*(nest+8))
+                connstr = '%s -> %s:' % (src, dest)
+                file.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
+                                                                  repr(uvec[src]),
+                                                                  nwid=nwid))
 
-        if noflat_conns:
-            file.write(' '*(nest+2) + "= noflat connections =\n")
-
-        for dest, src in noflat_conns.items():
-            file.write(" "*(nest+2))
-            file.write("%s --> %s\n" % (src, dest))
-
-        nest += 4
+        # now do the Components
+        nest += 3
         for name, sub in self.subsystems(local=True):
             if isinstance(sub, Component):
-                uvec = self._views[name].unknowns
-                file.write(" "*nest)
-                file.write(name)
-                file.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                           (sub.__class__.__name__,
+                uvec = getattr(sub, uvecname)
+                file.write("%s %s '%s'    req: %s  usize:%d\n" %
+                           (" "*nest,
+                            sub.__class__.__name__,
+                            name,
                             sub.get_req_procs(),
-                            world_rank(),
-                            uvec.vec.size,
-                            pvec.vec.size))
+                            uvec.vec.size))
                 for v, meta in uvec.items():
                     if verbose:
-                        file.write(" "*(nest+2))
-                        file.write("%s:  u (%s): %s\n" % (v, str(uvec._slices[v]),
-                                                          str(uvec[v])[:15]))
+                        if v in uvec._slices:
+                            uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                            file.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
+                                                                             v,
+                                                                             uslice,
+                                                                             repr(uvec[v]),
+                                                                             nwid=nwid))
+                        elif not dvecs: # deriv vecs don't have passing by obj
+                            file.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
+                                                                                 v,
+                                                                                 repr(uvec[v]),
+                                                                                 nwid=nwid))
             else:
-                sub.dump(nest, file)
+                sub.dump(nest, file=file, verbose=verbose, dvecs=dvecs)
 
     def get_req_procs(self):
         """
@@ -687,7 +777,8 @@ class Group(System):
             sub._update_sub_unit_conv(self._params_dict)
 
 def _get_implicit_connections(params_dict, unknowns_dict):
-    """Finds all matches between relative names of parameters and
+    """
+    Finds all matches between relative names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
     connections are expressed using absolute pathnames.
 
@@ -740,22 +831,22 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
-       Parameters
-       ----------
-       var_name : str
-           name of a variable relative to a `System`
+    Parameters
+    ----------
+    var_name : str
+        name of a variable relative to a `System`
 
-       var_dict : dict
-           dictionary of variable metadata, keyed on relative name
+    var_dict : dict
+        dictionary of variable metadata, keyed on relative name
 
-       dict_name : str
-           name of var_dict (used for error reporting)
+    dict_name : str
+        name of var_dict (used for error reporting)
 
-       Returns
-       -------
-       list of str
-           the absolute pathnames for the given variables in the
-           variable dictionary that map to the given relative name.
+    Returns
+    -------
+    list of str
+        the absolute pathnames for the given variables in the
+        variable dictionary that map to the given relative name.
     """
     pnames = []
     for pathname, meta in var_dict.items():
