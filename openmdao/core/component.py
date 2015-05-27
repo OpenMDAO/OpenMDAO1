@@ -150,16 +150,16 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
-        step_size : float, optional
+        step_size : float (optional)
             Override all other specifications of finite difference step size.
 
-        form : float, optional
+        form : float (optional)
             Override all other specifications of form. Can be forward,
             backward, or central.
 
-        step_type : float, optional
-            Override all other specifications of step type. Can be absollute
-            or relative..
+        step_type : float (optional)
+            Override all other specifications of step_type. Can be absolute
+            or relative.
 
         Returns
         -------
@@ -199,7 +199,7 @@ class Component(System):
                     mydict = val
                     break
 
-            # Local settings for this var
+            # Local settings for this var trump all
             if 'fd_step_size' in mydict:
                 fdstep = mydict['fd_step_size']
             else:
@@ -267,6 +267,7 @@ class Component(System):
                     inputs.flat[p_name][idx] -= 2.0*step
                     self.apply_nonlinear(params, unknowns, resids)
 
+                    # central difference formula
                     resids.vec[:] -= resid_cache + resids2
                     resids.vec[:] *= (-0.5/step)
 
