@@ -11,8 +11,10 @@ from openmdao.core.group import Group
 class SimpleComp(Component):
     """ The simplest component you can imagine. """
 
-    def __init__(self):
+    def __init__(self, multiplier=2.0):
         super(SimpleComp, self).__init__()
+
+        self.multiplier = multiplier
 
         # Params
         self.add_param('x', 3.0)
@@ -22,8 +24,7 @@ class SimpleComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
-
-        unknowns['y'] = 2.0*params['x']
+        unknowns['y'] = self.multiplier*params['x']
 
 
 class SimpleCompDerivMatVec(SimpleComp):
@@ -41,16 +42,19 @@ class SimpleCompDerivMatVec(SimpleComp):
             dparams['x'] = 2.0*dresids['y']
 
 
-
 class SimpleCompDerivJac(SimpleComp):
     """ The simplest component you can imagine, this time with derivatives
     defined using Jacobian to return a jacobian. """
+
+    def __init__(self, multiplier=2.0):
+        super(SimpleCompDerivJac, self).__init__()
+        self.multiplier = multiplier
 
     def jacobian(self, params, unknowns, resids):
         """Returns the Jacobian."""
 
         J = {}
-        J[('y', 'x')] = np.array([2.0])
+        J[('y', 'x')] = np.array([self.multiplier])
         return J
 
 
@@ -235,11 +239,11 @@ class SimpleImplicitComp(Component):
         return J
 
 
-class SimpleNoflatComp(Component):
+class SimplePassByObjComp(Component):
     """ The simplest component you can imagine. """
 
     def __init__(self):
-        super(SimpleNoflatComp, self).__init__()
+        super(SimplePassByObjComp, self).__init__()
 
         # Params
         self.add_param('x', '')
@@ -357,6 +361,7 @@ class FanOutComp3(Component):
         J[('y', 'x')] = np.array([5.0])
         return J
 
+
 class FanInTarget(Component):
 
     def __init__(self):
@@ -389,9 +394,9 @@ class FanOut(Group):
     def __init__(self):
         super(FanOut, self).__init__()
 
-        self.add('comp1', FanOutComp1())
-        self.add('comp2', FanOutComp2())
-        self.add('comp3', FanOutComp3())
+        self.add('comp1', SimpleCompDerivJac(3.0))
+        self.add('comp2', SimpleCompDerivJac(-2.0))
+        self.add('comp3', SimpleCompDerivJac(5.0))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "comp2:x")
@@ -407,9 +412,9 @@ class FanOutGrouped(Group):
         super(FanOutGrouped, self).__init__()
 
         sub = self.add('sub', Group())
-        self.add('comp1', FanOutComp1())
-        sub.add('comp2', FanOutComp2())
-        sub.add('comp3', FanOutComp3())
+        self.add('comp1', SimpleCompDerivJac(3.0))
+        sub.add('comp2', SimpleCompDerivJac(-2.0))
+        sub.add('comp3', SimpleCompDerivJac(5.0))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "sub:comp2:x")
@@ -423,8 +428,8 @@ class FanIn(Group):
     def __init__(self):
         super(FanIn, self).__init__()
 
-        self.add('comp1', FanOutComp2())
-        self.add('comp2', FanOutComp3())
+        self.add('comp1', SimpleCompDerivJac(-2.0))
+        self.add('comp2', SimpleCompDerivJac(5.0))
         self.add('comp3', FanInTarget())
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
@@ -441,10 +446,9 @@ class FanInGrouped(Group):
     def __init__(self):
         super(FanInGrouped, self).__init__()
 
-        sub = self.add('sub', Group()
-                       )
-        sub.add('comp1', FanOutComp2())
-        sub.add('comp2', FanOutComp3())
+        sub = self.add('sub', Group())
+        sub.add('comp1', SimpleCompDerivJac(-2.0))
+        sub.add('comp2', SimpleCompDerivJac(5.0))
         self.add('comp3', FanInTarget())
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))

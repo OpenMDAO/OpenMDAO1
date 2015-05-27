@@ -171,8 +171,10 @@ else:
                     results = MPI.COMM_WORLD.gather(result, root=0)
 
                     if MPI.COMM_WORLD.rank == 0:
-                        for r in results:
+                        for i,r in enumerate(results):
                             if r.status != 'OK':
+                                if i>0:
+                                    print("rank %d:" % i)
                                 print(r)
                                 break
                         else:

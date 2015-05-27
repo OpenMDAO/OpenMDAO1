@@ -11,7 +11,7 @@ from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
-from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleNoflatGroup
+from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 
 if PY3:
     def py3fix(s):
@@ -76,21 +76,6 @@ class TestProblem(unittest.TestCase):
         except Exception as error:
             msg = "Promoted name 'G3:y' matches multiple unknowns: ['G3:C3:y', 'G3:C4:y']"
             self.assertEquals(text_type(error), msg)
-        else:
-            self.fail("Error expected")
-
-    def test_hanging_params(self):
-
-        root  = Group()
-        root.add('ls', LinearSystem(size=10))
-
-        prob = Problem(root=root)
-
-        try:
-            prob.setup()
-        except Exception as error:
-            self.assertEquals(text_type(error),
-                "Parameters ['ls:A', 'ls:b'] have no associated unknowns.")
         else:
             self.fail("Error expected")
 
@@ -281,7 +266,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_simplest_run_w_promote(self):
@@ -295,7 +280,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_variable_access(self):
@@ -314,12 +299,12 @@ class TestProblem(unittest.TestCase):
 
         self.assertEqual(prob['G2:C1:x'], 5.)                # default output from ParamComp
         self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
-        self.assertEqual(prob['G3:C3:x', 'params'], 0.)      # initial value for a parameter
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)   # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G3:C3').params['x'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)      # initial value for a parameter
 
         # __setitem__
         prob['G2:G1:C2:y'] = 99.
@@ -334,8 +319,8 @@ class TestProblem(unittest.TestCase):
 
         self.assertAlmostEqual(prob['G3:C4:y'], 40.)
 
-    def test_noflat_run(self):
-        prob = Problem(root=ExampleNoflatGroup())
+    def test_byobj_run(self):
+        prob = Problem(root=ExampleByObjGroup())
 
         prob.setup()
         prob.run()
