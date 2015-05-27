@@ -21,7 +21,7 @@ class LinearSystem(Component):
 
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
 
         dresids['x'] += params['A'].dot(dunknowns['x'])
         dresids['x'] += dparams['A'].dot(unknowns['x'])
