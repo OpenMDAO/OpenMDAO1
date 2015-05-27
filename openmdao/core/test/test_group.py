@@ -28,6 +28,13 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(subs['mycomp'], comp)
         self.assertEqual(subs['nextcomp'], comp2)
 
+        with self.assertRaises(RuntimeError) as cm:
+            group.add('mycomp', comp)
+
+        expected_msg = "Group '' already contains a component with name 'mycomp'."
+
+        self.assertEqual(str(cm.exception), expected_msg)
+
     def test_variables(self):
         group = Group()
         group.add('C1', SimpleComp(), promotes=['x'])
