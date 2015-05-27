@@ -9,6 +9,9 @@ from six.moves import range
 import numpy as np
 
 from openmdao.core.system import System
+from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.varmanager import create_views
+
 
 '''
 Object to represent default value for `add_output`.
@@ -18,8 +21,8 @@ _NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
-    variables and operates on its inputs to produce unknowns, which can be
-    excplicit outputs or implicit states.
+    variables and operates on its params to produce unknowns, which can be
+    explicit outputs or implicit states.
     """
 
     def __init__(self):
@@ -27,6 +30,7 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
+        self._vecs = None
 
     def _get_initial_val(self, val, shape):
         if val is _NotSet:
@@ -66,6 +70,40 @@ class Component(System):
         args['state'] = True
         self._unknowns_dict[name] = args
 
+    @property
+    def unknowns(self):
+        return self._vecs.unknowns
+
+    @property
+    def dunknowns(self):
+        return self._vecs.dunknowns
+
+    @property
+    def params(self):
+        return self._vecs.params
+
+    @property
+    def dparams(self):
+        return self._vecs.dparams
+
+    @property
+    def resids(self):
+        return self._vecs.resids
+
+    @property
+    def dresids(self):
+        return self._vecs.dresids
+
+    def vectors(self):
+        """
+        Returns
+        -------
+        `VecTuple`
+            A named tuple containing the unknowns, dunknowns, params, dparams, resids, and
+            dresids `VecWrapper`s.
+        """
+        return self._vecs
+
     def _check_name(self, name):
         if self._post_setup:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
@@ -104,8 +142,47 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+                       top_unknowns=None, impl=BasicImpl):
+        """
+        Set up local `VecWrapper`s to store this component's variables.
+
+        Parameters
+        ----------
+        param_owners : dict
+            a dictionary mapping `System` pathnames to the pathnames of parameters
+            they are reponsible for propagating. (ignored)
+
+        connections : dict
+            a dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to
+
+        parent_vm : `VarManager`, optional
+            the `VarManager` for the parent `Group`, if any.
+
+        top_unknowns : `VecWrapper`, optional
+            the `Problem` level unknowns `VecWrapper`
+
+        impl : an implementation factory, optional
+            Specifies the factory object used to create `VecWrapper` objects.
+        """
+        if not self.is_active():
+            return
+
+        self._vecs = create_views(top_unknowns, parent_vm, self.comm, self.pathname,
+                                  self._params_dict, self._unknowns_dict, [], connections)
+
+        params = self._vecs.params
+
+        # create params vec entries for any unconnected params
+        for pathname, meta in self._params_dict.items():
+            name = params._scoped_abs_name(pathname)
+            if name not in params:
+                params._add_unconnected_var(pathname, meta)
+
     def apply_nonlinear(self, params, unknowns, resids):
-        """ Evaluates the residuals for this component. For explicit
+        """
+        Evaluates the residuals for this component. For explicit
         components, the residual is the output produced by the current params
         minus the previously calculated output. Thus, an explicit component
         must execute its solve nonlinear method. Implicit components should
@@ -129,13 +206,14 @@ class Component(System):
 
         self.solve_nonlinear(params, unknowns, resids)
 
-        # Unknowns are restored to the old values too; apply_nonlinear does
+        # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
     def jacobian(self, params, unknowns, resids):
-        """ Returns Jacobian. Returns None unless component overides and
+        """
+        Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 

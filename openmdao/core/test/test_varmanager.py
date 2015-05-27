@@ -16,11 +16,11 @@ class TestVarManager(unittest.TestCase):
         prob = Problem(root)
         prob.setup()
 
-        root._varmanager.unknowns['G2:G1:C2:y'] = 99.
+        root.unknowns['G2:G1:C2:y'] = 99.
         self.assertEqual(root['G2:G1:C2:y'], 99.)
 
         root._varmanager._transfer_data('G3')
-        self.assertEqual(root._varmanager.params['G3:C3:x'], 99.)
+        self.assertEqual(root.params['G3:C3:x'], 99.)
 
         self.assertEqual(root['G3:C3:x', 'params'], 99.)
 

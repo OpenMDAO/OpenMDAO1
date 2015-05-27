@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
 
@@ -21,9 +23,8 @@ class ParallelGroup(Group):
         # full scatter
         self._varmanager._transfer_data()
 
-        for name, system in self.subsystems(local=True):
-            view = self._views[name]
-            system.apply_nonlinear(view.params, view.unknowns, view.resids)
+        for name, sub in self.subsystems(local=True):
+            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def children_solve_nonlinear(self):
         """Loops over our children systems and asks them to solve."""
@@ -31,9 +32,8 @@ class ParallelGroup(Group):
         # full scatter
         self._varmanager._transfer_data()
 
-        for name, system in self.subsystems(local=True):
-            view = self._views[name]
-            system.solve_nonlinear(view.params, view.unknowns, view.resids)
+        for name, sub in self.subsystems(local=True):
+            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def get_req_procs(self):
         """
@@ -110,7 +110,7 @@ class ParallelGroup(Group):
                         if assigned == limit:
                             break
 
-        self._local_subsystems = []
+        self._local_subsystems = OrderedDict()
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > assigned_procs[i]:
@@ -137,7 +137,9 @@ class ParallelGroup(Group):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._add_local_subsystem(sub)
+            else:
+                self._add_remote_subsystem(sub)
 
         for sub in self._local_subsystems.values():
-            sub.setup_communicators(sub_comm)
+            sub._setup_communicators(sub_comm)

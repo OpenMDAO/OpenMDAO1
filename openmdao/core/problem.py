@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import warnings
 from collections import namedtuple
 from itertools import chain
 from six import iteritems
@@ -60,7 +61,21 @@ class Problem(Component):
         name : str
              the name of the variable to set into the unknowns vector
         """
-        self.root._varmanager.unknowns[name] = val
+        self.root[name] = val
+
+    def subsystem(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.subsystem(name)
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -100,6 +115,7 @@ class Problem(Component):
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
 
+        # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
         # check for parameters that are not connected to a source/unknown
@@ -110,9 +126,9 @@ class Problem(Component):
 
         if hanging_params:
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
-            raise RuntimeError(msg)
+            warnings.warn(msg)
 
-        # propagate top level metadata, e.g., unit_conv to subsystems
+        # propagate top level metadata, e.g. unit_conv, to subsystems
         self.root._update_sub_unit_conv()
 
         # Given connection information, create mapping from system pathname
@@ -174,22 +190,16 @@ class Problem(Component):
         # Group.
 
         root = self.root
-        varmanager = root._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        dparams = varmanager.dparams
-        dunknowns = varmanager.dunknowns
-        dresids = varmanager.dresids
+        unknowns = root.unknowns
 
         n_edge = len(unknowns.vec)
         rhs = np.zeros((n_edge, ))
 
         # Prepare model for calculation
         root.clear_dparams()
-        dunknowns.vec[:] = 0.0
-        dresids.vec[:] = 0.0
-        root.jacobian(params, unknowns, resids)
+        root.dunknowns.vec[:] = 0.0
+        root.dresids.vec[:] = 0.0
+        root.jacobian(root.params, unknowns, root.resids)
 
         # Initialized Jacobian
         if return_format == 'dict':
@@ -234,7 +244,6 @@ class Problem(Component):
 
                 # Call GMRES to solve the linear system
                 dx = root.ln_solver.solve(rhs, root, mode)
-                #print "dx",dx
 
                 rhs[irhs] = 0.0
 
@@ -263,7 +272,6 @@ class Problem(Component):
 
                 j += 1
 
-        #print params, '\n', unknowns, '\n', J
         return J
 
     def check_partial_derivatives(self, out_stream=sys.stdout):
@@ -318,13 +326,12 @@ class Problem(Component):
                 jac_rev = {}
                 jac_fd = {}
 
-                view = group._views[comp.name]
-                params = view.params
-                unknowns = view.unknowns
-                resids = view.resids
-                dparams = view.dparams
-                dunknowns = view.dunknowns
-                dresids = view.dresids
+                params = comp.params
+                unknowns = comp.unknowns
+                resids = comp.resids
+                dparams = comp.dparams
+                dunknowns = comp.dunknowns
+                dresids = comp.dresids
 
                 if out_stream is not None:
                     out_stream.write('-'*(len(cname)+15) + '\n')
@@ -565,13 +572,9 @@ def _find_all_comps(group):
     """ Recursive function that assembles a dictionary whose keys are Group
     instances and whos values are lists of Component instances."""
 
-    components = group.components()
-    subgroups = group.subgroups()
-
     data = {group:[]}
-    for c_name, c in components:
+    for c_name, c in group.components():
         data[group].append(c)
-    for sg_name, sg in subgroups:
-        sub_data = _find_all_comps(sg)
-        data.update(sub_data)
+    for sg_name, sg in group.subgroups():
+        data.update(_find_all_comps(sg))
     return data

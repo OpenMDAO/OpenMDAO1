@@ -23,8 +23,7 @@ class TestNLGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        unknowns = top.root._varmanager.unknowns
-        y = unknowns['comp:y']
+        y = top.root.unknowns['comp:y']
 
         assert_rel_error(self, y, 6.0, .000001)
 
