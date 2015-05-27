@@ -52,8 +52,7 @@ class NLGaussSeidel(NonLinearSolver):
         if maxiter == 1:
             return
 
-        varmanager = system._varmanager
-        resids = varmanager.resids
+        resids = system.resids
 
         # Evaluate Norm
         system.apply_nonlinear(params, unknowns, resids)

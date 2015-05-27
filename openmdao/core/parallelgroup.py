@@ -23,9 +23,8 @@ class ParallelGroup(Group):
         # full scatter
         self._varmanager._transfer_data()
 
-        for name, system in self.subsystems(local=True):
-            view = self._views[name]
-            system.apply_nonlinear(view.params, view.unknowns, view.resids)
+        for name, sub in self.subsystems(local=True):
+            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def children_solve_nonlinear(self):
         """Loops over our children systems and asks them to solve."""
@@ -33,9 +32,8 @@ class ParallelGroup(Group):
         # full scatter
         self._varmanager._transfer_data()
 
-        for name, system in self.subsystems(local=True):
-            view = self._views[name]
-            system.solve_nonlinear(view.params, view.unknowns, view.resids)
+        for name, sub in self.subsystems(local=True):
+            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def get_req_procs(self):
         """

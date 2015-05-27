@@ -69,7 +69,7 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_byobjs=True)
 
-        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
+        jac = self.p.subsystem('c1').fd_jacobian(params, unknowns, resids)
         self.assertEqual(set(expected_keys), set(jac.keys()))
 
     def test_correct_vals_in_jac(self):
@@ -98,9 +98,9 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_byobjs=True)
 
-        self.p['c1'].solve_nonlinear(params, unknowns, resids)
+        self.p.subsystem('c1').solve_nonlinear(params, unknowns, resids)
 
-        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
+        jac = self.p.subsystem('c1').fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2.,  7.],[ 5., -3.]])}
 
@@ -133,9 +133,9 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_byobjs=True)
 
-        self.p['c1'].solve_nonlinear(params, unknowns, resids)
+        self.p.subsystem('c1').solve_nonlinear(params, unknowns, resids)
 
-        jac = self.p['c1'].fd_jacobian(params, unknowns, resids)
+        jac = self.p.subsystem('c1').fd_jacobian(params, unknowns, resids)
 
         expected_jac = {('y', 'x'): np.array([[ 2,  0,  7,  0],
                                               [ 0,  2,  0,  7],
@@ -177,9 +177,9 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_byobjs=True)
 
-        self.p['ci1'].solve_nonlinear(params, unknowns, resids)
+        self.p.subsystem('ci1').solve_nonlinear(params, unknowns, resids)
 
-        jac = self.p['ci1'].fd_jacobian(params, unknowns, resids)
+        jac = self.p.subsystem('ci1').fd_jacobian(params, unknowns, resids)
         expected_jac = {}
         # Output equation
         expected_jac[('y', 'x')] = 1.

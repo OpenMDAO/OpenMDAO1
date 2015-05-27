@@ -79,21 +79,6 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
-    def test_hanging_params(self):
-
-        root  = Group()
-        root.add('ls', LinearSystem(size=10))
-
-        prob = Problem(root=root)
-
-        try:
-            prob.setup()
-        except Exception as error:
-            self.assertEquals(text_type(error),
-                "Parameters ['ls:A', 'ls:b'] have no associated unknowns.")
-        else:
-            self.fail("Error expected")
-
     def test_calc_gradient_interface_errors(self):
 
         root  = Group()
@@ -281,7 +266,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_simplest_run_w_promote(self):
@@ -295,7 +280,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_variable_access(self):
@@ -314,12 +299,12 @@ class TestProblem(unittest.TestCase):
 
         self.assertEqual(prob['G2:C1:x'], 5.)                # default output from ParamComp
         self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
-        self.assertEqual(prob['G3:C3:x', 'params'], 0.)      # initial value for a parameter
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)   # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G3:C3').params['x'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)      # initial value for a parameter
 
         # __setitem__
         prob['G2:G1:C2:y'] = 99.

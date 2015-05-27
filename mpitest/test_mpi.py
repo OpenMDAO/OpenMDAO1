@@ -98,16 +98,10 @@ class MPITests1(MPITestCase):
         pgrp.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
         pgrp.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
 
-        prob.root.add('S1', ParamComp('s', ''))
-        prob.root.add('L1', ParamComp('l', []))
-
         prob.root.add('C1', ABCDArrayComp(size))
 
         prob.root.connect('pgrp:P1:x', 'C1:a')
         prob.root.connect('pgrp:P2:x', 'C1:b')
-
-        prob.root.connect('S1:s', 'C1:in_string')
-        prob.root.connect('L1:l', 'C1:in_list')
 
         prob.setup()
         prob.run()

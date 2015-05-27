@@ -525,37 +525,39 @@ class SrcVecWrapper(VecWrapper):
             vmeta['shape'] = shape
             if 'val' in meta:
                 val = meta['val']
-                if not is_differentiable(val):
-                    var_size = 0
+                if not is_differentiable(val) or meta.get('pass_by_obj'):
+                    vmeta['size'] = 0
                     vmeta['pass_by_obj'] = True
                     vmeta['val'] = _ByObjWrapper(val)
                 else:
                     if val.shape != shape:
                         raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
                                          name)
-                    var_size = val.size
+                    vmeta['size'] = val.size
             else:
                 # no val given, so use shape to determine size of the array value
-                var_size = numpy.prod(shape)
-                vmeta['val'] = meta['val'] = numpy.zeros(shape)
+                vmeta['size'] = numpy.prod(shape)
+                if meta.get('pass_by_obj'):
+                    vmeta['pass_by_obj'] = True
+                    vmeta['val'] = _ByObjWrapper(numpy.zeros(shape))
+                else:
+                    vmeta['val'] = meta['val'] = numpy.zeros(shape)
         elif 'val' in meta:
             val = meta['val']
-            if is_differentiable(val):
+            if is_differentiable(val) and not meta.get('pass_by_obj'):
                 if isinstance(val, numpy.ndarray):
-                    var_size = val.size
+                    vmeta['size'] = val.size
                     # if they didn't specify the shape, get it here so we
                     # can unflatten the value we return from __getitem__
                     vmeta['shape'] = val.shape
                 else:
-                    var_size = 1
+                    vmeta['size'] = 1
             else:
-                var_size = 0
+                vmeta['size'] = 0
                 vmeta['pass_by_obj'] = True
                 vmeta['val'] = _ByObjWrapper(val)
         else:
             raise ValueError("No value or shape given for variable '%s'" % name)
-
-        vmeta['size'] = var_size
 
         return vmeta
 
@@ -625,10 +627,11 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = vmeta
             else:
                 if parent_params_vec is not None:
-                    src = connections[pathname]
-                    common = get_common_ancestor(src, pathname)
-                    if common == self.pathname or (self.pathname+':') not in common:
-                        missing.append(pathname)
+                    src = connections.get(pathname)
+                    if src:
+                        common = get_common_ancestor(src, pathname)
+                        if common == self.pathname or (self.pathname+':') not in common:
+                            missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -690,25 +693,43 @@ class TgtVecWrapper(VecWrapper):
         if 'shape' in src_meta:
             vmeta['shape'] = src_meta['shape']
 
-        if var_size > 0:
-            if not meta.get('remote'):
-                self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
-        elif src_meta.get('pass_by_obj'):
+        if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
+        elif var_size > 0 and not meta.get('remote'):
+            self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
 
         return vmeta
 
+    def _add_unconnected_var(self, pathname, meta):
+        """
+        Add an entry to this vecwrapper for the given unconnected variable so the
+        component can access its value through the vecwrapper.
+        """
+        vmeta = meta.copy()
+        vmeta['pass_by_obj'] = True
+        vmeta['size'] = 0
+        if 'val' in meta:
+            val = meta['val']
+        elif 'shape' in meta:
+            val = numpy.zeros(shape)
+        else:
+            raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
+                               pathname)
+
+        vmeta['val'] = _ByObjWrapper(val)
+        self._vardict[self._scoped_abs_name(pathname)] = vmeta
+
     def _get_flattened_sizes(self):
         """
-            Create a 1x1 numpy array to hold the sum of the sizes of params
-            stored in flattened form in our internal vector.
+        Create a 1x1 numpy array to hold the sum of the sizes of params
+        stored in flattened form in our internal vector.
 
-            Returns
-            -------
-            ndarray
-                array containing sum of local sizes of params in our internal vector.
+        Returns
+        -------
+        ndarray
+            array containing sum of local sizes of params in our internal vector.
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('pass_by_obj')])

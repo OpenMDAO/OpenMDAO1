@@ -82,18 +82,10 @@ class ScipyGMRES(LinearSolver):
         system = self.system
         mode = self.mode
 
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        dparams = varmanager.dparams
-        dunknowns = varmanager.dunknowns
-        dresids = varmanager.dresids
-
         if mode=='fwd':
-            sol_vec, rhs_vec = dunknowns, dresids
+            sol_vec, rhs_vec = system.dunknowns, system.dresids
         else:
-            sol_vec, rhs_vec = dresids, dunknowns
+            sol_vec, rhs_vec = system.dresids, system.dunknowns
 
         # Set incoming vector
         sol_vec.vec[:] = arg[:]
@@ -102,8 +94,8 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.apply_linear(params, unknowns, dparams, dunknowns, dresids,
-                            mode)
+        system.apply_linear(system.params, system.unknowns, system.dparams,
+                            system.dunknowns, system.dresids, mode)
 
         #print ("arg", arg)
         #print ("result", rhs_vec.vec)

@@ -1,5 +1,7 @@
 """ OpenMDAO Problem class defintion."""
 
+import warnings
+
 import numpy as np
 from collections import namedtuple
 
@@ -55,6 +57,20 @@ class Problem(Component):
         """
         self.root[name] = val
 
+    def subsystem(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.subsystem(name)
+
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.
@@ -104,7 +120,7 @@ class Problem(Component):
 
         if hanging_params:
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
-            raise RuntimeError(msg)
+            warnings.warn(msg)
 
         # propagate top level metadata, e.g. unit_conv, to subsystems
         self.root._update_sub_unit_conv()
@@ -168,22 +184,16 @@ class Problem(Component):
         # Group.
 
         root = self.root
-        varmanager = root._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        dparams = varmanager.dparams
-        dunknowns = varmanager.dunknowns
-        dresids = varmanager.dresids
+        unknowns = root.unknowns
 
         n_edge = len(unknowns.vec)
         rhs = np.zeros((n_edge, ))
 
         # Prepare model for calculation
         root.clear_dparams()
-        dunknowns.vec[:] = 0.0
-        dresids.vec[:] = 0.0
-        root.jacobian(params, unknowns, resids)
+        root.dunknowns.vec[:] = 0.0
+        root.dresids.vec[:] = 0.0
+        root.jacobian(root.params, unknowns, root.resids)
 
         # Initialized Jacobian
         if return_format == 'dict':
