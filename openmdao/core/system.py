@@ -8,7 +8,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
+from openmdao.core.mpiwrap import MPI, get_comm_if_active
 from openmdao.core.options import OptionsDictionary
 
 
@@ -26,7 +26,7 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
-        self.comm = FakeComm()
+        self.comm = None
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
@@ -297,4 +297,3 @@ class System(object):
                 resids.vec[:] = resid_cache
 
         return jac
-

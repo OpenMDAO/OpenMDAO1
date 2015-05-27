@@ -254,10 +254,6 @@ class VecWrapper(object):
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
 
-    # for distributed vecwrappers, get_global_idxs will return the indices w.r.t. the
-    # full distributed vector. For this class, both methods return the local indices.
-    get_global_idxs = get_local_idxs
-
     def norm(self):
         """
         Calculates the norm of this vector.
@@ -481,9 +477,10 @@ class SrcVecWrapper(VecWrapper):
             vmeta = self._setup_var_meta(name, meta)
             var_size = vmeta['size']
 
-            if not meta.get('remote') and not vmeta.get('pass_by_obj'):
-                self._slices[relname] = (vec_size, vec_size + var_size)
-                vec_size += var_size
+            if not vmeta.get('pass_by_obj'):
+                if not meta.get('remote'):
+                    self._slices[relname] = (vec_size, vec_size + var_size)
+                    vec_size += var_size
 
             self._vardict[relname] = vmeta
 
@@ -578,6 +575,24 @@ class SrcVecWrapper(VecWrapper):
         """
         sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
         return numpy.array([sizes], int)
+
+    def _var_idx(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the variable.
+
+        Returns
+        -------
+        int
+            The index of the given variable into the local_sizes table.
+        """
+
+        for i, (vname, meta) in enumerate(self.get_vecvars()):
+            if vname == name:
+                return i
+        raise RuntimeError("'%s' is not a 'pass by vector' variable." % name)
 
 
 class TgtVecWrapper(VecWrapper):
