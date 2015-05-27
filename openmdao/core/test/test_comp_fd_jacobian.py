@@ -178,6 +178,8 @@ class CompFDTestCase(unittest.TestCase):
         resids = SrcVecWrapper()
         resids.setup(resids_dict, store_byobjs=True)
 
+        # Partials
+
         self.p.subsystem('ci1').solve_nonlinear(params, unknowns, resids)
 
         jac = self.p.subsystem('ci1').fd_jacobian(params, unknowns, resids)
@@ -190,6 +192,19 @@ class CompFDTestCase(unittest.TestCase):
         expected_jac[('z', 'x')] = unknowns['z']
 
         assert_equal_jacobian(self, jac, expected_jac, 1e-8)
+
+        # Totals
+
+        # Really tighten this up
+        self.p.subsystem('ci1').atol = 1e-14
+        self.p.subsystem('ci1').solve_nonlinear(params, unknowns, resids)
+
+        jac = self.p.subsystem('ci1').fd_jacobian(params, unknowns, resids, total_derivs=True)
+        expected_jac = {}
+        expected_jac[('y', 'x')] = -2.5555555555555554
+        expected_jac[('z', 'x')] = -1.7777777777777777
+
+        assert_equal_jacobian(self, jac, expected_jac, 1e-5)
 
 
 class CompFDinSystemTestCase(unittest.TestCase):

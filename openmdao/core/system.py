@@ -198,13 +198,21 @@ class System(object):
             step_type = self.fd_options['step_type']
 
         jac = {}
-        resid_cache = resids.vec.copy()
-        resid_cache2 = None
+        cache2 = None
 
+        # Prepare for calculating partial derivatives or total derivatives
         states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
+        if total_derivs == False:
+            run_model = self.apply_nonlinear
+            cache1 = resids.vec.copy()
+            resultvec = resids
+            for u_name, meta in iteritems(self._unknowns_dict):
+                if meta.get('state'):
+                    states.append(meta['relative_name'])
+        else:
+            run_model = self.solve_nonlinear
+            cache1 = unknowns.vec.copy()
+            resultvec = unknowns
 
         # Compute gradient for this param or state.
         for p_name in chain(params, states):
@@ -213,6 +221,15 @@ class System(object):
                 inputs = unknowns
             else:
                 inputs = params
+
+            target_input = inputs.flat[p_name]
+
+            # If our input is connected to a Paramcomp, then we need to twiddle
+            # the unknowns vector instead of the params vector.
+            if hasattr(self, '_src'):
+                param_src = self._src.get(p_name)
+                if param_src in self.unknowns:
+                    target_input = unknowns.flat[param_src]
 
             mydict = {}
             for key, val in self._params_dict.items():
@@ -255,50 +272,52 @@ class System(object):
 
                 if fdform == 'forward':
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] += step
 
-                    self.apply_nonlinear(params, unknowns, resids)
+                    run_model(params, unknowns, resids)
 
-                    inputs.flat[p_name][idx] -= step
+                    target_input[idx] -= step
 
                     # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (1.0/step)
+                    resultvec.vec[:] -= cache1
+                    resultvec.vec[:] *= (1.0/step)
 
                 elif fdform == 'backward':
 
-                    inputs.flat[p_name][idx] -= step
+                    target_input[idx] -= step
 
-                    self.apply_nonlinear(params, unknowns, resids)
+                    run_model(params, unknowns, resids)
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] += step
 
                     # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (-1.0/step)
+                    resultvec.vec[:] -= cache1
+                    resultvec.vec[:] *= (-1.0/step)
 
                 elif fdform == 'central':
 
-                    inputs.flat[p_name][idx] += step
-                    self.apply_nonlinear(params, unknowns, resids)
-                    resids2 = resids.vec - resid_cache
+                    target_input[idx] += step
 
-                    resids.vec[:] = resid_cache
+                    run_model(params, unknowns, resids)
+                    cache2 = resultvec.vec - cache1
 
-                    inputs.flat[p_name][idx] -= 2.0*step
-                    self.apply_nonlinear(params, unknowns, resids)
+                    resultvec.vec[:] = cache1
+
+                    target_input[idx] -= 2.0*step
+
+                    run_model(params, unknowns, resids)
 
                     # central difference formula
-                    resids.vec[:] -= resid_cache + resids2
-                    resids.vec[:] *= (-0.5/step)
+                    resultvec.vec[:] -= cache1 + cache2
+                    resultvec.vec[:] *= (-0.5/step)
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] -= step
 
                 for u_name in unknowns:
-                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
+                    jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
 
                 # Restore old residual
-                resids.vec[:] = resid_cache
+                resultvec.vec[:] = cache1
 
         return jac
 

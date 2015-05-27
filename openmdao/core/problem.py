@@ -195,6 +195,19 @@ class Problem(Component):
         n_edge = len(unknowns.vec)
         rhs = np.zeros((n_edge, ))
 
+        # Full model finite difference.
+        if root.fd_options['force_fd'] == True:
+            Jfd = root.fd_jacobian(root.params, unknowns, root.resids,
+                                   total_derivs=True)
+            J = {}
+            for okey in unknown_list:
+                J[okey] = {}
+                for ikey in param_list:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
+                    J[okey][ikey] = Jfd[okey, ikey]
+            return J
+
         # Prepare model for calculation
         root.clear_dparams()
         root.dunknowns.vec[:] = 0.0
