@@ -88,7 +88,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.calc_gradient(['comp:x'], ['comp:y'], mode='junk')
         except Exception as error:
-            msg = "mode must be 'auto', 'fwd', or 'rev'"
+            msg = "mode must be 'auto', 'fwd', 'rev', or 'fd'"
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")

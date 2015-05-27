@@ -199,7 +199,7 @@ class SimpleImplicitComp(Component):
         self.add_state('z', 0.0)
 
         self.maxiter = 10
-        self.atol = 1.0e-6
+        self.atol = 1.0e-12
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Simple iterative solve. (Babylonian method) """

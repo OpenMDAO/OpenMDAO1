@@ -184,6 +184,9 @@ class TestScipyGMRES(unittest.TestCase):
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
+
     def test_converge_diverge_groups(self):
 
         top = Problem()
@@ -199,6 +202,9 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
     def test_single_diamond(self):
@@ -236,6 +242,10 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp4:y1']['p:x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp4:y1']['p:x'][0][0], 25, 1e-6)
         assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
 

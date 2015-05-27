@@ -165,7 +165,7 @@ class Problem(Component):
             calculated. All must be valid unknowns in OpenMDAO.
 
         mode : string (optional)
-            Deriviative direction, can be 'fwd', 'rev', or 'auto'.
+            Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
@@ -178,8 +178,8 @@ class Problem(Component):
             Jacobian of unknowns with respect to params
         """
 
-        if mode not in ['auto', 'fwd', 'rev']:
-            msg = "mode must be 'auto', 'fwd', or 'rev'"
+        if mode not in ['auto', 'fwd', 'rev', 'fd']:
+            msg = "mode must be 'auto', 'fwd', 'rev', or 'fd'"
             raise ValueError(msg)
 
         if return_format not in ['array', 'dict']:
@@ -191,13 +191,11 @@ class Problem(Component):
 
         root = self.root
         unknowns = root.unknowns
-
-        n_edge = len(unknowns.vec)
-        rhs = np.zeros((n_edge, ))
+        params = root.params
 
         # Full model finite difference.
-        if root.fd_options['force_fd'] == True:
-            Jfd = root.fd_jacobian(root.params, unknowns, root.resids,
+        if mode == 'fd' or root.fd_options['force_fd'] == True:
+            Jfd = root.fd_jacobian(params, unknowns, root.resids,
                                    total_derivs=True)
             J = {}
             for okey in unknown_list:
@@ -205,14 +203,24 @@ class Problem(Component):
                 for ikey in param_list:
                     if isinstance(ikey, tuple):
                         ikey = ikey[0]
-                    J[okey][ikey] = Jfd[okey, ikey]
+
+                    fd_ikey = ikey
+                    if ikey not in params:
+                        for key, val in iteritems(root._src):
+                            if val == ikey:
+                                fd_ikey = key
+
+                    J[okey][ikey] = Jfd[okey, fd_ikey]
             return J
 
         # Prepare model for calculation
         root.clear_dparams()
         root.dunknowns.vec[:] = 0.0
         root.dresids.vec[:] = 0.0
-        root.jacobian(root.params, unknowns, root.resids)
+        root.jacobian(params, unknowns, root.resids)
+
+        n_edge = len(unknowns.vec)
+        rhs = np.zeros((n_edge, ))
 
         # Initialized Jacobian
         if return_format == 'dict':
@@ -248,7 +256,13 @@ class Problem(Component):
         j = 0
         for param in input_list:
 
-            in_idx = unknowns.get_local_idxs(param)
+            if param in unknowns:
+                in_idx = unknowns.get_local_idxs(param)
+            elif hasattr(root, '_src'):
+                param_src = root._src.get(param)
+                if param_src in unknowns:
+                    in_idx = unknowns.get_local_idxs(param_src)
+
             jbase = j
 
             for irhs in in_idx:
@@ -263,7 +277,13 @@ class Problem(Component):
                 i = 0
                 for item in output_list:
 
-                    out_idx = unknowns.get_local_idxs(item)
+                    if item in unknowns:
+                        out_idx = unknowns.get_local_idxs(item)
+                    elif hasattr(root, '_src'):
+                        param_src = root._src.get(item)
+                        if param_src in unknowns:
+                            out_idx = unknowns.get_local_idxs(param_src)
+
                     nk = len(out_idx)
 
                     if return_format == 'dict':
@@ -518,10 +538,109 @@ class Problem(Component):
                         out_stream.write(str(Jsub_fd))
                         out_stream.write('\n\n')
 
-
-
         return data
 
+    def check_total_derivatives(self, out_stream=sys.stdout):
+        """ Checks total derivatives for problem defined at the top.
+
+        Parameters
+        ----------
+
+        out_stream : file_like
+            Where to send human readable output. Default is sys.stdout. Set to
+            None to suppress.
+
+        Returns
+        -------
+        Dict of Dicts of Tuples of Floats
+
+        First key is the (output, input) tuple of strings; second key is one
+        of ['rel error', 'abs error', 'magnitude', 'fdstep']; Tuple contains
+        norms for forward - fd, adjoint - fd, forward - adjoint using the
+        best case fdstep.
+        """
+
+        if out_stream is not None:
+            out_stream.write('Total Derivatives Check\n\n')
+
+        param_list = self.root.params.keys()
+        unknown_list = self.root.unknowns.keys()
+
+        Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
+                                 return_format='dict')
+        Jrev = self.calc_gradient(param_list, unknown_list, mode='rev',
+                                  return_format='dict')
+        Jfd = self.calc_gradient(param_list, unknown_list, mode='fd',
+                                  return_format='dict')
+
+        # Assemble the derivative checks
+        data = {}
+        started = False
+        for p_name in param_list:
+            for u_name in unknown_list:
+
+                ldata = data[(u_name, p_name)] = {}
+
+                Jsub_fd = Jfd[u_name][p_name]
+                Jsub_for = Jfor[u_name][p_name]
+                Jsub_rev = Jrev[u_name][p_name]
+
+                ldata['J_fd'] = Jsub_fd
+                ldata['J_fwd'] = Jsub_for
+                ldata['J_rev'] = Jsub_rev
+
+                magfor = np.linalg.norm(Jsub_for)
+                magrev = np.linalg.norm(Jsub_rev)
+                magfd = np.linalg.norm(Jsub_fd)
+
+                ldata['magnitude'] = (magfor, magrev, magfd)
+
+                abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+                abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+                abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+
+                ldata['abs error'] = (abs1, abs2, abs3)
+
+                rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+
+                ldata['rel error'] = (rel1, rel2, rel3)
+
+                if out_stream is None:
+                    continue
+
+                if started is True:
+                    out_stream.write(' -'*30 + '\n')
+                else:
+                    started = True
+
+                # Optional file_like output
+                out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
+
+                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+
+                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+
+                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+
+                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                out_stream.write(str(Jsub_for))
+                out_stream.write('\n\n')
+                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                out_stream.write(str(Jsub_rev))
+                out_stream.write('\n\n')
+                out_stream.write('    Raw FD Derivative (Jfor)\n\n')
+                out_stream.write(str(Jsub_fd))
+                out_stream.write('\n\n')
+
+        return data
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
