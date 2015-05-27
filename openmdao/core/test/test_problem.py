@@ -327,7 +327,70 @@ class TestProblem(unittest.TestCase):
 
         self.assertEqual(prob['G3:C4:y'], 'fooC2C3C4')
 
+    def test_scalar_sizes(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_param('x', shape=1)
+                self.add_output('y', shape=1)
 
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', shape=2)
+                self.add_output('y', shape=2)
+
+        class C(Component):
+            def __init__(self):
+                super(C, self).__init__()
+                self.add_param('x', shape=3)
+                self.add_output('y', shape=3)
+
+        # Scalar Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('A1', A(), promotes=['x'])
+        root.add('A2', A())
+        root.connect('A1:y', 'A2:x')
+        prob.setup()
+
+        # Array Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        root.add('B2', B())
+        root.connect('B1:y', 'B2:x')
+        prob.setup()
+
+        # Mismatched Array Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        root.add('C1', C())
+        root.connect('B1:y', 'C1:x')
+        with self.assertRaises(ConnectError) as cm:
+            prob.setup()
+        expected_error_message = "Shape '(2,)' of the source "\
+                                  "'B1:y' must match the shape '(3,)' "\
+                                  "of the target 'C1:x'"
+        self.assertEquals(expected_error_message, str(cm.exception))
+
+        # Mismatched Scalar to Array Value
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        with self.assertRaises(ConnectError) as cm:
+            prob.setup()
+
+        expected_error_message = py3fix("Type '<type 'float'>' of source "
+                                  "'x' must be the same as type "
+                                  "'<type 'numpy.ndarray'>' of target "
+                                  "'x'")
+        self.assertEquals(expected_error_message, str(cm.exception))
 
 if __name__ == "__main__":
     unittest.main()
