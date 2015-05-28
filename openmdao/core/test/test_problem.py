@@ -3,6 +3,7 @@
 import unittest
 import numpy as np
 from six import text_type, PY3
+import warnings
 
 from openmdao.components.linear_system import LinearSystem
 from openmdao.core.component import Component
@@ -78,6 +79,19 @@ class TestProblem(unittest.TestCase):
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
+
+    def test_hanging_params(self):
+        # test that a warning is issued for an unconnected parameter
+        root  = Group()
+        root.add('ls', LinearSystem(size=10))
+
+        prob = Problem(root=root)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            prob.setup()
+            assert len(w) == 1, "Warning expected."
+            self.assertEquals("Parameters ['ls:A', 'ls:b'] have no associated unknowns.", str(w[-1].message))
 
     def test_calc_gradient_interface_errors(self):
 

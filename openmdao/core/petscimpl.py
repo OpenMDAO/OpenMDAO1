@@ -5,6 +5,8 @@ import numpy
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 
+import petsc4py
+#petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
 
 class PetscImpl(object):
