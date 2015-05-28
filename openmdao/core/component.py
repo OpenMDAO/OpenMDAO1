@@ -72,37 +72,45 @@ class Component(System):
 
     @property
     def unknowns(self):
-        return self._vecs.unknowns
+        try:
+            return self._vecs.unknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dunknowns(self):
-        return self._vecs.dunknowns
+        try:
+            return self._vecs.dunknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def params(self):
-        return self._vecs.params
+        try:
+            return self._vecs.params
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dparams(self):
-        return self._vecs.dparams
+        try:
+            return self._vecs.dparams
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def resids(self):
-        return self._vecs.resids
+        try:
+            return self._vecs.resids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dresids(self):
-        return self._vecs.dresids
-
-    def vectors(self):
-        """
-        Returns
-        -------
-        `VecTuple`
-            A named tuple containing the unknowns, dunknowns, params, dparams, resids, and
-            dresids `VecWrapper`s.
-        """
-        return self._vecs
+        try:
+            return self._vecs.dresids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     def _check_name(self, name):
         if self._post_setup:

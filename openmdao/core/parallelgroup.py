@@ -137,7 +137,7 @@ class ParallelGroup(Group):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._add_local_subsystem(sub)
+                self._local_subsystems[sub.name] = sub
             else:
                 self._add_remote_subsystem(sub)
 
