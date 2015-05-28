@@ -23,6 +23,7 @@ class UnitComp(Component):
 
         self.param_name = param_name
         self.out_name = out_name
+        self.shape = shape
 
         if param_name == out_name:
             msg = "UnitComp param_name cannot match out_name: '{name}'"
@@ -76,5 +77,5 @@ class UnitComp(Component):
             `VecWrapper`  containing residuals. (r)
         """
         J = {}
-        J[(self.out_name, self.param_name)] = np.array([1.0])
+        J[(self.out_name, self.param_name)] = np.eye(np.prod(self.shape))
         return J
