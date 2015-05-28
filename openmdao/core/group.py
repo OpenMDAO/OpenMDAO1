@@ -545,6 +545,11 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
+
+                        # Skip all states
+                        if dunknowns.metadata(var).get('state'):
+                            continue
+
                         dresids[var] += dunknowns[var]
 
                 # Adjoint Mode
@@ -567,6 +572,11 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
+
+                        # Skip all states
+                        if dunknowns.metadata(var).get('state'):
+                            continue
+
                         dunknowns[var] += dresids[var]
 
             # Groups and all other systems just call their own apply_linear.
