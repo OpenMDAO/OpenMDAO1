@@ -1,46 +1,13 @@
 """ Unit test for the DumpCaseRecorder. """
 
 import unittest
-import StringIO
 
+from six import StringIO
 from openmdao.core.problem import Problem
 from openmdao.casehandlers.dumpcase import DumpCaseRecorder
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 from openmdao.test.sellar import SellarNoDerivatives
 from openmdao.test.testutil import assert_rel_error
-
-# class TestNLGaussSeidel(unittest.TestCase):
-
-#     def test_sellar(self):
-
-#         top = Problem()
-
-
-#         sout = StringIO.StringIO()
-#         top.driver.recorders = [DumpCaseRecorder(sout)]
-
-
-#         top.root = SellarNoDerivatives()
-#         top.root.nl_solver = NLGaussSeidel()
-
-#         top.setup()
-#         top.run()
-
-#         assert_rel_error(self, top['y1'], 25.58830273, .00001)
-#         assert_rel_error(self, top['y2'], 12.05848819, .00001)
-
-#         # Make sure we aren't iterating like crazy
-#         self.assertLess(top.root.nl_solver.iter_count, 8)
-
-# if __name__ == "__main__":
-#     unittest.main()
-
-
-
-import unittest
-from unittest import SkipTest
-import StringIO
-
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
@@ -62,7 +29,7 @@ class TestDumpCaseRecorder(unittest.TestCase):
         top.root = ConvergeDiverge()
         top.root.lin_solver = ScipyGMRES()
 
-        sout = StringIO.StringIO()
+        sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)
         top.driver.add_recorder(recorder)
         top.setup()
@@ -116,7 +83,7 @@ p:x: [ 0.]
         top.root = ConvergeDiverge()
         top.root.lin_solver = ScipyGMRES()
 
-        sout = StringIO.StringIO()
+        sout = StringIO()
 
         recorder = DumpCaseRecorder(top.driver, sout)
         recorder.options['excludes'] = ['comp4:y1']
@@ -170,7 +137,7 @@ p:x: [ 0.]
         top.root = ConvergeDiverge()
         top.root.lin_solver = ScipyGMRES()
 
-        sout = StringIO.StringIO()
+        sout = StringIO()
 
         recorder = DumpCaseRecorder(top.driver, sout)
         recorder.options['includes'] = ['comp4:y1']
@@ -199,7 +166,7 @@ comp4:y1: [ 0.]
         top.root = ConvergeDiverge()
         top.root.lin_solver = ScipyGMRES()
 
-        sout = StringIO.StringIO()
+        sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)
         recorder.options['includes'] = ['comp4:*']
         recorder.options['excludes'] = ['*:y2']

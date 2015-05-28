@@ -1,9 +1,8 @@
-import cStringIO
-import StringIO
 import sys
 import time
 
-# from openmdao.main.exceptions import traceback_str
+from six import StringIO, string_types
+from six.moves import cStringIO
 
 from openmdao.casehandlers.baserecorder import _BaseRecorder
 
@@ -17,7 +16,7 @@ class DumpCaseRecorder(_BaseRecorder):
 
     def __init__(self, driver, out='stdout'):
         super(DumpCaseRecorder, self).__init__(driver)
-        if isinstance(out, basestring):
+        if isinstance(out, string_types):
             if out == 'stdout':
                 out = sys.stdout
             elif out == 'stderr':
@@ -25,7 +24,6 @@ class DumpCaseRecorder(_BaseRecorder):
             else:
                 out = open(out, 'w')
         self.out = out
-        # self._cfg_map = {}
 
     def startup(self):
         """ Write out info that applies to the entire run"""
@@ -109,7 +107,7 @@ class DumpCaseRecorder(_BaseRecorder):
         Note that a closed recorder will do nothing in :meth:`record`."""
         if self.out not in (None, sys.stdout, sys.stderr):
             if not isinstance(self.out,
-                              (StringIO.StringIO, cStringIO.OutputType)):
+                              (StringIO, cStringIO.OutputType)):
                 # Closing a StringIO deletes its contents.
                 self.out.close()
             self.out = None
