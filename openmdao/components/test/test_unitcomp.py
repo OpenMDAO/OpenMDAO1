@@ -69,7 +69,7 @@ class TestUnitComp(unittest.TestCase):
         assert_rel_error(self, J['x_out']['x'][0][0], 1.8, 1e-6)
 
         # Reverse Mode
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
         assert_rel_error(self, J['x_out']['x'][0][0], 1.8, 1e-6)
 
@@ -92,6 +92,6 @@ class TestUnitComp(unittest.TestCase):
         assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
 
         # Reverse Mode
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
         assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
