@@ -21,8 +21,6 @@ class Driver(object):
         pass
 
     def add_recorder(self, recorder):
-                
-        #TODO: only allowed to add recorders to the Driver associated with the top Problem?
         self.recorders.append(recorder)
 
     def run(self, system):

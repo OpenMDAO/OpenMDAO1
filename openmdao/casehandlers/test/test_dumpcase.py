@@ -3,22 +3,11 @@
 import unittest
 
 from six import StringIO
-from openmdao.core.problem import Problem
-from openmdao.casehandlers.dumpcase import DumpCaseRecorder
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
-from openmdao.test.sellar import SellarNoDerivatives
-from openmdao.test.testutil import assert_rel_error
 
-from openmdao.components.paramcomp import ParamComp
-from openmdao.core.group import Group
+from openmdao.casehandlers.dumpcase import DumpCaseRecorder
 from openmdao.core.problem import Problem
 from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
-                                           ConvergeDivergeGroups, SingleDiamondGrouped
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      SimpleCompDerivJac, FanOutGrouped, \
-                                      FanInGrouped
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.converge_diverge import ConvergeDiverge
 
 
 class TestDumpCaseRecorder(unittest.TestCase):

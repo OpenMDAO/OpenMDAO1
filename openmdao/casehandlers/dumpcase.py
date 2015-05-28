@@ -1,5 +1,4 @@
 import sys
-import time
 
 from six import StringIO, string_types
 from six.moves import cStringIO
@@ -38,19 +37,6 @@ class DumpCaseRecorder(_BaseRecorder):
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
         pass
-        # self._cfg_map[driver] = driver_map(driver, inputs, outputs)
-
-    # def record_constants(self, constants):
-    #     """Record constant data."""
-
-    #     pass
-    #     if not self.out:  # if self.out is None, just do nothing
-    #         return
-
-    #     # write = self.out.write
-    #     # write("Constants:\n")
-    #     # for path in sorted(constants.keys()):
-    #     #     write("   %s: %s\n" % (path, constants[path]))
 
     def record(self, params, unknowns, resids):
         """Dump the given run data in a "pretty" form."""
@@ -62,7 +48,6 @@ class DumpCaseRecorder(_BaseRecorder):
         write("Case:\n")
 
         #TODO: Need to look at Group.dump to see how it handles this
-
         write("  Params:\n")
         for param, meta in params.items():
             if self._check_path(param):
@@ -78,29 +63,6 @@ class DumpCaseRecorder(_BaseRecorder):
             if self._check_path(resid):
                 write("%s: %s\n" % ( resid, str(meta['val'])))
 
-
-        # in_names, out_names = self._cfg_map[driver]
-        # ins = sorted(zip(in_names, inputs))
-        # outs = sorted(zip(out_names, outputs))
-
-        # write = self.out.write
-        # write("Case:\n")
-        # write("   uuid: %s\n" % case_uuid)
-        # write("   timestamp: %15f\n" % time.time())
-        # if parent_uuid:
-        #     write("   parent_uuid: %s\n" % parent_uuid)
-
-        # if ins:
-        #     write("   inputs:\n")
-        #     for name, val in ins:
-        #         write("      %s: %s\n" % (name, val))
-        # if outs:
-        #     write("   outputs:\n")
-        #     for name, val in outs:
-        #         write("      %s: %s\n" % (name, val))
-        # if exc:
-        #     write("   exc: %s\n" % exc)
-        #     write("        %s\n" % traceback_str(exc))
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
