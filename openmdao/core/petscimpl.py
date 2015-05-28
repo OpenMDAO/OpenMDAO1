@@ -5,6 +5,8 @@ import numpy
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 
+import petsc4py
+#petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
 
 class PetscImpl(object):
@@ -33,7 +35,7 @@ class PetscImpl(object):
         return PetscTgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors
@@ -49,12 +51,12 @@ class PetscImpl(object):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
 
         Returns
@@ -62,12 +64,13 @@ class PetscImpl(object):
         `PetscDataXfer`
             a `PetscDataXfer` object
         """
-        return PetscDataXfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns)
+        return PetscDataXfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
     @staticmethod
     def create_app_ordering(varmanager):
         """Creates a PETSc application ordering."""
         comm = varmanager.comm
+
         local_unknown_sizes = varmanager._local_unknown_sizes
         unknowns_vec = varmanager.unknowns
         rank = comm.rank
@@ -77,6 +80,14 @@ class PetscImpl(object):
         to_idx_array = unknowns_vec.make_idx_array(start, end)
 
         app_idxs = []
+
+        # each column in the _local_unknown_sizes table contains the sizes
+        # corresponds to a fully distributed variable. (col=var, row=proc)
+        # so in order to get the offset into the full distributed vector
+        # containing all variables, you need to add the full distributed
+        # sizes of all the variables up to the current variable (ivar)
+        # plus the sizes of all of the distributed parts of ivar in the
+        # current column for ranks below the current rank
         for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
             start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
                     numpy.sum(local_unknown_sizes[:rank, ivar])
@@ -95,7 +106,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
 
-    def setup(self, unknowns_dict, store_noflats=False):
+    def setup(self, unknowns_dict, store_byobjs=False):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -105,50 +116,50 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             A dictionary of absolute variable names keyed to an associated
             metadata dictionary.
 
-        store_noflats : bool
-            Indicates of noflat vars should be stored.  This is only true
+        store_byobjs : bool
+            Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
-        super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_noflats=store_noflats)
+        super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
         """
-        Collect all flattenable var sizes.
+        Collect all flattened sizes of vars stored in our internal array.
 
         Returns
         -------
         ndarray
-            array containing local sizes of flattenable unknown variables for
+            array containing local sizes of 'pass by vector' unknown variables for
             every process in our communicator.
         """
-        sizes = [m['size'] for m in self.values() if not m.get('noflat')]
+        sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
 
         # create 2D array of variable sizes per process
         self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
 
-        # create a vec indicating whether a nonflat variable is active
+        # create a vec indicating whether a 'pass by object' variable is active
         # in this rank or not
-        #self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
+        #self.byobj_isactive = numpy.zeros((size, len(self.byobj_vars)), int)
 
-        # create our row in the local_unknown_sizes table
-        ours = numpy.zeros((1, len(sizes)), int)
+        # create row in the local_unknown_sizes table for this process
+        our_row = numpy.zeros((1, len(sizes)), int)
         for i, (name, meta) in enumerate(self.get_vecvars()):
-            ours[0, i] = meta['size']
+            our_row[0, i] = meta['size']
 
-        #our_noflats = numpy.zeros((1, len(self.get_noflats())), int)
-        #for i, (name, meta) in enumerate(self.get_noflats()):
-            #our_noflats[0, i] = int(self.is_variable_local(name[0]))
+        #our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
+        #for i, (name, meta) in enumerate(self.get_byobjs()):
+            #our_byobjs[0, i] = int(self.is_variable_local(name[0]))
 
-        # collect local var sizes from all of the processes in our comm
+        # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        self.comm.Allgather(ours[0,:], self.local_unknown_sizes)
-        #comm.Allgather(our_noflats[0,:], self.noflat_isactive)
+        self.comm.Allgather(our_row[0,:], self.local_unknown_sizes)
+        #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
-        self.local_unknown_sizes[self.comm.rank, :] = ours[0, :]
+        self.local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
 
         return self.local_unknown_sizes
 
@@ -168,8 +179,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Index array containing all distributed indices for the named variable.
         """
         meta = self._vardict[name]
-        if meta.get('noflat'):
-            raise RuntimeError("No vector indices can be provided for non-flattenable variable '%s'" % name)
+        if meta.get('pass_by_obj'):
+            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
 
         start, end = self._slices[name]
         return self.make_idx_array(start, end)
@@ -184,12 +195,16 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
+    def get_view(self, sys_pathname, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        return view
 
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, store_noflats=False):
+              connections, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -213,32 +228,36 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
-        store_noflats : bool (optional)
-            If True, store unflattenable variables in the `VecWrapper` we're building.
+        store_byobjs : bool (optional)
+            If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
-                                              connections, store_noflats)
+                                              connections, store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
         """
         Create a 1x1 numpy array to hold the sum of the sizes of local
-        flattenable params.
+        'pass by vector' params.
 
         Returns
         -------
         ndarray
-            array containing sum of local sizes of flattenable params.
+            array containing sum of local sizes of 'pass by vector' params.
         """
         psize = sum([m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('noflat')])
+                     if m.get('owned') and not m.get('pass_by_obj')])
 
         return numpy.array(self.comm.allgather(psize), int)
 
+    def get_view(self, sys_pathname, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        return view
 
 class PetscDataXfer(DataXfer):
-    def __init__(self, varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
+    def __init__(self, varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Parameters
         ----------
@@ -251,18 +270,19 @@ class PetscDataXfer(DataXfer):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
         """
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
-                                            flat_conns, noflat_conns)
+                                            vec_conns, byobj_conns)
 
         self.comm = comm = varmanager.comm
+
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
 
@@ -292,12 +312,12 @@ class PetscDataXfer(DataXfer):
         tgt_idxs : array
             indices of the target variables in the target vector
 
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
+        vec_conns : dict
+            mapping of 'pass by vector' variables to the source variables that
             they are connected to
 
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
+        byobj_conns : dict
+            mapping of 'pass by object' variables to the source variables that
             they are connected to
 
         mode : 'fwd' or 'rev' (optional)
@@ -313,10 +333,10 @@ class PetscDataXfer(DataXfer):
             # formerly
             #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
 
-            # noflats are never scattered in reverse, so skip that part
+            # byobjs are never scattered in reverse, so skip that part
 
         else:  # forward
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
 
-            for tgt, src in self.noflat_conns:
+            for tgt, src in self.byobj_conns:
                 tgtvec[tgt] = srcvec[src]

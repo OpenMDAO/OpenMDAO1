@@ -2,9 +2,11 @@
 
 from __future__ import print_function
 
+import warnings
 from collections import namedtuple
 from itertools import chain
 from six import iteritems
+import sys
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -59,7 +61,21 @@ class Problem(Component):
         name : str
              the name of the variable to set into the unknowns vector
         """
-        self.root._varmanager.unknowns[name] = val
+        self.root[name] = val
+
+    def subsystem(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.subsystem(name)
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -99,6 +115,7 @@ class Problem(Component):
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
 
+        # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
         # check for parameters that are not connected to a source/unknown
@@ -109,9 +126,9 @@ class Problem(Component):
 
         if hanging_params:
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
-            raise RuntimeError(msg)
+            warnings.warn(msg)
 
-        # propagate top level metadata, e.g., unit_conv to subsystems
+        # propagate top level metadata, e.g. unit_conv, to subsystems
         self.root._update_sub_unit_conv()
 
         # Given connection information, create mapping from system pathname
@@ -185,22 +202,16 @@ class Problem(Component):
         # Group.
 
         root = self.root
-        varmanager = root._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        dparams = varmanager.dparams
-        dunknowns = varmanager.dunknowns
-        dresids = varmanager.dresids
+        unknowns = root.unknowns
 
         n_edge = len(unknowns.vec)
         rhs = np.zeros((n_edge, ))
 
         # Prepare model for calculation
         root.clear_dparams()
-        dunknowns.vec[:] = 0.0
-        dresids.vec[:] = 0.0
-        root.jacobian(params, unknowns, resids)
+        root.dunknowns.vec[:] = 0.0
+        root.dresids.vec[:] = 0.0
+        root.jacobian(root.params, unknowns, root.resids)
 
         # Initialized Jacobian
         if return_format == 'dict':
@@ -245,7 +256,6 @@ class Problem(Component):
 
                 # Call GMRES to solve the linear system
                 dx = root.ln_solver.solve(rhs, root, mode)
-                #print "dx",dx
 
                 rhs[irhs] = 0.0
 
@@ -274,12 +284,18 @@ class Problem(Component):
 
                 j += 1
 
-        #print params, '\n', unknowns, '\n', J
         return J
 
-    def check_partial_derivatives(self):
+    def check_partial_derivatives(self, out_stream=sys.stdout):
         """ Checks partial derivatives comprehensively for all components in
         your model.
+
+        Parameters
+        ----------
+
+        out_stream : file_like
+            Where to send human readable output. Default is sys.stdout. Set to
+            None to suppress.
 
         Returns
         -------
@@ -296,17 +312,20 @@ class Problem(Component):
         params = varmanager.params
         unknowns = varmanager.unknowns
         resids = varmanager.resids
+
+        # Linearize the model
         root.jacobian(params, unknowns, resids)
 
         data = {}
-        jac_fwd = {}
-        jac_rev = {}
-        jac_fd = {}
+        skip_keys = []
         model_hierarchy = _find_all_comps(self.root)
 
-        # Check derivative calculations
-        for group, comps in model_hierarchy.items():
+        if out_stream is not None:
+            out_stream.write('Partial Derivatives Check\n\n')
 
+        # Check derivative calculations for all comps at every level of the
+        # system hierarchy.
+        for group, comps in model_hierarchy.items():
             for comp in comps:
 
                 # No need to check comps that don't have any derivs.
@@ -315,18 +334,21 @@ class Problem(Component):
 
                 cname = comp.pathname
                 data[cname] = {}
-                jac_fwd[cname] = {}
-                jac_rev[cname] = {}
-                jac_fd[cname] = {}
-                skip_keys = []
+                jac_fwd = {}
+                jac_rev = {}
+                jac_fd = {}
 
-                view = group._views[comp.name]
-                params = view.params
-                unknowns = view.unknowns
-                resids = view.resids
-                dparams = view.dparams
-                dunknowns = view.dunknowns
-                dresids = view.dresids
+                params = comp.params
+                unknowns = comp.unknowns
+                resids = comp.resids
+                dparams = comp.dparams
+                dunknowns = comp.dunknowns
+                dresids = comp.dresids
+
+                if out_stream is not None:
+                    out_stream.write('-'*(len(cname)+15) + '\n')
+                    out_stream.write("Component: '%s'\n" % cname)
+                    out_stream.write('-'*(len(cname)+15) + '\n')
 
                 # Figure out implicit states for this comp
                 states = []
@@ -336,32 +358,25 @@ class Problem(Component):
 
                 # Create all our keys and allocate Jacs
                 for p_name in chain(params, states):
-                    if p_name in states:
-                        dinputs = dunknowns
-                    else:
-                        dinputs = dparams
 
-                        p_size = np.size(dinputs[p_name])
+                    dinputs = dunknowns if p_name in states else dparams
+                    p_size = np.size(dinputs[p_name])
 
+                    # Check dimensions of user-supplied Jacobian
                     for u_name in unknowns:
                         data[cname][(u_name, p_name)] = {}
 
                         u_size = np.size(dunknowns[u_name])
-                        # Check dimensions of user-supplied Jacobian
                         if comp._jacobian_cache is not None:
 
-                            # Big boy rules
+                            # Go no further if we aren't defined.
                             if (u_name, p_name) not in comp._jacobian_cache:
-                                msg = "No derivatives defined between the" + \
-                                " variables '{}' and '{}', in '{}' so it " + \
-                                "will be skipped."
-                                msg = msg.format(p_name, u_name, cname)
-                                print(msg)
                                 skip_keys.append((u_name, p_name))
                                 continue
 
                             user = comp._jacobian_cache[(u_name, p_name)].shape
 
+                            # User may use floats for scalar jacobians
                             if len(user) < 2:
                                 user = (user[0], 1 )
 
@@ -373,8 +388,8 @@ class Problem(Component):
                                                  u_size)
                                 raise ValueError(msg)
 
-                        jac_fwd[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
-                        jac_rev[cname][(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
+                        jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
                 # Reverse derivatives first
                 for u_name in dresids:
@@ -396,21 +411,14 @@ class Problem(Component):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
-                            if p_name in states:
-                                dinputs = dunknowns
-                            else:
-                                dinputs = dparams
+                            dinputs = dunknowns if p_name in states else dparams
 
-                            jac_rev[cname][(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+                            jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
                 for p_name in chain(params, states):
 
-                    if p_name in states:
-                        dinputs = dunknowns
-                    else:
-                        dinputs = dparams
-
+                    dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
 
                     # Send columns of identity
@@ -429,7 +437,7 @@ class Problem(Component):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
-                            jac_fwd[cname][(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                            jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
 
                 # Finite Difference goes last
                 dresids.vec[:] = 0.0
@@ -439,23 +447,21 @@ class Problem(Component):
                                                  step_size = 1e-6)
 
                 # Start computing our metrics.
+                started = False
                 for p_name in chain(params, states):
                     for u_name in resids:
 
                         ldata = data[cname][(u_name, p_name)]
 
-                        if (u_name, p_name) in skip_keys:
-                            ldata['magnitude'] = None
-                            ldata['abs error'] = None
-                            ldata['rel error'] = None
-                            ldata['J_fd'] = None
-                            ldata['J_fwd'] = None
-                            ldata['J_rev'] = None
-                            continue
-
-                        Jsub_for = jac_fwd[cname][(u_name, p_name)]
-                        Jsub_rev = jac_rev[cname][(u_name, p_name)]
                         Jsub_fd = jac_fd[cname][(u_name, p_name)]
+
+                        if (u_name, p_name) in skip_keys:
+                            Jsub_for = np.zeros(Jsub_fd.shape)
+                            Jsub_rev = np.zeros(Jsub_fd.shape)
+                        else:
+                            Jsub_for = jac_fwd[(u_name, p_name)]
+                            Jsub_rev = jac_rev[(u_name, p_name)]
+
                         ldata['J_fd'] = Jsub_fd
                         ldata['J_fwd'] = Jsub_for
                         ldata['J_rev'] = Jsub_rev
@@ -477,6 +483,41 @@ class Problem(Component):
                         rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
 
                         ldata['rel error'] = (rel1, rel2, rel3)
+
+                        if out_stream is None:
+                            continue
+
+                        if started is True:
+                            out_stream.write(' -'*30 + '\n')
+                        else:
+                            started = True
+
+                        # Optional file_like output
+                        out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
+
+                        out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                        out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                        out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+
+                        out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                        out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                        out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+
+                        out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                        out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                        out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+
+                        out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                        out_stream.write(str(Jsub_for))
+                        out_stream.write('\n\n')
+                        out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                        out_stream.write(str(Jsub_rev))
+                        out_stream.write('\n\n')
+                        out_stream.write('    Raw FD Derivative (Jfor)\n\n')
+                        out_stream.write(str(Jsub_fd))
+                        out_stream.write('\n\n')
+
+
 
         return data
 
@@ -543,13 +584,9 @@ def _find_all_comps(group):
     """ Recursive function that assembles a dictionary whose keys are Group
     instances and whos values are lists of Component instances."""
 
-    components = group.components()
-    subgroups = group.subgroups()
-
     data = {group:[]}
-    for c_name, c in components:
+    for c_name, c in group.components():
         data[group].append(c)
-    for sg_name, sg in subgroups:
-        sub_data = _find_all_comps(sg)
-        data.update(sub_data)
+    for sg_name, sg in group.subgroups():
+        data.update(_find_all_comps(sg))
     return data

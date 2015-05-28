@@ -4,7 +4,7 @@
 class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
     Problem, and every problem has a Driver. Driver is the simplest driver that
-    runs (solves using solve_nonlinder) a problem once.
+    runs (solves using solve_nonlinear) a problem once.
     """
 
     def __init__(self):
@@ -33,10 +33,4 @@ class Driver(object):
         system : `System`
             `System` that our parent `Problem` owns.
         """
-
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-
-        system.solve_nonlinear(params, unknowns, resids)
+        system.solve_nonlinear()

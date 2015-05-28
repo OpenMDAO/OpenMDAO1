@@ -2,7 +2,6 @@
 
 from collections import OrderedDict
 import functools
-from itertools import chain
 from six import iteritems
 from six.moves import range
 
@@ -10,6 +9,9 @@ from six.moves import range
 import numpy as np
 
 from openmdao.core.system import System
+from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.varmanager import create_views
+
 
 '''
 Object to represent default value for `add_output`.
@@ -19,8 +21,8 @@ _NotSet = object()
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
-    variables and operates on its inputs to produce unknowns, which can be
-    excplicit outputs or implicit states.
+    variables and operates on its params to produce unknowns, which can be
+    explicit outputs or implicit states.
     """
 
     def __init__(self):
@@ -28,6 +30,7 @@ class Component(System):
         self._post_setup = False
 
         self._jacobian_cache = {}
+        self._vecs = None
 
     def _get_initial_val(self, val, shape):
         if val is _NotSet:
@@ -45,27 +48,69 @@ class Component(System):
             msg = msg.format(var_type=var_type, name=name)
             raise ValueError(msg)
 
-    def add_param(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'param', val, kwargs.get('shape'))
+    def _add_variable(self, name, val, var_type, **kwargs):
+        shape = kwargs.get('shape')
+        self._check_val(name, var_type, val, shape)
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
-        self._params_dict[name] = args
+        args['val'] = self._get_initial_val(val, shape)
+        if shape is not None and isinstance(shape, int):
+            if shape > 1:
+                args['shape'] = (shape,)
+        return args
+
+    def add_param(self, name, val=_NotSet, **kwargs):
+        self._params_dict[name] = self._add_variable(name, val, 'param', **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'output', val, kwargs.get('shape'))
-        self._check_name(name)
-        args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
-        self._unknowns_dict[name] = args
+        self._unknowns_dict[name] = self._add_variable(name, val, 'output', **kwargs)
 
     def add_state(self, name, val=_NotSet, **kwargs):
-        self._check_val(name, 'state', val, kwargs.get('shape'))
-        self._check_name(name)
-        args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, kwargs.get('shape'))
+        args = self._add_variable(name, val, 'state', **kwargs)
         args['state'] = True
         self._unknowns_dict[name] = args
+
+    @property
+    def unknowns(self):
+        try:
+            return self._vecs.unknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
+
+    @property
+    def dunknowns(self):
+        try:
+            return self._vecs.dunknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
+
+    @property
+    def params(self):
+        try:
+            return self._vecs.params
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
+
+    @property
+    def dparams(self):
+        try:
+            return self._vecs.dparams
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
+
+    @property
+    def resids(self):
+        try:
+            return self._vecs.resids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
+
+    @property
+    def dresids(self):
+        try:
+            return self._vecs.dresids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     def _check_name(self, name):
         if self._post_setup:
@@ -105,8 +150,47 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+                       top_unknowns=None, impl=BasicImpl):
+        """
+        Set up local `VecWrapper`s to store this component's variables.
+
+        Parameters
+        ----------
+        param_owners : dict
+            a dictionary mapping `System` pathnames to the pathnames of parameters
+            they are reponsible for propagating. (ignored)
+
+        connections : dict
+            a dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to
+
+        parent_vm : `VarManager`, optional
+            the `VarManager` for the parent `Group`, if any.
+
+        top_unknowns : `VecWrapper`, optional
+            the `Problem` level unknowns `VecWrapper`
+
+        impl : an implementation factory, optional
+            Specifies the factory object used to create `VecWrapper` objects.
+        """
+        if not self.is_active():
+            return
+
+        self._vecs = create_views(top_unknowns, parent_vm, self.comm, self.pathname,
+                                  self._params_dict, self._unknowns_dict, [], connections)
+
+        params = self._vecs.params
+
+        # create params vec entries for any unconnected params
+        for pathname, meta in self._params_dict.items():
+            name = params._scoped_abs_name(pathname)
+            if name not in params:
+                params._add_unconnected_var(pathname, meta)
+
     def apply_nonlinear(self, params, unknowns, resids):
-        """ Evaluates the residuals for this component. For explicit
+        """
+        Evaluates the residuals for this component. For explicit
         components, the residual is the output produced by the current params
         minus the previously calculated output. Thus, an explicit component
         must execute its solve nonlinear method. Implicit components should
@@ -130,156 +214,14 @@ class Component(System):
 
         self.solve_nonlinear(params, unknowns, resids)
 
-        # Unknowns are restored to the old values too; apply_nonlinear does
+        # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
-    def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None):
-        """Finite difference across all unknowns in component w.r.t. all params.
-
-        Parameters
-        ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
-
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
-
-        resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
-
-        step_size : float, optional
-            Override all other specifications of finite difference step size.
-
-        form : float, optional
-            Override all other specifications of form. Can be forward,
-            backward, or central.
-
-        step_type : float, optional
-            Override all other specifications of step type. Can be absollute
-            or relative..
-
-        Returns
-        -------
-        dict
-            Dictionary whose keys are tuples of the form ('unknown', 'param')
-            and whose values are ndarrays
-        """
-
-        # Function call arguments have precedence over the system dict.
-        if step_size == None:
-            step_size = self.fd_options['step_size']
-        if form == None:
-            form = self.fd_options['form']
-        if step_type == None:
-            step_type = self.fd_options['step_type']
-
-        jac = {}
-        resid_cache = resids.vec.copy()
-        resid_cache2 = None
-
-        states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
-
-        # Compute gradient for this param or state.
-        for p_name in chain(params, states):
-
-            if p_name in states:
-                inputs = unknowns
-            else:
-                inputs = params
-
-            mydict = {}
-            for key, val in self._params_dict.items():
-                if val['relative_name'] == p_name:
-                    mydict = val
-                    break
-
-            # Local settings for this var
-            if 'fd_step_size' in mydict:
-                fdstep = mydict['fd_step_size']
-            else:
-                fdstep = step_size
-            if 'fd_step_type' in mydict:
-                fdtype = mydict['fd_step_type']
-            else:
-                fdtype = step_type
-            if 'fd_form' in mydict:
-                fdform = mydict['fd_form']
-            else:
-                fdform = form
-
-            # Size our Inputs
-            p_size = np.size(inputs[p_name])
-
-            # Size our Outputs
-            for u_name in unknowns:
-                u_size = np.size(unknowns[u_name])
-                jac[u_name, p_name] = np.ones((u_size, p_size))
-
-            # Finite Difference each index in array
-            for idx in range(p_size):
-
-                # Relative or Absolute step size
-                if fdtype == 'relative':
-                    step = inputs.flat[p_name][idx] * fdstep
-                    if step < fdstep:
-                        step = fdstep
-                else:
-                    step = fdstep
-
-                if fdform == 'forward':
-
-                    inputs.flat[p_name][idx] += step
-
-                    self.apply_nonlinear(params, unknowns, resids)
-
-                    inputs.flat[p_name][idx] -= step
-
-                    # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (1.0/step)
-
-                elif fdform == 'backward':
-
-                    inputs.flat[p_name][idx] -= step
-
-                    self.apply_nonlinear(params, unknowns, resids)
-
-                    inputs.flat[p_name][idx] += step
-
-                    # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (-1.0/step)
-
-                elif fdform == 'central':
-
-                    inputs.flat[p_name][idx] += step
-                    self.apply_nonlinear(params, unknowns, resids)
-                    resids2 = resids.vec - resid_cache
-
-                    resids.vec[:] = resid_cache
-
-                    inputs.flat[p_name][idx] -= 2.0*step
-                    self.apply_nonlinear(params, unknowns, resids)
-
-                    resids.vec[:] -= resid_cache + resids2
-                    resids.vec[:] *= (-0.5/step)
-
-                for u_name in unknowns:
-                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
-
-                # Restore old residual
-                resids.vec[:] = resid_cache
-
-        return jac
-
     def jacobian(self, params, unknowns, resids):
-        """ Returns Jacobian. Returns None unless component overides and
+        """
+        Returns Jacobian. Returns None unless component overides and
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 

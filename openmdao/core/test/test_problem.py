@@ -3,6 +3,7 @@
 import unittest
 import numpy as np
 from six import text_type, PY3
+import warnings
 
 from openmdao.components.linear_system import LinearSystem
 from openmdao.core.component import Component
@@ -11,7 +12,7 @@ from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
-from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleNoflatGroup
+from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 
 if PY3:
     def py3fix(s):
@@ -80,19 +81,17 @@ class TestProblem(unittest.TestCase):
             self.fail("Error expected")
 
     def test_hanging_params(self):
-
+        # test that a warning is issued for an unconnected parameter
         root  = Group()
         root.add('ls', LinearSystem(size=10))
 
         prob = Problem(root=root)
 
-        try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             prob.setup()
-        except Exception as error:
-            self.assertEquals(text_type(error),
-                "Parameters ['ls:A', 'ls:b'] have no associated unknowns.")
-        else:
-            self.fail("Error expected")
+            assert len(w) == 1, "Warning expected."
+            self.assertEquals("Parameters ['ls:A', 'ls:b'] have no associated unknowns.", str(w[-1].message))
 
     def test_calc_gradient_interface_errors(self):
 
@@ -281,7 +280,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_simplest_run_w_promote(self):
@@ -295,7 +294,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
         prob.run()
-        result = root._varmanager.unknowns['mycomp:y']
+        result = root.unknowns['mycomp:y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_variable_access(self):
@@ -314,12 +313,12 @@ class TestProblem(unittest.TestCase):
 
         self.assertEqual(prob['G2:C1:x'], 5.)                # default output from ParamComp
         self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
-        self.assertEqual(prob['G3:C3:x', 'params'], 0.)      # initial value for a parameter
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)   # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G3:C3').params['x'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob['G2:G1:C2:x', 'params'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)      # initial value for a parameter
 
         # __setitem__
         prob['G2:G1:C2:y'] = 99.
@@ -334,15 +333,78 @@ class TestProblem(unittest.TestCase):
 
         self.assertAlmostEqual(prob['G3:C4:y'], 40.)
 
-    def test_noflat_run(self):
-        prob = Problem(root=ExampleNoflatGroup())
+    def test_byobj_run(self):
+        prob = Problem(root=ExampleByObjGroup())
 
         prob.setup()
         prob.run()
 
         self.assertEqual(prob['G3:C4:y'], 'fooC2C3C4')
 
+    def test_scalar_sizes(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_param('x', shape=1)
+                self.add_output('y', shape=1)
 
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', shape=2)
+                self.add_output('y', shape=2)
+
+        class C(Component):
+            def __init__(self):
+                super(C, self).__init__()
+                self.add_param('x', shape=3)
+                self.add_output('y', shape=3)
+
+        # Scalar Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('A1', A(), promotes=['x'])
+        root.add('A2', A())
+        root.connect('A1:y', 'A2:x')
+        prob.setup()
+
+        # Array Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        root.add('B2', B())
+        root.connect('B1:y', 'B2:x')
+        prob.setup()
+
+        # Mismatched Array Values
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        root.add('C1', C())
+        root.connect('B1:y', 'C1:x')
+        with self.assertRaises(ConnectError) as cm:
+            prob.setup()
+        expected_error_message = "Shape '(2,)' of the source "\
+                                  "'B1:y' must match the shape '(3,)' "\
+                                  "of the target 'C1:x'"
+        self.assertEquals(expected_error_message, str(cm.exception))
+
+        # Mismatched Scalar to Array Value
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('B1', B(), promotes=['x'])
+        with self.assertRaises(ConnectError) as cm:
+            prob.setup()
+
+        expected_error_message = py3fix("Type '<type 'float'>' of source "
+                                  "'x' must be the same as type "
+                                  "'<type 'numpy.ndarray'>' of target "
+                                  "'x'")
+        self.assertEquals(expected_error_message, str(cm.exception))
 
 if __name__ == "__main__":
     unittest.main()

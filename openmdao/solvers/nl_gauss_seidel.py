@@ -15,11 +15,11 @@ class NLGaussSeidel(NonLinearSolver):
 
         opt = self.options
         opt.add_option('atol', 1e-6,
-                       doc='Absolute convergence tolerance.')
+                       desc='Absolute convergence tolerance.')
         opt.add_option('rtol', 1e-6,
-                       doc='Relative convergence tolerance.')
+                       desc='Relative convergence tolerance.')
         opt.add_option('maxiter', 100,
-                       doc='Maximum number of iterations.')
+                       desc='Maximum number of iterations.')
 
 
     def solve(self, params, unknowns, resids, system):
@@ -52,8 +52,7 @@ class NLGaussSeidel(NonLinearSolver):
         if maxiter == 1:
             return
 
-        varmanager = system._varmanager
-        resids = varmanager.resids
+        resids = system.resids
 
         # Evaluate Norm
         system.apply_nonlinear(params, unknowns, resids)
