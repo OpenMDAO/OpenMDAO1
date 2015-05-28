@@ -9,7 +9,7 @@ from six import reraise, PY3
 def _redirect_streams(to_fd):
     """
     Redirect stdout/stderr to the given file descriptor.
-    Based on: http://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python/
+    Based on: http://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python/.
     """
 
     original_stdout_fd = sys.stdout.fileno()
@@ -79,7 +79,7 @@ def get_comm_if_active(system, comm=None):
 
     Returns
     -------
-    MPI communicator or a fake MPI commmunicator
+    MPI communicator or a fake MPI commmunicator.
     """
     if MPI:
         req, max_req = system.get_req_procs()

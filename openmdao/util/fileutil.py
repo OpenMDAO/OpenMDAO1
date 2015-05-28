@@ -205,7 +205,7 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
 
 def _file_dir_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files and directories under
-    the given directory, with optional file and directory filtering..
+    the given directory, with optional file and directory filtering.
 
     Parameters
     ----------

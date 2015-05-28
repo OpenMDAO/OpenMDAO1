@@ -44,7 +44,7 @@ class SimpleCompDerivMatVec(SimpleComp):
 
 class SimpleCompDerivJac(SimpleComp):
     """ The simplest component you can imagine, this time with derivatives
-    defined using Jacobian to return a jacobian. """
+    defined using Jacobian to return a Jacobian. """
 
     def jacobian(self, params, unknowns, resids):
         """Returns the Jacobian."""
@@ -55,7 +55,7 @@ class SimpleCompDerivJac(SimpleComp):
 
 
 class SimpleArrayComp(Component):
-    '''A fairly simple array component'''
+    """A fairly simple array component."""
 
     def __init__(self):
         super(SimpleArrayComp, self).__init__()
@@ -74,7 +74,7 @@ class SimpleArrayComp(Component):
         # print(self.name, "ran", params['x'], unknowns['y'])
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
 
         dy1_dx1 = 2.0
         dy1_dx2 = 7.0
@@ -87,7 +87,7 @@ class SimpleArrayComp(Component):
 
 
 class ArrayComp2D(Component):
-    '''2D Array component'''
+    """2D Array component."""
 
     def __init__(self):
         super(ArrayComp2D, self).__init__()
@@ -99,7 +99,7 @@ class ArrayComp2D(Component):
         self.add_output('y', np.zeros((2, 2)))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         x = params['x']
         y = np.zeros((2, 2))
@@ -119,7 +119,7 @@ class ArrayComp2D(Component):
         unknowns['y'] = y
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
 
         J = {}
         J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
@@ -130,7 +130,7 @@ class ArrayComp2D(Component):
 
 
 class SimpleSparseArrayComp(Component):
-    '''A fairly simple sparse array component'''
+    """A fairly simple sparse array component."""
 
     def __init__(self):
         super(SimpleSparseArrayComp, self).__init__()
@@ -142,14 +142,14 @@ class SimpleSparseArrayComp(Component):
         self.add_output('y', np.zeros([4]))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         unknowns['y'][0] = 2.0*params['x'][0] + 7.0*params['x'][3]
         unknowns['y'][2] = 5.0*params['x'][1] - 3.0*params['x'][2]
         # print(self.name, "ran", params['x'], unknowns['y'])
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
 
         dy1_dx1 = 2.0
         dy1_dx2 = 7.0
@@ -190,7 +190,7 @@ class SimpleImplicitComp(Component):
         self.atol = 1.0e-6
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Simple iterative solve. (Babylonian method) """
+        """ Simple iterative solve. (Babylonian method)."""
 
         x = params['x']
         z = unknowns['z']
@@ -210,7 +210,7 @@ class SimpleImplicitComp(Component):
         resids['z'] = eps
 
     def apply_nonlinear(self, params, unknowns, resids):
-        """ Don't solve; just calculate the redisual. """
+        """ Don't solve; just calculate the residual."""
 
         x = params['x']
         z = unknowns['z']
@@ -220,7 +220,7 @@ class SimpleImplicitComp(Component):
         resids['y'] = x + 2.0*z - unknowns['y']
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
 
         J = {}
 
@@ -248,7 +248,7 @@ class SimpleNoflatComp(Component):
         self.add_output('y', '')
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         unknowns['y'] = params['x']+self.name
 
@@ -277,7 +277,7 @@ class Paraboloid(Component):
         unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
 
         x = params['x']
         y = params['y']
@@ -306,7 +306,7 @@ class FanOutComp1(Component):
         unknowns['y'] = 3.0*params['x']
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
         J = {}
         J[('y', 'x')] = np.array([3.0])
         return J
@@ -324,12 +324,12 @@ class FanOutComp2(Component):
         self.add_output('y', 0.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         unknowns['y'] = -2.0*params['x']
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
         J = {}
         J[('y', 'x')] = np.array([-2.0])
         return J
@@ -347,12 +347,12 @@ class FanOutComp3(Component):
         self.add_output('y', 0.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         unknowns['y'] = 5.0*params['x']
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
         J = {}
         J[('y', 'x')] = np.array([5.0])
         return J
@@ -370,12 +370,12 @@ class FanInTarget(Component):
         self.add_output('y', 0.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ Doesn't do much."""
 
         unknowns['y'] = 3.0*params['x1'] * 7.0*params['x2']
 
     def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives"""
+        """Analytical derivatives."""
         J = {}
         J[('y', 'x1')] = np.array([3.0])
         J[('y', 'x2')] = np.array([7.0])
@@ -418,7 +418,7 @@ class FanOutGrouped(Group):
 
 
 class FanIn(Group):
-    """ Topology where two comp feed a single comp."""
+    """ Topology where two comps feed a single comp."""
 
     def __init__(self):
         super(FanIn, self).__init__()
@@ -436,7 +436,7 @@ class FanIn(Group):
 
 
 class FanInGrouped(Group):
-    """ Topology where two comp feed a single comp."""
+    """ Topology where two comps feed a single comp."""
 
     def __init__(self):
         super(FanInGrouped, self).__init__()

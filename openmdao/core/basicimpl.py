@@ -2,7 +2,7 @@ from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 
 class BasicImpl(object):
-    """Basic vector and data transfer implementation factory"""
+    """Basic vector and data transfer implementation factory."""
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
@@ -11,8 +11,8 @@ class BasicImpl(object):
 
         Parameters
         ----------
-        comm : a fake communicator or None
-            This arg is ignored
+        comm : a fake communicator or None.
+            This arg is ignored.
 
         Returns
         -------
@@ -27,8 +27,8 @@ class BasicImpl(object):
 
         Parameters
         ----------
-        comm : a fake communicator or None
-            This arg is ignored
+        comm : a fake communicator or None.
+            This arg is ignored.
 
         Returns
         -------
@@ -40,31 +40,31 @@ class BasicImpl(object):
     def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         """
         Create an object for performing data transfer between source
-        and target vectors
+        and target vectors.
 
         Parameters
         ----------
         varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
+            The `VarManager` that managers this data transfer.
 
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         flat_conns : dict
-            mapping of flattenable variables to the source variables that
-            they are connected to
+            Mapping of flattenable variables to the source variables that
+            they are connected to.
 
         noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
-            they are connected to
+            Mapping of non-flattenable variables to the source variables that
+            they are connected to.
 
         Returns
         -------
         `DataXfer`
-            a `DataXfer` object
+            A `DataXfer` object.
         """
         return DataXfer(src_idxs, tgt_idxs, flat_conns, noflat_conns)
 

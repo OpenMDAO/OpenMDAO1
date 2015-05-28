@@ -8,12 +8,12 @@ from openmdao.core.dataxfer import DataXfer
 from petsc4py import PETSc
 
 class PetscImpl(object):
-    """PETSc vector and data transfer implementation factory"""
+    """PETSc vector and data transfer implementation factory."""
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
         """
-        Create a`PetscSrcVecWrapper`
+        Create a`PetscSrcVecWrapper`.
 
         Returns
         -------
@@ -24,7 +24,7 @@ class PetscImpl(object):
     @staticmethod
     def create_tgt_vecwrapper(pathname, comm):
         """
-        Create a `PetscTgtVecWrapper`
+        Create a `PetscTgtVecWrapper`.
 
         Returns
         -------
@@ -36,31 +36,31 @@ class PetscImpl(object):
     def create_data_xfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
         """
         Create an object for performing data transfer between source
-        and target vectors
+        and target vectors.
 
         Parameters
         ----------
         varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
+            The `VarManager` that managers this data transfer.
 
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         flat_conns : dict
-            mapping of flattenable variables to the source variables that
-            they are connected to
+            Mapping of flattenable variables to the source variables that
+            they are connected to.
 
         noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
-            they are connected to
+            Mapping of non-flattenable variables to the source variables that
+            they are connected to.
 
         Returns
         -------
         `PetscDataXfer`
-            a `PetscDataXfer` object
+            A `PetscDataXfer` object.
         """
         return PetscDataXfer(varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns)
 
@@ -119,7 +119,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         ndarray
-            array containing local sizes of flattenable unknown variables for
+            Array containing local sizes of flattenable unknown variables for
             every process in our communicator.
         """
         sizes = [m['size'] for m in self.values() if not m.get('noflat')]
@@ -160,7 +160,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Parameters
         ----------
         name : str
-            name of variable to get the indices for
+            Name of variable to get the indices for.
 
         Returns
         -------
@@ -179,7 +179,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         float
-            The norm of the distributed vector
+            The norm of the distributed vector.
         """
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
@@ -197,10 +197,10 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
+            `VecWrapper` of parameters from the parent `System`.
 
         params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
+            Dictionary of parameter absolute name mapped to metadata dict.
 
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
@@ -229,7 +229,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Returns
         -------
         ndarray
-            array containing sum of local sizes of flattenable params.
+            Array containing sum of local sizes of flattenable params.
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('noflat')])
@@ -238,27 +238,29 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
 
 class PetscDataXfer(DataXfer):
+    """
+    Parameters
+    ----------
+    varmanager : `VarManager`
+        The `VarManager` that managers this data transfer.
+
+    src_idxs : array
+        Indices of the source variables in the source vector.
+
+    tgt_idxs : array
+        Indices of the target variables in the target vector.
+
+    flat_conns : dict
+        Mapping of flattenable variables to the source variables that
+        they are connected to.
+
+    noflat_conns : dict
+        Mapping of non-flattenable variables to the source variables that
+        they are connected to.
+    """	
+    
     def __init__(self, varmanager, src_idxs, tgt_idxs, flat_conns, noflat_conns):
-        """
-        Parameters
-        ----------
-        varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
-
-        src_idxs : array
-            indices of the source variables in the source vector
-
-        tgt_idxs : array
-            indices of the target variables in the target vector
-
-        flat_conns : dict
-            mapping of flattenable variables to the source variables that
-            they are connected to
-
-        noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
-            they are connected to
-        """
+        
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
                                             flat_conns, noflat_conns)
 
@@ -287,21 +289,21 @@ class PetscDataXfer(DataXfer):
         Parameters
         ----------
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         flat_conns : dict
-            mapping of flattenable variables to the source variables that
-            they are connected to
+            Mapping of flattenable variables to the source variables that
+            they are connected to.
 
         noflat_conns : dict
-            mapping of non-flattenable variables to the source variables that
-            they are connected to
+            Mapping of non-flattenable variables to the source variables that
+            they are connected to.
 
         mode : 'fwd' or 'rev' (optional)
-            direction of the data transfer, source to target ('fwd', the default)
+            Direction of the data transfer, source to target ('fwd', the default)
             or target to source ('rev').
         """
         if mode == 'rev':

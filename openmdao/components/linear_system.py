@@ -17,7 +17,7 @@ class LinearSystem(Component):
         unknowns['x'] = np.linalg.solve(params['A'], params['b'])
 
     def apply_nonlinear(self, params, unknowns, resids):
-        ''' Evaluating residual for given state '''
+        ''' Evaluating residual for given state. '''
 
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 

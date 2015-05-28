@@ -24,9 +24,9 @@ class _flat_dict(object):
 class _NoflatWrapper(object):
     """
     We have to wrap noflat values in these in order to have param vec entries
-    that are shared between parents and children all share the same object
+    that are shared between parents and children. All share the same object
     reference, so that when the internal val attribute is changed, all
-    `VecWrappers` that contain a reference to the wrapper will see the updated
+    `VecWrapper`s that contain a reference to the wrapper will see the updated
     value.
     """
     def __init__(self, val):
@@ -39,9 +39,9 @@ class VecWrapper(object):
     Attributes
     ----------
     idx_arr_type : dtype
-        string indicating how index arrays are to be represented
+        String indicating how index arrays are to be represented
         (the value 'i' indicates an numpy integer array, other
-        implementations (petsc, etc) will define this differently)
+        implementations (petsc, etc) will define this differently).
     """
 
     idx_arr_type = 'i'
@@ -69,16 +69,16 @@ class VecWrapper(object):
             raise KeyError(msg)
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named var
+        """Retrieve unflattened value of named var.
 
         Parameters
         ----------
         name : str
-            name of variable to get the value for
+            Name of variable to get the value for.
 
         Returns
         -------
-            the unflattened value of the named variable
+            The unflattened value of the named variable.
         """
         meta = self._get_metadata(name)
 
@@ -109,15 +109,15 @@ class VecWrapper(object):
                 return meta['val'].reshape(shape)
 
     def __setitem__(self, name, value):
-        """Set the value of the named variable
+        """Set the value of the named variable.
 
         Parameters
         ----------
         name : str
-            name of variable to get the value for
+            Name of variable to get the value for.
 
         value :
-            the unflattened value of the named variable
+            The unflattened value of the named variable.
         """
         meta = self._get_metadata(name)
 
@@ -146,15 +146,15 @@ class VecWrapper(object):
         """
         Returns
         -------
-            the number of keys (variables) in this vector
+            The number of keys (variables) in this vector.
         """
         return len(self._vardict)
 
     def __contains__(self, key):
         """
         Returns
-        _______
-            a boolean indicating if the given key (variable name) is in this vector
+        -------
+            A boolean indicating if the given key (variable name) is in this vector.
         """
 
         return key in self._vardict
@@ -162,8 +162,8 @@ class VecWrapper(object):
     def __iter__(self):
         """
         Returns
-        _______
-            a dictionary iterator over the items in _vardict
+        -------
+            A dictionary iterator over the items in _vardict.
         """
         return self._vardict.__iter__()
 
@@ -172,28 +172,28 @@ class VecWrapper(object):
         """
         Returns
         -------
-            the keys (variable names) in this vector
+            The keys (variable names) in this vector.
         """
         return self._vardict.keys()
 
     def items(self):
-        """Iterate over the first metadata for each variable
+        """Iterate over the first metadata for each variable.
 
         Returns
         -------
             iterator
-                iterator over the first metadata for each variable
+                Iterator over the first metadata for each variable.
         """
         for name, metadata_entry in self._vardict.items():
             yield name, metadata_entry
 
     def values(self):
-        """Iterate over the first metadata for each variable
+        """Iterate over the first metadata for each variable.
 
         Returns
         -------
             iterator
-                iterator over the first metadata for each variable
+                Iterator over the first metadata for each variable.
         """
         for metadata_entry in self._vardict.values():
             yield metadata_entry
@@ -201,27 +201,27 @@ class VecWrapper(object):
     def metadata(self, name):
         """Returns the metadata for the named variable. A target variable may
         have multiple sets of metadata due to having connections to multiple
-        source variables, therefore a list of metadata dictionaries is returned.
+        source variables; therefore, a list of metadata dictionaries is returned.
 
         Parameters
         ----------
         name : str
-            name of variable to get the metadata for
+            Name of variable to get the metadata for.
 
         Returns
         -------
             list of dict
-                a list of the metadata dictionaries for the named variable
+                A list of the metadata dictionaries for the named variable.
         """
         return self._vardict[name]
 
     def get_local_idxs(self, name):
-        """Returns all of the indices for the named variable in this vector
+        """Returns all of the indices for the named variable in this vector.
 
         Parameters
         ----------
         name : str
-            name of variable to get the indices for
+            Name of variable to get the indices for.
 
         Returns
         -------
@@ -254,21 +254,21 @@ class VecWrapper(object):
 
     def get_view(self, comm, varmap):
         """
-        Return a new `VecWrapper` that is a view into this one
+        Return a new `VecWrapper` that is a view into this one.
 
         Parameters
         ----------
         comm : an MPI communicator (real or fake)
-            a communicator that is used in the creation of the view
+            A communicator that is used in the creation of the view.
 
         varmap : dict
-            mapping of variable names in the old `VecWrapper` to the names
-            they will have in the new `VecWrapper`
+            Mapping of variable names in the old `VecWrapper` to the names
+            they will have in the new `VecWrapper`.
 
         Returns
         -------
         `VecWrapper`
-            a new `VecWrapper` that is a view into this one
+            A new `VecWrapper` that is a view into this one.
         """
         view = self.__class__(comm)
         view_size = 0
@@ -305,10 +305,10 @@ class VecWrapper(object):
         Parameters
         ----------
         start : int
-            the starting index
+            The starting index.
 
         end : int
-            the ending index
+            The ending index.
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
 
@@ -320,12 +320,12 @@ class VecWrapper(object):
         Parameters
         ----------
         indices : iterator of ints
-            An iterator of indices
+            An iterator of indices.
 
         Returns
         -------
         ndarray of idx_arr_type
-            Index array
+            Index array.
         """
         return numpy.array(indices, dtype=idx_arr_type)
 
@@ -337,15 +337,15 @@ class VecWrapper(object):
         Parameters
         ----------
         src_idxs : array
-            source indices
+            Source indices.
 
         tgt_idxs : array
-            target indices
+            Target indices.
 
         Returns
         -------
         array
-            the merged index arrays
+            The merged index arrays.
         """
         assert(len(src_idxs) == len(tgt_idxs))
 
@@ -373,12 +373,12 @@ class VecWrapper(object):
         Parameters
         ----------
         abs_name : str
-            Absolute pathname of a variable
+            Absolute pathname of a variable.
 
         Returns
         -------
         rel_name : str
-            Relative name mapped to the given absolute pathname
+            Relative name mapped to the given absolute pathname.
         """
         for rel_name, meta in self._vardict.items():
             if meta['pathname'] == abs_name:
@@ -422,7 +422,7 @@ class VecWrapper(object):
         -------
         str
             The given name as seen from the 'scope' of the `System` that
-            contains this `VecWrapper`
+            contains this `VecWrapper`.
         """
         if self.pathname:
             start = len(self.pathname)+1
@@ -439,11 +439,11 @@ class SrcVecWrapper(VecWrapper):
         Parameters
         ----------
         unknowns_dict : dict
-            dictionary of metadata for unknown variables
+            Dictionary of metadata for unknown variables.
 
         store_noflats : bool (optional)
-            if True, then store non-flattenable (non-differentiable) variables
-            by default only flattenable variables will be stired
+            If True, then store non-flattenable (non-differentiable) variables;
+            by default only flattenable variables will be stored.
 
         """
         vec_size = 0
@@ -483,14 +483,14 @@ class SrcVecWrapper(VecWrapper):
         Parameters
         ----------
         name : str
-            the name of the variable to add
+           The name of the variable to add.
 
         meta : dict
-            metadata for the variable
+            Metadata for the variable.
 
         index : int
-            index into the array where the variable value is to be stored
-            (if flattenable)
+            Index into the array where the variable value is to be stored
+            (if flattenable).
         """
 
         vmeta = meta.copy()
@@ -558,10 +558,10 @@ class TgtVecWrapper(VecWrapper):
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
+            `VecWrapper` of parameters from the parent `System`.
 
         params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
+            Dictionary of parameter absolute name mapped to metadata dict.
 
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
@@ -641,18 +641,18 @@ class TgtVecWrapper(VecWrapper):
         Parameters
         ----------
         pathname : str
-            absolute name of the var being added
+            Absolute name of the var being added.
 
         meta : dict
-            metadata for the variable
+            metadata for the variable.
 
         index : int
-            index into the array where the variable value is to be stored
-            (if flattenable)
+            Index into the array where the variable value is to be stored
+            (if flattenable).
 
         src_meta : dict
-            metadata for the source variable that this target variable is
-            connected to
+            Metadata for the source variable that this target variable is
+            connected to.
 
         store_noflats : bool (optional)
             If True, store unflattenable variables in the `VecWrapper` we're building.
@@ -682,7 +682,7 @@ class TgtVecWrapper(VecWrapper):
             Returns
             -------
             ndarray
-                array containing sum of local sizes of flattenable params.
+                Array containing sum of local sizes of flattenable params.
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('noflat')])

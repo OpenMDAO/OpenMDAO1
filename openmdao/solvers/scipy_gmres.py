@@ -34,14 +34,14 @@ class ScipyGMRES(LinearSolver):
         Parameters
         ----------
         rhs : ndarray
-            Array containing the right hand side for the linear solve. Also
-            possibly a 2D array with multiple right hand sides.
+            Array containing the right-hand side for the linear solve. Also
+            possibly a 2D array with multiple right-hand sides.
 
         system : `System`
             Parent `System` object.
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
 
         Returns
         -------
