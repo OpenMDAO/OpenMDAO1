@@ -168,7 +168,7 @@ class Group(System):
 
 
         if name in self._subsystems.keys():
-            msg = "Group '{gname}' already contains a component with name"\
+            msg = "Group '{gname}' already contains a subsystem with name"\
                             " '{cname}'.".format(gname=self.name, cname=name)
             raise RuntimeError(msg)
         self._subsystems[name] = system

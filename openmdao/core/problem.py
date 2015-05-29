@@ -148,16 +148,13 @@ class Problem(Component):
 
     def run(self):
         """ Runs the Driver in self.driver. """
-        self.driver.run(self.root)
+        if self.root.is_active():
+            self.driver.run(self.root)
 
-        # Should only happen in top Problem?
-        system = self.root
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        for recorder in self.driver.recorders:
-            recorder.record(params, unknowns, resids)
+            # Should only happen in top Problem?
+            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
+            for recorder in self.driver.recorders:
+                recorder.record(params, unknowns, resids)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):

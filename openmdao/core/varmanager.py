@@ -189,8 +189,8 @@ class VarManagerBase(object):
             unknowns, dunknowns, resids, dresids, params, dparams.
         """
         return VecTuple(self.unknowns, self.dunknowns,
-                        self.resids, self.dresids,
-                        self.params, self.dparams)
+                        self.resids,   self.dresids,
+                        self.params,   self.dparams)
 
 
 class VarManager(VarManagerBase):

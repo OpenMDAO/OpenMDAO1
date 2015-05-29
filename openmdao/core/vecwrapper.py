@@ -628,7 +628,6 @@ class TgtVecWrapper(VecWrapper):
                 src_meta = srcvec.metadata(src_rel_name)
 
                 vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
-                vmeta['pathname'] = pathname
 
                 if meta.get('remote'):
                     # we don't store remote vars
@@ -697,18 +696,26 @@ class TgtVecWrapper(VecWrapper):
             we're building.
         """
         vmeta = meta.copy()
+        vmeta['pathname'] = pathname
 
         if not src_meta.get('remote'):
             vmeta['size'] = src_meta['size']
+        elif meta.get('remote'):
+            vmeta['size'] = 0
 
         if 'shape' in src_meta:
             vmeta['shape'] = src_meta['shape']
+            vmeta['size'] = numpy.prod(vmeta['shape'])
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
-        elif vmeta.get('size') and vmeta['size'] > 0:
+        elif not 'size' in vmeta.keys():
+            # if we don't have a size yet for a vec var, then get it from val
+            vmeta['size'] = numpy.prod(vmeta['val'].shape)
+
+        if vmeta.get('size') and vmeta['size'] > 0:
             self._slices[self._scoped_abs_name(pathname)] = (index, index + vmeta['size'])
 
         return vmeta
