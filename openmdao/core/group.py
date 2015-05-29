@@ -185,7 +185,7 @@ class Group(System):
         targets : str OR iterable
             the name of one or more target variables
         """
-        if type(targets) is str:
+        if isinstance(targets, str):
             self._src[targets] = source
         else:
             for target in targets:
