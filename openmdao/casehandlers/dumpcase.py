@@ -74,8 +74,3 @@ class DumpCaseRecorder(_BaseRecorder):
                 self.out.close()
             self.out = None
 
-    def get_iterator(self):
-        """Doesn't really make sense to have a case iterator for dump files, so
-        just return None.
-        """
-        return None
