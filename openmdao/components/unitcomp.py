@@ -69,23 +69,23 @@ class UnitComp(Component):
 
         Parameters
         ----------
-        params : `VecwWrapper`
-            `VecwWrapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters (p)
 
-        unknowns : `VecwWrapper`
-            `VecwWrapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states (u)
 
-        dparams : `VecwWrapper`
-            `VecwWrapper` containing either the incoming vector in forward mode
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns : `VecwWrapper`
-            In forward mode, this `VecwWrapper` contains the incoming vector for
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecwWrapper`
-            `VecwWrapper` containing either the outgoing result in forward mode
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
         mode : string
