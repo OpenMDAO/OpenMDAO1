@@ -61,39 +61,21 @@ class UnitComp(Component):
         """
         unknowns[self.out_name] = params[self.param_name]
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
-                     mode):
+    def jacobian(self, params, unknowns, resids):
         """
-        Multiplies incoming vector by the Jacobian (fwd mode) or the
-        transpose Jacobian (rev mode).
+        Since UnitComp pushes input into output, the Jacobian is the identity.
 
         Parameters
         ----------
-        params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+        params : `VecwWapper`
+            `VecwWapper` containing parameters (p)
 
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+        unknowns : `VecwWapper`
+            `VecwWapper` containing outputs and states (u)
 
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
         """
-
-        if mode == 'fwd':
-            dresids[self.out_name] = dparams[self.param_name]
-
-        elif mode == 'rev':
-            dparams[self.param_name] = dresids[self.out_name]
+        J = {}
+        J[(self.out_name, self.param_name)] = np.eye(np.prod(self.shape))
+        return J
