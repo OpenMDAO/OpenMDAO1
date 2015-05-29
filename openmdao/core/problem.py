@@ -140,6 +140,9 @@ class Problem(Component):
         else:
             self.root._setup_communicators(FakeComm())
 
+        from openmdao.core.mpiwrap import debug
+        debug("Problem setup_vectors...")
+
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)
 

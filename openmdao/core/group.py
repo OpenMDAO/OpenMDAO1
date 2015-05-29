@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from openmdao.core.mpiwrap import debug
+
 from collections import OrderedDict
 import sys
 from six import iteritems
@@ -293,12 +295,9 @@ class Group(System):
 
         self.comm = get_comm_if_active(self, comm)
 
-        if not self.is_active():
-            return
-
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)
-            if sub.is_active():
+            if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
             else:
                 self._set_vars_as_remote(sub)
@@ -332,6 +331,8 @@ class Group(System):
         if not self.is_active():
             return
 
+        debug("%s._setup_vectors..." % self.pathname)
+
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self._varmanager = VarManager(self.comm,
@@ -348,6 +349,7 @@ class Group(System):
                                               my_params)
 
         for name, sub in self.subsystems():
+            debug("%s._setup_vectors for sub %s..." % (self.pathname, sub.pathname))
             sub._setup_vectors(param_owners, connections,
                                parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
@@ -407,12 +409,15 @@ class Group(System):
         sub : `System`
             `System` containing remote variables.
         """
+        debug('%s, _set_vars_as_local' % self.pathname)
         sub_pname = sub.pathname + ':'
-        for name, meta in self._params_dict.items():
+        for name, meta in sub._params_dict.items():
+            debug('sub_pname %s, param name: %s, remote? %s' % (sub_pname, name, name.startswith(sub_pname)))
             if name.startswith(sub_pname):
                 meta['remote'] = True
 
-        for name, meta in self._unknowns_dict.items():
+        for name, meta in sub._unknowns_dict.items():
+            debug('sub_pname %s, unknown name: %s, remote? %s' % (sub_pname, name, name.startswith(sub_pname)))
             if name.startswith(sub_pname):
                 meta['remote'] = True
 
@@ -729,7 +734,7 @@ class Group(System):
 
         for v, meta in uvec.items():
             if verbose:
-                if meta.get('pass_by_obj'):
+                if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 file.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])

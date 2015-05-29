@@ -1,4 +1,5 @@
 """ Base class for all systems in OpenMDAO."""
+from openmdao.core.mpiwrap import debug
 
 from collections import OrderedDict
 import copy
@@ -150,6 +151,21 @@ class System(object):
             The communicator being offered by the parent system.
         """
         self.comm = get_comm_if_active(self, comm)
+
+    def _set_vars_as_remote(self):
+        """
+        Set 'remote' attribute in metadata of all variables for this subsystem.
+        """
+        pname = self.pathname + ':'
+        for name, meta in self._params_dict.items():
+            debug("%s %s is remote? %s" % (pname, name, name.startswith(pname)))
+            if name.startswith(pname):
+                meta['remote'] = True
+
+        for name, meta in self._unknowns_dict.items():
+            debug("%s %s is remote? %s" % (pname, name, name.startswith(pname)))
+            if name.startswith(pname):
+                meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None):

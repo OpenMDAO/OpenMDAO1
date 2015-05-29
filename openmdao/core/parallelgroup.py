@@ -4,6 +4,8 @@ from collections import OrderedDict
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
 
+from openmdao.core.mpiwrap import debug
+
 class ParallelGroup(Group):
     def apply_nonlinear(self, params, unknowns, resids):
         """ Evaluates the residuals of our children systems.
@@ -72,7 +74,7 @@ class ParallelGroup(Group):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        if not MPI:
+        if not MPI or not self.is_active():
             super(ParallelGroup, self)._setup_communicators(comm)
             return
 
@@ -104,17 +106,23 @@ class ParallelGroup(Group):
             max_requested = sum(max_req_procs)
             limit = min(size, max_requested)
 
+        debug("ParallelGroup _setup_communicators comm.size = %s " % comm.size)
+        debug("ParallelGroup _setup_communicators assigned = %s " % assigned)
+        debug("ParallelGroup _setup_communicators limit = %s " % limit)
+
         # first, just use simple round robin assignment of requested CPUs
         # until everybody has what they asked for or we run out
         if requested:
             while assigned < limit:
                 for i, system in enumerate(subsystems):
                     if max_req_procs[i] is None or \
-                                   assigned_procs[i] < max_req_procs[i]:
+                       assigned_procs[i] < max_req_procs[i]:
                         assigned_procs[i] += 1
                         assigned += 1
                         if assigned == limit:
                             break
+
+        debug("ParallelGroup _setup_communicators assigned_procs = %s " % assigned_procs)
 
         self._local_subsystems = OrderedDict()
 
@@ -138,14 +146,19 @@ class ParallelGroup(Group):
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
 
+        debug("ParallelGroup _setup_communicators rank_color = %s " % rank_color)
+        debug("ParallelGroup _setup_communicators sub_comm.size = %s " % sub_comm.size)
+
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i,sub in enumerate(subsystems):
+        for i, (name, sub) in enumerate(self.subsystems()):
+            debug("ParallelGroup _setup_communicators for subsystem %d %s %s " % (i, name, sub))
             if i == rank_color:
+                debug("ParallelGroup subsystem %s is local" % name)
                 self._local_subsystems[sub.name] = sub
+                sub._setup_communicators(sub_comm)
             else:
-                self._set_vars_as_remote(sub)
-
-        for sub in self._local_subsystems.values():
-            sub._setup_communicators(sub_comm)
+                debug("ParallelGroup subsystem %s is remote" % name)
+                sub._set_vars_as_remote()
+                sub._setup_communicators(MPI.COMM_NULL)

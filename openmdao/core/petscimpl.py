@@ -1,4 +1,7 @@
 from __future__ import print_function
+from openmdao.core.mpiwrap import debug
+#def debug(s):
+    #pass
 
 import sys
 import numpy
@@ -124,8 +127,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
+        debug("PetscSrcVecWrapper setup() ")
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        debug("PetscSrcVecWrapper setup() complete")
 
     def _get_flattened_sizes(self):
         """
@@ -213,10 +218,12 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         store_byobjs : bool (optional)
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
+        debug("PetscTgtVecWrapper setup() ")
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        debug("PetscTgtVecWrapper setup() complete")
 
     def _get_flattened_sizes(self):
         """
@@ -283,7 +290,7 @@ class PetscDataXfer(DataXfer):
                                 varmanager.unknowns.vec.size,
                                 varmanager.params.vec.size, str(err)))
 
-    def transfer(self, srcvec, tgtvec, mode='fwd'):
+    def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """Performs data transfer between a distributed source vector and
         a distributed target vector.
 
@@ -310,18 +317,13 @@ class PetscDataXfer(DataXfer):
         if mode == 'rev':
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
-            # all targets. This requires numpy's new add command.
-            np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
-
-            # formerly
-            #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-
-            # byobjs are never scattered in reverse, so skip that part
-
-        else:  # forward
+            # all targets. This does not involve pass_by_object.
+            self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
+        else:
+            # forward mode, source to target including pass_by_object
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
 
-            for tgt, src in self.byobj_conns:
-                raise NotImplementedError("can't transfer '%s' to '%s'" %
-                                           (src, tgt))
-                tgtvec[tgt] = srcvec[src]
+            if not deriv:
+                for tgt, src in self.byobj_conns:
+                    raise NotImplementedError("can't transfer '%s' to '%s'" %
+                                               (src, tgt))
