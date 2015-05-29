@@ -120,6 +120,24 @@ class Component(System):
             raise RuntimeError("%s: variable '%s' already exists" %
                                (self.pathname, name))
 
+    def _get_fd_params(self):
+        """
+        Returns
+        -------
+        list of str
+            List of names of params for this `Component` .
+        """
+        return self.params.keys()
+
+    def _get_fd_unknowns(self):
+        """
+        Returns
+        -------
+        list of str
+            List of names of unknowns for this `Component`.
+        """
+        return self.unknowns.keys()
+
     def _setup_variables(self):
         """Returns our params and unknowns, and stores them
         as attributes of the component"""
