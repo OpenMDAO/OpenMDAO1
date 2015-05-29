@@ -3,7 +3,7 @@
 
 class OptionsDictionary(object):
     """ A dictionary for storing options for components/drivers/solvers. It
-    is generally used like a standard python dictionary, except that 1) you
+    is generally used like a standard Python dictionary, except that 1) you
     can only set or get keys that have been registered with add_option, and
     2) type is enforced."""
 
@@ -25,13 +25,13 @@ class OptionsDictionary(object):
             Lower bounds for a float value.
 
         high: float (optional)
-            upper bound for a float value.
+            Upper bounds for a float value.
 
         values: list (optional)
-            list of all possible values for an enumeration option
+            List of all possible values for an enumeration option.
 
         desc: str (optional)
-            string containing documentation of this option.
+            String containing documentation of this option.
         """
 
         if name in self._options:
