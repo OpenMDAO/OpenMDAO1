@@ -15,7 +15,7 @@ class Comp1(Component):
         self.add_output('y2', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = 2.0*params['x1']**2
         unknowns['y2'] = 3.0*params['x1']
 
@@ -34,7 +34,7 @@ class Comp2(Component):
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = 0.5*params['x1']
 
     def jacobian(self, params, unknowns, resids):
@@ -51,7 +51,7 @@ class Comp3(Component):
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = 3.5*params['x1']
 
     def jacobian(self, params, unknowns, resids):
@@ -70,7 +70,7 @@ class Comp4(Component):
         self.add_output('y2', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = params['x1'] + 2.0*params['x2']
         unknowns['y2'] = 3.0*params['x1'] - 5.0*params['x2']
 
@@ -91,7 +91,7 @@ class Comp5(Component):
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = 0.8*params['x1']
 
     def jacobian(self, params, unknowns, resids):
@@ -108,7 +108,7 @@ class Comp6(Component):
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = 0.5*params['x1']
 
     def jacobian(self, params, unknowns, resids):
@@ -126,7 +126,7 @@ class Comp7(Component):
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Runs the component"""
+        """ Runs the component."""
         unknowns['y1'] = params['x1'] + 3.0*params['x2']
 
     def jacobian(self, params, unknowns, resids):
