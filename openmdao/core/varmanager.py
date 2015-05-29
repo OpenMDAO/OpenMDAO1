@@ -1,6 +1,7 @@
-
+import sys
 from collections import namedtuple, OrderedDict
 import numpy
+
 
 VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
@@ -48,19 +49,60 @@ class VarManagerBase(object):
             raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
 
+    def _get_global_idxs(self, uname, pname):
+        """
+        Parameters
+        ----------
+        uname : str
+            Name of variable in the unknowns vector.
+
+        pname : str
+            Name of the variable in the params vector.
+
+        Returns
+        -------
+        tuple of (idx_array, idx_array)
+            index array into the global unknowns vector and the corresponding
+            index array into the global params vector.
+        """
+        umeta = self.unknowns.metadata(uname)
+        pmeta = self.params.metadata(pname)
+
+        if pmeta.get('remote'):
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        # add up sizes across all processes in our communicator for all columns
+        # up to the column corresponding to the named variable
+        offset = numpy.sum(self._local_unknown_sizes[:, :self.unknowns._var_idx(uname)])
+
+        if 'param_idxs' in pmeta:
+            raise NotImplementedError("distrib comps not supported yet")
+        else:
+            arg_idxs = self.params.make_idx_array(0, pmeta['size'])
+
+        src_idxs = arg_idxs + offset
+
+        rank = self.comm.rank if self.comm else 0
+        tgt_start = numpy.sum(self._local_param_sizes[:rank])
+        tgt_idxs = tgt_start + self.params._slices[pname][0] + \
+                     self.params.make_idx_array(0, len(arg_idxs))
+
+        return src_idxs, tgt_idxs
+
     def _setup_data_transfer(self, sys_pathname, my_params):
-        """Create `DataXfer` objects to handle data transfer for all of the
-           connections that involve paramaters for which this `VarManager`
-           is responsible.
+        """
+        Create `DataXfer` objects to handle data transfer for all of the
+        connections that involve paramaters for which this `VarManager`
+        is responsible.
 
-           Parameters
-           ----------
-           sys_pathname : str
-               Absolute pathname of the `System` that will own this `VarManager`.
+        Parameters
+        ----------
+        sys_pathname : str
+            Absolute pathname of the `System` that will own this `VarManager`.
 
-           my_params : list
-               list of pathnames for parameters that the VarManager is
-               responsible for propagating
+        my_params : list
+            list of pathnames for parameters that the VarManager is
+            responsible for propagating
         """
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
@@ -73,10 +115,8 @@ class VarManagerBase(object):
             if param in my_params:
                 # remove our system pathname from the abs pathname of the param and
                 # get the subsystem name from that
-                if sys_pathname:
-                    start = len(sys_pathname)+1
-                else:
-                    start = 0
+                start = len(sys_pathname)+1 if sys_pathname else 0
+
                 tgt_sys = param[start:].split(':', 1)[0]
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault(tgt_sys, ([],[],[],[]))
@@ -85,10 +125,11 @@ class VarManagerBase(object):
 
                 if self.unknowns.metadata(urelname).get('pass_by_obj'):
                     byobj_conns.append((prelname, urelname))
-                else:
+                else: # pass by vector
                     vec_conns.append((prelname, urelname))
-                    src_idx_list.append(self.unknowns.get_global_idxs(urelname))
-                    dest_idx_list.append(self.params.get_global_idxs(prelname))
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
+                    src_idx_list.append(sidxs)
+                    dest_idx_list.append(didxs)
 
         for tgt_sys, (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)

@@ -15,7 +15,6 @@ from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.group import _get_implicit_connections
 from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
@@ -578,3 +577,55 @@ def _find_all_comps(group):
     for sg_name, sg in group.subgroups():
         data.update(_find_all_comps(sg))
     return data
+
+def _get_implicit_connections(params_dict, unknowns_dict):
+    """
+    Finds all matches between relative names of parameters and
+    unknowns.  Any matches imply an implicit connection.  All
+    connections are expressed using absolute pathnames.
+
+    This should only be called using params and unknowns from the
+    top level `Group` in the system tree.
+
+    Parameters
+    ----------
+    params_dict : dict
+        dictionary of metadata for all parameters in this `Group`
+
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns in this `Group`
+
+    Returns
+    -------
+    dict
+        implicit connections in this `Group`, represented as a mapping
+        from the pathname of the target to the pathname of the source
+
+    Raises
+    ------
+    RuntimeError
+        if a a promoted variable name matches multiple unknowns
+    """
+
+    # collect all absolute names that map to each relative name
+    abs_unknowns = {}
+    for abs_name, u in unknowns_dict.items():
+        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
+
+    abs_params = {}
+    for abs_name, p in params_dict.items():
+        abs_params.setdefault(p['relative_name'], []).append(abs_name)
+
+    # check if any relative names correspond to mutiple unknowns
+    for name, lst in abs_unknowns.items():
+        if len(lst) > 1:
+            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
+                               (name, lst))
+
+    connections = {}
+    for uname, uabs in abs_unknowns.items():
+        pabs = abs_params.get(uname, ())
+        for p in pabs:
+            connections[p] = uabs[0]
+
+    return connections

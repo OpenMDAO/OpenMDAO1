@@ -64,13 +64,13 @@ class MPITests1(MPITestCase):
 
         prob.root.connect('A1:a', 'C1:a')
         prob.root.connect('B1:b', 'C1:b')
-        prob.root.connect('S1:s', 'C1:in_string')
-        prob.root.connect('L1:l', 'C1:in_list')
+        # prob.root.connect('S1:s', 'C1:in_string')
+        # prob.root.connect('L1:l', 'C1:in_list')
 
         prob.root.connect('C1:c', 'C2:a')
         prob.root.connect('B2:b', 'C2:b')
-        prob.root.connect('C1:out_string', 'C2:in_string')
-        prob.root.connect('C1:out_list',   'C2:in_list')
+        # prob.root.connect('C1:out_string', 'C2:in_string')
+        # prob.root.connect('C1:out_list',   'C2:in_list')
 
         prob.setup()
 
@@ -86,29 +86,30 @@ class MPITests1(MPITestCase):
             self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))
             self.assertTrue(all(prob['C2:d']==np.ones(size, float)*5.))
 
-            self.assertTrue(prob['C2:out_string']=='_C1_C2')
-            self.assertTrue(prob['C2:out_list']==[1.5, 1.5])
+            # TODO: can't do MPI pass_by_object yet
+            # self.assertTrue(prob['C2:out_string']=='_C1_C2')
+            # self.assertTrue(prob['C2:out_list']==[1.5, 1.5])
 
     def test_parallel_fan_in(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
 
-        pgrp = prob.root.add('pgrp', ParallelGroup())
-        pgrp.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
-        pgrp.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
 
         prob.root.add('C1', ABCDArrayComp(size))
 
-        prob.root.connect('pgrp:P1:x', 'C1:a')
-        prob.root.connect('pgrp:P2:x', 'C1:b')
+        prob.root.connect('G1:P1:x', 'C1:a')
+        prob.root.connect('G1:P2:x', 'C1:b')
 
         prob.setup()
         prob.run()
 
         if not MPI or self.comm.rank == 0:
-            self.assertTrue(all(prob['C1:a', 'params']==np.ones(size, float)*1.0))
-            self.assertTrue(all(prob['C1:b', 'params']==np.ones(size, float)*2.0))
+            self.assertTrue(all(prob.subsystem('C1').params['a']==np.ones(size, float)*1.0))
+            self.assertTrue(all(prob.subsystem('C1').params['b']==np.ones(size, float)*2.0))
             self.assertTrue(all(prob['C1:c']==np.ones(size, float)*3.0))
             self.assertTrue(all(prob['C1:d']==np.ones(size, float)*-1.0))
             # TODO: not handling non-flattenable vars yet
@@ -128,6 +129,9 @@ class MPITests1(MPITestCase):
         root.connect('G1:C1:c', 'C3:a')
         root.connect('G1:C2:c', 'C3:b')
 
+        prob.setup()
+
+        self.fail("finish this test!!!")
 
 
 

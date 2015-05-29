@@ -28,11 +28,6 @@ except ImportError:
     mpirun_tests = unittest.main
 
 else:
-
-    def debug_msg(msg):
-        print("rank %d: %s" % (MPI.COMM_WORLD.rank, msg))
-        sys.stdout.flush()
-
     class MPITestCase(TestCase):
         """A base class for all TestCases that are
         intended to run under mpirun.
