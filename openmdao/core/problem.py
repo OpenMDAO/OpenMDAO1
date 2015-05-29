@@ -151,6 +151,7 @@ class Problem(Component):
     def run(self):
         """ Runs the Driver in self.driver. """
         self.driver.run(self.root)
+
         # Should only happen in top Problem?
         system = self.root
         varmanager = system._varmanager
