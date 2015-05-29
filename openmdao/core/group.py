@@ -791,6 +791,8 @@ class Group(System):
             else:
                 sub.dump(nest, file=file, verbose=verbose, dvecs=dvecs)
 
+        file.flush()
+
     def get_req_procs(self):
         """
         Returns

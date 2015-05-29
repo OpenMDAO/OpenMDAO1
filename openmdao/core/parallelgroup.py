@@ -43,8 +43,8 @@ class ParallelGroup(Group):
             A tuple of the form (min_procs, max_procs), indicating the min and max
             processors usable by this `ParallelGroup`.
         """
-        min_procs = 1
-        max_procs = 1
+        min_procs = 0
+        max_procs = 0
 
         for name, sub in self.subsystems():
             sub_min, sub_max = sub.get_req_procs()
@@ -54,6 +54,12 @@ class ParallelGroup(Group):
                     max_procs = None
                 else:
                     max_procs += sub_max
+
+        if min_procs == 0:
+            min_procs = 1
+
+        if max_procs == 0:
+            max_procs = 1
 
         return (min_procs, max_procs)
 
