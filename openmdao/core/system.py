@@ -189,6 +189,9 @@ class System(object):
             and whose values are ndarrays.
         """
 
+        fd_params = self._get_fd_params()
+        fd_unknowns = self._get_fd_unknowns()
+
         # Function call arguments have precedence over the system dict.
         if step_size == None:
             step_size = self.fd_options['step_size']
@@ -215,7 +218,7 @@ class System(object):
             resultvec = unknowns
 
         # Compute gradient for this param or state.
-        for p_name in chain(params, states):
+        for p_name in chain(fd_params, states):
 
             if p_name in states:
                 inputs = unknowns
@@ -255,7 +258,7 @@ class System(object):
             p_size = np.size(inputs[p_name])
 
             # Size our Outputs
-            for u_name in unknowns:
+            for u_name in fd_unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
@@ -313,7 +316,7 @@ class System(object):
 
                     target_input[idx] -= step
 
-                for u_name in unknowns:
+                for u_name in fd_unknowns:
                     jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
 
                 # Restore old residual

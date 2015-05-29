@@ -563,8 +563,8 @@ class Problem(Component):
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
 
-        param_list = self.root.params.keys()
-        unknown_list = self.root.unknowns.keys()
+        param_list = self.root._get_fd_params()
+        unknown_list = self.root._get_fd_unknowns()
 
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
                                  return_format='dict')
