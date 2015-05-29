@@ -38,18 +38,18 @@ class Problem(Component):
             self.driver = driver
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable from the root system
+        """Retrieve unflattened value of named variable from the root system.
 
         Parameters
         ----------
         name : str   OR   tuple : (name, vector)
-             the name of the variable to retrieve from the unknowns vector OR
-             a tuple of the name of the variable and the vector to get it's
+             The name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get its
              value from.
 
         Returns
         -------
-        the unflattened value of the given variable
+        The unflattened value of the given variable.
         """
         return self.root[name]
 
@@ -59,7 +59,7 @@ class Problem(Component):
         Parameters
         ----------
         name : str
-             the name of the variable to set into the unknowns vector
+             The name of the variable to set into the unknowns vector.
         """
         self.root[name] = val
 
@@ -151,7 +151,7 @@ class Problem(Component):
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
-        self.root. This function is used by the optimizer, but also can be
+        self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
 
         Parameters
@@ -175,7 +175,7 @@ class Problem(Component):
         Returns
         -------
         ndarray or dict
-            Jacobian of unknowns with respect to params
+            Jacobian of unknowns with respect to params.
         """
 
         if mode not in ['auto', 'fwd', 'rev']:
@@ -287,7 +287,7 @@ class Problem(Component):
 
         Returns
         -------
-        Dict of Dicts of Dicts of Tuples of Floats
+        Dict of Dicts of Dicts of Tuples of Floats.
 
         First key is the component name; 2nd key is the (output, input) tuple
         of strings; third key is one of ['rel error', 'abs error',
@@ -513,7 +513,7 @@ class Problem(Component):
 def _setup_units(connections, params_dict, unknowns_dict):
     """
     Calculate unit conversion factors for any connected
-    variables having different units and stores them in params_dict.
+    variables having different units and store them in params_dict.
 
     Parameters
     ----------
@@ -522,10 +522,10 @@ def _setup_units(connections, params_dict, unknowns_dict):
         to the absolute name of their source variable.
 
     params_dict : OrderedDict
-        A dict of parameter metadata for the whole `Problem`
+        A dict of parameter metadata for the whole `Problem`.
 
     unknowns_dict : OrderedDict
-        A dict of unknowns metadata for the whole `Problem`
+        A dict of unknowns metadata for the whole `Problem`.
     """
 
     for target, source in connections.items():
@@ -570,7 +570,7 @@ def assign_parameters(connections):
 
 def _find_all_comps(group):
     """ Recursive function that assembles a dictionary whose keys are Group
-    instances and whos values are lists of Component instances."""
+    instances and whose values are lists of Component instances."""
 
     data = {group:[]}
     for c_name, c in group.components():

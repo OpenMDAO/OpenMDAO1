@@ -47,7 +47,7 @@ class SellarDis1withDerivatives(SellarDis1):
     """Component containing Discipline 1 -- derivatives version."""
 
     def jacobian(self, params, unknowns, resids):
-        """ Jacobian for Sellar discipline 1"""
+        """ Jacobian for Sellar discipline 1."""
         J = {}
 
         J['y1','y2'] = -0.2
@@ -92,7 +92,7 @@ class SellarDis2withDerivatives(SellarDis2):
     """Component containing Discipline 2 -- derivatives version."""
 
     def jacobian(self, params, unknowns, resids):
-        """ Jacobian for Sellar discipline 2"""
+        """ Jacobian for Sellar discipline 2."""
         J = {}
 
         J['y2', 'y1'] = .5*params['y1']**-.5

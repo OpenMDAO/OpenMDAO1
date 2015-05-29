@@ -1,12 +1,12 @@
-""" The RunOnce solver just performs solve_nonlinear the system hierarchy
-with no iteration.."""
+""" The RunOnce solver just performs solve_nonlinear on the system hierarchy
+with no iteration."""
 
 from openmdao.solvers.solverbase import NonLinearSolver
 
 
 class RunOnce(NonLinearSolver):
-    """ The RunOnce solver just performs solve_nonlinear the system hierarchy
-    with no iteration..
+    """ The RunOnce solver just performs solve_nonlinear on the system hierarchy
+    with no iteration.
     """
 
     def __init__(self):
@@ -18,10 +18,10 @@ class RunOnce(NonLinearSolver):
         Parameters
         ----------
         params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
