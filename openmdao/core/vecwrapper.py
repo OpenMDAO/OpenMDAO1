@@ -531,6 +531,7 @@ class SrcVecWrapper(VecWrapper):
                     vmeta['shape'] = val.shape
                 else:
                     vmeta['size'] = 1
+                    vmeta['shape'] = 1
             else:
                 vmeta['size'] = 0
                 vmeta['pass_by_obj'] = True
