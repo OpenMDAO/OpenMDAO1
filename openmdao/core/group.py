@@ -345,8 +345,42 @@ class Group(System):
                                               my_params)
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
+            sub._setup_vectors(param_owners, connections,
+                               parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
+
+    def _get_fd_params(self):
+        """
+        Returns
+        -------
+        list of str
+            List of names of params that have sources that are ParamComps
+            or sources that are outside of this `Group` .
+        """
+        conns = self._varmanager.connections
+        mypath = self.pathname + ':' if self.pathname else ''
+
+        params = []
+        for tgt, src in conns.items():
+            if tgt.startswith(mypath):
+                src_comp = self.subsystem(src.rsplit(':', 1)[0][len(mypath):])
+                if not src.startswith(mypath) or isinstance(src_comp, ParamComp):
+                    params.append(tgt[len(mypath):])
+
+        return params
+
+    def _get_fd_unknowns(self):
+        """
+        """
+        mypath = self.pathname + ':' if self.pathname else ''
+        fd_unknowns = []
+        for name, meta in self.unknowns.items():
+            path = meta['pathname']
+            sub = self.subsystem(path.rsplit(':',1)[0][len(mypath):])
+            if not isinstance(sub, ParamComp):
+                fd_unknowns.append(name)
+
+        return fd_unknowns
 
     def _add_remote_subsystem(self, sub):
         """
