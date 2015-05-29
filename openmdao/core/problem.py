@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import warnings
-from collections import namedtuple
 from itertools import chain
 from six import iteritems
 import sys
@@ -219,8 +218,7 @@ class Problem(Component):
         root.dresids.vec[:] = 0.0
         root.jacobian(params, unknowns, root.resids)
 
-        n_edge = len(unknowns.vec)
-        rhs = np.zeros((n_edge, ))
+        rhs = np.zeros((len(unknowns.vec), ))
 
         # Initialized Jacobian
         if return_format == 'dict':
@@ -239,7 +237,7 @@ class Problem(Component):
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
-        if mode =='auto':
+        if mode == 'auto':
             mode = root.ln_solver.options['mode']
             if mode == 'auto':
                 # TODO: Choose based on size
@@ -330,19 +328,17 @@ class Problem(Component):
 
         root = self.root
         varmanager = root._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
 
         # Linearize the model
-        root.jacobian(params, unknowns, resids)
-
-        data = {}
-        skip_keys = []
-        model_hierarchy = _find_all_comps(self.root)
+        root.jacobian(varmanager.params, varmanager.unknowns,
+                      varmanager.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
+
+        data = {}
+        skip_keys = []
+        model_hierarchy = _find_all_comps(root)
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
@@ -385,7 +381,6 @@ class Problem(Component):
 
                     # Check dimensions of user-supplied Jacobian
                     for u_name in unknowns:
-                        data[cname][(u_name, p_name)] = {}
 
                         u_size = np.size(dunknowns[u_name])
                         if comp._jacobian_cache is not None:
@@ -399,7 +394,7 @@ class Problem(Component):
 
                             # User may use floats for scalar jacobians
                             if len(user) < 2:
-                                user = (user[0], 1 )
+                                user = (user[0], 1)
 
                             if user[0] != u_size or user[1] != p_size:
                                 msg = "Jacobian in component '{}' between the" + \
@@ -419,8 +414,7 @@ class Problem(Component):
                     # Send columns of identity
                     for idx in range(u_size):
                         dresids.vec[:] = 0.0
-                        for item in dparams:
-                            dparams.flat[item][:] = 0.0
+                        root.clear_dparams()
                         dunknowns.vec[:] = 0.0
 
                         dresids.flat[u_name][idx] = 1.0
@@ -428,7 +422,6 @@ class Problem(Component):
                                           dunknowns, dresids, 'rev')
 
                         for p_name in chain(params, states):
-
                             if (u_name, p_name) in skip_keys:
                                 continue
 
@@ -445,8 +438,7 @@ class Problem(Component):
                     # Send columns of identity
                     for idx in range(p_size):
                         dresids.vec[:] = 0.0
-                        for item in dparams:
-                            dparams.flat[item][:] = 0.0
+                        root.clear_dparams()
                         dunknowns.vec[:] = 0.0
 
                         dinputs.flat[p_name][idx] = 1.0
@@ -454,7 +446,6 @@ class Problem(Component):
                                           dunknowns, dresids, 'fwd')
 
                         for u_name in dresids:
-
                             if (u_name, p_name) in skip_keys:
                                 continue
 
@@ -462,81 +453,15 @@ class Problem(Component):
 
                 # Finite Difference goes last
                 dresids.vec[:] = 0.0
-                dparams.vec[:] = 0.0
+                root.clear_dparams()
                 dunknowns.vec[:] = 0.0
-                jac_fd[cname] = comp.fd_jacobian(params, unknowns, resids,
-                                                 step_size = 1e-6)
+                jac_fd = comp.fd_jacobian(params, unknowns, resids,
+                                          step_size=1e-6)
 
-                # Start computing our metrics.
-                started = False
-                for p_name in chain(params, states):
-                    for u_name in resids:
-
-                        ldata = data[cname][(u_name, p_name)]
-
-                        Jsub_fd = jac_fd[cname][(u_name, p_name)]
-
-                        if (u_name, p_name) in skip_keys:
-                            Jsub_for = np.zeros(Jsub_fd.shape)
-                            Jsub_rev = np.zeros(Jsub_fd.shape)
-                        else:
-                            Jsub_for = jac_fwd[(u_name, p_name)]
-                            Jsub_rev = jac_rev[(u_name, p_name)]
-
-                        ldata['J_fd'] = Jsub_fd
-                        ldata['J_fwd'] = Jsub_for
-                        ldata['J_rev'] = Jsub_rev
-
-                        magfor = np.linalg.norm(Jsub_for)
-                        magrev = np.linalg.norm(Jsub_rev)
-                        magfd = np.linalg.norm(Jsub_fd)
-
-                        ldata['magnitude'] = (magfor, magrev, magfd)
-
-                        abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
-                        abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
-                        abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
-
-                        ldata['abs error'] = (abs1, abs2, abs3)
-
-                        rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
-                        rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
-                        rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
-
-                        ldata['rel error'] = (rel1, rel2, rel3)
-
-                        if out_stream is None:
-                            continue
-
-                        if started is True:
-                            out_stream.write(' -'*30 + '\n')
-                        else:
-                            started = True
-
-                        # Optional file_like output
-                        out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
-
-                        out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-                        out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-                        out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
-
-                        out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-                        out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-                        out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
-
-                        out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-                        out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-                        out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
-
-                        out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-                        out_stream.write(str(Jsub_for))
-                        out_stream.write('\n\n')
-                        out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-                        out_stream.write(str(Jsub_rev))
-                        out_stream.write('\n\n')
-                        out_stream.write('    Raw FD Derivative (Jfor)\n\n')
-                        out_stream.write(str(Jsub_fd))
-                        out_stream.write('\n\n')
+                # Assemble and Return all metrics.
+                _assemble_deriv_data(chain(params, states), resids, data[cname],
+                                     jac_fwd, jac_rev, jac_fd, out_stream,
+                                     skip_keys)
 
         return data
 
@@ -563,82 +488,27 @@ class Problem(Component):
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
 
+        # Params and Unknowns that we provide at this level.
         param_list = self.root._get_fd_params()
         unknown_list = self.root._get_fd_unknowns()
 
+        # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
-                                 return_format='dict')
+                                  return_format='dict')
         Jrev = self.calc_gradient(param_list, unknown_list, mode='rev',
                                   return_format='dict')
         Jfd = self.calc_gradient(param_list, unknown_list, mode='fd',
-                                  return_format='dict')
+                                 return_format='dict')
 
-        # Assemble the derivative checks
+        Jfor = jac_to_flat_dict(Jfor)
+        Jrev = jac_to_flat_dict(Jrev)
+        Jfd = jac_to_flat_dict(Jfd)
+
+        # Assemble and Return all metrics.
         data = {}
-        started = False
-        for p_name in param_list:
-            for u_name in unknown_list:
+        _assemble_deriv_data(param_list, unknown_list, data,
+                             Jfor, Jrev, Jfd, out_stream)
 
-                ldata = data[(u_name, p_name)] = {}
-
-                Jsub_fd = Jfd[u_name][p_name]
-                Jsub_for = Jfor[u_name][p_name]
-                Jsub_rev = Jrev[u_name][p_name]
-
-                ldata['J_fd'] = Jsub_fd
-                ldata['J_fwd'] = Jsub_for
-                ldata['J_rev'] = Jsub_rev
-
-                magfor = np.linalg.norm(Jsub_for)
-                magrev = np.linalg.norm(Jsub_rev)
-                magfd = np.linalg.norm(Jsub_fd)
-
-                ldata['magnitude'] = (magfor, magrev, magfd)
-
-                abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
-                abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
-                abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
-
-                ldata['abs error'] = (abs1, abs2, abs3)
-
-                rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
-                rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
-                rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
-
-                ldata['rel error'] = (rel1, rel2, rel3)
-
-                if out_stream is None:
-                    continue
-
-                if started is True:
-                    out_stream.write(' -'*30 + '\n')
-                else:
-                    started = True
-
-                # Optional file_like output
-                out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
-
-                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
-
-                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
-
-                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
-
-                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-                out_stream.write(str(Jsub_for))
-                out_stream.write('\n\n')
-                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-                out_stream.write(str(Jsub_rev))
-                out_stream.write('\n\n')
-                out_stream.write('    Raw FD Derivative (Jfor)\n\n')
-                out_stream.write(str(Jsub_fd))
-                out_stream.write('\n\n')
 
         return data
 
@@ -710,3 +580,101 @@ def _find_all_comps(group):
     for sg_name, sg in group.subgroups():
         data.update(_find_all_comps(sg))
     return data
+
+def jac_to_flat_dict(jac):
+    """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go
+    from [out][in] to [out,in].
+
+    Parameters
+    ----------
+
+    jac : dict of dicts of ndarrays
+        Jacobian that comes from calc_gradient when the return_type is 'dict'.
+
+    Returns
+    -------
+
+    dict of ndarrays"""
+
+    new_jac = {}
+    for key1, val1 in jac.items():
+        for key2, val2 in val1.items():
+            new_jac[(key1, key2)] = val2
+
+    return new_jac
+
+def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
+                         out_stream, skip_keys=[None]):
+    """ Assembles dictionaries and prints output for check derivatives
+    functions. This is used by both the partial and total derivative
+    checks."""
+    started = False
+
+    for p_name in params:
+        for u_name in resids:
+
+            ldata = cdata[(u_name, p_name)] = {}
+
+            Jsub_fd = jac_fd[(u_name, p_name)]
+
+            if (u_name, p_name) in skip_keys:
+                Jsub_for = np.zeros(Jsub_fd.shape)
+                Jsub_rev = np.zeros(Jsub_fd.shape)
+            else:
+                Jsub_for = jac_fwd[(u_name, p_name)]
+                Jsub_rev = jac_rev[(u_name, p_name)]
+
+            ldata['J_fd'] = Jsub_fd
+            ldata['J_fwd'] = Jsub_for
+            ldata['J_rev'] = Jsub_rev
+
+            magfor = np.linalg.norm(Jsub_for)
+            magrev = np.linalg.norm(Jsub_rev)
+            magfd = np.linalg.norm(Jsub_fd)
+
+            ldata['magnitude'] = (magfor, magrev, magfd)
+
+            abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+            abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+            abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+
+            ldata['abs error'] = (abs1, abs2, abs3)
+
+            rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+            rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+            rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+
+            ldata['rel error'] = (rel1, rel2, rel3)
+
+            if out_stream is None:
+                continue
+
+            if started is True:
+                out_stream.write(' -'*30 + '\n')
+            else:
+                started = True
+
+            # Optional file_like output
+            out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
+
+            out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+            out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+            out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+
+            out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+            out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+            out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+
+            out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+            out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+            out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+
+            out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+            out_stream.write(str(Jsub_for))
+            out_stream.write('\n\n')
+            out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+            out_stream.write(str(Jsub_rev))
+            out_stream.write('\n\n')
+            out_stream.write('    Raw FD Derivative (Jfor)\n\n')
+            out_stream.write(str(Jsub_fd))
+            out_stream.write('\n\n')

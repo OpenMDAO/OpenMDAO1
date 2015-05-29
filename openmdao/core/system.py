@@ -1,7 +1,6 @@
 """ Base class for all systems in OpenMDAO."""
 
 from collections import OrderedDict
-import copy
 from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
@@ -30,17 +29,17 @@ class System(object):
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
-                                   desc = "Set to True to finite difference this system.")
+                                   desc="Set to True to finite difference this system.")
         self.fd_options.add_option('form', 'forward',
-                                   values = ['forward', 'backward', 'central', 'complex_step'],
-                                   desc = "Finite difference mode. (forward, backward, central) "
+                                   values=['forward', 'backward', 'central', 'complex_step'],
+                                   desc="Finite difference mode. (forward, backward, central) "
                                    "You can also set to 'complex_step' to peform the complex "
                                    "step method if your components support it.")
         self.fd_options.add_option("step_size", 1.0e-6,
                                     desc = "Default finite difference stepsize")
         self.fd_options.add_option("step_type", 'absolute',
-                                   values = ['absolute', 'relative'],
-                                   desc = 'Set to absolute, relative')
+                                   values=['absolute', 'relative'],
+                                   desc='Set to absolute, relative')
 
     def __getitem__(self, name):
         """
@@ -77,7 +76,7 @@ class System(object):
         if isinstance(self._promotes, string_types):
             raise TypeError("'%s' promotes must be specified as a list, "
                             "tuple or other iterator of strings, but '%s' was specified" %
-                             (self.name, self._promotes))
+                            (self.name, self._promotes))
 
         for prom in self._promotes:
             if fnmatch(name, prom):
@@ -189,6 +188,7 @@ class System(object):
             and whose values are ndarrays.
         """
 
+        # Params and Unknowns that we provide at this level.
         fd_params = self._get_fd_params()
         fd_unknowns = self._get_fd_unknowns()
 
