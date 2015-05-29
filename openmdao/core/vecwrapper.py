@@ -663,8 +663,7 @@ class TgtVecWrapper(VecWrapper):
         var_size = src_meta['size']
 
         vmeta['size'] = var_size
-        if 'shape' in src_meta:
-            vmeta['shape'] = src_meta['shape']
+        vmeta['shape'] = src_meta['shape']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
@@ -683,13 +682,7 @@ class TgtVecWrapper(VecWrapper):
         vmeta = meta.copy()
         vmeta['pass_by_obj'] = True
         vmeta['size'] = 0
-        if 'val' in meta:
-            val = meta['val']
-        elif 'shape' in meta:
-            val = numpy.zeros(shape)
-        else:
-            raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
-                               pathname)
+        val = meta['val']
 
         vmeta['val'] = _ByObjWrapper(val)
         self._vardict[self._scoped_abs_name(pathname)] = vmeta

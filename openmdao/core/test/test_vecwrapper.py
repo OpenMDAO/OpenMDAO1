@@ -12,7 +12,6 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['y1'] = { 'val': np.ones((3, 2)), 'shape': (3,2) }
         unknowns_dict['y2'] = { 'val': 2.0, 'shape': 1 }
         unknowns_dict['y3'] = { 'val': "foo", 'shape':1 }
-        unknowns_dict['y4'] = { 'val': np.zeros((2,1)), 'shape': (2, 1), }
         unknowns_dict['s1'] = { 'val': -1.0, 'shape':1, 'state': True, }
 
         for u, meta in unknowns_dict.items():
@@ -22,27 +21,24 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
 
-        self.assertEqual(u.vec.size, 10)
-        self.assertEqual(len(u), 5)
-        self.assertEqual(list(u.keys()), ['y1','y2','y3', 'y4', 's1'])
+        self.assertEqual(u.vec.size, 8)
+        self.assertEqual(len(u), 4)
+        self.assertEqual(list(u.keys()), ['y1','y2','y3', 's1'])
         self.assertTrue(np.all(u['y1']==np.ones((3,2))))
         self.assertEqual(u['y2'], 2.0)
         self.assertEqual(u['y3'], 'foo')
-        self.assertTrue(np.all(u['y4']==np.zeros((2,1))))
         self.assertEqual(u['s1'], -1.0)
 
         self.assertEqual(u.get_states(), ['s1'])
-        self.assertEqual([t[0] for t in u.get_vecvars()], ['y1','y2','y4','s1'])
+        self.assertEqual([t[0] for t in u.get_vecvars()], ['y1','y2','s1'])
         self.assertEqual([t[0] for t in u.get_byobjs()], ['y3'])
 
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
         u['y3'] = 'bar'
-        u['y4'] = np.ones((2,1))*7.
         u['s1'] = 5.
 
         self.assertTrue(np.all(u['y1']==np.ones((3,2))*3.))
-        self.assertTrue(np.all(u['y4']==np.ones((2,1))*7.))
         self.assertEqual(u['y2'], 2.5)
         self.assertEqual(u['y3'], 'bar')
         self.assertEqual(u['s1'], 5.)
@@ -57,10 +53,9 @@ class TestVecWrapper(unittest.TestCase):
             self.fail("Exception expected")
 
         params = OrderedDict()
-        params['y1'] = { 'val': np.ones((3, 2)) }
-        params['y2'] = { 'val': 2.0 }
-        params['y3'] = { 'val': "foo" }
-        params['y4'] = { 'shape': (2, 1) }
+        params['y1'] = { 'val': np.ones((3, 2)), 'shape':(3,2) }
+        params['y2'] = { 'val': 2.0, 'shape':1 }
+        params['y3'] = { 'val': "foo", 'shape':1 }
 
         for p, meta in params.items():
             meta['pathname'] = p
@@ -74,13 +69,12 @@ class TestVecWrapper(unittest.TestCase):
         p.setup(None, params, u, params.keys(),
                                             connections, store_byobjs=True)
 
-        self.assertEqual(p.vec.size, 9)
-        self.assertEqual(len(p), 4)
-        self.assertEqual(list(p.keys()), ['y1','y2','y3', 'y4'])
+        self.assertEqual(p.vec.size, 7)
+        self.assertEqual(len(p), 3)
+        self.assertEqual(list(p.keys()), ['y1','y2','y3'])
         self.assertTrue(np.all(p['y1']==np.zeros((3,2))))
         self.assertEqual(p['y2'], 0.)
         self.assertEqual(p['y3'], 'bar')
-        self.assertTrue(np.all(p['y4']==np.zeros((2,1))))
 
         p['y1'] = np.ones((3,2))*9.
         self.assertTrue(np.all(p['y1']==np.ones((3,2))*9.))
