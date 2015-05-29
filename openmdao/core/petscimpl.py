@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import sys
 import numpy
@@ -8,6 +9,7 @@ from openmdao.core.dataxfer import DataXfer
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
+
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
@@ -81,13 +83,15 @@ class PetscImpl(object):
 
         app_idxs = []
 
-        # each column in the _local_unknown_sizes table contains the sizes
-        # corresponds to a fully distributed variable. (col=var, row=proc)
-        # so in order to get the offset into the full distributed vector
+        # Each column in the _local_unknown_sizes table corresponds to a
+        # fully distributed variable and contains the local sizes of that
+        # variable in each process. The row corresponds to the rank.
+        # (col=var, row=proc)
+        # So in order to get the offset into the full distributed vector
         # containing all variables, you need to add the full distributed
         # sizes of all the variables up to the current variable (ivar)
         # plus the sizes of all of the distributed parts of ivar in the
-        # current column for ranks below the current rank
+        # current column for ranks below the current rank.
         for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
             start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
                     numpy.sum(local_unknown_sizes[:rank, ivar])
@@ -136,7 +140,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
 
         # create 2D array of variable sizes per process
-        self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
+        local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
 
         # create a vec indicating whether a 'pass by object' variable is active
         # in this rank or not
@@ -156,34 +160,12 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        self.comm.Allgather(our_row[0,:], self.local_unknown_sizes)
+        self.comm.Allgather(our_row[0,:], local_unknown_sizes)
         #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
-        self.local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
+        local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
 
-        return self.local_unknown_sizes
-
-    def get_global_idxs(self, name):
-        """
-        Get all of the indices for the named variable into the full distributed
-        vector.
-
-        Parameters
-        ----------
-        name : str
-            Name of variable to get the indices for.
-
-        Returns
-        -------
-        ndarray
-            Index array containing all distributed indices for the named variable.
-        """
-        meta = self._vardict[name]
-        if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
-
-        start, end = self._slices[name]
-        return self.make_idx_array(start, end)
+        return local_unknown_sizes
 
     def norm(self):
         """
@@ -255,6 +237,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
+
 
 class PetscDataXfer(DataXfer):
     """
@@ -336,7 +319,9 @@ class PetscDataXfer(DataXfer):
             # byobjs are never scattered in reverse, so skip that part
 
         else:  # forward
-            tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
+            self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
 
             for tgt, src in self.byobj_conns:
+                raise NotImplementedError("can't transfer '%s' to '%s'" %
+                                           (src, tgt))
                 tgtvec[tgt] = srcvec[src]

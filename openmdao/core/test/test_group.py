@@ -2,8 +2,8 @@
 import unittest
 from six import text_type, StringIO
 
-from openmdao.core.problem import Problem
-from openmdao.core.group import Group, _get_implicit_connections
+from openmdao.core.problem import Problem, _get_implicit_connections
+from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.test.simplecomps import SimpleComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes

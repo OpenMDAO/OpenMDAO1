@@ -122,21 +122,27 @@ class Component(System):
 
     def _get_fd_params(self):
         """
+        Get the list of parameters that are needed to perform a
+        finite difference on this `Component`.
+
         Returns
         -------
         list of str
             List of names of params for this `Component` .
         """
-        return self.params.keys()
+        return list(self.params.keys())
 
     def _get_fd_unknowns(self):
         """
+        Get the list of unknowns that are needed to perform a
+        finite difference on this `Group`.
+
         Returns
         -------
         list of str
             List of names of unknowns for this `Component`.
         """
-        return self.unknowns.keys()
+        return list(self.unknowns.keys())
 
     def _setup_variables(self):
         """Returns our params and unknowns, and stores them
