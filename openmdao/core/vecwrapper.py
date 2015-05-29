@@ -114,14 +114,14 @@ class VecWrapper(object):
             if self.deriv_units:
                 offset = 0.0
 
-            # if it doesn't have a shape, it's a float
-            if shape is None:
+            # if shape is 1, it's a float
+            if shape == 1:
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
         else:
-            # if it doesn't have a shape, it's a float
-            if shape is None:
+            # if shape is 1, it's a float
+            if shape == 1:
                 return meta['val'][0]
             else:
                 return meta['val'].reshape(shape)
