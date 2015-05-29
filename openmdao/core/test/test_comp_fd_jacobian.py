@@ -48,16 +48,19 @@ class CompFDTestCase(unittest.TestCase):
 
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
+                             'shape': (2,),
                              'pathname' : 'x',
                              'relative_name' : 'x' }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
+                               'shape': (2,),
                                'pathname' : 'y',
                                'relative_name' : 'y' }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
+                             'shape': (2,),
                              'pathname' : 'y',
                              'relative_name' : 'y' }
 
@@ -77,16 +80,19 @@ class CompFDTestCase(unittest.TestCase):
 
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
+                             'shape': (2,),
                              'pathname' : 'x',
                              'relative_name' : 'x' }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
+                               'shape': (2,),
                                'pathname' : 'y',
                                'relative_name' : 'y' }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
+                             'shape': (2,),
                              'pathname' : 'y',
                              'relative_name' : 'y' }
 
@@ -112,16 +118,19 @@ class CompFDTestCase(unittest.TestCase):
 
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2, 2)),
+                             'shape': (2,2),
                              'pathname' : 'x',
                              'relative_name' : 'x' }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2, 2)),
+                               'shape': (2,2),
                                'pathname' : 'y',
                                'relative_name' : 'y' }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2, 2)),
+                             'shape': (2,2),
                              'pathname' : 'y',
                              'relative_name' : 'y' }
 
@@ -150,22 +159,27 @@ class CompFDTestCase(unittest.TestCase):
 
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.array([0.5]),
+                             'shape': (1,),
                              'pathname' : 'x',
                              'relative_name' : 'x' }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.array([0.0]),
+                               'shape': (1,),
                                'pathname' : 'y',
                                'relative_name' : 'y' }
         unknowns_dict['z'] = { 'val': np.array([0.0]),
+                               'shape': (1,),
                                'pathname' : 'z',
                                'relative_name' : 'z' }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.array([0.0]),
+                             'shape': (1,),
                              'pathname' : 'y',
                              'relative_name' : 'y' }
         resids_dict['z'] = { 'val': np.array([0.0]),
+                             'shape': (1,),
                              'pathname' : 'z',
                              'relative_name' : 'z' }
 
