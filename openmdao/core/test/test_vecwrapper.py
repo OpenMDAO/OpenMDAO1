@@ -124,7 +124,6 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)),'shape':(3,2) }
         unknowns_dict['C1:y2'] = { 'val': 2.0, 'shape':1 }
         unknowns_dict['C1:y3'] = { 'val': "foo", 'shape':1 }
-        unknowns_dict['C2:y4'] = { 'val': np.zeros((2,1)), 'shape': (2, 1), }
         unknowns_dict['C2:s1'] = { 'val': -1.0, 'shape':1, 'state': True, }
 
         for u, meta in unknowns_dict.items():
@@ -143,7 +142,6 @@ class TestVecWrapper(unittest.TestCase):
             self.assertEqual(str(err), "'C1:y3' is a 'pass by object' variable. Flat value not found.")
         else:
             self.fail('Exception expected')
-        self.assertTrue((np.array(u.flat['C2:y4'])==np.array([0., 0.])).all())
         self.assertTrue((np.array(u.flat['C2:s1'])==np.array([-1.])).all())
 
     def test_norm(self):
