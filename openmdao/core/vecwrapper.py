@@ -114,14 +114,14 @@ class VecWrapper(object):
             if self.deriv_units:
                 offset = 0.0
 
-            # if it doesn't have a shape, it's a float
-            if shape is None:
+            # if shape is 1, it's a float
+            if shape == 1:
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
         else:
-            # if it doesn't have a shape, it's a float
-            if shape is None:
+            # if shape is 1, it's a float
+            if shape == 1:
                 return meta['val'][0]
             else:
                 return meta['val'].reshape(shape)
@@ -523,50 +523,27 @@ class SrcVecWrapper(VecWrapper):
         vmeta = meta.copy()
         vmeta['pathname'] = name
 
-        if 'shape' in meta:
-            shape = meta['shape']
-            vmeta['shape'] = shape
-            if 'val' in meta:
-                val = meta['val']
-                if not is_differentiable(val) or meta.get('pass_by_obj'):
-                    vmeta['size'] = 0
-                    vmeta['pass_by_obj'] = True
-                    vmeta['val'] = _ByObjWrapper(val)
-                else:
-                    if isinstance(val, numpy.ndarray):
-                        if val.shape != shape:
-                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
-                                             name)
-                        vmeta['size']= val.size
-                    else:
-                        if shape != 1:
-                            raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
-                                             name)
-                        vmeta['size'] = 1
-            else:
-                # no val given, so use shape to determine size of the array value
-                vmeta['size'] = numpy.prod(shape)
-                if meta.get('pass_by_obj'):
-                    vmeta['pass_by_obj'] = True
-                    vmeta['val'] = _ByObjWrapper(numpy.zeros(shape))
-                else:
-                    vmeta['val'] = meta['val'] = numpy.zeros(shape)
-        elif 'val' in meta:
+        if 'val' in meta:
             val = meta['val']
             if is_differentiable(val) and not meta.get('pass_by_obj'):
                 if isinstance(val, numpy.ndarray):
                     vmeta['size'] = val.size
-                    # if they didn't specify the shape, get it here so we
-                    # can unflatten the value we return from __getitem__
                     vmeta['shape'] = val.shape
                 else:
                     vmeta['size'] = 1
+                    vmeta['shape'] = 1
             else:
                 vmeta['size'] = 0
                 vmeta['pass_by_obj'] = True
                 vmeta['val'] = _ByObjWrapper(val)
         else:
-            raise ValueError("No value or shape given for variable '%s'" % name)
+            # If val is not specified, shape must be.
+            shape = meta['shape']
+            vmeta['size'] = numpy.prod(shape)
+            if meta.get('pass_by_obj'):
+                vmeta['val'] = meta['val'] = _ByObjWrapper(numpy.zeros(shape))
+            else:
+                vmeta['val'] = meta['val'] = numpy.zeros(shape)
 
         return vmeta
 
