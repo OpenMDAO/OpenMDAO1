@@ -363,6 +363,7 @@ class Group(System):
         params = []
         for tgt, src in conns.items():
             if tgt.startswith(mypath):
+                # look up the Component that contains the source variable
                 src_comp = self.subsystem(src.rsplit(':', 1)[0][len(mypath):])
                 if not src.startswith(mypath) or isinstance(src_comp, ParamComp):
                     params.append(tgt[len(mypath):])
@@ -371,12 +372,17 @@ class Group(System):
 
     def _get_fd_unknowns(self):
         """
+        Returns
+        -------
+        list of str
+            List of names of unknowns for this `Group` that don't come from a
+            `ParamComp`.
         """
         mypath = self.pathname + ':' if self.pathname else ''
         fd_unknowns = []
         for name, meta in self.unknowns.items():
-            path = meta['pathname']
-            sub = self.subsystem(path.rsplit(':',1)[0][len(mypath):])
+            # look up the subsystem containing the unknown
+            sub = self.subsystem(meta['pathname'].rsplit(':',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
