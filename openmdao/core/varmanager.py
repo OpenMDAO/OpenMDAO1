@@ -2,10 +2,8 @@ import sys
 from collections import namedtuple, OrderedDict
 import numpy
 
-from openmdao.core.mpiwrap import debug
-
-
 VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
+
 
 class VarManagerBase(object):
     """Base class for a manager of the data transfer of a possibly distributed
@@ -77,14 +75,10 @@ class VarManagerBase(object):
         # up to the column corresponding to the named variable
         offset = numpy.sum(self._local_unknown_sizes[:, :self.unknowns._var_idx(uname)])
 
-        debug('self._local_unknown_sizes:\n %s' % self._local_unknown_sizes)
-
         if 'param_idxs' in pmeta:
             raise NotImplementedError("distrib comps not supported yet")
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
-
-        debug('arg_idxs: %s' % arg_idxs)
 
         src_idxs = arg_idxs + offset
 
@@ -92,10 +86,6 @@ class VarManagerBase(object):
         tgt_start = numpy.sum(self._local_param_sizes[:rank])
         tgt_idxs = tgt_start + self.params._slices[pname][0] + \
                      self.params.make_idx_array(0, len(arg_idxs))
-
-        debug('rank: %s' % rank)
-        debug('tgt_start: %s' % tgt_start)
-        debug('tgt_idxs: %s' % tgt_idxs)
 
         return src_idxs, tgt_idxs
 
@@ -234,8 +224,6 @@ class VarManager(VarManagerBase):
         self.impl_factory = impl
         self.comm = comm
 
-        from openmdao.core.mpiwrap import debug
-
         # create implementation specific VecWrappers
         self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         self.dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
@@ -245,21 +233,16 @@ class VarManager(VarManagerBase):
         self.dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
         # populate the VecWrappers with data
-        debug("VarManager init() setup unknown vectors")
         self.unknowns.setup(unknowns_dict, store_byobjs=True)
         self.dunknowns.setup(unknowns_dict)
         self.resids.setup(unknowns_dict)
         self.dresids.setup(unknowns_dict)
-
-        debug("VarManager init() setup param vectors")
-        #debug("VarManager init() %s" % params_dict)
 
         self.params.setup(None, params_dict, self.unknowns,
                                 my_params, connections, store_byobjs=True)
         self.dparams.setup(None, params_dict, self.unknowns,
                                  my_params, connections)
 
-        debug("VarManager init() setup data xfer for %s, params=%s" % (sys_pathname, my_params))
         self._setup_data_transfer(sys_pathname, my_params)
 
 

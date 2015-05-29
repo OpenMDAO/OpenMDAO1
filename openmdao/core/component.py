@@ -1,7 +1,5 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
-from openmdao.core.mpiwrap import debug
-
 from collections import OrderedDict
 import functools
 from six import iteritems
@@ -59,8 +57,6 @@ class Component(System):
         if shape is not None and isinstance(shape, int):
             if shape > 1:
                 args['shape'] = (shape,)
-        # use shape to determine size of the array value
-        args['size'] = numpy.prod(shape)
         return args
 
     def add_param(self, name, val=_NotSet, **kwargs):
@@ -178,10 +174,7 @@ class Component(System):
 
         # set 'remote' attribute if this comp is not active
         if not self.is_active():
-            debug("Component %s is remote" % self.pathname)
             self._set_vars_as_remote()
-        else:
-            debug("Component %s is local" % self.pathname)
 
         return self._params_dict, self._unknowns_dict
 

@@ -4,8 +4,6 @@ from collections import OrderedDict
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
 
-from openmdao.core.mpiwrap import debug
-
 class ParallelGroup(Group):
     def apply_nonlinear(self, params, unknowns, resids):
         """ Evaluates the residuals of our children systems.
@@ -106,10 +104,6 @@ class ParallelGroup(Group):
             max_requested = sum(max_req_procs)
             limit = min(size, max_requested)
 
-        debug("ParallelGroup _setup_communicators comm.size = %s " % comm.size)
-        debug("ParallelGroup _setup_communicators assigned = %s " % assigned)
-        debug("ParallelGroup _setup_communicators limit = %s " % limit)
-
         # first, just use simple round robin assignment of requested CPUs
         # until everybody has what they asked for or we run out
         if requested:
@@ -121,8 +115,6 @@ class ParallelGroup(Group):
                         assigned += 1
                         if assigned == limit:
                             break
-
-        debug("ParallelGroup _setup_communicators assigned_procs = %s " % assigned_procs)
 
         self._local_subsystems = OrderedDict()
 
@@ -146,18 +138,12 @@ class ParallelGroup(Group):
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
 
-        debug("ParallelGroup _setup_communicators rank_color = %s " % rank_color)
-        debug("ParallelGroup _setup_communicators sub_comm.size = %s " % sub_comm.size)
-
         if sub_comm == MPI.COMM_NULL:
             return
 
         for i, (name, sub) in enumerate(self.subsystems()):
-            debug("ParallelGroup _setup_communicators for subsystem %d %s %s " % (i, name, sub))
             if i == rank_color:
-                debug("ParallelGroup subsystem %s is local" % name)
                 self._local_subsystems[sub.name] = sub
                 sub._setup_communicators(sub_comm)
             else:
-                debug("ParallelGroup subsystem %s is remote" % name)
                 sub._setup_communicators(MPI.COMM_NULL)
