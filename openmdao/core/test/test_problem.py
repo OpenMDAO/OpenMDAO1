@@ -208,7 +208,7 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Explicit
-        expected_error_message = ("Shape of the initial value '(2,)' of source "
+        expected_error_message = ("Shape '(2,)' of the source "
                                   "'C:y' must match the shape '(3,)' "
                                   "of the target 'B:y'")
 
@@ -224,7 +224,7 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Implicit
-        expected_error_message = ("Shape of the initial value '(2,)' of source "
+        expected_error_message = ("Shape '(2,)' of the source "
                                   "'y' must match the shape '(3,)' "
                                   "of the target 'y'")
 
@@ -244,14 +244,24 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('D', D())
         problem.root.connect('A:y', 'D:y')
-        problem.setup()
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        expected_error_message = ("Shape '(2,)' of the source "
+                                  "'A:y' must match the shape '(3,)' "
+                                  "of the target 'D:y'")
+        self.assertEqual(expected_error_message, str(cm.exception))
 
         # Implicit
         problem = Problem()
         problem.root = Group()
         problem.root.add('A', A(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
-        problem.setup()
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        expected_error_message = ("Shape '(2,)' of the source "
+                                  "'y' must match the shape '(3,)' "
+                                  "of the target 'y'")
+        self.assertEqual(expected_error_message, str(cm.exception))
 
         # Explicit
         problem = Problem()
@@ -259,15 +269,24 @@ class TestProblem(unittest.TestCase):
         problem.root.add('C', C())
         problem.root.add('D', D())
         problem.root.connect('C:y', 'D:y')
-        problem.setup()
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        expected_error_message = ("Shape '(2,)' of the source "
+                                  "'C:y' must match the shape '(3,)' "
+                                  "of the target 'D:y'")
+        self.assertEqual(expected_error_message, str(cm.exception))
 
         # Implicit
         problem = Problem()
         problem.root = Group()
         problem.root.add('C', C(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
-        problem.setup()
-
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+        expected_error_message = ("Shape '(2,)' of the source "
+                                  "'y' must match the shape '(3,)' "
+                                  "of the target 'y'")
+        self.assertEqual(expected_error_message, str(cm.exception))
     def test_simplest_run(self):
 
         prob = Problem(root=Group())

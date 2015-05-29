@@ -16,13 +16,6 @@ class ConnectError(Exception):
 
         return cls(msg)
 
-    @classmethod
-    def val_and_shape_mismatch_error(cls, src, target):
-        msg = "Shape of the initial value '{src[val].shape}' of source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
-        msg = msg.format(src=src, target=target)
-
-        return cls(msg)
-
 def __make_metadata(metadata):
     '''
     Add type field to metadata dict.
@@ -42,7 +35,6 @@ def __get_metadata(paths, metadata_dict):
 
     return metadata
 
-
 def check_types_match(src, target):
     if src['type'] != target['type']:
         raise ConnectError.type_mismatch_error(src, target)
@@ -59,21 +51,5 @@ def check_connections(connections, params, unknowns):
         check_shapes_match(source, target)
 
 def check_shapes_match(source, target):
-    #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
-
-    check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
-
-    check_shape_function(source, target)
-
-def __check_shapes_match(src, target):
-    if src['shape'] != target['shape']:
-        raise ConnectError.shape_mismatch_error(src, target)
-
-def __check_val_and_shape_match(src, target):
-    if src['val'].shape != target['shape']:
-        raise ConnectError.val_and_shape_mismatch_error(src, target)
-
-__shape_checks = {
-    (tuple, tuple) : __check_shapes_match,
-    (type(None), tuple)  : __check_val_and_shape_match
-}
+    if source['shape'] != target['shape']:
+        raise ConnectError.shape_mismatch_error(source, target)

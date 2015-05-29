@@ -32,14 +32,25 @@ class Component(System):
         self._jacobian_cache = {}
         self._vecs = None
 
-    def _get_initial_val(self, val, shape):
-        if val is _NotSet:
-            # Interpret a shape of 1 to mean scalar.
-            if shape == 1:
-                return 0.
-            return np.zeros(shape)
+    def _get_initial_data(self, val, shape):
 
-        return val
+        # If shape > 1, then we are indicating an ndarray, so promote
+        # shape to tuple
+        if isinstance(shape, int) and shape > 1:
+            shape = (shape,)
+
+        if val is _NotSet:
+            if shape == 1:
+                val = 0.
+            else:
+                val = np.zeros(shape)
+
+        elif shape is None:
+            if isinstance(val, np.ndarray):
+                shape = val.shape
+            else:
+                shape = 1
+        return val, shape
 
     def _check_val(self, name, var_type, val, shape):
         if val is _NotSet and shape is None:
@@ -53,10 +64,7 @@ class Component(System):
         self._check_val(name, var_type, val, shape)
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, shape)
-        if shape is not None and isinstance(shape, int):
-            if shape > 1:
-                args['shape'] = (shape,)
+        args['val'], args['shape'] = self._get_initial_data(val, shape)
         return args
 
     def add_param(self, name, val=_NotSet, **kwargs):

@@ -74,8 +74,8 @@ class TestComponent(unittest.TestCase):
 
         self.assertEquals(["x", "y", "z", "t", "u"], list(params.keys()))
 
-        self.assertEquals(params["x"], {"val": 0.0, 'relative_name': 'x' })
-        self.assertEquals(params["y"], {"val": 0.0, 'relative_name': 'y' })
+        self.assertEquals(params["x"], {"val": 0.0, 'shape':1, 'relative_name': 'x' })
+        self.assertEquals(params["y"], {"val": 0.0, 'shape':1, 'relative_name': 'y' })
         np.testing.assert_array_equal(params["z"]["val"], np.zeros((1,)))
         np.testing.assert_array_equal(params["t"]["val"], np.zeros((2,)))
         self.assertEquals(params["u"], {"val": 0.0, 'relative_name': 'u', 'shape':1 })
@@ -102,7 +102,7 @@ class TestComponent(unittest.TestCase):
         self.assertIsInstance(unknowns["t"]["val"], np.ndarray)
         self.assertIsInstance(unknowns["u"]["val"], float)
 
-        self.assertEquals(unknowns["x"], {"val": -1, 'relative_name': 'x' })
+        self.assertEquals(unknowns["x"], {"val": -1, 'shape':1, 'relative_name': 'x' })
         self.assertEquals(list(unknowns["y"]["val"]), 10*[0])
         np.testing.assert_array_equal(unknowns["z"]["val"], np.zeros((10,)))
         np.testing.assert_array_equal(unknowns["t"]["val"], np.zeros((2,)))
@@ -124,8 +124,8 @@ class TestComponent(unittest.TestCase):
 
         self.assertEquals(["s1", "s2", "s3", "s4", "s5"], list(unknowns.keys()))
 
-        self.assertEquals(unknowns["s1"], {"val": 0.0, 'state': True, 'relative_name': 's1' })
-        self.assertEquals(unknowns["s2"], {"val": 6.0, 'state': True, 'relative_name': 's2' })
+        self.assertEquals(unknowns["s1"], {"val": 0.0, 'shape':1, 'state': True, 'relative_name': 's1' })
+        self.assertEquals(unknowns["s2"], {"val": 6.0, 'shape':1, 'state': True, 'relative_name': 's2' })
         np.testing.assert_array_equal(unknowns["s3"]["val"], np.zeros((1,)))
         np.testing.assert_array_equal(unknowns["s4"]["val"], np.zeros((2,)))
         self.assertEquals(unknowns["s5"], {"val": 0.0, 'state': True, 'relative_name': 's5', 'shape':1 })
