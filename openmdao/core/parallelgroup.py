@@ -145,7 +145,7 @@ class ParallelGroup(Group):
             if i == rank_color:
                 self._local_subsystems[sub.name] = sub
             else:
-                self._add_remote_subsystem(sub)
+                self._set_vars_as_remote(sub)
 
         for sub in self._local_subsystems.values():
             sub._setup_communicators(sub_comm)
