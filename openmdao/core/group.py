@@ -299,8 +299,6 @@ class Group(System):
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
-            else:
-                self._set_vars_as_remote(sub)
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):

@@ -160,5 +160,4 @@ class ParallelGroup(Group):
                 sub._setup_communicators(sub_comm)
             else:
                 debug("ParallelGroup subsystem %s is remote" % name)
-                sub._set_vars_as_remote()
                 sub._setup_communicators(MPI.COMM_NULL)

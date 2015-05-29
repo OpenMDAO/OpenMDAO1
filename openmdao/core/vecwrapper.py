@@ -677,9 +677,11 @@ class TgtVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in self._vardict.items():
-            debug("TgtVecWrapper setup() slice %s %s" % (name, meta))
-            if not meta.get('remote') and not meta.get('pass_by_obj'):
+            debug("TgtVecWrapper setup() do we need slice for %s? meta=%s" % (name, meta))
+            if meta['size'] > 0 and not meta.get('pass_by_obj'):
+                debug("TgtVecWrapper setup() looking for slice for %s in %s" % (name, self._slices.keys()))
                 start, end = self._slices[name]
+                debug("TgtVecWrapper %s slice start/end %s %s" % (name, start, end))
                 meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
@@ -728,12 +730,12 @@ class TgtVecWrapper(VecWrapper):
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """
-
+        debug('TgtVecWrapper _setup_var_meta meta=%s src=%s' % (meta, src_meta))
         vmeta = meta.copy()
 
-        var_size = src_meta['size']
+        if not src_meta.get('remote'):
+            vmeta['size'] = src_meta['size']
 
-        vmeta['size'] = var_size
         if 'shape' in src_meta:
             vmeta['shape'] = src_meta['shape']
 

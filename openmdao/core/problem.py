@@ -83,6 +83,12 @@ class Problem(Component):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
+        # divide MPI communicators among subsystems
+        if MPI:
+            self.root._setup_communicators(MPI.COMM_WORLD)
+        else:
+            self.root._setup_communicators(FakeComm())
+
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
@@ -133,15 +139,6 @@ class Problem(Component):
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
-
-        # divide MPI communicators among subsystems
-        if MPI:
-            self.root._setup_communicators(MPI.COMM_WORLD)
-        else:
-            self.root._setup_communicators(FakeComm())
-
-        from openmdao.core.mpiwrap import debug
-        debug("Problem setup_vectors...")
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)
