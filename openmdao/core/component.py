@@ -13,7 +13,7 @@ import numpy as np
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.varmanager import create_views
-
+from openmdao.util.types import is_differentiable
 
 '''
 Object to represent default value for `add_output`.
@@ -55,12 +55,22 @@ class Component(System):
         self._check_val(name, var_type, val, shape)
         self._check_name(name)
         args = kwargs.copy()
-        args['val'] = self._get_initial_val(val, shape)
-        if shape is not None and isinstance(shape, int):
-            if shape > 1:
-                args['shape'] = (shape,)
-        # use shape to determine size of the array value
-        args['size'] = numpy.prod(shape)
+        args['val'] = val = self._get_initial_val(val, shape)
+
+        if is_differentiable(val) and not args.get('pass_by_obj'):
+            if isinstance(val, np.ndarray):
+                args['size'] = val.size
+                args['shape'] = val.shape
+            else:
+                args['size'] = 1
+                args['shape'] = 1
+        else:
+            args['size'] = 0
+            args['pass_by_obj'] = True
+
+        if isinstance(shape, int) and shape > 1:
+            args['shape'] = (shape,)
+
         return args
 
     def add_param(self, name, val=_NotSet, **kwargs):

@@ -527,27 +527,9 @@ class SrcVecWrapper(VecWrapper):
         vmeta = meta.copy()
         vmeta['pathname'] = name
 
-        if 'val' in meta:
-            val = meta['val']
-            if is_differentiable(val) and not meta.get('pass_by_obj'):
-                if isinstance(val, numpy.ndarray):
-                    vmeta['size'] = val.size
-                    vmeta['shape'] = val.shape
-                else:
-                    vmeta['size'] = 1
-                    vmeta['shape'] = 1
-            else:
-                vmeta['size'] = 0
-                vmeta['pass_by_obj'] = True
-                vmeta['val'] = _ByObjWrapper(val)
-        else:
-            # If val is not specified, shape must be.
-            shape = meta['shape']
-            vmeta['size'] = numpy.prod(shape)
-            if meta.get('pass_by_obj'):
-                vmeta['val'] = meta['val'] = _ByObjWrapper(numpy.zeros(shape))
-            else:
-                vmeta['val'] = meta['val'] = numpy.zeros(shape)
+        val = meta['val']
+        if not is_differentiable(val) or meta.get('pass_by_obj'):
+            vmeta['val'] = _ByObjWrapper(val)
 
         return vmeta
 
@@ -719,8 +701,8 @@ class TgtVecWrapper(VecWrapper):
             if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
-        elif var_size > 0:
-            self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
+        elif vmeta['size'] > 0:
+            self._slices[self._scoped_abs_name(pathname)] = (index, index + vmeta['size'])
 
         return vmeta
 

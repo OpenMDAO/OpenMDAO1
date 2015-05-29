@@ -134,7 +134,7 @@ class TestProblem(unittest.TestCase):
         class D(Component):
             def __init__(self):
                 super(D, self).__init__()
-                self.add_param('y', np.zeros((3,)))
+                self.add_param('y', np.zeros((2,)))
 
         class E(Component):
             def __init__(self):
@@ -208,8 +208,7 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Explicit
-        expected_error_message = ("Shape of the initial value '(2,)' of source "
-                                  "'C:y' must match the shape '(3,)' "
+        expected_error_message = ("Shape '(2,)' of the source 'C:y' must match the shape '(3,)' "
                                   "of the target 'B:y'")
 
         problem = Problem()
@@ -224,9 +223,8 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Implicit
-        expected_error_message = ("Shape of the initial value '(2,)' of source "
-                                  "'y' must match the shape '(3,)' "
-                                  "of the target 'y'")
+        expected_error_message = ("Shape '(2,)' of the source 'y' must match the shape"
+                                  " '(3,)' of the target 'y'")
 
         problem = Problem()
         problem.root = Group()

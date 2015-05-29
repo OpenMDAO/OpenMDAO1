@@ -9,11 +9,11 @@ class TestVecWrapper(unittest.TestCase):
     def test_vecwrapper(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
-        unknowns_dict['y2'] = { 'val': 2.0 }
-        unknowns_dict['y3'] = { 'val': "foo" }
-        unknowns_dict['y4'] = { 'shape': (2, 1), }
-        unknowns_dict['s1'] = { 'val': -1.0, 'state': True, }
+        unknowns_dict['y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        unknowns_dict['y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        unknowns_dict['y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
+        unknowns_dict['y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
+        unknowns_dict['s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -57,10 +57,10 @@ class TestVecWrapper(unittest.TestCase):
             self.fail("Exception expected")
 
         params = OrderedDict()
-        params['y1'] = { 'val': np.ones((3, 2)) }
-        params['y2'] = { 'val': 2.0 }
-        params['y3'] = { 'val': "foo" }
-        params['y4'] = { 'shape': (2, 1) }
+        params['y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        params['y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        params['y3'] = { 'size': 0, 'val': "foo" }
+        params['y4'] = { 'shape': (2,1), 'size': 6, 'val': np.zeros((2, 1)) }
 
         for p, meta in params.items():
             meta['pathname'] = p
@@ -88,11 +88,11 @@ class TestVecWrapper(unittest.TestCase):
     def test_view(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)) }
-        unknowns_dict['C1:y2'] = { 'val': 2.0 }
-        unknowns_dict['C1:y3'] = { 'val': "foo" }
-        unknowns_dict['C2:y4'] = { 'shape': (2, 1), }
-        unknowns_dict['C2:s1'] = { 'val': -1.0, 'state': True, }
+        unknowns_dict['C1:y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        unknowns_dict['C1:y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        unknowns_dict['C1:y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
+        unknowns_dict['C2:y4'] = { 'shape': (2, 1),  'val': np.zeros((2,1)), 'size': 2,  }
+        unknowns_dict['C2:s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -127,11 +127,11 @@ class TestVecWrapper(unittest.TestCase):
     def test_flat(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['C1:y1'] = { 'val': np.ones((3, 2)) }
-        unknowns_dict['C1:y2'] = { 'val': 2.0 }
-        unknowns_dict['C1:y3'] = { 'val': "foo" }
-        unknowns_dict['C2:y4'] = { 'shape': (2, 1), }
-        unknowns_dict['C2:s1'] = { 'val': -1.0, 'state': True, }
+        unknowns_dict['C1:y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        unknowns_dict['C1:y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        unknowns_dict['C1:y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
+        unknowns_dict['C2:y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
+        unknowns_dict['C2:s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -155,8 +155,8 @@ class TestVecWrapper(unittest.TestCase):
     def test_norm(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['y1'] = { 'val' : np.array([2.0, 3.0]) }
-        unknowns_dict['y2'] = { 'val' : -4.0 }
+        unknowns_dict['y1'] = { 'shape': (2,1), 'size': 2, 'val' : np.array([2.0, 3.0]) }
+        unknowns_dict['y2'] = { 'shape': 1, 'size': 1, 'val' : -4.0 }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -171,7 +171,7 @@ class TestVecWrapper(unittest.TestCase):
     def test_bad_get_unknown(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -193,7 +193,7 @@ class TestVecWrapper(unittest.TestCase):
     def test_bad_set_unknown(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['y1'] = { 'val': np.ones((3, 2)) }
+        unknowns_dict['y1'] = {  'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
