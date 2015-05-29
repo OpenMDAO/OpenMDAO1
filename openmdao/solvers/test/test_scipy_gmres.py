@@ -178,10 +178,18 @@ class TestScipyGMRES(unittest.TestCase):
         param_list = ['p:x']
         unknown_list = ['comp7:y1']
 
+        top.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, top['comp7:y1'], -102.7, 1e-6)
+
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
     def test_converge_diverge_groups(self):
@@ -192,6 +200,9 @@ class TestScipyGMRES(unittest.TestCase):
         top.setup()
         top.run()
 
+        # Make sure value is fine.
+        assert_rel_error(self, top['comp7:y1'], -102.7, 1e-6)
+
         param_list = ['p:x']
         unknown_list = ['comp7:y1']
 
@@ -199,6 +210,9 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['p:x'][0][0], -40.75, 1e-6)
 
     def test_single_diamond(self):
@@ -236,6 +250,10 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp4:y1']['p:x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp4:y1']['p:x'][0][0], 25, 1e-6)
         assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
 

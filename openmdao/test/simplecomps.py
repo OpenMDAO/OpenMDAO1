@@ -176,6 +176,14 @@ class SimpleImplicitComp(Component):
     y = x + 2z
 
     Sol: when x = 0.5, z = 2.666
+
+    Coupled derivs:
+
+    y = x + 8/(x+1)
+    dy_dx = 1 - 8/(x+1)**2 = -2.5555555555555554
+
+    z = 4/(x+1)
+    dz_dx = -4/(x+1)**2 = -1.7777777777777777
     """
 
     def __init__(self):
@@ -191,7 +199,7 @@ class SimpleImplicitComp(Component):
         self.add_state('z', 0.0)
 
         self.maxiter = 10
-        self.atol = 1.0e-6
+        self.atol = 1.0e-12
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Simple iterative solve. (Babylonian method)."""
