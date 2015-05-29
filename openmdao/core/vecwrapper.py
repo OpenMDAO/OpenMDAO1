@@ -529,6 +529,7 @@ class SrcVecWrapper(VecWrapper):
                 else:
                     if isinstance(val, numpy.ndarray):
                         if val.shape != shape:
+                            # they must have changed value after adding the variable
                             raise ValueError("The specified shape of variable '%s' does not match the shape of its value." %
                                              name)
                         vmeta['size']= val.size

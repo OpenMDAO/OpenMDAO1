@@ -85,13 +85,15 @@ class PetscImpl(object):
 
         app_idxs = []
 
-        # each column in the _local_unknown_sizes table contains the sizes
-        # corresponds to a fully distributed variable. (col=var, row=proc)
-        # so in order to get the offset into the full distributed vector
+        # Each column in the _local_unknown_sizes table corresponds to a
+        # fully distributed variable and contains the local sizes of that
+        # variable in each process. The row corresponds to the rank.
+        # (col=var, row=proc)
+        # So in order to get the offset into the full distributed vector
         # containing all variables, you need to add the full distributed
         # sizes of all the variables up to the current variable (ivar)
         # plus the sizes of all of the distributed parts of ivar in the
-        # current column for ranks below the current rank
+        # current column for ranks below the current rank.
         for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
             start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
                     numpy.sum(local_unknown_sizes[:rank, ivar])

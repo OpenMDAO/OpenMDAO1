@@ -298,7 +298,7 @@ class Group(System):
             if sub.is_active():
                 self._local_subsystems[sub.name] = sub
             else:
-                self._add_remote_subsystem(sub)
+                self._set_vars_as_remote(sub)
 
     def _setup_vectors(self, param_owners, connections, parent_vm=None,
                        top_unknowns=None, impl=BasicImpl):
@@ -348,15 +348,15 @@ class Group(System):
             sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
 
-    def _add_remote_subsystem(self, sub):
+    def _set_vars_as_remote(self, sub):
         """
-        Add a subsystem that is remote to this process and set variable
-        'remote' flag in metadata.
+        Set 'remote' attribute in metadata of all variables for specified
+        subsystem.
 
         Parameters
         ----------
         sub : `System`
-            `System` being added.
+            `System` containing remote variables.
         """
         sub_pname = sub.pathname + ':'
         for name, meta in self._params_dict.items():
@@ -781,58 +781,6 @@ class Group(System):
 
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
-
-def _get_implicit_connections(params_dict, unknowns_dict):
-    """
-    Finds all matches between relative names of parameters and
-    unknowns.  Any matches imply an implicit connection.  All
-    connections are expressed using absolute pathnames.
-
-    This should only be called using params and unknowns from the
-    top level `Group` in the system tree.
-
-    Parameters
-    ----------
-    params_dict : dict
-        dictionary of metadata for all parameters in this `Group`
-
-    unknowns_dict : dict
-        dictionary of metadata for all unknowns in this `Group`
-
-    Returns
-    -------
-    dict
-        implicit connections in this `Group`, represented as a mapping
-        from the pathname of the target to the pathname of the source
-
-    Raises
-    ------
-    RuntimeError
-        if a a promoted variable name matches multiple unknowns
-    """
-
-    # collect all absolute names that map to each relative name
-    abs_unknowns = {}
-    for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
-
-    abs_params = {}
-    for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['relative_name'], []).append(abs_name)
-
-    # check if any relative names correspond to mutiple unknowns
-    for name, lst in abs_unknowns.items():
-        if len(lst) > 1:
-            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
-                               (name, lst))
-
-    connections = {}
-    for uname, uabs in abs_unknowns.items():
-        pabs = abs_params.get(uname, ())
-        for p in pabs:
-            connections[p] = uabs[0]
-
-    return connections
 
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
