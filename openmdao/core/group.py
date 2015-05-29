@@ -354,7 +354,8 @@ class Group(System):
 
     def _get_fd_params(self):
         """
-        Get the list of parameters that are needed to perform a finite difference on this `Group`.
+        Get the list of parameters that are needed to perform a
+        finite difference on this `Group`.
 
         Returns
         -------
@@ -377,7 +378,8 @@ class Group(System):
 
     def _get_fd_unknowns(self):
         """
-        Get the list of unknowns that are needed to perform a finite difference on this `Group`.
+        Get the list of unknowns that are needed to perform a
+        finite difference on this `Group`.
 
         Returns
         -------
