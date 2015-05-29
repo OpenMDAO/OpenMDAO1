@@ -277,34 +277,3 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
-    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
-        """ See apply_linear. """
-
-        if self._jacobian_cache is None:
-            msg = ("No derivatives defined for Component '{name}'")
-            msg = msg.format(name=self.name)
-            raise ValueError(msg)
-
-
-        for key, J in iteritems(self._jacobian_cache):
-            unknown, param = key
-
-            # States are never in dparams.
-            if param in dparams:
-                arg_vec = dparams
-            elif param in dunknowns:
-                arg_vec = dunknowns
-            else:
-                continue
-
-            if unknown not in dresids:
-                continue
-
-            result = dresids[unknown]
-
-            # Vectors are flipped during adjoint
-
-            if mode == 'fwd':
-                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
-            else:
-                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)

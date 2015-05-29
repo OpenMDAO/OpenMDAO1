@@ -152,7 +152,7 @@ class System(object):
         self.comm = get_comm_if_active(self, comm)
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None):
+                    step_type=None, total_derivs=False):
         """Finite difference across all unknowns in this system w.r.t. all
         params.
 
@@ -178,6 +178,10 @@ class System(object):
             Override all other specifications of step_type. Can be absolute
             or relative.
 
+        total_derivs : bool
+            Set to true to calculate total derivatives. Otherwise, partial
+            derivatives are returned.
+
         Returns
         -------
         dict
@@ -194,13 +198,21 @@ class System(object):
             step_type = self.fd_options['step_type']
 
         jac = {}
-        resid_cache = resids.vec.copy()
-        resid_cache2 = None
+        cache2 = None
 
+        # Prepare for calculating partial derivatives or total derivatives
         states = []
-        for u_name, meta in iteritems(self._unknowns_dict):
-            if meta.get('state'):
-                states.append(meta['relative_name'])
+        if total_derivs == False:
+            run_model = self.apply_nonlinear
+            cache1 = resids.vec.copy()
+            resultvec = resids
+            for u_name, meta in iteritems(self._unknowns_dict):
+                if meta.get('state'):
+                    states.append(meta['relative_name'])
+        else:
+            run_model = self.solve_nonlinear
+            cache1 = unknowns.vec.copy()
+            resultvec = unknowns
 
         # Compute gradient for this param or state.
         for p_name in chain(params, states):
@@ -209,6 +221,15 @@ class System(object):
                 inputs = unknowns
             else:
                 inputs = params
+
+            target_input = inputs.flat[p_name]
+
+            # If our input is connected to a Paramcomp, then we need to twiddle
+            # the unknowns vector instead of the params vector.
+            if hasattr(self, '_src'):
+                param_src = self._src.get(p_name)
+                if param_src in self.unknowns:
+                    target_input = unknowns.flat[param_src]
 
             mydict = {}
             for key, val in self._params_dict.items():
@@ -251,50 +272,85 @@ class System(object):
 
                 if fdform == 'forward':
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] += step
 
-                    self.apply_nonlinear(params, unknowns, resids)
+                    run_model(params, unknowns, resids)
 
-                    inputs.flat[p_name][idx] -= step
+                    target_input[idx] -= step
 
                     # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (1.0/step)
+                    resultvec.vec[:] -= cache1
+                    resultvec.vec[:] *= (1.0/step)
 
                 elif fdform == 'backward':
 
-                    inputs.flat[p_name][idx] -= step
+                    target_input[idx] -= step
 
-                    self.apply_nonlinear(params, unknowns, resids)
+                    run_model(params, unknowns, resids)
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] += step
 
                     # delta resid is delta unknown
-                    resids.vec[:] -= resid_cache
-                    resids.vec[:] *= (-1.0/step)
+                    resultvec.vec[:] -= cache1
+                    resultvec.vec[:] *= (-1.0/step)
 
                 elif fdform == 'central':
 
-                    inputs.flat[p_name][idx] += step
-                    self.apply_nonlinear(params, unknowns, resids)
-                    resids2 = resids.vec - resid_cache
+                    target_input[idx] += step
 
-                    resids.vec[:] = resid_cache
+                    run_model(params, unknowns, resids)
+                    cache2 = resultvec.vec - cache1
 
-                    inputs.flat[p_name][idx] -= 2.0*step
-                    self.apply_nonlinear(params, unknowns, resids)
+                    resultvec.vec[:] = cache1
+
+                    target_input[idx] -= 2.0*step
+
+                    run_model(params, unknowns, resids)
 
                     # central difference formula
-                    resids.vec[:] -= resid_cache + resids2
-                    resids.vec[:] *= (-0.5/step)
+                    resultvec.vec[:] -= cache1 + cache2
+                    resultvec.vec[:] *= (-0.5/step)
 
-                    inputs.flat[p_name][idx] += step
+                    target_input[idx] -= step
 
                 for u_name in unknowns:
-                    jac[u_name, p_name][:, idx] = resids.flat[u_name]
+                    jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
 
                 # Restore old residual
-                resids.vec[:] = resid_cache
+                resultvec.vec[:] = cache1
 
         return jac
 
+    def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """ See apply_linear. This method allows the framework to override
+        any derivative specification in any `Component` or `Group` to perform
+        finite difference."""
+
+        if self._jacobian_cache is None:
+            msg = ("No derivatives defined for Component '{name}'")
+            msg = msg.format(name=self.name)
+            raise ValueError(msg)
+
+
+        for key, J in iteritems(self._jacobian_cache):
+            unknown, param = key
+
+            # States are never in dparams.
+            if param in dparams:
+                arg_vec = dparams
+            elif param in dunknowns:
+                arg_vec = dunknowns
+            else:
+                continue
+
+            if unknown not in dresids:
+                continue
+
+            result = dresids[unknown]
+
+            # Vectors are flipped during adjoint
+
+            if mode == 'fwd':
+                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
+            else:
+                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)

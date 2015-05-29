@@ -9,7 +9,8 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
-from openmdao.test.simplecomps import SimpleArrayComp, SimpleImplicitComp
+from openmdao.test.simplecomps import SimpleArrayComp, SimpleImplicitComp, \
+                                      SimpleCompDerivMatVec
 from openmdao.test.testutil import assert_rel_error
 
 
@@ -110,6 +111,89 @@ class TestProblemCheckPartials(unittest.TestCase):
             self.assertEquals(str(err), msg)
         else:
             self.fail("Error expected")
+
+
+class TestProblemFullFD(unittest.TestCase):
+
+    def test_full_model_fd_simple_comp(self):
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('comp', SimpleCompDerivMatVec())
+        top.root.add('p1', ParamComp('x', 1.0))
+
+        top.root.connect('p1:x', 'comp:x')
+
+        top.root.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        param_list = ['comp:x']
+        unknown_list = ['comp:y']
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp:y']['comp:x'][0][0], 2.0, 1e-6)
+
+
+    def test_full_model_fd_double_diamond_grouped(self):
+
+        top = Problem()
+        top.root = ConvergeDivergeGroups()
+        top.setup()
+        top.run()
+
+        top.root.fd_options['force_fd'] = True
+
+        param_list = ['sub1:comp1:x1']
+        unknown_list = ['comp7:y1']
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['sub1:comp1:x1'][0][0], -40.75, 1e-6)
+
+
+class TestProblemCheckTotals(unittest.TestCase):
+
+    def test_double_diamond_model(self):
+
+        top = Problem()
+        top.root = ConvergeDivergeGroups()
+
+        top.setup()
+        top.run()
+
+        data = top.check_total_derivatives()
+        #print data
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
+
+    def test_simple_implicit(self):
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('comp', SimpleImplicitComp())
+        top.root.add('p1', ParamComp('x', 0.5))
+
+        top.root.connect('p1:x', 'comp:x')
+
+        top.setup()
+        top.run()
+
+        data = top.check_total_derivatives()
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 
 
 if __name__ == "__main__":

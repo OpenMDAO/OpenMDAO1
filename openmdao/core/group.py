@@ -506,7 +506,10 @@ class Group(System):
             else:
                 jacobian_cache = sub.jacobian(sub.params, sub.unknowns, sub.resids)
 
-            if isinstance(sub, Component) and \
+            # Cache the Jacobian for Components that aren't Paramcomps.
+            # Also cache it for systems that are finite differenced.
+            if (isinstance(sub, Component) or \
+                sub.fd_options['force_fd'] == True) and \
                not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
@@ -560,8 +563,12 @@ class Group(System):
 
         for name, system in self.subsystems(local=True):
 
-            # Special handling for Components
-            if isinstance(system, Component) and not isinstance(system, ParamComp):
+            # Components that are not paramcomps perform a matrix-vector
+            # product on their variables. Any group where the user requests
+            # a finite difference is also treated as a component.
+            if (isinstance(system, Component) or \
+                system.fd_options['force_fd'] == True) and \
+                not isinstance(system, ParamComp):
 
                 dresids = system.dresids
                 dunknowns = system.dunknowns
