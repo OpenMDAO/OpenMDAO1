@@ -132,9 +132,14 @@ class MPITests1(MPITestCase):
         root.connect('G1:C1:c', 'C3:a')
         root.connect('G1:C2:d', 'C3:b')
 
+        debug("Setup...")
         prob.setup()
-        prob.run()
+        debug("Setup complete")
+        prob.root.dump()
 
+        debug("Running...")
+        prob.run()
+        debug("Run complete")
         prob.root.dump()
 
         if not MPI or self.comm.rank == 0:

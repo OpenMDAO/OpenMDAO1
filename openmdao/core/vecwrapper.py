@@ -1,5 +1,9 @@
 """ Class definition for VecWrapper"""
 
+from openmdao.core.mpiwrap import debug
+#def debug(s):
+    #pass
+
 from collections import OrderedDict
 
 import numpy
@@ -481,7 +485,10 @@ class SrcVecWrapper(VecWrapper):
             var_size = vmeta['size']
 
             if not vmeta.get('pass_by_obj'):
-                if not meta.get('remote'):
+                if meta.get('remote'):
+                    # we don't store remote vars
+                    vmeta['size'] = 0
+                else:
                     self._slices[relname] = (vec_size, vec_size + var_size)
                     vec_size += var_size
 
@@ -516,7 +523,7 @@ class SrcVecWrapper(VecWrapper):
             in an earlier stage of setup.
 
         """
-
+        debug('_setup_var_meta %s: %s' % (name, meta))
         vmeta = meta.copy()
         vmeta['pathname'] = name
 
@@ -604,6 +611,8 @@ class TgtVecWrapper(VecWrapper):
         store_byobjs : bool (optional)
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
+        debug("TgtVecWrapper setup() ")
+
         # dparams vector has some additional behavior
         if not store_byobjs:
             self.deriv_units = True
@@ -612,6 +621,7 @@ class TgtVecWrapper(VecWrapper):
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
             if pathname in my_params:
+                debug("TgtVecWrapper setup() %s is in my_params" % (pathname))
                 # if connected, get metadata from the source
                 src_pathname = connections.get(pathname)
                 if src_pathname is None:
@@ -622,7 +632,10 @@ class TgtVecWrapper(VecWrapper):
                 vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
                 vmeta['pathname'] = pathname
 
-                if not meta.get('remote'):
+                if meta.get('remote'):
+                    # we don't store remote vars
+                    vmeta['size'] = 0
+                else:
                     vec_size += vmeta['size']
 
                 self._vardict[self._scoped_abs_name(pathname)] = vmeta
@@ -636,14 +649,20 @@ class TgtVecWrapper(VecWrapper):
 
         self.vec = numpy.zeros(vec_size)
 
+        debug("TgtVecWrapper setup() mapping slices, keys=%s" % str(self._vardict.keys()))
+
         # map slices to the array
         for name, meta in self._vardict.items():
-            if not meta.get('remote') and not meta.get('pass_by_obj'):
+            debug("TgtVecWrapper setup() do we need slice for %s? meta=%s" % (name, meta))
+            if meta['size'] > 0 and not meta.get('pass_by_obj'):
+                debug("TgtVecWrapper setup() looking for slice for %s in %s" % (name, self._slices.keys()))
                 start, end = self._slices[name]
+                debug("TgtVecWrapper %s slice start/end %s %s" % (name, start, end))
                 meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
         for pathname in missing:
+            debug("TgtVecWrapper setup() missing %s" % pathname)
             meta = params_dict[pathname]
             newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
             if newmeta['pathname'] == pathname:
@@ -659,8 +678,9 @@ class TgtVecWrapper(VecWrapper):
                 scale, offset = unitconv
                 if self.deriv_units:
                     offset = 0.0
-
                 self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
+
+        debug("TgtVecWrapper setup() complete")
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -686,12 +706,12 @@ class TgtVecWrapper(VecWrapper):
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """
-
+        debug('TgtVecWrapper _setup_var_meta meta=%s src=%s' % (meta, src_meta))
         vmeta = meta.copy()
 
-        var_size = src_meta['size']
+        if not src_meta.get('remote'):
+            vmeta['size'] = src_meta['size']
 
-        vmeta['size'] = var_size
         if 'shape' in src_meta:
             vmeta['shape'] = src_meta['shape']
 
@@ -699,7 +719,7 @@ class TgtVecWrapper(VecWrapper):
             if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
-        elif var_size > 0 and not meta.get('remote'):
+        elif var_size > 0:
             self._slices[self._scoped_abs_name(pathname)] = (index, index + var_size)
 
         return vmeta
