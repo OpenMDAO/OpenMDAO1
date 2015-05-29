@@ -172,14 +172,16 @@ class ConvergeDivergeGroups(Group):
     def __init__(self):
         super(ConvergeDivergeGroups, self).__init__()
 
-        sub1 = self.add('sub1', Group())
-        sub2 = sub1.add('sub2', Group())
-        sub3 = self.add('sub3', Group())
 
+        sub1 = self.add('sub1', Group())
         sub1.add('comp1', Comp1())
+
+        sub2 = sub1.add('sub2', Group())
         sub2.add('comp2', Comp2())
         sub2.add('comp3', Comp3())
         sub1.add('comp4', Comp4())
+
+        sub3 = self.add('sub3', Group())
         sub3.add('comp5', Comp5())
         sub3.add('comp6', Comp6())
         self.add('comp7', Comp7())
