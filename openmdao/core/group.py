@@ -22,7 +22,7 @@ from openmdao.util.types import real_types
 from openmdao.core.mpiwrap import get_comm_if_active
 
 class Group(System):
-    """A system that contains other systems"""
+    """A system that contains other systems."""
 
     def __init__(self):
         super(Group, self).__init__()
@@ -48,17 +48,18 @@ class Group(System):
             self._varmanager.unknowns[name] = val
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named unknown or unconnected
+        """
+        Retrieve unflattened value of named unknown or unconnected
         param variable.
 
         Parameters
         ----------
         name : str
-             the name of the variable to retrieve from the unknowns vector.
+             The name of the variable to retrieve from the unknowns vector.
 
         Returns
         -------
-        the unflattened value of the given variable.
+        The unflattened value of the given variable.
         """
 
         # if system is not active, then it's not valid to access it's variables
@@ -82,27 +83,45 @@ class Group(System):
 
     @property
     def unknowns(self):
-        return self._varmanager.unknowns
+        try:
+            return self._varmanager.unknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dunknowns(self):
-        return self._varmanager.dunknowns
+        try:
+            return self._varmanager.dunknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def params(self):
-        return self._varmanager.params
+        try:
+            return self._varmanager.params
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dparams(self):
-        return self._varmanager.dparams
+        try:
+            return self._varmanager.dparams
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def resids(self):
-        return self._varmanager.resids
+        try:
+            return self._varmanager.resids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     @property
     def dresids(self):
-        return self._varmanager.dresids
+        try:
+            return self._varmanager.dresids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     def subsystem(self, name):
         """
@@ -134,14 +153,15 @@ class Group(System):
 
         Parameters
         ----------
+
         name : str
-            the name by which the subsystem is to be known
+            The name by which the subsystem is to be known.
 
         system : `System`
-            the subsystem to be added
+            The subsystem to be added.
 
         promotes : tuple, optional
-            the names of variables in the subsystem which are to be promoted
+            The names of variables in the subsystem which are to be promoted.
         """
         if promotes is not None:
             system._promotes = promotes
@@ -161,11 +181,12 @@ class Group(System):
 
         Parameters
         ----------
+
         source : source
-            the name of the source variable
+            The name of the source variable.
 
         targets : str OR iterable
-            the name of one or more target variables
+            The name of one or more target variables.
         """
         if type(targets) is str:
             self._src[targets] = source
@@ -189,7 +210,7 @@ class Group(System):
         Returns
         -------
         iterator
-            iterator over subgroups.
+            Iterator over subgroups.
         """
         for name, subsystem in self.subsystems(local=local):
             if isinstance(subsystem, Group):
@@ -200,7 +221,7 @@ class Group(System):
         Returns
         -------
         iterator
-            iterator over sub-`Component`s.
+            Iterator over sub-`Components`.
         """
         for name, comp in self.subsystems(local=local):
             if isinstance(comp, Component):
@@ -212,7 +233,7 @@ class Group(System):
         Parameter
         ---------
         parent_path : str
-            the pathname of the parent `System`, which is to be prepended to the
+            The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
         """
         super(Group, self)._setup_paths(parent_path)
@@ -221,15 +242,15 @@ class Group(System):
 
     def _setup_variables(self):
         """Create dictionaries of metadata for parameters and for unknowns for
-           this `Group` and stores them as attributes of the `Group'. The
+           this `Group` and stores them as attributes of the `Group`. The
            relative name of subsystem variables with respect to this `Group`
            system is included in the metadata.
 
            Returns
            -------
            tuple
-               a dictionary of metadata for parameters and for unknowns
-               for all subsystems
+               A dictionary of metadata for parameters and for unknowns
+               for all subsystems.
         """
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
@@ -250,7 +271,7 @@ class Group(System):
         Returns
         -------
         str
-            the pathname of the given variable, based on its promotion status.
+            The pathname of the given variable, based on its promotion status.
         """
         if subsystem.promoted(name):
             return name
@@ -261,7 +282,7 @@ class Group(System):
 
     def _setup_communicators(self, comm):
         """
-        Assign communicator to this `Group` and all of it's subsystems
+        Assign communicator to this `Group` and all of its subsystems.
 
         Parameters
         ----------
@@ -278,7 +299,7 @@ class Group(System):
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)
             if sub.is_active():
-                self._add_local_subsystem(sub)
+                self._local_subsystems[sub.name] = sub
             else:
                 self._add_remote_subsystem(sub)
 
@@ -290,19 +311,19 @@ class Group(System):
         Parameters
         ----------
         param_owners : dict
-            a dictionary mapping `System` pathnames to the pathnames of parameters
-            they are reponsible for propagating
+            A dictionary mapping `System` pathnames to the pathnames of parameters
+            they are reponsible for propagating.
 
         connections : dict
-            a dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to
+            A dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to.
 
         parent_vm : `VarManager`, optional
-            the `VarManager` for the parent `Group`, if any, into which this
+            The `VarManager` for the parent `Group`, if any, into which this
             `VarManager` will provide a view.
 
         top_unknowns : `VecWrapper`, optional
-            the `Problem` level unknowns `VecWrapper`
+            The `Problem` level unknowns `VecWrapper`.
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
@@ -327,20 +348,48 @@ class Group(System):
                                               my_params)
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections, parent_vm=self._varmanager,
+            sub._setup_vectors(param_owners, connections,
+                               parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
 
-    def _add_local_subsystem(self, sub):
+    def _get_fd_params(self):
         """
-        Add a subsystem that is local to this process.
+        Returns
+        -------
+        list of str
+            List of names of params that have sources that are ParamComps
+            or sources that are outside of this `Group` .
+        """
+        conns = self._varmanager.connections
+        mypath = self.pathname + ':' if self.pathname else ''
 
-        Parameters
-        ----------
-        sub : `System`
-            `System` being added.
+        params = []
+        for tgt, src in conns.items():
+            if tgt.startswith(mypath):
+                # look up the Component that contains the source variable
+                src_comp = self.subsystem(src.rsplit(':', 1)[0][len(mypath):])
+                if not src.startswith(mypath) or isinstance(src_comp, ParamComp):
+                    params.append(tgt[len(mypath):])
+
+        return params
+
+    def _get_fd_unknowns(self):
         """
-        name = sub.name
-        self._local_subsystems[name] = sub
+        Returns
+        -------
+        list of str
+            List of names of unknowns for this `Group` that don't come from a
+            `ParamComp`.
+        """
+        mypath = self.pathname + ':' if self.pathname else ''
+        fd_unknowns = []
+        for name, meta in self.unknowns.items():
+            # look up the subsystem containing the unknown
+            sub = self.subsystem(meta['pathname'].rsplit(':',1)[0][len(mypath):])
+            if not isinstance(sub, ParamComp):
+                fd_unknowns.append(name)
+
+        return fd_unknowns
 
     def _add_remote_subsystem(self, sub):
         """
@@ -365,8 +414,8 @@ class Group(System):
         """ Returns
             -------
             dict
-                explicit connections in this `Group`, represented as a mapping
-                from the pathname of the target to the pathname of the source
+                Explicit connections in this `Group`, represented as a mapping
+                from the pathname of the target to the pathname of the source.
         """
         connections = {}
         for _, sub in self.subgroups():
@@ -386,10 +435,10 @@ class Group(System):
         Parameters
         ----------
         params : `VecWrapper`, optional
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`, optional
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`, optional
             `VecWrapper`  containing residuals. (r)
@@ -420,13 +469,13 @@ class Group(System):
         Parameters
         ----------
         params : `VecWrapper`
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
         if not self.is_active():
             return
@@ -442,14 +491,14 @@ class Group(System):
 
         Parameters
         ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
 
         for name, sub in self.subsystems(local=True):
@@ -483,27 +532,28 @@ class Group(System):
 
         Parameters
         ----------
-        params : `VecwWrapper`
-            `VecwWrapper` containing parameters (p)
 
-        unknowns : `VecwWrapper`
-            `VecwWrapper` containing outputs and states (u)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        dparams : `VecwWrapper`
-            `VecwWrapper` containing either the incoming vector in forward mode
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns : `VecwWrapper`
-            In forward mode, this `VecwWrapper` contains the incoming vector for
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecwWrapper`
-            `VecwWrapper` containing either the outgoing result in forward mode
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
         """
         if not self.is_active():
             return
@@ -574,17 +624,17 @@ class Group(System):
         Parameters
         ----------
         rhs: `ndarray`
-            Right hand side for our linear solve.
+            Right-hand side for our linear solve.
 
-        params : `VecwWrapper`
-            `VecwWrapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWrapper`
-            `VecwWrapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
-            called wihtout mode so that the user can set the mode in this
+            called without mode so that the user can set the mode in this
             system's ln_solver.options.
         """
         if not self.is_active():
@@ -747,7 +797,7 @@ class Group(System):
         -------
         tuple
             A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `Group`
+            processors usable by this `Group`.
         """
         min_procs = 1
         max_procs = 1
@@ -779,7 +829,7 @@ class Group(System):
 def _get_implicit_connections(params_dict, unknowns_dict):
     """
     Finds all matches between relative names of parameters and
-    unknowns.  Any matches imply an implicit connection.  All
+    unknowns. Any matches imply an implicit connection.  All
     connections are expressed using absolute pathnames.
 
     This should only be called using params and unknowns from the
@@ -788,21 +838,21 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     Parameters
     ----------
     params_dict : dict
-        dictionary of metadata for all parameters in this `Group`
+        Dictionary of metadata for all parameters in this `Group`.
 
     unknowns_dict : dict
-        dictionary of metadata for all unknowns in this `Group`
+        Dictionary of metadata for all unknowns in this `Group`.
 
     Returns
     -------
     dict
-        implicit connections in this `Group`, represented as a mapping
-        from the pathname of the target to the pathname of the source
+        Implicit connections in this `Group`, represented as a mapping
+        from the pathname of the target to the pathname of the source.
 
     Raises
     ------
     RuntimeError
-        if a a promoted variable name matches multiple unknowns
+        If a promoted variable name matches multiple unknowns.
     """
 
     # collect all absolute names that map to each relative name
@@ -834,18 +884,18 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
     Parameters
     ----------
     var_name : str
-        name of a variable relative to a `System`
+        Name of a variable relative to a `System`.
 
     var_dict : dict
-        dictionary of variable metadata, keyed on relative name
+        Dictionary of variable metadata, keyed on relative name.
 
     dict_name : str
-        name of var_dict (used for error reporting)
+        Name of var_dict (used for error reporting).
 
     Returns
     -------
     list of str
-        the absolute pathnames for the given variables in the
+        The absolute pathnames for the given variables in the
         variable dictionary that map to the given relative name.
     """
     pnames = []

@@ -11,10 +11,10 @@ class ParallelGroup(Group):
         Parameters
         ----------
         params : `VecWrapper`
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper`  containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -41,7 +41,7 @@ class ParallelGroup(Group):
         -------
         tuple
             A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `ParallelGroup`
+            processors usable by this `ParallelGroup`.
         """
         min_procs = 1
         max_procs = 1
@@ -59,7 +59,7 @@ class ParallelGroup(Group):
 
     def _setup_communicators(self, comm):
         """
-        Assign communicator to this `ParallelGroup` and all of it's subsystems
+        Assign communicator to this `ParallelGroup` and all of its subsystems.
 
         Parameters
         ----------
@@ -137,7 +137,7 @@ class ParallelGroup(Group):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._add_local_subsystem(sub)
+                self._local_subsystems[sub.name] = sub
             else:
                 self._add_remote_subsystem(sub)
 

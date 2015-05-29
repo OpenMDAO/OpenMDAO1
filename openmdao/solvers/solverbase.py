@@ -19,14 +19,14 @@ class LinearSolver(object):
         Parameters
         ----------
         rhs : ndarray
-            Array containing the right hand side for the linear solve. Also
-            possibly a 2D array with multiple right hand sides.
+            Array containing the right-hand side for the linear solve. Also
+            possibly a 2D array with multiple right-hand sides.
 
         system : `System`
             Parent `System` object.
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
 
         Returns
         -------
@@ -51,10 +51,10 @@ class NonLinearSolver(object):
         Parameters
         ----------
         params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)

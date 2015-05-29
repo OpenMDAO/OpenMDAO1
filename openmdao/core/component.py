@@ -72,37 +72,45 @@ class Component(System):
 
     @property
     def unknowns(self):
-        return self._vecs.unknowns
+        try:
+            return self._vecs.unknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dunknowns(self):
-        return self._vecs.dunknowns
+        try:
+            return self._vecs.dunknowns
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def params(self):
-        return self._vecs.params
+        try:
+            return self._vecs.params
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dparams(self):
-        return self._vecs.dparams
+        try:
+            return self._vecs.dparams
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def resids(self):
-        return self._vecs.resids
+        try:
+            return self._vecs.resids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     @property
     def dresids(self):
-        return self._vecs.dresids
-
-    def vectors(self):
-        """
-        Returns
-        -------
-        `VecTuple`
-            A named tuple containing the unknowns, dunknowns, params, dparams, resids, and
-            dresids `VecWrapper`s.
-        """
-        return self._vecs
+        try:
+            return self._vecs.dresids
+        except:
+            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
 
     def _check_name(self, name):
         if self._post_setup:
@@ -191,10 +199,10 @@ class Component(System):
         Parameters
         ----------
         params : `VecWrapper`
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper` containing outputs and states (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -219,11 +227,11 @@ class Component(System):
 
         Parameters
         ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -232,7 +240,7 @@ class Component(System):
         -------
         dict
             Dictionary whose keys are tuples of the form ('unknown', 'param')
-            and whose values are ndarrays
+            and whose values are ndarrays.
         """
         return None
 
@@ -244,27 +252,27 @@ class Component(System):
 
         Parameters
         ----------
-        params : `VecwWrapper`
-            `VecwWrapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWrapper`
-            `VecwWrapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
-        dparams : `VecwWrapper`
-            `VecwWrapper` containing either the incoming vector in forward mode
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns : `VecwWrapper`
-            In forward mode, this `VecwWrapper` contains the incoming vector for
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecwWrapper`
-            `VecwWrapper` containing either the outgoing result in forward mode
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
         """
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
