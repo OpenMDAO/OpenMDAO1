@@ -144,10 +144,23 @@ class Problem(Component):
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)
 
+        # Prep for case recording
+        for recorder in self.driver.recorders:
+            recorder.startup()
+
     def run(self):
         """ Runs the Driver in self.driver. """
         self.driver.run(self.root)
 
+        # Should only happen in top Problem?
+        system = self.root
+        varmanager = system._varmanager
+        params = varmanager.params
+        unknowns = varmanager.unknowns
+        resids = varmanager.resids
+        for recorder in self.driver.recorders:
+            recorder.record(params, unknowns, resids)
+            
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
