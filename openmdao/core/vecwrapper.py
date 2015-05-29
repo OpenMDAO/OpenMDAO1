@@ -523,7 +523,7 @@ class SrcVecWrapper(VecWrapper):
         vmeta = meta.copy()
         vmeta['pathname'] = name
 
-        vmeta['shape'] = shape = meta['shape']
+        shape = meta['shape']
         val = meta['val']
         if not is_differentiable(val) or meta.get('pass_by_obj'):
             vmeta['size'] = 0
