@@ -12,8 +12,8 @@ class VarManagerBase(object):
     Parameters
     ----------
         connections : dict
-            a dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to
+            A dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to.
     """
     def __init__(self, connections):
         self.connections = connections
@@ -26,18 +26,18 @@ class VarManagerBase(object):
         self.data_xfer = {}
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable
+        """Retrieve unflattened value of named variable.
 
         Parameters
         ----------
         name : str   OR   tuple : (name, vector)
-             the name of the variable to retrieve from the unknowns vector OR
-             a tuple of the name of the variable and the vector to get it's
+             The name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get its
              value from.
 
         Returns
         -------
-        the unflattened value of the given variable
+        The unflattened value of the given variable.
         """
         if isinstance(name, tuple):
             name, vector = name
@@ -90,19 +90,18 @@ class VarManagerBase(object):
         return src_idxs, tgt_idxs
 
     def _setup_data_transfer(self, sys_pathname, my_params):
-        """
-        Create `DataXfer` objects to handle data transfer for all of the
-        connections that involve paramaters for which this `VarManager`
-        is responsible.
+        """Create `DataXfer` objects to handle data transfer for all of the
+           connections that involve paramaters for which this `VarManager`
+           is responsible.
 
-        Parameters
-        ----------
-        sys_pathname : str
-            Absolute pathname of the `System` that will own this `VarManager`.
+           Parameters
+           ----------
+           sys_pathname : str
+               Absolute pathname of the `System` that will own this `VarManager`.
 
-        my_params : list
-            list of pathnames for parameters that the VarManager is
-            responsible for propagating
+           my_params : list
+               list of pathnames for parameters that the VarManager is
+               responsible for propagating.
         """
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
@@ -169,7 +168,7 @@ class VarManagerBase(object):
             Specifies forward or reverse data transfer.
 
         deriv : bool, optional
-            If True, perform a data transfer between derivative `VecWrapper`s
+            If True, perform a data transfer between derivative `VecWrappers`.
         """
         x = self.data_xfer.get(target_system)
         if x is not None:
@@ -179,13 +178,13 @@ class VarManagerBase(object):
                 x.transfer(self.unknowns, self.params, mode)
 
     def vectors(self):
-        """Return the set of variable vectors being managed by this `VarManager`
+        """Return the set of variable vectors being managed by this `VarManager`.
 
         Returns
         -------
         `VecTuple`
-            a namedtuple of six (6) `VecWrapper`s:
-            unknowns, dunknowns, resids, dresids, params, dparams
+            A namedtuple of six (6) `VecWrappers`:
+            unknowns, dunknowns, resids, dresids, params, dparams.
         """
         return VecTuple(self.unknowns, self.dunknowns,
                         self.resids, self.dresids,
@@ -199,18 +198,18 @@ class VarManager(VarManagerBase):
     Parameters
     ----------
     params_dict : dict
-        dictionary of metadata for all parameters
+        Dictionary of metadata for all parameters.
 
     unknowns_dict : dict
-        dictionary of metadata for all unknowns
+        Dictionary of metadata for all unknowns.
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     connections : dict
-        a dictionary mapping the pathname of a target variable to the
-        pathname of the source variable that it is connected to
+        A dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to.
 
     impl : an implementation factory, optional
         Specifies the factory object used to create `VecWrapper` and
@@ -252,20 +251,20 @@ class ViewVarManager(VarManagerBase):
     Parameters
     ----------
     top_unknowns : `VecWrapper`
-        the `Problem` level unknowns `VecWrapper`
+        The `Problem` level unknowns `VecWrapper`.
 
     parent_vm : `VarManager`
-        the `VarManager` which provides the `VecWrapper`s on which to create views
+        The `VarManager` which provides the `VecWrappers` on which to create views.
 
     params_dict : dict
-        dictionary of metadata for all parameters
+        Dictionary of metadata for all parameters.
 
     unknowns_dict : dict
-        dictionary of metadata for all unknowns
+        Dictionary of metadata for all unknowns.
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     """
     def __init__(self, top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
@@ -291,36 +290,36 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     Parameters
     ----------
     top_unknowns : `VecWrapper`
-        the `Problem` level unknowns `VecWrapper`
+        The `Problem` level unknowns `VecWrapper`.
 
     parent_vm : `VarManager`
-        the `VarManager` which provides the `VecWrapper`s on which to create views
+        The `VarManager` which provides the `VecWrapper` on which to create views.
 
     comm : an MPI communicator (real or fake)
-        communicator to be used for any distributed operations
+        Communicator to be used for any distributed operations.
 
     sys_pathname : str
-        pathname of the system for which the views are being created
+        Pathname of the system for which the views are being created.
 
     params_dict : dict
-        dictionary of metadata for all parameters
+        Dictionary of metadata for all parameters.
 
     unknowns_dict : dict
-        dictionary of metadata for all unknowns
+        Dictionary of metadata for all unknowns.
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     connections : dict
-        a dictionary mapping the pathname of a target variable to the
-        pathname of the source variable that it is connected to
+        A dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to.
 
     Returns
     -------
     `VecTuple`
-        a namedtuple of six (6) `VecWrapper`s:
-        unknowns, dunknowns, resids, dresids, params, dparams
+        A namedtuple of six (6) `VecWrappers`:
+        unknowns, dunknowns, resids, dresids, params, dparams.
     """
 
     # map relative name in parent to corresponding relative name in this view
@@ -353,7 +352,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         An ordered mapping of absolute variable name to its metadata.
 
     child_name : str
-        The pathname of the child for which to get relative name
+        The pathname of the child for which to get relative name.
 
     Returns
     -------

@@ -360,6 +360,36 @@ class TestGroup(unittest.TestCase):
         G2.connect('C1:x', 'C2:x')
         prob.setup()
 
+    def test_fd_params(self):
+        # tests retrieval of a list of any internal params whose source is either
+        # a ParamComp or is outside of the Group
+        prob = Problem(root=ExampleGroup())
+        prob.setup()
+        root = prob.root
+
+        self.assertEqual(root._get_fd_params(), ['G2:G1:C2:x'])
+        self.assertEqual(root.subsystem('G2')._get_fd_params(), ['G1:C2:x'])
+        self.assertEqual(root.subsystem('G2:G1')._get_fd_params(), ['C2:x'])
+        self.assertEqual(root.subsystem('G3')._get_fd_params(), ['C3:x'])
+
+        self.assertEqual(root.subsystem('G3:C3')._get_fd_params(), ['x'])
+        self.assertEqual(root.subsystem('G2:G1:C2')._get_fd_params(), ['x'])
+
+    def test_fd_unknowns(self):
+        # tests retrieval of a list of any internal unknowns with ParamComp
+        # variables filtered out.
+        prob = Problem(root=ExampleGroup())
+        prob.setup()
+        root = prob.root
+
+        self.assertEqual(root._get_fd_unknowns(), ['G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y'])
+        self.assertEqual(root.subsystem('G2')._get_fd_unknowns(), ['G1:C2:y'])
+        self.assertEqual(root.subsystem('G2:G1')._get_fd_unknowns(), ['C2:y'])
+        self.assertEqual(root.subsystem('G3')._get_fd_unknowns(), ['C3:y', 'C4:y'])
+
+        self.assertEqual(root.subsystem('G3:C3')._get_fd_unknowns(), ['y'])
+        self.assertEqual(root.subsystem('G2:G1:C2')._get_fd_unknowns(), ['y'])
+
     def test_dump(self):
         prob = Problem(root=ExampleGroup())
         prob.setup()

@@ -63,11 +63,11 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
         TestCase instance used for assertions.
 
     computed_jac : dict
-        Computed value of the jacobian that you wish to check for accuracy
+        Computed value of the jacobian that you wish to check for accuracy.
 
     expected_jac : dict
         Expected jacobian values, usually computed by finite difference or
-        complex step
+        complex step.
 
     tolerance : float
         Maximum relative error ``norm(computed - expected) / norm(expected)``.

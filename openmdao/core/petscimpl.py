@@ -14,12 +14,12 @@ from petsc4py import PETSc
 
 
 class PetscImpl(object):
-    """PETSc vector and data transfer implementation factory"""
+    """PETSc vector and data transfer implementation factory."""
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
         """
-        Create a`PetscSrcVecWrapper`
+        Create a`PetscSrcVecWrapper`.
 
         Returns
         -------
@@ -30,7 +30,7 @@ class PetscImpl(object):
     @staticmethod
     def create_tgt_vecwrapper(pathname, comm):
         """
-        Create a `PetscTgtVecWrapper`
+        Create a `PetscTgtVecWrapper`.
 
         Returns
         -------
@@ -42,31 +42,31 @@ class PetscImpl(object):
     def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
-        and target vectors
+        and target vectors.
 
         Parameters
         ----------
         varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
+            The `VarManager` that managers this data transfer.
 
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by vector' variables to the source variables that
+            they are connected to.
 
         byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by object' variables to the source variables that
+            they are connected to.
 
         Returns
         -------
         `PetscDataXfer`
-            a `PetscDataXfer` object
+            A `PetscDataXfer` object.
         """
         return PetscDataXfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
@@ -136,8 +136,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         ndarray
-            array containing local sizes of 'pass by vector' unknown variables for
-            every process in our communicator.
+            Array containing local sizes of 'pass by vector' unknown variables
+            for every process in our communicator.
         """
         sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
 
@@ -174,7 +174,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         float
-            The norm of the distributed vector
+            The norm of the distributed vector.
         """
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
@@ -196,10 +196,10 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
+            `VecWrapper` of parameters from the parent `System`.
 
         params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
+            Dictionary of parameter absolute name mapped to metadata dict.
 
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
@@ -228,7 +228,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Returns
         -------
         ndarray
-            array containing sum of local sizes of 'pass by vector' params.
+            Array containing sum of local sizes of 'pass by vector' params.
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('pass_by_obj')])
@@ -242,27 +242,27 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
 
 class PetscDataXfer(DataXfer):
+    """
+    Parameters
+    ----------
+    varmanager : `VarManager`
+        The `VarManager` that managers this data transfer
+
+    src_idxs : array
+        indices of the source variables in the source vector
+
+    tgt_idxs : array
+        indices of the target variables in the target vector
+
+    vec_conns : dict
+        mapping of 'pass by vector' variables to the source variables that
+        they are connected to
+
+    byobj_conns : dict
+        mapping of 'pass by object' variables to the source variables that
+        they are connected to
+    """
     def __init__(self, varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
-        """
-        Parameters
-        ----------
-        varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
-
-        src_idxs : array
-            indices of the source variables in the source vector
-
-        tgt_idxs : array
-            indices of the target variables in the target vector
-
-        vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
-
-        byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
-        """
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
                                             vec_conns, byobj_conns)
 
@@ -292,21 +292,21 @@ class PetscDataXfer(DataXfer):
         Parameters
         ----------
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by vector' variables to the source variables that
+            they are connected to.
 
         byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by object' variables to the source variables that
+            they are connected to.
 
-        mode : 'fwd' or 'rev' (optional)
-            direction of the data transfer, source to target ('fwd', the default)
+        mode : 'fwd' or 'rev', optional
+            Direction of the data transfer, source to target ('fwd', the default)
             or target to source ('rev').
         """
         if mode == 'rev':

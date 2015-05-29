@@ -49,25 +49,25 @@ class System(object):
         Parameters
         ----------
         name : str
-            the name of the variable or subsystem
+            The name of the variable or subsystem.
 
         Returns
         -------
         value OR `System`
-            the unflattened value of the given variable OR a reference to
-            the named `System`
+            The unflattened value of the given variable OR a reference to
+            the named `System`.
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
 
 
     def promoted(self, name):
-        """Determine is the given variable name  is being promoted from this
+        """Determine if the given variable name is being promoted from this
         `System`.
 
         Parameters
         ----------
         name : str
-            the name of a variable, relative to this `System`
+            The name of a variable, relative to this `System`.
 
         Returns
         -------
@@ -94,8 +94,8 @@ class System(object):
         Parameter
         ---------
         parent_path : str
-            the pathname of the parent `System`, which is to be prepended to the
-            name of this child `System`
+            The pathname of the parent `System`, which is to be prepended to the
+            name of this child `System`.
         """
         if parent_path:
             self.pathname = ':'.join((parent_path, self.name))
@@ -136,13 +136,13 @@ class System(object):
         -------
         tuple
             A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `System`
+            processors usable by this `System`.
         """
         return (1, 1)
 
     def _setup_communicators(self, comm):
         """
-        Assign communicator to this `System` and all of it's subsystems
+        Assign communicator to this `System` and all of its subsystems.
 
         Parameters
         ----------
@@ -162,7 +162,7 @@ class System(object):
             `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecwWapper` containing outputs and states. (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)

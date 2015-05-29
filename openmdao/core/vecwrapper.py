@@ -27,7 +27,7 @@ class _ByObjWrapper(object):
     We have to wrap byobj values in these in order to have param vec entries
     that are shared between parents and children all share the same object
     reference, so that when the internal val attribute is changed, all
-    `VecWrappers` that contain a reference to the wrapper will see the updated
+    `VecWrapper`s that contain a reference to the wrapper will see the updated
     value.
     """
     def __init__(self, val):
@@ -50,9 +50,9 @@ class VecWrapper(object):
     Attributes
     ----------
     idx_arr_type : dtype
-                   A dtype indicating how index arrays are to be represented.
-                   The value 'i' indicates an numpy integer array, other
-                   implementations, e.g., petsc, will define this differently.
+        A dtype indicating how index arrays are to be represented.
+        The value 'i' indicates an numpy integer array, other
+        implementations, e.g., petsc, will define this differently.
     """
 
     idx_arr_type = 'i'
@@ -87,16 +87,16 @@ class VecWrapper(object):
 
     def __getitem__(self, name):
         """
-        Retrieve unflattened value of named var
+        Retrieve unflattened value of named var.
 
         Parameters
         ----------
         name : str
-            name of variable to get the value for
+            Name of variable to get the value for.
 
         Returns
         -------
-            the unflattened value of the named variable
+            The unflattened value of the named variable.
         """
         meta = self._get_metadata(name)
 
@@ -128,15 +128,15 @@ class VecWrapper(object):
 
     def __setitem__(self, name, value):
         """
-        Set the value of the named variable
+        Set the value of the named variable.
 
         Parameters
         ----------
         name : str
-            name of variable to get the value for
+            Name of variable to get the value for.
 
         value :
-            the unflattened value of the named variable
+            The unflattened value of the named variable.
         """
         meta = self._get_metadata(name)
 
@@ -165,15 +165,15 @@ class VecWrapper(object):
         """
         Returns
         -------
-            the number of keys (variables) in this vector
+            The number of keys (variables) in this vector.
         """
         return len(self._vardict)
 
     def __contains__(self, key):
         """
         Returns
-        _______
-            a boolean indicating if the given key (variable name) is in this vector
+        -------
+            A boolean indicating if the given key (variable name) is in this vector.
         """
 
         return key in self._vardict
@@ -181,8 +181,8 @@ class VecWrapper(object):
     def __iter__(self):
         """
         Returns
-        _______
-            a dictionary iterator over the items in _vardict
+        -------
+            A dictionary iterator over the items in _vardict.
         """
         return self._vardict.__iter__()
 
@@ -192,7 +192,7 @@ class VecWrapper(object):
         Returns
         -------
         list or KeyView (python 3)
-            the keys (variable names) in this vector
+            the keys (variable names) in this vector.
         """
         return self._vardict.keys()
 
@@ -201,7 +201,7 @@ class VecWrapper(object):
         Returns
         -------
         iterator
-            iterator returning the name and metadata dict for each variable
+            Iterator returning the name and metadata dict for each variable.
         """
         return iteritems(self._vardict)
 
@@ -210,7 +210,7 @@ class VecWrapper(object):
         Returns
         -------
         iterator
-            iterator returning a metadata dict for each variable
+            Iterator returning a metadata dict for each variable.
         """
         for meta in self._vardict.values():
             yield meta
@@ -222,12 +222,12 @@ class VecWrapper(object):
         Parameters
         ----------
         name : str
-            name of variable to get the metadata for
+            Name of variable to get the metadata for.
 
         Returns
         -------
         dict
-            the metadata dict for the named variable
+            The metadata dict for the named variable.
         """
         return self._vardict[name]
 
@@ -238,7 +238,7 @@ class VecWrapper(object):
         Parameters
         ----------
         name : str
-            name of variable to get the indices for
+            Name of variable to get the indices for.
 
         Returns
         -------
@@ -267,7 +267,7 @@ class VecWrapper(object):
 
     def get_view(self, sys_pathname, comm, varmap):
         """
-        Return a new `VecWrapper` that is a view into this one
+        Return a new `VecWrapper` that is a view into this one.
 
         Parameters
         ----------
@@ -275,16 +275,16 @@ class VecWrapper(object):
             pathname of the system for which the view is being created
 
         comm : an MPI communicator (real or fake)
-            a communicator that is used in the creation of the view
+            A communicator that is used in the creation of the view.
 
         varmap : dict
-            mapping of variable names in the old `VecWrapper` to the names
-            they will have in the new `VecWrapper`
+            Mapping of variable names in the old `VecWrapper` to the names
+            they will have in the new `VecWrapper`.
 
         Returns
         -------
         `VecWrapper`
-            a new `VecWrapper` that is a view into this one
+            A new `VecWrapper` that is a view into this one.
         """
         view = self.__class__(sys_pathname, comm)
         view_size = 0
@@ -321,10 +321,10 @@ class VecWrapper(object):
         Parameters
         ----------
         start : int
-            the starting index
+            The starting index.
 
         end : int
-            the ending index
+            The ending index.
 
         Returns
         -------
@@ -342,12 +342,13 @@ class VecWrapper(object):
         Parameters
         ----------
         indices : iterator of ints
-            An iterator of indices
+            An iterator of indices.
 
         Returns
         -------
         ndarray of idx_arr_type
-            index array containing all of the given indices
+            Index array containing all of the given indices.
+
         """
         return numpy.array(indices, dtype=idx_arr_type)
 
@@ -360,15 +361,16 @@ class VecWrapper(object):
         Parameters
         ----------
         src_idxs : array
-            source indices
+            Source indices.
 
         tgt_idxs : array
-            target indices
+            Target indices.
 
         Returns
         -------
         ndarray of idx_arr_type
-            index array containing all of the merged indices
+            Index array containing all of the merged indices.
+
         """
         assert(len(src_idxs) == len(tgt_idxs))
 
@@ -396,12 +398,12 @@ class VecWrapper(object):
         Parameters
         ----------
         abs_name : str
-            Absolute pathname of a variable
+            Absolute pathname of a variable.
 
         Returns
         -------
         rel_name : str
-            Relative name mapped to the given absolute pathname
+            Relative name mapped to the given absolute pathname.
         """
         for rel_name, meta in self._vardict.items():
             if meta['pathname'] == abs_name:
@@ -446,7 +448,7 @@ class VecWrapper(object):
         -------
         str
             The given name as seen from the 'scope' of the `System` that
-            contains this `VecWrapper`
+            contains this `VecWrapper`.
         """
         if self.pathname:
             start = len(self.pathname)+1
@@ -464,7 +466,8 @@ class SrcVecWrapper(VecWrapper):
         Parameters
         ----------
         unknowns_dict : dict
-            dictionary of metadata for unknown variables collected from components.
+            Dictionary of metadata for unknown variables collected from
+            components.
 
         store_byobjs : bool (optional)
             If True, then store 'pass by object' variables.
@@ -506,7 +509,7 @@ class SrcVecWrapper(VecWrapper):
         Parameters
         ----------
         name : str
-            the name of the variable to add
+           The name of the variable to add.
 
         meta : dict
             Starting metadata for the variable, collected from components
@@ -606,10 +609,10 @@ class TgtVecWrapper(VecWrapper):
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
+            `VecWrapper` of parameters from the parent `System`.
 
         params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
+            Dictionary of parameter absolute name mapped to metadata dict.
 
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
@@ -690,21 +693,22 @@ class TgtVecWrapper(VecWrapper):
         Parameters
         ----------
         pathname : str
-            absolute name of the variable
+            Absolute name of the variable.
 
         meta : dict
-            metadata for the variable collected from components
+            Metadata for the variable collected from components.
 
         index : int
-            index into the array where the variable value is to be stored
-            (if variable is not 'pass by object')
+            Index into the array where the variable value is to be stored
+            (if variable is not 'pass by object').
 
         src_meta : dict
-            metadata for the source variable that this target variable is
-            connected to
+            Metadata for the source variable that this target variable is
+            connected to.
 
         store_byobjs : bool (optional)
-            If True, store 'pass by object' variables in the `VecWrapper` we're building.
+            If True, store 'pass by object' variables in the `VecWrapper`
+            we're building.
         """
 
         vmeta = meta.copy()
@@ -751,7 +755,7 @@ class TgtVecWrapper(VecWrapper):
         Returns
         -------
         ndarray
-            array containing sum of local sizes of params in our internal vector.
+            Array containing sum of local sizes of params in our internal vector.
         """
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('pass_by_obj')])

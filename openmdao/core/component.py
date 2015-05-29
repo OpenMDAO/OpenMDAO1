@@ -120,6 +120,24 @@ class Component(System):
             raise RuntimeError("%s: variable '%s' already exists" %
                                (self.pathname, name))
 
+    def _get_fd_params(self):
+        """
+        Returns
+        -------
+        list of str
+            List of names of params for this `Component` .
+        """
+        return self.params.keys()
+
+    def _get_fd_unknowns(self):
+        """
+        Returns
+        -------
+        list of str
+            List of names of unknowns for this `Component`.
+        """
+        return self.unknowns.keys()
+
     def _setup_variables(self):
         """Returns our params and unknowns, and stores them
         as attributes of the component"""
@@ -199,10 +217,10 @@ class Component(System):
         Parameters
         ----------
         params : `VecWrapper`
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper` containing outputs and states (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -227,11 +245,11 @@ class Component(System):
 
         Parameters
         ----------
-        params : `VecwWapper`
-            `VecwWapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWapper`
-            `VecwWapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -240,7 +258,7 @@ class Component(System):
         -------
         dict
             Dictionary whose keys are tuples of the form ('unknown', 'param')
-            and whose values are ndarrays
+            and whose values are ndarrays.
         """
         return None
 
@@ -252,27 +270,27 @@ class Component(System):
 
         Parameters
         ----------
-        params : `VecwWrapper`
-            `VecwWrapper` containing parameters (p)
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecwWrapper`
-            `VecwWrapper` containing outputs and states (u)
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
 
-        dparams : `VecwWrapper`
-            `VecwWrapper` containing either the incoming vector in forward mode
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
             or the outgoing result in reverse mode. (dp)
 
-        dunknowns : `VecwWrapper`
-            In forward mode, this `VecwWrapper` contains the incoming vector for
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
             the states. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecwWrapper`
-            `VecwWrapper` containing either the outgoing result in forward mode
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
             or the incoming vector in reverse mode. (dr)
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
         """
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
