@@ -392,25 +392,6 @@ class Group(System):
 
         return fd_unknowns
 
-    def _set_vars_as_remote(self, sub):
-        """
-        Set 'remote' attribute in metadata of all variables for specified
-        subsystem.
-
-        Parameters
-        ----------
-        sub : `System`
-            `System` containing remote variables.
-        """
-        sub_pname = sub.pathname + ':'
-        for name, meta in sub._params_dict.items():
-            if name.startswith(sub_pname):
-                meta['remote'] = True
-
-        for name, meta in sub._unknowns_dict.items():
-            if name.startswith(sub_pname):
-                meta['remote'] = True
-
     def _get_explicit_connections(self):
         """ Returns
             -------
