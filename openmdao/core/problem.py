@@ -14,7 +14,7 @@ from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.mpiwrap import MPI, FakeComm, debug
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
 
@@ -148,16 +148,19 @@ class Problem(Component):
 
     def run(self):
         """ Runs the Driver in self.driver. """
-        self.driver.run(self.root)
 
-        # Should only happen in top Problem?
-        system = self.root
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        for recorder in self.driver.recorders:
-            recorder.record(params, unknowns, resids)
+        try:
+            if self.root.is_active():
+                debug('driver run')
+                self.driver.run(self.root)
+                debug('recording: recorders=%s' % self.driver.recorders)
+                # Should only happen in top Problem?
+                unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
+                for recorder in self.driver.recorders:
+                    recorder.record(params, unknowns, resids)
+        except:
+            import traceback
+            debug(traceback.format_exc())
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
@@ -592,6 +595,7 @@ def _find_all_comps(group):
     for sg_name, sg in group.subgroups():
         data.update(_find_all_comps(sg))
     return data
+
 
 def jac_to_flat_dict(jac):
     """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go

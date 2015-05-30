@@ -1,7 +1,5 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
-from openmdao.core.mpiwrap import debug
-
 from collections import OrderedDict
 import functools
 from six import iteritems
@@ -55,6 +53,7 @@ class Component(System):
         self._check_val(name, var_type, val, shape)
         self._check_name(name)
         args = kwargs.copy()
+
         args['val'] = val = self._get_initial_val(val, shape)
 
         if is_differentiable(val) and not args.get('pass_by_obj'):
@@ -188,10 +187,7 @@ class Component(System):
 
         # set 'remote' attribute if this comp is not active
         if not self.is_active():
-            debug("Component %s is remote" % self.pathname)
             self._set_vars_as_remote()
-        else:
-            debug("Component %s is local" % self.pathname)
 
         return self._params_dict, self._unknowns_dict
 

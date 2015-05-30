@@ -1,17 +1,16 @@
 from __future__ import print_function
-from openmdao.core.mpiwrap import debug
-#def debug(s):
-    #pass
 
 import sys
 import numpy
 
-from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
-from openmdao.core.dataxfer import DataXfer
-
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
+
+
+from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.dataxfer import DataXfer
+from openmdao.core.mpiwrap import debug
 
 
 class PetscImpl(object):
@@ -109,6 +108,7 @@ class PetscImpl(object):
 
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set, comm=comm)
 
+
 class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
@@ -127,10 +127,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
-        debug("PetscSrcVecWrapper setup() ")
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
-        debug("PetscSrcVecWrapper setup() complete")
 
     def _get_flattened_sizes(self):
         """
@@ -187,6 +185,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
 
+
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
@@ -218,12 +217,10 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         store_byobjs : bool (optional)
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
-        debug("PetscTgtVecWrapper setup() ")
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_byobjs)
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
-        debug("PetscTgtVecWrapper setup() complete")
 
     def _get_flattened_sizes(self):
         """
@@ -321,9 +318,13 @@ class PetscDataXfer(DataXfer):
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
         else:
             # forward mode, source to target including pass_by_object
+            for u,v in self.vec_conns:
+                debug("scattering %s --> %s" % (v, u))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
+            debug("scatter done")
 
             if not deriv:
                 for tgt, src in self.byobj_conns:
+                    debug('NotImplemented!!!')
                     raise NotImplementedError("can't transfer '%s' to '%s'" %
                                                (src, tgt))

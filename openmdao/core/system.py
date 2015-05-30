@@ -1,5 +1,4 @@
 """ Base class for all systems in OpenMDAO."""
-from openmdao.core.mpiwrap import debug
 
 from collections import OrderedDict
 from fnmatch import fnmatch
@@ -157,12 +156,10 @@ class System(object):
         """
         pname = self.pathname + ':'
         for name, meta in self._params_dict.items():
-            debug("%s %s is remote? %s" % (pname, name, name.startswith(pname)))
             if name.startswith(pname):
                 meta['remote'] = True
 
         for name, meta in self._unknowns_dict.items():
-            debug("%s %s is remote? %s" % (pname, name, name.startswith(pname)))
             if name.startswith(pname):
                 meta['remote'] = True
 

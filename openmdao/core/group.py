@@ -2,8 +2,6 @@
 
 from __future__ import print_function
 
-from openmdao.core.mpiwrap import debug
-
 from collections import OrderedDict
 import sys
 from six import iteritems
@@ -20,6 +18,7 @@ from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.core.mpiwrap import debug
 
 from openmdao.core.mpiwrap import get_comm_if_active
 
@@ -170,7 +169,7 @@ class Group(System):
 
 
         if name in self._subsystems.keys():
-            msg = "Group '{gname}' already contains a component with name"\
+            msg = "Group '{gname}' already contains a subsystem with name"\
                             " '{cname}'.".format(gname=self.name, cname=name)
             raise RuntimeError(msg)
         self._subsystems[name] = system
@@ -329,8 +328,6 @@ class Group(System):
         if not self.is_active():
             return
 
-        debug("%s._setup_vectors..." % self.pathname)
-
         my_params = param_owners.get(self.pathname, [])
         if parent_vm is None:
             self._varmanager = VarManager(self.comm,
@@ -347,7 +344,6 @@ class Group(System):
                                               my_params)
 
         for name, sub in self.subsystems():
-            debug("%s._setup_vectors for sub %s..." % (self.pathname, sub.pathname))
             sub._setup_vectors(param_owners, connections,
                                parent_vm=self._varmanager,
                                top_unknowns=top_unknowns)
@@ -397,28 +393,6 @@ class Group(System):
 
         return fd_unknowns
 
-    def _set_vars_as_remote(self, sub):
-        """
-        Set 'remote' attribute in metadata of all variables for specified
-        subsystem.
-
-        Parameters
-        ----------
-        sub : `System`
-            `System` containing remote variables.
-        """
-        debug('%s, _set_vars_as_local' % self.pathname)
-        sub_pname = sub.pathname + ':'
-        for name, meta in sub._params_dict.items():
-            debug('sub_pname %s, param name: %s, remote? %s' % (sub_pname, name, name.startswith(sub_pname)))
-            if name.startswith(sub_pname):
-                meta['remote'] = True
-
-        for name, meta in sub._unknowns_dict.items():
-            debug('sub_pname %s, unknown name: %s, remote? %s' % (sub_pname, name, name.startswith(sub_pname)))
-            if name.startswith(sub_pname):
-                meta['remote'] = True
-
     def _get_explicit_connections(self):
         """ Returns
             -------
@@ -467,9 +441,9 @@ class Group(System):
         # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems(local=True):
             self._varmanager._transfer_data(name)
-            #print('solving',name,'in rank',self.comm.rank)
+            debug('solving %s in rank %d' % (name, self.comm.rank))
             sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-            #print('done solving',name,'in rank',self.comm.rank)
+            debug('done solving %s in rank %d' % (name, self.comm.rank))
 
     def apply_nonlinear(self, params, unknowns, resids):
         """

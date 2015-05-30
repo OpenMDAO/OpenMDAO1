@@ -31,7 +31,7 @@ class TestGroup(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             group.add('mycomp', comp)
 
-        expected_msg = "Group '' already contains a component with name 'mycomp'."
+        expected_msg = "Group '' already contains a subsystem with name 'mycomp'."
 
         self.assertEqual(str(cm.exception), expected_msg)
 
