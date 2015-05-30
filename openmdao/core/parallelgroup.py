@@ -143,7 +143,7 @@ class ParallelGroup(Group):
 
         for i, (name, sub) in enumerate(self.subsystems()):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems[name] = sub
                 sub._setup_communicators(sub_comm)
             else:
                 sub._setup_communicators(MPI.COMM_NULL)
