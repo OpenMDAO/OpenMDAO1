@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import sys
 import numpy
 
@@ -12,6 +13,7 @@ from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 from openmdao.core.mpiwrap import debug
 
+trace = os.environ.get('TRACE_COLLECTIVE')
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
@@ -103,9 +105,14 @@ class PetscImpl(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
+        if trace:
+            debug('making index sets for app ordering:\napp: %s\npetsc: %s' %
+                  (app_idxs, to_idx_array))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
         petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
 
+        if trace:
+            debug("creating app ordering")
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set, comm=comm)
 
 
@@ -128,6 +135,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             for the unknowns vecwrapper.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
+        if trace:
+            debug("creating src petsc_vec for '%s': vec=%s" %
+                  (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -163,6 +173,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
+        if trace:
+            debug("allgathering local unknown sizes: local=%s" % our_row[0,:])
         self.comm.Allgather(our_row[0,:], local_unknown_sizes)
         #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
@@ -177,6 +189,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         float
             The norm of the distributed vector.
         """
+        if trace:
+            debug("%s: norm: petsc_vec.assemble" % self.pathname)
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
@@ -220,6 +234,9 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_byobjs)
+        if trace:
+            debug("creating tgt petsc_vec for '%s': vec=%s" %
+                  (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -235,12 +252,17 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         psize = sum([m['size'] for m in self.values()
                      if m.get('owned') and not m.get('pass_by_obj')])
 
+        if trace:
+            debug("algathering param sizes for '%s'" % self.pathname)
         return numpy.array(self.comm.allgather(psize), int)
 
-    def get_view(self, sys_pathname, comm, varmap):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
-        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
-        return view
+    #def get_view(self, sys_pathname, comm, varmap):
+        #view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        #if trace:
+            #debug("creating tgt petsc_vec for '%s': vec=%s" %
+                  #(sys_pathname, self.vec))
+        #view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        #return view
 
 
 class PetscDataXfer(DataXfer):

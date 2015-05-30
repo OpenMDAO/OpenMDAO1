@@ -33,7 +33,6 @@ except ImportError:
     class MPITestCase(TestCase):
         pass
 
-    print("BARF")
     mpirun_tests = unittest.main
 
 else:

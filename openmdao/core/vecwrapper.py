@@ -685,9 +685,9 @@ class TgtVecWrapper(VecWrapper):
         elif meta.get('remote'):
             vmeta['size'] = 0
 
-        if 'shape' in src_meta:
-            vmeta['shape'] = src_meta['shape']
-            vmeta['size'] = numpy.prod(vmeta['shape'])
+        #if 'shape' in src_meta:
+        #    vmeta['shape'] = src_meta['shape']
+        #    vmeta['size'] = numpy.prod(vmeta['shape'])
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
