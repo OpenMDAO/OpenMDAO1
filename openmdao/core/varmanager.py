@@ -72,7 +72,8 @@ class VarManagerBase(object):
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         # add up sizes across all processes in our communicator for all columns
-        # up to the column corresponding to the named variable
+        # up to the column corresponding to the named variable.  This gives us the
+        # offset of the the given unknown in the distributed vector.
         offset = numpy.sum(self._local_unknown_sizes[:, :self.unknowns._var_idx(uname)])
 
         if 'param_idxs' in pmeta:
@@ -89,7 +90,7 @@ class VarManagerBase(object):
 
         return src_idxs, tgt_idxs
 
-    def _setup_data_transfer(self, sys_pathname, my_params):
+    def _setup_data_transfer(self, system, my_params):
         """
         Create `DataXfer` objects to handle data transfer for all of the
         connections that involve paramaters for which this `VarManager`
@@ -97,14 +98,16 @@ class VarManagerBase(object):
 
         Parameters
         ----------
-        sys_pathname : str
-            Absolute pathname of the `System` that will own this `VarManager`.
+        system : `System`
+            The `System` that will own this `VarManager`.
 
         my_params : list
             List of pathnames for parameters that the VarManager is
             responsible for propagating.
 
         """
+
+        sys_pathname = system.pathname
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
@@ -217,9 +220,13 @@ class VarManager(VarManagerBase):
         Specifies the factory object used to create `VecWrapper` and
         `DataXfer` objects.
     """
-    def __init__(self, comm, sys_pathname, params_dict, unknowns_dict, my_params,
-                 connections, impl):
+    def __init__(self, system, my_params, connections, impl):
         super(VarManager, self).__init__(connections)
+
+        comm = system.comm
+        sys_pathname = system.pathname
+        params_dict = system._params_dict
+        unknowns_dict = system._unknowns_dict
 
         self.impl_factory = impl
         self.comm = comm
@@ -243,7 +250,7 @@ class VarManager(VarManagerBase):
         self.dparams.setup(None, params_dict, self.unknowns,
                                  my_params, connections)
 
-        self._setup_data_transfer(sys_pathname, my_params)
+        self._setup_data_transfer(system, my_params)
 
 
 class ViewVarManager(VarManagerBase):
@@ -255,36 +262,29 @@ class ViewVarManager(VarManagerBase):
     top_unknowns : `VecWrapper`
         The `Problem` level unknowns `VecWrapper`.
 
-    parent_vm : `VarManager`
-        The `VarManager` which provides the `VecWrappers` on which to create views.
-
-    params_dict : dict
-        Dictionary of metadata for all parameters.
-
-    unknowns_dict : dict
-        Dictionary of metadata for all unknowns.
+    system : `System`
+        The `System` that owns this VarManager
 
     my_params : list
         List of pathnames for parameters that this `VarManager` is
         responsible for propagating.
 
     """
-    def __init__(self, top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                 my_params):
+    def __init__(self, top_unknowns, parent_vm, system, my_params):
         super(ViewVarManager, self).__init__(parent_vm.connections)
+
+        comm = system.comm
 
         self.impl_factory = parent_vm.impl_factory
         self.comm = comm
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
-            create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                         my_params, parent_vm.connections)
+            create_views(top_unknowns, parent_vm, system, my_params, parent_vm.connections)
 
-        self._setup_data_transfer(sys_pathname, my_params)
+        self._setup_data_transfer(system, my_params)
 
 
-def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                 my_params, connections):
+def create_views(top_unknowns, parent_vm, system, my_params, connections):
     """
     A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
@@ -297,17 +297,8 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     parent_vm : `VarManager`
         The `VarManager` which provides the `VecWrapper` on which to create views.
 
-    comm : an MPI communicator (real or fake)
-        Communicator to be used for any distributed operations.
-
-    sys_pathname : str
-        Pathname of the system for which the views are being created.
-
-    params_dict : dict
-        Dictionary of metadata for all parameters.
-
-    unknowns_dict : dict
-        Dictionary of metadata for all unknowns.
+    system : `System`
+        The `System` that will contain the views.
 
     my_params : list
         List of pathnames for parameters that this `VarManager` is
@@ -323,6 +314,11 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
         A namedtuple of six (6) `VecWrappers`:
         unknowns, dunknowns, resids, dresids, params, dparams.
     """
+
+    comm = system.comm
+    unknowns_dict = system._unknowns_dict
+    params_dict = system._params_dict
+    sys_pathname = system.pathname
 
     # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)

@@ -108,12 +108,8 @@ class MPITests1(MPITestCase):
         prob.root.connect('G1:P1:x', 'C1:a')
         prob.root.connect('G1:P2:x', 'C1:b')
 
-        debug("presetup")
         prob.setup()
-        prob.root.dump()
-        debug('prerun')
         prob.run()
-        debug('postrun')
 
         if not MPI or self.comm.rank == 0:
             self.assertTrue(all(prob.subsystem('C1').params['a']==np.ones(size, float)*1.0))
@@ -137,14 +133,8 @@ class MPITests1(MPITestCase):
         root.connect('G1:C1:c', 'C3:a')
         root.connect('G1:C2:d', 'C3:b')
 
-        debug("Setup...")
         prob.setup()
-        debug("Setup complete")
-        prob.root.dump()
-
-        debug("Running...")
         prob.run()
-        debug("Run complete")
         prob.root.dump()
 
         if not MPI or self.comm.rank == 0:

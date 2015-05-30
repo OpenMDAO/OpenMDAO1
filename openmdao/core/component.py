@@ -192,7 +192,7 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+    def _setup_vectors(self, param_owners, connections, parent,
                        top_unknowns=None, impl=BasicImpl):
         """
         Set up local `VecWrapper`s to store this component's variables.
@@ -207,8 +207,8 @@ class Component(System):
             a dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to
 
-        parent_vm : `VarManager`, optional
-            the `VarManager` for the parent `Group`, if any.
+        parent : `Group`
+            The parent `Group`.
 
         top_unknowns : `VecWrapper`, optional
             the `Problem` level unknowns `VecWrapper`
@@ -219,8 +219,7 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._vecs = create_views(top_unknowns, parent_vm, self.comm, self.pathname,
-                                  self._params_dict, self._unknowns_dict, [], connections)
+        self._vecs = create_views(top_unknowns, parent._varmanager, self, [], connections)
 
         params = self._vecs.params
 

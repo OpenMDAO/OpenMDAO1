@@ -299,7 +299,7 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+    def _setup_vectors(self, param_owners, connections, parent=None,
                        top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
@@ -314,8 +314,8 @@ class Group(System):
             A dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to.
 
-        parent_vm : `VarManager`, optional
-            The `VarManager` for the parent `Group`, if any, into which this
+        parent : `Group`, optional
+            The `Group` that contains this `Group`, if any, into which this
             `VarManager` will provide a view.
 
         top_unknowns : `VecWrapper`, optional
@@ -329,24 +329,15 @@ class Group(System):
             return
 
         my_params = param_owners.get(self.pathname, [])
-        if parent_vm is None:
-            self._varmanager = VarManager(self.comm,
-                                          self.pathname, self._params_dict, self._unknowns_dict,
-                                          my_params, connections, impl=impl)
+        if parent is None:
+            self._varmanager = VarManager(self, my_params, connections, impl=impl)
             top_unknowns = self._varmanager.unknowns
         else:
-            self._varmanager = ViewVarManager(top_unknowns,
-                                              parent_vm,
-                                              self.comm,
-                                              self.pathname,
-                                              self._params_dict,
-                                              self._unknowns_dict,
-                                              my_params)
+            self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, connections,
-                               parent_vm=self._varmanager,
-                               top_unknowns=top_unknowns)
+                               parent=self, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):
         """
