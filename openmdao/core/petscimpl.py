@@ -106,7 +106,7 @@ class PetscImpl(object):
             app_idxs = numpy.concatenate(app_idxs)
 
         if trace:
-            debug('making index sets for app ordering:\napp: %s\npetsc: %s' %
+            debug('making index sets for app ordering:\n      app: %s\n      petsc: %s' %
                   (app_idxs, to_idx_array))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
         petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
@@ -196,6 +196,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
     def get_view(self, sys_pathname, comm, varmap):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        if trace:
+            debug("creating src petsc_vec (view) for '%s': vec=%s" %
+                  (sys_pathname, self.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
 
@@ -295,12 +298,21 @@ class PetscDataXfer(DataXfer):
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
 
+        if trace:
+            debug("creating index sets for '%s' DataXfer:\n      %s\n      %s" %
+                  (varmanager.unknowns.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
+        if trace:
+            debug("converting src indices from app order: %s" % src_idx_set.indices)
         src_idx_set = varmanager.app_ordering.app2petsc(src_idx_set)
+        if trace:
+            debug("new indices: %s" % src_idx_set.indices)
 
         try:
+            if trace:
+                debug("scattering")
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
         except Exception as err:
@@ -337,13 +349,17 @@ class PetscDataXfer(DataXfer):
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
+            if trace:
+                for u,v in self.vec_conns:
+                    debug("reverse scattering %s --> %s" % (u, v))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
         else:
             # forward mode, source to target including pass_by_object
-            for u,v in self.vec_conns:
-                debug("scattering %s --> %s" % (v, u))
+            if trace:
+                for u,v in self.vec_conns:
+                    debug("scattering %s --> %s" % (v, u))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
-            debug("scatter done")
+            if trace: debug("scatter done")
 
             if not deriv:
                 for tgt, src in self.byobj_conns:

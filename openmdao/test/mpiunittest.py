@@ -183,7 +183,7 @@ else:
                         for i,r in enumerate(results):
                             if r.status != 'OK':
                                 sys.stdout.write("%s\nERROR in rank %d:\n" % (r.status, i))
-                                sys.stdout.write("%s\n" % r.err_message)
+                                sys.stdout.write("%s\n" % r.err_msg)
                                 break
                         else:
                             sys.stdout.write("%s\n" % r.status)

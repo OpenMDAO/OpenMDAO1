@@ -1,5 +1,6 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
+import sys
 from collections import OrderedDict
 import functools
 from six import iteritems
@@ -318,3 +319,62 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
+        """
+        Writes a formated dump of this `Component` to file.
+
+        Parameters
+        ----------
+        nest : int, optional
+            Starting nesting level.  Defaults to 0.
+
+        out_stream : an open file, optional
+            Where output is written.  Defaults to sys.stdout.
+
+        verbose : bool, optional
+            If True (the default), output additional info beyond
+            just the tree structure.
+
+        dvecs : bool, optional
+            If True, show contents of du and dp vectors instead of
+            u and p (the default).
+        """
+        klass = self.__class__.__name__
+        if dvecs:
+            ulabel, plabel, uvecname, pvecname = 'du', 'dp', 'dunknowns', 'dparams'
+        else:
+            ulabel, plabel, uvecname, pvecname = 'u', 'p', 'unknowns', 'params'
+
+        uvec = getattr(self, uvecname)
+        pvec = getattr(self, pvecname)
+
+        lens = [len(n) for n in uvec.keys()]
+        nwid = max(lens) if lens else 12
+
+        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+
+        out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
+                   (" "*nest,
+                    klass,
+                    self.name,
+                    self.get_req_procs(),
+                    uvec.vec.size,
+                    pvec.vec.size,
+                    commsz))
+
+        for v, meta in uvec.items():
+            if verbose:
+                if v in uvec._slices:
+                    uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                    out_stream.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
+                                                                         v,
+                                                                         uslice,
+                                                                         repr(uvec[v]),
+                                                                         nwid=nwid))
+                elif not dvecs: # deriv vecs don't have passing by obj
+                    out_stream.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
+                                                                         v,
+                                                                         repr(uvec[v]),
+                                                                         nwid=nwid))
+
+        out_stream.flush()

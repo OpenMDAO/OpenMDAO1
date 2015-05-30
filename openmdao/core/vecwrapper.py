@@ -1,10 +1,11 @@
 """ Class definition for VecWrapper"""
 
 from collections import OrderedDict
-
+import sys
 import numpy
 from numpy.linalg import norm
 from six import iteritems
+from six.moves import cStringIO
 
 from openmdao.util.types import is_differentiable, int_types
 from openmdao.util.strutil import get_common_ancestor
@@ -458,6 +459,55 @@ class VecWrapper(object):
         else:
             start = 0
         return name[start:]
+
+    def dump(self, out_stream=sys.stdout):
+        """
+        Parameters
+        ----------
+
+        out_stream : file_like
+            Where to send human readable output. Default is sys.stdout. Set to
+            None to return a str.
+        """
+
+        if out_stream is None:
+            out_stream = cStringIO()
+            return_str = True
+        else:
+            return_str = False
+
+        lens = [len(n) for n in self.keys()]
+        nwid = max(lens) if lens else 10
+        vlens = [len(repr(self[v])) for v in self.keys()]
+        vwid = max(vlens) if vlens else 1
+        if len(self.get_vecvars()) != len(self.keys()): # we have some pass by obj
+            defwid = 8
+        else:
+            defwid = 1
+        slens = [len('[{0[0]}:{0[1]}]'.format(self._slices[v])) for v in self.keys()
+                       if v in self._slices]+[defwid]
+        swid = max(slens)
+
+        for v, meta in self.items():
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
+            out_stream.write("{0:<{nwid}} {1:<{swid}} {2:>{vwid}}\n".format(v,
+                                                                       uslice,
+                                                                       repr(self[v]),
+                                                                       nwid=nwid,
+                                                                       swid=swid,
+                                                                       vwid=vwid))
+
+        for v, meta in self.items():
+            if meta.get('pass_by_obj') and not meta.get('remote'):
+                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v,
+                                                                                '(by obj)',
+                                                                                repr(self[v]),
+                                                                                nwid=nwid,
+                                                                                swid=swid))
+        if return_str:
+            return out_stream.getvalue()
 
 
 class SrcVecWrapper(VecWrapper):

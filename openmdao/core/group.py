@@ -439,11 +439,12 @@ class Group(System):
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
-        for name, sub in self.subsystems(local=True):
+        for name, sub in self.subsystems():
             self._varmanager._transfer_data(name)
-            debug('solving %s in rank %d' % (name, self.comm.rank))
-            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-            debug('done solving %s in rank %d' % (name, self.comm.rank))
+            if sub.is_active():
+                debug('solving %s in rank %d' % (name, self.comm.rank))
+                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                debug('done solving %s in rank %d' % (name, self.comm.rank))
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
@@ -464,9 +465,10 @@ class Group(System):
             return
 
         # transfer data to each subsystem and then apply_nonlinear to it
-        for name, sub in self.subsystems(local=True):
+        for name, sub in self.subsystems():
             self._varmanager._transfer_data(name)
-            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+            if sub.is_active():
+                sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def jacobian(self, params, unknowns, resids):
         """
@@ -665,7 +667,7 @@ class Group(System):
             else:
                 system.clear_dparams()
 
-    def dump(self, nest=0, file=sys.stdout, verbose=True, dvecs=False):
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of the `System` tree to file.
 
@@ -674,7 +676,7 @@ class Group(System):
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 
-        file : an open file, optional
+        out_stream : file-like, optional
             Where output is written.  Defaults to sys.stdout.
 
         verbose : bool, optional
@@ -687,26 +689,23 @@ class Group(System):
         """
         klass = self.__class__.__name__
         if dvecs:
-            ulabel = 'du'
-            plabel = 'dp'
-            uvecname = 'dunknowns'
-            pvecname = 'dparams'
+            ulabel, plabel, uvecname, pvecname = 'du', 'dp', 'dunknowns', 'dparams'
         else:
-            ulabel = 'u'
-            plabel = 'p'
-            uvecname = 'unknowns'
-            pvecname = 'params'
+            ulabel, plabel, uvecname, pvecname = 'u', 'p', 'unknowns', 'params'
 
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        file.write("%s %s '%s'    req: %s  usize:%d  psize:%d\n" %
+        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+
+        out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
                      (" "*nest,
                       klass,
                       self.name,
                       self.get_req_procs(),
                       uvec.vec.size,
-                      pvec.vec.size))
+                      pvec.vec.size,
+                      commsz))
 
         vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
         byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
@@ -724,7 +723,7 @@ class Group(System):
             if verbose:
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
-                file.write(" "*(nest+8))
+                out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
                 pnames = [p for p,u in vec_conns.items() if u==v]
 
@@ -743,54 +742,30 @@ class Group(System):
                     pslice = '{}[{}]'.format(plabel, pslice)
 
                     connstr = '%s -> %s' % (v, pnames)
-                    file.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
+                    out_stream.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
                                                                     uslice,
                                                                     pslice,
                                                                     repr(uvec[v]),
                                                                     nwid=nwid))
                 else:
-                    file.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
+                    out_stream.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
                                                                   uslice,
                                                                   repr(uvec[v]),
                                                                   nwid=nwid))
 
         if not dvecs:
             for dest, src in byobj_conns.items():
-                file.write(" "*(nest+8))
+                out_stream.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
-                file.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
+                out_stream.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
                                                                   repr(uvec[src]),
                                                                   nwid=nwid))
 
-        # now do the Components
         nest += 3
         for name, sub in self.subsystems(local=True):
-            if isinstance(sub, Component):
-                uvec = getattr(sub, uvecname)
-                file.write("%s %s '%s'    req: %s  usize:%d\n" %
-                           (" "*nest,
-                            sub.__class__.__name__,
-                            name,
-                            sub.get_req_procs(),
-                            uvec.vec.size))
-                for v, meta in uvec.items():
-                    if verbose:
-                        if v in uvec._slices:
-                            uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                            file.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
-                                                                             v,
-                                                                             uslice,
-                                                                             repr(uvec[v]),
-                                                                             nwid=nwid))
-                        elif not dvecs: # deriv vecs don't have passing by obj
-                            file.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
-                                                                                 v,
-                                                                                 repr(uvec[v]),
-                                                                                 nwid=nwid))
-            else:
-                sub.dump(nest, file=file, verbose=verbose, dvecs=dvecs)
+            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
 
-        file.flush()
+        out_stream.flush()
 
     def get_req_procs(self):
         """
