@@ -7,7 +7,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
+from openmdao.core.mpiwrap import MPI, get_comm_if_active
 from openmdao.core.options import OptionsDictionary
 
 
@@ -25,7 +25,7 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
-        self.comm = FakeComm()
+        self.comm = None
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
@@ -149,6 +149,19 @@ class System(object):
             The communicator being offered by the parent system.
         """
         self.comm = get_comm_if_active(self, comm)
+
+    def _set_vars_as_remote(self):
+        """
+        Set 'remote' attribute in metadata of all variables for this subsystem.
+        """
+        pname = self.pathname + ':'
+        for name, meta in self._params_dict.items():
+            if name.startswith(pname):
+                meta['remote'] = True
+
+        for name, meta in self._unknowns_dict.items():
+            if name.startswith(pname):
+                meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None, total_derivs=False):

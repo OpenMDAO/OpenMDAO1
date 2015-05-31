@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+from pprint import pformat
 from collections import OrderedDict
 import sys
 from six import iteritems
@@ -18,6 +19,7 @@ from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.core.mpiwrap import debug
 
 from openmdao.core.mpiwrap import get_comm_if_active
 
@@ -168,7 +170,7 @@ class Group(System):
 
 
         if name in self._subsystems.keys():
-            msg = "Group '{gname}' already contains a component with name"\
+            msg = "Group '{gname}' already contains a subsystem with name"\
                             " '{cname}'.".format(gname=self.name, cname=name)
             raise RuntimeError(msg)
         self._subsystems[name] = system
@@ -293,17 +295,12 @@ class Group(System):
 
         self.comm = get_comm_if_active(self, comm)
 
-        if not self.is_active():
-            return
-
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)
-            if sub.is_active():
+            if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
-            else:
-                self._add_remote_subsystem(sub)
 
-    def _setup_vectors(self, param_owners, connections, parent_vm=None,
+    def _setup_vectors(self, param_owners, connections, parent=None,
                        top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
@@ -318,8 +315,8 @@ class Group(System):
             A dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to.
 
-        parent_vm : `VarManager`, optional
-            The `VarManager` for the parent `Group`, if any, into which this
+        parent : `Group`, optional
+            The `Group` that contains this `Group`, if any, into which this
             `VarManager` will provide a view.
 
         top_unknowns : `VecWrapper`, optional
@@ -333,27 +330,21 @@ class Group(System):
             return
 
         my_params = param_owners.get(self.pathname, [])
-        if parent_vm is None:
-            self._varmanager = VarManager(self.comm,
-                                          self.pathname, self._params_dict, self._unknowns_dict,
-                                          my_params, connections, impl=impl)
+        if parent is None:
+            self._varmanager = VarManager(self, my_params, connections, impl=impl)
             top_unknowns = self._varmanager.unknowns
         else:
-            self._varmanager = ViewVarManager(top_unknowns,
-                                              parent_vm,
-                                              self.comm,
-                                              self.pathname,
-                                              self._params_dict,
-                                              self._unknowns_dict,
-                                              my_params)
+            self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, connections,
-                               parent_vm=self._varmanager,
-                               top_unknowns=top_unknowns)
+                               parent=self, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):
         """
+        Get the list of parameters that are needed to perform a
+        finite difference on this `Group`.
+
         Returns
         -------
         list of str
@@ -375,6 +366,9 @@ class Group(System):
 
     def _get_fd_unknowns(self):
         """
+        Get the list of unknowns that are needed to perform a
+        finite difference on this `Group`.
+
         Returns
         -------
         list of str
@@ -390,25 +384,6 @@ class Group(System):
                 fd_unknowns.append(name)
 
         return fd_unknowns
-
-    def _add_remote_subsystem(self, sub):
-        """
-        Add a subsystem that is remote to this process and set variable
-        'remote' flag in metadata.
-
-        Parameters
-        ----------
-        sub : `System`
-            `System` being added.
-        """
-        sub_pname = sub.pathname + ':'
-        for name, meta in self._params_dict.items():
-            if name.startswith(sub_pname):
-                meta['remote'] = True
-
-        for name, meta in self._unknowns_dict.items():
-            if name.startswith(sub_pname):
-                meta['remote'] = True
 
     def _get_explicit_connections(self):
         """ Returns
@@ -456,11 +431,12 @@ class Group(System):
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
-        for name, sub in self.subsystems(local=True):
+        for name, sub in self.subsystems():
             self._varmanager._transfer_data(name)
-            #print('solving',name,'in rank',self.comm.rank)
-            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-            #print('done solving',name,'in rank',self.comm.rank)
+            if sub.is_active():
+                #debug('solving %s in rank %d' % (name, self.comm.rank))
+                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                #debug('done solving %s in rank %d' % (name, self.comm.rank))
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
@@ -481,9 +457,10 @@ class Group(System):
             return
 
         # transfer data to each subsystem and then apply_nonlinear to it
-        for name, sub in self.subsystems(local=True):
+        for name, sub in self.subsystems():
             self._varmanager._transfer_data(name)
-            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+            if sub.is_active():
+                sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def jacobian(self, params, unknowns, resids):
         """
@@ -682,7 +659,7 @@ class Group(System):
             else:
                 system.clear_dparams()
 
-    def dump(self, nest=0, file=sys.stdout, verbose=True, dvecs=False):
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of the `System` tree to file.
 
@@ -691,7 +668,7 @@ class Group(System):
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 
-        file : an open file, optional
+        out_stream : file-like, optional
             Where output is written.  Defaults to sys.stdout.
 
         verbose : bool, optional
@@ -704,26 +681,23 @@ class Group(System):
         """
         klass = self.__class__.__name__
         if dvecs:
-            ulabel = 'du'
-            plabel = 'dp'
-            uvecname = 'dunknowns'
-            pvecname = 'dparams'
+            ulabel, plabel, uvecname, pvecname = 'du', 'dp', 'dunknowns', 'dparams'
         else:
-            ulabel = 'u'
-            plabel = 'p'
-            uvecname = 'unknowns'
-            pvecname = 'params'
+            ulabel, plabel, uvecname, pvecname = 'u', 'p', 'unknowns', 'params'
 
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        file.write("%s %s '%s'    req: %s  usize:%d  psize:%d\n" %
+        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+
+        out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
                      (" "*nest,
                       klass,
                       self.name,
                       self.get_req_procs(),
                       uvec.vec.size,
-                      pvec.vec.size))
+                      pvec.vec.size,
+                      commsz))
 
         vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
         byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
@@ -739,9 +713,9 @@ class Group(System):
 
         for v, meta in uvec.items():
             if verbose:
-                if meta.get('pass_by_obj'):
+                if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
-                file.write(" "*(nest+8))
+                out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
                 pnames = [p for p,u in vec_conns.items() if u==v]
 
@@ -760,52 +734,81 @@ class Group(System):
                     pslice = '{}[{}]'.format(plabel, pslice)
 
                     connstr = '%s -> %s' % (v, pnames)
-                    file.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
+                    out_stream.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
                                                                     uslice,
                                                                     pslice,
                                                                     repr(uvec[v]),
                                                                     nwid=nwid))
                 else:
-                    file.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
+                    out_stream.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
                                                                   uslice,
                                                                   repr(uvec[v]),
                                                                   nwid=nwid))
 
         if not dvecs:
             for dest, src in byobj_conns.items():
-                file.write(" "*(nest+8))
+                out_stream.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
-                file.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
+                out_stream.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
                                                                   repr(uvec[src]),
                                                                   nwid=nwid))
 
-        # now do the Components
         nest += 3
         for name, sub in self.subsystems(local=True):
-            if isinstance(sub, Component):
-                uvec = getattr(sub, uvecname)
-                file.write("%s %s '%s'    req: %s  usize:%d\n" %
-                           (" "*nest,
-                            sub.__class__.__name__,
-                            name,
-                            sub.get_req_procs(),
-                            uvec.vec.size))
-                for v, meta in uvec.items():
-                    if verbose:
-                        if v in uvec._slices:
-                            uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                            file.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
-                                                                             v,
-                                                                             uslice,
-                                                                             repr(uvec[v]),
-                                                                             nwid=nwid))
-                        elif not dvecs: # deriv vecs don't have passing by obj
-                            file.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
-                                                                                 v,
-                                                                                 repr(uvec[v]),
-                                                                                 nwid=nwid))
-            else:
-                sub.dump(nest, file=file, verbose=verbose, dvecs=dvecs)
+            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
+
+        out_stream.flush()
+
+    def dump_meta(self, nest=0, out_stream=sys.stdout):
+        """
+        Dumps the system tree with associated metadata for the params and unknowns
+        `VecWrappers`.
+
+        Parameters
+        ----------
+        nest : int, optional
+            Starting nesting level.  Defaults to 0.
+
+        out_stream : file-like, optional
+            Where output is written.  Defaults to sys.stdout.
+
+        """
+        klass = self.__class__.__name__
+
+        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+
+        margin = ' '*nest
+        if self.is_active():
+            out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
+                             (margin,
+                              klass,
+                              self.name,
+                              self.get_req_procs(),
+                              self.unknowns.vec.size,
+                              self.params.vec.size,
+                              commsz))
+
+            margin = ' '*(nest+6)
+            out_stream.write("%sunknowns:\n" % margin)
+            for v, meta in self.unknowns.items():
+                out_stream.write("%s%s: " % (margin, v))
+                out_stream.write(pformat(meta, indent=nest+9).replace("{","{\n",1))
+                out_stream.write('\n')
+
+            out_stream.write("%sparams:\n" % margin)
+            for v, meta in self.params.items():
+                out_stream.write("%s%s: " % (margin, v))
+                out_stream.write(pformat(meta, indent=nest+9).replace("{","{\n",1))
+                out_stream.write('\n')
+        else:
+            out_stream.write("%s %s '%s'   (inactive)\n" %
+                             (margin, klass, self.name))
+
+        nest += 3
+        for name, sub in self.subsystems():
+            sub.dump_meta(nest, out_stream=out_stream)
+
+        out_stream.flush()
 
     def get_req_procs(self):
         """
@@ -841,58 +844,6 @@ class Group(System):
 
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
-
-def _get_implicit_connections(params_dict, unknowns_dict):
-    """
-    Finds all matches between relative names of parameters and
-    unknowns. Any matches imply an implicit connection.  All
-    connections are expressed using absolute pathnames.
-
-    This should only be called using params and unknowns from the
-    top level `Group` in the system tree.
-
-    Parameters
-    ----------
-    params_dict : dict
-        Dictionary of metadata for all parameters in this `Group`.
-
-    unknowns_dict : dict
-        Dictionary of metadata for all unknowns in this `Group`.
-
-    Returns
-    -------
-    dict
-        Implicit connections in this `Group`, represented as a mapping
-        from the pathname of the target to the pathname of the source.
-
-    Raises
-    ------
-    RuntimeError
-        If a promoted variable name matches multiple unknowns.
-    """
-
-    # collect all absolute names that map to each relative name
-    abs_unknowns = {}
-    for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
-
-    abs_params = {}
-    for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['relative_name'], []).append(abs_name)
-
-    # check if any relative names correspond to mutiple unknowns
-    for name, lst in abs_unknowns.items():
-        if len(lst) > 1:
-            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
-                               (name, lst))
-
-    connections = {}
-    for uname, uabs in abs_unknowns.items():
-        pabs = abs_params.get(uname, ())
-        for p in pabs:
-            connections[p] = uabs[0]
-
-    return connections
 
 
 def get_absvarpathnames(var_name, var_dict, dict_name):

@@ -14,8 +14,7 @@ from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.group import _get_implicit_connections
-from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.mpiwrap import MPI, FakeComm, debug
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
 
@@ -83,6 +82,12 @@ class Problem(Component):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
+        # divide MPI communicators among subsystems
+        if MPI:
+            self.root._setup_communicators(MPI.COMM_WORLD)
+        else:
+            self.root._setup_communicators(FakeComm())
+
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
@@ -134,12 +139,6 @@ class Problem(Component):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
-        # divide MPI communicators among subsystems
-        if MPI:
-            self.root._setup_communicators(MPI.COMM_WORLD)
-        else:
-            self.root._setup_communicators(FakeComm())
-
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self.impl)
 
@@ -149,17 +148,14 @@ class Problem(Component):
 
     def run(self):
         """ Runs the Driver in self.driver. """
-        self.driver.run(self.root)
 
-        # Should only happen in top Problem?
-        system = self.root
-        varmanager = system._varmanager
-        params = varmanager.params
-        unknowns = varmanager.unknowns
-        resids = varmanager.resids
-        for recorder in self.driver.recorders:
-            recorder.record(params, unknowns, resids)
-            
+        if self.root.is_active():
+            self.driver.run(self.root)
+            # Should only happen in top Problem?
+            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
+            for recorder in self.driver.recorders:
+                recorder.record(params, unknowns, resids)
+
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
@@ -594,6 +590,7 @@ def _find_all_comps(group):
         data.update(_find_all_comps(sg))
     return data
 
+
 def jac_to_flat_dict(jac):
     """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go
     from [out][in] to [out,in].
@@ -691,3 +688,55 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n\n')
+
+def _get_implicit_connections(params_dict, unknowns_dict):
+    """
+    Finds all matches between relative names of parameters and
+    unknowns.  Any matches imply an implicit connection.  All
+    connections are expressed using absolute pathnames.
+
+    This should only be called using params and unknowns from the
+    top level `Group` in the system tree.
+
+    Parameters
+    ----------
+    params_dict : dict
+        dictionary of metadata for all parameters in this `Group`
+
+    unknowns_dict : dict
+        dictionary of metadata for all unknowns in this `Group`
+
+    Returns
+    -------
+    dict
+        implicit connections in this `Group`, represented as a mapping
+        from the pathname of the target to the pathname of the source
+
+    Raises
+    ------
+    RuntimeError
+        if a a promoted variable name matches multiple unknowns
+    """
+
+    # collect all absolute names that map to each relative name
+    abs_unknowns = {}
+    for abs_name, u in unknowns_dict.items():
+        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
+
+    abs_params = {}
+    for abs_name, p in params_dict.items():
+        abs_params.setdefault(p['relative_name'], []).append(abs_name)
+
+    # check if any relative names correspond to mutiple unknowns
+    for name, lst in abs_unknowns.items():
+        if len(lst) > 1:
+            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
+                               (name, lst))
+
+    connections = {}
+    for uname, uabs in abs_unknowns.items():
+        pabs = abs_params.get(uname, ())
+        for p in pabs:
+            connections[p] = uabs[0]
+
+    return connections

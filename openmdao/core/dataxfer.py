@@ -69,19 +69,11 @@ class DataXfer(object):
         if mode == 'rev':
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
-            # all targets. This requires numpy's new add command.
+            # all targets. byobjs are never scattered in reverse
             np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
-            #print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.vec_conns, 'byobj',self.byobj_conns
-
-            # formerly
-            #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-
-            # byobjs are never scattered in reverse, so skip that part
-
-        else:  # forward
+        else:
+            # forward, include byobjs if not a deriv scatter
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
-            #print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.vec_conns, 'byobj',self.byobj_conns
-
             if not deriv:
                 for tgt, src in self.byobj_conns:
                     tgtvec[tgt] = srcvec[src]
