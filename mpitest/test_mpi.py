@@ -41,7 +41,6 @@ class ABCDArrayComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         #time.sleep(self.delay)
 
-        debug("%s: solve_nonlinear" % self.name)
         unknowns['c'] = params['a'] + params['b']
         unknowns['d'] = params['a'] - params['b']
 
@@ -142,11 +141,13 @@ class MPITests1(MPITestCase):
             assert_rel_error(self, prob.subsystem('C3').params['a'],
                              np.ones(size)*2.1, 1.e-10)
             assert_rel_error(self, prob.subsystem('C3').params['b'],
-                             -np.ones(size)*.1, 1.e-10)
+                             np.ones(size)*-.1, 1.e-10)
 
         if not MPI or self.comm.rank == 1:
+            assert_rel_error(self, prob.subsystem('G1:C2').unknowns['c'],
+                             np.ones(size)*2.1, 1.e-10)
             assert_rel_error(self, prob.subsystem('G1:C2').unknowns['d'],
-                             -np.ones(size)*.1, 1.e-10)
+                             np.ones(size)*-.1, 1.e-10)
 
 
 

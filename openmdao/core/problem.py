@@ -149,18 +149,12 @@ class Problem(Component):
     def run(self):
         """ Runs the Driver in self.driver. """
 
-        try:
-            if self.root.is_active():
-                debug('driver run')
-                self.driver.run(self.root)
-                debug('recording: recorders=%s' % self.driver.recorders)
-                # Should only happen in top Problem?
-                unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
-                for recorder in self.driver.recorders:
-                    recorder.record(params, unknowns, resids)
-        except:
-            import traceback
-            debug(traceback.format_exc())
+        if self.root.is_active():
+            self.driver.run(self.root)
+            # Should only happen in top Problem?
+            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
+            for recorder in self.driver.recorders:
+                recorder.record(params, unknowns, resids)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):

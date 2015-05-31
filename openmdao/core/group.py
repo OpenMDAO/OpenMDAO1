@@ -434,9 +434,9 @@ class Group(System):
         for name, sub in self.subsystems():
             self._varmanager._transfer_data(name)
             if sub.is_active():
-                debug('solving %s in rank %d' % (name, self.comm.rank))
+                #debug('solving %s in rank %d' % (name, self.comm.rank))
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-                debug('done solving %s in rank %d' % (name, self.comm.rank))
+                #debug('done solving %s in rank %d' % (name, self.comm.rank))
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
