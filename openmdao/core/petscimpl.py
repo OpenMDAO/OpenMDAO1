@@ -106,8 +106,8 @@ class PetscImpl(object):
             app_idxs = numpy.concatenate(app_idxs)
 
         if trace:
-            debug('making index sets for app ordering:\n      app: %s\n      petsc: %s' %
-                  (app_idxs, to_idx_array))
+            debug("'%s': making index sets for app ordering:\n      app: %s\n      petsc: %s" %
+                  (varmanager.unknowns.pathname, app_idxs, to_idx_array))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
         petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
 
@@ -136,7 +136,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
         if trace:
-            debug("creating src petsc_vec for '%s': vec=%s" %
+            debug("'%s': creating src petsc_vec: vec=%s" %
                   (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
@@ -174,7 +174,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if trace:
-            debug("allgathering local unknown sizes: local=%s" % our_row[0,:])
+            debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
+                                                                        our_row[0,:]))
         self.comm.Allgather(our_row[0,:], local_unknown_sizes)
         #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
@@ -197,7 +198,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     def get_view(self, sys_pathname, comm, varmap):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
         if trace:
-            debug("creating src petsc_vec (view) for '%s': vec=%s" %
+            debug("'%s': creating src petsc_vec (view): vec=%s" %
                   (sys_pathname, self.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
@@ -238,7 +239,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                                               srcvec, my_params,
                                               connections, store_byobjs)
         if trace:
-            debug("creating tgt petsc_vec for '%s': vec=%s" %
+            debug("'%s': creating tgt petsc_vec: vec=%s" %
                   (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
@@ -252,21 +253,12 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         ndarray
             Array containing sum of local sizes of 'pass by vector' params.
         """
-        psize = sum([m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('pass_by_obj')])
+        psize = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
 
         if trace:
-            debug("algathering param sizes for '%s'" % self.pathname)
+            debug("'%s': allgathering param sizes.  local param size = %d" % (self.pathname,
+                                                                              psize))
         return numpy.array(self.comm.allgather(psize), int)
-
-    #def get_view(self, sys_pathname, comm, varmap):
-        #view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
-        #if trace:
-            #debug("creating tgt petsc_vec for '%s': vec=%s" %
-                  #(sys_pathname, self.vec))
-        #view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
-        #return view
-
 
 class PetscDataXfer(DataXfer):
     """
@@ -298,21 +290,24 @@ class PetscDataXfer(DataXfer):
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
 
+        name = varmanager.unknowns.pathname
+
         if trace:
-            debug("creating index sets for '%s' DataXfer:\n      %s\n      %s" %
-                  (varmanager.unknowns.pathname, src_idxs, tgt_idxs))
+            debug("'%s': creating index sets for '%s' DataXfer:\n      %s\n      %s" %
+                  (name, varmanager.unknowns.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
         if trace:
-            debug("converting src indices from app order: %s" % src_idx_set.indices)
+            debug("'%s': converting src indices from app order: %s" % (name, src_idx_set.indices))
         src_idx_set = varmanager.app_ordering.app2petsc(src_idx_set)
         if trace:
-            debug("new indices: %s" % src_idx_set.indices)
+            debug("'%s': petsc indices: %s" % (name, src_idx_set.indices))
 
         try:
             if trace:
-                debug("scattering")
+                debug("'%s': creating scatter %s --> %s" % (name, src_idx_set.indices,
+                                                          tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
         except Exception as err:
@@ -351,13 +346,14 @@ class PetscDataXfer(DataXfer):
             # all targets. This does not involve pass_by_object.
             if trace:
                 for u,v in self.vec_conns:
-                    debug("reverse scattering %s --> %s" % (u, v))
+                    debug("'%s': reverse scattering %s --> %s" % (srcvec.pathname,
+                                                                  u, v))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
         else:
             # forward mode, source to target including pass_by_object
             if trace:
                 for u,v in self.vec_conns:
-                    debug("scattering %s --> %s" % (v, u))
+                    debug("'%s': scattering %s --> %s" % (srcvec.pathname, v, u))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
             if trace: debug("scatter done")
 

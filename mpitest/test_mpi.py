@@ -135,18 +135,17 @@ class MPITests1(MPITestCase):
 
         prob.setup()
         prob.run()
-        prob.root.dump()
 
         if not MPI or self.comm.rank == 0:
             assert_rel_error(self, prob.subsystem('G1:C1').unknowns['c'],
                              np.ones(size)*2.1, 1.e-10)
             assert_rel_error(self, prob.subsystem('C3').params['a'],
                              np.ones(size)*2.1, 1.e-10)
+            assert_rel_error(self, prob.subsystem('C3').params['b'],
+                             -np.ones(size)*.1, 1.e-10)
 
         if not MPI or self.comm.rank == 1:
             assert_rel_error(self, prob.subsystem('G1:C2').unknowns['d'],
-                             -np.ones(size)*.1, 1.e-10)
-            assert_rel_error(self, prob.subsystem('C3').params['b'],
                              -np.ones(size)*.1, 1.e-10)
 
 

@@ -2,6 +2,8 @@ import sys
 from collections import namedtuple, OrderedDict
 import numpy
 
+from openmdao.core.mpiwrap import debug
+
 VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
 
@@ -24,6 +26,7 @@ class VarManagerBase(object):
         self.resids    = None
         self.dresids   = None
         self.data_xfer = {}
+        self.distrib_idxs = {}  # this will be non-empty if some systems have distributed vars
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named variable.
@@ -48,6 +51,36 @@ class VarManagerBase(object):
         except KeyError:
             raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
+
+    def _var_column_offset(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the variable to find the distributed offset for
+
+        Returns
+        -------
+        int
+            An offset within the distributed storage area for the named variable.
+        """
+        if self.comm is None:
+            return 0
+
+        vidx = self.unknowns._var_idx(name)
+        if self._local_unknown_sizes[self.comm.rank, vidx]:
+            rank = self.comm.rank
+        else:
+            for i in range(self.comm.size):
+                if self._local_unknown_sizes[i, vidx]:
+                    rank = i
+                    break
+            else:
+                raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
+                                   name)
+
+        return numpy.sum(self._local_unknown_sizes[:rank, vidx])
+
 
     def _get_global_idxs(self, uname, pname):
         """
@@ -76,12 +109,12 @@ class VarManagerBase(object):
         # offset of the the given unknown in the distributed vector.
         offset = numpy.sum(self._local_unknown_sizes[:, :self.unknowns._var_idx(uname)])
 
-        if 'param_idxs' in pmeta:
+        if pname in self.distrib_idxs:
             raise NotImplementedError("distrib comps not supported yet")
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
-        src_idxs = arg_idxs + offset
+        src_idxs = arg_idxs + offset + self._var_column_offset(uname)
 
         rank = self.comm.rank if self.comm else 0
         tgt_start = numpy.sum(self._local_param_sizes[:rank])
@@ -93,7 +126,7 @@ class VarManagerBase(object):
     def _setup_data_transfer(self, system, my_params):
         """
         Create `DataXfer` objects to handle data transfer for all of the
-        connections that involve paramaters for which this `VarManager`
+        connections that involve parameters for which this `VarManager`
         is responsible.
 
         Parameters
@@ -113,6 +146,8 @@ class VarManagerBase(object):
         self._local_param_sizes = self.params._get_flattened_sizes()
 
         self.app_ordering = self.impl_factory.create_app_ordering(self)
+
+        # TODO: obtain distributed idx info from system to populate self.distib_idxs
 
         xfer_dict = {}
         for param, unknown in self.connections.items():

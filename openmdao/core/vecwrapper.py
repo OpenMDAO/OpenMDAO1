@@ -9,6 +9,7 @@ from six.moves import cStringIO
 
 from openmdao.util.types import is_differentiable, int_types
 from openmdao.util.strutil import get_common_ancestor
+from openmdao.core.mpiwrap import debug
 
 
 class _flat_dict(object):
@@ -35,6 +36,9 @@ class _ByObjWrapper(object):
     """
     def __init__(self, val):
         self.val = val
+
+    def __repr__(self):
+        return repr(self.val)
 
 
 class VecWrapper(object):
@@ -660,6 +664,7 @@ class TgtVecWrapper(VecWrapper):
                 src_meta = srcvec.metadata(src_rel_name)
 
                 vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
+                vmeta['owned'] = True
 
                 if meta.get('remote'):
                     # we don't store remote vars
@@ -777,9 +782,9 @@ class TgtVecWrapper(VecWrapper):
         ndarray
             Array containing sum of local sizes of params in our internal vector.
         """
-        psize = sum([m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('pass_by_obj')])
-        return numpy.array([psize], int)
+        psizes = [m['size'] for m in self.values()
+                     if m.get('owned') and not m.get('pass_by_obj') and not m.get('remote')]
+        return numpy.array([sum(psizes)], int)
 
 
 

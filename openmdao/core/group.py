@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+from pprint import pformat
 from collections import OrderedDict
 import sys
 from six import iteritems
@@ -755,6 +756,57 @@ class Group(System):
         nest += 3
         for name, sub in self.subsystems(local=True):
             sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
+
+        out_stream.flush()
+
+    def dump_meta(self, nest=0, out_stream=sys.stdout):
+        """
+        Dumps the system tree with associated metadata for the params and unknowns
+        `VecWrappers`.
+
+        Parameters
+        ----------
+        nest : int, optional
+            Starting nesting level.  Defaults to 0.
+
+        out_stream : file-like, optional
+            Where output is written.  Defaults to sys.stdout.
+
+        """
+        klass = self.__class__.__name__
+
+        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+
+        margin = ' '*nest
+        if self.is_active():
+            out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
+                             (margin,
+                              klass,
+                              self.name,
+                              self.get_req_procs(),
+                              self.unknowns.vec.size,
+                              self.params.vec.size,
+                              commsz))
+
+            margin = ' '*(nest+6)
+            out_stream.write("%sunknowns:\n" % margin)
+            for v, meta in self.unknowns.items():
+                out_stream.write("%s%s: " % (margin, v))
+                out_stream.write(pformat(meta, indent=nest+9).replace("{","{\n",1))
+                out_stream.write('\n')
+
+            out_stream.write("%sparams:\n" % margin)
+            for v, meta in self.params.items():
+                out_stream.write("%s%s: " % (margin, v))
+                out_stream.write(pformat(meta, indent=nest+9).replace("{","{\n",1))
+                out_stream.write('\n')
+        else:
+            out_stream.write("%s %s '%s'   (inactive)\n" %
+                             (margin, klass, self.name))
+
+        nest += 3
+        for name, sub in self.subsystems():
+            sub.dump_meta(nest, out_stream=out_stream)
 
         out_stream.flush()
 

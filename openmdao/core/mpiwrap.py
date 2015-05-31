@@ -56,13 +56,18 @@ def under_mpirun():
 
 if under_mpirun():
     from mpi4py import MPI
-    def debug(msg):
-        print("%d: %s" % (MPI.COMM_WORLD.rank, msg))
+    def debug(*msg):
+        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
+        for m in newmsg:
+            sys.stdout.write("%s " % m)
+        sys.stdout.write('\n')
         sys.stdout.flush()
 else:
     MPI = None
-    def debug(msg):
-        print(msg)
+    def debug(*msg):
+        for m in msg:
+            sys.stdout.write("%s " % m)
+        sys.stdout.write('\n')
 
 class FakeComm(object):
     def __init__(self):
