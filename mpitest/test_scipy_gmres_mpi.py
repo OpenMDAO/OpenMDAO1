@@ -18,9 +18,11 @@ from openmdao.test.testutil import assert_rel_error
 
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 
-print 'MPI:', MPI
+if MPI:
+    from openmdao.core.petscimpl import PetscImpl as impl
+else:
+    from openmdao.core.basicimpl import BasicImpl as impl
 
-from openmdao.core.petscimpl import PetscImpl
 from openmdao.test.mpiunittest import MPITestCase
 
 class TestScipyGMRES(MPITestCase):
@@ -48,7 +50,7 @@ class TestScipyGMRES(MPITestCase):
 
     def test_fan_in_grouped(self):
 
-        top = Problem(impl=PetscImpl)
+        top = Problem(impl=impl)
         top.root = FanInGrouped()
         top.root.lin_solver = ScipyGMRES()
         top.setup()
@@ -58,12 +60,12 @@ class TestScipyGMRES(MPITestCase):
         unknown_list = ['comp3:y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        if MPI.COMM_WORLD.rank == 0:
+        if not MPI or self.comm.rank == 0:
             assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
             assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        if MPI.COMM_WORLD.rank == 0:
+        if not MPI or self.comm.rank == 0:
             assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
             assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
 
