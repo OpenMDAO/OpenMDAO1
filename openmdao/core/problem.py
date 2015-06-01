@@ -28,9 +28,9 @@ class Problem(System):
         super(Problem, self).__init__()
         self.root = root
         if impl is None:
-            self.impl = BasicImpl
+            self._impl = BasicImpl
         else:
-            self.impl = impl
+            self._impl = impl
         if driver is None:
             self.driver = Driver()
         else:
@@ -141,7 +141,7 @@ class Problem(System):
         param_owners = assign_parameters(connections)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, impl=self.impl)
+        self.root._setup_vectors(param_owners, connections, impl=self._impl)
 
         # Prep for case recording
         for recorder in self.driver.recorders:
