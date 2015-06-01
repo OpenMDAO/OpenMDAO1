@@ -22,6 +22,7 @@ class LinearSystem(Component):
         """ Use numpy to solve Ax=b for x."""
 
         unknowns['x'] = np.linalg.solve(params['A'], params['b'])
+        resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 
     def apply_nonlinear(self, params, unknowns, resids):
         """Evaluating residual for given state."""
