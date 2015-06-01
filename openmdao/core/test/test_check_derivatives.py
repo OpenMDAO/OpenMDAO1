@@ -136,6 +136,32 @@ class TestProblemFullFD(unittest.TestCase):
         assert_rel_error(self, J['comp:y']['comp:x'][0][0], 2.0, 1e-6)
 
 
+    def test_full_model_fd_simple_comp_promoted(self):
+
+        top = Problem()
+        top.root = Group()
+        sub = top.root.add('sub', Group(), promotes=['*'])
+        sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
+        top.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+
+        top.root.fd_options['force_fd'] = True
+
+        top.setup()
+        top.run()
+
+        param_list = ['x']
+        unknown_list = ['y']
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        param_list = ['sub:comp:x']
+        unknown_list = ['sub:comp:y']
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub:comp:y']['sub:comp:x'][0][0], 2.0, 1e-6)
+
+
     def test_full_model_fd_double_diamond_grouped(self):
 
         top = Problem()
