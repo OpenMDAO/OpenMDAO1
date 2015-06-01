@@ -10,6 +10,8 @@ from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.component import Component
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 
+print 'MPI:', MPI
+
 from openmdao.components.paramcomp import ParamComp
 
 from openmdao.test.mpiunittest import MPITestCase

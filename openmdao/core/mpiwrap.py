@@ -47,8 +47,8 @@ def under_mpirun():
     # no consistent set of environment vars between MPI
     # implementations.
     for name in os.environ.keys():
-        if name.startswith('OMPI_COMM') or \
-           name.startswith('MPIR_')     or \
+        if name.startswith('OMPI_') or \
+           name.startswith('MPIR_') or \
            name.startswith('MPICH_'):
             return True
     return False
