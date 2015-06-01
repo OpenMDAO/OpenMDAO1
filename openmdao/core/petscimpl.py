@@ -150,7 +150,12 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Array containing local sizes of 'pass by vector' unknown variables
             for every process in our communicator.
         """
-        sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
+        sizes = []
+        for name, meta in self.get_vecvars():
+            if meta.get('remote'):
+                sizes.append(0)
+            else:
+                sizes.append(meta['size'])
 
         # create 2D array of variable sizes per process
         local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
@@ -161,8 +166,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         # create row in the local_unknown_sizes table for this process
         our_row = numpy.zeros((1, len(sizes)), int)
-        for i, (name, meta) in enumerate(self.get_vecvars()):
-            our_row[0, i] = meta['size']
+        our_row[0, :] = sizes
 
         #our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
         #for i, (name, meta) in enumerate(self.get_byobjs()):

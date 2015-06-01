@@ -10,6 +10,7 @@ from six.moves import cStringIO
 from openmdao.util.types import is_differentiable, int_types
 from openmdao.util.strutil import get_common_ancestor
 
+from openmdao.devtools.debug import *
 
 class _flat_dict(object):
     """This is here to allow the user to use vec.flat['foo'] syntax instead
@@ -258,8 +259,11 @@ class VecWrapper(object):
         if meta.get('pass_by_obj'):
             raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
 
+        if name not in self._slices:
+            return meta['size'], []
+
         start, end = self._slices[name]
-        return self.make_idx_array(start, end)
+        return meta['size'], self.make_idx_array(start, end)
 
     def norm(self):
         """
@@ -300,7 +304,7 @@ class VecWrapper(object):
         for name, meta in self.items():
             if name in varmap:
                 view._vardict[varmap[name]] = self._vardict[name]
-                if meta['size'] > 0 and not meta.get('remote'):
+                if not meta.get('pass_by_obj') and not meta.get('remote'):
                     pstart, pend = self._slices[name]
                     if start == -1:
                         start = pstart
@@ -535,15 +539,9 @@ class SrcVecWrapper(VecWrapper):
         for name, meta in unknowns_dict.items():
             relname = meta['relative_name']
             vmeta = self._setup_var_meta(name, meta)
-            var_size = vmeta['size']
-
-            if not vmeta.get('pass_by_obj'):
-                if meta.get('remote'):
-                    # we don't store remote vars
-                    vmeta['size'] = 0
-                else:
-                    self._slices[relname] = (vec_size, vec_size + var_size)
-                    vec_size += var_size
+            if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
+                self._slices[relname] = (vec_size, vec_size + vmeta['size'])
+                vec_size += vmeta['size']
 
             self._vardict[relname] = vmeta
 
@@ -594,7 +592,8 @@ class SrcVecWrapper(VecWrapper):
         ndarray
             1x<num_vector_vars> array of sizes.
         """
-        sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
+        sizes = [m['size'] for m in self.values()
+                 if not m.get('pass_by_obj') and not m.get('remote')]
         return numpy.array([sizes], int)
 
     def _var_idx(self, name):
@@ -614,7 +613,6 @@ class SrcVecWrapper(VecWrapper):
             if vname == name:
                 return i
         raise RuntimeError("'%s' is not a 'pass by vector' variable." % name)
-
 
 
 class TgtVecWrapper(VecWrapper):
@@ -665,10 +663,7 @@ class TgtVecWrapper(VecWrapper):
                 vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
                 vmeta['owned'] = True
 
-                if meta.get('remote'):
-                    # we don't store remote vars
-                    vmeta['size'] = 0
-                else:
+                if not meta.get('remote'):
                     vec_size += vmeta['size']
 
                 self._vardict[self._scoped_abs_name(pathname)] = vmeta
@@ -684,7 +679,7 @@ class TgtVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in self._vardict.items():
-            if meta['size'] > 0 and not meta.get('pass_by_obj'):
+            if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
 
@@ -733,17 +728,13 @@ class TgtVecWrapper(VecWrapper):
         """
         vmeta = meta.copy()
         vmeta['pathname'] = pathname
-
-        if not src_meta.get('remote'):
-            vmeta['size'] = src_meta['size']
-        elif meta.get('remote'):
-            vmeta['size'] = 0
+        vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
                 vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
-        elif vmeta['size'] > 0:
+        elif not vmeta.get('remote'):
             self._slices[self._scoped_abs_name(pathname)] = (index, index + vmeta['size'])
 
         return vmeta
@@ -755,7 +746,6 @@ class TgtVecWrapper(VecWrapper):
         """
         vmeta = meta.copy()
         vmeta['pass_by_obj'] = True
-        vmeta['size'] = 0
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:

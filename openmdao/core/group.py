@@ -21,6 +21,8 @@ from openmdao.util.types import real_types
 
 from openmdao.core.mpiwrap import get_comm_if_active
 
+from openmdao.devtools.debug import *
+
 class Group(System):
     """A system that contains other systems."""
 
@@ -531,14 +533,17 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
         """
+        debug(self.pathname, 'apply_linear()', self.is_active())
         if not self.is_active():
             return
 
         if mode == 'fwd':
             # Full Scatter
+            debug(self.pathname, 'apply_linear xfer', self._varmanager)
             self._varmanager._transfer_data(deriv=True)
 
         for name, system in self.subsystems(local=True):
+            debug(self.pathname, 'apply_linear sub=', name)
 
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
@@ -557,6 +562,7 @@ class Group(System):
                         system._apply_linear_jac(system.params, system.unknowns, system.dparams,
                                                  dunknowns, dresids, mode)
                     else:
+                        debug('calling apply_linear for', system.pathname)
                         system.apply_linear(system.params, system.unknowns, system.dparams,
                                             dunknowns, dresids, mode)
                     dresids.vec *= -1.0
