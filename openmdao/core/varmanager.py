@@ -1,8 +1,11 @@
-
+import sys
 from collections import namedtuple, OrderedDict
 import numpy
 
+from openmdao.core.mpiwrap import debug
+
 VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
+
 
 class VarManagerBase(object):
     """Base class for a manager of the data transfer of a possibly distributed
@@ -11,8 +14,8 @@ class VarManagerBase(object):
     Parameters
     ----------
         connections : dict
-            a dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to
+            A dictionary mapping the pathname of a target variable to the
+            pathname of the source variable that it is connected to.
     """
     def __init__(self, connections):
         self.connections = connections
@@ -23,20 +26,21 @@ class VarManagerBase(object):
         self.resids    = None
         self.dresids   = None
         self.data_xfer = {}
+        self.distrib_idxs = {}  # this will be non-empty if some systems have distributed vars
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable
+        """Retrieve unflattened value of named variable.
 
         Parameters
         ----------
         name : str   OR   tuple : (name, vector)
-             the name of the variable to retrieve from the unknowns vector OR
-             a tuple of the name of the variable and the vector to get it's
+             The name of the variable to retrieve from the unknowns vector OR
+             a tuple of the name of the variable and the vector to get its
              value from.
 
         Returns
         -------
-        the unflattened value of the given variable
+        The unflattened value of the given variable.
         """
         if isinstance(name, tuple):
             name, vector = name
@@ -48,35 +52,110 @@ class VarManagerBase(object):
             raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
 
-    def _setup_data_transfer(self, sys_pathname, my_params):
-        """Create `DataXfer` objects to handle data transfer for all of the
-           connections that involve paramaters for which this `VarManager`
-           is responsible.
-
-           Parameters
-           ----------
-           sys_pathname : str
-               Absolute pathname of the `System` that will own this `VarManager`.
-
-           my_params : list
-               list of pathnames for parameters that the VarManager is
-               responsible for propagating
+    def _var_column_offset(self, name):
         """
+        Parameters
+        ----------
+        name : str
+            Name of the variable to find the distributed offset for
+
+        Returns
+        -------
+        int
+            An offset within the distributed storage area for the named variable.
+        """
+        if self.comm is None:
+            return 0
+
+        vidx = self.unknowns._var_idx(name)
+        if self._local_unknown_sizes[self.comm.rank, vidx]:
+            rank = self.comm.rank
+        else:
+            for i in range(self.comm.size):
+                if self._local_unknown_sizes[i, vidx]:
+                    rank = i
+                    break
+            else:
+                raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
+                                   name)
+
+        return numpy.sum(self._local_unknown_sizes[:rank, vidx])
+
+
+    def _get_global_idxs(self, uname, pname):
+        """
+        Parameters
+        ----------
+        uname : str
+            Name of variable in the unknowns vector.
+
+        pname : str
+            Name of the variable in the params vector.
+
+        Returns
+        -------
+        tuple of (idx_array, idx_array)
+            index array into the global unknowns vector and the corresponding
+            index array into the global params vector.
+        """
+        umeta = self.unknowns.metadata(uname)
+        pmeta = self.params.metadata(pname)
+
+        if pmeta.get('remote'):
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        # add up sizes across all processes in our communicator for all columns
+        # up to the column corresponding to the named variable.  This gives us the
+        # offset of the the given unknown in the distributed vector.
+        offset = numpy.sum(self._local_unknown_sizes[:, :self.unknowns._var_idx(uname)])
+
+        if pname in self.distrib_idxs:
+            raise NotImplementedError("distrib comps not supported yet")
+        else:
+            arg_idxs = self.params.make_idx_array(0, pmeta['size'])
+
+        src_idxs = arg_idxs + offset + self._var_column_offset(uname)
+
+        rank = self.comm.rank if self.comm else 0
+        tgt_start = numpy.sum(self._local_param_sizes[:rank])
+        tgt_idxs = tgt_start + self.params._slices[pname][0] + \
+                     self.params.make_idx_array(0, len(arg_idxs))
+
+        return src_idxs, tgt_idxs
+
+    def _setup_data_transfer(self, system, my_params):
+        """
+        Create `DataXfer` objects to handle data transfer for all of the
+        connections that involve parameters for which this `VarManager`
+        is responsible.
+
+        Parameters
+        ----------
+        system : `System`
+            The `System` that will own this `VarManager`.
+
+        my_params : list
+            List of pathnames for parameters that the VarManager is
+            responsible for propagating.
+
+        """
+
+        sys_pathname = system.pathname
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
 
         self.app_ordering = self.impl_factory.create_app_ordering(self)
 
+        # TODO: obtain distributed idx info from system to populate self.distib_idxs
+
         xfer_dict = {}
         for param, unknown in self.connections.items():
             if param in my_params:
                 # remove our system pathname from the abs pathname of the param and
                 # get the subsystem name from that
-                if sys_pathname:
-                    start = len(sys_pathname)+1
-                else:
-                    start = 0
+                start = len(sys_pathname)+1 if sys_pathname else 0
+
                 tgt_sys = param[start:].split(':', 1)[0]
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault(tgt_sys, ([],[],[],[]))
@@ -85,10 +164,11 @@ class VarManagerBase(object):
 
                 if self.unknowns.metadata(urelname).get('pass_by_obj'):
                     byobj_conns.append((prelname, urelname))
-                else:
+                else: # pass by vector
                     vec_conns.append((prelname, urelname))
-                    src_idx_list.append(self.unknowns.get_global_idxs(urelname))
-                    dest_idx_list.append(self.params.get_global_idxs(prelname))
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
+                    src_idx_list.append(sidxs)
+                    dest_idx_list.append(didxs)
 
         for tgt_sys, (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
@@ -128,7 +208,7 @@ class VarManagerBase(object):
             Specifies forward or reverse data transfer.
 
         deriv : bool, optional
-            If True, perform a data transfer between derivative `VecWrapper`s
+            If True, perform a data transfer between derivative `VecWrappers`.
         """
         x = self.data_xfer.get(target_system)
         if x is not None:
@@ -138,17 +218,17 @@ class VarManagerBase(object):
                 x.transfer(self.unknowns, self.params, mode)
 
     def vectors(self):
-        """Return the set of variable vectors being managed by this `VarManager`
+        """Return the set of variable vectors being managed by this `VarManager`.
 
         Returns
         -------
         `VecTuple`
-            a namedtuple of six (6) `VecWrapper`s:
-            unknowns, dunknowns, resids, dresids, params, dparams
+            A namedtuple of six (6) `VecWrappers`:
+            unknowns, dunknowns, resids, dresids, params, dparams.
         """
         return VecTuple(self.unknowns, self.dunknowns,
-                        self.resids, self.dresids,
-                        self.params, self.dparams)
+                        self.resids,   self.dresids,
+                        self.params,   self.dparams)
 
 
 class VarManager(VarManagerBase):
@@ -158,26 +238,30 @@ class VarManager(VarManagerBase):
     Parameters
     ----------
     params_dict : dict
-        dictionary of metadata for all parameters
+        Dictionary of metadata for all parameters.
 
     unknowns_dict : dict
-        dictionary of metadata for all unknowns
+        Dictionary of metadata for all unknowns.
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     connections : dict
-        a dictionary mapping the pathname of a target variable to the
-        pathname of the source variable that it is connected to
+        A dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to.
 
     impl : an implementation factory, optional
         Specifies the factory object used to create `VecWrapper` and
         `DataXfer` objects.
     """
-    def __init__(self, comm, sys_pathname, params_dict, unknowns_dict, my_params,
-                 connections, impl):
+    def __init__(self, system, my_params, connections, impl):
         super(VarManager, self).__init__(connections)
+
+        comm = system.comm
+        sys_pathname = system.pathname
+        params_dict = system._params_dict
+        unknowns_dict = system._unknowns_dict
 
         self.impl_factory = impl
         self.comm = comm
@@ -201,7 +285,7 @@ class VarManager(VarManagerBase):
         self.dparams.setup(None, params_dict, self.unknowns,
                                  my_params, connections)
 
-        self._setup_data_transfer(sys_pathname, my_params)
+        self._setup_data_transfer(system, my_params)
 
 
 class ViewVarManager(VarManagerBase):
@@ -211,38 +295,31 @@ class ViewVarManager(VarManagerBase):
     Parameters
     ----------
     top_unknowns : `VecWrapper`
-        the `Problem` level unknowns `VecWrapper`
+        The `Problem` level unknowns `VecWrapper`.
 
-    parent_vm : `VarManager`
-        the `VarManager` which provides the `VecWrapper`s on which to create views
-
-    params_dict : dict
-        dictionary of metadata for all parameters
-
-    unknowns_dict : dict
-        dictionary of metadata for all unknowns
+    system : `System`
+        The `System` that owns this VarManager
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     """
-    def __init__(self, top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                 my_params):
+    def __init__(self, top_unknowns, parent_vm, system, my_params):
         super(ViewVarManager, self).__init__(parent_vm.connections)
+
+        comm = system.comm
 
         self.impl_factory = parent_vm.impl_factory
         self.comm = comm
 
         self.unknowns, self.dunknowns, self.resids, self.dresids, self.params, self.dparams = \
-            create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                         my_params, parent_vm.connections)
+            create_views(top_unknowns, parent_vm, system, my_params, parent_vm.connections)
 
-        self._setup_data_transfer(sys_pathname, my_params)
+        self._setup_data_transfer(system, my_params)
 
 
-def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unknowns_dict,
-                 my_params, connections):
+def create_views(top_unknowns, parent_vm, system, my_params, connections):
     """
     A manager of the data transfer of a possibly distributed collection of
     variables.  The variables are based on views into an existing VarManager.
@@ -250,37 +327,33 @@ def create_views(top_unknowns, parent_vm, comm, sys_pathname, params_dict, unkno
     Parameters
     ----------
     top_unknowns : `VecWrapper`
-        the `Problem` level unknowns `VecWrapper`
+        The `Problem` level unknowns `VecWrapper`.
 
     parent_vm : `VarManager`
-        the `VarManager` which provides the `VecWrapper`s on which to create views
+        The `VarManager` which provides the `VecWrapper` on which to create views.
 
-    comm : an MPI communicator (real or fake)
-        communicator to be used for any distributed operations
-
-    sys_pathname : str
-        pathname of the system for which the views are being created
-
-    params_dict : dict
-        dictionary of metadata for all parameters
-
-    unknowns_dict : dict
-        dictionary of metadata for all unknowns
+    system : `System`
+        The `System` that will contain the views.
 
     my_params : list
-        list of pathnames for parameters that this `VarManager` is
-        responsible for propagating
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
     connections : dict
-        a dictionary mapping the pathname of a target variable to the
-        pathname of the source variable that it is connected to
+        A dictionary mapping the pathname of a target variable to the
+        pathname of the source variable that it is connected to.
 
     Returns
     -------
     `VecTuple`
-        a namedtuple of six (6) `VecWrapper`s:
-        unknowns, dunknowns, resids, dresids, params, dparams
+        A namedtuple of six (6) `VecWrappers`:
+        unknowns, dunknowns, resids, dresids, params, dparams.
     """
+
+    comm = system.comm
+    unknowns_dict = system._unknowns_dict
+    params_dict = system._params_dict
+    sys_pathname = system.pathname
 
     # map relative name in parent to corresponding relative name in this view
     umap = get_relname_map(parent_vm.unknowns, unknowns_dict, sys_pathname)
@@ -312,7 +385,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         An ordered mapping of absolute variable name to its metadata.
 
     child_name : str
-        The pathname of the child for which to get relative name
+        The pathname of the child for which to get relative name.
 
     Returns
     -------

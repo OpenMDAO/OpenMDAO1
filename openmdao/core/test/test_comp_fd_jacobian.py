@@ -49,17 +49,20 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x' }
+                             'relative_name' : 'x',
+                             'shape': 2, 'size' : 2}
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y' }
+                               'relative_name' : 'y',
+                             'shape': 2, 'size' : 2 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y' }
+                             'relative_name' : 'y',
+                             'shape': 2, 'size' : 2}
 
         params = SrcVecWrapper()
         params.setup(params_dict, store_byobjs=True)
@@ -78,17 +81,20 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x' }
+                             'relative_name' : 'x',
+                             'shape': 2, 'size' : 2 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y' }
+                               'relative_name' : 'y',
+                             'shape': 2, 'size' : 2 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y' }
+                             'relative_name' : 'y',
+                             'shape': 2, 'size' : 2 }
 
         params = SrcVecWrapper()
         params.setup(params_dict, store_byobjs=True)
@@ -113,17 +119,20 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2, 2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x' }
+                             'relative_name' : 'x',
+                             'shape': (2,2), 'size' : 4 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2, 2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y' }
+                               'relative_name' : 'y',
+                             'shape': (2,2), 'size' : 4 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2, 2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y' }
+                             'relative_name' : 'y',
+                             'shape': (2,2), 'size' : 4 }
 
         params = SrcVecWrapper()
         params.setup(params_dict, store_byobjs=True)
@@ -151,23 +160,28 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.array([0.5]),
                              'pathname' : 'x',
-                             'relative_name' : 'x' }
+                             'relative_name' : 'x',
+                             'shape': (1,), 'size' : 1 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.array([0.0]),
                                'pathname' : 'y',
-                               'relative_name' : 'y' }
+                               'relative_name' : 'y',
+                             'shape': (1,), 'size' : 1 }
         unknowns_dict['z'] = { 'val': np.array([0.0]),
                                'pathname' : 'z',
-                               'relative_name' : 'z' }
+                               'relative_name' : 'z',
+                             'shape': (1,), 'size' : 1 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.array([0.0]),
                              'pathname' : 'y',
-                             'relative_name' : 'y' }
+                             'relative_name' : 'y',
+                             'shape': (1,), 'size' : 1 }
         resids_dict['z'] = { 'val': np.array([0.0]),
                              'pathname' : 'z',
-                             'relative_name' : 'z' }
+                             'relative_name' : 'z',
+                             'shape': (1,), 'size' : 1 }
 
         params = SrcVecWrapper()
         params.setup(params_dict, store_byobjs=True)

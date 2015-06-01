@@ -1,14 +1,13 @@
 """ Base class for all systems in OpenMDAO."""
 
 from collections import OrderedDict
-import copy
 from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, FakeComm, get_comm_if_active
+from openmdao.core.mpiwrap import MPI, get_comm_if_active
 from openmdao.core.options import OptionsDictionary
 
 
@@ -26,21 +25,21 @@ class System(object):
         # are allowed.
         self._promotes = ()
 
-        self.comm = FakeComm()
+        self.comm = None
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
-                                   desc = "Set to True to finite difference this system.")
+                                   desc="Set to True to finite difference this system.")
         self.fd_options.add_option('form', 'forward',
-                                   values = ['forward', 'backward', 'central', 'complex_step'],
-                                   desc = "Finite difference mode. (forward, backward, central) "
+                                   values=['forward', 'backward', 'central', 'complex_step'],
+                                   desc="Finite difference mode. (forward, backward, central) "
                                    "You can also set to 'complex_step' to peform the complex "
                                    "step method if your components support it.")
         self.fd_options.add_option("step_size", 1.0e-6,
                                     desc = "Default finite difference stepsize")
         self.fd_options.add_option("step_type", 'absolute',
-                                   values = ['absolute', 'relative'],
-                                   desc = 'Set to absolute, relative')
+                                   values=['absolute', 'relative'],
+                                   desc='Set to absolute, relative')
 
     def __getitem__(self, name):
         """
@@ -49,25 +48,25 @@ class System(object):
         Parameters
         ----------
         name : str
-            the name of the variable or subsystem
+            The name of the variable or subsystem.
 
         Returns
         -------
         value OR `System`
-            the unflattened value of the given variable OR a reference to
-            the named `System`
+            The unflattened value of the given variable OR a reference to
+            the named `System`.
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
 
 
     def promoted(self, name):
-        """Determine is the given variable name  is being promoted from this
+        """Determine if the given variable name is being promoted from this
         `System`.
 
         Parameters
         ----------
         name : str
-            the name of a variable, relative to this `System`
+            The name of a variable, relative to this `System`.
 
         Returns
         -------
@@ -77,7 +76,7 @@ class System(object):
         if isinstance(self._promotes, string_types):
             raise TypeError("'%s' promotes must be specified as a list, "
                             "tuple or other iterator of strings, but '%s' was specified" %
-                             (self.name, self._promotes))
+                            (self.name, self._promotes))
 
         for prom in self._promotes:
             if fnmatch(name, prom):
@@ -94,8 +93,8 @@ class System(object):
         Parameter
         ---------
         parent_path : str
-            the pathname of the parent `System`, which is to be prepended to the
-            name of this child `System`
+            The pathname of the parent `System`, which is to be prepended to the
+            name of this child `System`.
         """
         if parent_path:
             self.pathname = ':'.join((parent_path, self.name))
@@ -136,13 +135,13 @@ class System(object):
         -------
         tuple
             A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `System`
+            processors usable by this `System`.
         """
         return (1, 1)
 
     def _setup_communicators(self, comm):
         """
-        Assign communicator to this `System` and all of it's subsystems
+        Assign communicator to this `System` and all of its subsystems.
 
         Parameters
         ----------
@@ -150,6 +149,19 @@ class System(object):
             The communicator being offered by the parent system.
         """
         self.comm = get_comm_if_active(self, comm)
+
+    def _set_vars_as_remote(self):
+        """
+        Set 'remote' attribute in metadata of all variables for this subsystem.
+        """
+        pname = self.pathname + ':'
+        for name, meta in self._params_dict.items():
+            if name.startswith(pname):
+                meta['remote'] = True
+
+        for name, meta in self._unknowns_dict.items():
+            if name.startswith(pname):
+                meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None, total_derivs=False):
@@ -162,7 +174,7 @@ class System(object):
             `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecwWapper` containing outputs and states. (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -188,6 +200,10 @@ class System(object):
             Dictionary whose keys are tuples of the form ('unknown', 'param')
             and whose values are ndarrays.
         """
+
+        # Params and Unknowns that we provide at this level.
+        fd_params = self._get_fd_params()
+        fd_unknowns = self._get_fd_unknowns()
 
         # Function call arguments have precedence over the system dict.
         if step_size == None:
@@ -215,7 +231,7 @@ class System(object):
             resultvec = unknowns
 
         # Compute gradient for this param or state.
-        for p_name in chain(params, states):
+        for p_name in chain(fd_params, states):
 
             if p_name in states:
                 inputs = unknowns
@@ -255,7 +271,7 @@ class System(object):
             p_size = np.size(inputs[p_name])
 
             # Size our Outputs
-            for u_name in unknowns:
+            for u_name in fd_unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.ones((u_size, p_size))
 
@@ -313,7 +329,7 @@ class System(object):
 
                     target_input[idx] -= step
 
-                for u_name in unknowns:
+                for u_name in fd_unknowns:
                     jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
 
                 # Restore old residual

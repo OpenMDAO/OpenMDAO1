@@ -11,10 +11,18 @@ import time
 import traceback
 import subprocess
 from six.moves import cStringIO as StringIO
+from six import PY3
 import unittest
 from unittest import TestCase, SkipTest
 from os.path import join, dirname, abspath
-from inspect import getmembers, ismethod, isclass, getargspec
+import inspect
+from inspect import getmembers, ismethod, isfunction, isclass, getargspec
+
+# in python3, inspect.ismethod doesn't work as you might expect, so...
+if PY3:
+    def ismethod(obj):
+        return isfunction(obj) or inspect.ismethod(obj)
+
 
 from openmdao.core.mpiwrap import under_mpirun
 
@@ -28,11 +36,6 @@ except ImportError:
     mpirun_tests = unittest.main
 
 else:
-
-    def debug_msg(msg):
-        print("rank %d: %s" % (MPI.COMM_WORLD.rank, msg))
-        sys.stdout.flush()
-
     class MPITestCase(TestCase):
         """A base class for all TestCases that are
         intended to run under mpirun.
@@ -168,8 +171,10 @@ else:
                     #parent = mod
                     #method = tcase
 
-                result = run_test("%s:%s" % (mod.__file__, test),
-                                  parent, method, nocap=nocap)
+                tspec = "%s:%s" % (mod.__file__, test)
+                sys.stdout.write("%s ... " % tspec)
+                result = run_test(tspec, parent, method, nocap=nocap)
+                sys.stdout.write("%s\n" % result.status)
 
                 if under_mpirun():
                     results = MPI.COMM_WORLD.gather(result, root=0)
@@ -177,14 +182,13 @@ else:
                     if MPI.COMM_WORLD.rank == 0:
                         for i,r in enumerate(results):
                             if r.status != 'OK':
-                                if i>0:
-                                    print("rank %d:" % i)
-                                print(r)
+                                sys.stdout.write("%s\nERROR in rank %d:\n" % (r.status, i))
+                                sys.stdout.write("%s\n" % r.err_msg)
                                 break
                         else:
-                            print(r)
+                            sys.stdout.write("%s\n" % r.status)
                 else:
-                    print(result)
+                    sys.stdout.write("%s\n" % r.status)
 
         else: # find all test methods in the file and mpi run ourselves for each one
 

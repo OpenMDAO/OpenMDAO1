@@ -9,25 +9,25 @@ class DataXfer(object):
     """
     An object that performs data transfer between a source vector and a
     target vector.
+
+    Parameters
+    ----------
+    src_idxs : array
+        Indices of the source variables in the source vector.
+
+    tgt_idxs : array
+        Indices of the target variables in the target vector.
+
+    vec_conns : dict
+        Mapping of 'pass by vector' variables to the source variables that
+        they are connected to.
+
+    byobj_conns : dict
+        Mapping of 'pass by object' variables to the source variables that
+        they are connected to.
     """
+
     def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns):
-        """
-        Parameters
-        ----------
-        src_idxs : array
-            indices of the source variables in the source vector
-
-        tgt_idxs : array
-            indices of the target variables in the target vector
-
-        vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
-
-        byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
-        """
 
         # TODO: change to_slice to to_slices. (should never return an index array)
         #self.src_idxs = to_slice(src_idxs)
@@ -45,42 +45,35 @@ class DataXfer(object):
         Parameters
         ----------
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by vector' variables to the source variables that
+            they are connected to.
 
         byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by object' variables to the source variables that
+            they are connected to.
 
         mode : 'fwd' or 'rev' (optional)
-            direction of the data transfer, source to target ('fwd', the default)
-            or target to source ('rev')
+            Direction of the data transfer, source to target ('fwd', the default)
+            or target to source ('rev').
 
         deriv : bool
-            If True, this is a derivative scatter, so byobjs should not be transferred
+            If True, this is a derivative scatter, so byobjs should not be
+            transferred.
         """
         if mode == 'rev':
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
-            # all targets. This requires numpy's new add command.
+            # all targets. byobjs are never scattered in reverse
             np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
-            #print "rev:",self.tgt_idxs,'-->',self.src_idxs, self.vec_conns, 'byobj',self.byobj_conns
-
-            # formerly
-            #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-
-            # byobjs are never scattered in reverse, so skip that part
-
-        else:  # forward
+        else:
+            # forward, include byobjs if not a deriv scatter
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
-            #print "fwd:",self.src_idxs,'-->',self.tgt_idxs, self.vec_conns, 'byobj',self.byobj_conns
-
             if not deriv:
                 for tgt, src in self.byobj_conns:
                     tgtvec[tgt] = srcvec[src]

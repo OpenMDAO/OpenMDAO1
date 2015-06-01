@@ -1,21 +1,27 @@
+from __future__ import print_function
 
+import os
 import sys
 import numpy
-
-from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
-from openmdao.core.dataxfer import DataXfer
 
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
 
+
+from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.dataxfer import DataXfer
+from openmdao.core.mpiwrap import debug
+
+trace = os.environ.get('TRACE_COLLECTIVE')
+
 class PetscImpl(object):
-    """PETSc vector and data transfer implementation factory"""
+    """PETSc vector and data transfer implementation factory."""
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
         """
-        Create a`PetscSrcVecWrapper`
+        Create a`PetscSrcVecWrapper`.
 
         Returns
         -------
@@ -26,7 +32,7 @@ class PetscImpl(object):
     @staticmethod
     def create_tgt_vecwrapper(pathname, comm):
         """
-        Create a `PetscTgtVecWrapper`
+        Create a `PetscTgtVecWrapper`.
 
         Returns
         -------
@@ -38,31 +44,31 @@ class PetscImpl(object):
     def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
-        and target vectors
+        and target vectors.
 
         Parameters
         ----------
         varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
+            The `VarManager` that managers this data transfer.
 
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by vector' variables to the source variables that
+            they are connected to.
 
         byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by object' variables to the source variables that
+            they are connected to.
 
         Returns
         -------
         `PetscDataXfer`
-            a `PetscDataXfer` object
+            A `PetscDataXfer` object.
         """
         return PetscDataXfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
@@ -81,13 +87,15 @@ class PetscImpl(object):
 
         app_idxs = []
 
-        # each column in the _local_unknown_sizes table contains the sizes
-        # corresponds to a fully distributed variable. (col=var, row=proc)
-        # so in order to get the offset into the full distributed vector
+        # Each column in the _local_unknown_sizes table corresponds to a
+        # fully distributed variable and contains the local sizes of that
+        # variable in each process. The row corresponds to the rank.
+        # (col=var, row=proc)
+        # So in order to get the offset into the full distributed vector
         # containing all variables, you need to add the full distributed
         # sizes of all the variables up to the current variable (ivar)
         # plus the sizes of all of the distributed parts of ivar in the
-        # current column for ranks below the current rank
+        # current column for ranks below the current rank.
         for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
             start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
                     numpy.sum(local_unknown_sizes[:rank, ivar])
@@ -97,10 +105,16 @@ class PetscImpl(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
+        if trace:
+            debug("'%s': making index sets for app ordering:\n      app: %s\n      petsc: %s" %
+                  (varmanager.unknowns.pathname, app_idxs, to_idx_array))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
         petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
 
+        if trace:
+            debug("creating app ordering")
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set, comm=comm)
+
 
 class PetscSrcVecWrapper(SrcVecWrapper):
 
@@ -121,6 +135,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             for the unknowns vecwrapper.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
+        if trace:
+            debug("'%s': creating src petsc_vec: vec=%s" %
+                  (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -130,13 +147,13 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         Returns
         -------
         ndarray
-            array containing local sizes of 'pass by vector' unknown variables for
-            every process in our communicator.
+            Array containing local sizes of 'pass by vector' unknown variables
+            for every process in our communicator.
         """
         sizes = [m['size'] for m in self.values() if not m.get('pass_by_obj')]
 
         # create 2D array of variable sizes per process
-        self.local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
+        local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
 
         # create a vec indicating whether a 'pass by object' variable is active
         # in this rank or not
@@ -156,49 +173,36 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        self.comm.Allgather(our_row[0,:], self.local_unknown_sizes)
+        if trace:
+            debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
+                                                                        our_row[0,:]))
+        self.comm.Allgather(our_row[0,:], local_unknown_sizes)
         #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
 
-        self.local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
+        local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
 
-        return self.local_unknown_sizes
-
-    def get_global_idxs(self, name):
-        """
-        Get all of the indices for the named variable into the full distributed
-        vector.
-
-        Parameters
-        ----------
-        name : str
-            name of variable to get the indices for
-
-        Returns
-        -------
-        ndarray
-            Index array containing all distributed indices for the named variable.
-        """
-        meta = self._vardict[name]
-        if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
-
-        start, end = self._slices[name]
-        return self.make_idx_array(start, end)
+        return local_unknown_sizes
 
     def norm(self):
         """
         Returns
         -------
         float
-            The norm of the distributed vector
+            The norm of the distributed vector.
         """
+        if trace:
+            debug("%s: norm: petsc_vec.assemble" % self.pathname)
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
     def get_view(self, sys_pathname, comm, varmap):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        if trace:
+            debug("'%s': creating src petsc_vec (view): vec=%s" %
+                  (sys_pathname, self.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
+
 
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
@@ -212,10 +216,10 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Parameters
         ----------
         parent_params_vec : `VecWrapper` or None
-            `VecWrapper` of parameters from the parent `System`
+            `VecWrapper` of parameters from the parent `System`.
 
         params_dict : `OrderedDict`
-            Dictionary of parameter absolute name mapped to metadata dict
+            Dictionary of parameter absolute name mapped to metadata dict.
 
         srcvec : `VecWrapper`
             Source `VecWrapper` corresponding to the target `VecWrapper` we're building.
@@ -234,6 +238,9 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, store_byobjs)
+        if trace:
+            debug("'%s': creating tgt petsc_vec: vec=%s" %
+                  (self.pathname, self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -244,40 +251,37 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Returns
         -------
         ndarray
-            array containing sum of local sizes of 'pass by vector' params.
+            Array containing sum of local sizes of 'pass by vector' params.
         """
-        psize = sum([m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('pass_by_obj')])
+        psize = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
 
+        if trace:
+            debug("'%s': allgathering param sizes.  local param size = %d" % (self.pathname,
+                                                                              psize))
         return numpy.array(self.comm.allgather(psize), int)
 
-    def get_view(self, sys_pathname, comm, varmap):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
-        view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
-        return view
-
 class PetscDataXfer(DataXfer):
+    """
+    Parameters
+    ----------
+    varmanager : `VarManager`
+        The `VarManager` that managers this data transfer
+
+    src_idxs : array
+        indices of the source variables in the source vector
+
+    tgt_idxs : array
+        indices of the target variables in the target vector
+
+    vec_conns : dict
+        mapping of 'pass by vector' variables to the source variables that
+        they are connected to
+
+    byobj_conns : dict
+        mapping of 'pass by object' variables to the source variables that
+        they are connected to
+    """
     def __init__(self, varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
-        """
-        Parameters
-        ----------
-        varmanager : `VarManager`
-            The `VarManager` that managers this data transfer
-
-        src_idxs : array
-            indices of the source variables in the source vector
-
-        tgt_idxs : array
-            indices of the target variables in the target vector
-
-        vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
-
-        byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
-        """
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
                                             vec_conns, byobj_conns)
 
@@ -286,12 +290,24 @@ class PetscDataXfer(DataXfer):
         uvec = varmanager.unknowns.petsc_vec
         pvec = varmanager.params.petsc_vec
 
+        name = varmanager.unknowns.pathname
+
+        if trace:
+            debug("'%s': creating index sets for '%s' DataXfer:\n      %s\n      %s" %
+                  (name, varmanager.unknowns.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
+        if trace:
+            debug("'%s': converting src indices from app order: %s" % (name, src_idx_set.indices))
         src_idx_set = varmanager.app_ordering.app2petsc(src_idx_set)
+        if trace:
+            debug("'%s': petsc indices: %s" % (name, src_idx_set.indices))
 
         try:
+            if trace:
+                debug("'%s': creating scatter %s --> %s" % (name, src_idx_set.indices,
+                                                          tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
         except Exception as err:
@@ -300,43 +316,49 @@ class PetscDataXfer(DataXfer):
                                 varmanager.unknowns.vec.size,
                                 varmanager.params.vec.size, str(err)))
 
-    def transfer(self, srcvec, tgtvec, mode='fwd'):
+    def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """Performs data transfer between a distributed source vector and
         a distributed target vector.
 
         Parameters
         ----------
         src_idxs : array
-            indices of the source variables in the source vector
+            Indices of the source variables in the source vector.
 
         tgt_idxs : array
-            indices of the target variables in the target vector
+            Indices of the target variables in the target vector.
 
         vec_conns : dict
-            mapping of 'pass by vector' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by vector' variables to the source variables that
+            they are connected to.
 
         byobj_conns : dict
-            mapping of 'pass by object' variables to the source variables that
-            they are connected to
+            Mapping of 'pass by object' variables to the source variables that
+            they are connected to.
 
-        mode : 'fwd' or 'rev' (optional)
-            direction of the data transfer, source to target ('fwd', the default)
+        mode : 'fwd' or 'rev', optional
+            Direction of the data transfer, source to target ('fwd', the default)
             or target to source ('rev').
         """
         if mode == 'rev':
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
-            # all targets. This requires numpy's new add command.
-            np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
+            # all targets. This does not involve pass_by_object.
+            if trace:
+                for u,v in self.vec_conns:
+                    debug("'%s': reverse scattering %s --> %s" % (srcvec.pathname,
+                                                                  u, v))
+            self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
+        else:
+            # forward mode, source to target including pass_by_object
+            if trace:
+                for u,v in self.vec_conns:
+                    debug("'%s': scattering %s --> %s" % (srcvec.pathname, v, u))
+            self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
+            if trace: debug("scatter done")
 
-            # formerly
-            #srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-
-            # byobjs are never scattered in reverse, so skip that part
-
-        else:  # forward
-            tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
-
-            for tgt, src in self.byobj_conns:
-                tgtvec[tgt] = srcvec[src]
+            if not deriv:
+                for tgt, src in self.byobj_conns:
+                    debug('NotImplemented!!!')
+                    raise NotImplementedError("can't transfer '%s' to '%s'" %
+                                               (src, tgt))

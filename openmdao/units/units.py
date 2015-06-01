@@ -8,7 +8,7 @@ the correct unit. A quantity can be raised to a non-integer
 power only if the result can be represented by integer powers
 of the base units.
 
-The module provides a basic set of predefined physical quanitites
+The module provides a basic set of predefined physical quantities
 in its built-in library; however, it also supports generation of
 personal libararies which can be saved and reused.
 
@@ -96,7 +96,7 @@ class NumberDict(OrderedDict):
         return repr(dict(self))
 
 class PhysicalQuantity(object):
-    """ Physical quantity with units
+    """ Physical quantity with units.
 
     PhysicalQuantity instances allow addition, subtraction,
     multiplication, and division with each other as well as
@@ -104,27 +104,29 @@ class PhysicalQuantity(object):
     Addition and subtraction check that the units of the two operands
     are compatible and return the result in the units of the first
     operand.
-    """
+    
+    There are two constructor calling patterns:
 
+                1. PhysicalQuantity(value, unit), where value is any number
+                   and unit is a string defining the unit.
+
+                2. PhysicalQuantity(value_with_unit), where value_with_unit
+                   is a string that contains both the value and the unit,
+                   i.e., '1.5 m/s'. This form is provided for more convenient
+                   interactive use.
+
+    Parameters
+    ----------
+    args : tuple of a number, str or tuple of a str
+        Either (value, unit) or (value_with_unit,).
+    """
+    
     #class attributes
     _number = re.compile('[+-]?[0-9]+(\\.[0-9]*)?([eE][+-]?[0-9]+)?')
 
     def __init__(self, *args):
-        """
-        There are two constructor calling patterns:
-
-                1. PhysicalQuantity(value, unit), where value is any number
-                and unit is a string defining the unit.
-
-                2. PhysicalQuantity(value_with_unit), where value_with_unit
-                is a string that contains both the value and the unit,
-                i.e., '1.5 m/s'. This form is provided for more convenient
-                interactive use.
-
-         @param args: either (value, unit) or (value_with_unit,)
-         @type args: (number, C{str}) or (C{str},)
-         """
-
+        
+        
         if len(args) == 2:
             self.value = args[0]
             self.unit = _find_unit(args[1])
@@ -150,7 +152,7 @@ class PhysicalQuantity(object):
             return False
 
     def _sum(self, other, sign1, sign2):
-        """sums units"""
+        """Sums units."""
         if not isinstance(other, PhysicalQuantity):
             raise TypeError('Incompatible types')
         new_value = sign1*self.value + \
@@ -239,10 +241,16 @@ class PhysicalQuantity(object):
         the combination is equivalent to the original one. The new unit
         must be compatible with the previous unit of the object.
 
-        @param unit: a unit
-        @type unit: C{str}
-        @raise TypeError: if the unit string is not a known unit or a
-        unit incompatible with the current one.
+        Parameters
+	---------- 
+	unit : str
+	    A unit.
+        
+        Raises
+	------
+	TypeError
+	    If the unit string is not a known unit or a
+            unit incompatible with the current one.
         """
         unit = _find_unit(unit)
 
@@ -255,18 +263,27 @@ class PhysicalQuantity(object):
         specified, a new PhysicalQuantity object is returned that
         expresses the quantity in that unit. If several units
         are specified, the return value is a tuple of
-        PhysicalObject instances with with one element per unit such
+        PhysicalObject instances with one element per unit such
         that the sum of all quantities in the tuple equals the
-        original quantity and all the values except for the last one
+        original quantity, and all the values except for the last one
         are integers. This is used to convert to irregular unit
         systems like hour/minute/second.
 
-        @param units: one or several units
-        @type units: C{str} or sequence of C{str}
-        @returns: one or more physical quantities
-        @rtype: L{PhysicalQuantity} or C{tuple} of L{PhysicalQuantity}
-        @raises TypeError: if any of the specified units are not compatible
-        with the original unit.
+        Parameters
+	----------
+	unit : str or sequence of str
+	    One or several units.
+        
+        Returns
+	-------
+	PhysicalQuantity or tuple of PhysicalQuantity
+	    One or more physical quantities.
+	    
+        Raises
+	------
+	TypeError
+	    If any of the specified units are not compatible
+            with the original unit.
         """
         unit = _find_unit(unit)
 
@@ -277,9 +294,11 @@ class PhysicalQuantity(object):
     # Contributed by Berthold Hoellmann
     def in_base_units(self):
         """
-        @returns: the same quantity converted to base units,
-        i.e., SI units in most cases
-        @rtype: L{PhysicalQuantity}
+        Returns
+	-------
+	PhysicalQuantity
+	    The same quantity converted to base units,
+	    i.e., SI units in most cases. 	    
         """
         new_value = self.value * self.unit.factor
         num = ''
@@ -303,11 +322,16 @@ class PhysicalQuantity(object):
 
     def is_compatible(self, unit):
         """
-        @param unit: a unit
-        @type unit: C{str}
-        @returns: C{True} if the specified unit is compatible with the
-        one of the quantity.
-        @rtype: C{bool}.
+        Parameters
+	---------- 
+	unit : str
+	    A unit.
+	     
+        Returns
+	-------
+	bool  
+	    True if the specified unit is compatible with the
+            one of the quantity.
         """
         unit = _find_unit(unit)
         return self.unit.is_compatible(unit)
@@ -321,7 +345,7 @@ class PhysicalQuantity(object):
         return self.unit.name()
 
     def sqrt(self):
-        """Parsing Square Root"""
+        """Parsing Square Root."""
         return pow(self, 0.5)
 
     def sin(self):
@@ -358,8 +382,8 @@ class UnitsOnlyPQ(PhysicalQuantity):
     replace the variables in the expression with instances of this class, evaluate
     the expression, and retrieve the units of the result.
 
-    WARNING: only the units of the resulting UnitsOnlyPQ object will be correct. The value
-    may be incorrect, so don't use it.
+    .. warning:: Only the units of the resulting UnitsOnlyPQ object will be correct. The value
+       may be incorrect, so don't use it.
     """
     def __div__(self, other):
         if not isinstance(other, PhysicalQuantity):
@@ -397,24 +421,28 @@ class PhysicalUnit(object):
     A physical unit is defined by a name (possibly composite), a scaling
     factor, and the exponentials of each of the SI base units that enter into
     it. Units can be multiplied, divided, and raised to integer powers.
+    
+    Parameters
+    ----------
+    names : dict or str
+        A dictionary mapping each name component to its
+        associated integer power (e.g., C{{'m': 1, 's': -1}})
+        for M{m/s}). As a shorthand, a string may be passed
+        which is assigned an implicit power 1.
+       
+    factor : float
+        A scaling factor.
+        
+    powers : list of int
+        The integer powers for each of the nine base units.
+       
+    offset : float
+        An additive offset to the base unit (used only for temperatures).
     """
 
     def __init__(self, names, factor, powers, offset=0):
-        """
-        @param names: a dictionary mapping each name component to its
-                      associated integer power (e.g., C{{'m': 1, 's': -1}})
-                      for M{m/s}). As a shorthand, a string may be passed
-                      which is assigned an implicit power 1.
-        @type names: C{dict} or C{str}
-        @param factor: a scaling factor
-        @type factor: C{float}
-        @param powers: the integer powers for each of the nine base units
-        @type powers: C{list} of C{int}
-        @param offset: an additive offset to the base unit (used only for
-                       temperatures)
-        @type offset: C{float}
-        """
-
+        
+        
         if isinstance(names, str):
             self.names = NumberDict(((names, 1),))
             #self.names[names] = 1;
@@ -509,12 +537,22 @@ class PhysicalUnit(object):
 
     def conversion_factor_to(self, other):
         """
-        @param other: another unit
-        @type other: L{PhysicalUnit}
-        @returns: the conversion factor from this unit to another unit
-        @rtype: C{float}
-        @raises TypeError: if the units are not compatible.
+        Parameters
+	----------
+	other : PhysicalUnit
+	    Another unit.
+        
+        Returns
+	------- 
+	float  
+	   The conversion factor from this unit to another unit.
+        
+        Raises
+	------
+	TypeError
+	    If the units are not compatible.
         """
+	
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 
@@ -528,12 +566,22 @@ class PhysicalUnit(object):
     # added 1998/09/29 GPW
     def conversion_tuple_to(self, other):
         """
-        @param other: another unit
-        @type other: L{PhysicalUnit}
-        @returns: the conversion factor and offset from this unit to another unit
-        @rtype: (C{float}, C{float})
-        @raises TypeError: if the units are not compatible.
+        Parameters
+	----------
+	other : PhysicalUnit
+	    Another unit.
+        
+	Returns
+	-------
+	Tuple with two floats
+	    The conversion factor and offset from this unit to another unit.
+        
+        Raises
+	------ 
+	TypeError
+	    If the units are not compatible.
         """
+	
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 
@@ -560,9 +608,9 @@ class PhysicalUnit(object):
     # added 1998/10/01 GPW
     def is_compatible(self, other):
         """
-        @param other: another unit
-        @type other: L{PhysicalUnit}
-        @returns: C{True} if the units are compatible, i.e., if the powers of the base units are the same
+        @param other: Another unit.
+        @type other: L{PhysicalUnit}.
+        @returns: C{True} If the units are compatible, i.e., if the powers of the base units are the same.
         @rtype: C{bool}.
         """
         return self.powers == other.powers
@@ -657,7 +705,7 @@ def _find_unit(unit):
 
 
 def _new_unit(name, factor, powers):
-    """create new Unit"""
+    """Create new Unit."""
     _UNIT_LIB.unit_table[name] = PhysicalUnit(name, factor, powers)
 
 
@@ -755,7 +803,7 @@ def import_library(libfilepointer):
 
 def update_library(filename):
     """
-    Update units in current library from `filename` which must contain a
+    Update units in current library from `filename`, which must contain a
     ``units`` section.
 
     filename: string or file
@@ -829,7 +877,7 @@ def convert_units(value, units, convunits):
     Parameters
     ----------
     value : float
-        Quantity you would like to convert
+        Quantity you would like to convert.
 
     units : string
         Valid unit string that declares the source units.
@@ -839,7 +887,7 @@ def convert_units(value, units, convunits):
 
     Returns
     -------
-    float : Converted quantity
+    float : Converted quantity.
     """
     pq = PhysicalQuantity(value, units)
     pq.convert_to_unit(convunits)
@@ -851,7 +899,7 @@ def get_conversion_tuple(src_units, target_units):
     Parameters
     ----------
     value : float
-        Quantity you would like to convert
+        Quantity you would like to convert.
 
     src_units : string
         Valid unit string that declares the source units.
@@ -861,7 +909,7 @@ def get_conversion_tuple(src_units, target_units):
 
     Returns
     -------
-    tuple(float, float) : Tuple containing the conversion factor and offset
+    tuple(float, float) : Tuple containing the conversion factor and offset.
     """
     pq = PhysicalQuantity(1.0, src_units)
     target = _find_unit(target_units)

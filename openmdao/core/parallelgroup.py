@@ -11,10 +11,10 @@ class ParallelGroup(Group):
         Parameters
         ----------
         params : `VecWrapper`
-            ``VecWrapper` ` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper`  containing outputs and states (u)
+            `VecWrapper`  containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -41,10 +41,10 @@ class ParallelGroup(Group):
         -------
         tuple
             A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `ParallelGroup`
+            processors usable by this `ParallelGroup`.
         """
-        min_procs = 1
-        max_procs = 1
+        min_procs = 0
+        max_procs = 0
 
         for name, sub in self.subsystems():
             sub_min, sub_max = sub.get_req_procs()
@@ -55,18 +55,24 @@ class ParallelGroup(Group):
                 else:
                     max_procs += sub_max
 
+        if min_procs == 0:
+            min_procs = 1
+
+        if max_procs == 0:
+            max_procs = 1
+
         return (min_procs, max_procs)
 
     def _setup_communicators(self, comm):
         """
-        Assign communicator to this `ParallelGroup` and all of it's subsystems
+        Assign communicator to this `ParallelGroup` and all of its subsystems.
 
         Parameters
         ----------
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        if not MPI:
+        if not MPI or not self.is_active():
             super(ParallelGroup, self)._setup_communicators(comm)
             return
 
@@ -104,7 +110,7 @@ class ParallelGroup(Group):
             while assigned < limit:
                 for i, system in enumerate(subsystems):
                     if max_req_procs[i] is None or \
-                                   assigned_procs[i] < max_req_procs[i]:
+                       assigned_procs[i] < max_req_procs[i]:
                         assigned_procs[i] += 1
                         assigned += 1
                         if assigned == limit:
@@ -135,11 +141,9 @@ class ParallelGroup(Group):
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i,sub in enumerate(subsystems):
+        for i, (name, sub) in enumerate(self.subsystems()):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems[name] = sub
+                sub._setup_communicators(sub_comm)
             else:
-                self._add_remote_subsystem(sub)
-
-        for sub in self._local_subsystems.values():
-            sub._setup_communicators(sub_comm)
+                sub._setup_communicators(MPI.COMM_NULL)

@@ -162,7 +162,7 @@ class TestProblemCheckTotals(unittest.TestCase):
         top.setup()
         top.run()
 
-        data = top.check_total_derivatives()
+        data = top.check_total_derivatives(out_stream=None)
         #print data
 
         for key, val in iteritems(data):
@@ -185,7 +185,7 @@ class TestProblemCheckTotals(unittest.TestCase):
         top.setup()
         top.run()
 
-        data = top.check_total_derivatives()
+        data = top.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
             assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
