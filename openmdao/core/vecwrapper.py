@@ -9,7 +9,6 @@ from six.moves import cStringIO
 
 from openmdao.util.types import is_differentiable, int_types
 from openmdao.util.strutil import get_common_ancestor
-from openmdao.core.mpiwrap import debug
 
 
 class _flat_dict(object):
@@ -739,10 +738,6 @@ class TgtVecWrapper(VecWrapper):
             vmeta['size'] = src_meta['size']
         elif meta.get('remote'):
             vmeta['size'] = 0
-
-        #if 'shape' in src_meta:
-        #    vmeta['shape'] = src_meta['shape']
-        #    vmeta['size'] = numpy.prod(vmeta['shape'])
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:

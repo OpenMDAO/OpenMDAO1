@@ -15,7 +15,7 @@ from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm, debug
+from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
 

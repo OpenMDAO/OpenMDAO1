@@ -8,7 +8,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.component import Component
-from openmdao.core.mpiwrap import MPI, MultiProcFailCheck, debug
+from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 
 from openmdao.components.paramcomp import ParamComp
 
@@ -138,6 +138,8 @@ class MPITests1(MPITestCase):
         if not MPI or self.comm.rank == 0:
             assert_rel_error(self, prob.subsystem('G1:C1').unknowns['c'],
                              np.ones(size)*2.1, 1.e-10)
+            assert_rel_error(self, prob.subsystem('G1:C1').unknowns['d'],
+                             np.ones(size)*.1, 1.e-10)
             assert_rel_error(self, prob.subsystem('C3').params['a'],
                              np.ones(size)*2.1, 1.e-10)
             assert_rel_error(self, prob.subsystem('C3').params['b'],

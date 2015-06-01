@@ -11,7 +11,7 @@ from petsc4py import PETSc
 
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
-from openmdao.core.mpiwrap import debug
+from openmdao.devtools.debug import debug
 
 trace = os.environ.get('TRACE_COLLECTIVE')
 
