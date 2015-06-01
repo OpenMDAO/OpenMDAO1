@@ -194,32 +194,114 @@ class Problem(Component):
             msg = "return_format must be 'array' or 'dict'"
             raise ValueError(msg)
 
-        # TODO Some of this stuff should go in the linearsolver, and some in
-        # Group.
+        # Either analytic or finite difference
+        if mode == 'fd' or self.root.fd_options['force_fd'] == True:
+            return self._calc_gradient_fd(param_list, unknown_list,
+                                          return_format)
+        else:
+            return self._calc_gradient_lin_solver(param_list, unknown_list,
+                                                  return_format, mode)
+
+    def _calc_gradient_fd(self, param_list, unknown_list, return_format):
+        """ Returns the finite differenced gradient for the system that is slotted in
+        self.root.
+
+        Parameters
+        ----------
+        param_list : list of strings (optional)
+            List of parameter name strings with respect to which derivatives
+            are desired. All params must have a paramcomp.
+
+        unknown_list : list of strings (optional)
+            List of output or state name strings for derivatives to be
+            calculated. All must be valid unknowns in OpenMDAO.
+
+        return_format : string (optional)
+            Format for the derivatives, can be 'array' or 'dict'.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params.
+        """
 
         root = self.root
         unknowns = root.unknowns
         params = root.params
 
-        # Full model finite difference.
-        if mode == 'fd' or root.fd_options['force_fd'] == True:
-            Jfd = root.fd_jacobian(params, unknowns, root.resids,
-                                   total_derivs=True)
-            J = {}
-            for okey in unknown_list:
-                J[okey] = {}
-                for ikey in param_list:
-                    if isinstance(ikey, tuple):
-                        ikey = ikey[0]
+        Jfd = root.fd_jacobian(params, unknowns, root.resids,
+                               total_derivs=True)
+        J = {}
+        for okey in unknown_list:
+            J[okey] = {}
+            for ikey in param_list:
+                if isinstance(ikey, tuple):
+                    ikey = ikey[0]
 
-                    fd_ikey = ikey
-                    if ikey not in params:
-                        for key, val in iteritems(root._src):
-                            if val == ikey:
-                                fd_ikey = key
+                # User might request an output via the absolute pathname
+                fd_okey = okey
+                if fd_okey not in unknowns:
+                    for key in unknowns:
+                        meta = unknowns.metadata(key)
+                        if meta['pathname'] == fd_okey:
+                            fd_okey = meta['relative_name']
+                            break
 
-                    J[okey][ikey] = Jfd[okey, fd_ikey]
-            return J
+                # FD Input keys are a little funny...
+                fd_ikey = ikey
+                if fd_ikey not in params:
+
+                    # The user sometimes specifies the parameter output
+                    # name instead of its target because it is more
+                    # convenient
+                    for key, val in iteritems(root._src):
+                        if val == ikey:
+                            fd_ikey = key
+                            break
+
+                    # We need the absolute name, but the fd Jacobian
+                    # holds relative promoted inputs
+                    if fd_ikey not in params:
+                        for key in params:
+                            meta = params.metadata(key)
+                            if meta['relative_name'] == fd_ikey:
+                                fd_ikey = meta['pathname']
+                                break
+
+                J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+        return J
+
+    def _calc_gradient_lin_solver(self, param_list, unknown_list, return_format, mode):
+        """ Returns the gradient for the system that is slotted in
+        self.root. The gradient is calculated using root.ln_solver.
+
+        Parameters
+        ----------
+        param_list : list of strings (optional)
+            List of parameter name strings with respect to which derivatives
+            are desired. All params must have a paramcomp.
+
+        unknown_list : list of strings (optional)
+            List of output or state name strings for derivatives to be
+            calculated. All must be valid unknowns in OpenMDAO.
+
+        return_format : string (optional)
+            Format for the derivatives, can be 'array' or 'dict'.
+
+        mode : string (optional)
+            Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
+            Default is 'auto', which uses mode specified on the linear solver
+            in root.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params.
+        """
+
+        root = self.root
+        unknowns = root.unknowns
+        params = root.params
 
         # Prepare model for calculation
         root.clear_dparams()
@@ -229,7 +311,7 @@ class Problem(Component):
 
         rhs = np.zeros((len(unknowns.vec), ))
 
-        # Initialized Jacobian
+        # Initialize Jacobian
         if return_format == 'dict':
             J = {}
             for okey in unknown_list:
@@ -498,8 +580,18 @@ class Problem(Component):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        param_list = self.root._get_fd_params()
+        abs_param_list = self.root._get_fd_params()
         unknown_list = self.root._get_fd_unknowns()
+
+        # Params need to be converted to relative to key into the unknowns
+        param_list = []
+        params = self.root.params
+        for param in abs_param_list:
+            if param not in self.root.unknowns:
+                param_list.append(params.metadata(param)['relative_name'])
+            else:
+                param_list.append(param)
+
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',

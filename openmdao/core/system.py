@@ -242,9 +242,17 @@ class System(object):
 
             # If our input is connected to a Paramcomp, then we need to twiddle
             # the unknowns vector instead of the params vector.
-            if hasattr(self, '_src'):
-                param_src = self._src.get(p_name)
-                if param_src in self.unknowns:
+            if hasattr(self, '_varmanager'):
+                param_src = self._varmanager.connections.get(p_name)
+                if param_src is not None:
+
+                    # Have to convert to relative name to key into unknowns
+                    if param_src not in self.unknowns:
+                        for name in unknowns:
+                            meta = unknowns.metadata(name)
+                            if meta['pathname'] == param_src:
+                                param_src = meta['relative_name']
+
                     target_input = unknowns.flat[param_src]
 
             mydict = {}
