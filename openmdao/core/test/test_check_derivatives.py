@@ -221,6 +221,26 @@ class TestProblemCheckTotals(unittest.TestCase):
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 
+    def test_full_model_fd_simple_comp_promoted(self):
+
+        top = Problem()
+        top.root = Group()
+        sub = top.root.add('sub', Group(), promotes=['*'])
+        sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
+        top.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+
+        top.setup()
+        top.run()
+
+        data = top.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

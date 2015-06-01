@@ -254,7 +254,7 @@ class Problem(Component):
                     # The user sometimes specifies the parameter output
                     # name instead of its target because it is more
                     # convenient
-                    for key, val in iteritems(root._src):
+                    for key, val in iteritems(root._varmanager.connections):
                         if val == ikey:
                             fd_ikey = key
                             break
@@ -347,10 +347,17 @@ class Problem(Component):
 
             if param in unknowns:
                 in_idx = unknowns.get_local_idxs(param)
-            elif hasattr(root, '_src'):
-                param_src = root._src.get(param)
-                if param_src in unknowns:
-                    in_idx = unknowns.get_local_idxs(param_src)
+            else:
+                param_src = root._varmanager.connections.get(param)
+
+                # Have to convert to relative name to key into unknowns
+                if param_src not in unknowns:
+                    for name in unknowns:
+                        meta = unknowns.metadata(name)
+                        if meta['pathname'] == param_src:
+                            param_src = meta['relative_name']
+
+                in_idx = unknowns.get_local_idxs(param_src)
 
             jbase = j
 
@@ -368,10 +375,17 @@ class Problem(Component):
 
                     if item in unknowns:
                         out_idx = unknowns.get_local_idxs(item)
-                    elif hasattr(root, '_src'):
-                        param_src = root._src.get(item)
-                        if param_src in unknowns:
-                            out_idx = unknowns.get_local_idxs(param_src)
+                    else:
+                        param_src = root._varmanager.connections.get(item)
+
+                        # Have to convert to relative name to key into unknowns
+                        if param_src not in unknowns:
+                            for name in unknowns:
+                                meta = unknowns.metadata(name)
+                                if meta['pathname'] == param_src:
+                                    param_src = meta['relative_name']
+
+                        out_idx = unknowns.get_local_idxs(param_src)
 
                     nk = len(out_idx)
 
@@ -580,17 +594,8 @@ class Problem(Component):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        abs_param_list = self.root._get_fd_params()
+        param_list = self.root._get_fd_params()
         unknown_list = self.root._get_fd_unknowns()
-
-        # Params need to be converted to relative to key into the unknowns
-        param_list = []
-        params = self.root.params
-        for param in abs_param_list:
-            if param not in self.root.unknowns:
-                param_list.append(params.metadata(param)['relative_name'])
-            else:
-                param_list.append(param)
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',

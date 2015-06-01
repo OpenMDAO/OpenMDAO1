@@ -66,9 +66,11 @@ class ScipyGMRES(LinearSolver):
         if info > 0:
             msg = "ERROR in solve in '%s': gmres failed to converge " \
                   "after %d iterations"
+            print(msg)
             #logger.error(msg, system.name, info)
         elif info < 0:
             msg = "ERROR in solve in '%s': gmres failed"
+            print(msg)
             #logger.error(msg, system.name)
 
         #print system.name, 'Linear solution vec', d_unknowns
