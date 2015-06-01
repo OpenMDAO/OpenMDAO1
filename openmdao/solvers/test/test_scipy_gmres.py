@@ -36,6 +36,25 @@ class TestScipyGMRES(unittest.TestCase):
         J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
+    def test_simple_matvec_subbed(self):
+        group = Group()
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        top.root.add('sub', group, promotes=['*'])
+
+        top.root.lin_solver = ScipyGMRES()
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
     def test_array2D(self):
         group = Group()
         group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])

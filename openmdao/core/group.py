@@ -566,7 +566,8 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     for var in dunknowns.keys():
-                        # Ignore states
+
+                        # Skip all states
                         if dunknowns.metadata(var).get('state'):
                             continue
 
@@ -593,7 +594,7 @@ class Group(System):
 
                     for var in dunknowns.keys():
 
-                        # Ignore states
+                        # Skip all states
                         if dunknowns.metadata(var).get('state'):
                             continue
 
