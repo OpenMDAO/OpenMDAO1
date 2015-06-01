@@ -23,8 +23,20 @@ class LinearSystem(Component):
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
 
-        dresids['x'] += params['A'].dot(dunknowns['x'])
-        if 'A' in dparams:
-            dresids['x'] += dparams['A'].dot(unknowns['x'])
-        if 'b' in dparams:
-            dresids['x'] -= dparams['b']
+        if mode == 'fwd':
+
+            if 'x' in dunknowns:
+                dresids['x'] += params['A'].dot(dunknowns['x'])
+            if 'A' in dparams:
+                dresids['x'] += dparams['A'].dot(unknowns['x'])
+            if 'b' in dparams:
+                dresids['x'] -= dparams['b']
+
+        elif mode == 'rev':
+
+            if 'x' in dunknowns:
+                dunknowns['x'] += params['A'].dot(dresids['x'])
+            if 'A' in dparams:
+                dparams['A'] += dresids['x']*(unknowns['x'])
+            if 'b' in dparams:
+                dparams['b'] -= dresids['x']
