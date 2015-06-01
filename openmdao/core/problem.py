@@ -592,7 +592,6 @@ class Problem(Component):
             else:
                 param_list.append(param)
 
-
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
                                   return_format='dict')
