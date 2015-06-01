@@ -10,6 +10,7 @@ import sys
 # pylint: disable=E0611, F0401
 import numpy as np
 
+from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
@@ -18,7 +19,7 @@ from openmdao.core.mpiwrap import MPI, FakeComm, debug
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
 
-class Problem(Component):
+class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
     """
