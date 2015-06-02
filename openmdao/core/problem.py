@@ -247,7 +247,7 @@ class Problem(Component):
                             fd_okey = meta['relative_name']
                             break
 
-                # FD Input keys are a little funny...
+                # FD Input keys are a little funny....
                 fd_ikey = ikey
                 if fd_ikey not in params:
 
