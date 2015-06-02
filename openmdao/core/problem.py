@@ -566,7 +566,7 @@ class Problem(Component):
                 # Assemble and Return all metrics.
                 _assemble_deriv_data(chain(params, states), resids, data[cname],
                                      jac_fwd, jac_rev, jac_fd, out_stream,
-                                     skip_keys)
+                                     skip_keys, c_name=cname)
 
         return data
 
@@ -594,8 +594,18 @@ class Problem(Component):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        param_list = self.root._get_fd_params()
+        abs_param_list = self.root._get_fd_params()
         unknown_list = self.root._get_fd_unknowns()
+
+        # Convert absolute parameter names to relative ones because it is
+        # easier for the user to read.
+        param_list = []
+        params = self.root.params
+        for param in abs_param_list:
+            if param not in self.root.unknowns:
+                param_list.append(params.metadata(param)['relative_name'])
+            else:
+                param_list.append(param)
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
@@ -710,7 +720,7 @@ def jac_to_flat_dict(jac):
     return new_jac
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, skip_keys=[None]):
+                         out_stream, skip_keys=[None], c_name='root'):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""
@@ -761,7 +771,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 started = True
 
             # Optional file_like output
-            out_stream.write("  Variable '%s' wrt '%s'\n\n"% (u_name, p_name))
+            out_stream.write("  %s: '%s' wrt '%s'\n\n"% (c_name, u_name, p_name))
 
             out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
             out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)

@@ -31,6 +31,7 @@ class TestLinearSystem(unittest.TestCase):
 
         # Make sure it gets the right answer
         assert_rel_error(self, top['lin:x'], x, .0001)
+        assert_rel_error(self, np.linalg.norm(top.root.resids.vec), 0.0, 1e-10)
 
         # Compare against calculated derivs
         Ainv = np.linalg.inv(A)
