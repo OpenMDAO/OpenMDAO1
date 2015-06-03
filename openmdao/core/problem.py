@@ -348,22 +348,15 @@ class Problem(System):
         for param in input_list:
 
             if param in unknowns:
-                in_idx = unknowns.get_local_idxs(param)
+                in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
                 param_src = root._varmanager.connections.get(param)
-
-                # Have to convert to relative name to key into unknowns
-                if param_src not in unknowns:
-                    for name in unknowns:
-                        meta = unknowns.metadata(name)
-                        if meta['pathname'] == param_src:
-                            param_src = meta['relative_name']
-
-                in_idx = unknowns.get_local_idxs(param_src)
+                param_src = unknowns.get_relative_varname(param_src)
+                in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
             jbase = j
 
-            for irhs in in_idx:
+            for irhs in in_idxs:
 
                 rhs[irhs] = 1.0
 
@@ -376,36 +369,29 @@ class Problem(System):
                 for item in output_list:
 
                     if item in unknowns:
-                        out_idx = unknowns.get_local_idxs(item)
+                        out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
                         param_src = root._varmanager.connections.get(item)
+                        param_src = unknowns.get_relative_varname(param_src)
+                        out_size, out_idxs = unknowns.get_local_idxs(param_src)
 
-                        # Have to convert to relative name to key into unknowns
-                        if param_src not in unknowns:
-                            for name in unknowns:
-                                meta = unknowns.metadata(name)
-                                if meta['pathname'] == param_src:
-                                    param_src = meta['relative_name']
-
-                        out_idx = unknowns.get_local_idxs(param_src)
-
-                    nk = len(out_idx)
+                    nk = len(out_idxs)
 
                     if return_format == 'dict':
                         if mode == 'fwd':
                             if J[item][param] is None:
-                                J[item][param] = np.zeros((nk, len(in_idx)))
-                            J[item][param][:, j-jbase] = dx[out_idx]
+                                J[item][param] = np.zeros((nk, len(in_idxs)))
+                            J[item][param][:, j-jbase] = dx[out_idxs]
                         else:
                             if J[param][item] is None:
-                                J[param][item] = np.zeros((len(in_idx), nk))
-                            J[param][item][j-jbase, :] = dx[out_idx]
+                                J[param][item] = np.zeros((len(in_idxs), nk))
+                            J[param][item][j-jbase, :] = dx[out_idxs]
 
                     else:
                         if mode == 'fwd':
-                            J[i:i+nk, j] = dx[out_indices]
+                            J[i:i+nk, j] = dx[out_idxs]
                         else:
-                            J[j, i:i+nk] = dx[out_indices]
+                            J[j, i:i+nk] = dx[out_idxs]
                         i += nk
 
                 j += 1

@@ -250,6 +250,9 @@ class VecWrapper(object):
 
         Returns
         -------
+        size
+            The size of the named variable
+
         ndarray
             Index array containing all local indices for the named variable.
         """
