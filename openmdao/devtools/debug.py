@@ -16,7 +16,8 @@ if under_mpirun():
 else:
     def debug(*msg):
         for m in msg:
-            sys.stdout.write("%s " % m)
+            print m
+            sys.stdout.write("%s " % str(m))
         sys.stdout.write('\n')
 
 

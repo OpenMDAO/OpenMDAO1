@@ -1,93 +1,56 @@
+# Test the LinearSystem component.
+
 import unittest
 import numpy as np
-from openmdao.core.component import Component
-# from openmdao.components.linear_system import LinearSystem
 
-class LinearSystem(Component):
-
-    def __init__(self):
-        pass
-
-    def solve_nonlinear(self, params, unknowns, resids):
-
-        unknowns['x'] = np.linalg.solve(params['A'], params['b'])
-
-    def apply_nonlinear(self, params, unknowns, resids):
-        ''' Evaluating residual for given state '''
-
-        resids['x'] = params['A'].dot(unknowns['x']) - params['b']
-
-    def apply_linear(self, params, unknowns, resids, dparams, dunknowns, dresids):
-
-        dresids['x'] += params['A'].dot(dunknowns['x'])
-        dresids['x'] += dparams['A'].dot(unknowns['x'])
-        dresids['x'] -= dparams['b']
-
-
+from openmdao.components.linear_system import LinearSystem
+from openmdao.components.paramcomp import ParamComp
+from openmdao.core.group import Group
+from openmdao.core.problem import Problem
+from openmdao.test.testutil import assert_rel_error
 
 class TestLinearSystem(unittest.TestCase):
 
-    def setUp(self):
-        self.s = LinearSystem()
-        self.params, self.unknowns, self.resids = {}, {}, {}
+    def test_linear_system(self):
 
-        self.params['A'] = np.eye(10)
-        self.params['b'] = np.ones(10)
+        top = Problem()
+        root = top.root = Group()
+        root.add('lin', LinearSystem(3))
 
-        self.unknowns['x'] = np.zeros(10)
+        x = np.array([1, 2, -3])
+        A = np.array([[ 5.0, -3.0, 2.0], [1.0, 7.0, -4.0], [1.0, 0.0, 8.0]])
+        b = A.dot(x)
 
-        self.resids['x'] = np.zeros(10)
+        root.add('p1', ParamComp('A', A))
+        root.add('p2', ParamComp('b', b))
+        root.connect('p1:A', 'lin:A')
+        root.connect('p2:b', 'lin:b')
 
-    def test_solve_linearsystem(self):
+        top.setup()
+        top.run()
 
-        self.s.solve_nonlinear(self.params, self.unknowns, self.resids)
+        # Make sure it gets the right answer
+        assert_rel_error(self, top['lin:x'], x, .0001)
+        assert_rel_error(self, np.linalg.norm(top.root.resids.vec), 0.0, 1e-10)
 
-        actual = np.ones(10)
+        # Compare against calculated derivs
+        Ainv = np.linalg.inv(A)
+        dx_dA = np.outer(Ainv, -x).reshape(3, 9)
+        dx_db = Ainv
 
-        rel = np.linalg.norm(actual - self.unknowns['x']) / np.linalg.norm(actual)
+        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
 
-        assert rel < 1e-6
+        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
 
-    def test_apply_nonlinear(self):
+        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
 
-        self.unknowns['x'] = np.array([0,1,2,3,4,5,6,7,8,9])
-        self.s.apply_nonlinear(self.params, self.unknowns, self.resids)
 
-        actual = np.array([0,1,2,3,4,5,6,7,8,9]) - 1
-
-        rel = np.linalg.norm(actual - self.resids['x'])/np.linalg.norm(actual)
-
-        assert rel < 1e-6
-
-    def test_apply_linear(self):
-
-        self.params['A'] = np.eye(2)
-        self.params['b'] = np.ones(2)
-
-        self.unknowns['x'] = np.zeros(2)
-
-        self.resids['x'] = np.zeros(2)
-
-        d_params = {}
-        d_params['A'] = np.random.random((2, 2))
-        d_params['b'] = np.random.random((2))
-        d_unknowns = {}
-        d_unknowns['x'] = np.random.random((2))
-        d_resids = {}
-        d_resids['x'] = np.zeros((2))
-
-        self.s.apply_linear(self.params, self.unknowns, self.resids,
-                            d_params, d_unknowns, d_resids)
-
-        actual = d_resids['x']
-
-        x = self.unknowns['x']
-        piece = np.array([[x[0], x[1], 0, 0], [0, 0, x[0], x[1]]])
-        temp = self.params['A'].dot(d_unknowns['x']) + \
-               piece.dot(d_params['A'].flatten()) + \
-               -d_params['b']
-
-        self.assertLessEqual(np.linalg.norm((actual - temp))/np.linalg.norm(actual), 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
