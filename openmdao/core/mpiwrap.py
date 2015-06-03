@@ -47,8 +47,8 @@ def under_mpirun():
     # no consistent set of environment vars between MPI
     # implementations.
     for name in os.environ.keys():
-        if name.startswith('OMPI_COMM') or \
-           name.startswith('MPIR_')     or \
+        if name.startswith('OMPI_') or \
+           name.startswith('MPIR_') or \
            name.startswith('MPICH_'):
             return True
     return False
@@ -56,18 +56,8 @@ def under_mpirun():
 
 if under_mpirun():
     from mpi4py import MPI
-    def debug(*msg):
-        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
-        for m in newmsg:
-            sys.stdout.write("%s " % m)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
 else:
     MPI = None
-    def debug(*msg):
-        for m in msg:
-            sys.stdout.write("%s " % m)
-        sys.stdout.write('\n')
 
 class FakeComm(object):
     def __init__(self):

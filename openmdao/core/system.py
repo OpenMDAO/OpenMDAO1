@@ -87,6 +87,11 @@ class System(object):
 
         return False
 
+    def subsystems(self):
+        """ Returns an iterator over subsystems.  For `System`, this is an empty list.
+        """
+        return []
+
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
 

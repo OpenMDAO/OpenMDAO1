@@ -6,6 +6,7 @@ import scipy.sparse
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
+from openmdao.core.parallelgroup import ParallelGroup
 
 
 class SimpleComp(Component):
@@ -419,7 +420,7 @@ class FanOutGrouped(Group):
     def __init__(self):
         super(FanOutGrouped, self).__init__()
 
-        sub = self.add('sub', Group())
+        sub = self.add('sub', ParallelGroup())
         self.add('comp1', SimpleCompDerivJac(3.0))
         sub.add('comp2', SimpleCompDerivJac(-2.0))
         sub.add('comp3', SimpleCompDerivJac(5.0))
@@ -454,7 +455,7 @@ class FanInGrouped(Group):
     def __init__(self):
         super(FanInGrouped, self).__init__()
 
-        sub = self.add('sub', Group())
+        sub = self.add('sub', ParallelGroup())
         sub.add('comp1', SimpleCompDerivJac(-2.0))
         sub.add('comp2', SimpleCompDerivJac(5.0))
         self.add('comp3', FanInTarget())
