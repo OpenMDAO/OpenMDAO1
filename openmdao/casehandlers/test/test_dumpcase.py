@@ -16,7 +16,7 @@ class TestDumpCaseRecorder(unittest.TestCase):
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)
@@ -70,7 +70,7 @@ p:x: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
 
@@ -124,7 +124,7 @@ p:x: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
 
@@ -153,7 +153,7 @@ comp4:y1: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)

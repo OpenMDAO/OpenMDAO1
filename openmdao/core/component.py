@@ -319,6 +319,38 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
+    def solve_linear(self, rhs, dunknowns, dresids, mode="auto"):
+        """
+        Single linear solution applied to whatever input is sitting in
+        the rhs vector.
+
+        Parameters
+        ----------
+        rhs: `ndarray`
+            Right-hand side for our linear solve.
+
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
+
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev', but generally should be
+            called without mode so that the user can set the mode in this
+            system's ln_solver.options.
+        """
+
+        if mode == 'fwd':
+            #dunknowns.vec[:] = rhs[:]
+            dunknowns.vec[:] = dresids.vec[:]
+        else:
+            #dresids.vec[:] = rhs[:]
+            dresids.vec[:] = dunknowns.vec[:]
+
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of this `Component` to file.

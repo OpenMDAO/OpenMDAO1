@@ -437,11 +437,11 @@ class FanIn(Group):
     def __init__(self):
         super(FanIn, self).__init__()
 
+        self.add('p1', ParamComp('x1', 1.0))
+        self.add('p2', ParamComp('x2', 1.0))
         self.add('comp1', SimpleCompDerivJac(-2.0))
         self.add('comp2', SimpleCompDerivJac(5.0))
         self.add('comp3', FanInTarget())
-        self.add('p1', ParamComp('x1', 1.0))
-        self.add('p2', ParamComp('x2', 1.0))
 
         self.connect("comp1:y", "comp3:x1")
         self.connect("comp2:y", "comp3:x2")

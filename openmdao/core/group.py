@@ -606,7 +606,7 @@ class Group(System):
             # Full Scatter
             self._varmanager._transfer_data(mode='rev', deriv=True)
 
-    def solve_linear(self, rhs, params, unknowns, mode="auto"):
+    def solve_linear(self, rhs, dparams, dunknowns, mode="auto"):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -616,11 +616,14 @@ class Group(System):
         rhs: `ndarray`
             Right-hand side for our linear solve.
 
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
+            or the outgoing result in reverse mode. (dp)
 
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
