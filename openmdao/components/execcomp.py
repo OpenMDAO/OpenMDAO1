@@ -4,7 +4,7 @@ import math
 import ast
 
 import numpy
-from numpy import zeros, ndarray
+from numpy import zeros, ndarray, complex, imag
 
 from six import string_types
 
@@ -39,6 +39,9 @@ class ExecComp(Component):
 
     def __init__(self, exprs, derivs=(), **kwargs):
         super(ExecComp, self).__init__()
+
+        # if complex step is used for derivatives, this is the stepsize
+        self.complex_stepsize = 1.e-6
 
         if isinstance(exprs, string_types):
             exprs = [exprs]
@@ -124,7 +127,7 @@ class ExecComp(Component):
         Calculate the Jacobian using our derivative expressions.
         """
         if not self.deriv_exprs:
-            return None
+            return self._complex_step(params, unknowns, resids)
 
         for pname, meta in params.items():
             self._exec_dict[pname] = params[pname]
@@ -141,6 +144,68 @@ class ExecComp(Component):
             J[(numerator, wrt)] = deriv
 
         return J
+
+    def _complex_step(self, params, unknowns, resids):
+        """
+        If the ExecComp doesn't have it's own user specified
+        derivatives, use the complex step method to calculate them.
+
+        Returns
+        -------
+        dict
+            A jacobian dict.
+        """
+
+        step = self.complex_stepsize * 1j
+
+        J = {}
+
+        for param, meta in params.items():
+
+            uwrap = DictWrapper(unknowns)
+            pwrap = DictWrapper(params)
+            pwrap[param] = params[param]+step
+
+            self.solve_nonlinear(pwrap, uwrap, {})
+
+            for u, meta in unknowns.items():
+                jval = imag(uwrap[u] / self.complex_stepsize)
+                # for scalar values, imag() returns a 0D numpy array, but we
+                # want a 1D array
+                if not jval.shape:
+                    jval = numpy.array([jval])
+                J[(u,param)] = jval
+
+        return J
+
+
+class DictWrapper(object):
+    """
+    A wrapper for a dictionary that will allow getting of values
+    from its inner dict unless those values get modified via
+    __setitem__.  After values have been modified they are managed
+    thereafter by the wrapper.
+
+    Parameters
+    ----------
+    inner, dict-like
+        The dictionary to be wrapped.
+    """
+    def __init__(self, inner):
+        self._inner = inner
+        self._changed = {}
+
+    def __getitem__(self, name):
+        if name in self._changed:
+            return self._changed[name]
+        else:
+            return self._inner[name]
+
+    def __setitem__(self, name, value):
+        self._changed[name] = value
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
 
 
 def _import_functs(mod, dct, names=None):

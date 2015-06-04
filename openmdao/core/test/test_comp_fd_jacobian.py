@@ -225,27 +225,6 @@ class CompFDTestCase(unittest.TestCase):
 class CompFDinSystemTestCase(unittest.TestCase):
     """ Tests automatic finite difference of a component in a full problem."""
 
-    def test_error_no_derivatives(self):
-
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', ExecComp('y=x*2.0'))
-        top.root.add('p1', ParamComp('x', 2.0))
-        top.root.connect('p1:x', 'comp:x')
-
-        comp.fd_options['force_fd'] = False
-
-        top.setup()
-        top.run()
-
-        try:
-            J = top.calc_gradient(['comp:x'], ['comp:y'], mode='fwd', return_format='dict')
-        except Exception as err:
-            msg = "No derivatives defined for Component 'comp'"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("Exception expected")
-
     def test_no_derivatives(self):
 
         top = Problem()
