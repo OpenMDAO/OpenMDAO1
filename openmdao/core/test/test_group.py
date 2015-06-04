@@ -5,7 +5,7 @@ from six import text_type, StringIO
 from openmdao.core.problem import Problem, _get_implicit_connections
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.simplecomps import SimpleComp
+from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes
 
 class TestGroup(unittest.TestCase):
@@ -13,14 +13,14 @@ class TestGroup(unittest.TestCase):
     def test_add(self):
 
         group = Group()
-        comp = SimpleComp()
+        comp = ExecComp('y=x*2.0')
         group.add('mycomp', comp)
 
         subs = dict(group.subsystems())
         self.assertEqual(len(subs), 1)
         self.assertEqual(subs['mycomp'], comp)
 
-        comp2 = SimpleComp()
+        comp2 = ExecComp('y=x*2.0')
         group.add("nextcomp", comp2)
 
         subs = dict(group.subsystems())
@@ -37,8 +37,8 @@ class TestGroup(unittest.TestCase):
 
     def test_variables(self):
         group = Group()
-        group.add('C1', SimpleComp(), promotes=['x'])
-        group.add("C2", SimpleComp(), promotes=['y'])
+        group.add('C1', ExecComp('y=x*2.0'), promotes=['x'])
+        group.add("C2", ExecComp('y=x*2.0'), promotes=['y'])
 
         # paths must be initialized prior to calling _setup_variables
         group._setup_paths('')
@@ -52,9 +52,9 @@ class TestGroup(unittest.TestCase):
 
     def test_multiple_connect(self):
         root = Group()
-        C1 = root.add('C1', SimpleComp())
-        C2 = root.add('C2', SimpleComp())
-        C3 = root.add('C3', SimpleComp())
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
 
         root.connect('C1:y',['C2:x', 'C3:x'])
 
@@ -308,7 +308,7 @@ class TestGroup(unittest.TestCase):
 
         # check that we can access values from unknowns (default) and params
         self.assertEqual(prob.root['G2:C1:x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob.root['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
+        self.assertEqual(prob.root['G2:G1:C2:y'], 5.5)            # output from ExecComp
         self.assertEqual(prob.subsystem('G3:C3').params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 
@@ -356,7 +356,7 @@ class TestGroup(unittest.TestCase):
         G1 = root.add('G1', Group())
         G2 = G1.add('G2', Group())
         C1 = G2.add('C1', ParamComp('x', 5.))
-        C2 = G2.add('C2', SimpleComp())
+        C2 = G2.add('C2', ExecComp('y=x*2.0'))
         G2.connect('C1:x', 'C2:x')
         prob.setup()
 
