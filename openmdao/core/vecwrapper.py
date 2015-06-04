@@ -161,13 +161,14 @@ class VecWrapper(object):
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = scale*value.flat[:]
             else:
-                meta['val'][:] = scale*value
+                meta['val'][0] = scale*value
 
         else:
             if isinstance(value, numpy.ndarray):
                 meta['val'][:] = value.flat[:]
             else:
-                meta['val'][:] = value
+                meta['val'][0] = value
+
 
     def __len__(self):
         """
