@@ -328,19 +328,20 @@ class System(object):
                     target_input[idx] += step
 
                     run_model(params, unknowns, resids)
-                    cache2 = resultvec.vec - cache1
+                    cache2 = resultvec.vec.copy()
 
+                    target_input[idx] -= step
                     resultvec.vec[:] = cache1
 
-                    target_input[idx] -= 2.0*step
+                    target_input[idx] -= step
 
                     run_model(params, unknowns, resids)
 
                     # central difference formula
-                    resultvec.vec[:] -= cache1 + cache2
-                    resultvec.vec[:] *= (-0.5/step)
+                    resultvec.vec[:] -= cache2
+                    resultvec.vec[:] *= (-1.0/(2.0*step))
 
-                    target_input[idx] -= step
+                    target_input[idx] += step
 
                 for u_name in fd_unknowns:
                     jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
