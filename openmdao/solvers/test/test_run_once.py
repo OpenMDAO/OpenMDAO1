@@ -3,10 +3,10 @@
 import unittest
 
 from openmdao.components.paramcomp import ParamComp
+from openmdao.components.execcomp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.run_once import RunOnce
-from openmdao.test.simplecomps import SimpleComp
 from openmdao.test.testutil import assert_rel_error
 
 class TestNLGaussSeidel(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestNLGaussSeidel(unittest.TestCase):
         top = Problem()
         top.root = Group()
         top.root.nl_solver = RunOnce()
-        top.root.add('comp', SimpleComp())
+        top.root.add('comp', ExecComp('y=x*2.0'))
         top.root.add('P1', ParamComp('x', 3.0))
         top.root.connect('P1:x', 'comp:x')
 

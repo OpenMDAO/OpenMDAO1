@@ -12,7 +12,7 @@ from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      SimpleCompDerivJac, FanOutGrouped, \
+                                      FanOutGrouped, \
                                       FanInGrouped, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
