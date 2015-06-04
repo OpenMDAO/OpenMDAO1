@@ -339,7 +339,7 @@ class System(object):
 
                     # central difference formula
                     resultvec.vec[:] -= cache2
-                    resultvec.vec[:] *= (-1.0/(2.0*step))
+                    resultvec.vec[:] *= (-0.5/step)
 
                     target_input[idx] += step
 
