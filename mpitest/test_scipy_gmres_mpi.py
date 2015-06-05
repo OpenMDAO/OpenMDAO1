@@ -17,6 +17,7 @@ from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
 from openmdao.test.testutil import assert_rel_error
 
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
+from openmdao.test.mpiunittest import MPITestCase
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
@@ -135,5 +136,6 @@ class TestScipyGMRES(MPITestCase):
         #assert_rel_error(self, J['comp4:y2']['p:x'][0][0], -40.5, 1e-6)
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == '__main__':
+    from openmdao.test.mpiunittest import mpirun_tests
+    mpirun_tests()

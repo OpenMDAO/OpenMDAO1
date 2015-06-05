@@ -97,7 +97,7 @@ class TestScipyGMRES(unittest.TestCase):
     def test_simple_jac(self):
         group = Group()
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
-        group.add('mycomp', ExecComp(['y=2.0*x'], ['dy_dx=2.0']), promotes=['x', 'y'])
+        group.add('mycomp', ExecComp(['y=2.0*x']), promotes=['x', 'y'])
 
         top = Problem()
         top.root = group

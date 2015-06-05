@@ -295,9 +295,9 @@ class FanOut(Group):
     def __init__(self):
         super(FanOut, self).__init__()
 
-        self.add('comp1', ExecComp(['y=3.0*x'], ['dy_dx=3.0']))
-        self.add('comp2', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
-        self.add('comp3', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
+        self.add('comp1', ExecComp(['y=3.0*x']))
+        self.add('comp2', ExecComp(['y=-2.0*x']))
+        self.add('comp3', ExecComp(['y=5.0*x']))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "comp2:x")
@@ -313,9 +313,9 @@ class FanOutGrouped(Group):
         super(FanOutGrouped, self).__init__()
 
         sub = self.add('sub', ParallelGroup())
-        self.add('comp1', ExecComp(['y=3.0*x'], ['dy_dx=3.0']))
-        sub.add('comp2', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
-        sub.add('comp3', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
+        self.add('comp1', ExecComp(['y=3.0*x']))
+        sub.add('comp2', ExecComp(['y=-2.0*x']))
+        sub.add('comp3', ExecComp(['y=5.0*x']))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "sub:comp2:x")
@@ -329,10 +329,9 @@ class FanIn(Group):
     def __init__(self):
         super(FanIn, self).__init__()
 
-        self.add('comp1', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
-        self.add('comp2', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
-        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2'],
-                                   ['dy_dx1=3.0', 'dy_dx2=7.0']))
+        self.add('comp1', ExecComp(['y=-2.0*x']))
+        self.add('comp2', ExecComp(['y=5.0*x']))
+        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2']))
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
 
@@ -349,10 +348,9 @@ class FanInGrouped(Group):
         super(FanInGrouped, self).__init__()
 
         sub = self.add('sub', ParallelGroup())
-        sub.add('comp1', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
-        sub.add('comp2', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
-        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2'],
-                                   ['dy_dx1=3.0', 'dy_dx2=7.0']))
+        sub.add('comp1', ExecComp(['y=-2.0*x']))
+        sub.add('comp2', ExecComp(['y=5.0*x']))
+        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2']))
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
 
