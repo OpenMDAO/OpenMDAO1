@@ -11,7 +11,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.simplecomps import SimpleComp
+from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 
 if PY3:
@@ -34,11 +34,11 @@ class TestProblem(unittest.TestCase):
         G2.add('C1', ParamComp('x', 5.), promotes=['x'])
 
         G1 = G2.add('G1', Group(), promotes=['x'])
-        G1.add('C2', SimpleComp(), promotes=['x'])
+        G1.add('C2', ExecComp('y=x*2.0'), promotes=['x'])
 
         G3 = root.add('G3', Group(), promotes=['x'])
-        G3.add('C3', SimpleComp())
-        G3.add('C4', SimpleComp(), promotes=['x'])
+        G3.add('C3', ExecComp('y=x*2.0'))
+        G3.add('C4', ExecComp('y=x*2.0'), promotes=['x'])
 
         root.connect('G2:G1:C2:y', 'G3:C3:x')
         G3.connect('C3:y', 'x')
@@ -64,11 +64,11 @@ class TestProblem(unittest.TestCase):
         G2.add('C1', ParamComp('x', 5.), promotes=['x'])
 
         G1 = G2.add('G1', Group(), promotes=['x'])
-        G1.add('C2', SimpleComp(), promotes=['x'])
+        G1.add('C2', ExecComp('y=x*2.0'), promotes=['x'])
 
         G3 = root.add('G3', Group(), promotes=['x'])
-        G3.add('C3', SimpleComp(), promotes=['y'])          # promoting y
-        G3.add('C4', SimpleComp(), promotes=['x', 'y'])     # promoting y again.. BAD
+        G3.add('C3', ExecComp('y=x*2.0'), promotes=['y'])          # promoting y
+        G3.add('C4', ExecComp('y=x*2.0'), promotes=['x', 'y'])     # promoting y again.. BAD
 
         prob = Problem(root)
 
@@ -97,7 +97,7 @@ class TestProblem(unittest.TestCase):
 
         root  = Group()
         prob = Problem(root=root)
-        root.add('comp', SimpleComp())
+        root.add('comp', ExecComp('y=x*2.0'))
 
         try:
             prob.calc_gradient(['comp:x'], ['comp:y'], mode='junk')
@@ -272,7 +272,7 @@ class TestProblem(unittest.TestCase):
         root = prob.root
 
         root.add('x_param', ParamComp('x', 7.0))
-        root.add('mycomp', SimpleComp())
+        root.add('mycomp', ExecComp('y=x*2.0'))
 
         root.connect('x_param:x', 'mycomp:x')
 
@@ -288,7 +288,7 @@ class TestProblem(unittest.TestCase):
 
         # ? Didn't we say that ParamComp by default promoted its variable?
         root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
-        root.add('mycomp', SimpleComp(), promotes=['x'])
+        root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x'])
 
         prob.setup()
         prob.run()
@@ -310,7 +310,7 @@ class TestProblem(unittest.TestCase):
         prob.setup()
 
         self.assertEqual(prob['G2:C1:x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # default output from SimpleComp
+        self.assertEqual(prob['G2:G1:C2:y'], 5.5)            # output from ExecComp
         self.assertEqual(prob.root.subsystem('G3:C3').params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 

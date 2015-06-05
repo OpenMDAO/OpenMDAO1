@@ -2,8 +2,6 @@ import sys
 from collections import namedtuple, OrderedDict
 import numpy
 
-from openmdao.core.mpiwrap import debug
-
 VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params, dparams')
 
 

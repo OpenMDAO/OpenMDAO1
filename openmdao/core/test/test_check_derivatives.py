@@ -177,6 +177,10 @@ class TestProblemFullFD(unittest.TestCase):
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7:y1']['sub1:comp1:x1'][0][0], -40.75, 1e-6)
 
+        top.root.fd_options['form'] = 'central'
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7:y1']['sub1:comp1:x1'][0][0], -40.75, 1e-6)
+
 
 class TestProblemCheckTotals(unittest.TestCase):
 

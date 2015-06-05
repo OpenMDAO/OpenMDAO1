@@ -87,6 +87,11 @@ class System(object):
 
         return False
 
+    def subsystems(self):
+        """ Returns an iterator over subsystems.  For `System`, this is an empty list.
+        """
+        return []
+
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
 
@@ -323,19 +328,20 @@ class System(object):
                     target_input[idx] += step
 
                     run_model(params, unknowns, resids)
-                    cache2 = resultvec.vec - cache1
+                    cache2 = resultvec.vec.copy()
 
+                    target_input[idx] -= step
                     resultvec.vec[:] = cache1
 
-                    target_input[idx] -= 2.0*step
+                    target_input[idx] -= step
 
                     run_model(params, unknowns, resids)
 
                     # central difference formula
-                    resultvec.vec[:] -= cache1 + cache2
+                    resultvec.vec[:] -= cache2
                     resultvec.vec[:] *= (-0.5/step)
 
-                    target_input[idx] -= step
+                    target_input[idx] += step
 
                 for u_name in fd_unknowns:
                     jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
