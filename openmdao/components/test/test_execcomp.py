@@ -80,8 +80,7 @@ class TestExecComp(unittest.TestCase):
         top.root = Group()
         top.root.add('comp', ExecComp(['y[0]=2.0*x[0]+7.0*x[1]',
                                        'y[1]=5.0*x[0]-3.0*x[1]'],
-                                      ['dy_dx=numpy.array([[2.0,7.0],[5.0,-3.0]])'],
-                                      x=np.zeros([2]), y=np.zeros([2])))
+                                       x=np.zeros([2]), y=np.zeros([2])))
 
         top.root.add('p1', ParamComp('x', np.ones([2])))
 
@@ -107,12 +106,7 @@ class TestExecComp(unittest.TestCase):
         top.root = Group()
         top.root.add('comp', ExecComp(['y[0]=2.0*x[0]+7.0*x[1]',
                                        'y[1]=5.0*x[0]-3.0*x[1]'],
-                                      ['dy_dx[0,0]=2.0',
-                                       'dy_dx[0,1]=7.0',
-                                       'dy_dx[1,0]=5.0',
-                                       'dy_dx[1,1]=-3.0'],
-                                      x=np.zeros([2]), y=np.zeros([2]),
-                                      dy_dx=np.zeros((2,2))))
+                                      x=np.zeros([2]), y=np.zeros([2])))
 
         top.root.add('p1', ParamComp('x', np.ones([2])))
 

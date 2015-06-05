@@ -1,6 +1,7 @@
 
 from six.moves import range
 from numpy import ndarray
+from itertools import product
 
 def to_slice(idxs):
     """Convert an index array or list to a slice if possible. Otherwise,
@@ -41,3 +42,17 @@ def to_slice(idxs):
     else:
         raise RuntimeError("can't convert indices of type '%s' to a slice" %
                            str(type(idxs)))
+
+
+def array_idx_iter(shape):
+    """
+    Return an iterator over the indices into a n-dimensional array.
+
+    Parameters
+    ----------
+    shape : tuple
+        shape of the array.
+    """
+    for p in product(*[range(s) for s in shape]):
+        yield p
+
