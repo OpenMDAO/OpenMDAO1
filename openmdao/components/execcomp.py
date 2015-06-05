@@ -33,7 +33,7 @@ class ExecComp(Component):
         arg with the var name.
     """
 
-    def __init__(self, exprs, derivs=(), **kwargs):
+    def __init__(self, exprs, **kwargs):
         super(ExecComp, self).__init__()
 
         # if complex step is used for derivatives, this is the stepsize
@@ -42,11 +42,7 @@ class ExecComp(Component):
         if isinstance(exprs, string_types):
             exprs = [exprs]
 
-        self.exprs = exprs
-        self.codes = [compile(expr, expr, 'exec') for expr in exprs]
-
-        # dictionary used for the exec of the compiled assignment statements
-        self._exec_dict = {}
+        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
 
         outs = set()
         allvars = set()
@@ -61,10 +57,6 @@ class ExecComp(Component):
             # if user supplied an initial value, use it, otherwise set to 0.0
             val = kwargs.get(var, 0.0)
 
-            # need to initialize _exec_dict to prevent keyerror when
-            # params are not connected
-            self._exec_dict[var] = val
-
             if var in outs:
                 self.add_output(var, val)
             else:
@@ -74,28 +66,23 @@ class ExecComp(Component):
         """
         Executes this component's assignment statements
         """
-        for pname, meta in params.items():
-            self._exec_dict[pname] = params[pname]
-
-        for expr in self.codes:
-            exec(expr, _expr_dict, self._exec_dict )
-
-        for uname in unknowns.keys():
-            unknowns[uname] = self._exec_dict[uname]
+        for expr in self._codes:
+            exec(expr, _expr_dict, _UPDict(unknowns, params) )
 
     def jacobian(self, params, unknowns, resids):
+        """
+        Uses complex step method to calculate a Jacobian dict.
 
+        Returns
+        -------
+        dict
+            A jacobian dict
+        """
+
+        # our complex step
         step = self.complex_stepsize * 1j
 
         J = {}
-
-        self._exec_dict = TmpDict(self._exec_dict)
-
-        # create temporary complex versions of any arrays in _exec_dict
-        for u in unknowns:
-            uval = unknowns[u]
-            if isinstance(uval, ndarray):
-                self._exec_dict[u] = numpy.asarray(uval, dtype=complex)
 
         for param, pmeta in params.items():
 
@@ -106,25 +93,30 @@ class ExecComp(Component):
                 # replace the param array with a complex copy
                 pwrap[param] = numpy.asarray(params[param], complex)
                 idx_iter = array_idx_iter(pwrap[param].shape)
-                psz = pval.size
+                psize = pval.size
             else:
                 pwrap[param] = complex(params[param])
                 idx_iter = (None,)
-                psz = 1
+                psize = 1
 
             for i,idx in enumerate(idx_iter):
+                # set a complex param value
                 if idx is None:
                     pwrap[param] += step
                 else:
                     pwrap[param][idx] += step
-                uwrap = TmpDict(unknowns)
 
+                uwrap = TmpDict(unknowns, complex=True)
+
+                # solve with complex param value
                 self.solve_nonlinear(pwrap, uwrap, resids)
 
                 for u in unknowns:
                     jval = imag(uwrap[u] / self.complex_stepsize)
                     if (u,param) not in J: # create the dict entry
-                        J[(u,param)] = numpy.zeros((jval.size, psz))
+                        J[(u,param)] = numpy.zeros((jval.size, psize))
+
+                    # set the column in the Jacobian entry
                     J[(u,param)][:,i] = jval
 
                 # restore old param value
@@ -132,9 +124,6 @@ class ExecComp(Component):
                     pwrap[param] -= step
                 else:
                     pwrap[param][idx] -= step
-
-        # unwrap _exec_dict
-        self._exec_dict = self._exec_dict._inner
 
         return J
 
@@ -149,15 +138,26 @@ class TmpDict(object):
 
     Parameters
     ----------
-    inner, dict-like
+    inner : dict-like
         The dictionary to be wrapped.
+
+    complex : bool, optional
+        If True, return a complex version of values from __getitem__
     """
-    def __init__(self, inner):
+    def __init__(self, inner, complex=False):
         self._inner = inner
         self._changed = {}
+        self._complex = complex
 
     def __getitem__(self, name):
         if name in self._changed:
+            return self._changed[name]
+        elif self._complex:
+            val = self._inner[name]
+            if isinstance(val, ndarray):
+                self._changed[name] = numpy.asarray(val, dtype=complex)
+            else:
+                self._changed[name] = complex(val)
             return self._changed[name]
         else:
             return self._inner[name]
@@ -165,8 +165,44 @@ class TmpDict(object):
     def __setitem__(self, name, value):
         self._changed[name] = value
 
+    def __contains__(self, name):
+        return name in self._inner or name in self._changed
+
     def __getattr__(self, name):
         return getattr(self._inner, name)
+
+
+class _UPDict(object):
+    """
+    A dict-like wrapper for the unknowns and params
+    objects.  Items are first looked for in the unknowns
+    and then the params.
+
+    Parameters
+    ----------
+    unknowns : dict-like
+        The unknowns object to be wrapped.
+
+    params : dict-like
+        The params object to be wrapped.
+    """
+    def __init__(self, unknowns, params):
+        self._unknowns = unknowns
+        self._params = params
+
+    def __getitem__(self, name):
+        try:
+            return self._unknowns[name]
+        except KeyError:
+            return self._params[name]
+
+    def __setitem__(self, name, value):
+        if name in self._unknowns:
+            self._unknowns[name] = value
+        elif name in self._params:
+            self._params[name] = value
+        else:
+            raise KeyError(name)
 
 
 def _import_functs(mod, dct, names=None):

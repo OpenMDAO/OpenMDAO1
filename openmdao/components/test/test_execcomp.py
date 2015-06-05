@@ -25,21 +25,6 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, C1.unknowns['y'], 3.0, 0.00001)
 
-    def test_with_derivs(self):
-        p = Problem(root=Group())
-        C1 = p.root.add('C1', ExecComp(['y=2.0*x+1.'], ['dy_dx=2.0'], x=2.0))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
-
-        p.setup()
-        p.run()
-
-        assert_rel_error(self, C1.unknowns['y'], 5.0, 0.00001)
-
-        J = C1.jacobian(C1.params, C1.unknowns, C1.resids)
-
-        assert_rel_error(self, J[('y','x')], 2.0, 0.00001)
-
     def test_math(self):
         p = Problem(root=Group())
         C1 = p.root.add('C1', ExecComp('y=sin(x)', x=2.0))
@@ -141,8 +126,6 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, J[('y','x')], 2.0, 0.00001)
 
-
-
     def test_complex_step2(self):
 
         top = Problem()
@@ -159,3 +142,5 @@ class TestExecComp(unittest.TestCase):
         J = top.calc_gradient(['comp:x'], ['comp:y'], mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp:y']['comp:x'], np.array([6.0]), 0.00001)
 
+        J = top.calc_gradient(['comp:x'], ['comp:y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp:y']['comp:x'], np.array([6.0]), 0.00001)
