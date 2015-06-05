@@ -547,54 +547,8 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                dresids = system.dresids
-                dunknowns = system.dunknowns
+                self._sub_apply_linear_wrapper(system, mode)
 
-                # Forward Mode
-                if mode == 'fwd':
-
-                    if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
-                                            dunknowns, dresids, mode)
-                    dresids.vec *= -1.0
-
-                    for var in dunknowns.keys():
-
-                        # Skip all states
-                        if dunknowns.metadata(var).get('state'):
-                            continue
-
-                        dresids[var] += dunknowns[var]
-
-                # Adjoint Mode
-                elif mode == 'rev':
-
-                    # Sign on the local Jacobian needs to be -1 before
-                    # we add in the fake residual. Since we can't modify
-                    # the 'du' vector at this point without stomping on the
-                    # previous component's contributions, we can multiply
-                    # our local 'arg' by -1, and then revert it afterwards.
-                    dresids.vec *= -1.0
-
-                    if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
-                                            dunknowns, dresids, mode)
-
-                    dresids.vec *= -1.0
-
-                    for var in dunknowns.keys():
-
-                        # Skip all states
-                        if dunknowns.metadata(var).get('state'):
-                            continue
-
-                        dunknowns[var] += dresids[var]
 
             # Groups and all other systems just call their own apply_linear.
             else:
@@ -605,6 +559,71 @@ class Group(System):
         if mode == 'rev':
             # Full Scatter
             self._varmanager._transfer_data(mode='rev', deriv=True)
+
+    def _sub_apply_linear_wrapper(self, system, mode):
+        """ Calls apply_linear on any Component-like subsystem. This
+        basically does two things: 1) multiplies the user Jacobian by -1, and
+        2) puts a 1 on the diagonal for all explicit outputs.
+
+        Parameters
+        ----------
+
+        system : `System`
+            Subsystem of interest, either a `Component` or a `Group` that is
+            being finite differenced.
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
+        """
+
+        dresids = system.dresids
+        dunknowns = system.dunknowns
+
+        # Forward Mode
+        if mode == 'fwd':
+
+            if system.fd_options['force_fd'] == True:
+                system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                                         dunknowns, dresids, mode)
+            else:
+                system.apply_linear(system.params, system.unknowns, system.dparams,
+                                    dunknowns, dresids, mode)
+            dresids.vec *= -1.0
+
+            for var in dunknowns.keys():
+
+                # Skip all states
+                if dunknowns.metadata(var).get('state'):
+                    continue
+
+                dresids[var] += dunknowns[var]
+
+        # Adjoint Mode
+        elif mode == 'rev':
+
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'du' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # our local 'arg' by -1, and then revert it afterwards.
+            dresids.vec *= -1.0
+
+            if system.fd_options['force_fd'] == True:
+                system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                                         dunknowns, dresids, mode)
+            else:
+                system.apply_linear(system.params, system.unknowns, system.dparams,
+                                    dunknowns, dresids, mode)
+
+            dresids.vec *= -1.0
+
+            for var in dunknowns.keys():
+
+                # Skip all states
+                if dunknowns.metadata(var).get('state'):
+                    continue
+
+                dunknowns[var] += dresids[var]
 
     def solve_linear(self, rhs, dunknowns, dresids, mode=None):
         """
@@ -651,7 +670,7 @@ class Group(System):
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
         print('after', self.params.vec, sol_vec.vec, rhs_vec.vec)
         print(sol_buf)
-        sol_vec.vec[:] = -sol_buf[:]
+        sol_vec.vec[:] = sol_buf[:]
 
     def clear_dparams(self):
         """ Zeros out the dparams (dp) vector."""

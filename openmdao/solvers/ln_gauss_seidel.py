@@ -58,10 +58,7 @@ class LinearGaussSeidel(LinearSolver):
 
         if mode == 'fwd':
 
-            dunknowns.vec[:] = rhs
-
-            # TODO: This scatter shouldn't be needed ... or should it...
-            system._varmanager._transfer_data(deriv=True)
+            #dunknowns.vec[:] = rhs
 
             for subsystem in system.subsystems(local=True):
                 name, sub = subsystem
@@ -72,15 +69,25 @@ class LinearGaussSeidel(LinearSolver):
 
                 print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
                 dresids.vec[:] = 0.0
-                sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
-                                 sub.dunknowns, sub.dresids, mode)
+
+                if isinstance(sub, Component):
+
+                    # Components need to reverse sign and add 1 on diagonal
+                    # for explicit unknowns
+                    system._sub_apply_linear_wrapper(sub, mode)
+
+                else:
+                    # Groups and all other systems just call their own
+                    # apply_linear.
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
+                                     sub.dunknowns, sub.dresids, mode)
+
                 print('post apply', dparams.vec, dunknowns.vec, dresids.vec)
 
-                if not isinstance(sub, Component):
-                    dresids.vec *= -1.0
-                    dresids.vec += rhs
+                dresids.vec *= -1.0
+                dresids.vec += rhs
 
-                sub.solve_linear(sub.dresids.vec, sub.dunknowns, sub.dresids,
+                sub.solve_linear(-sub.dresids.vec, sub.dunknowns, sub.dresids,
                                  mode=mode)
                 print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
 
@@ -88,30 +95,37 @@ class LinearGaussSeidel(LinearSolver):
 
         else:
 
-            dresids.vec[:] = rhs
+            #dresids.vec[:] = rhs
 
             rev_systems = [sys for sys in system.subsystems(local=True)]
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                #print(name, dparams.keys(), dunknowns.keys())
+                print(name, dparams.keys(), dunknowns.keys())
 
-                #print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
-                sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
-                                 sub.dunknowns, sub.dresids, mode)
+                dunknowns.vec *= -1.0
+                dunknowns.vec += rhs
 
-                #print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre solve', dparams.vec, dunknowns.vec, dresids.vec)
+                sub.solve_linear(sub.dunknowns.vec, sub.dunknowns, sub.dresids,
+                                 mode=mode)
+
+                print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+
+                if isinstance(sub, Component):
+
+                    # Components need to reverse sign and add 1 on diagonal
+                    # for explicit unknowns
+                    system._sub_apply_linear_wrapper(sub, mode)
+
+                else:
+                    # Groups and all other systems just call their own
+                    # apply_linear.
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
+                                     sub.dunknowns, sub.dresids, mode)
+
+                print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
                 system._varmanager._transfer_data(name, mode='rev', deriv=True)
-
-                if not isinstance(sub, Component):
-                    dunknowns.vec *= -1.0
-                    dunknowns.vec += rhs
-
-                #print('pre solve', dparams.vec, dunknowns.vec, dresids.vec)
-                sub.solve_linear(sub.dunknowns.vec, sub.dunknowns, sub.dresids, mode=mode)
-                #print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
-
-            # TODO: This scatter shouldn't be needed ... or should it...
-            system._varmanager._transfer_data(deriv=True, mode='rev')
+                print('post scatter', dparams.vec, dunknowns.vec, dresids.vec)
 
             return dresids.vec

@@ -144,6 +144,8 @@ class ConvergeDiverge(Group):
     def __init__(self):
         super(ConvergeDiverge, self).__init__()
 
+        self.add('p', ParamComp('x', 2.0))
+
         self.add('comp1', Comp1())
         self.add('comp2', Comp2())
         self.add('comp3', Comp3())
@@ -151,8 +153,6 @@ class ConvergeDiverge(Group):
         self.add('comp5', Comp5())
         self.add('comp6', Comp6())
         self.add('comp7', Comp7())
-
-        self.add('p', ParamComp('x', 2.0))
 
         self.connect("p:x", "comp1:x1")
         self.connect('comp1:y1', 'comp2:x1')
