@@ -91,7 +91,57 @@ class TestProblem(unittest.TestCase):
             warnings.simplefilter("always")
             prob.setup()
             assert len(w) == 1, "Warning expected."
-            self.assertEquals("Parameters ['ls:A', 'ls:b'] have no associated unknowns.", str(w[-1].message))
+            self.assertEquals("Parameters ['ls:A', 'ls:b'] have no associated unknowns.",
+                              str(w[-1].message))
+
+    def test_unconnected_param_access(self):
+        prob = Problem(root=Group())
+        G1 = prob.root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+                                    'z=x*x-2.0']))
+        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+                                    'z=x*x-2.0']))
+        G2.connect("C1:y", "C2:x")
+
+        prob.setup()
+        prob.run()
+
+        C1.params['x'] = 2.
+        self.assertEqual(prob['G1:G2:C1:x'], 2.0)
+        prob['G1:G2:C1:x'] = 99.
+        self.assertEqual(C1.params['x'], 99.)
+
+    def test_unconnected_param_access_with_promotes(self):
+        prob = Problem(root=Group())
+        G1 = prob.root.add("G1", Group())
+        G2 = G1.add("G2", Group(), promotes=['x'])
+        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+                                    'z=x*x-2.0']), promotes=['x'])
+        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+                                    'z=x*x-2.0']))
+        G2.connect("C1:y", "C2:x")
+
+        prob.setup()
+        prob.run()
+
+        # still must use absolute naming to find params even if they're
+        # promoted.  Promoted names for params can refer to more than one param.
+        C1.params['x'] = 2.
+        self.assertEqual(prob['G1:G2:C1:x'], 2.0)
+        self.assertEqual(prob.root['G1:G2:C1:x'], 2.0)
+        prob['G1:G2:C1:x'] = 99.
+        self.assertEqual(C1.params['x'], 99.)
+        prob.root.subsystem('G1')['G2:C1:x'] = 12.
+        self.assertEqual(C1.params['x'], 12.)
+
+        try:
+            prob['G1:x'] = 11.
+        except Exception as err:
+            self.assertEqual(err.args[0],
+                             "Can't find variable 'G1:x' in unknowns or params vectors in system ''")
+        else:
+            self.fail("exception expected")
 
     def test_calc_gradient_interface_errors(self):
 
