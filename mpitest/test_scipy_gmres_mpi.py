@@ -33,7 +33,7 @@ class TestScipyGMRES(MPITestCase):
 
         #top = Problem()
         #top.root = FanOutGrouped()
-        #top.root.lin_solver = ScipyGMRES()
+        #top.root.ln_solver = ScipyGMRES()
         #top.setup()
         #top.run()
 
@@ -52,7 +52,7 @@ class TestScipyGMRES(MPITestCase):
 
         top = Problem(impl=impl)
         top.root = FanInGrouped()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
         top.setup()
         top.run()
 
@@ -73,7 +73,7 @@ class TestScipyGMRES(MPITestCase):
 
         #top = Problem()
         #top.root = ConvergeDivergeGroups()
-        #top.root.lin_solver = ScipyGMRES()
+        #top.root.ln_solver = ScipyGMRES()
         #top.setup()
         #top.run()
 
@@ -96,7 +96,7 @@ class TestScipyGMRES(MPITestCase):
 
         #top = Problem()
         #top.root = SingleDiamond()
-        #top.root.lin_solver = ScipyGMRES()
+        #top.root.ln_solver = ScipyGMRES()
         #top.setup()
         #top.run()
 
@@ -115,7 +115,7 @@ class TestScipyGMRES(MPITestCase):
 
         #top = Problem()
         #top.root = SingleDiamondGrouped()
-        #top.root.lin_solver = ScipyGMRES()
+        #top.root.ln_solver = ScipyGMRES()
         #top.setup()
         #top.run()
 

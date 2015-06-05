@@ -606,7 +606,7 @@ class Group(System):
             # Full Scatter
             self._varmanager._transfer_data(mode='rev', deriv=True)
 
-    def solve_linear(self, rhs, params, unknowns, mode="auto"):
+    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -616,11 +616,14 @@ class Group(System):
         rhs: `ndarray`
             Right-hand side for our linear solve.
 
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
 
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
@@ -630,18 +633,25 @@ class Group(System):
         if not self.is_active():
             return
 
-        if rhs.norm() < 1e-15:
-            self.sol_vec.array[:] = 0.0
-            return self.sol_vec.array
+        if mode is None:
+            mode = self.fd_options['step_size']
 
-        if mode=='auto':
-            mode = self.ln_solver.options['mode']
+        if mode == 'fwd':
+            sol_vec, rhs_vec = dunknowns, dresids
+        else:
+            sol_vec, rhs_vec = dresids, dunknowns
+
+        #if np.linalg.norm(rhs) < 1e-15:
+        #    sol_vec.vec[:] = 0.0
+        #    return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
-        self.rhs_buf[:] = self.rhs_vec.array[:]
-        self.sol_buf[:] = self.sol_vec.array[:]
-        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
-        self.sol_vec.array[:] = self.sol_buf[:]
+        rhs_buf = rhs_vec.vec.copy()
+        print('before', self.params.vec, sol_vec.vec, rhs_vec.vec)
+        sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
+        print('after', self.params.vec, sol_vec.vec, rhs_vec.vec)
+        print(sol_buf)
+        sol_vec.vec[:] = -sol_buf[:]
 
     def clear_dparams(self):
         """ Zeros out the dparams (dp) vector."""

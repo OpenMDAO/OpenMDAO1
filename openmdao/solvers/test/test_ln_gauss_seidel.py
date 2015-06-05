@@ -1,15 +1,14 @@
-""" Unit test for the Scipy GMRES linear solver. """
+""" Unit test for the Gauss Seidel linear solver. """
 
 import unittest
 from unittest import SkipTest
 
 import numpy as np
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
-from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
@@ -18,7 +17,7 @@ from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
 from openmdao.test.testutil import assert_rel_error
 
 
-class TestScipyGMRES(unittest.TestCase):
+class TestLinearGaussSeidel(unittest.TestCase):
 
     def test_simple_matvec(self):
         group = Group()
@@ -27,7 +26,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = group
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -46,7 +45,7 @@ class TestScipyGMRES(unittest.TestCase):
         top.root.add('x_param', ParamComp('x', 1.0), promotes=['*'])
         top.root.add('sub', group, promotes=['*'])
 
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -63,7 +62,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = group
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -78,30 +77,13 @@ class TestScipyGMRES(unittest.TestCase):
 
     def test_simple_in_group_matvec(self):
         group = Group()
-        sub = group.add('sub', Group(), promotes=['x', 'y'])
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        sub = group.add('sub', Group(), promotes=['x', 'y'])
         sub.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
 
         top = Problem()
         top.root = group
-        top.root.ln_solver = ScipyGMRES()
-        top.setup()
-        top.run()
-
-        J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
-
-        J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
-
-    def test_simple_jac(self):
-        group = Group()
-        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
-        group.add('mycomp', ExecComp(['y=2.0*x'], ['dy_dx=2.0']), promotes=['x', 'y'])
-
-        top = Problem()
-        top.root = group
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -115,7 +97,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = FanOut()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -134,7 +116,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = FanOutGrouped()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -153,7 +135,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = FanIn()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -172,7 +154,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = FanInGrouped()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -191,7 +173,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -216,7 +198,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = ConvergeDivergeGroups()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -239,7 +221,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = SingleDiamond()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
@@ -258,7 +240,7 @@ class TestScipyGMRES(unittest.TestCase):
 
         top = Problem()
         top.root = SingleDiamondGrouped()
-        top.root.ln_solver = ScipyGMRES()
+        top.root.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 

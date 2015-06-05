@@ -312,8 +312,8 @@ class FanOutGrouped(Group):
     def __init__(self):
         super(FanOutGrouped, self).__init__()
 
-        sub = self.add('sub', ParallelGroup())
         self.add('comp1', ExecComp(['y=3.0*x'], ['dy_dx=3.0']))
+        sub = self.add('sub', ParallelGroup())
         sub.add('comp2', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
         sub.add('comp3', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
         self.add('p', ParamComp('x', 1.0))
@@ -329,12 +329,12 @@ class FanIn(Group):
     def __init__(self):
         super(FanIn, self).__init__()
 
+        self.add('p1', ParamComp('x1', 1.0))
+        self.add('p2', ParamComp('x2', 1.0))
         self.add('comp1', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
         self.add('comp2', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
         self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2'],
                                    ['dy_dx1=3.0', 'dy_dx2=7.0']))
-        self.add('p1', ParamComp('x1', 1.0))
-        self.add('p2', ParamComp('x2', 1.0))
 
         self.connect("comp1:y", "comp3:x1")
         self.connect("comp2:y", "comp3:x2")
