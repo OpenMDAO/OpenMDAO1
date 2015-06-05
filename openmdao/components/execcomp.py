@@ -10,6 +10,7 @@ from six import string_types
 
 from openmdao.core.component import Component
 from openmdao.util.strutil import parse_for_vars
+from openmdao.util.arrayutil import array_idx_iter
 
 
 class ExecComp(Component):
@@ -19,7 +20,7 @@ class ExecComp(Component):
     appearing on the left-hand side of the assignments are outputs,
     and the rest are inputs.  Each variable is assumed to be of
     type float unless the initial value for that variable is supplied
-    in **kwargs.
+    in **kwargs.  Derivatives are calculated using complex step.
 
     Parameters
     ----------
@@ -27,17 +28,12 @@ class ExecComp(Component):
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
-    derivs: str or iter of str, optional
-        An assignment statement or iter of them.  These specify how the
-        derivatives are calculated.  Derivative names must be of the form
-        d<var>_d<wrt> for a derivative of <var> with respect to <wrt>.
-
     **kwargs: dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
     """
 
-    def __init__(self, exprs, derivs=(), **kwargs):
+    def __init__(self, exprs, **kwargs):
         super(ExecComp, self).__init__()
 
         # if complex step is used for derivatives, this is the stepsize
@@ -46,11 +42,7 @@ class ExecComp(Component):
         if isinstance(exprs, string_types):
             exprs = [exprs]
 
-        self.exprs = exprs
-        self.codes = [compile(expr, expr, 'exec') for expr in exprs]
-
-        # dictionary used for the exec of the compiled assignment statements
-        self._exec_dict = {}
+        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
 
         outs = set()
         allvars = set()
@@ -65,138 +57,107 @@ class ExecComp(Component):
             # if user supplied an initial value, use it, otherwise set to 0.0
             val = kwargs.get(var, 0.0)
 
-            # need to initialize _exec_dict to prevent keyerror when
-            # params are not connected
-            self._exec_dict[var] = val
-
             if var in outs:
                 self.add_output(var, val)
             else:
                 self.add_param(var, val)
 
-        self._setup_derivs(derivs, **kwargs)
-
-    def _setup_derivs(self, derivs, **kwargs):
-        self.deriv_exprs = derivs
-        if not derivs:
-            return
-
-        if isinstance(derivs, string_types):
-            derivs = [derivs]
-
-        self.deriv_codes = \
-            [compile(expr, expr, 'exec') for expr in derivs]
-
-        allvars = set()
-
-        self.deriv_names = []
-        deriv_rgx = re.compile('d(\w+)_d(\w+)')
-        for expr in derivs:
-            lhs, _ = expr.split('=')
-            for lhs in parse_for_vars(lhs):
-                match = deriv_rgx.search(lhs)
-                numerator = match.group(1)
-                wrt = match.group(2)
-
-                if numerator not in self._unknowns_dict:
-                    raise RuntimeError("Derivative numerator '%s' could not be found" %
-                                       numerator)
-                if wrt not in self._params_dict:
-                    raise RuntimeError("Derivative denominator '%s' could not be found" %
-                                       wrt)
-
-                self.deriv_names.append( (lhs, numerator, wrt) )
-
-                self._exec_dict[lhs] = kwargs.get(lhs, 0.0)
-
     def solve_nonlinear(self, params, unknowns, resids):
         """
         Executes this component's assignment statements
         """
-        for pname, meta in params.items():
-            self._exec_dict[pname] = params[pname]
-
-        for expr in self.codes:
-            exec(expr, _expr_dict, self._exec_dict )
-
-        for uname in unknowns.keys():
-            unknowns[uname] = self._exec_dict[uname]
+        for expr in self._codes:
+            exec(expr, _expr_dict, _UPDict(unknowns, params) )
 
     def jacobian(self, params, unknowns, resids):
         """
-        Calculate the Jacobian using our derivative expressions.
-        """
-        if not self.deriv_exprs:
-            return self._complex_step(params, unknowns, resids)
-
-        for pname, meta in params.items():
-            self._exec_dict[pname] = params[pname]
-
-        for expr in self.deriv_codes:
-            exec(expr, _expr_dict, self._exec_dict )
-
-        J = {}
-
-        for dname, numerator, wrt in self.deriv_names:
-            deriv = self._exec_dict[dname]
-            if not isinstance(deriv, ndarray):
-                deriv = numpy.array([deriv])
-            J[(numerator, wrt)] = deriv
-
-        return J
-
-    def _complex_step(self, params, unknowns, resids):
-        """
-        If the ExecComp doesn't have it's own user specified
-        derivatives, use the complex step method to calculate them.
+        Uses complex step method to calculate a Jacobian dict.
 
         Returns
         -------
         dict
-            A jacobian dict.
+            A jacobian dict
         """
 
+        # our complex step
         step = self.complex_stepsize * 1j
 
         J = {}
 
-        for param, meta in params.items():
+        for param, pmeta in params.items():
 
-            uwrap = DictWrapper(unknowns)
-            pwrap = DictWrapper(params)
-            pwrap[param] = params[param]+step
+            pwrap = TmpDict(params)
 
-            self.solve_nonlinear(pwrap, uwrap, {})
+            pval = params[param]
+            if isinstance(pval, ndarray):
+                # replace the param array with a complex copy
+                pwrap[param] = numpy.asarray(params[param], complex)
+                idx_iter = array_idx_iter(pwrap[param].shape)
+                psize = pval.size
+            else:
+                pwrap[param] = complex(params[param])
+                idx_iter = (None,)
+                psize = 1
 
-            for u, meta in unknowns.items():
-                jval = imag(uwrap[u] / self.complex_stepsize)
-                # for scalar values, imag() returns a 0D numpy array, but we
-                # want a 1D array
-                if not jval.shape:
-                    jval = numpy.array([jval])
-                J[(u,param)] = jval
+            for i,idx in enumerate(idx_iter):
+                # set a complex param value
+                if idx is None:
+                    pwrap[param] += step
+                else:
+                    pwrap[param][idx] += step
+
+                uwrap = TmpDict(unknowns, complex=True)
+
+                # solve with complex param value
+                self.solve_nonlinear(pwrap, uwrap, resids)
+
+                for u in unknowns:
+                    jval = imag(uwrap[u] / self.complex_stepsize)
+                    if (u,param) not in J: # create the dict entry
+                        J[(u,param)] = numpy.zeros((jval.size, psize))
+
+                    # set the column in the Jacobian entry
+                    J[(u,param)][:,i] = jval
+
+                # restore old param value
+                if idx is None:
+                    pwrap[param] -= step
+                else:
+                    pwrap[param][idx] -= step
 
         return J
 
 
-class DictWrapper(object):
+class TmpDict(object):
     """
     A wrapper for a dictionary that will allow getting of values
     from its inner dict unless those values get modified via
     __setitem__.  After values have been modified they are managed
-    thereafter by the wrapper.
+    thereafter by the wrapper.  This protects the inner dict from
+    modification.
 
     Parameters
     ----------
-    inner, dict-like
+    inner : dict-like
         The dictionary to be wrapped.
+
+    complex : bool, optional
+        If True, return a complex version of values from __getitem__
     """
-    def __init__(self, inner):
+    def __init__(self, inner, complex=False):
         self._inner = inner
         self._changed = {}
+        self._complex = complex
 
     def __getitem__(self, name):
         if name in self._changed:
+            return self._changed[name]
+        elif self._complex:
+            val = self._inner[name]
+            if isinstance(val, ndarray):
+                self._changed[name] = numpy.asarray(val, dtype=complex)
+            else:
+                self._changed[name] = complex(val)
             return self._changed[name]
         else:
             return self._inner[name]
@@ -204,8 +165,44 @@ class DictWrapper(object):
     def __setitem__(self, name, value):
         self._changed[name] = value
 
+    def __contains__(self, name):
+        return name in self._inner or name in self._changed
+
     def __getattr__(self, name):
         return getattr(self._inner, name)
+
+
+class _UPDict(object):
+    """
+    A dict-like wrapper for the unknowns and params
+    objects.  Items are first looked for in the unknowns
+    and then the params.
+
+    Parameters
+    ----------
+    unknowns : dict-like
+        The unknowns object to be wrapped.
+
+    params : dict-like
+        The params object to be wrapped.
+    """
+    def __init__(self, unknowns, params):
+        self._unknowns = unknowns
+        self._params = params
+
+    def __getitem__(self, name):
+        try:
+            return self._unknowns[name]
+        except KeyError:
+            return self._params[name]
+
+    def __setitem__(self, name, value):
+        if name in self._unknowns:
+            self._unknowns[name] = value
+        elif name in self._params:
+            self._params[name] = value
+        else:
+            raise KeyError(name)
 
 
 def _import_functs(mod, dct, names=None):
