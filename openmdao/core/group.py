@@ -665,6 +665,7 @@ class Group(System):
         #    return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
+        rhs_vec.vec[:] = rhs[:]
         rhs_buf = rhs_vec.vec.copy()
         print('before', self.params.vec, sol_vec.vec, rhs_vec.vec)
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)

@@ -87,7 +87,7 @@ class LinearGaussSeidel(LinearSolver):
                 dresids.vec *= -1.0
                 dresids.vec += rhs
 
-                sub.solve_linear(-sub.dresids.vec, sub.dunknowns, sub.dresids,
+                sub.solve_linear(sub.dresids.vec, sub.dunknowns, sub.dresids,
                                  mode=mode)
                 print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
 
