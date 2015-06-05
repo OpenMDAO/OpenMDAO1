@@ -49,17 +49,17 @@ class DumpCaseRecorder(_BaseRecorder):
 
         #TODO: Need to look at Group.dump to see how it handles this
         write("  Params:\n")
-        for param, meta in params.items():
+        for param, meta in sorted(params.items()):
             if self._check_path(param):
                 write("%s: %s\n" % ( param, str(meta['val'])))
 
         write("  Unknowns:\n")
-        for unknown, meta in unknowns.items():
+        for unknown, meta in sorted(unknowns.items()):
             if self._check_path(unknown):
                 write("%s: %s\n" % ( unknown, str(meta['val'])))
 
         write("  Resids:\n")
-        for resid, meta in resids.items():
+        for resid, meta in sorted(resids.items()):
             if self._check_path(resid):
                 write("%s: %s\n" % ( resid, str(meta['val'])))
 
