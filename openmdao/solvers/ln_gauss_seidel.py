@@ -6,6 +6,7 @@ from __future__ import print_function
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
+from openmdao.core.component import Component
 from openmdao.solvers.solverbase import LinearSolver
 
 
@@ -59,22 +60,31 @@ class LinearGaussSeidel(LinearSolver):
 
             dunknowns.vec[:] = rhs
 
+            # TODO: This scatter shouldn't be needed ... or should it...
+            system._varmanager._transfer_data(deriv=True)
+
             for subsystem in system.subsystems(local=True):
                 name, sub = subsystem
-                #print(name, dparams.keys(), dunknowns.keys())
+                print(name, dparams.keys(), dunknowns.keys())
 
-                #print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
                 system._varmanager._transfer_data(name, deriv=True)
 
-                #print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+                dresids.vec[:] = 0.0
                 sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
                                  sub.dunknowns, sub.dresids, mode)
-                #print('post apply', dparams.vec, dunknowns.vec, dresids.vec)
+                print('post apply', dparams.vec, dunknowns.vec, dresids.vec)
 
-                sub.solve_linear(rhs, sub.dunknowns, sub.dresids, mode=mode)
-                #print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
+                if not isinstance(sub, Component):
+                    dresids.vec *= -1.0
+                    dresids.vec += rhs
 
-            return dresids.vec
+                sub.solve_linear(sub.dresids.vec, sub.dunknowns, sub.dresids,
+                                 mode=mode)
+                print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
+
+            return dunknowns.vec
 
         else:
 
@@ -84,17 +94,24 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                print(name, dparams.keys(), dunknowns.keys())
+                #print(name, dparams.keys(), dunknowns.keys())
 
-                print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+                #print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
                 sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
                                  sub.dunknowns, sub.dresids, mode)
 
-                print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
+                #print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
                 system._varmanager._transfer_data(name, mode='rev', deriv=True)
 
-                print('pre solve', dparams.vec, dunknowns.vec, dresids.vec)
-                #sub.solve_linear(rhs, sub.dunknowns, sub.dresids, mode=mode)
-                print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
+                if not isinstance(sub, Component):
+                    dunknowns.vec *= -1.0
+                    dunknowns.vec += rhs
 
-            return dunknowns.vec
+                #print('pre solve', dparams.vec, dunknowns.vec, dresids.vec)
+                sub.solve_linear(sub.dunknowns.vec, sub.dunknowns, sub.dresids, mode=mode)
+                #print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
+
+            # TODO: This scatter shouldn't be needed ... or should it...
+            system._varmanager._transfer_data(deriv=True, mode='rev')
+
+            return dresids.vec

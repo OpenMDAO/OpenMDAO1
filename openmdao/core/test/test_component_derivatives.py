@@ -7,7 +7,8 @@ import unittest
 import numpy as np
 
 from openmdao.core.component import Component
-from openmdao.test.simplecomps import SimpleCompDerivJac, SimpleArrayComp, \
+from openmdao.components.execcomp import ExecComp
+from openmdao.test.simplecomps import SimpleArrayComp, \
                                       SimpleImplicitComp, SimpleSparseArrayComp
 
 
@@ -18,7 +19,7 @@ class TestComponentDerivatives(unittest.TestCase):
         # Tests that we can correctly handle user-defined Jacobians.
 
         empty = {}
-        mycomp = SimpleCompDerivJac()
+        mycomp = ExecComp(['y=2.0*x'], ['dy_dx=2.0'])
         mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
 
         # Forward

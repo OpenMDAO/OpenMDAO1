@@ -12,7 +12,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      SimpleCompDerivJac, FanOutGrouped, \
+                                      FanOutGrouped, \
                                       FanInGrouped, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
@@ -77,26 +77,9 @@ class TestLinearGaussSeidel(unittest.TestCase):
 
     def test_simple_in_group_matvec(self):
         group = Group()
+        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
         sub = group.add('sub', Group(), promotes=['x', 'y'])
-        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
         sub.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
-
-        top = Problem()
-        top.root = group
-        top.root.ln_solver = LinearGaussSeidel()
-        top.setup()
-        top.run()
-
-        J = top.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
-
-        J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
-
-    def test_simple_jac(self):
-        group = Group()
-        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
-        group.add('mycomp', SimpleCompDerivJac(), promotes=['x', 'y'])
 
         top = Problem()
         top.root = group

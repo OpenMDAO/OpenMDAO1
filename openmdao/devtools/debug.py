@@ -16,7 +16,6 @@ if under_mpirun():
 else:
     def debug(*msg):
         for m in msg:
-            print m
             sys.stdout.write("%s " % str(m))
         sys.stdout.write('\n')
 
@@ -29,7 +28,7 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
     Parameters
     ----------
     system : `System`
-        The `System` for which to dump metadata
+        The node in the `System` tree where dumping begins.
 
     nest : int, optional
         Starting nesting level.  Defaults to 0.

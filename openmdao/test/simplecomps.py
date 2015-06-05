@@ -3,10 +3,12 @@
 import numpy as np
 import scipy.sparse
 
-from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.parallelgroup import ParallelGroup
+
+from openmdao.components.paramcomp import ParamComp
+from openmdao.components.execcomp import ExecComp
 
 
 class SimpleComp(Component):
@@ -37,26 +39,10 @@ class SimpleCompDerivMatVec(SimpleComp):
         """Returns the product of the incoming vector with the Jacobian."""
 
         if mode == 'fwd':
-            dresids['y'] = 2.0*dparams['x']
+            dresids['y'] = self.multiplier*dparams['x']
 
         elif mode == 'rev':
-            dparams['x'] = 2.0*dresids['y']
-
-
-class SimpleCompDerivJac(SimpleComp):
-    """ The simplest component you can imagine, this time with derivatives
-    defined using Jacobian to return a Jacobian. """
-
-    def __init__(self, multiplier=2.0):
-        super(SimpleCompDerivJac, self).__init__()
-        self.multiplier = multiplier
-
-    def jacobian(self, params, unknowns, resids):
-        """Returns the Jacobian."""
-
-        J = {}
-        J[('y', 'x')] = np.array([self.multiplier])
-        return J
+            dparams['x'] = self.multiplier*dresids['y']
 
 
 class SimpleArrayComp(Component):
@@ -302,100 +288,6 @@ class Paraboloid(Component):
         return J
 
 
-class FanOutComp1(Component):
-
-    def __init__(self):
-        super(FanOutComp1, self).__init__()
-
-        # Params
-        self.add_param('x', 0.0)
-
-        # Unknowns
-        self.add_output('y', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
-
-        unknowns['y'] = 3.0*params['x']
-
-    def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives."""
-        J = {}
-        J[('y', 'x')] = np.array([3.0])
-        return J
-
-
-class FanOutComp2(Component):
-
-    def __init__(self):
-        super(FanOutComp2, self).__init__()
-
-        # Params
-        self.add_param('x', 0.0)
-
-        # Unknowns
-        self.add_output('y', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much."""
-
-        unknowns['y'] = -2.0*params['x']
-
-    def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives."""
-        J = {}
-        J[('y', 'x')] = np.array([-2.0])
-        return J
-
-
-class FanOutComp3(Component):
-
-    def __init__(self):
-        super(FanOutComp3, self).__init__()
-
-        # Params
-        self.add_param('x', 0.0)
-
-        # Unknowns
-        self.add_output('y', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much."""
-
-        unknowns['y'] = 5.0*params['x']
-
-    def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives."""
-        J = {}
-        J[('y', 'x')] = np.array([5.0])
-        return J
-
-
-class FanInTarget(Component):
-
-    def __init__(self):
-        super(FanInTarget, self).__init__()
-
-        # Params
-        self.add_param('x1', 0.0)
-        self.add_param('x2', 0.0)
-
-        # Unknowns
-        self.add_output('y', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much."""
-
-        unknowns['y'] = 3.0*params['x1'] * 7.0*params['x2']
-
-    def jacobian(self, params, unknowns, resids):
-        """Analytical derivatives."""
-        J = {}
-        J[('y', 'x1')] = np.array([3.0])
-        J[('y', 'x2')] = np.array([7.0])
-        return J
-
-
 class FanOut(Group):
     """ Topology where one comp broadcasts an output to two target
     components."""
@@ -403,9 +295,9 @@ class FanOut(Group):
     def __init__(self):
         super(FanOut, self).__init__()
 
-        self.add('comp1', SimpleCompDerivJac(3.0))
-        self.add('comp2', SimpleCompDerivJac(-2.0))
-        self.add('comp3', SimpleCompDerivJac(5.0))
+        self.add('comp1', ExecComp(['y=3.0*x'], ['dy_dx=3.0']))
+        self.add('comp2', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
+        self.add('comp3', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "comp2:x")
@@ -420,10 +312,10 @@ class FanOutGrouped(Group):
     def __init__(self):
         super(FanOutGrouped, self).__init__()
 
+        self.add('comp1', ExecComp(['y=3.0*x'], ['dy_dx=3.0']))
         sub = self.add('sub', ParallelGroup())
-        self.add('comp1', SimpleCompDerivJac(3.0))
-        sub.add('comp2', SimpleCompDerivJac(-2.0))
-        sub.add('comp3', SimpleCompDerivJac(5.0))
+        sub.add('comp2', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
+        sub.add('comp3', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
         self.add('p', ParamComp('x', 1.0))
 
         self.connect("comp1:y", "sub:comp2:x")
@@ -439,9 +331,10 @@ class FanIn(Group):
 
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
-        self.add('comp1', SimpleCompDerivJac(-2.0))
-        self.add('comp2', SimpleCompDerivJac(5.0))
-        self.add('comp3', FanInTarget())
+        self.add('comp1', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
+        self.add('comp2', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
+        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2'],
+                                   ['dy_dx1=3.0', 'dy_dx2=7.0']))
 
         self.connect("comp1:y", "comp3:x1")
         self.connect("comp2:y", "comp3:x2")
@@ -456,9 +349,10 @@ class FanInGrouped(Group):
         super(FanInGrouped, self).__init__()
 
         sub = self.add('sub', ParallelGroup())
-        sub.add('comp1', SimpleCompDerivJac(-2.0))
-        sub.add('comp2', SimpleCompDerivJac(5.0))
-        self.add('comp3', FanInTarget())
+        sub.add('comp1', ExecComp(['y=-2.0*x'], ['dy_dx=-2.0']))
+        sub.add('comp2', ExecComp(['y=5.0*x'], ['dy_dx=5.0']))
+        self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2'],
+                                   ['dy_dx1=3.0', 'dy_dx2=7.0']))
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
 

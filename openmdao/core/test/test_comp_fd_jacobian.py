@@ -14,8 +14,9 @@ from openmdao.core.system import System
 from openmdao.core.vecwrapper import SrcVecWrapper
 
 from openmdao.components.paramcomp import ParamComp
-from openmdao.test.simplecomps import SimpleArrayComp, SimpleCompDerivJac, \
-                                      SimpleImplicitComp, SimpleComp, \
+from openmdao.components.execcomp import ExecComp
+from openmdao.test.simplecomps import SimpleArrayComp, \
+                                      SimpleImplicitComp, \
                                       Paraboloid
 from openmdao.test.testutil import assert_equal_jacobian, assert_rel_error
 
@@ -228,7 +229,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
         top = Problem()
         top.root = Group()
-        comp = top.root.add('comp', SimpleComp())
+        comp = top.root.add('comp', ExecComp('y=x*2.0'))
         top.root.add('p1', ParamComp('x', 2.0))
         top.root.connect('p1:x', 'comp:x')
 
@@ -249,7 +250,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
         top = Problem()
         top.root = Group()
-        comp = top.root.add('comp', SimpleComp())
+        comp = top.root.add('comp', ExecComp('y=x*2.0'))
         top.root.add('p1', ParamComp('x', 2.0))
         top.root.connect('p1:x', 'comp:x')
 

@@ -3,8 +3,8 @@ import unittest
 from openmdao.core.problem import Problem
 from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.components.paramcomp import ParamComp
+from openmdao.components.execcomp import ExecComp
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
-from openmdao.test.simplecomps import SimpleComp
 
 
 class TestGroup(unittest.TestCase):
@@ -16,9 +16,9 @@ class TestGroup(unittest.TestCase):
         root.nl_solver = NLGaussSeidel()
 
         root.add('C1', ParamComp('x', 5.))
-        root.add('C2', SimpleComp())
-        root.add('C3', SimpleComp())
-        root.add('C4', SimpleComp())
+        root.add('C2', ExecComp('y=x*2.0'))
+        root.add('C3', ExecComp('y=x*2.0'))
+        root.add('C4', ExecComp('y=x*2.0'))
 
         root.connect("C1:x", "C2:x")
         root.connect("C2:y", "C3:x")

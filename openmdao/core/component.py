@@ -319,7 +319,7 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
-    def solve_linear(self, rhs, dunknowns, dresids, mode="auto"):
+    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -344,11 +344,14 @@ class Component(System):
             system's ln_solver.options.
         """
 
+        if mode is None:
+            mode = self.fd_options['step_size']
+
         if mode == 'fwd':
-            #dunknowns.vec[:] = rhs[:]
+            dresids.vec[:] = rhs[:]
             dunknowns.vec[:] = dresids.vec[:]
         else:
-            #dresids.vec[:] = rhs[:]
+            dunknowns.vec[:] = rhs[:]
             dresids.vec[:] = dunknowns.vec[:]
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):

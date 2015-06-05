@@ -5,14 +5,15 @@ from unittest import SkipTest
 
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
+from openmdao.components.paramcomp import ParamComp
+from openmdao.components.execcomp import ExecComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      SimpleCompDerivJac, FanOutGrouped, \
+                                      FanOutGrouped, \
                                       FanInGrouped, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
@@ -96,7 +97,7 @@ class TestScipyGMRES(unittest.TestCase):
     def test_simple_jac(self):
         group = Group()
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
-        group.add('mycomp', SimpleCompDerivJac(), promotes=['x', 'y'])
+        group.add('mycomp', ExecComp(['y=2.0*x'], ['dy_dx=2.0']), promotes=['x', 'y'])
 
         top = Problem()
         top.root = group
