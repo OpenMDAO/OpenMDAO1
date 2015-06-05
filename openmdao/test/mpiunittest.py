@@ -172,9 +172,9 @@ else:
                     #method = tcase
 
                 tspec = "%s:%s" % (mod.__file__, test)
-                sys.stdout.write("%s ... " % tspec)
+                if MPI.COMM_WORLD.rank == 0:
+                    sys.stdout.write("%s ... " % tspec)
                 result = run_test(tspec, parent, method, nocap=nocap)
-                sys.stdout.write("%s\n" % result.status)
 
                 if under_mpirun():
                     results = MPI.COMM_WORLD.gather(result, root=0)
