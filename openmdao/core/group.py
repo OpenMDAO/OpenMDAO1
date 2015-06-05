@@ -46,7 +46,16 @@ class Group(System):
              the name of the variable to set into the unknowns vector
         """
         if self.is_active():
-            self._varmanager.unknowns[name] = val
+            try:
+                self._varmanager.unknowns[name] = val
+            except KeyError:
+                # look in params
+                try:
+                    subname, vname = name.rsplit(':', 1)
+                    self.subsystem(subname).params[vname] = val
+                except:
+                    raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
+                                   (name, self.pathname))
 
     def __getitem__(self, name):
         """
@@ -79,8 +88,13 @@ class Group(System):
             try:
                 return self._subsystems[subsys][subname]
             except:
-                raise KeyError("Can't find variable '%s' in unknowns vector in system '%s'" %
-                               (name, self.pathname))
+                # look in params
+                try:
+                    subname, vname = name.rsplit(':', 1)
+                    return self.subsystem(subname).params[vname]
+                except:
+                    raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
+                                   (name, self.pathname))
 
     @property
     def unknowns(self):
