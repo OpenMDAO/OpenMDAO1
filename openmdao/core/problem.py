@@ -202,7 +202,7 @@ class Problem(System):
                                           return_format)
         else:
             return self._calc_gradient_ln_solver(param_list, unknown_list,
-                                                  return_format, mode)
+                                                 return_format, mode)
 
     def _calc_gradient_fd(self, param_list, unknown_list, return_format):
         """ Returns the finite differenced gradient for the system that is slotted in
