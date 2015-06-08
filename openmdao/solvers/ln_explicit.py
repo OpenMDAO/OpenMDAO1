@@ -4,10 +4,10 @@ linalg.solve."""
 # pylint: disable=E0611, F0401
 import numpy as np
 
-from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.solverbase import LinearSolver
 
 
-class ExplicitSolver(ScipyGMRES):
+class ExplicitSolver(LinearSolver):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve."""
 
