@@ -1,7 +1,6 @@
 """ OpenMDAO LinearSolver that explicitly solves the linear system using
 linalg.solve."""
 
-
 # pylint: disable=E0611, F0401
 import numpy as np
 
