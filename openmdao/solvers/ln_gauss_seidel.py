@@ -60,15 +60,15 @@ class LinearGaussSeidel(LinearSolver):
 
             #dunknowns.vec[:] = rhs
 
-            for subsystem in system.subsystems(local=True):
-                name, sub = subsystem
+            for name, sub in system.subsystems(local=True):
+
                 print(name, dparams.keys(), dunknowns.keys())
 
                 print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
                 system._varmanager._transfer_data(name, deriv=True)
 
+                #dresids.vec[:] = 0.0
                 print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
-                dresids.vec[:] = 0.0
 
                 if isinstance(sub, Component):
 

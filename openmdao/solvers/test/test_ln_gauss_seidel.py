@@ -5,6 +5,7 @@ from unittest import SkipTest
 
 import numpy as np
 
+from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
@@ -92,6 +93,27 @@ class TestLinearGaussSeidel(unittest.TestCase):
 
         J = top.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_two_simple(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', 1.0))
+        group.add('comp1', ExecComp(['y=2.0*x']))
+        group.add('comp2', ExecComp(['z=3.0*y']))
+
+        top = Problem()
+        top.root = group
+        top.root.ln_solver = LinearGaussSeidel()
+        top.root.connect('x_param:x', 'comp1:x')
+        top.root.connect('comp1:y', 'comp2:y')
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['x_param:x'], ['comp2:z'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp2:z']['x_param:x'][0][0], 6.0, 1e-6)
+
+        J = top.calc_gradient(['x_param:x'], ['comp2:z'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp2:z']['x_param:x'][0][0], 6.0, 1e-6)
 
     def test_fan_out(self):
 
