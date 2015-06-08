@@ -201,8 +201,8 @@ class Problem(System):
             return self._calc_gradient_fd(param_list, unknown_list,
                                           return_format)
         else:
-            return self._calc_gradient_lin_solver(param_list, unknown_list,
-                                                  return_format, mode)
+            return self._calc_gradient_ln_solver(param_list, unknown_list,
+                                                 return_format, mode)
 
     def _calc_gradient_fd(self, param_list, unknown_list, return_format):
         """ Returns the finite differenced gradient for the system that is slotted in
@@ -273,7 +273,7 @@ class Problem(System):
                 J[okey][ikey] = Jfd[fd_okey, fd_ikey]
         return J
 
-    def _calc_gradient_lin_solver(self, param_list, unknown_list, return_format, mode):
+    def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 

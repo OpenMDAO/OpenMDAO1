@@ -1,17 +1,20 @@
 """ OpenMDAO LinearSolver that explicitly solves the linear system using
-linalg.solve."""
+linalg.solve. Inherits from ScipyGMRES just for the mult function."""
 
 # pylint: disable=E0611, F0401
 import numpy as np
 
-from openmdao.solvers.solverbase import LinearSolver
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 
-class ExplicitSolver(LinearSolver):
+class ExplicitSolver(ScipyGMRES):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve."""
 
     def solve(self, rhs, system, mode):
+
+        self.system = system
+        self.mode = mode
 
         n_edge = len(rhs)
         I = np.eye(n_edge)
@@ -23,4 +26,5 @@ class ExplicitSolver(LinearSolver):
 
         deriv = np.linalg.solve(partials, rhs)
 
+        self.system = None
         return deriv
