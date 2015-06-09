@@ -10,6 +10,8 @@ class Driver(object):
     def __init__(self):
         super(Driver, self).__init__()
         self.recorders = []
+        self.outputs_of_interest = []
+        self.inputs_of_interest = []
 
     def add_param(self, name, low=None, high=None):
         pass

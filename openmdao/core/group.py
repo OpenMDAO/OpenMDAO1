@@ -19,8 +19,6 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
-from openmdao.core.mpiwrap import get_comm_if_active
-
 
 class Group(System):
     """A system that contains other systems."""
@@ -306,7 +304,7 @@ class Group(System):
         """
         self._local_subsystems = OrderedDict()
 
-        self.comm = get_comm_if_active(self, comm)
+        self.comm = comm
 
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)

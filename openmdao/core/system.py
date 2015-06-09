@@ -7,7 +7,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, get_comm_if_active
+from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
 
 
@@ -153,7 +153,7 @@ class System(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self.comm = get_comm_if_active(self, comm)
+        self.comm = comm
 
     def _set_vars_as_remote(self):
         """
