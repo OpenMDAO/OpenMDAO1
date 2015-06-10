@@ -731,10 +731,10 @@ class Group(System):
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
-                        pslice = pvec._slices[pname]
+                        pslice = pvec._slices.get(pname, (-1,-1))
                         pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [('%d:%d' % pvec._slices[p]) for p in pnames]
+                        pslice = [('%d:%d' % pvec._slices.get(p, (-1,-1))) for p in pnames]
                         if len(pslice) > 1:
                             pslice = ','.join(pslice)
                         else:

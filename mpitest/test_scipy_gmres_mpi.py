@@ -18,6 +18,7 @@ from openmdao.test.testutil import assert_rel_error
 
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 from openmdao.test.mpiunittest import MPITestCase
+from openmdao.devtools.debug import debug
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
@@ -49,26 +50,26 @@ class TestScipyGMRES(MPITestCase):
         #assert_rel_error(self, J['sub:comp2:y']['p:x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub:comp3:y']['p:x'][0][0], 15.0, 1e-6)
 
-    def test_fan_in_grouped(self):
+    #def test_fan_in_grouped(self):
 
-        top = Problem(impl=impl)
-        top.root = FanInGrouped()
-        top.root.lin_solver = ScipyGMRES()
-        top.setup()
-        top.run()
+        #top = Problem(impl=impl)
+        #top.root = FanInGrouped()
+        #top.root.lin_solver = Petsc_KSP()
+        #top.setup()
+        #top.run()
 
-        param_list = ['p1:x1', 'p2:x2']
-        unknown_list = ['comp3:y']
+        #param_list = ['p1:x1', 'p2:x2']
+        #unknown_list = ['comp3:y']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
+        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #if not MPI or self.comm.rank == 0:
+            #assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
+            #assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
+        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #if not MPI or self.comm.rank == 0:
+            #assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)
+            #assert_rel_error(self, J['comp3:y']['p2:x2'][0][0], 35.0, 1e-6)
 
     #def test_converge_diverge_groups(self):
 

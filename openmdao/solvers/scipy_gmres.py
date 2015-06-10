@@ -7,6 +7,7 @@ import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.solvers.solverbase import LinearSolver
+from openmdao.devtools.debug import debug
 
 
 class ScipyGMRES(LinearSolver):
@@ -99,6 +100,6 @@ class ScipyGMRES(LinearSolver):
         system.apply_linear(system.params, system.unknowns, system.dparams,
                             system.dunknowns, system.dresids, mode)
 
-        #print ("arg", arg)
-        #print ("result", rhs_vec.vec)
+        debug ("arg", arg)
+        debug ("result", rhs_vec.vec)
         return rhs_vec.vec[:]

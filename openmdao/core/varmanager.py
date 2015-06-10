@@ -153,26 +153,28 @@ class VarManagerBase(object):
                 start = len(sys_pathname)+1 if sys_pathname else 0
 
                 tgt_sys = param[start:].split(':', 1)[0]
+                src_sys = unknown[start:].split(':', 1)[0]
+
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+
                 rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
-                    xfer_dict.setdefault((tgt_sys, 'rev'), ([],[],[],[]))
+                                   xfer_dict.setdefault((src_sys, 'rev'), ([],[],[],[]))
 
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
 
                 if self.unknowns.metadata(urelname).get('pass_by_obj'):
                     byobj_conns.append((prelname, urelname))
-                    rev_byobj_conns.append((prelname, urelname))
                 else: # pass by vector
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
                     #forward
                     vec_conns.append((prelname, urelname))
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
+
                     # reverse
                     rev_vec_conns.append((prelname, urelname))
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
                     rev_src_idx_list.append(sidxs)
                     rev_dest_idx_list.append(didxs)
 

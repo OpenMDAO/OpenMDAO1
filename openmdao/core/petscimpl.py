@@ -13,7 +13,7 @@ from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
 from openmdao.devtools.debug import debug
 
-trace = os.environ.get('TRACE_COLLECTIVE')
+trace = os.environ.get('TRACE_PETSC')
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""

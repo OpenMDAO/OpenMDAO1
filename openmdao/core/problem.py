@@ -18,6 +18,7 @@ from openmdao.core.driver import Driver
 from openmdao.core.mpiwrap import MPI, FakeComm
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
+from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -142,6 +143,12 @@ class Problem(System):
         param_owners = assign_parameters(connections)
 
         # TODO: create dependency graph
+
+        # deps holds the forward and reverse dependencies for each variable
+        self.deps = {
+            'fwd': {},
+            'rev': {}
+        }
 
         # TODO: create a dict that maps each unknown of interest to its fwd deps
         # TODO: create a dict that maps each unknown of interest to its rev deps
