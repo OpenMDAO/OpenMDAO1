@@ -193,7 +193,7 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
-    def _setup_vectors(self, param_owners, connections, parent,
+    def _setup_vectors(self, param_owners, connections, vardeps, parent,
                        top_unknowns=None, impl=BasicImpl):
         """
         Set up local `VecWrapper`s to store this component's variables.
@@ -207,6 +207,11 @@ class Component(System):
         connections : dict
             a dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to
+
+        vardeps : dict
+            A dictionary of dictionaries that maps full variable pathnames to all
+            of their 'downstream' variables, where 'downstream' depends on mode, which
+            can be 'fwd' or 'rev'.
 
         parent : `Group`
             The parent `Group`.

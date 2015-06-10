@@ -130,7 +130,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(param_owners, expected_owners)
 
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections)
+        root._setup_vectors(param_owners, connections, {'fwd':(), 'rev':()})
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:C1:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
@@ -242,7 +242,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(param_owners, expected_owners)
 
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections)
+        root._setup_vectors(param_owners, connections, {'fwd':(), 'rev':()})
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']

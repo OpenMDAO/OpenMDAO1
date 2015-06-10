@@ -311,7 +311,7 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent=None,
+    def _setup_vectors(self, param_owners, connections, vardeps, parent=None,
                        top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
@@ -325,6 +325,11 @@ class Group(System):
         connections : dict
             A dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to.
+
+        vardeps : dict
+            A dictionary of dictionaries that maps full variable pathnames to all
+            of their 'downstream' variables, where 'downstream' depends on mode, which
+            can be 'fwd' or 'rev'.
 
         parent : `Group`, optional
             The `Group` that contains this `Group`, if any, into which this
@@ -348,7 +353,7 @@ class Group(System):
             self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections,
+            sub._setup_vectors(param_owners, connections, vardeps,
                                parent=self, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):

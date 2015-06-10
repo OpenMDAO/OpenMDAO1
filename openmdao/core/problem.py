@@ -9,6 +9,7 @@ import sys
 
 # pylint: disable=E0611, F0401
 import numpy as np
+import networkx as nx
 
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
@@ -142,19 +143,16 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
-        # TODO: create dependency graph
+        vgraph = _setup_graph(params_dict, unknowns_dict, connections)
 
-        # deps holds the forward and reverse dependencies for each variable
-        self.deps = {
-            'fwd': {},
-            'rev': {}
-        }
+        # _deps holds the forward and reverse dependencies for each variable
+        self._deps = {}
 
-        # TODO: create a dict that maps each unknown of interest to its fwd deps
-        # TODO: create a dict that maps each unknown of interest to its rev deps
+        self._deps['fwd'] = get_successor_vars(vgraph, params_dict)
+        self._deps['rev'] = get_successor_vars(vgraph.reverse(), unknowns_dict)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, impl=self._impl)
+        self.root._setup_vectors(param_owners, connections, self._deps, impl=self._impl)
 
         # Prep for case recording
         for recorder in self.driver.recorders:
@@ -846,3 +844,72 @@ def _get_implicit_connections(params_dict, unknowns_dict):
             connections[p] = uabs[0]
 
     return connections
+
+def _setup_graph(params_dict, unknowns_dict, connections):
+    """
+    Set up a dependency graph for all variables in the Problem.
+
+    Parameters
+    ----------
+    params_dict : dict
+        Dictionary mapping all parameters to their metadata.
+
+    unknowns_dict : dict
+        Dictionary mapping all unknowns to their metadata.
+
+    connections : dict
+        Dictionary mapping target var absolute names to source var absolute names.
+
+    Returns
+    -------
+    nx.DiGraph
+        A graph containing all variables and their connections
+
+    """
+
+    vgraph = nx.DiGraph()  # var graph
+
+    compins = {}  # maps input vars to components
+    compouts = {} # maps output vars to components
+
+    for param in params_dict:
+        tcomp = param.rsplit(':',1)[0]
+        compins.setdefault(tcomp, []).append(param)
+
+    for unknown in unknowns_dict:
+        scomp = unknown.rsplit(':',1)[0]
+        compouts.setdefault(scomp, []).append(unknown)
+
+    for target, source in connections.items():
+        vgraph.add_edge(source, target)
+
+    # connect inputs to outputs on same component in order to fully
+    # connect the variable graph.
+    for comp, inputs in compins.items():
+        for inp in inputs:
+            for out in compouts.get(comp, ()):
+                vgraph.add_edge(inp, out)
+
+    return vgraph
+
+def get_successor_vars(g, excludes):
+    """
+    Parameters
+    ----------
+    g : nx.DiGraph
+        A graph of variable dependencies.
+
+    excludes : collection of str
+        Don't store sucessors for any vars in excludes.
+
+    Returns
+    -------
+    dict
+        Dictionary that maps a variable name to all other variables in the graph that it
+        depends on.
+    """
+    succs = {}
+    for node in g:
+        if node not in excludes:
+            succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
+    return succs
