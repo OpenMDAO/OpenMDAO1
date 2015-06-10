@@ -141,6 +141,11 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
+        # TODO: create dependency graph
+
+        # TODO: create a dict that maps each unknown of interest to its fwd deps
+        # TODO: create a dict that maps each unknown of interest to its rev deps
+
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, impl=self._impl)
 

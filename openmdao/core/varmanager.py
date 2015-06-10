@@ -145,8 +145,6 @@ class VarManagerBase(object):
 
         self.app_ordering = self.impl_factory.create_app_ordering(self)
 
-        # TODO: obtain distributed idx info from system to populate self.distib_idxs
-
         xfer_dict = {}
         for param, unknown in self.connections.items():
             if param in my_params:
@@ -156,7 +154,7 @@ class VarManagerBase(object):
 
                 tgt_sys = param[start:].split(':', 1)[0]
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                                   xfer_dict.setdefault(tgt_sys, ([],[],[],[]))
+                                   xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
 
@@ -168,11 +166,14 @@ class VarManagerBase(object):
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
-        for tgt_sys, (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
+        for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
-                self.data_xfer[tgt_sys] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                             vec_conns, byobj_conns)
+                self.data_xfer[(tgt_sys, mode)] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                                                     vec_conns, byobj_conns)
+                # FIXME: do a real rev scatter
+                self.data_xfer[(tgt_sys, 'rev')] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                                                     vec_conns, byobj_conns)
 
         # create a DataXfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
@@ -190,8 +191,9 @@ class VarManagerBase(object):
             full_byobjs.extend(byobjs)
 
         src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-        self.data_xfer[''] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                full_flats, full_byobjs)
+        self.data_xfer[('','fwd')] = self.data_xfer[('','rev')] = \
+            self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                               full_flats, full_byobjs)
 
     def _transfer_data(self, target_system='', mode='fwd', deriv=False):
         """Transfer data to/from target_system depending on mode.
@@ -208,7 +210,7 @@ class VarManagerBase(object):
         deriv : bool, optional
             If True, perform a data transfer between derivative `VecWrappers`.
         """
-        x = self.data_xfer.get(target_system)
+        x = self.data_xfer.get((target_system, mode))
         if x is not None:
             if deriv:
                 x.transfer(self.dunknowns, self.dparams, mode, deriv=True)
