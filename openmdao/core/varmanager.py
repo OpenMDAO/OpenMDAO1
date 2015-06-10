@@ -155,45 +155,54 @@ class VarManagerBase(object):
                 tgt_sys = param[start:].split(':', 1)[0]
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+                rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
+                    xfer_dict.setdefault((tgt_sys, 'rev'), ([],[],[],[]))
+
                 urelname = self.unknowns.get_relative_varname(unknown)
                 prelname = self.params.get_relative_varname(param)
 
                 if self.unknowns.metadata(urelname).get('pass_by_obj'):
                     byobj_conns.append((prelname, urelname))
+                    rev_byobj_conns.append((prelname, urelname))
                 else: # pass by vector
+                    #forward
                     vec_conns.append((prelname, urelname))
                     sidxs, didxs = self._get_global_idxs(urelname, prelname)
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
+                    # reverse
+                    rev_vec_conns.append((prelname, urelname))
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
+                    rev_src_idx_list.append(sidxs)
+                    rev_dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
                 self.data_xfer[(tgt_sys, mode)] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
                                                                                      vec_conns, byobj_conns)
-                # FIXME: do a real rev scatter
-                self.data_xfer[(tgt_sys, 'rev')] = self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                                                                     vec_conns, byobj_conns)
 
         # create a DataXfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataXfer
         # object under the name ''.
-        full_srcs = []
-        full_tgts = []
-        full_flats = []
-        full_byobjs = []
 
-        for src, tgts, flats, byobjs in xfer_dict.values():
-            full_srcs.extend(src)
-            full_tgts.extend(tgts)
-            full_flats.extend(flats)
-            full_byobjs.extend(byobjs)
+        for mode in ('fwd', 'rev'):
+            full_srcs = []
+            full_tgts = []
+            full_flats = []
+            full_byobjs = []
+            for (tgt_sys, direction), (srcs, tgts, flats, byobjs) in xfer_dict.items():
+                if mode == direction:
+                    full_srcs.extend(srcs)
+                    full_tgts.extend(tgts)
+                    full_flats.extend(flats)
+                    full_byobjs.extend(byobjs)
 
-        src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-        self.data_xfer[('','fwd')] = self.data_xfer[('','rev')] = \
-            self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
-                                               full_flats, full_byobjs)
+            src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
+            self.data_xfer[('', mode)] = \
+                self.impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                   full_flats, full_byobjs)
 
     def _transfer_data(self, target_system='', mode='fwd', deriv=False):
         """Transfer data to/from target_system depending on mode.
