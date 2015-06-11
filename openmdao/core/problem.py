@@ -145,18 +145,13 @@ class Problem(System):
         self.root._setup_vectors(param_owners, connections, impl=self._impl)
 
         # Prep for case recording
-        for recorder in self.driver.recorders:
-            recorder.startup()
+        self._start_recorders()
 
     def run(self):
         """ Runs the Driver in self.driver. """
 
         if self.root.is_active():
             self.driver.run(self.root)
-            # Should only happen in top Problem?
-            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
-            for recorder in self.driver.recorders:
-                recorder.record(params, unknowns, resids)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
@@ -615,6 +610,15 @@ class Problem(System):
 
         return data
 
+    def _start_recorders(self):
+        for recorder in self.driver.recorders:
+            recorder.startup(self.root)
+
+        for group, solvers in _find_all_solvers(self.root):
+            for solver in solvers:
+                for recorder in solver.recorders:
+                    recorder.startup(group)
+
 def _setup_units(connections, params_dict, unknowns_dict):
     """
     Calculate unit conversion factors for any connected
@@ -672,6 +676,13 @@ def assign_parameters(connections):
 
     return param_owners
 
+
+def _find_all_solvers(group):
+    """Recursively finds all solvers in the given group and sub-groups."""
+    yield (group, (group.ln_solver, group.nl_solver))
+    for _, sub in group.subgroups():
+        for solvers in _find_all_solvers(sub):
+            yield solvers
 
 def _find_all_comps(group):
     """ Recursive function that assembles a dictionary whose keys are Group
