@@ -165,6 +165,77 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_explicit_connection_errors(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_state('x', 0)
+
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', 0)
+                
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        
+        problem.root.connect('A:x', 'B:x')
+        problem.setup()
+        
+        expected_error_message = ("Source 'A:y' cannot be connected to target 'B:x': "
+                                  "'A:y' does not exist.")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        problem.root.connect('A:y', 'B:x')
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+            
+        self.assertEqual(str(cm.exception), expected_error_message)
+        
+        expected_error_message = ("Source 'A:x' cannot be connected to target 'B:y': "
+                                  "'B:y' does not exist.")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        problem.root.connect('A:x', 'B:y')
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+            
+        self.assertEqual(str(cm.exception), expected_error_message)
+        
+        expected_error_message = ("Source 'B:x' cannot be connected to target 'A:x': "
+                                  "Source must be an unknown but 'B:x' is a parameter.")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        problem.root.connect('B:x', 'A:x')
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+            
+        self.assertEqual(str(cm.exception), expected_error_message)
+        
+        expected_error_message = ("Source 'A:x' cannot be connected to target 'A:x': "
+                                  "Target must be a parameter but 'A:x' is an unknown.")
+        problem = Problem()
+        problem.root = Group()
+        problem.root.add('A', A())
+        problem.root.add('B', B())
+        problem.root.connect('A:x', 'A:x')
+        
+        with self.assertRaises(ConnectError) as cm:
+            problem.setup()
+            
+        self.assertEqual(str(cm.exception), expected_error_message)
+            
     def test_check_connections(self):
         class A(Component):
             def __init__(self):
