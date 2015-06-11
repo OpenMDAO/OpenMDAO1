@@ -347,7 +347,7 @@ class Group(System):
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._varmanager = VarManager(self, my_params, connections, impl=impl)
+            self._varmanager = VarManager(self, my_params, connections, vardeps, impl=impl)
             top_unknowns = self._varmanager.unknowns
         else:
             self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)

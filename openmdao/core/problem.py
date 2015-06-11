@@ -146,10 +146,10 @@ class Problem(System):
         vgraph = _setup_graph(params_dict, unknowns_dict, connections)
 
         # _deps holds the forward and reverse dependencies for each variable
-        self._deps = {}
-
-        self._deps['fwd'] = get_successor_vars(vgraph, params_dict)
-        self._deps['rev'] = get_successor_vars(vgraph.reverse(), unknowns_dict)
+        self._deps = {
+            'fwd': get_successor_vars(vgraph, params_dict),
+            'rev': get_successor_vars(vgraph.reverse(), unknowns_dict)
+        }
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, self._deps, impl=self._impl)

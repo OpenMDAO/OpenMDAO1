@@ -66,13 +66,13 @@ class CompFDTestCase(unittest.TestCase):
                              'shape': 2, 'size' : 2}
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_byobjs=True)
+        params.setup(params_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_byobjs=True)
+        unknowns.setup(unknowns_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_byobjs=True)
+        resids.setup(resids_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         jac = self.p.subsystem('c1').fd_jacobian(params, unknowns, resids)
         self.assertEqual(set(expected_keys), set(jac.keys()))
@@ -98,13 +98,13 @@ class CompFDTestCase(unittest.TestCase):
                              'shape': 2, 'size' : 2 }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_byobjs=True)
+        params.setup(params_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_byobjs=True)
+        unknowns.setup(unknowns_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_byobjs=True)
+        resids.setup(resids_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         self.p.subsystem('c1').solve_nonlinear(params, unknowns, resids)
 
@@ -136,13 +136,13 @@ class CompFDTestCase(unittest.TestCase):
                              'shape': (2,2), 'size' : 4 }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_byobjs=True)
+        params.setup(params_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_byobjs=True)
+        unknowns.setup(unknowns_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_byobjs=True)
+        resids.setup(resids_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         self.p.subsystem('c1').solve_nonlinear(params, unknowns, resids)
 
@@ -185,13 +185,13 @@ class CompFDTestCase(unittest.TestCase):
                              'shape': (1,), 'size' : 1 }
 
         params = SrcVecWrapper()
-        params.setup(params_dict, store_byobjs=True)
+        params.setup(params_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_byobjs=True)
+        unknowns.setup(unknowns_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_byobjs=True)
+        resids.setup(resids_dict, {'fwd':None, 'rev':None}, store_byobjs=True)
 
         # Partials
 

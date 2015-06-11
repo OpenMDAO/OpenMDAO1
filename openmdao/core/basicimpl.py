@@ -68,6 +68,3 @@ class BasicImpl(object):
         """
         return DataXfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
-    @staticmethod
-    def create_app_ordering(varmanager):
-        pass

@@ -522,7 +522,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, store_byobjs=False):
+    def setup(self, unknowns_dict, vardeps, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -596,9 +596,9 @@ class SrcVecWrapper(VecWrapper):
         ndarray
             1x<num_vector_vars> array of sizes.
         """
-        sizes = [m['size'] for m in self.values()
+        sizes = [(n,m['size']) for n,m in self.items()
                  if not m.get('pass_by_obj') and not m.get('remote')]
-        return numpy.array([sizes], int)
+        return [sizes]
 
     def _var_idx(self, name):
         """
@@ -621,7 +621,7 @@ class SrcVecWrapper(VecWrapper):
 
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, store_byobjs=False):
+              connections, vardeps, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -771,10 +771,16 @@ class TgtVecWrapper(VecWrapper):
         ndarray
             Array containing sum of local sizes of params in our internal vector.
         """
-        psizes = [m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('pass_by_obj') and not m.get('remote')]
-        return numpy.array([sum(psizes)], int)
+        psizes = []
+        for name, m in self.items():
+            if m.get('pass_by_obj') or not m.get('owned'):
+                continue
+            if m.get('remote'):
+                psizes.append((name, 0))
+            else:
+                psizes.append((name, m['size']))
 
+        return [psizes]
 
 
 def idx_merge(idxs):

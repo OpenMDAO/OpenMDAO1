@@ -225,7 +225,7 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._vecs = create_views(top_unknowns, parent._varmanager, self, [], connections)
+        self._vecs = create_views(top_unknowns, parent._varmanager, self, [])
 
         params = self._vecs.params
 

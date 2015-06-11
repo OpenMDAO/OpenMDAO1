@@ -72,55 +72,12 @@ class PetscImpl(object):
         """
         return PetscDataXfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
-    @staticmethod
-    def create_app_ordering(varmanager):
-        """Creates a PETSc application ordering."""
-        comm = varmanager.comm
-
-        local_unknown_sizes = varmanager._local_unknown_sizes
-        unknowns_vec = varmanager.unknowns
-        rank = comm.rank
-
-        start = numpy.sum(local_unknown_sizes[:rank])
-        end = numpy.sum(local_unknown_sizes[:rank+1])
-        to_idx_array = unknowns_vec.make_idx_array(start, end)
-
-        app_idxs = []
-
-        # Each column in the _local_unknown_sizes table corresponds to a
-        # fully distributed variable and contains the local sizes of that
-        # variable in each process. The row corresponds to the rank.
-        # (col=var, row=proc)
-        # So in order to get the offset into the full distributed vector
-        # containing all variables, you need to add the full distributed
-        # sizes of all the variables up to the current variable (ivar)
-        # plus the sizes of all of the distributed parts of ivar in the
-        # current column for ranks below the current rank.
-        for ivar, (name, v) in enumerate(unknowns_vec.get_vecvars()):
-            start = numpy.sum(local_unknown_sizes[:,    :ivar]) + \
-                    numpy.sum(local_unknown_sizes[:rank, ivar])
-            end = start + local_unknown_sizes[rank, ivar]
-            app_idxs.append(unknowns_vec.make_idx_array(start, end))
-
-        if app_idxs:
-            app_idxs = numpy.concatenate(app_idxs)
-
-        if trace:
-            debug("'%s': making index sets for app ordering:\n      app: %s\n      petsc: %s" %
-                  (varmanager.unknowns.pathname, app_idxs, to_idx_array))
-        app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
-        petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
-
-        if trace:
-            debug("creating app ordering")
-        return PETSc.AO().createBasic(app_ind_set, petsc_ind_set, comm=comm)
-
 
 class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
 
-    def setup(self, unknowns_dict, store_byobjs=False):
+    def setup(self, unknowns_dict, vardeps, store_byobjs=False):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -134,7 +91,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
-        super(PetscSrcVecWrapper, self).setup(unknowns_dict, store_byobjs=store_byobjs)
+        super(PetscSrcVecWrapper, self).setup(unknowns_dict, vardeps, store_byobjs=store_byobjs)
         if trace:
             debug("'%s': creating src petsc_vec: vec=%s" %
                   (self.pathname, self.vec))
@@ -146,31 +103,20 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         Returns
         -------
-        ndarray
+        list of tuples of the form (name, size)
             Array containing local sizes of 'pass by vector' unknown variables
             for every process in our communicator.
         """
         sizes = []
         for name, meta in self.get_vecvars():
             if meta.get('remote'):
-                sizes.append(0)
+                sizes.append((name, 0))
             else:
-                sizes.append(meta['size'])
+                sizes.append((name, meta['size']))
 
-        # create 2D array of variable sizes per process
-        local_unknown_sizes = numpy.zeros((self.comm.size, len(sizes)), int)
-
-        # create a vec indicating whether a 'pass by object' variable is active
-        # in this rank or not
-        #self.byobj_isactive = numpy.zeros((size, len(self.byobj_vars)), int)
-
-        # create row in the local_unknown_sizes table for this process
-        our_row = numpy.zeros((1, len(sizes)), int)
-        our_row[0, :] = sizes
-
-        #our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
-        #for i, (name, meta) in enumerate(self.get_byobjs()):
-            #our_byobjs[0, i] = int(self.is_variable_local(name[0]))
+        ##our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
+        ##for i, (name, meta) in enumerate(self.get_byobjs()):
+            ##our_byobjs[0, i] = int(self.is_variable_local(name[0]))
 
         # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
@@ -179,13 +125,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # only have a slice of each of the component's variables.
         if trace:
             debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
-                                                                        our_row[0,:]))
-        self.comm.Allgather(our_row[0,:], local_unknown_sizes)
-        #comm.Allgather(our_byobjs[0,:], self.byobj_isactive)
+                                                                        sizes))
+        size_table = self.comm.allgather(sizes)
 
-        local_unknown_sizes[self.comm.rank, :] = our_row[0, :]
-
-        return local_unknown_sizes
+        return size_table
 
     def norm(self):
         """
@@ -212,7 +155,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, store_byobjs=False):
+              connections, vardeps, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -249,20 +192,22 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
     def _get_flattened_sizes(self):
         """
-        Create a 1x1 numpy array to hold the sum of the sizes of local
-        'pass by vector' params.
+        Create a list of lists, one list per process, where each process list
+        contains tuples of the form (varname, local_size).
 
         Returns
         -------
-        ndarray
-            Array containing sum of local sizes of 'pass by vector' params.
+        list of list of tuples of the form (varname, local_size)
+            List containing local sizes of 'pass by vector' params for each
+            process.
         """
-        psize = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
+        psizes = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
 
         if trace:
-            debug("'%s': allgathering param sizes.  local param size = %d" % (self.pathname,
-                                                                              psize))
-        return numpy.array(self.comm.allgather(psize), int)
+            debug("'%s': allgathering param sizes.  local param sizes = %s" % (self.pathname,
+                                                                              psizes))
+        return self.comm.allgather(psizes)
+
 
 class PetscDataXfer(DataXfer):
     """
@@ -302,9 +247,6 @@ class PetscDataXfer(DataXfer):
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
-        if trace:
-            debug("'%s': converting src indices from app order: %s" % (name, src_idx_set.indices))
-        src_idx_set = varmanager.app_ordering.app2petsc(src_idx_set)
         if trace:
             debug("'%s': petsc indices: %s" % (name, src_idx_set.indices))
 
