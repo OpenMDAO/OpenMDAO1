@@ -58,6 +58,42 @@ class VarManagerBase(object):
             raise KeyError("'%s' is not in the %s vector for this system" %
                            (name, vector))
 
+    def _get_global_offset(self, name, var_rank, sizes_table):
+        """
+        Parameters
+        ----------
+        name : str
+            The variable name.
+
+        var_rank : int
+            The rank the the offset is requested for.
+
+        sizes_table : list of tuple of (name, size)
+            Size information for all vars in all ranks.
+
+        Returns
+        -------
+        int
+            The offset into the distributed vector for the named variable
+            in the specified rank (process).
+        """
+        offset = 0
+        rank = 0
+
+        # first get the offset of the distributed storage for var_rank
+        while rank < var_rank:
+            for vname, size in sizes_table[rank]:
+                offset += size
+            rank += 1
+
+        # now, get the offset into the var_rank storage for the variable
+        for vname, size in sizes_table[var_rank]:
+            if vname == name:
+                break
+            offset += size
+
+        return offset
+
     def _get_global_idxs(self, uname, pname):
         """
         Parameters
@@ -85,45 +121,14 @@ class VarManagerBase(object):
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
-        # get the offset to the beginning of local storage in the distributed
-        # vector
         var_rank = self._get_owning_rank(uname)
-
-        offset = 0
-        rank = 0
-        while rank < var_rank:
-            for vname, size in self._local_unknown_sizes[rank]:
-                offset += size
-            rank += 1
-
-        # now, we need the offset into the owning rank storage for the variable
-        for vname, size in self._local_unknown_sizes[var_rank]:
-            if vname == uname:
-                break
-            offset += size
-
-        debug("slices:",self.unknowns._slices)
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
         src_idxs = arg_idxs + offset
 
         myrank = self.unknowns.comm.rank if self.unknowns.comm else 0
 
-        tgt_start = 0
-        rank = 0
-        while rank < myrank:
-            for vname, size in self._local_param_sizes[rank]:
-                tgt_start += size
-            rank += 1
-
-        for vname, size in self._local_param_sizes[myrank]:
-            if vname == pname:
-                break
-            tgt_start += size
-
-        debug('tgt_start:',tgt_start)
-        #tgt_idxs = tgt_start + self.params._slices[pname][0] + \
-            #self.params.make_idx_array(0, len(arg_idxs))
-        tgt_idxs = tgt_start + \
-            self.params.make_idx_array(0, len(arg_idxs))
+        tgt_start = self._get_global_offset(pname, myrank, self._local_param_sizes)
+        tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
 
