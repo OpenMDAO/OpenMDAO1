@@ -68,7 +68,7 @@ class VarManagerBase(object):
         var_rank : int
             The rank the the offset is requested for.
 
-        sizes_table : list of tuple of (name, size)
+        sizes_table : list of OrderDicts mappging var name to size.
             Size information for all vars in all ranks.
 
         Returns
@@ -82,19 +82,18 @@ class VarManagerBase(object):
 
         # first get the offset of the distributed storage for var_rank
         while rank < var_rank:
-            for vname, size in sizes_table[rank]:
-                offset += size
+            offset += sum(sizes_table[rank].values())
             rank += 1
 
         # now, get the offset into the var_rank storage for the variable
-        for vname, size in sizes_table[var_rank]:
+        for vname, size in sizes_table[var_rank].items():
             if vname == name:
                 break
             offset += size
 
         return offset
 
-    def _get_global_idxs(self, uname, pname):
+    def _get_global_idxs(self, uname, pname, relevant_vars, mode):
         """
         Parameters
         ----------
@@ -110,10 +109,12 @@ class VarManagerBase(object):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
+        umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
-        if pmeta.get('remote'):
+
+        # FIXME: if we switch to push scatters, this check will flip
+        if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
             # just return empty index arrays for remote vars
-            debug("returning empty for",pname)
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if pname in self.distrib_idxs:
@@ -121,13 +122,12 @@ class VarManagerBase(object):
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
-        var_rank = self._get_owning_rank(uname)
+        var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
         offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
         src_idxs = arg_idxs + offset
 
-        myrank = self.unknowns.comm.rank if self.unknowns.comm else 0
-
-        tgt_start = self._get_global_offset(pname, myrank, self._local_param_sizes)
+        var_rank = self._get_owning_rank(pname, self._local_param_sizes)
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes)
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
@@ -177,13 +177,14 @@ class VarManagerBase(object):
                 if self.unknowns.metadata(urelname).get('pass_by_obj'):
                     byobj_conns.append((prelname, urelname))
                 else: # pass by vector
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname)
                     #forward
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname, None, 'fwd')
                     vec_conns.append((prelname, urelname))
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
                     # reverse
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname, None, 'rev')
                     rev_vec_conns.append((prelname, urelname))
                     rev_src_idx_list.append(sidxs)
                     rev_dest_idx_list.append(didxs)
@@ -252,12 +253,15 @@ class VarManagerBase(object):
                         self.resids,   self.dresids,
                         self.params,   self.dparams)
 
-    def _get_owning_rank(self, name):
+    def _get_owning_rank(self, name, sizes_table):
         """
         Parameters
         ----------
         name : str
             Name of the variable to find the owning rank for
+
+        sizes_table : list of ordered dicts mapping name to size
+            Size info for all vars in all ranks.
 
         Returns
         -------
@@ -268,12 +272,11 @@ class VarManagerBase(object):
         if self.comm is None:
             return 0
 
-        vidx = self.unknowns._var_idx(name)
-        if self._local_unknown_sizes[self.comm.rank][vidx][1]:
+        if sizes_table[self.comm.rank][name]:
             return self.comm.rank
         else:
             for i in range(self.comm.size):
-                if self._local_unknown_sizes[i][vidx][1]:
+                if sizes_table[i][name]:
                     return i
             else:
                 raise RuntimeError("Can't find a source for '%s' with a non-zero size" %

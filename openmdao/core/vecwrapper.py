@@ -596,8 +596,8 @@ class SrcVecWrapper(VecWrapper):
         ndarray
             1x<num_vector_vars> array of sizes.
         """
-        sizes = [(n,m['size']) for n,m in self.items()
-                 if not m.get('pass_by_obj') and not m.get('remote')]
+        sizes = OrderedDict([(n,m['size']) for n,m in self.items()
+                 if not m.get('pass_by_obj') and not m.get('remote')])
         return [sizes]
 
     def _var_idx(self, name):
@@ -771,14 +771,14 @@ class TgtVecWrapper(VecWrapper):
         ndarray
             Array containing sum of local sizes of params in our internal vector.
         """
-        psizes = []
+        psizes = OrderedDict()
         for name, m in self.items():
             if m.get('pass_by_obj') or not m.get('owned'):
                 continue
             if m.get('remote'):
-                psizes.append((name, 0))
+                psizes[name] = 0
             else:
-                psizes.append((name, m['size']))
+                psizes[name] = m['size']
 
         return [psizes]
 

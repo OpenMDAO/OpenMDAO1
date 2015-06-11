@@ -145,6 +145,14 @@ class Problem(System):
 
         vgraph = _setup_graph(params_dict, unknowns_dict, connections)
 
+        # determine parallel groups of quantities of interest (constraints, objectives)
+        self.output_groups = []
+        for entry in self.driver._outputs_of_interest:
+            if isinstance(entry, string_types):
+                self.output_groups.append((entry,))
+            else:
+                self.output_groups.append(tuple(entry))
+
         # _deps holds the forward and reverse dependencies for each variable
         self._deps = {
             'fwd': get_successor_vars(vgraph, params_dict),

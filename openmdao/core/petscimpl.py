@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
+from collections import OrderedDict
 import numpy
 
 import petsc4py
@@ -107,16 +108,12 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Array containing local sizes of 'pass by vector' unknown variables
             for every process in our communicator.
         """
-        sizes = []
+        sizes = OrderedDict()
         for name, meta in self.get_vecvars():
             if meta.get('remote'):
-                sizes.append((name, 0))
+                sizes[name] = 0
             else:
-                sizes.append((name, meta['size']))
-
-        ##our_byobjs = numpy.zeros((1, len(self.get_byobjs())), int)
-        ##for i, (name, meta) in enumerate(self.get_byobjs()):
-            ##our_byobjs[0, i] = int(self.is_variable_local(name[0]))
+                sizes[name] = meta['size']
 
         # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases

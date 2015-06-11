@@ -27,6 +27,11 @@ class System(object):
 
         self.comm = None
 
+        # dicts of vectors used for parallel solution of multiple RHS
+        self.umat = {}
+        self.pmat = {}
+        self.rmat = {}
+
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
                                    desc="Set to True to finite difference this system.")
