@@ -1,5 +1,5 @@
-Package openmdao.core
----------------------
+openmdao.core
+-------------
 .. toctree::
     :maxdepth: 2
 

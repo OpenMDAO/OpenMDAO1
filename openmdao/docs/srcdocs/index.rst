@@ -1,8 +1,8 @@
 .. _source_documentation:
 
-====================
-Source Documentation
-====================
+=============================
+OpenMDAO Source Documentation
+=============================
 
 .. toctree::
    :maxdepth: 3
