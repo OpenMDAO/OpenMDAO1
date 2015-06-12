@@ -8,7 +8,6 @@ Current version: |version|
    :maxdepth: 2
 
    usr-guide/index.rst
-   srcdocs/index.rst
 
 =========================
 OpenMDAO Developer Guide
@@ -18,6 +17,15 @@ OpenMDAO Developer Guide
    :maxdepth: 1
 
    dev-guide/index.rst
+
+=============================
+OpenMDAO Source Documentation
+=============================
+
+.. toctree::
+   :maxdepth: 4
+
+   srcdocs/index.rst
 
 ==============================
 Appendix and Glossary

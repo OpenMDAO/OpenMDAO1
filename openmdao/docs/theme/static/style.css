@@ -1,0 +1,54 @@
+/*
+ * sytle.css
+ * ~~~~~~~~~~~~~
+ *
+ * OpenMDAO stylesheet
+ *
+ */
+
+@import url("sphinxdoc.css");
+
+h1{
+  color: navy;
+}
+
+a {
+    /*color: #005ce6;*/
+    color: navy;
+    text-decoration: none;
+}
+
+a:visited {
+    color: gray;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+div.sphinxsidebar h4{
+  background-color: navy;
+}
+
+div.sphinxsidebar h3{
+  background-color: navy;
+}
+
+div.sphinxsidebar input{
+  border: 1px solid navy;
+
+}
+
+/*parameter bkgrd*/
+table.field-list td, table.field-list th {
+  border: 0 !important;
+}
+
+/*top links "breadcrumbs"*/
+div.related ul li a {
+  margin: 0;
+  padding: 0 5px 0 5px;
+  line-height: 1.75em;
+  color: navy;
+}

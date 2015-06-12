@@ -8,4 +8,5 @@ Source Documentation
    :maxdepth: 3
    :glob:
 
-   packages/*
+   packages/openmdao.core
+   packages/openmdao.solvers

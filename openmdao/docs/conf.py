@@ -78,19 +78,9 @@ release = '1.0.0'
 # Usually you set "language" from the command line for these cases.
 language = None
 
-# There are two options for replacing |today|: either, you set today to some
-# non-false value, then it is used:
-#today = ''
-# Else, today_fmt is used as the format for a strftime call.
-#today_fmt = '%B %d, %Y'
-
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build']
-
-# The reST default role (used for this markup: `text`) to use for all
-# documents.
-#default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
@@ -113,39 +103,18 @@ pygments_style = 'sphinx'
 #keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True
+todo_include_todos = False
 
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#html_theme = 'alabaster'
-html_theme = 'classic'
-
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-html_theme_options = {
-     "headtextcolor": "#000099",
-     "headbgcolor": "#e2b530",
-     "headfont": "Arial",
-     "relbarbgcolor": "#000099",
-     "relbartextcolor": "white",
-     "relbarlinkcolor": "white",
-     "sidebarbgcolor": "#c7c7c7",
-     "sidebartextcolor": "black",
-     "sidebarlinkcolor": "#000099",
-     "footerbgcolor": "white",
-     "footertextcolor": "#000099",
-     "textcolor": "black",
-     "codebgcolor": "#ffffa7",
-     "linkcolor": "#005ce6",
-    }
+html_theme = 'theme'
+#html_theme = 'sphinxdoc'
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ['.']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
