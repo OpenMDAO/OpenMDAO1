@@ -151,7 +151,7 @@ class Problem(System):
         """ Runs the Driver in self.driver. """
 
         if self.root.is_active():
-            self.driver.run(self.root)
+            self.driver.run(self)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):

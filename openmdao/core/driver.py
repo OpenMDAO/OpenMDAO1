@@ -45,7 +45,7 @@ class Driver(object):
         """
         pass
 
-    def list_parameters(self):
+    def get_parameters(self):
         """ Returns a dict of parameters.
 
         Returns
@@ -156,14 +156,15 @@ class Driver(object):
         problems."""
         pass
 
-    def run(self, system):
+    def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
 
         Parameters
         ----------
-        system : `System`
-            `System` that our parent `Problem` owns.
+        problem : `Problem`
+            Our parent `Problem`.
         """
+        system = problem.root
         system.solve_nonlinear()
         for recorder in self.recorders:
             recorder._record(system.params, system.unknowns, system.resids)
