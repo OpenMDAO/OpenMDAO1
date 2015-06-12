@@ -165,3 +165,5 @@ class Driver(object):
             `System` that our parent `Problem` owns.
         """
         system.solve_nonlinear()
+        for recorder in self.recorders:
+            recorder._record(system.params, system.unknowns, system.resids)

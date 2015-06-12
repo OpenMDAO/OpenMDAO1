@@ -29,5 +29,6 @@ class RunOnce(NonLinearSolver):
         system : `System`
             Parent `System` object.
         """
+        #TODO: When to record?
         system.children_solve_nonlinear()
         self.iter_count += 1
