@@ -1,8 +1,9 @@
 from fnmatch import fnmatch
 
 from openmdao.core.options import OptionsDictionary
+from six.moves import filter
 
-class _BaseRecorder(object):
+class BaseRecorder(object):
     """ Base class for all case recorders. """
 
     def __init__(self, driver):
@@ -14,12 +15,14 @@ class _BaseRecorder(object):
         self.options.add_option('save_problem_formulation', True, desc='Save problem formulation '
                                                '(parameters, constraints, etc.)')
 
-    def startup(self):
+    def startup(self, group):
         """ Prepare for new run. """
 
-        # In Classic, only CSV recorder did anything in this method.
-        # All the others did opening of files, etc... in their __init__
-        raise NotImplementedError("startup")
+        # Compute the inclusion lists for recording
+        self._params = list(filter(self._check_path, group.params))
+        self._unknowns = list(filter(self._check_path, group.unknowns))
+        self._resids = list(filter(self._check_path, group.resids))
+
 
     def get_simulation_info(self):
         """ Return simulation info dictionary. """
@@ -37,24 +40,27 @@ class _BaseRecorder(object):
 
     def _check_path(self,path):
         """ Return True if `path` should be recorded. """
-        record = False
 
         includes = self.options['includes']
         excludes = self.options['excludes']
-        
+
         # first see if it's included
         for pattern in includes:
             if fnmatch(path, pattern):
-                record = True
+                # We found a match. Check to see if it is excluded.
+                for ex_pattern in excludes:
+                    if fnmatch(path, ex_pattern):
+                        return False
+                return True
 
-        # if it passes include filter, check exclude filter
-        if record:
-            for pattern in excludes:
-                if fnmatch(path, pattern):
-                    record = False
+        # Did not match anything in includes.
+        return False
 
-        return record
+    def _record(self, params, unknowns, resids):
+        filtered_params = {key:params[key] for key in self._params}
+        filtered_unknowns = {key:unknowns[key] for key in self._unknowns}
+        filtered_resids = {key:resids[key] for key in self._resids}
+        self.record(filtered_params, filtered_unknowns, filtered_resids)
 
     def record(self, params, unknowns, resids):
         raise NotImplementedError("record")
-

@@ -40,6 +40,7 @@ class NLGaussSeidel(NonLinearSolver):
             Parent `System` object.
         """
 
+        #TODO: When to record?
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
@@ -70,4 +71,3 @@ class NLGaussSeidel(NonLinearSolver):
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
-
