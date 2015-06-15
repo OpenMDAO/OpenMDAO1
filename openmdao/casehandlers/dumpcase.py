@@ -3,9 +3,9 @@ import sys
 from six import StringIO, string_types
 from six.moves import cStringIO
 
-from openmdao.casehandlers.baserecorder import _BaseRecorder
+from openmdao.casehandlers.baserecorder import BaseRecorder
 
-class DumpCaseRecorder(_BaseRecorder):
+class DumpCaseRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
     ``stderr``, then that standard stream is used. Otherwise, if `out` is a
@@ -24,8 +24,10 @@ class DumpCaseRecorder(_BaseRecorder):
                 out = open(out, 'w')
         self.out = out
 
-    def startup(self):
+    def startup(self, group):
         """ Write out info that applies to the entire run"""
+        super(DumpCaseRecorder, self).startup(group)
+        
         write = self.out.write
         sim_info = self.get_simulation_info()
         write("Simulation Info:\n")
@@ -47,21 +49,17 @@ class DumpCaseRecorder(_BaseRecorder):
 
         write("Case:\n")
 
-        #TODO: Need to look at Group.dump to see how it handles this
         write("  Params:\n")
-        for param, meta in sorted(params.items()):
-            if self._check_path(param):
-                write("%s: %s\n" % ( param, str(meta['val'])))
+        for param, val in sorted(params.items()):
+            write("%s: %s\n" % ( param, str(val)))
 
         write("  Unknowns:\n")
-        for unknown, meta in sorted(unknowns.items()):
-            if self._check_path(unknown):
-                write("%s: %s\n" % ( unknown, str(meta['val'])))
+        for unknown, val in sorted(unknowns.items()):
+            write("%s: %s\n" % ( unknown, str(val)))
 
         write("  Resids:\n")
-        for resid, meta in sorted(resids.items()):
-            if self._check_path(resid):
-                write("%s: %s\n" % ( resid, str(meta['val'])))
+        for resid, val in sorted(resids.items()):
+            write("%s: %s\n" % ( resid, str(val)))
 
 
     def close(self):
@@ -73,4 +71,3 @@ class DumpCaseRecorder(_BaseRecorder):
                 # Closing a StringIO deletes its contents.
                 self.out.close()
             self.out = None
-

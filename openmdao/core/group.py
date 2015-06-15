@@ -19,6 +19,8 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
+from openmdao.core.checks import ConnectError
+
 
 class Group(System):
     """A system that contains other systems."""
@@ -389,9 +391,32 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, src in self._src.items():
-            src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-            for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
-                connections[tgt_pathname] = src_pathname
+            try:
+                src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
+
+            except KeyError as error:
+                try:
+                    get_absvarpathnames(src, self._params_dict, 'params')
+
+                except KeyError as error:
+                    raise ConnectError.nonexistent_src_error(src, tgt)
+
+                else:
+                    raise ConnectError.invalid_src_error(src, tgt)
+
+            try:
+                for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
+                    connections[tgt_pathname] = src_pathname
+
+            except KeyError as error:
+                try:
+                    get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
+
+                except KeyError as error:
+                    raise ConnectError.nonexistent_target_error(src, tgt)
+
+                else:
+                    raise ConnectError.invalid_target_error(src, tgt)
 
         return connections
 
@@ -794,12 +819,13 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         The absolute pathnames for the given variables in the
         variable dictionary that map to the given relative name.
     """
+
     pnames = []
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
             pnames.append(pathname)
 
     if not pnames:
-        raise RuntimeError("'%s' not found in %s" % (var_name, dict_name))
+        raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 
     return pnames

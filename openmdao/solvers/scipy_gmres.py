@@ -49,6 +49,8 @@ class ScipyGMRES(LinearSolver):
         ndarray : Solution vector
         """
 
+        #TODO: When to record?
+
         n_edge = len(rhs)
         A = LinearOperator((n_edge, n_edge),
                            matvec=self.mult,

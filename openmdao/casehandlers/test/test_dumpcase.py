@@ -16,7 +16,7 @@ class TestDumpCaseRecorder(unittest.TestCase):
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)
@@ -31,37 +31,37 @@ Driver Info:
   Driver Class: Driver
 Case:
   Params:
-comp1:x1: [ 2.]
-comp2:x1: [ 8.]
-comp3:x1: [ 6.]
-comp4:x1: [ 4.]
-comp4:x2: [ 21.]
-comp5:x1: [ 46.]
-comp6:x1: [-93.]
-comp7:x1: [ 36.8]
-comp7:x2: [-46.5]
+comp1:x1: 2.0
+comp2:x1: 8.0
+comp3:x1: 6.0
+comp4:x1: 4.0
+comp4:x2: 21.0
+comp5:x1: 46.0
+comp6:x1: -93.0
+comp7:x1: 36.8
+comp7:x2: -46.5
   Unknowns:
-comp1:y1: [ 8.]
-comp1:y2: [ 6.]
-comp2:y1: [ 4.]
-comp3:y1: [ 21.]
-comp4:y1: [ 46.]
-comp4:y2: [-93.]
-comp5:y1: [ 36.8]
-comp6:y1: [-46.5]
-comp7:y1: [-102.7]
-p:x: [ 2.]
+comp1:y1: 8.0
+comp1:y2: 6.0
+comp2:y1: 4.0
+comp3:y1: 21.0
+comp4:y1: 46.0
+comp4:y2: -93.0
+comp5:y1: 36.8
+comp6:y1: -46.5
+comp7:y1: -102.7
+p:x: 2.0
   Resids:
-comp1:y1: [ 0.]
-comp1:y2: [ 0.]
-comp2:y1: [ 0.]
-comp3:y1: [ 0.]
-comp4:y1: [ 0.]
-comp4:y2: [ 0.]
-comp5:y1: [ 0.]
-comp6:y1: [ 0.]
-comp7:y1: [ 0.]
-p:x: [ 0.]
+comp1:y1: 0.0
+comp1:y2: 0.0
+comp2:y1: 0.0
+comp3:y1: 0.0
+comp4:y1: 0.0
+comp4:y2: 0.0
+comp5:y1: 0.0
+comp6:y1: 0.0
+comp7:y1: 0.0
+p:x: 0.0
 '''
 
         self.assertEqual( sout.getvalue(), expected )
@@ -70,7 +70,7 @@ p:x: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
 
@@ -87,35 +87,35 @@ Driver Info:
   Driver Class: Driver
 Case:
   Params:
-comp1:x1: [ 2.]
-comp2:x1: [ 8.]
-comp3:x1: [ 6.]
-comp4:x1: [ 4.]
-comp4:x2: [ 21.]
-comp5:x1: [ 46.]
-comp6:x1: [-93.]
-comp7:x1: [ 36.8]
-comp7:x2: [-46.5]
+comp1:x1: 2.0
+comp2:x1: 8.0
+comp3:x1: 6.0
+comp4:x1: 4.0
+comp4:x2: 21.0
+comp5:x1: 46.0
+comp6:x1: -93.0
+comp7:x1: 36.8
+comp7:x2: -46.5
   Unknowns:
-comp1:y1: [ 8.]
-comp1:y2: [ 6.]
-comp2:y1: [ 4.]
-comp3:y1: [ 21.]
-comp4:y2: [-93.]
-comp5:y1: [ 36.8]
-comp6:y1: [-46.5]
-comp7:y1: [-102.7]
-p:x: [ 2.]
+comp1:y1: 8.0
+comp1:y2: 6.0
+comp2:y1: 4.0
+comp3:y1: 21.0
+comp4:y2: -93.0
+comp5:y1: 36.8
+comp6:y1: -46.5
+comp7:y1: -102.7
+p:x: 2.0
   Resids:
-comp1:y1: [ 0.]
-comp1:y2: [ 0.]
-comp2:y1: [ 0.]
-comp3:y1: [ 0.]
-comp4:y2: [ 0.]
-comp5:y1: [ 0.]
-comp6:y1: [ 0.]
-comp7:y1: [ 0.]
-p:x: [ 0.]
+comp1:y1: 0.0
+comp1:y2: 0.0
+comp2:y1: 0.0
+comp3:y1: 0.0
+comp4:y2: 0.0
+comp5:y1: 0.0
+comp6:y1: 0.0
+comp7:y1: 0.0
+p:x: 0.0
 '''
 
         self.assertEqual( sout.getvalue(), expected )
@@ -124,7 +124,7 @@ p:x: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
 
@@ -142,9 +142,9 @@ Driver Info:
 Case:
   Params:
   Unknowns:
-comp4:y1: [ 46.]
+comp4:y1: 46.0
   Resids:
-comp4:y1: [ 0.]
+comp4:y1: 0.0
 '''
 
         self.assertEqual( sout.getvalue(), expected )
@@ -153,7 +153,7 @@ comp4:y1: [ 0.]
 
         top = Problem()
         top.root = ConvergeDiverge()
-        top.root.lin_solver = ScipyGMRES()
+        top.root.ln_solver = ScipyGMRES()
 
         sout = StringIO()
         recorder = DumpCaseRecorder(top.driver, sout)
@@ -170,12 +170,12 @@ Driver Info:
   Driver Class: Driver
 Case:
   Params:
-comp4:x1: [ 4.]
-comp4:x2: [ 21.]
+comp4:x1: 4.0
+comp4:x2: 21.0
   Unknowns:
-comp4:y1: [ 46.]
+comp4:y1: 46.0
   Resids:
-comp4:y1: [ 0.]
+comp4:y1: 0.0
 '''
 
         self.assertEqual( sout.getvalue(), expected )
