@@ -919,9 +919,6 @@ def _check_for_matrix_matrix(problem, params, unknowns):
 
     groups = _find_all_comps(problem.root).keys()
     for sub in groups:
-        print(sub.name)
-        sub_params = sub._get_fd_params()
-        sub_unknowns = sub._get_fd_unknowns()
         sub_mode = sub.ln_solver.options['mode']
 
         # Modes much match root for all subs
