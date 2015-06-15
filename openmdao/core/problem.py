@@ -153,6 +153,21 @@ class Problem(System):
         if self.root.is_active():
             self.driver.run(self)
 
+    def _mode(self, mode, param_list, unknown_list):
+        """ Determine the mode based on precedence. The mode in `mode` is
+        first. If that is 'auto', then the mode in root.ln_options takes
+        precedence. If that is 'auto', then mode is determined by the width
+        of the prameter and quantity space."""
+
+        if mode == 'auto':
+            mode = self.root.ln_solver.options['mode']
+            if mode == 'auto':
+                # TODO: Choose based on size
+                msg = 'Automatic mode selction not yet implemented.'
+                raise NotImplementedError(msg)
+
+        return mode
+
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
@@ -325,12 +340,7 @@ class Problem(System):
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
-        if mode == 'auto':
-            mode = root.ln_solver.options['mode']
-            if mode == 'auto':
-                # TODO: Choose based on size
-                msg = 'Automatic mode selction not yet implemented.'
-                raise NotImplementedError(msg)
+        mode = self._mode(mode, param_list, unknown_list)
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list
