@@ -37,15 +37,15 @@ class BasicImpl(object):
         return TgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def create_data_xfer(system, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors.
 
         Parameters
         ----------
-        varmanager : `VarManager`
-            The `VarManager` that managers this data transfer.
+        system : `System`
+            The `System` that managers this data transfer.
 
         src_idxs : array
             Indices of the source variables in the source vector.

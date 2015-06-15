@@ -42,15 +42,15 @@ class PetscImpl(object):
         return PetscTgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def create_data_xfer(system, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors.
 
         Parameters
         ----------
-        varmanager : `VarManager`
-            The `VarManager` that managers this data transfer.
+        system : `System`
+            The `System` that manages this data transfer.
 
         src_idxs : array
             Indices of the source variables in the source vector.
@@ -71,14 +71,14 @@ class PetscImpl(object):
         `PetscDataXfer`
             A `PetscDataXfer` object.
         """
-        return PetscDataXfer(varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns)
+        return PetscDataXfer(system, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PETSc.IntType
 
-    def setup(self, unknowns_dict, vardeps, store_byobjs=False):
+    def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -92,7 +92,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
-        super(PetscSrcVecWrapper, self).setup(unknowns_dict, vardeps, store_byobjs=store_byobjs)
+        super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevant_vars=relevant_vars,
+                                              store_byobjs=store_byobjs)
         if trace:
             debug("'%s': creating src petsc_vec: vec=%s" %
                   (self.pathname, self.vec))
@@ -139,8 +140,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
-    def get_view(self, sys_pathname, comm, varmap):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+    def get_view(self, sys_pathname, comm, varmap, relevance, var_of_interest):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap,
+                                                        relevance, var_of_interest)
         if trace:
             debug("'%s': creating src petsc_vec (view): vec=%s" %
                   (sys_pathname, self.vec))
@@ -152,7 +154,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PETSc.IntType
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, vardeps, store_byobjs=False):
+              connections, relevant_vars=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -181,7 +183,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
-                                              connections, store_byobjs)
+                                              connections, relevant_vars=relevant_vars,
+                                              store_byobjs=store_byobjs)
         if trace:
             debug("'%s': creating tgt petsc_vec: vec=%s" %
                   (self.pathname, self.vec))
@@ -210,37 +213,37 @@ class PetscDataXfer(DataXfer):
     """
     Parameters
     ----------
-    varmanager : `VarManager`
-        The `VarManager` that managers this data transfer
+    system : `System`
+        The `System` that contains the `VecWrappers` used for this data transfer.
 
     src_idxs : array
-        indices of the source variables in the source vector
+        indices of the source variables in the source vector.
 
     tgt_idxs : array
-        indices of the target variables in the target vector
+        indices of the target variables in the target vector.
 
     vec_conns : dict
         mapping of 'pass by vector' variables to the source variables that
-        they are connected to
+        they are connected to.
 
     byobj_conns : dict
         mapping of 'pass by object' variables to the source variables that
-        they are connected to
+        they are connected to.
     """
-    def __init__(self, varmanager, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def __init__(self, system, src_idxs, tgt_idxs, vec_conns, byobj_conns):
         super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
                                             vec_conns, byobj_conns)
 
-        self.comm = comm = varmanager.comm
+        self.comm = comm = system.comm
 
-        uvec = varmanager.unknowns.petsc_vec
-        pvec = varmanager.params.petsc_vec
+        uvec = system.unknowns.petsc_vec
+        pvec = system.params.petsc_vec
 
-        name = varmanager.unknowns.pathname
+        name = system.unknowns.pathname
 
         if trace:
             debug("'%s': creating index sets for '%s' DataXfer:\n      %s\n      %s" %
-                  (name, varmanager.unknowns.pathname, src_idxs, tgt_idxs))
+                  (name, system.unknowns.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
@@ -256,8 +259,8 @@ class PetscDataXfer(DataXfer):
         except Exception as err:
             raise RuntimeError("ERROR in %s (src_idxs=%s, tgt_idxs=%s, usize=%d, psize=%d): %s" %
                                (system.name, src_idxs, tgt_idxs,
-                                varmanager.unknowns.vec.size,
-                                varmanager.params.vec.size, str(err)))
+                                system.unknowns.vec.size,
+                                system.params.vec.size, str(err)))
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """Performs data transfer between a distributed source vector and

@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import warnings
 from itertools import chain
-from six import iteritems
+from six import iteritems, string_types
 import sys
 
 # pylint: disable=E0611, F0401
@@ -143,24 +143,13 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
-        vgraph = _setup_graph(params_dict, unknowns_dict, connections)
-
-        # determine parallel groups of quantities of interest (constraints, objectives)
-        self.output_groups = []
-        for entry in self.driver._outputs_of_interest:
-            if isinstance(entry, string_types):
-                self.output_groups.append((entry,))
-            else:
-                self.output_groups.append(tuple(entry))
-
-        # _deps holds the forward and reverse dependencies for each variable
-        self._deps = {
-            'fwd': get_successor_vars(vgraph, params_dict),
-            'rev': get_successor_vars(vgraph.reverse(), unknowns_dict)
-        }
+        relevance = Relevance(params_dict, unknowns_dict, connections,
+                              self.driver._inputs_of_interest,
+                              self.driver._outputs_of_interest, 'auto')
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, self._deps, impl=self._impl)
+        self.root._setup_vectors(param_owners, connections, relevance=relevance,
+                                 impl=self._impl)
 
         # Prep for case recording
         for recorder in self.driver.recorders:
@@ -172,9 +161,9 @@ class Problem(System):
         if self.root.is_active():
             self.driver.run(self.root)
             # Should only happen in top Problem?
-            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
+
             for recorder in self.driver.recorders:
-                recorder.record(params, unknowns, resids)
+                recorder.record(self.root.params, self.root.unknowns, self.root.resids)
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
@@ -274,7 +263,7 @@ class Problem(System):
                     # The user sometimes specifies the parameter output
                     # name instead of its target because it is more
                     # convenient
-                    for key, val in iteritems(root._varmanager.connections):
+                    for key, val in iteritems(root._relevance.connections):
                         if val == ikey:
                             fd_ikey = key
                             break
@@ -325,8 +314,12 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        root.dunknowns.vec[:] = 0.0
-        root.dresids.vec[:] = 0.0
+        for name in root._relevance.vars_of_interest():
+            root.dumat[name].vec[:] = 0.0
+            root.drmat[name].vec[:] = 0.0
+        root.dumat[None].vec[:] = 0.0
+        root.drmat[None].vec[:] = 0.0
+
         root.jacobian(params, unknowns, root.resids)
 
         rhs = np.zeros((len(unknowns.vec), ))
@@ -368,7 +361,7 @@ class Problem(System):
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
-                param_src = root._varmanager.connections.get(param)
+                param_src = root._relevance.connections.get(param)
                 param_src = unknowns.get_relative_varname(param_src)
                 in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
@@ -389,7 +382,7 @@ class Problem(System):
                     if item in unknowns:
                         out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
-                        param_src = root._varmanager.connections.get(item)
+                        param_src = root._relevance.connections.get(item)
                         param_src = unknowns.get_relative_varname(param_src)
                         out_size, out_idxs = unknowns.get_local_idxs(param_src)
 
@@ -438,11 +431,9 @@ class Problem(System):
         """
 
         root = self.root
-        varmanager = root._varmanager
 
         # Linearize the model
-        root.jacobian(varmanager.params, varmanager.unknowns,
-                      varmanager.resids)
+        root.jacobian(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
@@ -450,6 +441,9 @@ class Problem(System):
         data = {}
         skip_keys = []
         model_hierarchy = _find_all_comps(root)
+
+        # FIXME:
+        voi = None
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
@@ -469,9 +463,9 @@ class Problem(System):
                 params = comp.params
                 unknowns = comp.unknowns
                 resids = comp.resids
-                dparams = comp.dparams
-                dunknowns = comp.dunknowns
-                dresids = comp.dresids
+                dparams = comp.dpmat[voi]
+                dunknowns = comp.dumat[voi]
+                dresids = comp.drmat[voi]
 
                 if out_stream is not None:
                     out_stream.write('-'*(len(cname)+15) + '\n')
@@ -630,8 +624,120 @@ class Problem(System):
         _assemble_deriv_data(param_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
-
         return data
+
+
+class Relevance(object):
+    def __init__(self, params_dict, unknowns_dict, connections,
+                 inputs, outputs, mode):
+
+        self.params_dict = params_dict
+        self.unknowns_dict = unknowns_dict
+        self.connections = connections
+        self.mode = mode
+
+        # turn all inputs and outputs, even singletons, into tuples
+        self.inputs = []
+        for inp in inputs:
+            if isinstance(inp, string_types):
+                self.inputs.append((inp,))
+            else:
+                self.inputs.append(tuple(inp))
+
+        self.outputs = []
+        for out in outputs:
+            if isinstance(out, string_types):
+                self.outputs.append((out,))
+            else:
+                self.outputs.append(tuple(out))
+
+        vgraph = self._setup_graph()
+        self.relevant = self._get_relevant_vars(vgraph)
+
+    def is_relevant(self, var_of_interest, varname):
+        if not var_of_interest:
+            return True
+        return varname in self.relevant[var_of_interest]
+
+    def vars_of_interest(self):
+        if self.mode == 'fwd':
+            return iter(self.inputs)
+        elif self.mode == 'rev':
+            return iter(self.outputs)
+        else:
+            return iter(self.inputs+self.outputs)
+
+    def _setup_graph(self):
+        """
+        Set up a dependency graph for all variables in the Problem.
+
+        Returns
+        -------
+        nx.DiGraph
+            A graph containing all variables and their connections
+
+        """
+        params_dict = self.params_dict
+        unknowns_dict = self.unknowns_dict
+        connections = self.connections
+
+        vgraph = nx.DiGraph()  # var graph
+
+        compins = {}  # maps input vars to components
+        compouts = {} # maps output vars to components
+
+        for param in params_dict:
+            tcomp = param.rsplit(':',1)[0]
+            compins.setdefault(tcomp, []).append(param)
+
+        for unknown in unknowns_dict:
+            scomp = unknown.rsplit(':',1)[0]
+            compouts.setdefault(scomp, []).append(unknown)
+
+        for target, source in connections.items():
+            vgraph.add_edge(source, target)
+
+        # connect inputs to outputs on same component in order to fully
+        # connect the variable graph.
+        for comp, inputs in compins.items():
+            for inp in inputs:
+                for out in compouts.get(comp, ()):
+                    vgraph.add_edge(inp, out)
+
+        return vgraph
+
+
+    def _get_relevant_vars(self, g):
+        """
+        Parameters
+        ----------
+        g : nx.DiGraph
+            A graph of variable dependencies.
+
+        Returns
+        -------
+        dict
+            Dictionary that maps a variable name to all other variables in the graph that
+            are relevant to it.
+        """
+        succs = {}
+        for nodes in self.inputs:
+            for node in nodes:
+                succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
+
+        relevant = {}
+        grev = g.reverse()
+        for nodes in self.outputs:
+            for node in nodes:
+                preds = set([v for u,v in nx.dfs_edges(grev, node)])
+                for inp in relevant_inputs:
+                    common = preds.intersection(succs[inp])
+                    common.update([node, inp])
+                    relevant.setdefault(inp, set()).update(common)
+                    relevant.setdefault(node, set()).update(common)
+
+        return relevant
+
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
@@ -853,71 +959,3 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     return connections
 
-def _setup_graph(params_dict, unknowns_dict, connections):
-    """
-    Set up a dependency graph for all variables in the Problem.
-
-    Parameters
-    ----------
-    params_dict : dict
-        Dictionary mapping all parameters to their metadata.
-
-    unknowns_dict : dict
-        Dictionary mapping all unknowns to their metadata.
-
-    connections : dict
-        Dictionary mapping target var absolute names to source var absolute names.
-
-    Returns
-    -------
-    nx.DiGraph
-        A graph containing all variables and their connections
-
-    """
-
-    vgraph = nx.DiGraph()  # var graph
-
-    compins = {}  # maps input vars to components
-    compouts = {} # maps output vars to components
-
-    for param in params_dict:
-        tcomp = param.rsplit(':',1)[0]
-        compins.setdefault(tcomp, []).append(param)
-
-    for unknown in unknowns_dict:
-        scomp = unknown.rsplit(':',1)[0]
-        compouts.setdefault(scomp, []).append(unknown)
-
-    for target, source in connections.items():
-        vgraph.add_edge(source, target)
-
-    # connect inputs to outputs on same component in order to fully
-    # connect the variable graph.
-    for comp, inputs in compins.items():
-        for inp in inputs:
-            for out in compouts.get(comp, ()):
-                vgraph.add_edge(inp, out)
-
-    return vgraph
-
-def get_successor_vars(g, excludes):
-    """
-    Parameters
-    ----------
-    g : nx.DiGraph
-        A graph of variable dependencies.
-
-    excludes : collection of str
-        Don't store sucessors for any vars in excludes.
-
-    Returns
-    -------
-    dict
-        Dictionary that maps a variable name to all other variables in the graph that it
-        depends on.
-    """
-    succs = {}
-    for node in g:
-        if node not in excludes:
-            succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
-    return succs

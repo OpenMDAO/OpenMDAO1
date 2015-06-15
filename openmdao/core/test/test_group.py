@@ -4,6 +4,7 @@ from six import text_type, StringIO
 
 from openmdao.core.problem import Problem, _get_implicit_connections
 from openmdao.core.group import Group
+from openmdao.core.problem import Relevance
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes
@@ -129,8 +130,11 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(param_owners, expected_owners)
 
+        relevance = Relevance(root._params_dict, root._unknowns_dict, connections,
+                              [], [], 'auto')
+
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections, {'fwd':(), 'rev':()})
+        root._setup_vectors(param_owners, connections, relevance=relevance)
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:C1:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
@@ -144,33 +148,35 @@ class TestGroup(unittest.TestCase):
         expected_G1_params   = ['C2:x']
         expected_G1_unknowns = ['C2:y']
 
+        voi = None
+
         self.assertEqual(list(root.params.keys()),    expected_root_params)
-        self.assertEqual(list(root.dparams.keys()),   expected_root_params)
+        self.assertEqual(list(root.dpmat[voi].keys()),   expected_root_params)
         self.assertEqual(list(root.unknowns.keys()),  expected_root_unknowns)
-        self.assertEqual(list(root.dunknowns.keys()), expected_root_unknowns)
+        self.assertEqual(list(root.dumat[voi].keys()), expected_root_unknowns)
         self.assertEqual(list(root.resids.keys()),    expected_root_unknowns)
-        self.assertEqual(list(root.dresids.keys()),   expected_root_unknowns)
+        self.assertEqual(list(root.drmat[voi].keys()),   expected_root_unknowns)
 
         self.assertEqual(list(root.G3.params.keys()),    expected_G3_params)
-        self.assertEqual(list(root.G3.dparams.keys()),   expected_G3_params)
+        self.assertEqual(list(root.G3.dpmat[voi].keys()),   expected_G3_params)
         self.assertEqual(list(root.G3.unknowns.keys()),  expected_G3_unknowns)
-        self.assertEqual(list(root.G3.dunknowns.keys()), expected_G3_unknowns)
+        self.assertEqual(list(root.G3.dumat[voi].keys()), expected_G3_unknowns)
         self.assertEqual(list(root.G3.resids.keys()),    expected_G3_unknowns)
-        self.assertEqual(list(root.G3.dresids.keys()),   expected_G3_unknowns)
+        self.assertEqual(list(root.G3.drmat[voi].keys()),   expected_G3_unknowns)
 
         self.assertEqual(list(root.G2.params.keys()),    expected_G2_params)
-        self.assertEqual(list(root.G2.dparams.keys()),   expected_G2_params)
+        self.assertEqual(list(root.G2.dpmat[voi].keys()),   expected_G2_params)
         self.assertEqual(list(root.G2.unknowns.keys()),  expected_G2_unknowns)
-        self.assertEqual(list(root.G2.dunknowns.keys()), expected_G2_unknowns)
+        self.assertEqual(list(root.G2.dumat[voi].keys()), expected_G2_unknowns)
         self.assertEqual(list(root.G2.resids.keys()),    expected_G2_unknowns)
-        self.assertEqual(list(root.G2.dresids.keys()),   expected_G2_unknowns)
+        self.assertEqual(list(root.G2.drmat[voi].keys()),   expected_G2_unknowns)
 
         self.assertEqual(list(root.G1.params.keys()),    expected_G1_params)
-        self.assertEqual(list(root.G1.dparams.keys()),   expected_G1_params)
+        self.assertEqual(list(root.G1.dpmat[voi].keys()),   expected_G1_params)
         self.assertEqual(list(root.G1.unknowns.keys()),  expected_G1_unknowns)
-        self.assertEqual(list(root.G1.dunknowns.keys()), expected_G1_unknowns)
+        self.assertEqual(list(root.G1.dumat[voi].keys()), expected_G1_unknowns)
         self.assertEqual(list(root.G1.resids.keys()),    expected_G1_unknowns)
-        self.assertEqual(list(root.G1.dresids.keys()),   expected_G1_unknowns)
+        self.assertEqual(list(root.G1.drmat[voi].keys()),   expected_G1_unknowns)
 
         # verify subsystem is using shared view of parent unknowns vector
         root.unknowns['G2:C1:x'] = 99.
@@ -241,8 +247,11 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(param_owners, expected_owners)
 
+        relevance = Relevance(root._params_dict, root._unknowns_dict, connections,
+                              [], [], 'auto')
+
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections, {'fwd':(), 'rev':()})
+        root._setup_vectors(param_owners, connections, relevance=relevance)
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
@@ -256,33 +265,35 @@ class TestGroup(unittest.TestCase):
         expected_G1_params   = ['C2:x']
         expected_G1_unknowns = ['C2:y']
 
+        voi = None
+
         self.assertEqual(list(root.params.keys()),    expected_root_params)
-        self.assertEqual(list(root.dparams.keys()),   expected_root_params)
+        self.assertEqual(list(root.dpmat[voi].keys()),   expected_root_params)
         self.assertEqual(list(root.unknowns.keys()),  expected_root_unknowns)
-        self.assertEqual(list(root.dunknowns.keys()), expected_root_unknowns)
+        self.assertEqual(list(root.dumat[voi].keys()), expected_root_unknowns)
         self.assertEqual(list(root.resids.keys()),    expected_root_unknowns)
-        self.assertEqual(list(root.dresids.keys()),   expected_root_unknowns)
+        self.assertEqual(list(root.drmat[voi].keys()),   expected_root_unknowns)
 
         self.assertEqual(list(root.G3.params.keys()),    expected_G3_params)
-        self.assertEqual(list(root.G3.dparams.keys()),   expected_G3_params)
+        self.assertEqual(list(root.G3.dpmat[voi].keys()),   expected_G3_params)
         self.assertEqual(list(root.G3.unknowns.keys()),  expected_G3_unknowns)
-        self.assertEqual(list(root.G3.dunknowns.keys()), expected_G3_unknowns)
+        self.assertEqual(list(root.G3.dumat[voi].keys()), expected_G3_unknowns)
         self.assertEqual(list(root.G3.resids.keys()),    expected_G3_unknowns)
-        self.assertEqual(list(root.G3.dresids.keys()),   expected_G3_unknowns)
+        self.assertEqual(list(root.G3.drmat[voi].keys()),   expected_G3_unknowns)
 
         self.assertEqual(list(root.G2.params.keys()),    expected_G2_params)
-        self.assertEqual(list(root.G2.dparams.keys()),   expected_G2_params)
+        self.assertEqual(list(root.G2.dpmat[voi].keys()),   expected_G2_params)
         self.assertEqual(list(root.G2.unknowns.keys()),  expected_G2_unknowns)
-        self.assertEqual(list(root.G2.dunknowns.keys()), expected_G2_unknowns)
+        self.assertEqual(list(root.G2.dumat[voi].keys()), expected_G2_unknowns)
         self.assertEqual(list(root.G2.resids.keys()),    expected_G2_unknowns)
-        self.assertEqual(list(root.G2.dresids.keys()),   expected_G2_unknowns)
+        self.assertEqual(list(root.G2.drmat[voi].keys()),   expected_G2_unknowns)
 
         self.assertEqual(list(root.G1.params.keys()),    expected_G1_params)
-        self.assertEqual(list(root.G1.dparams.keys()),   expected_G1_params)
+        self.assertEqual(list(root.G1.dpmat[voi].keys()),   expected_G1_params)
         self.assertEqual(list(root.G1.unknowns.keys()),  expected_G1_unknowns)
-        self.assertEqual(list(root.G1.dunknowns.keys()), expected_G1_unknowns)
+        self.assertEqual(list(root.G1.dumat[voi].keys()), expected_G1_unknowns)
         self.assertEqual(list(root.G1.resids.keys()),    expected_G1_unknowns)
-        self.assertEqual(list(root.G1.dresids.keys()),   expected_G1_unknowns)
+        self.assertEqual(list(root.G1.drmat[voi].keys()),   expected_G1_unknowns)
 
         # verify subsystem is using shared view of parent unknowns vector
         root.unknowns['G2:x'] = 99.
@@ -322,7 +333,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(prob.subsystem('G2:G1:C2').params['x'], 0.)   # initial value for a parameter
 
         # and make sure we get the correct value after a transfer
-        prob.root.G2._varmanager._transfer_data('G1')
+        prob.root.G2._varmanager._transfer_data(prob.root.G2, 'G1')
         self.assertEqual(prob.subsystem('G2:G1:C2').params['x'], 99.)   # transferred value of parameter
 
     def test_subsystem_access(self):

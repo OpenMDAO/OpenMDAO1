@@ -14,7 +14,7 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.system import System
-from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
+from openmdao.core.varmanager import VarManager
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
@@ -45,7 +45,7 @@ class Group(System):
         """
         if self.is_active():
             try:
-                self._varmanager.unknowns[name] = val
+                self.unknowns[name] = val
             except KeyError:
                 # look in params
                 try:
@@ -80,7 +80,7 @@ class Group(System):
             raise RuntimeError('setup() must be called before variables can be accessed')
 
         try:
-            return self._varmanager[name]
+            return self.unknowns[name]
         except KeyError:
             subsys, subname = name.split(':', 1)
             try:
@@ -93,48 +93,6 @@ class Group(System):
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
-
-    @property
-    def unknowns(self):
-        try:
-            return self._varmanager.unknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dunknowns(self):
-        try:
-            return self._varmanager.dunknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def params(self):
-        try:
-            return self._varmanager.params
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dparams(self):
-        try:
-            return self._varmanager.dparams
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def resids(self):
-        try:
-            return self._varmanager.resids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dresids(self):
-        try:
-            return self._varmanager.dresids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     def subsystem(self, name):
         """
@@ -311,8 +269,8 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
 
-    def _setup_vectors(self, param_owners, connections, vardeps, parent=None,
-                       top_unknowns=None, impl=BasicImpl):
+    def _setup_vectors(self, param_owners, connections, parent=None,
+                       relevance=None, top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -326,14 +284,12 @@ class Group(System):
             A dictionary mapping the pathname of a target variable to the
             pathname of the source variable that it is connected to.
 
-        vardeps : dict
-            A dictionary of dictionaries that maps full variable pathnames to all
-            of their 'downstream' variables, where 'downstream' depends on mode, which
-            can be 'fwd' or 'rev'.
-
         parent : `Group`, optional
             The `Group` that contains this `Group`, if any, into which this
             `VarManager` will provide a view.
+
+        relevance : `Relevance`
+            An object that stores relevance information for each variable of interest.
 
         top_unknowns : `VecWrapper`, optional
             The `Problem` level unknowns `VecWrapper`.
@@ -345,16 +301,36 @@ class Group(System):
         if not self.is_active():
             return
 
+        self._impl_factory = impl
+        self._relevance = relevance
+
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._varmanager = VarManager(self, my_params, connections, vardeps, impl=impl)
-            top_unknowns = self._varmanager.unknowns
+            self._create_vecs(my_params, connections, relevance, None, impl)
+            top_unknowns = self.unknowns
         else:
-            self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)
+            self._create_views(top_unknowns, parent, my_params, relevance, var_of_interest=None)
+
+        self._varmanager = VarManager(self, my_params, impl=impl)
+
+        ## loop over vars_of_interest and relevant subvecs for each
+        ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
+        ##       an array of that size, and sub-allocate from that for all relevant subvecs
+
+        ## create storage for the relevant vecwrappers, keyed by variable_of_interest
+
+        ## TODO: need to determine if mode is fwd or rev up front so we don't allocate vecwrappers
+        ##        for unneeded VOIs, e.g., in rev, we just need output of interest and in fwd
+        ##        we need inputs of interest.
+        #VOIs = relevance.inputs + relevance.outputs  # for now, just do them all
+
+        #for voi in VOIs:
+            #pass
+
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections, vardeps,
-                               parent=self, top_unknowns=top_unknowns)
+            sub._setup_vectors(param_owners, connections, parent=self,
+                               relevance=relevance, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):
         """
@@ -367,7 +343,7 @@ class Group(System):
             List of names of params that have sources that are ParamComps
             or sources that are outside of this `Group` .
         """
-        conns = self._varmanager.connections
+        conns = self._relevance.connections
         mypath = self.pathname + ':' if self.pathname else ''
 
         params = []
@@ -435,9 +411,9 @@ class Group(System):
             `VecWrapper`  containing residuals. (r)
         """
         if self.is_active():
-            params   = params   if params   is not None else self._varmanager.params
-            unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
-            resids   = resids   if resids   is not None else self._varmanager.resids
+            params   = params   if params   is not None else self.params
+            unknowns = unknowns if unknowns is not None else self.unknowns
+            resids   = resids   if resids   is not None else self.resids
 
             self.nl_solver.solve(params, unknowns, resids, self)
 
@@ -448,7 +424,7 @@ class Group(System):
 
         # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(name)
+            self._varmanager._transfer_data(self, name)
             if sub.is_active():
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -472,7 +448,7 @@ class Group(System):
 
         # transfer data to each subsystem and then apply_nonlinear to it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(name)
+            self._varmanager._transfer_data(self, name)
             if sub.is_active():
                 sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -554,7 +530,10 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            self._varmanager._transfer_data(deriv=True)
+            self._varmanager._transfer_data(self, deriv=True)
+
+        #FIXME:
+        voi = None
 
         for name, system in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
@@ -564,17 +543,17 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                dresids = system.dresids
-                dunknowns = system.dunknowns
+                dresids = system.drmat[voi]
+                dunknowns = system.dumat[voi]
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dpmat[voi],
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dpmat[voi],
                                             dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
@@ -597,10 +576,10 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dpmat[voi],
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dpmat[voi],
                                             dunknowns, dresids, mode)
 
                     dresids.vec *= -1.0
@@ -616,12 +595,12 @@ class Group(System):
             # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(system.params, system.unknowns,
-                                    system.dparams, system.dunknowns,
-                                    system.dresids, mode)
+                                    system.dpmat[None], system.dumat[None],
+                                    system.drmat[None], mode)
 
         if mode == 'rev':
             # Full Scatter
-            self._varmanager._transfer_data(mode='rev', deriv=True)
+            self._varmanager._transfer_data(self, mode='rev', deriv=True)
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
         """
@@ -659,19 +638,6 @@ class Group(System):
         self.sol_buf[:] = self.sol_vec.array[:]
         self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
         self.sol_vec.array[:] = self.sol_buf[:]
-
-    def clear_dparams(self):
-        """ Zeros out the dparams (dp) vector."""
-
-        self.dparams.vec[:] = 0.0
-
-        # Recurse to clear all dparams vectors.
-        for name, system in self.subsystems(local=True):
-
-            if isinstance(system, Component):
-                system.dparams.vec[:] = 0.0
-            else:
-                system.clear_dparams()
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
