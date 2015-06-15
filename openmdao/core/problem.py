@@ -9,7 +9,6 @@ import sys
 
 # pylint: disable=E0611, F0401
 import numpy as np
-import networkx as nx
 
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
@@ -17,6 +16,7 @@ from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.relevance import Relevance
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
 from openmdao.devtools.debug import debug
@@ -625,118 +625,6 @@ class Problem(System):
                              Jfor, Jrev, Jfd, out_stream)
 
         return data
-
-
-class Relevance(object):
-    def __init__(self, params_dict, unknowns_dict, connections,
-                 inputs, outputs, mode):
-
-        self.params_dict = params_dict
-        self.unknowns_dict = unknowns_dict
-        self.connections = connections
-        self.mode = mode
-
-        # turn all inputs and outputs, even singletons, into tuples
-        self.inputs = []
-        for inp in inputs:
-            if isinstance(inp, string_types):
-                self.inputs.append((inp,))
-            else:
-                self.inputs.append(tuple(inp))
-
-        self.outputs = []
-        for out in outputs:
-            if isinstance(out, string_types):
-                self.outputs.append((out,))
-            else:
-                self.outputs.append(tuple(out))
-
-        vgraph = self._setup_graph()
-        self.relevant = self._get_relevant_vars(vgraph)
-
-    def is_relevant(self, var_of_interest, varname):
-        if not var_of_interest:
-            return True
-        return varname in self.relevant[var_of_interest]
-
-    def vars_of_interest(self):
-        if self.mode == 'fwd':
-            return iter(self.inputs)
-        elif self.mode == 'rev':
-            return iter(self.outputs)
-        else:
-            return iter(self.inputs+self.outputs)
-
-    def _setup_graph(self):
-        """
-        Set up a dependency graph for all variables in the Problem.
-
-        Returns
-        -------
-        nx.DiGraph
-            A graph containing all variables and their connections
-
-        """
-        params_dict = self.params_dict
-        unknowns_dict = self.unknowns_dict
-        connections = self.connections
-
-        vgraph = nx.DiGraph()  # var graph
-
-        compins = {}  # maps input vars to components
-        compouts = {} # maps output vars to components
-
-        for param in params_dict:
-            tcomp = param.rsplit(':',1)[0]
-            compins.setdefault(tcomp, []).append(param)
-
-        for unknown in unknowns_dict:
-            scomp = unknown.rsplit(':',1)[0]
-            compouts.setdefault(scomp, []).append(unknown)
-
-        for target, source in connections.items():
-            vgraph.add_edge(source, target)
-
-        # connect inputs to outputs on same component in order to fully
-        # connect the variable graph.
-        for comp, inputs in compins.items():
-            for inp in inputs:
-                for out in compouts.get(comp, ()):
-                    vgraph.add_edge(inp, out)
-
-        return vgraph
-
-
-    def _get_relevant_vars(self, g):
-        """
-        Parameters
-        ----------
-        g : nx.DiGraph
-            A graph of variable dependencies.
-
-        Returns
-        -------
-        dict
-            Dictionary that maps a variable name to all other variables in the graph that
-            are relevant to it.
-        """
-        succs = {}
-        for nodes in self.inputs:
-            for node in nodes:
-                succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
-
-        relevant = {}
-        grev = g.reverse()
-        for nodes in self.outputs:
-            for node in nodes:
-                preds = set([v for u,v in nx.dfs_edges(grev, node)])
-                for inp in relevant_inputs:
-                    common = preds.intersection(succs[inp])
-                    common.update([node, inp])
-                    relevant.setdefault(inp, set()).update(common)
-                    relevant.setdefault(node, set()).update(common)
-
-        return relevant
 
 
 def _setup_units(connections, params_dict, unknowns_dict):
