@@ -6,21 +6,35 @@ VecTuple = namedtuple('VecTuple', 'unknowns, dunknowns, resids, dresids, params,
 
 from openmdao.devtools.debug import debug
 
-class VarManagerBase(object):
-    """Base class for a manager of the data transfer of a possibly distributed
+class VarManager(object):
+    """A manager of the data transfer of a possibly distributed
     collection of variables.
 
     Parameters
     ----------
+    system : `System`
+        `System` containing this `VarManager`.
 
-    relevance : `Relevance`
-        An object containing variable relevance info.
+    my_params : list
+        List of pathnames for parameters that this `VarManager` is
+        responsible for propagating.
 
+    impl : an implementation factory, optional
+        Specifies the factory object used to create `VecWrapper` and
+        `DataXfer` objects.
     """
-    def __init__(self, relevance):
-        self.relevance = relevance
+    def __init__(self, system, my_params, impl):
+        comm = system.comm
+        sys_pathname = system.pathname
+        params_dict = system._params_dict
+        unknowns_dict = system._unknowns_dict
+
+        self.impl_factory = impl
+        self.comm = comm
         self.data_xfer = {}
         self.distrib_idxs = {}  # this will be non-empty if some systems have distributed vars
+
+        self._setup_data_transfer(system, my_params, system._relevance, None)
 
     def _get_global_offset(self, name, var_rank, sizes_table):
         """
@@ -256,34 +270,3 @@ class VarManagerBase(object):
             else:
                 raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
                                    name)
-
-
-class VarManager(VarManagerBase):
-    """A manager of the data transfer of a possibly distributed
-    collection of variables.
-
-    Parameters
-    ----------
-    system : `System`
-        `System` containing this `VarManager`.
-
-    my_params : list
-        List of pathnames for parameters that this `VarManager` is
-        responsible for propagating.
-
-    impl : an implementation factory, optional
-        Specifies the factory object used to create `VecWrapper` and
-        `DataXfer` objects.
-    """
-    def __init__(self, system, my_params, impl):
-        super(VarManager, self).__init__(system._relevance)
-
-        comm = system.comm
-        sys_pathname = system.pathname
-        params_dict = system._params_dict
-        unknowns_dict = system._unknowns_dict
-
-        self.impl_factory = impl
-        self.comm = comm
-
-        self._setup_data_transfer(system, my_params, system._relevance, None)
