@@ -16,7 +16,8 @@ a {
 
 a:visited {
     color: navy;
-    text-decoration: none;}
+    text-decoration: none;
+}
 
 a:hover {
     text-decoration: underline;
@@ -60,11 +61,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /*in the source docs, the header for "Parameters"*/
 th {
-    background-color: #BFD1D4;
-}
-/*in the main page, the color of the bars down the sides*/
-body {
-    background-color: #BFD1D4;
+    background-color: #FFFFB0;
+    /*background-color: #FFFFE0;*/
 }
 
 body {
@@ -73,7 +71,9 @@ body {
   letter-spacing: -0.01em;
   line-height: 150%;
   text-align: center;
-  background-color: #BFD1D4;
+  /*in the main page, background-color is the color of the bars down the sides*/
+  background-color: #FFFFA0;
+  /*background-color: #BFD1D4;*/
   color: black;
   padding: 0;
   border: 1px solid #aaa;
