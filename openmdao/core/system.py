@@ -92,7 +92,7 @@ class System(object):
 
         return False
 
-    def subsystems(self, local=False):
+    def subsystems(self, local=False, recurse=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
         return []

@@ -167,38 +167,54 @@ class Group(System):
             for target in targets:
                 self._src[target] = source
 
-    def subsystems(self, local=False):
-        """ Returns an iterator over subsystems.
-
-        local: bool
-            Set to True to return only systems that are local.
+    def subsystems(self, local=False, recurse=False, typ=System):
         """
-        if local:
-            return self._local_subsystems.items()
-        else:
-            return self._subsystems.items()
+        Parameters
+        ----------
+        local : bool, optional
+            If True, only return those `Components` that are local. Default is False.
 
-    def subgroups(self, local=False):
+        recurse : bool, optional
+            If True, return all `Components` in the system tree, subject to
+            the value of the local arg. Default is False.
+
+        typ : type, optional
+            If a class is specified here, only those subsystems that are instances
+            of that type will be returned.  Default type is `System`.
+
+        Returns
+        -------
+        iterator
+            Iterator over subsystems.
+        """
+        subs = self._local_subsystems if local else self._subsystems
+
+        for name, sub in subs.items():
+            if isinstance(sub, typ):
+                yield name, sub
+            if recurse and isinstance(sub, Group):
+                for n, s in sub.subsystems(local, recurse, typ):
+                    yield n, s
+
+    def subgroups(self, local=False, recurse=False):
         """
         Returns
         -------
         iterator
             Iterator over subgroups.
         """
-        for name, subsystem in self.subsystems(local=local):
-            if isinstance(subsystem, Group):
-                yield name, subsystem
+        for name, sub in self.subsystems(local, recurse, typ=Group):
+            yield name, sub
 
-    def components(self, local=False):
+    def components(self, local=False, recurse=False):
         """
         Returns
         -------
         iterator
             Iterator over sub-`Components`.
         """
-        for name, comp in self.subsystems(local=local):
-            if isinstance(comp, Component):
-                yield name, comp
+        for name, sub in self.subsystems(local, recurse, typ=Component):
+            yield name, sub
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.

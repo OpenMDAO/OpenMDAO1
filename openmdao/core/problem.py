@@ -143,9 +143,19 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
+        # some mode determination requires connection information, so pass
+        # it down the tree
+        self.root.connections = connections
+        for name, sub in self.root.subsystems(recurse=True):
+            sub.connections = connections
+
+        mode = self._check_for_matrix_matrix(self.driver._inputs_of_interest,
+                                             self.driver._outputs_of_interest)
+
         relevance = Relevance(params_dict, unknowns_dict, connections,
                               self.driver._inputs_of_interest,
-                              self.driver._outputs_of_interest, 'auto')
+                              self.driver._outputs_of_interest,
+                              mode)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, connections, relevance=relevance,
@@ -180,7 +190,6 @@ class Problem(System):
 
                     if param in p_dict:
                         meta = p_dict[param]
-
                     else:
                         # The user sometimes specifies the parameter output
                         # name instead of its target because it is more
@@ -207,7 +216,6 @@ class Problem(System):
 
                     if unkn in u_dict:
                         meta = u_dict[unkn]
-
                     else:
                         # We need the absolute name, but the fd Jacobian
                         # holds relative promoted inputs
@@ -694,6 +702,30 @@ class Problem(System):
                 for recorder in solver.recorders:
                     recorder.startup(group)
 
+    def _check_for_matrix_matrix(self, params, unknowns):
+        """ Checks a system hiearchy to make sure that no settings violate the
+        assumptions needed for matrix-matrix calculation. Returns the mode that
+        the system needs to use.
+        """
+
+        mode = self._mode('auto', params, unknowns)
+
+        # TODO : Only Linear GS is supported on system
+
+        for _, sub in self.root.subgroups(recurse=True):
+            sub_mode = sub.ln_solver.options['mode']
+
+            # Modes must match root for all subs
+            if sub_mode not in (mode, 'auto'):
+                msg  = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                        " Modes must match to use Matrix Matrix."
+                msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                raise RuntimeError(msg)
+
+            # TODO : Only Linear GS is supported on sub
+
+        return mode
+
 def _setup_units(connections, params_dict, unknowns_dict):
     """
     Calculate unit conversion factors for any connected
@@ -921,28 +953,3 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     return connections
 
-def _check_for_matrix_matrix(problem, params, unknowns):
-    """ Checks a system hiearchy to make sure that no settings violate the
-    assumptions needed for matrix-matrix calculation. Returns the mode that
-    the system needs to use."""
-
-    mode = problem._mode('auto', params, unknowns)
-
-    # TODO : Only Linear GS is supported on system
-
-    groups = _find_all_comps(problem.root).keys()
-    for sub in groups:
-        print(sub.name)
-        sub_params = sub._get_fd_params()
-        sub_unknowns = sub._get_fd_unknowns()
-        sub_mode = sub.ln_solver.options['mode']
-
-        # Modes much match root for all subs
-        if sub_mode != mode:
-            msg  = "Group '{name}' must have the same mode as root to use Matrix Matrix."
-            msg = msg.format(name=sub.name)
-            raise RuntimeError(msg)
-
-        # TODO : Only Linear GS is supported on sub
-
-    return mode
