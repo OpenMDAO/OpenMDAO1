@@ -142,7 +142,7 @@ class VarManager(object):
         self._local_param_sizes = system.params._get_flattened_sizes()
 
         xfer_dict = {}
-        for param, unknown in system._relevance.connections.items():
+        for param, unknown in system.connections.items():
             if not (relevance.is_relevant(var_of_interest, param) or
                       relevance.is_relevant(var_of_interest, unknown)):
                 continue

@@ -158,7 +158,7 @@ class Problem(System):
                               mode)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, relevance=relevance,
+        self.root._setup_vectors(param_owners, relevance=relevance,
                                  impl=self._impl)
 
         # Prep for case recording
@@ -194,7 +194,7 @@ class Problem(System):
                         # The user sometimes specifies the parameter output
                         # name instead of its target because it is more
                         # convenient
-                        for key, val in iteritems(root._relevance.connections):
+                        for key, val in iteritems(root.connections):
                             if val == param:
                                 meta = u_dict[param]
                                 break
@@ -333,7 +333,7 @@ class Problem(System):
                     # The user sometimes specifies the parameter output
                     # name instead of its target because it is more
                     # convenient
-                    for key, val in iteritems(root._relevance.connections):
+                    for key, val in iteritems(root.connections):
                         if val == ikey:
                             fd_ikey = key
                             break
@@ -428,7 +428,7 @@ class Problem(System):
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
-                param_src = root._relevance.connections.get(param)
+                param_src = root.connections.get(param)
                 param_src = unknowns.get_relative_varname(param_src)
                 in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
@@ -449,7 +449,7 @@ class Problem(System):
                     if item in unknowns:
                         out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
-                        param_src = root._relevance.connections.get(item)
+                        param_src = root.connections.get(item)
                         param_src = unknowns.get_relative_varname(param_src)
                         out_size, out_idxs = unknowns.get_local_idxs(param_src)
 

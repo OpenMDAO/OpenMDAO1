@@ -12,7 +12,6 @@ class Relevance(object):
 
         self.params_dict = params_dict
         self.unknowns_dict = unknowns_dict
-        self.connections = connections
         self.mode = mode
 
         # turn all inputs and outputs, even singletons, into tuples
@@ -30,7 +29,7 @@ class Relevance(object):
             else:
                 self.outputs.append(tuple(out))
 
-        vgraph = self._setup_graph()
+        vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(vgraph)
 
     def is_relevant(self, var_of_interest, varname):
@@ -46,7 +45,7 @@ class Relevance(object):
         else:
             return iter(self.inputs+self.outputs)
 
-    def _setup_graph(self):
+    def _setup_graph(self, connections):
         """
         Set up a dependency graph for all variables in the Problem.
 
@@ -58,7 +57,6 @@ class Relevance(object):
         """
         params_dict = self.params_dict
         unknowns_dict = self.unknowns_dict
-        connections = self.connections
 
         vgraph = nx.DiGraph()  # var graph
 

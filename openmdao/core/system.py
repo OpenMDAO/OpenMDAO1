@@ -266,7 +266,7 @@ class System(object):
 
             # If our input is connected to a Paramcomp, then we need to twiddle
             # the unknowns vector instead of the params vector.
-            param_src = self._relevance.connections.get(p_name)
+            param_src = self.connections.get(p_name)
             if param_src is not None:
 
                 # Have to convert to relative name to key into unknowns
@@ -403,7 +403,7 @@ class System(object):
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
 
-    def _create_vecs(self, my_params, connections, relevance, var_of_interest, impl):
+    def _create_vecs(self, my_params, relevance, var_of_interest, impl):
         comm = self.comm
         sys_pathname = self.pathname
         params_dict = self._params_dict
@@ -422,7 +422,7 @@ class System(object):
             self.unknowns.setup(unknowns_dict, store_byobjs=True)
             self.resids.setup(unknowns_dict)
             self.params.setup(None, params_dict, self.unknowns,
-                              my_params, connections, store_byobjs=True)
+                              my_params, self.connections, store_byobjs=True)
 
         dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         dresids   = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
@@ -430,7 +430,7 @@ class System(object):
 
         dunknowns.setup(unknowns_dict)
         dresids.setup(unknowns_dict)
-        dparams.setup(None, params_dict, self.unknowns, my_params, connections)
+        dparams.setup(None, params_dict, self.unknowns, my_params, self.connections)
 
         self.dumat[var_of_interest] = dunknowns
         self.drmat[var_of_interest] = dresids
@@ -469,7 +469,6 @@ class System(object):
         comm = self.comm
         unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
-        connections = relevance.connections
 
         # map relative name in parent to corresponding relative name in this view
         umap = get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
@@ -481,7 +480,7 @@ class System(object):
                                                     var_of_interest)
             self.params    = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
-                              my_params, connections, store_byobjs=True)
+                              my_params, self.connections, store_byobjs=True)
 
         self.dumat[var_of_interest] = parent.dumat[var_of_interest].get_view(self.pathname, comm, umap,
                                                                              relevance, var_of_interest)
@@ -489,7 +488,7 @@ class System(object):
                                                                              relevance, var_of_interest)
         self.dpmat[var_of_interest] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
         self.dpmat[var_of_interest].setup(parent.dpmat[var_of_interest], params_dict, top_unknowns,
-                                          my_params, connections)
+                                          my_params, self.connections)
 
 
 def get_relname_map(unknowns, unknowns_dict, child_name):

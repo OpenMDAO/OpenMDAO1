@@ -152,7 +152,7 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
-    def _setup_vectors(self, param_owners, connections, parent,
+    def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, relevance=None, impl=BasicImpl):
         """
         Set up local `VecWrappers` to store this component's variables.
@@ -162,10 +162,6 @@ class Component(System):
         param_owners : dict
             a dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating. (ignored)
-
-        connections : dict
-            a dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to
 
         parent : `Group`
             The parent `Group`.

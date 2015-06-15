@@ -134,7 +134,10 @@ class TestGroup(unittest.TestCase):
                               [], [], 'auto')
 
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections, relevance=relevance)
+        root.connections = connections
+        for _,sub in root.subsystems(recurse=True):
+            sub.connections = connections
+        root._setup_vectors(param_owners, relevance=relevance)
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:C1:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']
@@ -251,7 +254,10 @@ class TestGroup(unittest.TestCase):
                               [], [], 'auto')
 
         # verify vectors are set up correctly
-        root._setup_vectors(param_owners, connections, relevance=relevance)
+        root.connections = connections
+        for _,sub in root.subsystems(recurse=True):
+            sub.connections = connections
+        root._setup_vectors(param_owners, relevance=relevance)
 
         expected_root_params   = ['G3:C3:x']
         expected_root_unknowns = ['G2:x', 'G2:G1:C2:y', 'G3:C3:y', 'G3:C4:y']

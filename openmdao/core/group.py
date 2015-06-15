@@ -287,7 +287,7 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent=None,
+    def _setup_vectors(self, param_owners, parent=None,
                        relevance=None, top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
@@ -297,10 +297,6 @@ class Group(System):
         param_owners : dict
             A dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating.
-
-        connections : dict
-            A dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to.
 
         parent : `Group`, optional
             The `Group` that contains this `Group`, if any, into which this
@@ -324,8 +320,7 @@ class Group(System):
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._create_vecs(my_params, connections, relevance, var_of_interest=None,
-                              impl=impl)
+            self._create_vecs(my_params, relevance, var_of_interest=None, impl=impl)
             top_unknowns = self.unknowns
         else:
             self._create_views(top_unknowns, parent, my_params, relevance, var_of_interest=None)
@@ -340,12 +335,12 @@ class Group(System):
         for vois in self._relevance.vars_of_interest():
             for voi in vois:
                 if parent is None:
-                    self._create_vecs(my_params, connections, relevance, voi, impl)
+                    self._create_vecs(my_params, relevance, voi, impl)
                 else:
                     self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections, parent=self,
+            sub._setup_vectors(param_owners, parent=self,
                                relevance=relevance, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):
@@ -359,7 +354,7 @@ class Group(System):
             List of names of params that have sources that are ParamComps
             or sources that are outside of this `Group` .
         """
-        conns = self._relevance.connections
+        conns = self.connections
         mypath = self.pathname + ':' if self.pathname else ''
 
         params = []
