@@ -308,7 +308,8 @@ class Group(System):
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._create_vecs(my_params, connections, relevance, None, impl)
+            self._create_vecs(my_params, connections, relevance, var_of_interest=None,
+                              impl=impl)
             top_unknowns = self.unknowns
         else:
             self._create_views(top_unknowns, parent, my_params, relevance, var_of_interest=None)
@@ -319,16 +320,13 @@ class Group(System):
         ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
         ##       an array of that size, and sub-allocate from that for all relevant subvecs
 
-        ## create storage for the relevant vecwrappers, keyed by variable_of_interest
-
-        ## TODO: need to determine if mode is fwd or rev up front so we don't allocate vecwrappers
-        ##        for unneeded VOIs, e.g., in rev, we just need output of interest and in fwd
-        ##        we need inputs of interest.
-        #VOIs = relevance.inputs + relevance.outputs  # for now, just do them all
-
-        #for voi in VOIs:
-            #pass
-
+        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        for vois in self._relevance.vars_of_interest():
+            for voi in vois:
+                if parent is None:
+                    self._create_vecs(my_params, connections, relevance, voi, impl)
+                else:
+                    self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, connections, parent=self,

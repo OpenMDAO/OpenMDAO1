@@ -85,7 +85,6 @@ class Relevance(object):
 
         return vgraph
 
-
     def _get_relevant_vars(self, g):
         """
         Parameters
@@ -103,16 +102,19 @@ class Relevance(object):
         for nodes in self.inputs:
             for node in nodes:
                 succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
+                succs[node].add(node)
 
         relevant = {}
         grev = g.reverse()
         for nodes in self.outputs:
             for node in nodes:
+                relevant[node] = set()
                 preds = set([v for u,v in nx.dfs_edges(grev, node)])
-                for inp in relevant_inputs:
-                    common = preds.intersection(succs[inp])
-                    common.update([node, inp])
-                    relevant.setdefault(inp, set()).update(common)
-                    relevant.setdefault(node, set()).update(common)
+                preds.add(node)
+                for inps in self.inputs:
+                    for inp in inps:
+                        common = preds.intersection(succs[inp])
+                        relevant[node].update(common)
+                        relevant.setdefault(inp, set()).update(common)
 
         return relevant

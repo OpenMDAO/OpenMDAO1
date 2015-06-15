@@ -114,8 +114,10 @@ class System(object):
     def clear_dparams(self):
         """ Zeros out the dparams (dp) vector."""
 
-        for name in self._relevance.vars_of_interest():
-            self.dpmat[name].vec[:] = 0.0
+        for parallel_set in self._relevance.vars_of_interest():
+            for name in parallel_set:
+                if name in self.dpmat:
+                    self.dpmat[name].vec[:] = 0.0
 
         self.dpmat[None].vec[:] = 0.0
 
