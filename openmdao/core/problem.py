@@ -160,6 +160,73 @@ class Problem(System):
         if self.root.is_active():
             self.driver.run(self)
 
+    def _mode(self, mode, param_list, unknown_list):
+        """ Determine the mode based on precedence. The mode in `mode` is
+        first. If that is 'auto', then the mode in root.ln_options takes
+        precedence. If that is 'auto', then mode is determined by the width
+        of the prameter and quantity space."""
+
+        root = self.root
+
+        if mode == 'auto':
+            mode = root.ln_solver.options['mode']
+            if mode == 'auto':
+                p_dict = root._params_dict
+                u_dict = root._unknowns_dict
+
+                # Sum up param size
+                p_length = 0
+                for param in param_list:
+
+                    if param in p_dict:
+                        meta = p_dict[param]
+
+                    else:
+                        # The user sometimes specifies the parameter output
+                        # name instead of its target because it is more
+                        # convenient
+                        for key, val in iteritems(root._relevance.connections):
+                            if val == param:
+                                meta = u_dict[param]
+                                break
+
+                        # We need the absolute name, but the fd Jacobian
+                        # holds relative promoted inputs
+                        else:
+                            for key in p_dict:
+                                metadata = root.params.metadata(key)
+                                if metadata['relative_name'] == param:
+                                    meta = p_dict[metadata['pathname']]
+                                    break
+
+                    p_length += meta['size']
+
+                # Sum up unknowns size
+                u_length = 0
+                for unkn in unknown_list:
+
+                    if unkn in u_dict:
+                        meta = u_dict[unkn]
+
+                    else:
+                        # We need the absolute name, but the fd Jacobian
+                        # holds relative promoted inputs
+                        for key in root.unknowns:
+                            metadata = root.unknowns.metadata(key)
+                            if metadata['pathname'] == unkn:
+                                meta = u_dict[metadata['relative_name']]
+                                break
+
+                    u_length += meta['size']
+
+                # Choose mode based on size
+                if p_length > u_length:
+                    mode = 'rev'
+                else:
+                    mode = 'fwd'
+
+        return mode
+
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
@@ -338,12 +405,7 @@ class Problem(System):
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
-        if mode == 'auto':
-            mode = root.ln_solver.options['mode']
-            if mode == 'auto':
-                # TODO: Choose based on size
-                msg = 'Automatic mode selction not yet implemented.'
-                raise NotImplementedError(msg)
+        mode = self._mode(mode, param_list, unknown_list)
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list
@@ -859,3 +921,28 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     return connections
 
+def _check_for_matrix_matrix(problem, params, unknowns):
+    """ Checks a system hiearchy to make sure that no settings violate the
+    assumptions needed for matrix-matrix calculation. Returns the mode that
+    the system needs to use."""
+
+    mode = problem._mode('auto', params, unknowns)
+
+    # TODO : Only Linear GS is supported on system
+
+    groups = _find_all_comps(problem.root).keys()
+    for sub in groups:
+        print(sub.name)
+        sub_params = sub._get_fd_params()
+        sub_unknowns = sub._get_fd_unknowns()
+        sub_mode = sub.ln_solver.options['mode']
+
+        # Modes much match root for all subs
+        if sub_mode != mode:
+            msg  = "Group '{name}' must have the same mode as root to use Matrix Matrix."
+            msg = msg.format(name=sub.name)
+            raise RuntimeError(msg)
+
+        # TODO : Only Linear GS is supported on sub
+
+    return mode
