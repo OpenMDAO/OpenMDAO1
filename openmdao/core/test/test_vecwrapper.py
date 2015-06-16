@@ -72,7 +72,7 @@ class TestVecWrapper(unittest.TestCase):
 
         p = TgtVecWrapper()
         p.setup(None, params, u, params.keys(),
-                                            connections, store_byobjs=True)
+                connections, store_byobjs=True)
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)
@@ -107,7 +107,7 @@ class TestVecWrapper(unittest.TestCase):
             'C1:y3':'y3',
         }
 
-        uview = u.get_view('noname', None, varmap)
+        uview = u.get_view('noname', None, varmap, None, None)
 
         self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
 
@@ -121,7 +121,7 @@ class TestVecWrapper(unittest.TestCase):
         self.assertEqual(u['C1:y3'], 'bar')
 
         # now get a view that's empty
-        uview2 = u.get_view('nonname', None, {})
+        uview2 = u.get_view('nonname', None, {}, None, None)
         self.assertEqual(list(uview2.keys()), [])
 
     def test_flat(self):

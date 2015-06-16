@@ -173,11 +173,15 @@ class TestScipyGMRES(unittest.TestCase):
         top = Problem()
         top.root = FanInGrouped()
         top.root.ln_solver = ScipyGMRES()
-        top.setup()
-        top.run()
 
         param_list = ['p1:x1', 'p2:x2']
         unknown_list = ['comp3:y']
+
+        top.driver._inputs_of_interest = param_list
+        top.driver._outputs_of_interest = unknown_list
+
+        top.setup()
+        top.run()
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3:y']['p1:x1'][0][0], -6.0, 1e-6)

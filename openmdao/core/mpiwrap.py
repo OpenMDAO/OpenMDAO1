@@ -65,45 +65,6 @@ class FakeComm(object):
         self.size = 1
 
 
-def get_comm_if_active(system, comm=None):
-    """
-    Return an MPI communicator or a fake communicator if not running under MPI.
-    If running under MPI and current rank exceeds the max processes usable by
-    the given system, COMM_NULL will be returned.
-
-    Parameters
-    ----------
-    system : a `System`
-        The system that is requesting a communicator.
-
-    comm : an MPI communicator (real or fake)
-        The communicator being offered by the parent system.
-
-    Returns
-    -------
-    MPI communicator or a fake MPI commmunicator.
-    """
-    if MPI:
-        if comm is None or comm == MPI.COMM_NULL:
-            return comm
-
-        req, max_req = system.get_req_procs()
-
-        # if we can use every proc in comm, then we're good
-        if max_req is None or max_req >= comm.size:
-            return comm
-
-        # otherwise, we have to create a new smaller comm that
-        # doesn't include the unutilized processes.
-        if comm.rank+1 > max_req:
-            color = MPI.UNDEFINED
-        else:
-            color = 1
-
-        return comm.Split(color)
-    else:
-        return FakeComm()
-
 def evenly_distrib_idxs(num_divisions, arr_size):
     """
     Given a number of divisions and the size of an array, chop the array up
