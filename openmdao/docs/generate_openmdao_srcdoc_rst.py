@@ -86,8 +86,8 @@ for package in packages:
 
     if len(sub_packages) > 0:
         #continue to write in the top-level index file.
-        #only write in packages that have something in them to avoid errors
-        #e.g. at time of writing doegenerators, drivers, and surrmodels are empty dirs.
+        #only document non-empty packages to avoid errors
+        #(e.g. at time of writing, doegenerators, drivers, are empty dirs)
         index.write("   packages/openmdao." + package + "\n")
 
         #make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
@@ -95,16 +95,15 @@ for package in packages:
              package
         os.mkdir(package_dirname)
 
-        #create/write to a package index file: (e.g. "openmdao.core.rst")
+        #create/write a package index file: (e.g. "srcdocs/packages/openmdao.core.rst")
         package_file = open(package_filename, "w")
-        #write the title and underline it
         package_file.write(package_name + "\n")
         package_file.write("-" * len(package_name) + "\n")
         package_file.write(package_top)
 
         for sub_package in sub_packages:
             #this line writes subpackage name e.g. "core/component.py"
-            #into the corresponding package index file e.g. "openmdao.core.rst"
+            #into the corresponding package index file (e.g. "openmdao.core.rst")
             package_file.write("    " + package + os.path.sep + sub_package + "\n")
 
             #creates and writes out one reference sheet (e.g. core/component.rst)
