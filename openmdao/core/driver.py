@@ -17,11 +17,16 @@ class Driver(object):
         self._outputs_of_interest = []
         self._inputs_of_interest = []
 
+        # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('Inequality Constraints', True)
         self.supports.add_option('Equality Constraints', True)
         self.supports.add_option('Linear Constraints', False)
         self.supports.add_option('Multiple Objectives', True)
+        self.supports.add_option('2-Sided Constraints', False)
+
+        # This driver's options
+        self.options = OptionsDictionary()
 
         self._params = OrderedDict()
         self._objs = OrderedDict()
@@ -79,6 +84,17 @@ class Driver(object):
             params[key] = uvec[key]
 
         return params
+
+    def get_parameter_metadata(self):
+        """ Returns a dict of parameter metadata.
+
+        Returns
+        -------
+        dict
+            Keys are the param object names, and the values are the param
+            values.
+        """
+        return self._params
 
     def set_param(self, name, value):
         """ Sets a parameter.
