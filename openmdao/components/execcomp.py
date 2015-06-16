@@ -1,4 +1,3 @@
-
 import re
 import math
 import cmath
@@ -21,7 +20,7 @@ class ExecComp(Component):
     appearing on the left-hand side of the assignments are outputs,
     and the rest are inputs.  Each variable is assumed to be of
     type float unless the initial value for that variable is supplied
-    in **kwargs.  Derivatives are calculated using complex step.
+    in \*\*kwargs.  Derivatives are calculated using complex step.
 
     Parameters
     ----------
@@ -29,7 +28,8 @@ class ExecComp(Component):
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
-    **kwargs: dict of named args
+    **kwargs:
+        dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
     """
@@ -77,7 +77,7 @@ class ExecComp(Component):
         Returns
         -------
         dict
-            A jacobian dict
+            A jacobian dict:
         """
 
         # our complex step
@@ -265,5 +265,3 @@ except ImportError:
     pass
 else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma', 'erf', 'erfc'])
-
-
