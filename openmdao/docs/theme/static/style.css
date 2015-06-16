@@ -72,8 +72,8 @@ body {
   line-height: 150%;
   text-align: center;
   /*in the main page, background-color is the color of the bars down the sides*/
-  background-color: #FFFFA0;
-  /*background-color: #BFD1D4;*/
+  /*background-color: #FFFFA0;*/
+  background-color: #BFD1D4;
   color: black;
   padding: 0;
   border: 1px solid #aaa;
