@@ -27,7 +27,7 @@ class ExecComp(Component):
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
-    **kwargs: 
+    **kwargs:
         dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
@@ -76,7 +76,7 @@ class ExecComp(Component):
         Returns
         -------
         dict
-            A jacobian dict
+            A jacobian dict:
         """
 
         # our complex step

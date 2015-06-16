@@ -92,3 +92,12 @@ div.viewcode-block:target {
   border-top: 1px solid #ac9;
   border-bottom: 1px solid #ac9;
 }
+
+div.footer {
+  background-color: #FFFFA0;
+  color: navy;
+  padding: 3px 8px 3px 0;
+  clear: both;
+  font-size: 0.8em;
+  text-align: right;
+}

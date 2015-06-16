@@ -1,8 +1,9 @@
 #generate_openmdao_srcdoc_rst.py
-#generate index.rst, the openmdao.[pkg].rst, and openmdao.[pkg].[item] rst files
-#in a nested, procedural technique.
+#generate index.rst, a set of openmdao.[pkg].rst,
+#and a full set of openmdao.[pkg].[item].rst ref sheets
 
-#This is script is currently called from the docs/Makefile via "make html"
+#This is script is currently called from the openmdao/docs/Makefile
+#via "make html"
 #The srcdocs directory is removed and regenerated with each make.
 
 #Some formatted strings that will be needed along the way.
