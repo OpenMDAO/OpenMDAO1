@@ -428,9 +428,10 @@ class System(object):
         dresids   = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
         dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
 
-        dunknowns.setup(unknowns_dict)
-        dresids.setup(unknowns_dict)
-        dparams.setup(None, params_dict, self.unknowns, my_params, self.connections)
+        dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
+        dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
+        dparams.setup(None, params_dict, self.unknowns, my_params, self.connections,
+                      relevant_vars=relevance[var_of_interest])
 
         self.dumat[var_of_interest] = dunknowns
         self.drmat[var_of_interest] = dresids
@@ -488,7 +489,8 @@ class System(object):
                                                                              relevance, var_of_interest)
         self.dpmat[var_of_interest] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
         self.dpmat[var_of_interest].setup(parent.dpmat[var_of_interest], params_dict, top_unknowns,
-                                          my_params, self.connections)
+                                          my_params, self.connections,
+                                          relevant_vars=relevance[var_of_interest])
 
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
