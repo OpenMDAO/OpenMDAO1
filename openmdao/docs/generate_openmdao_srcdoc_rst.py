@@ -55,7 +55,7 @@ os.mkdir(dir + "srcdocs" + os.path.sep + "packages")
 #those directories will be the openmdao packages
 #auto-generate the top-level index.rst file for srcdocs, based on openmdao packages:
 packages = []
-listings = os.listdir("..")
+listings = os.listdir(dir + "..")
 #Everything in listings that isn't discarded is appended as a source package.
 for listing in listings:
     if os.path.isdir(".." + os.path.sep + listing):
@@ -64,7 +64,7 @@ for listing in listings:
             packages.append(listing)
 
 #begin writing the 'srcdocs/index.rst' file at top level.
-index_filename = "srcdocs" + os.path.sep + "index.rst"
+index_filename = dir + "srcdocs" + os.path.sep + "index.rst"
 index = open(index_filename, "w")
 index.write(index_top)
 
@@ -73,7 +73,7 @@ for package in packages:
     #a package is e.g. openmdao.core, that contains source files
     #a sub_package, is a src file, e.g. openmdao.core.component
     sub_packages = []
-    package_filename = "srcdocs" + os.path.sep + "packages" + os.path.sep + \
+    package_filename = dir + "srcdocs" + os.path.sep + "packages" + os.path.sep + \
         "openmdao." + package + ".rst"
     package_name = "openmdao." + package
     sub_listings = os.listdir(".." + os.path.sep + package)
@@ -93,9 +93,9 @@ for package in packages:
         index.write("   packages/openmdao." + package + "\n")
 
         #make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
-        package_dirname = "srcdocs" + os.path.sep + "packages" + os.path.sep + \
+        package_dirname = dir + "srcdocs" + os.path.sep + "packages" + os.path.sep + \
              package
-        os.mkdir(dir + package_dirname)
+        os.mkdir(package_dirname)
 
         #create/write a package index file: (e.g. "srcdocs/packages/openmdao.core.rst")
         package_file = open(package_filename, "w")
