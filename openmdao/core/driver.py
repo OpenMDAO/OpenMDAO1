@@ -29,7 +29,7 @@ class Driver(object):
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
 
-    def add_param(self, name, low=None, high=None):
+    def add_param(self, name, low=None, high=None, scaler=None, adder=None):
         """ Adds a param to this driver.
 
         Parameters
@@ -42,6 +42,12 @@ class Driver(object):
 
         high : upper or ndarray (optional)
             Lower boundary for the param
+
+        scalar : upper or ndarray (optional)
+            Multiplicative scale from physical to normalized coordinates.
+
+        adder : upper or ndarray (optional)
+            Additive scale from physical to normalized coordinates.
         """
         pass
 
@@ -69,13 +75,19 @@ class Driver(object):
         """
         pass
 
-    def add_objective(self, name):
+    def add_objective(self, name, scaler=None, adder=None):
         """ Adds an objective to this driver.
 
         Parameters
         ----------
         name : string
             Promoted pathname of the output that will serve as the objective.
+
+        scalar : upper or ndarray (optional)
+            Multiplicative scale from physical to normalized coordinates.
+
+        adder : upper or ndarray (optional)
+            Additive scale from physical to normalized coordinates.
         """
         pass
 
@@ -98,7 +110,8 @@ class Driver(object):
         """
         pass
 
-    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None):
+    def add_constraint(self, name, ctype='ineq', linear=False, scaler=None,
+                       adder=None, jacs=None):
         """ Adds a constraint to this driver.
 
         Parameters
@@ -114,6 +127,12 @@ class Driver(object):
         linear : bool, optional
             Set to True if this constraint is linear with respect to all params
             so that it can be calculated once and cached.
+
+        scalar : upper or ndarray (optional)
+            Multiplicative scale from physical to normalized coordinates.
+
+        adder : upper or ndarray (optional)
+            Additive scale from physical to normalized coordinates.
 
         jacs : dict of functions, optional
             Dictionary of user-defined functions that return the flattened
