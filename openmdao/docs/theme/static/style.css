@@ -21,7 +21,7 @@ a:visited {
 
 a:hover {
     text-decoration: underline;
-    color: orange;
+    color: #6699FF;
 }
 
 div.sphinxsidebar h4, div.sphinxsidebar h3 {
@@ -75,7 +75,7 @@ body {
   text-align: center;
   /*in the main page, background-color is the color of the bars down the sides*/
   background-color: #FFFFA0; /*yellow*/
-  /*background-color: #BFD1D4;*/
+  /*background-color: #BFD1D4;*/ /*blue*/
   /*background-color: #FFEEC9;*/
 
   color: black;
@@ -100,4 +100,9 @@ div.footer {
   clear: both;
   font-size: 0.8em;
   text-align: right;
+}
+
+a code {
+  border: 0;
+  color: navy;
 }

@@ -29,11 +29,17 @@ class Relevance(object):
             else:
                 self.outputs.append(tuple(out))
 
-        vgraph = self._setup_graph(connections)
-        self.relevant = self._get_relevant_vars(vgraph)
+        self._vgraph = self._setup_graph(connections)
+        self.relevant = self._get_relevant_vars(self._vgraph)
+
+    def __getitem__(self, name):
+        # if name is None, everything is relevant
+        if name is None:
+            return set(self._vgraph.nodes())
+        return self.relevant.get(name, [])
 
     def is_relevant(self, var_of_interest, varname):
-        if not var_of_interest:
+        if var_of_interest is None:
             return True
         return varname in self.relevant[var_of_interest]
 
