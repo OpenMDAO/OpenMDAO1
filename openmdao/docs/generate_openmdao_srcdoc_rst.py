@@ -1,8 +1,11 @@
 #generate_openmdao_srcdoc_rst.py
-#generate index.rst, the openmdao.[pkg].rst and ref sheets
-#in a nested technique.
+#generate index.rst, the openmdao.[pkg].rst, and openmdao.[pkg].[item] rst files
+#in a nested, procedural technique.
 
-#Some format strings that will be needed along the way.
+#This is script is currently called from the docs/Makefile via "make html"
+#The srcdocs directory is removed and regenerated with each make.
+
+#Some formatted strings that will be needed along the way.
 index_top=""".. _source_documentation:
 
 =============================
@@ -41,6 +44,7 @@ ref_sheet_bottom = """
 """
 
 import os
+#need to set up the srcdocs directory structure, relative to docs.
 os.mkdir("srcdocs")
 os.mkdir("srcdocs" + os.path.sep + "packages")
 
@@ -57,15 +61,15 @@ for listing in listings:
         and listing != "devtools":
             packages.append(listing)
 
-#begin writing the "srcdocs/index.rst" file at top leve.
+#begin writing the 'srcdocs/index.rst' file at top level.
 index_filename = "srcdocs" + os.path.sep + "index.rst"
 index = open(index_filename, "w")
 index.write(index_top)
 
 #auto-generate package header files (e.g. 'openmdao.core.rst')
 for package in packages:
-    #a package is e.g. openmdao.core
-    #a sub_package, for lack of better term, is e.g. openmdao.core.component
+    #a package is e.g. openmdao.core, that contains source files
+    #a sub_package, is a src file, e.g. openmdao.core.component
     sub_packages = []
     package_filename = "srcdocs" + os.path.sep + "packages" + os.path.sep + \
         "openmdao." + package + ".rst"
@@ -81,19 +85,19 @@ for package in packages:
             sub_packages.append(sub_listing.rsplit('.')[0])
 
     if len(sub_packages) > 0:
-
-        #contine to write in the top-level index file
+        #continue to write in the top-level index file.
         #only write in packages that have something in them to avoid errors
         #e.g. at time of writing doegenerators, drivers, and surrmodels are empty dirs.
         index.write("   packages/openmdao." + package + "\n")
 
-        #make directory (e.g.) srcdocs/packages/core in which to stick files
+        #make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
         package_dirname = "srcdocs" + os.path.sep + "packages" + os.path.sep + \
              package
         os.mkdir(package_dirname)
 
-        #write a package index file: "openmdao.core.rst,"" for instance
+        #create/write to a package index file: (e.g. "openmdao.core.rst")
         package_file = open(package_filename, "w")
+        #write the title and underline it
         package_file.write(package_name + "\n")
         package_file.write("-" * len(package_name) + "\n")
         package_file.write(package_top)
@@ -103,16 +107,16 @@ for package in packages:
             #into the corresponding package index file e.g. "openmdao.core.rst"
             package_file.write("    " + package + os.path.sep + sub_package + "\n")
 
-            #writes out the reference sheet for one item, e.g. core/component.py
+            #creates and writes out one reference sheet (e.g. core/component.rst)
             ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
             ref_sheet = open(ref_sheet_filename, "w")
-            ref_sheet.write(".. index:: "+ sub_package + ".py\n\n")
-            ref_sheet.write(".. _" + package_name + "." + sub_package + ".py:\n\n")
+            #get the meat of the ref sheet code done
             filename = sub_package + ".py"
+            ref_sheet.write(".. index:: "+ filename + "\n\n")
+            ref_sheet.write(".. _" + package_name + "." + filename + ":\n\n")
             ref_sheet.write(filename + "\n")
             ref_sheet.write("+" * len(filename) + "\n\n")
             ref_sheet.write(".. automodule:: " + package_name + "." + sub_package)
-
             #finish and close each reference sheet.
             ref_sheet.write(ref_sheet_bottom)
             ref_sheet.close()
