@@ -7,7 +7,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, get_comm_if_active
+from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
 
 
@@ -26,6 +26,11 @@ class System(object):
         self._promotes = ()
 
         self.comm = None
+
+        # dicts of vectors used for parallel solution of multiple RHS
+        self.dumat = {}
+        self.dpmat = {}
+        self.drmat = {}
 
         self.fd_options = OptionsDictionary()
         self.fd_options.add_option('force_fd', False,
@@ -87,7 +92,7 @@ class System(object):
 
         return False
 
-    def subsystems(self):
+    def subsystems(self, local=False, recurse=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
         return []
@@ -105,6 +110,20 @@ class System(object):
             self.pathname = ':'.join((parent_path, self.name))
         else:
             self.pathname = self.name
+
+    def clear_dparams(self):
+        """ Zeros out the dparams (dp) vector."""
+
+        for parallel_set in self._relevance.vars_of_interest():
+            for name in parallel_set:
+                if name in self.dpmat:
+                    self.dpmat[name].vec[:] = 0.0
+
+        self.dpmat[None].vec[:] = 0.0
+
+        # Recurse to clear all dparams vectors.
+        for name, system in self.subsystems(local=True):
+            system.clear_dparams()
 
     def preconditioner(self):
         pass
@@ -153,7 +172,7 @@ class System(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self.comm = get_comm_if_active(self, comm)
+        self.comm = comm
 
     def _set_vars_as_remote(self):
         """
@@ -247,18 +266,17 @@ class System(object):
 
             # If our input is connected to a Paramcomp, then we need to twiddle
             # the unknowns vector instead of the params vector.
-            if hasattr(self, '_varmanager'):
-                param_src = self._varmanager.connections.get(p_name)
-                if param_src is not None:
+            param_src = self.connections.get(p_name)
+            if param_src is not None:
 
-                    # Have to convert to relative name to key into unknowns
-                    if param_src not in self.unknowns:
-                        for name in unknowns:
-                            meta = unknowns.metadata(name)
-                            if meta['pathname'] == param_src:
-                                param_src = meta['relative_name']
+                # Have to convert to relative name to key into unknowns
+                if param_src not in self.unknowns:
+                    for name in unknowns:
+                        meta = unknowns.metadata(name)
+                        if meta['pathname'] == param_src:
+                            param_src = meta['relative_name']
 
-                    target_input = unknowns.flat[param_src]
+                target_input = unknowns.flat[param_src]
 
             mydict = {}
             for key, val in self._params_dict.items():
@@ -384,3 +402,126 @@ class System(object):
                 dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
+
+    def _create_vecs(self, my_params, relevance, var_of_interest, impl):
+        comm = self.comm
+        sys_pathname = self.pathname
+        params_dict = self._params_dict
+        unknowns_dict = self._unknowns_dict
+
+        self.impl_factory = impl
+        self.comm = comm
+
+        # create implementation specific VecWrappers
+        if var_of_interest is None:
+            self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+            self.resids    = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+            self.params    = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+
+            # populate the VecWrappers with data
+            self.unknowns.setup(unknowns_dict, store_byobjs=True)
+            self.resids.setup(unknowns_dict)
+            self.params.setup(None, params_dict, self.unknowns,
+                              my_params, self.connections, store_byobjs=True)
+
+        dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        dresids   = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
+        dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+
+        dunknowns.setup(unknowns_dict)
+        dresids.setup(unknowns_dict)
+        dparams.setup(None, params_dict, self.unknowns, my_params, self.connections)
+
+        self.dumat[var_of_interest] = dunknowns
+        self.drmat[var_of_interest] = dresids
+        self.dpmat[var_of_interest] = dparams
+
+    def _create_views(self, top_unknowns, parent, my_params, relevance, var_of_interest=None):
+        """
+        A manager of the data transfer of a possibly distributed collection of
+        variables.  The variables are based on views into an existing VarManager.
+
+        Parameters
+        ----------
+        top_unknowns : `VecWrapper`
+            The `Problem` level unknowns `VecWrapper`.
+
+        parent : `System`
+            The `System` which provides the `VecWrapper` on which to create views.
+
+        my_params : list
+            List of pathnames for parameters that this `VarManager` is
+            responsible for propagating.
+
+        relevance : `Relevance`
+            Object containing relevance info for each variable of interest.
+
+        var_of_interest : str
+            The name of a variable of interest.
+
+        Returns
+        -------
+        `VecTuple`
+            A namedtuple of six (6) `VecWrappers`:
+            unknowns, dunknowns, resids, dresids, params, dparams.
+        """
+
+        comm = self.comm
+        unknowns_dict = self._unknowns_dict
+        params_dict = self._params_dict
+
+        # map relative name in parent to corresponding relative name in this view
+        umap = get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
+
+        if var_of_interest is None:
+            self.unknowns  = parent.unknowns.get_view(self.pathname, comm, umap, relevance,
+                                                      var_of_interest)
+            self.resids    = parent.resids.get_view(self.pathname, comm, umap, relevance,
+                                                    var_of_interest)
+            self.params    = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+            self.params.setup(parent.params, params_dict, top_unknowns,
+                              my_params, self.connections, store_byobjs=True)
+
+        self.dumat[var_of_interest] = parent.dumat[var_of_interest].get_view(self.pathname, comm, umap,
+                                                                             relevance, var_of_interest)
+        self.drmat[var_of_interest] = parent.drmat[var_of_interest].get_view(self.pathname, comm, umap,
+                                                                             relevance, var_of_interest)
+        self.dpmat[var_of_interest] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+        self.dpmat[var_of_interest].setup(parent.dpmat[var_of_interest], params_dict, top_unknowns,
+                                          my_params, self.connections)
+
+
+def get_relname_map(unknowns, unknowns_dict, child_name):
+    """
+    Parameters
+    ----------
+    unknowns : `VecWrapper`
+        A dict-like object containing variables keyed using relative names.
+
+    unknowns_dict : `OrderedDict`
+        An ordered mapping of absolute variable name to its metadata.
+
+    child_name : str
+        The pathname of the child for which to get relative name.
+
+    Returns
+    -------
+    dict
+        Maps relative name in parent (owner of unknowns and unknowns_dict) to
+        the corresponding relative name in the child, where relative name may
+        include the 'promoted' name of a variable.
+    """
+    # unknowns is keyed on name relative to the parent system/varmanager
+    # unknowns_dict is keyed on absolute pathname
+    umap = {}
+    for rel, meta in unknowns.items():
+        abspath = meta['pathname']
+        if abspath.startswith(child_name+':'):
+            newmeta = unknowns_dict.get(abspath)
+            if newmeta is not None:
+                newrel = newmeta['relative_name']
+            else:
+                newrel = rel
+            umap[rel] = newrel
+
+    return umap

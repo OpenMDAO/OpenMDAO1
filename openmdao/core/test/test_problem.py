@@ -7,7 +7,7 @@ import warnings
 
 from openmdao.components.linear_system import LinearSystem
 from openmdao.core.component import Component
-from openmdao.core.problem import Problem, _check_for_matrix_matrix
+from openmdao.core.problem import Problem
 from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
@@ -557,16 +557,16 @@ class TestProblem(unittest.TestCase):
 
         # make sure _check function does it too
 
-        try:
-            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
-        except Exception as err:
-            msg  = "Group '' must have the same mode as root to use Matrix Matrix."
-            self.assertEquals(text_type(err), msg)
-        else:
-            self.fail('Exception expected')
+        #try:
+            #mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
+        #except Exception as err:
+            #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
+            #self.assertEquals(text_type(err), msg)
+        #else:
+            #self.fail('Exception expected')
 
         root.ln_solver.options['mode'] = 'fwd'
-        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
         self.assertEqual(mode, 'fwd')
 
     def test_check_matrix_matrix(self):
@@ -583,15 +583,15 @@ class TestProblem(unittest.TestCase):
         top.setup()
         top.run()
 
-        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+            mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
         except Exception as err:
-            msg  = "Group 'sub2' must have the same mode as root to use Matrix Matrix."
+            msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEquals(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -600,15 +600,15 @@ class TestProblem(unittest.TestCase):
         sub2.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+            mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
         except Exception as err:
-            msg  = "Group 'sub1' must have the same mode as root to use Matrix Matrix."
+            msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEquals(text_type(err), msg)
         else:
             self.fail('Exception expected')
 
         sub1.ln_solver.options['mode'] = 'rev'
-        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        mode = top._check_for_matrix_matrix(['p1:a'], ['comp:x'])
 
 if __name__ == "__main__":
     unittest.main()

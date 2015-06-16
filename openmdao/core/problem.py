@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import warnings
 from itertools import chain
-from six import iteritems
+from six import iteritems, string_types
 import sys
 
 # pylint: disable=E0611, F0401
@@ -16,8 +16,10 @@ from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.relevance import Relevance
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
+from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -141,8 +143,23 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
+        # some mode determination requires connection information, so pass
+        # it down the tree
+        self.root.connections = connections
+        for name, sub in self.root.subsystems(recurse=True):
+            sub.connections = connections
+
+        mode = self._check_for_matrix_matrix(self.driver._inputs_of_interest,
+                                             self.driver._outputs_of_interest)
+
+        relevance = Relevance(params_dict, unknowns_dict, connections,
+                              self.driver._inputs_of_interest,
+                              self.driver._outputs_of_interest,
+                              mode)
+
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, impl=self._impl)
+        self.root._setup_vectors(param_owners, relevance=relevance,
+                                 impl=self._impl)
 
         # Prep for case recording
         self._start_recorders()
@@ -173,12 +190,11 @@ class Problem(System):
 
                     if param in p_dict:
                         meta = p_dict[param]
-
                     else:
                         # The user sometimes specifies the parameter output
                         # name instead of its target because it is more
                         # convenient
-                        for key, val in iteritems(root._varmanager.connections):
+                        for key, val in iteritems(root.connections):
                             if val == param:
                                 meta = u_dict[param]
                                 break
@@ -200,7 +216,6 @@ class Problem(System):
 
                     if unkn in u_dict:
                         meta = u_dict[unkn]
-
                     else:
                         # We need the absolute name, but the fd Jacobian
                         # holds relative promoted inputs
@@ -318,7 +333,7 @@ class Problem(System):
                     # The user sometimes specifies the parameter output
                     # name instead of its target because it is more
                     # convenient
-                    for key, val in iteritems(root._varmanager.connections):
+                    for key, val in iteritems(root.connections):
                         if val == ikey:
                             fd_ikey = key
                             break
@@ -369,8 +384,14 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        root.dunknowns.vec[:] = 0.0
-        root.dresids.vec[:] = 0.0
+        for names in root._relevance.vars_of_interest():
+            for name in names:
+                if name in root.dumat:
+                    root.dumat[name].vec[:] = 0.0
+                    root.drmat[name].vec[:] = 0.0
+        root.dumat[None].vec[:] = 0.0
+        root.drmat[None].vec[:] = 0.0
+
         root.jacobian(params, unknowns, root.resids)
 
         rhs = np.zeros((len(unknowns.vec), ))
@@ -407,7 +428,7 @@ class Problem(System):
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
-                param_src = root._varmanager.connections.get(param)
+                param_src = root.connections.get(param)
                 param_src = unknowns.get_relative_varname(param_src)
                 in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
@@ -428,7 +449,7 @@ class Problem(System):
                     if item in unknowns:
                         out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
-                        param_src = root._varmanager.connections.get(item)
+                        param_src = root.connections.get(item)
                         param_src = unknowns.get_relative_varname(param_src)
                         out_size, out_idxs = unknowns.get_local_idxs(param_src)
 
@@ -477,11 +498,9 @@ class Problem(System):
         """
 
         root = self.root
-        varmanager = root._varmanager
 
         # Linearize the model
-        root.jacobian(varmanager.params, varmanager.unknowns,
-                      varmanager.resids)
+        root.jacobian(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
@@ -489,6 +508,9 @@ class Problem(System):
         data = {}
         skip_keys = []
         model_hierarchy = _find_all_comps(root)
+
+        # FIXME:
+        voi = None
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
@@ -508,9 +530,9 @@ class Problem(System):
                 params = comp.params
                 unknowns = comp.unknowns
                 resids = comp.resids
-                dparams = comp.dparams
-                dunknowns = comp.dunknowns
-                dresids = comp.dresids
+                dparams = comp.dpmat[voi]
+                dunknowns = comp.dumat[voi]
+                dresids = comp.drmat[voi]
 
                 if out_stream is not None:
                     out_stream.write('-'*(len(cname)+15) + '\n')
@@ -669,7 +691,6 @@ class Problem(System):
         _assemble_deriv_data(param_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
-
         return data
 
     def _start_recorders(self):
@@ -680,6 +701,30 @@ class Problem(System):
             for solver in solvers:
                 for recorder in solver.recorders:
                     recorder.startup(group)
+
+    def _check_for_matrix_matrix(self, params, unknowns):
+        """ Checks a system hiearchy to make sure that no settings violate the
+        assumptions needed for matrix-matrix calculation. Returns the mode that
+        the system needs to use.
+        """
+
+        mode = self._mode('auto', params, unknowns)
+
+        # TODO : Only Linear GS is supported on system
+
+        for _, sub in self.root.subgroups(recurse=True):
+            sub_mode = sub.ln_solver.options['mode']
+
+            # Modes must match root for all subs
+            if sub_mode not in (mode, 'auto'):
+                msg  = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                        " Modes must match to use Matrix Matrix."
+                msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                raise RuntimeError(msg)
+
+            # TODO : Only Linear GS is supported on sub
+
+        return mode
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
@@ -908,25 +953,3 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     return connections
 
-def _check_for_matrix_matrix(problem, params, unknowns):
-    """ Checks a system hiearchy to make sure that no settings violate the
-    assumptions needed for matrix-matrix calculation. Returns the mode that
-    the system needs to use."""
-
-    mode = problem._mode('auto', params, unknowns)
-
-    # TODO : Only Linear GS is supported on system
-
-    groups = _find_all_comps(problem.root).keys()
-    for sub in groups:
-        sub_mode = sub.ln_solver.options['mode']
-
-        # Modes much match root for all subs
-        if sub_mode != mode:
-            msg  = "Group '{name}' must have the same mode as root to use Matrix Matrix."
-            msg = msg.format(name=sub.name)
-            raise RuntimeError(msg)
-
-        # TODO : Only Linear GS is supported on sub
-
-    return mode

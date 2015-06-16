@@ -347,12 +347,12 @@ class FanInGrouped(Group):
     def __init__(self):
         super(FanInGrouped, self).__init__()
 
+        self.add('p1', ParamComp('x1', 1.0))
+        self.add('p2', ParamComp('x2', 1.0))
         sub = self.add('sub', ParallelGroup())
         sub.add('comp1', ExecComp(['y=-2.0*x']))
         sub.add('comp2', ExecComp(['y=5.0*x']))
         self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2']))
-        self.add('p1', ParamComp('x1', 1.0))
-        self.add('p2', ParamComp('x2', 1.0))
 
         self.connect("sub:comp1:y", "comp3:x1")
         self.connect("sub:comp2:y", "comp3:x2")
