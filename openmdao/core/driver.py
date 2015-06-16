@@ -26,6 +26,9 @@ class Driver(object):
         self._eq_cons = OrderedDict()
         self._ineq_cons = OrderedDict()
 
+        # We take root during setup
+        self.root = None
+
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
 
@@ -49,7 +52,23 @@ class Driver(object):
         adder : upper or ndarray (optional)
             Additive scale from physical to normalized coordinates.
         """
-        pass
+
+        if low is None:
+            low = -1e99
+
+        if high is None:
+            high = 1e99
+
+        # TODO: Check validity of param string.
+        # TODO: Check validity of everything else.
+
+        param = {}
+        param['low'] = low
+        param['high'] = high
+        param['scaler'] = scaler
+        param['adder'] = adder
+
+        self._params[name] = param
 
     def get_parameters(self):
         """ Returns a dict of parameters.
@@ -60,7 +79,7 @@ class Driver(object):
             Keys are the param object names, and the values are the param
             values.
         """
-        pass
+        return self._params
 
     def set_param(self, name, value):
         """ Sets a parameter.

@@ -65,7 +65,6 @@ class MySimpleDriver(Driver):
                     self.violated.append(name)
 
 
-
 class TestDriver(unittest.TestCase):
 
     def test_mydriver(self):
@@ -76,8 +75,9 @@ class TestDriver(unittest.TestCase):
         top.driver = MySimpleDriver()
         top.driver.add_param('pz.z', low=-100.0, high=100.0)
 
-        top.driver.add_objective('need to add expression comp')
-        top.driver.add_constraint('need to add expression comp')
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1')
+        top.driver.add_constraint('con2')
 
 if __name__ == "__main__":
     unittest.main()
