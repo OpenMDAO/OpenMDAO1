@@ -1,6 +1,7 @@
 
 import re
 import math
+import cmath
 import ast
 
 import numpy
@@ -220,30 +221,40 @@ def _import_functs(mod, dct, names=None):
     if names is None:
         names = dir(mod)
     for name in names:
+        if isinstance(name, tuple):
+            name, alias = name
+        else:
+            alias = name
         if not name.startswith('_'):
             dct[name] = getattr(mod, name)
+            dct[alias] = dct[name]
 
 
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {}
 
-
-# add stuff from math lib directly to our locals dict so users won't have to
-# put 'math.' in front of all of their calls to standard math functions
-
+# Note: no function in the math module support complex args, so the following can only be used
+#       in ExecComps if derivatives are not required.  The functions below don't have numpy
+#       versions (which do support complex args), otherwise we'd just use those.  Some of these
+#       will be overridden if scipy is found.
+_import_functs(math, _expr_dict,
+               names=['factorial', 'fsum', 'lgamma', 'erf', 'erfc', 'gamma'])
 
 _import_functs(numpy, _expr_dict,
-               names=['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+               names=['cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
                       'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
                       'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
-                      'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p'])
+                      'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p',
+                      ('arcsin','asin'), ('arcsinh','asinh'), ('arctanh','atanh'),
+                      ('arctan','atan'), ('arctan2','atan2'),
+                      ('arccosh','acosh'), ('arccos','acos'),
+                      ('power', 'pow')])
 
-_import_functs(math, _expr_dict,
-               names=['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
-                      'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma'])
+# Note: adding cmath here in case someone wants to have an ExecComp that performs some complex
+#       operation during solve_nonlinear.  cmath functions generally return complex numbers even if the
+#       args are floats.
+_expr_dict['cmath'] = cmath
 
-_expr_dict['math'] = math
-_expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
 _expr_dict['numpy'] = numpy
 
 
@@ -253,6 +264,6 @@ try:
 except ImportError:
     pass
 else:
-    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
+    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma', 'erf', 'erfc'])
 
 
