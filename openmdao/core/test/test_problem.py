@@ -7,7 +7,7 @@ import warnings
 
 from openmdao.components.linear_system import LinearSystem
 from openmdao.core.component import Component
-from openmdao.core.problem import Problem
+from openmdao.core.problem import Problem, _check_for_matrix_matrix
 from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
@@ -175,15 +175,15 @@ class TestProblem(unittest.TestCase):
             def __init__(self):
                 super(B, self).__init__()
                 self.add_param('x', 0)
-                
+
         problem = Problem()
         problem.root = Group()
         problem.root.add('A', A())
         problem.root.add('B', B())
-        
+
         problem.root.connect('A:x', 'B:x')
         problem.setup()
-        
+
         expected_error_message = ("Source 'A:y' cannot be connected to target 'B:x': "
                                   "'A:y' does not exist.")
         problem = Problem()
@@ -191,12 +191,12 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('A:y', 'B:x')
-        
+
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
-            
+
         self.assertEqual(str(cm.exception), expected_error_message)
-        
+
         expected_error_message = ("Source 'A:x' cannot be connected to target 'B:y': "
                                   "'B:y' does not exist.")
         problem = Problem()
@@ -204,12 +204,12 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('A:x', 'B:y')
-        
+
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
-            
+
         self.assertEqual(str(cm.exception), expected_error_message)
-        
+
         expected_error_message = ("Source 'B:x' cannot be connected to target 'A:x': "
                                   "Source must be an unknown but 'B:x' is a parameter.")
         problem = Problem()
@@ -217,12 +217,12 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('B:x', 'A:x')
-        
+
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
-            
+
         self.assertEqual(str(cm.exception), expected_error_message)
-        
+
         expected_error_message = ("Source 'A:x' cannot be connected to target 'A:x': "
                                   "Target must be a parameter but 'A:x' is an unknown.")
         problem = Problem()
@@ -230,12 +230,12 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('A:x', 'A:x')
-        
+
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
-            
+
         self.assertEqual(str(cm.exception), expected_error_message)
-            
+
     def test_check_connections(self):
         class A(Component):
             def __init__(self):
@@ -524,6 +524,91 @@ class TestProblem(unittest.TestCase):
                                   "'<type 'numpy.ndarray'>' of target "
                                   "'x'")
         self.assertEquals(expected_error_message, str(cm.exception))
+
+    def test_mode_auto(self):
+        # Make sure mode=auto chooses correctly for all problem sizes as well
+        # as for abs/rel/etc paths
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('a', 1.0), promotes=['*'])
+        root.add('p2', ParamComp('b', 1.0), promotes=['*'])
+        root.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
+
+        root.ln_solver.options['mode'] = 'auto'
+        top.setup()
+        top.run()
+
+        mode = top._mode('auto', ['p1:a'], ['comp:x'])
+        self.assertEqual(mode, 'fwd')
+
+        mode = top._mode('auto', ['p1:a', 'p1:b'], ['comp:x'])
+        self.assertEqual(mode, 'rev')
+
+        mode = top._mode('auto', ['a'], ['x'])
+        self.assertEqual(mode, 'fwd')
+
+        mode = top._mode('auto', ['a', 'b'], ['x'])
+        self.assertEqual(mode, 'rev')
+
+        mode = top._mode('auto', ['comp:a'], ['x'])
+        self.assertEqual(mode, 'fwd')
+
+        # make sure _check function does it too
+
+        try:
+            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        except Exception as err:
+            msg  = "Group '' must have the same mode as root to use Matrix Matrix."
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
+
+        root.ln_solver.options['mode'] = 'fwd'
+        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        self.assertEqual(mode, 'fwd')
+
+    def test_check_matrix_matrix(self):
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('a', 1.0), promotes=['*'])
+        root.add('p2', ParamComp('b', 1.0), promotes=['*'])
+        sub1 = root.add('sub1', Group(), promotes=['*'])
+        sub2 = sub1.add('sub2', Group(), promotes=['*'])
+        sub2.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
+
+        top.setup()
+        top.run()
+
+        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+
+        root.ln_solver.options['mode'] = 'rev'
+        sub1.ln_solver.options['mode'] = 'rev'
+
+        try:
+            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        except Exception as err:
+            msg  = "Group 'sub2' must have the same mode as root to use Matrix Matrix."
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
+
+        sub1.ln_solver.options['mode'] = 'fwd'
+        sub2.ln_solver.options['mode'] = 'rev'
+
+        try:
+            mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
+        except Exception as err:
+            msg  = "Group 'sub1' must have the same mode as root to use Matrix Matrix."
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
+
+        sub1.ln_solver.options['mode'] = 'rev'
+        mode = _check_for_matrix_matrix(top, ['p1:a'], ['comp:x'])
 
 if __name__ == "__main__":
     unittest.main()
