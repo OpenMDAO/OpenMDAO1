@@ -45,8 +45,9 @@ ref_sheet_bottom = """
 
 import os
 #need to set up the srcdocs directory structure, relative to docs.
-os.mkdir("srcdocs")
-os.mkdir("srcdocs" + os.path.sep + "packages")
+dir=os.path.dirname(__file__)
+os.mkdir(dir + "srcdocs")
+os.mkdir(dir + "srcdocs" + os.path.sep + "packages")
 
 
 #look for directories in the openmdao level, one up from docs
@@ -93,7 +94,7 @@ for package in packages:
         #make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
         package_dirname = "srcdocs" + os.path.sep + "packages" + os.path.sep + \
              package
-        os.mkdir(package_dirname)
+        os.mkdir(dir + package_dirname)
 
         #create/write a package index file: (e.g. "srcdocs/packages/openmdao.core.rst")
         package_file = open(package_filename, "w")

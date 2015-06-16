@@ -61,9 +61,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /*in the source docs, the header for "Parameters"*/
 th {
-  background-color: #BFD1D4;
+  background-color: #FFEEC9;
+  /*background-color: #BFD1D4;*/
   /*background-color: #FFFFB0;*/
-  /*background-color: #FFFFE0;*/
+  background-color: #FFFFE0;
 }
 
 body {
@@ -73,8 +74,10 @@ body {
   line-height: 150%;
   text-align: center;
   /*in the main page, background-color is the color of the bars down the sides*/
-  /*background-color: #FFFFA0;*/
-  background-color: #BFD1D4;
+  background-color: #FFFFA0; /*yellow*/
+  /*background-color: #BFD1D4;*/
+  /*background-color: #FFEEC9;*/
+
   color: black;
   padding: 0;
   border: 1px solid #aaa;
@@ -83,7 +86,8 @@ body {
 }
 
 div.viewcode-block:target {
-  background-color: #BFD1D4;
+  background-color: #FFFFA0;
+  /*background-color: #BFD1D4;*/
   /*background-color: #BFD0F4;*/
   border-top: 1px solid #ac9;
   border-bottom: 1px solid #ac9;
