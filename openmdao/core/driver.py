@@ -14,6 +14,8 @@ class Driver(object):
     def __init__(self):
         super(Driver, self).__init__()
         self.recorders = []
+        self._outputs_of_interest = []
+        self._inputs_of_interest = []
 
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('Inequality Constraints', True)

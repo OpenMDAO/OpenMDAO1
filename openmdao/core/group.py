@@ -14,12 +14,11 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.system import System
-from openmdao.core.varmanager import VarManager, ViewVarManager, create_views
+from openmdao.core.varmanager import VarManager
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 
-from openmdao.core.mpiwrap import get_comm_if_active
 from openmdao.core.checks import ConnectError
 
 
@@ -48,7 +47,7 @@ class Group(System):
         """
         if self.is_active():
             try:
-                self._varmanager.unknowns[name] = val
+                self.unknowns[name] = val
             except KeyError:
                 # look in params
                 try:
@@ -83,7 +82,7 @@ class Group(System):
             raise RuntimeError('setup() must be called before variables can be accessed')
 
         try:
-            return self._varmanager[name]
+            return self.unknowns[name]
         except KeyError:
             subsys, subname = name.split(':', 1)
             try:
@@ -96,48 +95,6 @@ class Group(System):
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
-
-    @property
-    def unknowns(self):
-        try:
-            return self._varmanager.unknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dunknowns(self):
-        try:
-            return self._varmanager.dunknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def params(self):
-        try:
-            return self._varmanager.params
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dparams(self):
-        try:
-            return self._varmanager.dparams
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def resids(self):
-        try:
-            return self._varmanager.resids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
-
-    @property
-    def dresids(self):
-        try:
-            return self._varmanager.dresids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Group '%s'" % self.name)
 
     def subsystem(self, name):
         """
@@ -210,38 +167,54 @@ class Group(System):
             for target in targets:
                 self._src[target] = source
 
-    def subsystems(self, local=False):
-        """ Returns an iterator over subsystems.
-
-        local: bool
-            Set to True to return only systems that are local.
+    def subsystems(self, local=False, recurse=False, typ=System):
         """
-        if local:
-            return self._local_subsystems.items()
-        else:
-            return self._subsystems.items()
+        Parameters
+        ----------
+        local : bool, optional
+            If True, only return those `Components` that are local. Default is False.
 
-    def subgroups(self, local=False):
+        recurse : bool, optional
+            If True, return all `Components` in the system tree, subject to
+            the value of the local arg. Default is False.
+
+        typ : type, optional
+            If a class is specified here, only those subsystems that are instances
+            of that type will be returned.  Default type is `System`.
+
+        Returns
+        -------
+        iterator
+            Iterator over subsystems.
+        """
+        subs = self._local_subsystems if local else self._subsystems
+
+        for name, sub in subs.items():
+            if isinstance(sub, typ):
+                yield name, sub
+            if recurse and isinstance(sub, Group):
+                for n, s in sub.subsystems(local, recurse, typ):
+                    yield n, s
+
+    def subgroups(self, local=False, recurse=False):
         """
         Returns
         -------
         iterator
             Iterator over subgroups.
         """
-        for name, subsystem in self.subsystems(local=local):
-            if isinstance(subsystem, Group):
-                yield name, subsystem
+        for name, sub in self.subsystems(local, recurse, typ=Group):
+            yield name, sub
 
-    def components(self, local=False):
+    def components(self, local=False, recurse=False):
         """
         Returns
         -------
         iterator
             Iterator over sub-`Components`.
         """
-        for name, comp in self.subsystems(local=local):
-            if isinstance(comp, Component):
-                yield name, comp
+        for name, sub in self.subsystems(local, recurse, typ=Component):
+            yield name, sub
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -307,15 +280,15 @@ class Group(System):
         """
         self._local_subsystems = OrderedDict()
 
-        self.comm = get_comm_if_active(self, comm)
+        self.comm = comm
 
         for name, sub in self.subsystems():
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
 
-    def _setup_vectors(self, param_owners, connections, parent=None,
-                       top_unknowns=None, impl=BasicImpl):
+    def _setup_vectors(self, param_owners, parent=None,
+                       relevance=None, top_unknowns=None, impl=BasicImpl):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
@@ -325,13 +298,12 @@ class Group(System):
             A dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating.
 
-        connections : dict
-            A dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to.
-
         parent : `Group`, optional
             The `Group` that contains this `Group`, if any, into which this
             `VarManager` will provide a view.
+
+        relevance : `Relevance`
+            An object that stores relevance information for each variable of interest.
 
         top_unknowns : `VecWrapper`, optional
             The `Problem` level unknowns `VecWrapper`.
@@ -343,16 +315,33 @@ class Group(System):
         if not self.is_active():
             return
 
+        self._impl_factory = impl
+        self._relevance = relevance
+
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._varmanager = VarManager(self, my_params, connections, impl=impl)
-            top_unknowns = self._varmanager.unknowns
+            self._create_vecs(my_params, relevance, var_of_interest=None, impl=impl)
+            top_unknowns = self.unknowns
         else:
-            self._varmanager = ViewVarManager(top_unknowns, parent._varmanager, self, my_params)
+            self._create_views(top_unknowns, parent, my_params, relevance, var_of_interest=None)
+
+        self._varmanager = VarManager(self, my_params, impl=impl)
+
+        ## loop over vars_of_interest and relevant subvecs for each
+        ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
+        ##       an array of that size, and sub-allocate from that for all relevant subvecs
+
+        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        for vois in self._relevance.vars_of_interest():
+            for voi in vois:
+                if parent is None:
+                    self._create_vecs(my_params, relevance, voi, impl)
+                else:
+                    self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
         for name, sub in self.subsystems():
-            sub._setup_vectors(param_owners, connections,
-                               parent=self, top_unknowns=top_unknowns)
+            sub._setup_vectors(param_owners, parent=self,
+                               relevance=relevance, top_unknowns=top_unknowns)
 
     def _get_fd_params(self):
         """
@@ -365,7 +354,7 @@ class Group(System):
             List of names of params that have sources that are ParamComps
             or sources that are outside of this `Group` .
         """
-        conns = self._varmanager.connections
+        conns = self.connections
         mypath = self.pathname + ':' if self.pathname else ''
 
         params = []
@@ -413,31 +402,31 @@ class Group(System):
         for tgt, src in self._src.items():
             try:
                 src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-            
+
             except KeyError as error:
                 try:
                     get_absvarpathnames(src, self._params_dict, 'params')
-                    
+
                 except KeyError as error:
                     raise ConnectError.nonexistent_src_error(src, tgt)
-                    
+
                 else:
                     raise ConnectError.invalid_src_error(src, tgt)
-                           
+
             try:
                 for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
                     connections[tgt_pathname] = src_pathname
-                    
+
             except KeyError as error:
                 try:
                     get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
-                    
+
                 except KeyError as error:
                     raise ConnectError.nonexistent_target_error(src, tgt)
-                    
+
                 else:
                     raise ConnectError.invalid_target_error(src, tgt)
-                    
+
         return connections
 
     def solve_nonlinear(self, params=None, unknowns=None, resids=None):
@@ -456,9 +445,9 @@ class Group(System):
             `VecWrapper`  containing residuals. (r)
         """
         if self.is_active():
-            params   = params   if params   is not None else self._varmanager.params
-            unknowns = unknowns if unknowns is not None else self._varmanager.unknowns
-            resids   = resids   if resids   is not None else self._varmanager.resids
+            params   = params   if params   is not None else self.params
+            unknowns = unknowns if unknowns is not None else self.unknowns
+            resids   = resids   if resids   is not None else self.resids
 
             self.nl_solver.solve(params, unknowns, resids, self)
 
@@ -469,7 +458,7 @@ class Group(System):
 
         # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(name)
+            self._varmanager._transfer_data(self, name)
             if sub.is_active():
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -493,7 +482,7 @@ class Group(System):
 
         # transfer data to each subsystem and then apply_nonlinear to it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(name)
+            self._varmanager._transfer_data(self, name)
             if sub.is_active():
                 sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -575,7 +564,10 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            self._varmanager._transfer_data(deriv=True)
+            self._varmanager._transfer_data(self, deriv=True)
+
+        #FIXME:
+        voi = None
 
         for name, system in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
@@ -585,17 +577,17 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                dresids = system.dresids
-                dunknowns = system.dunknowns
+                dresids = system.drmat[voi]
+                dunknowns = system.dumat[voi]
 
                 # Forward Mode
                 if mode == 'fwd':
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dpmat[voi],
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dpmat[voi],
                                             dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
@@ -618,10 +610,10 @@ class Group(System):
                     dresids.vec *= -1.0
 
                     if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, system.dparams,
+                        system._apply_linear_jac(system.params, system.unknowns, system.dpmat[voi],
                                                  dunknowns, dresids, mode)
                     else:
-                        system.apply_linear(system.params, system.unknowns, system.dparams,
+                        system.apply_linear(system.params, system.unknowns, system.dpmat[voi],
                                             dunknowns, dresids, mode)
 
                     dresids.vec *= -1.0
@@ -637,12 +629,12 @@ class Group(System):
             # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(system.params, system.unknowns,
-                                    system.dparams, system.dunknowns,
-                                    system.dresids, mode)
+                                    system.dpmat[None], system.dumat[None],
+                                    system.drmat[None], mode)
 
         if mode == 'rev':
             # Full Scatter
-            self._varmanager._transfer_data(mode='rev', deriv=True)
+            self._varmanager._transfer_data(self, mode='rev', deriv=True)
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
         """
@@ -680,19 +672,6 @@ class Group(System):
         self.sol_buf[:] = self.sol_vec.array[:]
         self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf, self, mode=mode)
         self.sol_vec.array[:] = self.sol_buf[:]
-
-    def clear_dparams(self):
-        """ Zeros out the dparams (dp) vector."""
-
-        self.dparams.vec[:] = 0.0
-
-        # Recurse to clear all dparams vectors.
-        for name, system in self.subsystems(local=True):
-
-            if isinstance(system, Component):
-                system.dparams.vec[:] = 0.0
-            else:
-                system.clear_dparams()
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
@@ -734,8 +713,8 @@ class Group(System):
                       pvec.vec.size,
                       commsz))
 
-        vec_conns = dict(self._varmanager.data_xfer[''].vec_conns)
-        byobj_conns = dict(self._varmanager.data_xfer[''].byobj_conns)
+        vec_conns = dict(self._varmanager.data_xfer[('', 'fwd')].vec_conns)
+        byobj_conns = dict(self._varmanager.data_xfer[('', 'fwd')].byobj_conns)
 
         # collect width info
         lens = [len(u)+sum(map(len,v)) for u,v in
@@ -757,10 +736,10 @@ class Group(System):
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
-                        pslice = pvec._slices[pname]
+                        pslice = pvec._slices.get(pname, (-1,-1))
                         pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [('%d:%d' % pvec._slices[p]) for p in pnames]
+                        pslice = [('%d:%d' % pvec._slices.get(p, (-1,-1))) for p in pnames]
                         if len(pslice) > 1:
                             pslice = ','.join(pslice)
                         else:
@@ -849,7 +828,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         The absolute pathnames for the given variables in the
         variable dictionary that map to the given relative name.
     """
-    
+
     pnames = []
     for pathname, meta in var_dict.items():
         if meta['relative_name'] == var_name:
@@ -857,5 +836,5 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
 
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
-    
+
     return pnames

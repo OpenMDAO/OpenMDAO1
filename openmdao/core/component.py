@@ -12,7 +12,6 @@ import numpy as np
 
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
-from openmdao.core.varmanager import create_views
 from openmdao.util.types import is_differentiable
 
 '''
@@ -85,48 +84,6 @@ class Component(System):
         args['state'] = True
         self._unknowns_dict[name] = args
 
-    @property
-    def unknowns(self):
-        try:
-            return self._vecs.unknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
-    @property
-    def dunknowns(self):
-        try:
-            return self._vecs.dunknowns
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
-    @property
-    def params(self):
-        try:
-            return self._vecs.params
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
-    @property
-    def dparams(self):
-        try:
-            return self._vecs.dparams
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
-    @property
-    def resids(self):
-        try:
-            return self._vecs.resids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
-    @property
-    def dresids(self):
-        try:
-            return self._vecs.dresids
-        except:
-            raise RuntimeError("Vectors have not yet been initialized for Component '%s'" % self.name)
-
     def _check_name(self, name):
         if self._post_setup:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
@@ -160,8 +117,10 @@ class Component(System):
         return list(self.unknowns.keys())
 
     def _setup_variables(self):
-        """Returns our params and unknowns, and stores them
-        as attributes of the component"""
+        """Returns our params and unknowns dictionaries, re-keyed
+        to use absolute variable names, and stores them
+        as attributes of the component
+        """
 
         # rekey with absolute path names and add relative names
         _new_params = OrderedDict()
@@ -193,10 +152,10 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
-    def _setup_vectors(self, param_owners, connections, parent,
-                       top_unknowns=None, impl=BasicImpl):
+    def _setup_vectors(self, param_owners, parent,
+                       top_unknowns=None, relevance=None, impl=BasicImpl):
         """
-        Set up local `VecWrapper`s to store this component's variables.
+        Set up local `VecWrappers` to store this component's variables.
 
         Parameters
         ----------
@@ -204,15 +163,14 @@ class Component(System):
             a dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating. (ignored)
 
-        connections : dict
-            a dictionary mapping the pathname of a target variable to the
-            pathname of the source variable that it is connected to
-
         parent : `Group`
             The parent `Group`.
 
         top_unknowns : `VecWrapper`, optional
             the `Problem` level unknowns `VecWrapper`
+
+        relevance : `Relevance`
+            An object containing relevance info for each variable of interest.
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
@@ -220,9 +178,12 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._vecs = create_views(top_unknowns, parent._varmanager, self, [], connections)
+        self._relevance = relevance
+        self._impl_factory = impl
 
-        params = self._vecs.params
+        self._create_views(top_unknowns, parent, [], relevance)
+
+        params = self.params
 
         # create params vec entries for any unconnected params
         for pathname, meta in self._params_dict.items():
