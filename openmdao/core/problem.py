@@ -164,6 +164,9 @@ class Problem(System):
         # Prep for case recording
         self._start_recorders()
 
+        # Prepare Driver
+        self.driver.root = self.root
+
     def run(self):
         """ Runs the Driver in self.driver. """
 

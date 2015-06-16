@@ -1,5 +1,6 @@
 """ Test for the Driver class -- basic driver interface."""
 
+from pprint import pformat
 import unittest
 
 import numpy as np
@@ -46,9 +47,19 @@ class MySimpleDriver(Driver):
 
             # Run the model
             problem.root.solve_nonlinear()
+            #print('z1: %f, z2: %f, x1: %f, y1: %f, y2: %f' % (problem['z'][0],
+                                                              #problem['z'][1],
+                                                              #problem['x'],
+                                                              #problem['y1'],
+                                                              #problem['y2']))
+            #print('obj: %f, con1: %f, con2: %f' % (problem['obj'], problem['con1'],
+                                                   #problem['con2']))
 
             # Calculate gradient
-            J = problem.calc_gradient(param_list, unknown_list)
+            J = problem.calc_gradient(param_list, unknown_list, return_format='dict')
+
+            objective = self.get_objectives()
+            constraints = self.get_constraints()
 
             for key1 in objective_names:
                 for key2 in param_list:
@@ -64,6 +75,7 @@ class MySimpleDriver(Driver):
                 if np.norm(val) > 0.0:
                     self.violated.append(name)
 
+            itercount += 1
 
 class TestDriver(unittest.TestCase):
 
@@ -73,11 +85,17 @@ class TestDriver(unittest.TestCase):
         root = top.root = SellarDerivatives()
 
         top.driver = MySimpleDriver()
-        top.driver.add_param('pz.z', low=-100.0, high=100.0)
+        top.driver.add_param('z', low=-100.0, high=100.0)
 
         top.driver.add_objective('obj')
         top.driver.add_constraint('con1')
         top.driver.add_constraint('con2')
+
+        top.setup()
+        top.run()
+
+        obj = top['obj']
+        self.assertLess(obj, 28.0)
 
 if __name__ == "__main__":
     unittest.main()

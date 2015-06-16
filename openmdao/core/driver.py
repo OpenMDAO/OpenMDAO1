@@ -25,8 +25,7 @@ class Driver(object):
 
         self._params = OrderedDict()
         self._objs = OrderedDict()
-        self._eq_cons = OrderedDict()
-        self._ineq_cons = OrderedDict()
+        self._cons = OrderedDict()
 
         # We take root during setup
         self.root = None
@@ -34,7 +33,7 @@ class Driver(object):
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
 
-    def add_param(self, name, low=None, high=None, scaler=None, adder=None):
+    def add_param(self, name, low=None, high=None):
         """ Adds a param to this driver.
 
         Parameters
@@ -47,12 +46,6 @@ class Driver(object):
 
         high : upper or ndarray (optional)
             Lower boundary for the param
-
-        scalar : upper or ndarray (optional)
-            Multiplicative scale from physical to normalized coordinates.
-
-        adder : upper or ndarray (optional)
-            Additive scale from physical to normalized coordinates.
         """
 
         if low is None:
@@ -67,8 +60,6 @@ class Driver(object):
         param = {}
         param['low'] = low
         param['high'] = high
-        param['scaler'] = scaler
-        param['adder'] = adder
 
         self._params[name] = param
 
@@ -81,7 +72,13 @@ class Driver(object):
             Keys are the param object names, and the values are the param
             values.
         """
-        return self._params
+        uvec = self.root.unknowns
+        params = OrderedDict()
+
+        for key, val in self._params.items():
+            params[key] = uvec[key]
+
+        return params
 
     def set_param(self, name, value):
         """ Sets a parameter.
@@ -94,23 +91,21 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        pass
+        self.root.unknowns[name] = value
 
-    def add_objective(self, name, scaler=None, adder=None):
+    def add_objective(self, name):
         """ Adds an objective to this driver.
 
         Parameters
         ----------
         name : string
             Promoted pathname of the output that will serve as the objective.
-
-        scalar : upper or ndarray (optional)
-            Multiplicative scale from physical to normalized coordinates.
-
-        adder : upper or ndarray (optional)
-            Additive scale from physical to normalized coordinates.
         """
-        pass
+
+        # TODO: Check validity of input.
+
+        obj = {}
+        self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):
         """ Adds a constraint to this driver.
@@ -129,10 +124,15 @@ class Driver(object):
         ndarray (for return_type 'array')
             Array containing all constraint values in the order they were added.
         """
-        pass
+        uvec = self.root.unknowns
+        objs = OrderedDict()
 
-    def add_constraint(self, name, ctype='ineq', linear=False, scaler=None,
-                       adder=None, jacs=None):
+        for key, val in self._objs.items():
+            objs[key] = uvec[key]
+
+        return objs
+
+    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None):
         """ Adds a constraint to this driver.
 
         Parameters
@@ -149,19 +149,19 @@ class Driver(object):
             Set to True if this constraint is linear with respect to all params
             so that it can be calculated once and cached.
 
-        scalar : upper or ndarray (optional)
-            Multiplicative scale from physical to normalized coordinates.
-
-        adder : upper or ndarray (optional)
-            Additive scale from physical to normalized coordinates.
-
         jacs : dict of functions, optional
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the params of
             this driver, as indicated by the dictionary keys. Default is None
             to let OpenMDAO calculate all derivatives.
         """
-        pass
+
+        # TODO: Check validity of input.
+
+        con = {}
+        con['linear'] = linear
+        con['ctype'] = ctype
+        self._objs[name] = con
 
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
         """ Gets all constraints for this driver.
@@ -188,13 +188,13 @@ class Driver(object):
         ndarray (for return_type 'array')
             Array containing all constraint values in the order they were added.
         """
-        pass
+        uvec = self.root.unknowns
+        cons = OrderedDict()
 
-    def _post_setup(self):
-        """ Do anything that we need to do before we run. Note, all this
-        stuff could be in `run`, but we are thinking ahead to nested
-        problems."""
-        pass
+        for key, val in self._cons.items():
+            cons[key] = uvec[key]
+
+        return cons
 
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
