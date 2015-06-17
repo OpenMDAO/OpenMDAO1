@@ -37,6 +37,9 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
+    def __getattr__(self, name):
+        return self._subsystems[name]
+
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
 
@@ -51,7 +54,7 @@ class Group(System):
             except KeyError:
                 # look in params
                 try:
-                    subname, vname = name.rsplit(':', 1)
+                    subname, vname = name.rsplit('.', 1)
                     self.subsystem(subname).params[vname] = val
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
@@ -84,13 +87,13 @@ class Group(System):
         try:
             return self.unknowns[name]
         except KeyError:
-            subsys, subname = name.split(':', 1)
+            subsys, subname = name.split('.', 1)
             try:
                 return self._subsystems[subsys][subname]
             except:
                 # look in params
                 try:
-                    subname, vname = name.rsplit(':', 1)
+                    subname, vname = name.rsplit('.', 1)
                     return self.subsystem(subname).params[vname]
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
@@ -99,7 +102,8 @@ class Group(System):
     def subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
-        subsystem of the this system.
+        subsystem of the this system.  Raises an exception if the given name
+        doesn't reference a subsystem.
 
         Parameters
         ----------
@@ -111,14 +115,12 @@ class Group(System):
         `System`
             A reference to the named subsystem.
         """
-        sys = self
-        parts = name.split(':')
+        s = self
+        parts = name.split('.')
         for part in parts:
-            sys = getattr(sys, '_subsystems', {}).get(part)
-            if sys is None:
-                break
-        else:
-            return sys
+            s = s._subsystems[part]
+
+        return s
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -265,7 +267,7 @@ class Group(System):
         if subsystem.promoted(name):
             return name
         if len(subsystem.name) > 0:
-            return subsystem.name+':'+name
+            return subsystem.name+'.'+name
         else:
             return name
 
@@ -355,14 +357,18 @@ class Group(System):
             or sources that are outside of this `Group` .
         """
         conns = self.connections
-        mypath = self.pathname + ':' if self.pathname else ''
+        mypath = self.pathname + '.' if self.pathname else ''
 
         params = []
         for tgt, src in conns.items():
             if tgt.startswith(mypath):
                 # look up the Component that contains the source variable
-                src_comp = self.subsystem(src.rsplit(':', 1)[0][len(mypath):])
-                if not src.startswith(mypath) or isinstance(src_comp, ParamComp):
+                scname = src.rsplit('.', 1)[0]
+                if scname.startswith(mypath):
+                    src_comp = self.subsystem(scname[len(mypath):])
+                    if isinstance(src_comp, ParamComp):
+                        params.append(tgt[len(mypath):])
+                else:
                     params.append(tgt[len(mypath):])
 
         return params
@@ -378,11 +384,11 @@ class Group(System):
             List of names of unknowns for this `Group` that don't come from a
             `ParamComp`.
         """
-        mypath = self.pathname + ':' if self.pathname else ''
+        mypath = self.pathname + '.' if self.pathname else ''
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self.subsystem(meta['pathname'].rsplit(':',1)[0][len(mypath):])
+            sub = self.subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 

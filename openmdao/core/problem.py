@@ -65,20 +65,6 @@ class Problem(System):
         """
         self.root[name] = val
 
-    def subsystem(self, name):
-        """
-        Parameters
-        ----------
-        name : str
-            Name of the subsystem to retrieve.
-
-        Returns
-        -------
-        `System`
-            A reference to the named subsystem.
-        """
-        return self.root.subsystem(name)
-
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.

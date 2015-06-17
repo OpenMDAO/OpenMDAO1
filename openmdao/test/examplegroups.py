@@ -22,9 +22,9 @@ class ExampleGroup(Group):
         self.C3 = self.G3.add('C3', ExecComp('y=x*2.0',x=3.,y=5.5))
         self.C4 = self.G3.add('C4', ExecComp('y=x*2.0',x=3.,y=5.5))
 
-        self.G2.connect('C1:x', 'G1:C2:x')
-        self.connect('G2:G1:C2:y', 'G3:C3:x')
-        self.G3.connect('C3:y', 'C4:x')
+        self.G2.connect('C1.x', 'G1.C2.x')
+        self.connect('G2.G1.C2.y', 'G3.C3.x')
+        self.G3.connect('C3.y', 'C4.x')
 
 class ExampleByObjGroup(Group):
     """A nested `Group` for testing"""
@@ -41,9 +41,9 @@ class ExampleByObjGroup(Group):
         self.C3 = self.G3.add('C3', SimplePassByObjComp())
         self.C4 = self.G3.add('C4', SimplePassByObjComp())
 
-        self.G2.connect('C1:x', 'G1:C2:x')
-        self.connect('G2:G1:C2:y', 'G3:C3:x')
-        self.G3.connect('C3:y', 'C4:x')
+        self.G2.connect('C1.x', 'G1.C2.x')
+        self.connect('G2.G1.C2.y', 'G3.C3.x')
+        self.G3.connect('C3.y', 'C4.x')
 
 
 class ExampleGroupWithPromotes(Group):
@@ -61,5 +61,5 @@ class ExampleGroupWithPromotes(Group):
         self.C3 = self.G3.add('C3', ExecComp('y=x*2.0',x=3.,y=5.5))
         self.C4 = self.G3.add('C4', ExecComp('y=x*2.0',x=3.,y=5.5), promotes=['x'])
 
-        self.connect('G2:G1:C2:y', 'G3:C3:x')
-        self.G3.connect('C3:y', 'x')
+        self.connect('G2.G1.C2.y', 'G3.C3.x')
+        self.G3.connect('C3.y', 'x')

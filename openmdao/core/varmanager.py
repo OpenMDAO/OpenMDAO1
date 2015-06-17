@@ -152,8 +152,8 @@ class VarManager(object):
                 # get the subsystem name from that
                 start = len(sys_pathname)+1 if sys_pathname else 0
 
-                tgt_sys = param[start:].split(':', 1)[0]
-                src_sys = unknown[start:].split(':', 1)[0]
+                tgt_sys = param[start:].split('.', 1)[0]
+                src_sys = unknown[start:].split('.', 1)[0]
 
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))

@@ -669,7 +669,7 @@ class TgtVecWrapper(VecWrapper):
                         src = connections.get(pathname)
                         if src:
                             common = get_common_ancestor(src, pathname)
-                            if common == self.pathname or (self.pathname+':') not in common:
+                            if common == self.pathname or (self.pathname+'.') not in common:
                                 missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)

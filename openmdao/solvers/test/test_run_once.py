@@ -18,12 +18,12 @@ class TestNLGaussSeidel(unittest.TestCase):
         top.root.nl_solver = RunOnce()
         top.root.add('comp', ExecComp('y=x*2.0'))
         top.root.add('P1', ParamComp('x', 3.0))
-        top.root.connect('P1:x', 'comp:x')
+        top.root.connect('P1.x', 'comp.x')
 
         top.setup()
         top.run()
 
-        y = top.root.unknowns['comp:y']
+        y = top.root.unknowns['comp.y']
 
         assert_rel_error(self, y, 6.0, .000001)
 
