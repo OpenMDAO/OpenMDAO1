@@ -101,7 +101,7 @@ class Driver(object):
         params = OrderedDict()
 
         for key, val in self._params.items():
-            params[key] = uvec[key]
+            params[key] = uvec.flat[key]
 
         return params
 
@@ -164,7 +164,7 @@ class Driver(object):
         objs = OrderedDict()
 
         for key, val in self._objs.items():
-            objs[key] = uvec[key]
+            objs[key] = uvec.flat[key]
 
         return objs
 
@@ -241,7 +241,7 @@ class Driver(object):
             if ctype=='ineq' and val['ctype']=='eq':
                 continue
 
-            cons[key] = uvec[key]
+            cons[key] = uvec.flat[key]
 
         return cons
 
