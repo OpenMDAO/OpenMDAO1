@@ -31,21 +31,21 @@ class TestGroupDerivatves(unittest.TestCase):
 
         top = Problem()
         top.root = Group()
-        top.root.add('Sub', sub)
+        top.root.add('sub', sub)
         top.root.add('x_param', ParamComp('x', 1.0))
-        top.root.connect('x_param:x', "Sub:mycomp:x")
+        top.root.connect('x_param.x', "sub.mycomp.x")
 
         sub.fd_options['force_fd'] = True
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['x_param:x'], ['Sub:mycomp:y'], mode='fwd',
+        J = top.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='fwd',
                               return_format='dict')
-        assert_rel_error(self, J['Sub:mycomp:y']['x_param:x'][0][0], 2.0, 1e-6)
+        assert_rel_error(self, J['sub.mycomp.y']['x_param.x'][0][0], 2.0, 1e-6)
 
-        J = top.calc_gradient(['x_param:x'], ['Sub:mycomp:y'], mode='rev',
+        J = top.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='rev',
                               return_format='dict')
-        assert_rel_error(self, J['Sub:mycomp:y']['x_param:x'][0][0], 2.0, 1e-6)
+        assert_rel_error(self, J['sub.mycomp.y']['x_param.x'][0][0], 2.0, 1e-6)
 
     def test_converge_diverge_groups(self):
 
@@ -55,14 +55,14 @@ class TestGroupDerivatves(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['sub:p:x']
-        unknown_list = ['sub:comp7:y1']
+        param_list = ['sub.p.x']
+        unknown_list = ['sub.comp7.y1']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['sub:comp7:y1']['sub:p:x'][0][0], -40.75, 1e-6)
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        assert_rel_error(self, J['sub:comp7:y1']['sub:p:x'][0][0], -40.75, 1e-6)
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
 
 

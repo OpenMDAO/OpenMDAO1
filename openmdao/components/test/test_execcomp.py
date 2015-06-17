@@ -69,7 +69,7 @@ class TestExecComp(unittest.TestCase):
 
         top.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()
@@ -93,7 +93,7 @@ class TestExecComp(unittest.TestCase):
 
         p1 = top.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()
@@ -128,15 +128,15 @@ class TestExecComp(unittest.TestCase):
         top.root = Group()
         comp = top.root.add('comp', ExecComp('y=x*x + x*2.0'))
         top.root.add('p1', ParamComp('x', 2.0))
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = False
 
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp:x'], ['comp:y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp:y']['comp:x'], np.array([6.0]), 0.00001)
+        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp.y']['comp.x'], np.array([6.0]), 0.00001)
 
-        J = top.calc_gradient(['comp:x'], ['comp:y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['comp:y']['comp:x'], np.array([6.0]), 0.00001)
+        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp.y']['comp.x'], np.array([6.0]), 0.00001)

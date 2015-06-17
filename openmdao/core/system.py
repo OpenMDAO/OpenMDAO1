@@ -107,7 +107,7 @@ class System(object):
             name of this child `System`.
         """
         if parent_path:
-            self.pathname = ':'.join((parent_path, self.name))
+            self.pathname = '.'.join((parent_path, self.name))
         else:
             self.pathname = self.name
 
@@ -178,7 +178,7 @@ class System(object):
         """
         Set 'remote' attribute in metadata of all variables for this subsystem.
         """
-        pname = self.pathname + ':'
+        pname = self.pathname + '.'
         for name, meta in self._params_dict.items():
             if name.startswith(pname):
                 meta['remote'] = True
@@ -518,7 +518,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
     umap = {}
     for rel, meta in unknowns.items():
         abspath = meta['pathname']
-        if abspath.startswith(child_name+':'):
+        if abspath.startswith(child_name+'.'):
             newmeta = unknowns_dict.get(abspath)
             if newmeta is not None:
                 newrel = newmeta['relative_name']

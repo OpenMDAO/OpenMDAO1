@@ -154,15 +154,15 @@ class ConvergeDiverge(Group):
         self.add('comp6', Comp6())
         self.add('comp7', Comp7())
 
-        self.connect("p:x", "comp1:x1")
-        self.connect('comp1:y1', 'comp2:x1')
-        self.connect('comp1:y2', 'comp3:x1')
-        self.connect('comp2:y1', 'comp4:x1')
-        self.connect('comp3:y1', 'comp4:x2')
-        self.connect('comp4:y1', 'comp5:x1')
-        self.connect('comp4:y2', 'comp6:x1')
-        self.connect('comp5:y1', 'comp7:x1')
-        self.connect('comp6:y1', 'comp7:x2')
+        self.connect("p.x", "comp1.x1")
+        self.connect('comp1.y1', 'comp2.x1')
+        self.connect('comp1.y2', 'comp3.x1')
+        self.connect('comp2.y1', 'comp4.x1')
+        self.connect('comp3.y1', 'comp4.x2')
+        self.connect('comp4.y1', 'comp5.x1')
+        self.connect('comp4.y2', 'comp6.x1')
+        self.connect('comp5.y1', 'comp7.x1')
+        self.connect('comp6.y1', 'comp7.x2')
 
 
 class ConvergeDivergeGroups(Group):
@@ -188,15 +188,15 @@ class ConvergeDivergeGroups(Group):
 
         self.add('p', ParamComp('x', 2.0))
 
-        self.connect("p:x", "sub1:comp1:x1")
-        self.connect('sub1:comp1:y1', 'sub1:sub2:comp2:x1')
-        self.connect('sub1:comp1:y2', 'sub1:sub2:comp3:x1')
-        self.connect('sub1:sub2:comp2:y1', 'sub1:comp4:x1')
-        self.connect('sub1:sub2:comp3:y1', 'sub1:comp4:x2')
-        self.connect('sub1:comp4:y1', 'sub3:comp5:x1')
-        self.connect('sub1:comp4:y2', 'sub3:comp6:x1')
-        self.connect('sub3:comp5:y1', 'comp7:x1')
-        self.connect('sub3:comp6:y1', 'comp7:x2')
+        self.connect("p.x", "sub1.comp1.x1")
+        self.connect('sub1.comp1.y1', 'sub1.sub2.comp2.x1')
+        self.connect('sub1.comp1.y2', 'sub1.sub2.comp3.x1')
+        self.connect('sub1.sub2.comp2.y1', 'sub1.comp4.x1')
+        self.connect('sub1.sub2.comp3.y1', 'sub1.comp4.x2')
+        self.connect('sub1.comp4.y1', 'sub3.comp5.x1')
+        self.connect('sub1.comp4.y2', 'sub3.comp6.x1')
+        self.connect('sub3.comp5.y1', 'comp7.x1')
+        self.connect('sub3.comp6.y1', 'comp7.x2')
 
 
 class SingleDiamond(Group):
@@ -212,11 +212,11 @@ class SingleDiamond(Group):
 
         self.add('p', ParamComp('x', 2.0))
 
-        self.connect("p:x", "comp1:x1")
-        self.connect('comp1:y1', 'comp2:x1')
-        self.connect('comp1:y2', 'comp3:x1')
-        self.connect('comp2:y1', 'comp4:x1')
-        self.connect('comp3:y1', 'comp4:x2')
+        self.connect("p.x", "comp1.x1")
+        self.connect('comp1.y1', 'comp2.x1')
+        self.connect('comp1.y2', 'comp3.x1')
+        self.connect('comp2.y1', 'comp4.x1')
+        self.connect('comp3.y1', 'comp4.x2')
 
 class SingleDiamondGrouped(Group):
     """ Topology one - two - one."""
@@ -232,9 +232,9 @@ class SingleDiamondGrouped(Group):
 
         self.add('p', ParamComp('x', 2.0))
 
-        self.connect("p:x", "sub1:comp1:x1")
-        self.connect('sub1:comp1:y1', 'sub1:comp2:x1')
-        self.connect('sub1:comp1:y2', 'sub1:comp3:x1')
-        self.connect('sub1:comp2:y1', 'comp4:x1')
-        self.connect('sub1:comp3:y1', 'comp4:x2')
+        self.connect("p.x", "sub1.comp1.x1")
+        self.connect('sub1.comp1.y1', 'sub1.comp2.x1')
+        self.connect('sub1.comp1.y2', 'sub1.comp3.x1')
+        self.connect('sub1.comp2.y1', 'comp4.x1')
+        self.connect('sub1.comp3.y1', 'comp4.x2')
 

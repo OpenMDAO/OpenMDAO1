@@ -70,11 +70,11 @@ class Relevance(object):
         compouts = {} # maps output vars to components
 
         for param in params_dict:
-            tcomp = param.rsplit(':',1)[0]
+            tcomp = param.rsplit('.',1)[0]
             compins.setdefault(tcomp, []).append(param)
 
         for unknown in unknowns_dict:
-            scomp = unknown.rsplit(':',1)[0]
+            scomp = unknown.rsplit('.',1)[0]
             compouts.setdefault(scomp, []).append(unknown)
 
         for target, source in connections.items():
