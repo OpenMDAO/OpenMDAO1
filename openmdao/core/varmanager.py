@@ -184,7 +184,7 @@ class VarManager(object):
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = system.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
-                self.data_xfer[(tgt_sys, mode)] = \
+                self.data_xfer[(tgt_sys, mode, var_of_interest)] = \
                     self.impl_factory.create_data_xfer(system, src_idxs, tgt_idxs,
                                                        vec_conns, byobj_conns)
 
@@ -206,7 +206,7 @@ class VarManager(object):
                     full_byobjs.extend(byobjs)
 
             src_idxs, tgt_idxs = system.unknowns.merge_idxs(full_srcs, full_tgts)
-            self.data_xfer[('', mode)] = \
+            self.data_xfer[('', mode, var_of_interest)] = \
                 self.impl_factory.create_data_xfer(system, src_idxs, tgt_idxs,
                                                    full_flats, full_byobjs)
 
@@ -234,7 +234,7 @@ class VarManager(object):
             Specifies the variable of interest to determine relevance.
 
         """
-        x = self.data_xfer.get((target_sys, mode))
+        x = self.data_xfer.get((target_sys, mode, var_of_interest))
         if x is not None:
             if deriv:
                 x.transfer(group.dumat[var_of_interest], group.dpmat[var_of_interest],

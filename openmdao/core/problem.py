@@ -549,7 +549,7 @@ class Problem(System):
                         states.append(meta['relative_name'])
 
                 # Create all our keys and allocate Jacs
-                for p_name in chain(params, states):
+                for p_name in chain(dparams, states):
 
                     dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
@@ -596,7 +596,7 @@ class Problem(System):
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
 
-                        for p_name in chain(params, states):
+                        for p_name in chain(dparams, states):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
@@ -605,7 +605,7 @@ class Problem(System):
                             jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
-                for p_name in chain(params, states):
+                for p_name in chain(dparams, states):
 
                     dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
@@ -634,7 +634,7 @@ class Problem(System):
                                           step_size=1e-6)
 
                 # Assemble and Return all metrics.
-                _assemble_deriv_data(chain(params, states), resids, data[cname],
+                _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                      jac_fwd, jac_rev, jac_fd, out_stream,
                                      skip_keys, c_name=cname)
 
