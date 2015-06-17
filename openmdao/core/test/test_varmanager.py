@@ -1,7 +1,6 @@
 import unittest
 from collections import OrderedDict
 
-from openmdao.core.varmanager import VarManager
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.components.paramcomp import ParamComp
@@ -18,7 +17,7 @@ class TestVarManager(unittest.TestCase):
         root.unknowns['G2.G1.C2.y'] = 99.
         self.assertEqual(root['G2.G1.C2.y'], 99.)
 
-        root._varmanager._transfer_data(root, 'G3')
+        root._transfer_data('G3')
         self.assertEqual(root.params['G3.C3.x'], 99.)
 
         self.assertEqual(prob['G3.C3.x'], 99.)

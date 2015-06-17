@@ -409,14 +409,13 @@ class System(object):
         params_dict = self._params_dict
         unknowns_dict = self._unknowns_dict
 
-        self.impl_factory = impl
         self.comm = comm
 
         # create implementation specific VecWrappers
         if var_of_interest is None:
-            self.unknowns  = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
-            self.resids    = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
-            self.params    = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+            self.unknowns  = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.resids    = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.params    = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict, store_byobjs=True)
@@ -424,9 +423,9 @@ class System(object):
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections, store_byobjs=True)
 
-        dunknowns = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
-        dresids   = self.impl_factory.create_src_vecwrapper(sys_pathname, comm)
-        dparams   = self.impl_factory.create_tgt_vecwrapper(sys_pathname, comm)
+        dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+        dresids   = impl.create_src_vecwrapper(sys_pathname, comm)
+        dparams   = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
         dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
         dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
@@ -513,7 +512,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         the corresponding relative name in the child, where relative name may
         include the 'promoted' name of a variable.
     """
-    # unknowns is keyed on name relative to the parent system/varmanager
+    # unknowns is keyed on name relative to the parent system
     # unknowns_dict is keyed on absolute pathname
     umap = {}
     for rel, meta in unknowns.items():

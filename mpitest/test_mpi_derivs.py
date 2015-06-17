@@ -56,7 +56,7 @@ class TestScipyGMRES(MPITestCase):
         top.root = FanInGrouped()
         top.setup()
 
-        #top.root.sub._varmanager._transfer_data(self, mode='rev', deriv=True)
+        #top.root.sub._transfer_data(mode='rev', deriv=True)
 
         #param_list = ['p1.x1', 'p2.x2']
         #unknown_list = ['comp3.y']
