@@ -108,7 +108,7 @@ class pyOptSparseDriver(Driver):
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
-            if con.linear is True:
+            if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      linear=True, wrt=param_list,
                                      jac=self.lin_jacs[name])

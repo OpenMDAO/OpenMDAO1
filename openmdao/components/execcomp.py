@@ -117,7 +117,7 @@ class ExecComp(Component):
                         J[(u,param)] = numpy.zeros((jval.size, psize))
 
                     # set the column in the Jacobian entry
-                    J[(u,param)][:,i] = jval
+                    J[(u,param)][:,i] = jval.flat
 
                 # restore old param value
                 if idx is None:

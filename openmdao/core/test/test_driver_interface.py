@@ -64,7 +64,7 @@ class MySimpleDriver(Driver):
             for key1 in objective_names:
                 for key2 in param_list:
 
-                    grad = J[key1][key2].dot(objective[key1])
+                    grad = J[key1][key2] * objective[key1]
                     new_val = params[key2] - self.alpha*grad
 
                     # Set parameter
