@@ -6,29 +6,11 @@ constrained optimization problems, with additional MPI capability. Note: only SN
 """
 
 # pylint: disable=E0611,F0401
-from numpy import array, zeros, ones, float32, float64, int32, int64
 import numpy as np
 
 from pyoptsparse import Optimization
 
-from openmdao.main.api import Driver
-
-
-#def _check_imports():
-    #""" Dynamically remove optimizers we don't have
-    #"""
-
-    #optlist = ['ALPSO', 'CONMIN', 'FSQP', 'IPOPT',
-               #'NLPQL', 'NLPY_AUGLAG', 'NSGA2', 'PSQP', 'SLSQP',
-               #'SNOPT']
-
-    #for optimizer in optlist[:]:
-        #try:
-            #exec('from pyoptsparse import %s' % optimizer)
-        #except ImportError:
-            #optlist.remove(optimizer)
-
-    #return optlist
+from openmdao.core.driver import Driver
 
 
 class pyOptSparseDriver(Driver):
@@ -51,30 +33,31 @@ class pyOptSparseDriver(Driver):
         # TODO: Support these
         self.supports['Linear Constraints'] = False
         self.supports['2-Sided Constraints'] = False
+        self.supports['Integer Parameters'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPt', values=['SNOPT'],
+        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
-        self.options.add_options('print_results', True,
+        self.options.add_option('print_results', True,
                                  desc='Print pyOpt results if True')
-        self.options.add_options('pyopt_diff', False,
+        self.options.add_option('pyopt_diff', False,
                                  desc='Set to True to let pyOpt calculate the gradient')
-        self.options.add_options('exit_flag', 0,
+        self.options.add_option('exit_flag', 0,
                                  desc='0 for fail, 1 for ok')
 
+        self.pyopt_excludes = ['optimizer', 'title', 'print_results',
+                               'pyopt_diff', 'exit_flag']
+
         self.pyOpt_solution = None
-        self.param_type = {}
-        self.nparam = None
 
-        self.objs = None
-        self.nlcons = None
         self.lin_jacs = {}
+        self.quantities = []
 
-    def execute(self, problem):
+    def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
-        individual optimizers control the iteration.
+        individual optimizers (i.e., SNOPT) control the iteration.
 
         Parameters
         ----------
@@ -87,120 +70,79 @@ class pyOptSparseDriver(Driver):
         # Initial Run
         problem.root.solve_nonlinear()
 
-        opt_prob = Optimization(self.title, self.objfunc)
+        opt_prob = Optimization(self.options['title'], self.objfunc)
 
         # Add all parameters
-        self.param_type = {}
-        self.nparam = self.total_parameters()
-        param_list = []
+        param_meta = self.get_param_metadata()
+        param_list = param_meta.keys()
+        for name, meta in param_meta.items():
 
-        #need a counter for lb and ub arrays
-        i_param = 0
+            vartype = 'c'
+            lower_bounds = meta['low']
+            upper_bounds = meta['high']
+            n_vals = meta['size']
 
-
-        for name, param in self.get_parameters().iteritems():
-
-            if isinstance(name, tuple):
-                name = name[0]
-
-            # We need to identify Enums, Lists, Dicts
-            metadata = param.get_metadata()[1]
-            values = param.evaluate()
-
-            # Assuming uniform enumerated, discrete, or continuous for now.
-            val = values[0]
-            n_vals = len(values)
-            choices = []
-            if 'values' in metadata and \
-               isinstance(metadata['values'], (list, tuple, array, set)):
-                vartype = 'd'
-                choices = metadata['values']
-            elif isinstance(val, bool):
-                vartype = 'd'
-                choices = [True, False]
-            elif isinstance(val, (int, int32, int64)):
-                vartype = 'i'
-            elif isinstance(val, (float, float32, float64)):
-                vartype = 'c'
-            else:
-                msg = 'Only continuous, discrete, or enumerated variables' \
-                      ' are supported. %s is %s.' % (name, type(val))
-                self.raise_exception(msg, ValueError)
-            self.param_type[name] = vartype
-
-            if self.n_x is None:
-                lower_bounds = param.get_low()
-                upper_bounds = param.get_high()
-            else:
-                lower_bounds = self.lb[i_param:i_param+n_vals]
-                upper_bounds = self.ub[i_param:i_param+n_vals]
-
-            i_param += n_vals
             opt_prob.addVarGroup(name, n_vals, type=vartype,
-                                 lower=lower_bounds, upper=upper_bounds,
-                                 value=values, choices=choices)
+                                 lower=lower_bounds, upper=upper_bounds)
             param_list.append(name)
+
         # Add all objectives
-        for name, obj in self.get_objectives().iteritems():
-            name = '%s.out0' % obj.pcomp_name
+        objs = self.get_objectives()
+        self.quantities = objs.keys()
+        for name, obj in objs.items():
             opt_prob.addObj(name)
 
         # Calculate and save gradient for any linear constraints.
-        lcons = self.get_constraints(linear=True).values() + \
-                self.get_2sided_constraints(linear=True).values()
+        lcons = self.get_constraints(lintype='linear').values()
         if len(lcons) > 0:
-            lcon_names = ['%s.out0' % obj.pcomp_name for obj in lcons]
-            self.lin_jacs = self.workflow.calc_gradient(param_list, lcon_names,
-                                                   return_format='dict')
+            self.lin_jacs = problem.calc_gradient(param_list, lcons,
+                                                  return_format='dict')
             #print "Linear Gradient"
             #print self.lin_jacs
 
         # Add all equality constraints
-        nlcons = []
-        for name, con in self.get_eq_constraints().iteritems():
-            size = con.size
-            lower = zeros((size))
-            upper = zeros((size))
-            name = '%s.out0' % con.pcomp_name
+        econs = self.get_constraints(ctype='eq', lintype='nonlinear')
+        con_meta = self.get_constraint_metadata()
+        self.quantities += econs.keys()
+        for name, con in econs.items():
+            size = con_meta[name]['size']
+            lower = np.zeros((size))
+            upper = np.zeros((size))
             if con.linear is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      linear=True, wrt=param_list,
                                      jac=self.lin_jacs[name])
             else:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper)
-                nlcons.append(name)
 
         # Add all inequality constraints
-        for name, con in self.get_ineq_constraints().iteritems():
-            size = con.size
-            upper = zeros((size))
-            name = '%s.out0' % con.pcomp_name
-            if con.linear is True:
+        incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
+        self.quantities += incons.keys()
+        for name, con in incons.items():
+            size = con_meta[name]['size']
+            upper = np.zeros((size))
+            if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
                 wrt=param_list, jac=self.lin_jacs[name])
             else:
                 opt_prob.addConGroup(name, size, upper=upper)
-                nlcons.append(name)
 
+        # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
-        for name, con in self.get_2sided_constraints().iteritems():
-            size = con.size
-            upper = con.high * ones((size))
-            lower = con.low * ones((size))
-            name = '%s.out0' % con.pcomp_name
-            if con.linear is True:
-                opt_prob.addConGroup(name, size, upper=upper, lower=lower,
-                                     linear=True, wrt=param_list,
-                                     jac=self.lin_jacs[name])
-            else:
-                opt_prob.addConGroup(name, size, upper=upper, lower=lower)
-                nlcons.append(name)
-
-        self.objs = self.list_objective_targets()
-        self.nlcons = nlcons
+        #for name, con in self.get_2sided_constraints().items():
+            #size = con_meta[name]['size']
+            #upper = con.high * np.ones((size))
+            #lower = con.low * np.ones((size))
+            #name = '%s.out0' % con.pcomp_name
+            #if con.linear is True:
+                #opt_prob.addConGroup(name, size, upper=upper, lower=lower,
+                                     #linear=True, wrt=param_list,
+                                     #jac=self.lin_jacs[name])
+            #else:
+                #opt_prob.addConGroup(name, size, upper=upper, lower=lower)
 
         # Instantiate the requested optimizer
-        optimizer = self.optimizer
+        optimizer = self.options['optimizer']
         try:
             exec('from pyoptsparse import %s' % optimizer)
         except ImportError:
@@ -212,39 +154,35 @@ class pyOptSparseDriver(Driver):
         opt = optname()
 
         # Set optimization options
-        for option, value in self.options.iteritems():
+        for option, value in self.options.items():
+            if option in self.pyopt_excludes:
+                continue
             opt.setOption(option, value)
 
+        self._problem = problem
+
         # Execute the optimization problem
-        if self.pyopt_diff:
+        if self.options['pyopt_diff'] is True:
             # Use pyOpt's internal finite difference
             sol = opt(opt_prob, sens='FD', sensStep=self.gradient_options.fd_step)
         else:
             # Use OpenMDAO's differentiator for the gradient
             sol = opt(opt_prob, sens=self.gradfunc)
 
-        # Print results
-        if self.print_results:
-            print sol
+        self._problem = None
 
+        # Print results
+        if self.options['print_results'] is True:
+            print sol
 
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        param_types = self.param_type
-        for name, param in self.get_parameters().iteritems():
-
-            full_name = name
-            if isinstance(name, tuple):
-                name = name[0]
-
+        for name, param in self.get_params().items():
             val = dv_dict[name]
-            if param_types[name] == 'i':
-                val = int(round(val))
+            self.set_param(name, val)
 
-            self.set_parameter_by_name(full_name, val)
-
-        self.run_iteration()
+        self.root.solve_nonlinear()
 
         # Save the most recent solution.
         self.pyOpt_solution = sol
@@ -279,40 +217,25 @@ class pyOptSparseDriver(Driver):
 
         try:
 
-            # Integer parameters come back as floats, so we need to round them
-            # and turn them into python integers before setting.
-            param_types = self.param_type
-            for name, param in self.get_parameters().iteritems():
-
-                tup_name = name
-                if isinstance(name, tuple):
-                    name = name[0]
-
-                val = dv_dict[name]
-                if param_types[name] == 'i':
-                    val = int(round(val))
-
-                self.set_parameter_by_name(tup_name, val)
+            for name, param in self.get_params().items():
+                self.set_param(name, param)
 
             # Execute the model
             #print "Setting DV"
             #print dv_dict
-            self.run_iteration()
+            self.root.solve_nonlinear()
 
             # Get the objective function evaluations
-            for key, obj in self.get_objectives().iteritems():
-                name = '%s.out0' % obj.pcomp_name
-                func_dict[name] = array(obj.evaluate())
+            for name, obj in self.get_objectives().items():
+                func_dict[name] = obj
 
             # Get the constraint evaluations
-            for key, con in self.get_constraints().iteritems():
-                name = '%s.out0' % con.pcomp_name
-                func_dict[name] = array(con.evaluate(self.parent))
+            for name, con in self.get_constraints().items():
+                func_dict[name] = con
 
             # Get the double-sided constraint evaluations
-            for key, con in self.get_2sided_constraints().iteritems():
-                name = '%s.out0' % con.pcomp_name
-                func_dict[name] = array(con.evaluate(self.parent))
+            #for key, con in self.get_2sided_constraints().items():
+            #    func_dict[name] = np.array(con.evaluate(self.parent))
 
             fail = 0
 
@@ -355,9 +278,9 @@ class pyOptSparseDriver(Driver):
         sens_dict = {}
 
         try:
-            sens_dict = self.workflow.calc_gradient(dv_dict.keys(), self.objs + self.nlcons,
+            sens_dict = self._problem.calc_gradient(dv_dict.keys(), self.quantities,
                                                     return_format='dict')
-            #for key, value in self.lin_jacs.iteritems():
+            #for key, value in self.lin_jacs.items():
             #    sens_dict[key] = value
 
             fail = 0

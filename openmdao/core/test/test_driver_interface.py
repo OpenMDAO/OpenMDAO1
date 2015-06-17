@@ -33,7 +33,7 @@ class MySimpleDriver(Driver):
         """ Mimic a very simplistic unconstrained optimization."""
 
         # Get dicts with pointers to our vectors
-        params = self.get_parameters()
+        params = self.get_params()
         objective = self.get_objectives()
         constraints = self.get_constraints()
 
@@ -72,7 +72,7 @@ class MySimpleDriver(Driver):
 
             self.violated = []
             for name, val in constraints.items():
-                if np.norm(val) > 0.0:
+                if np.linalg.norm(val) > 0.0:
                     self.violated.append(name)
 
             itercount += 1

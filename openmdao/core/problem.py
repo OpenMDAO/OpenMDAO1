@@ -165,7 +165,7 @@ class Problem(System):
         self._start_recorders()
 
         # Prepare Driver
-        self.driver.root = self.root
+        self.driver._setup(self.root)
 
     def run(self):
         """ Runs the Driver in self.driver. """

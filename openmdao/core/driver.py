@@ -22,8 +22,9 @@ class Driver(object):
         self.supports.add_option('Inequality Constraints', True)
         self.supports.add_option('Equality Constraints', True)
         self.supports.add_option('Linear Constraints', False)
-        self.supports.add_option('Multiple Objectives', True)
+        self.supports.add_option('Multiple Objectives', False)
         self.supports.add_option('2-Sided Constraints', False)
+        self.supports.add_option('Integer Parameters', False)
 
         # This driver's options
         self.options = OptionsDictionary()
@@ -34,6 +35,25 @@ class Driver(object):
 
         # We take root during setup
         self.root = None
+
+    def _setup(self, root):
+        """ Prepares some things we need."""
+        self.root = root
+
+        item_names = ['Parameter', 'Objective', 'Constraint']
+        items = [self._params, self._objs, self._cons]
+
+        for item, item_name in zip(items, item_names):
+            for name, meta in item.items():
+
+                # Check validity of variable
+                if name not in root.unknowns:
+                    msg = "{} '{}' not found in unknowns."
+                    msg = msg.format(item_name, name)
+                    raise ValueError(msg)
+
+                # Size is useful metadata to save
+                meta['size'] = root.unknowns.metadata(name)['size']
 
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
@@ -68,7 +88,7 @@ class Driver(object):
 
         self._params[name] = param
 
-    def get_parameters(self):
+    def get_params(self):
         """ Returns a dict of parameters.
 
         Returns
@@ -85,7 +105,7 @@ class Driver(object):
 
         return params
 
-    def get_parameter_metadata(self):
+    def get_param_metadata(self):
         """ Returns a dict of parameter metadata.
 
         Returns
@@ -177,7 +197,7 @@ class Driver(object):
         con = {}
         con['linear'] = linear
         con['ctype'] = ctype
-        self._objs[name] = con
+        self._cons[name] = con
 
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
         """ Gets all constraints for this driver.
@@ -208,9 +228,33 @@ class Driver(object):
         cons = OrderedDict()
 
         for key, val in self._cons.items():
+
+            if lintype=='linear' and val['linear']==False:
+                continue
+
+            if lintype=='nonlinear' and val['linear']==True:
+                continue
+
+            if ctype=='eq' and val['ctype']=='ineq':
+                continue
+
+            if ctype=='ineq' and val['ctype']=='eq':
+                continue
+
             cons[key] = uvec[key]
 
         return cons
+
+    def get_constraint_metadata(self):
+        """ Returns a dict of constraint metadata.
+
+        Returns
+        -------
+        dict
+            Keys are the constraint object names, and the values are the param
+            values.
+        """
+        return self._cons
 
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
