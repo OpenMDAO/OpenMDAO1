@@ -218,7 +218,7 @@ class pyOptSparseDriver(Driver):
         try:
 
             for name, param in self.get_params().items():
-                self.set_param(name, param)
+                self.set_param(name, dv_dict[name])
 
             # Execute the model
             #print "Setting DV"

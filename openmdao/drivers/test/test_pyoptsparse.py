@@ -52,6 +52,7 @@ class TestPyoptSparse(unittest.TestCase):
         print(obj)
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, top['x'], 7.16667, 1e-6)
+        assert_rel_error(self, top['y'], -7.833334, 1e-6)
 
 
 if __name__ == "__main__":
