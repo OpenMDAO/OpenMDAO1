@@ -88,6 +88,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             A dictionary of absolute variable names keyed to an associated
             metadata dictionary.
 
+        relevant_vars : iter of str
+            Names of variables that are relevant a particular variable of
+            interest.
+
         store_byobjs : bool
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
@@ -105,9 +109,10 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         Returns
         -------
-        list of tuples of the form (name, size)
-            Array containing local sizes of 'pass by vector' unknown variables
-            for every process in our communicator.
+        list of `OrderedDict`
+            Contains an entry for each process in this object's communicator.
+            Each entry is an `OrderedDict` mapping var name to local size for
+            'pass by vector' variables.
         """
         sizes = OrderedDict()
         for name, meta in self.get_vecvars():
@@ -124,9 +129,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         if trace:
             debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
                                                                         sizes))
-        size_table = self.comm.allgather(sizes)
-
-        return size_table
+        return self.comm.allgather(sizes)
 
     def norm(self):
         """
@@ -192,14 +195,12 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
     def _get_flattened_sizes(self):
         """
-        Create a list of lists, one list per process, where each process list
-        contains tuples of the form (varname, local_size).
-
         Returns
         -------
-        list of list of tuples of the form (varname, local_size)
-            List containing local sizes of 'pass by vector' params for each
-            process.
+        list of `OrderedDict`
+            Contains an entry for each process in this object's communicator.
+            Each entry is an `OrderedDict` mapping var name to local size for
+            'pass by vector' params.
         """
         psizes = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
 

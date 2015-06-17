@@ -534,6 +534,10 @@ class SrcVecWrapper(VecWrapper):
             Dictionary of metadata for unknown variables collected from
             components.
 
+        relevant_vars : iter of str
+            Names of variables that are relevant a particular variable of
+            interest.
+
         store_byobjs : bool (optional)
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
@@ -594,8 +598,9 @@ class SrcVecWrapper(VecWrapper):
 
         Returns
         -------
-        ndarray
-            1x<num_vector_vars> array of sizes.
+        list of `OrderedDict`
+            A one entry list containing an `OrderedDict` mapping var name to
+            local size for 'pass by vector' variables.
         """
         sizes = OrderedDict([(n,m['size']) for n,m in self.items()
                  if not m.get('pass_by_obj') and not m.get('remote')])
@@ -627,6 +632,10 @@ class TgtVecWrapper(VecWrapper):
         connections : dict of str : str
             A dict of absolute target names mapped to the absolute name of their
             source variable.
+
+        relevant_vars : iter of str
+            Names of variables that are relevant a particular variable of
+            interest.
 
         store_byobjs : bool (optional)
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
@@ -748,13 +757,11 @@ class TgtVecWrapper(VecWrapper):
 
     def _get_flattened_sizes(self):
         """
-        Create a 1x1 numpy array to hold the sum of the sizes of params
-        stored in flattened form in our internal vector.
-
         Returns
         -------
-        ndarray
-            Array containing sum of local sizes of params in our internal vector.
+        list of `OrderedDict`
+            A one entry list of `OrderedDict` mapping names to local sizes of owned, local params
+            in this `VecWrapper`.
         """
         psizes = OrderedDict()
         for name, m in self.items():

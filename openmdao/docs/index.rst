@@ -1,14 +1,26 @@
+.. _OpenMDAO-Documentation:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Documentation for OpenMDAO version: |version|
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+=============================
+Getting Started with OpenMDAO
+=============================
+
+.. toctree::
+
+   getting-started/index.rst
+
 ======================
 OpenMDAO User Guide
 ======================
-
-Current version: |version|
 
 .. toctree::
    :maxdepth: 2
 
    usr-guide/index.rst
-   srcdocs/index.rst
 
 =========================
 OpenMDAO Developer Guide
@@ -18,6 +30,15 @@ OpenMDAO Developer Guide
    :maxdepth: 1
 
    dev-guide/index.rst
+
+=========================
+OpenMDAO Reference Sheets
+=========================
+
+.. toctree::
+   :maxdepth: 3
+
+   srcdocs/index.rst
 
 ==============================
 Appendix and Glossary

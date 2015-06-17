@@ -46,7 +46,7 @@ class VarManager(object):
         var_rank : int
             The rank the the offset is requested for.
 
-        sizes_table : list of OrderDicts mappging var name to size.
+        sizes_table : list of OrderDicts mappping var name to size.
             Size information for all vars in all ranks.
 
         Returns
