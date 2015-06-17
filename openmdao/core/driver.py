@@ -2,6 +2,8 @@
 
 from collections import OrderedDict
 
+import numpy as np
+
 from openmdao.core.options import OptionsDictionary
 
 
@@ -81,6 +83,12 @@ class Driver(object):
 
         # TODO: Check validity of param string.
         # TODO: Check validity of everything else.
+
+        if isinstance(low, np.ndarray):
+            low = low.flat
+
+        if isinstance(high, np.ndarray):
+            high = high.flat
 
         param = {}
         param['low'] = low

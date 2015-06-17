@@ -10,7 +10,7 @@ from openmdao.components.execcomp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simplecomps import SimpleArrayComp
+from openmdao.test.simplecomps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
 SKIP = False
@@ -89,6 +89,50 @@ class TestPyoptSparse(unittest.TestCase):
 
         top.driver = pyOptSparseDriver()
         top.driver.add_param('x', low=-50.0, high=50.0)
+
+        top.driver.add_objective('o')
+        top.driver.add_constraint('c', ctype='eq')
+
+        top.setup()
+        top.run()
+
+        obj = top['o']
+        assert_rel_error(self, obj, 20.0, 1e-6)
+
+    def test_simple_array_comp2D(self):
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
+        root.add('comp', ArrayComp2D(), promotes=['*'])
+        root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
+
+        top.driver = pyOptSparseDriver()
+        top.driver.add_param('x', low=-50.0, high=50.0)
+
+        top.driver.add_objective('o')
+        top.driver.add_constraint('c', ctype='eq')
+
+        top.setup()
+        top.run()
+
+        obj = top['o']
+        assert_rel_error(self, obj, 20.0, 1e-6)
+
+    def test_simple_array_comp2D_array_lo_hi(self):
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
+        root.add('comp', ArrayComp2D(), promotes=['*'])
+        root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
+
+        top.driver = pyOptSparseDriver()
+        top.driver.add_param('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
 
         top.driver.add_objective('o')
         top.driver.add_constraint('c', ctype='eq')
