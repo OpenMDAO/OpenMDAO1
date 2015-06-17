@@ -8,9 +8,11 @@ From Sellar's analytic problem.
 
 import numpy as np
 
+from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
+from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 
 
 class SellarDis1(Component):
@@ -51,7 +53,7 @@ class SellarDis1withDerivatives(SellarDis1):
         J = {}
 
         J['y1','y2'] = -0.2
-        J['y1','z'] = np.array([2*params['z'][0], 1.0])
+        J['y1','z'] = np.array([[2*params['z'][0], 1.0]])
         J['y1','x'] = 1.0
 
         return J
@@ -96,7 +98,7 @@ class SellarDis2withDerivatives(SellarDis2):
         J = {}
 
         J['y2', 'y1'] = .5*params['y1']**-.5
-        J['y2', 'z'] = np.ones(2)
+        J['y2', 'z'] = np.array([[1.0, 1.0]])
 
         return J
 
@@ -108,11 +110,20 @@ class SellarNoDerivatives(Group):
     def __init__(self):
         super(SellarNoDerivatives, self).__init__()
 
+        self.add('px', ParamComp('x', 1.0), promotes=['*'])
+        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+
         self.add('d1', SellarDis1(), promotes=['*'])
         self.add('d2', SellarDis2(), promotes=['*'])
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                 promotes=['*'])
+
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+
+        self.nl_solver = NLGaussSeidel()
 
 
 class SellarDerivatives(Group):
@@ -122,8 +133,17 @@ class SellarDerivatives(Group):
     def __init__(self):
         super(SellarDerivatives, self).__init__()
 
+        self.add('px', ParamComp('x', 1.0), promotes=['*'])
+        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+
         self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
         self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
-        self.add('px', ParamComp('x', 1.0), promotes='*')
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes='*')
+        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                 promotes=['*'])
+
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+
+        self.nl_solver = NLGaussSeidel()
