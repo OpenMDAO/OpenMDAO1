@@ -339,7 +339,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
         # and make sure we get the correct value after a transfer
-        prob.root.G2._varmanager._transfer_data(prob.root.G2, 'G1')
+        prob.root.G2._transfer_data('G1')
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 99.)   # transferred value of parameter
 
     def test_subsystem_access(self):
@@ -417,6 +417,18 @@ class TestGroup(unittest.TestCase):
 
         # don't want to write a test that does a string compare of a dump, so
         # for now, just verify that calling dump doesn't raise an exception.
+
+    def test_data_xfer(self):
+        prob = Problem(root=ExampleGroupWithPromotes())
+        prob.setup()
+
+        prob.root.unknowns['G2.G1.C2.y'] = 99.
+        self.assertEqual(prob.root['G2.G1.C2.y'], 99.)
+
+        prob.root._transfer_data('G3')
+        self.assertEqual(prob.root.params['G3.C3.x'], 99.)
+
+        self.assertEqual(prob.root['G3.C3.x'], 99.)
 
 if __name__ == "__main__":
     unittest.main()
