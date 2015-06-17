@@ -713,8 +713,8 @@ class Group(System):
                       pvec.vec.size,
                       commsz))
 
-        vec_conns = dict(self._varmanager.data_xfer[('', 'fwd')].vec_conns)
-        byobj_conns = dict(self._varmanager.data_xfer[('', 'fwd')].byobj_conns)
+        vec_conns = dict(self._varmanager.data_xfer[('', 'fwd', None)].vec_conns)
+        byobj_conns = dict(self._varmanager.data_xfer[('', 'fwd', None)].byobj_conns)
 
         # collect width info
         lens = [len(u)+sum(map(len,v)) for u,v in
