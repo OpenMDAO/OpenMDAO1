@@ -1,5 +1,7 @@
 """ OptionsDictionary class definition. """
 
+from six import iteritems
+
 
 class OptionsDictionary(object):
     """ A dictionary for storing options for components/drivers/solvers. It
@@ -68,6 +70,15 @@ class OptionsDictionary(object):
 
         self.check(name, value)
         self._options[name]['val'] = value
+
+    def items(self):
+        """
+        Returns
+        -------
+        iterator
+            Iterator returning the name and option for each option.
+        """
+        return iteritems({name: opt['val'] for (name, opt) in self._options.items()})
 
     def check(self, name, value):
         low    = self._options[name]['low']

@@ -17,16 +17,43 @@ class Driver(object):
         self._outputs_of_interest = []
         self._inputs_of_interest = []
 
+        # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('Inequality Constraints', True)
         self.supports.add_option('Equality Constraints', True)
         self.supports.add_option('Linear Constraints', False)
-        self.supports.add_option('Multiple Objectives', True)
+        self.supports.add_option('Multiple Objectives', False)
+        self.supports.add_option('2-Sided Constraints', False)
+        self.supports.add_option('Integer Parameters', False)
+
+        # This driver's options
+        self.options = OptionsDictionary()
 
         self._params = OrderedDict()
         self._objs = OrderedDict()
-        self._eq_cons = OrderedDict()
-        self._ineq_cons = OrderedDict()
+        self._cons = OrderedDict()
+
+        # We take root during setup
+        self.root = None
+
+    def _setup(self, root):
+        """ Prepares some things we need."""
+        self.root = root
+
+        item_names = ['Parameter', 'Objective', 'Constraint']
+        items = [self._params, self._objs, self._cons]
+
+        for item, item_name in zip(items, item_names):
+            for name, meta in item.items():
+
+                # Check validity of variable
+                if name not in root.unknowns:
+                    msg = "{} '{}' not found in unknowns."
+                    msg = msg.format(item_name, name)
+                    raise ValueError(msg)
+
+                # Size is useful metadata to save
+                meta['size'] = root.unknowns.metadata(name)['size']
 
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
@@ -45,9 +72,23 @@ class Driver(object):
         high : upper or ndarray (optional)
             Lower boundary for the param
         """
-        pass
 
-    def get_parameters(self):
+        if low is None:
+            low = -1e99
+
+        if high is None:
+            high = 1e99
+
+        # TODO: Check validity of param string.
+        # TODO: Check validity of everything else.
+
+        param = {}
+        param['low'] = low
+        param['high'] = high
+
+        self._params[name] = param
+
+    def get_params(self):
         """ Returns a dict of parameters.
 
         Returns
@@ -56,7 +97,24 @@ class Driver(object):
             Keys are the param object names, and the values are the param
             values.
         """
-        pass
+        uvec = self.root.unknowns
+        params = OrderedDict()
+
+        for key, val in self._params.items():
+            params[key] = uvec[key]
+
+        return params
+
+    def get_param_metadata(self):
+        """ Returns a dict of parameter metadata.
+
+        Returns
+        -------
+        dict
+            Keys are the param object names, and the values are the param
+            values.
+        """
+        return self._params
 
     def set_param(self, name, value):
         """ Sets a parameter.
@@ -69,7 +127,7 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        pass
+        self.root.unknowns[name] = value
 
     def add_objective(self, name):
         """ Adds an objective to this driver.
@@ -79,7 +137,11 @@ class Driver(object):
         name : string
             Promoted pathname of the output that will serve as the objective.
         """
-        pass
+
+        # TODO: Check validity of input.
+
+        obj = {}
+        self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):
         """ Adds a constraint to this driver.
@@ -98,7 +160,13 @@ class Driver(object):
         ndarray (for return_type 'array')
             Array containing all constraint values in the order they were added.
         """
-        pass
+        uvec = self.root.unknowns
+        objs = OrderedDict()
+
+        for key, val in self._objs.items():
+            objs[key] = uvec[key]
+
+        return objs
 
     def add_constraint(self, name, ctype='ineq', linear=False, jacs=None):
         """ Adds a constraint to this driver.
@@ -123,7 +191,13 @@ class Driver(object):
             this driver, as indicated by the dictionary keys. Default is None
             to let OpenMDAO calculate all derivatives.
         """
-        pass
+
+        # TODO: Check validity of input.
+
+        con = {}
+        con['linear'] = linear
+        con['ctype'] = ctype
+        self._cons[name] = con
 
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
         """ Gets all constraints for this driver.
@@ -150,13 +224,37 @@ class Driver(object):
         ndarray (for return_type 'array')
             Array containing all constraint values in the order they were added.
         """
-        pass
+        uvec = self.root.unknowns
+        cons = OrderedDict()
 
-    def _post_setup(self):
-        """ Do anything that we need to do before we run. Note, all this
-        stuff could be in `run`, but we are thinking ahead to nested
-        problems."""
-        pass
+        for key, val in self._cons.items():
+
+            if lintype=='linear' and val['linear']==False:
+                continue
+
+            if lintype=='nonlinear' and val['linear']==True:
+                continue
+
+            if ctype=='eq' and val['ctype']=='ineq':
+                continue
+
+            if ctype=='ineq' and val['ctype']=='eq':
+                continue
+
+            cons[key] = uvec[key]
+
+        return cons
+
+    def get_constraint_metadata(self):
+        """ Returns a dict of constraint metadata.
+
+        Returns
+        -------
+        dict
+            Keys are the constraint object names, and the values are the param
+            values.
+        """
+        return self._cons
 
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
