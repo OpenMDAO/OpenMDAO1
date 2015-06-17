@@ -52,7 +52,7 @@ class ExecComp(Component):
         for expr in exprs:
             lhs, rhs = expr.split('=')
             outs.update(parse_for_vars(lhs))
-            allvars.update(parse_for_vars(expr))
+            allvars.update(parse_for_vars(expr, kwargs.keys()))
 
         for var in allvars:
             # if user supplied an initial value, use it, otherwise set to 0.0

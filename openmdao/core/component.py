@@ -102,7 +102,7 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return list(self.params.keys())
+        return [k for k,m in self.params.items() if not m.get('pass_by_obj')]
 
     def _get_fd_unknowns(self):
         """
@@ -114,7 +114,7 @@ class Component(System):
         list of str
             List of names of unknowns for this `Component`.
         """
-        return list(self.unknowns.keys())
+        return [k for k,m in self.unknowns.items() if not m.get('pass_by_obj')]
 
     def _setup_variables(self):
         """Returns our params and unknowns dictionaries, re-keyed
