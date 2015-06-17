@@ -38,8 +38,8 @@ class MySimpleDriver(Driver):
         constraints = self.get_constraints()
 
         param_list = params.keys()
-        objective_names = objective.keys()
-        constraint_names = constraints.keys()
+        objective_names = list(objective.keys())
+        constraint_names = list(constraints.keys())
         unknown_list = objective_names + constraint_names
 
         itercount = 0

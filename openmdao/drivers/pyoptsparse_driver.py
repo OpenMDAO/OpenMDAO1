@@ -4,6 +4,7 @@ OpenMDAO Wrapper for pyoptsparse.
 pyoptsparse is based on pyOpt, which is an object-oriented framework for formulating and solving nonlinear
 constrained optimization problems, with additional MPI capability. Note: only SNOPT is supported right now.
 """
+from __future__ import print_function
 
 # pylint: disable=E0611,F0401
 import numpy as np
@@ -97,8 +98,8 @@ class pyOptSparseDriver(Driver):
         if len(lcons) > 0:
             self.lin_jacs = problem.calc_gradient(param_list, lcons,
                                                   return_format='dict')
-            #print "Linear Gradient"
-            #print self.lin_jacs
+            #print("Linear Gradient")
+            #print(self.lin_jacs)
 
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
@@ -173,7 +174,7 @@ class pyOptSparseDriver(Driver):
 
         # Print results
         if self.options['print_results'] is True:
-            print sol
+            print(sol)
 
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
@@ -221,8 +222,8 @@ class pyOptSparseDriver(Driver):
                 self.set_param(name, dv_dict[name])
 
             # Execute the model
-            #print "Setting DV"
-            #print dv_dict
+            #print("Setting DV")
+            #print(dv_dict)
             self.root.solve_nonlinear()
 
             # Get the objective function evaluations
@@ -243,14 +244,14 @@ class pyOptSparseDriver(Driver):
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
-            print "Exception: %s" % str(msg)
-            print 70*"="
+            print("Exception: %s" % str(msg))
+            print(70*"=")
             import traceback
             traceback.print_exc()
-            print 70*"="
+            print(70*"=")
 
-        #print "Functions calculated"
-        #print func_dict
+        #print("Functions calculated")
+        #print(func_dict)
         return func_dict, fail
 
     def gradfunc(self, dv_dict, func_dict):
@@ -289,14 +290,14 @@ class pyOptSparseDriver(Driver):
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
-            print "Exception: %s" % str(msg)
-            print 70*"="
+            print("Exception: %s" % str(msg))
+            print(70*"=")
             import traceback
             traceback.print_exc()
-            print 70*"="
+            print(70*"=")
 
-        #print "Derivatives calculated"
-        #print dv_dict
-        #print sens_dict
+        #print("Derivatives calculated")
+        #print(dv_dict)
+        #print(sens_dict)
         return sens_dict, fail
 
