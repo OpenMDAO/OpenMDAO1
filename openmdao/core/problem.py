@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import warnings
 from itertools import chain
-from six import iteritems
+from six import iteritems, string_types
 import sys
 
 # pylint: disable=E0611, F0401
@@ -16,8 +16,10 @@ from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.relevance import Relevance
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
+from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -62,20 +64,6 @@ class Problem(System):
              The name of the variable to set into the unknowns vector.
         """
         self.root[name] = val
-
-    def subsystem(self, name):
-        """
-        Parameters
-        ----------
-        name : str
-            Name of the subsystem to retrieve.
-
-        Returns
-        -------
-        `System`
-            A reference to the named subsystem.
-        """
-        return self.root.subsystem(name)
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -141,22 +129,100 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
+        # some mode determination requires connection information, so pass
+        # it down the tree
+        self.root.connections = connections
+        for name, sub in self.root.subsystems(recurse=True):
+            sub.connections = connections
+
+        mode = self._check_for_matrix_matrix(self.driver._inputs_of_interest,
+                                             self.driver._outputs_of_interest)
+
+        relevance = Relevance(params_dict, unknowns_dict, connections,
+                              self.driver._inputs_of_interest,
+                              self.driver._outputs_of_interest,
+                              mode)
+
         # create VarManagers and VecWrappers for all groups in the system tree.
-        self.root._setup_vectors(param_owners, connections, impl=self._impl)
+        self.root._setup_vectors(param_owners, relevance=relevance,
+                                 impl=self._impl)
 
         # Prep for case recording
-        for recorder in self.driver.recorders:
-            recorder.startup()
+        self._start_recorders()
+
+        # Prepare Driver
+        self.driver._setup(self.root)
 
     def run(self):
         """ Runs the Driver in self.driver. """
 
         if self.root.is_active():
-            self.driver.run(self.root)
-            # Should only happen in top Problem?
-            unknowns, _, resids, _, params, _ = self.root._varmanager.vectors()
-            for recorder in self.driver.recorders:
-                recorder.record(params, unknowns, resids)
+            self.driver.run(self)
+
+    def _mode(self, mode, param_list, unknown_list):
+        """ Determine the mode based on precedence. The mode in `mode` is
+        first. If that is 'auto', then the mode in root.ln_options takes
+        precedence. If that is 'auto', then mode is determined by the width
+        of the prameter and quantity space."""
+
+        root = self.root
+
+        if mode == 'auto':
+            mode = root.ln_solver.options['mode']
+            if mode == 'auto':
+                p_dict = root._params_dict
+                u_dict = root._unknowns_dict
+
+                # Sum up param size
+                p_length = 0
+                for param in param_list:
+
+                    if param in p_dict:
+                        meta = p_dict[param]
+                    else:
+                        # The user sometimes specifies the parameter output
+                        # name instead of its target because it is more
+                        # convenient
+                        for key, val in iteritems(root.connections):
+                            if val == param:
+                                meta = u_dict[param]
+                                break
+
+                        # We need the absolute name, but the fd Jacobian
+                        # holds relative promoted inputs
+                        else:
+                            for key in p_dict:
+                                metadata = root.params.metadata(key)
+                                if metadata['relative_name'] == param:
+                                    meta = p_dict[metadata['pathname']]
+                                    break
+
+                    p_length += meta['size']
+
+                # Sum up unknowns size
+                u_length = 0
+                for unkn in unknown_list:
+
+                    if unkn in u_dict:
+                        meta = u_dict[unkn]
+                    else:
+                        # We need the absolute name, but the fd Jacobian
+                        # holds relative promoted inputs
+                        for key in root.unknowns:
+                            metadata = root.unknowns.metadata(key)
+                            if metadata['pathname'] == unkn:
+                                meta = u_dict[metadata['relative_name']]
+                                break
+
+                    u_length += meta['size']
+
+                # Choose mode based on size
+                if p_length > u_length:
+                    mode = 'rev'
+                else:
+                    mode = 'fwd'
+
+        return mode
 
     def calc_gradient(self, param_list, unknown_list, mode='auto',
                       return_format='array'):
@@ -202,7 +268,7 @@ class Problem(System):
                                           return_format)
         else:
             return self._calc_gradient_ln_solver(param_list, unknown_list,
-                                                  return_format, mode)
+                                                 return_format, mode)
 
     def _calc_gradient_fd(self, param_list, unknown_list, return_format):
         """ Returns the finite differenced gradient for the system that is slotted in
@@ -256,7 +322,7 @@ class Problem(System):
                     # The user sometimes specifies the parameter output
                     # name instead of its target because it is more
                     # convenient
-                    for key, val in iteritems(root._varmanager.connections):
+                    for key, val in iteritems(root.connections):
                         if val == ikey:
                             fd_ikey = key
                             break
@@ -307,8 +373,14 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        root.dunknowns.vec[:] = 0.0
-        root.dresids.vec[:] = 0.0
+        for names in root._relevance.vars_of_interest():
+            for name in names:
+                if name in root.dumat:
+                    root.dumat[name].vec[:] = 0.0
+                    root.drmat[name].vec[:] = 0.0
+        root.dumat[None].vec[:] = 0.0
+        root.drmat[None].vec[:] = 0.0
+
         root.jacobian(params, unknowns, root.resids)
 
         rhs = np.zeros((len(unknowns.vec), ))
@@ -330,12 +402,7 @@ class Problem(System):
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
-        if mode == 'auto':
-            mode = root.ln_solver.options['mode']
-            if mode == 'auto':
-                # TODO: Choose based on size
-                msg = 'Automatic mode selction not yet implemented.'
-                raise NotImplementedError(msg)
+        mode = self._mode(mode, param_list, unknown_list)
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list
@@ -350,7 +417,7 @@ class Problem(System):
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
-                param_src = root._varmanager.connections.get(param)
+                param_src = root.connections.get(param)
                 param_src = unknowns.get_relative_varname(param_src)
                 in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
@@ -371,7 +438,7 @@ class Problem(System):
                     if item in unknowns:
                         out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
-                        param_src = root._varmanager.connections.get(item)
+                        param_src = root.connections.get(item)
                         param_src = unknowns.get_relative_varname(param_src)
                         out_size, out_idxs = unknowns.get_local_idxs(param_src)
 
@@ -420,11 +487,9 @@ class Problem(System):
         """
 
         root = self.root
-        varmanager = root._varmanager
 
         # Linearize the model
-        root.jacobian(varmanager.params, varmanager.unknowns,
-                      varmanager.resids)
+        root.jacobian(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
@@ -432,6 +497,9 @@ class Problem(System):
         data = {}
         skip_keys = []
         model_hierarchy = _find_all_comps(root)
+
+        # FIXME:
+        voi = None
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
@@ -451,9 +519,9 @@ class Problem(System):
                 params = comp.params
                 unknowns = comp.unknowns
                 resids = comp.resids
-                dparams = comp.dparams
-                dunknowns = comp.dunknowns
-                dresids = comp.dresids
+                dparams = comp.dpmat[voi]
+                dunknowns = comp.dumat[voi]
+                dresids = comp.drmat[voi]
 
                 if out_stream is not None:
                     out_stream.write('-'*(len(cname)+15) + '\n')
@@ -467,7 +535,7 @@ class Problem(System):
                         states.append(meta['relative_name'])
 
                 # Create all our keys and allocate Jacs
-                for p_name in chain(params, states):
+                for p_name in chain(dparams, states):
 
                     dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
@@ -514,7 +582,7 @@ class Problem(System):
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
 
-                        for p_name in chain(params, states):
+                        for p_name in chain(dparams, states):
                             if (u_name, p_name) in skip_keys:
                                 continue
 
@@ -523,7 +591,7 @@ class Problem(System):
                             jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
                 # Forward derivatives second
-                for p_name in chain(params, states):
+                for p_name in chain(dparams, states):
 
                     dinputs = dunknowns if p_name in states else dparams
                     p_size = np.size(dinputs[p_name])
@@ -552,7 +620,7 @@ class Problem(System):
                                           step_size=1e-6)
 
                 # Assemble and Return all metrics.
-                _assemble_deriv_data(chain(params, states), resids, data[cname],
+                _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                      jac_fwd, jac_rev, jac_fd, out_stream,
                                      skip_keys, c_name=cname)
 
@@ -612,8 +680,40 @@ class Problem(System):
         _assemble_deriv_data(param_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
-
         return data
+
+    def _start_recorders(self):
+        for recorder in self.driver.recorders:
+            recorder.startup(self.root)
+
+        for group, solvers in _find_all_solvers(self.root):
+            for solver in solvers:
+                for recorder in solver.recorders:
+                    recorder.startup(group)
+
+    def _check_for_matrix_matrix(self, params, unknowns):
+        """ Checks a system hiearchy to make sure that no settings violate the
+        assumptions needed for matrix-matrix calculation. Returns the mode that
+        the system needs to use.
+        """
+
+        mode = self._mode('auto', params, unknowns)
+
+        # TODO : Only Linear GS is supported on system
+
+        for _, sub in self.root.subgroups(recurse=True):
+            sub_mode = sub.ln_solver.options['mode']
+
+            # Modes must match root for all subs
+            if sub_mode not in (mode, 'auto'):
+                msg  = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                        " Modes must match to use Matrix Matrix."
+                msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                raise RuntimeError(msg)
+
+            # TODO : Only Linear GS is supported on sub
+
+        return mode
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
@@ -672,6 +772,13 @@ def assign_parameters(connections):
 
     return param_owners
 
+
+def _find_all_solvers(group):
+    """Recursively finds all solvers in the given group and sub-groups."""
+    yield (group, (group.ln_solver, group.nl_solver))
+    for _, sub in group.subgroups():
+        for solvers in _find_all_solvers(sub):
+            yield solvers
 
 def _find_all_comps(group):
     """ Recursive function that assembles a dictionary whose keys are Group
@@ -834,3 +941,4 @@ def _get_implicit_connections(params_dict, unknowns_dict):
             connections[p] = uabs[0]
 
     return connections
+

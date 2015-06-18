@@ -22,6 +22,43 @@ class ConnectError(Exception):
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
+        
+    @classmethod
+    def nonexistent_src_error(cls, src, target):
+        msg = ("Source '{src}' cannot be connected to target '{target}': "
+               "'{src}' does not exist.")
+               
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def nonexistent_target_error(cls, src, target):
+        msg = ("Source '{src}' cannot be connected to target '{target}': "
+               "'{target}' does not exist.")
+               
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    @classmethod
+    def invalid_target_error(cls, src, target):
+        msg = ("Source '{src}' cannot be connected to target '{target}': "
+               "Target must be a parameter but '{target}' is an unknown.")
+               
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
+        
+    
+    @classmethod
+    def invalid_src_error(cls, src, target):
+        msg = ("Source '{src}' cannot be connected to target '{target}': "
+               "Source must be an unknown but '{src}' is a parameter.")
+               
+        msg = msg.format(src=src, target=target)
+        
+        return cls(msg)
 
 def __make_metadata(metadata):
     '''

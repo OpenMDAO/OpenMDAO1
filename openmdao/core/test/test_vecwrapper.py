@@ -72,7 +72,7 @@ class TestVecWrapper(unittest.TestCase):
 
         p = TgtVecWrapper()
         p.setup(None, params, u, params.keys(),
-                                            connections, store_byobjs=True)
+                connections, store_byobjs=True)
 
         self.assertEqual(p.vec.size, 9)
         self.assertEqual(len(p), 4)
@@ -88,11 +88,11 @@ class TestVecWrapper(unittest.TestCase):
     def test_view(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['C1:y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
-        unknowns_dict['C1:y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
-        unknowns_dict['C1:y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
-        unknowns_dict['C2:y4'] = { 'shape': (2, 1),  'val': np.zeros((2,1)), 'size': 2,  }
-        unknowns_dict['C2:s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
+        unknowns_dict['C1.y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        unknowns_dict['C1.y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        unknowns_dict['C1.y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
+        unknowns_dict['C2.y4'] = { 'shape': (2, 1),  'val': np.zeros((2,1)), 'size': 2,  }
+        unknowns_dict['C2.s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -102,12 +102,12 @@ class TestVecWrapper(unittest.TestCase):
         u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = {
-            'C1:y1':'y1',
-            'C1:y2':'y2',
-            'C1:y3':'y3',
+            'C1.y1':'y1',
+            'C1.y2':'y2',
+            'C1.y3':'y3',
         }
 
-        uview = u.get_view('noname', None, varmap)
+        uview = u.get_view('noname', None, varmap, None, None)
 
         self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
 
@@ -115,23 +115,23 @@ class TestVecWrapper(unittest.TestCase):
         uview['y3'] = 'bar'
 
         self.assertEqual(uview['y2'], 77.)
-        self.assertEqual(u['C1:y2'], 77.)
+        self.assertEqual(u['C1.y2'], 77.)
 
         self.assertEqual(uview['y3'], 'bar')
-        self.assertEqual(u['C1:y3'], 'bar')
+        self.assertEqual(u['C1.y3'], 'bar')
 
         # now get a view that's empty
-        uview2 = u.get_view('nonname', None, {})
+        uview2 = u.get_view('nonname', None, {}, None, None)
         self.assertEqual(list(uview2.keys()), [])
 
     def test_flat(self):
         unknowns_dict = OrderedDict()
 
-        unknowns_dict['C1:y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
-        unknowns_dict['C1:y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
-        unknowns_dict['C1:y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
-        unknowns_dict['C2:y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
-        unknowns_dict['C2:s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
+        unknowns_dict['C1.y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
+        unknowns_dict['C1.y2'] = { 'shape': 1, 'size': 1, 'val': 2.0 }
+        unknowns_dict['C1.y3'] = { 'size': 0, 'val': "foo", 'pass_by_obj': True }
+        unknowns_dict['C2.y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
+        unknowns_dict['C2.s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
@@ -140,17 +140,17 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
 
-        self.assertTrue((np.array(u.flat['C1:y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
-        self.assertTrue((np.array(u.flat['C1:y2'])==np.array([2.])).all())
+        self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u.flat['C1.y2'])==np.array([2.])).all())
 
         try:
-            u.flat['C1:y3']
+            u.flat['C1.y3']
         except Exception as err:
-            self.assertEqual(str(err), "'C1:y3' is a 'pass by object' variable. Flat value not found.")
+            self.assertEqual(str(err), "'C1.y3' is a 'pass by object' variable. Flat value not found.")
         else:
             self.fail('Exception expected')
-        self.assertTrue((np.array(u.flat['C2:y4'])==np.array([0., 0.])).all())
-        self.assertTrue((np.array(u.flat['C2:s1'])==np.array([-1.])).all())
+        self.assertTrue((np.array(u.flat['C2.y4'])==np.array([0., 0.])).all())
+        self.assertTrue((np.array(u.flat['C2.s1'])==np.array([-1.])).all())
 
     def test_norm(self):
         unknowns_dict = OrderedDict()
@@ -184,9 +184,9 @@ class TestVecWrapper(unittest.TestCase):
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
-            u['A:y1']
+            u['A.y1']
         except KeyError as err:
-            self.assertEqual(str(err), '"Variable \'A:y1\' does not exist"')
+            self.assertEqual(str(err), '"Variable \'A.y1\' does not exist"')
         else:
             self.fail('KeyError expected')
 
@@ -206,9 +206,9 @@ class TestVecWrapper(unittest.TestCase):
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
-            u['A:y1'] = np.zeros((3, 2))
+            u['A.y1'] = np.zeros((3, 2))
         except KeyError as err:
-            self.assertEqual(str(err), '"Variable \'A:y1\' does not exist"')
+            self.assertEqual(str(err), '"Variable \'A.y1\' does not exist"')
         else:
             self.fail('KeyError expected')
 

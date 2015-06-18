@@ -1,36 +1,47 @@
 """ OptionsDictionary class definition. """
 
+from six import iteritems
+
 
 class OptionsDictionary(object):
     """ A dictionary for storing options for components/drivers/solvers. It
     is generally used like a standard Python dictionary, except that 1) you
     can only set or get keys that have been registered with add_option, and
-    2) type is enforced."""
+    2) type is enforced
 
-    def __init__(self):
+    Parameters
+    ----------
+    read_only : bool
+        If this is True, these options should not be modified at run time,
+        and should not be printed in the docs.
+    ."""
+
+    def __init__(self, read_only=True):
         self._options = {}
+        self.read_only = read_only
 
-    def add_option(self, name, value, low=None, high=None, values=None, desc=''):
+    def add_option(self, name, value, low=None, high=None, values=None,
+                   desc=''):
         """ Adds an option to this options dictionary.
 
         Parameters
         ----------
-        name: str
+        name : str
             Name of the option.
 
-        value: object
+        value : object
             Default value for this option. The type of this value will be enforced.
 
-        low: float (optional)
+        low : float (optional)
             Lower bounds for a float value.
 
-        high: float (optional)
+        high : float (optional)
             Upper bounds for a float value.
 
-        values: list (optional)
+        values : list (optional)
             List of all possible values for an enumeration option.
 
-        desc: str (optional)
+        desc : str (optional)
             String containing documentation of this option.
         """
 
@@ -59,6 +70,15 @@ class OptionsDictionary(object):
 
         self.check(name, value)
         self._options[name]['val'] = value
+
+    def items(self):
+        """
+        Returns
+        -------
+        iterator
+            Iterator returning the name and option for each option.
+        """
+        return iteritems({name: opt['val'] for (name, opt) in self._options.items()})
 
     def check(self, name, value):
         low    = self._options[name]['low']

@@ -19,8 +19,10 @@ class TestComponentDerivatives(unittest.TestCase):
         # Tests that we can correctly handle user-defined Jacobians.
 
         empty = {}
-        mycomp = ExecComp(['y=2.0*x'], ['dy_dx=2.0'])
-        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+        params = {'x': 0.0}
+        unknowns = {'y': 0.0}
+        mycomp = ExecComp(['y=2.0*x'])
+        mycomp._jacobian_cache = mycomp.jacobian(params, unknowns, empty)
 
         # Forward
 

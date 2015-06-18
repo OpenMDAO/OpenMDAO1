@@ -23,14 +23,14 @@ class TestLinearSystem(unittest.TestCase):
 
         root.add('p1', ParamComp('A', A))
         root.add('p2', ParamComp('b', b))
-        root.connect('p1:A', 'lin:A')
-        root.connect('p2:b', 'lin:b')
+        root.connect('p1.A', 'lin.A')
+        root.connect('p2.b', 'lin.b')
 
         top.setup()
         top.run()
 
         # Make sure it gets the right answer
-        assert_rel_error(self, top['lin:x'], x, .0001)
+        assert_rel_error(self, top['lin.x'], x, .0001)
         assert_rel_error(self, np.linalg.norm(top.root.resids.vec), 0.0, 1e-10)
 
         # Compare against calculated derivs
@@ -38,17 +38,17 @@ class TestLinearSystem(unittest.TestCase):
         dx_dA = np.outer(Ainv, -x).reshape(3, 9)
         dx_db = Ainv
 
-        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
-        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
+        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
-        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
-        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
+        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
-        J = top.calc_gradient(['p1:A', 'p2:b'], ['lin:x'], mode='fd', return_format='dict')
-        assert_rel_error(self, J['lin:x']['p1:A'], dx_dA, .0001)
-        assert_rel_error(self, J['lin:x']['p2:b'], dx_db, .0001)
+        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
+        assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
 
 

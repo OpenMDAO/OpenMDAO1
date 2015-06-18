@@ -21,7 +21,7 @@ class ParallelGroup(Group):
         """
 
         # full scatter
-        self._varmanager._transfer_data()
+        self._transfer_data()
 
         for name, sub in self.subsystems(local=True):
             sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
@@ -30,7 +30,7 @@ class ParallelGroup(Group):
         """Loops over our children systems and asks them to solve."""
 
         # full scatter
-        self._varmanager._transfer_data()
+        self._transfer_data()
 
         for name, sub in self.subsystems(local=True):
             sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)

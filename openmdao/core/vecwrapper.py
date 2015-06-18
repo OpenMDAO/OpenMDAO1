@@ -280,7 +280,7 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, sys_pathname, comm, varmap):
+    def get_view(self, sys_pathname, comm, varmap, relevance, var_of_interest):
         """
         Return a new `VecWrapper` that is a view into this one.
 
@@ -522,7 +522,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    def setup(self, unknowns_dict, store_byobjs=False):
+    def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -534,6 +534,10 @@ class SrcVecWrapper(VecWrapper):
             Dictionary of metadata for unknown variables collected from
             components.
 
+        relevant_vars : iter of str
+            Names of variables that are relevant a particular variable of
+            interest.
+
         store_byobjs : bool (optional)
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
@@ -541,13 +545,14 @@ class SrcVecWrapper(VecWrapper):
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
-            relname = meta['relative_name']
-            vmeta = self._setup_var_meta(name, meta)
-            if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
-                self._slices[relname] = (vec_size, vec_size + vmeta['size'])
-                vec_size += vmeta['size']
+            if relevant_vars is None or name in relevant_vars:
+                relname = meta['relative_name']
+                vmeta = self._setup_var_meta(name, meta)
+                if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
+                    self._slices[relname] = (vec_size, vec_size + vmeta['size'])
+                    vec_size += vmeta['size']
 
-            self._vardict[relname] = vmeta
+                self._vardict[relname] = vmeta
 
         self.vec = numpy.zeros(vec_size)
 
@@ -561,7 +566,7 @@ class SrcVecWrapper(VecWrapper):
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
             for name, meta in unknowns_dict.items():
-                if not meta.get('remote'):
+                if (relevant_vars is None or name in relevant_vars) and not meta.get('remote'):
                     self[meta['relative_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
@@ -593,35 +598,18 @@ class SrcVecWrapper(VecWrapper):
 
         Returns
         -------
-        ndarray
-            1x<num_vector_vars> array of sizes.
+        list of `OrderedDict`
+            A one entry list containing an `OrderedDict` mapping var name to
+            local size for 'pass by vector' variables.
         """
-        sizes = [m['size'] for m in self.values()
-                 if not m.get('pass_by_obj') and not m.get('remote')]
-        return numpy.array([sizes], int)
-
-    def _var_idx(self, name):
-        """
-        Parameters
-        ----------
-        name : str
-            Name of the variable.
-
-        Returns
-        -------
-        int
-            The index of the given variable into the local_sizes table.
-        """
-
-        for i, (vname, meta) in enumerate(self.get_vecvars()):
-            if vname == name:
-                return i
-        raise RuntimeError("'%s' is not a 'pass by vector' variable." % name)
+        sizes = OrderedDict([(n,m['size']) for n,m in self.items()
+                 if not m.get('pass_by_obj') and not m.get('remote')])
+        return [sizes]
 
 
 class TgtVecWrapper(VecWrapper):
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, store_byobjs=False):
+              connections, relevant_vars=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -645,6 +633,10 @@ class TgtVecWrapper(VecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
+        relevant_vars : iter of str
+            Names of variables that are relevant a particular variable of
+            interest.
+
         store_byobjs : bool (optional)
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
@@ -656,28 +648,29 @@ class TgtVecWrapper(VecWrapper):
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
-            if pathname in my_params:
-                # if connected, get metadata from the source
-                src_pathname = connections.get(pathname)
-                if src_pathname is None:
-                    raise RuntimeError("Parameter '%s' is not connected" % pathname)
-                src_rel_name = srcvec.get_relative_varname(src_pathname)
-                src_meta = srcvec.metadata(src_rel_name)
+            if relevant_vars is None or pathname in relevant_vars:
+                if pathname in my_params:
+                    # if connected, get metadata from the source
+                    src_pathname = connections.get(pathname)
+                    if src_pathname is None:
+                        raise RuntimeError("Parameter '%s' is not connected" % pathname)
+                    src_rel_name = srcvec.get_relative_varname(src_pathname)
+                    src_meta = srcvec.metadata(src_rel_name)
 
-                vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
-                vmeta['owned'] = True
+                    vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
+                    vmeta['owned'] = True
 
-                if not meta.get('remote'):
-                    vec_size += vmeta['size']
+                    if not meta.get('remote'):
+                        vec_size += vmeta['size']
 
-                self._vardict[self._scoped_abs_name(pathname)] = vmeta
-            else:
-                if parent_params_vec is not None:
-                    src = connections.get(pathname)
-                    if src:
-                        common = get_common_ancestor(src, pathname)
-                        if common == self.pathname or (self.pathname+':') not in common:
-                            missing.append(pathname)
+                    self._vardict[self._scoped_abs_name(pathname)] = vmeta
+                else:
+                    if parent_params_vec is not None:
+                        src = connections.get(pathname)
+                        if src:
+                            common = get_common_ancestor(src, pathname)
+                            if common == self.pathname or (self.pathname+'.') not in common:
+                                missing.append(pathname)
 
         self.vec = numpy.zeros(vec_size)
 
@@ -699,12 +692,13 @@ class TgtVecWrapper(VecWrapper):
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
-            unitconv = meta.get('unit_conv')
-            if unitconv:
-                scale, offset = unitconv
-                if self.deriv_units:
-                    offset = 0.0
-                self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
+            if relevant_vars is None or pathname in relevant_vars:
+                unitconv = meta.get('unit_conv')
+                if unitconv:
+                    scale, offset = unitconv
+                    if self.deriv_units:
+                        offset = 0.0
+                    self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -763,18 +757,22 @@ class TgtVecWrapper(VecWrapper):
 
     def _get_flattened_sizes(self):
         """
-        Create a 1x1 numpy array to hold the sum of the sizes of params
-        stored in flattened form in our internal vector.
-
         Returns
         -------
-        ndarray
-            Array containing sum of local sizes of params in our internal vector.
+        list of `OrderedDict`
+            A one entry list of `OrderedDict` mapping names to local sizes of owned, local params
+            in this `VecWrapper`.
         """
-        psizes = [m['size'] for m in self.values()
-                     if m.get('owned') and not m.get('pass_by_obj') and not m.get('remote')]
-        return numpy.array([sum(psizes)], int)
+        psizes = OrderedDict()
+        for name, m in self.items():
+            if m.get('pass_by_obj') or not m.get('owned'):
+                continue
+            if m.get('remote'):
+                psizes[name] = 0
+            else:
+                psizes[name] = m['size']
 
+        return [psizes]
 
 
 def idx_merge(idxs):
