@@ -599,12 +599,12 @@ class Group(System):
             # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(system.params, system.unknowns,
-                                    system.dparams, system.dunknowns,
-                                    system.dresids, mode)
+                                    system.dpmat[None], system.dumat[None],
+                                    system.drmat[None], mode)
 
         if mode == 'rev':
             # Full Scatter
-            self._varmanager._transfer_data(mode='rev', deriv=True)
+            self._transfer_data(mode='rev', deriv=True)
 
     def _sub_apply_linear_wrapper(self, system, mode, voi):
         """ Calls apply_linear on any Component-like subsystem. This
