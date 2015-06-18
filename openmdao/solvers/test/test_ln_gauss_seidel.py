@@ -123,8 +123,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['p:x']
-        unknown_list = ['comp2:y', "comp3:y"]
+        param_list = ['p.x']
+        unknown_list = ['comp2.y', "comp3.y"]
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp2.y']['p.x'][0][0], -6.0, 1e-6)
@@ -142,8 +142,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['p:x']
-        unknown_list = ['sub:comp2:y', "sub:comp3:y"]
+        param_list = ['p.x']
+        unknown_list = ['sub.comp2:y', "sub.comp3:y"]
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['sub:comp2.y']['p.x'][0][0], -6.0, 1e-6)
@@ -161,8 +161,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['p1:x1', 'p2:x2']
-        unknown_list = ['comp3:y']
+        param_list = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
@@ -180,8 +180,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['p1:x1', 'p2:x2']
-        unknown_list = ['comp3:y']
+        param_list = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
@@ -199,8 +199,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top.setup()
         top.run()
 
-        param_list = ['p:x']
-        unknown_list = ['comp7:y1']
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
 
         top.run()
 
