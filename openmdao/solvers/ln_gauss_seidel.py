@@ -48,69 +48,73 @@ class LinearGaussSeidel(LinearSolver):
         ndarray : Solution vector
         """
 
-        dunknowns = system.dunknowns
-        dparams = system.dparams
-        dresids = system.dresids
+        dumat = system.dumat
+        drmat = system.drmat
+        dpmat = system.dpmat
 
-        dunknowns.vec[:] = 0.0
-        dresids.vec[:] = 0.0
         system.clear_dparams()
+        for names in system._relevance.vars_of_interest():
+            for name in names:
+                if name in dumat:
+                    dumat[name].vec[:] = 0.0
+                    drmat[name].vec[:] = 0.0
+        dumat[None].vec[:] = 0.0
+        drmat[None].vec[:] = 0.0
+
+        #FIXME: Just want to get LGS working by itself before considering matmat
+        voi = None
 
         if mode == 'fwd':
 
-            #dunknowns.vec[:] = rhs
-
             for name, sub in system.subsystems(local=True):
 
-                print(name, dparams.keys(), dunknowns.keys())
+                print(name, dpmat[voi].keys(), dumat[voi].keys())
 
-                print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
-                system._varmanager._transfer_data(name, deriv=True)
+                print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                system._transfer_data(name, deriv=True)
 
                 #dresids.vec[:] = 0.0
-                print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode)
+                    system._sub_apply_linear_wrapper(sub, mode, voi)
 
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
-                                     sub.dunknowns, sub.dresids, mode)
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat,
+                                     sub.dumat, sub.drmat, mode)
 
-                print('post apply', dparams.vec, dunknowns.vec, dresids.vec)
+                print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                dresids.vec *= -1.0
-                dresids.vec += rhs
+                drmat[voi].vec *= -1.0
+                drmat[voi].vec += rhs
 
-                sub.solve_linear(sub.dresids.vec, sub.dunknowns, sub.dresids,
+                sub.solve_linear(sub.drmat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
-                print('post solve', dparams.vec, dunknowns.vec, dresids.vec)
+                print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-            return dunknowns.vec
+            return dumat[voi].vec
 
         else:
-
-            #dresids.vec[:] = rhs
 
             rev_systems = [sys for sys in system.subsystems(local=True)]
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                print(name, dparams.keys(), dunknowns.keys())
+                print(name, dpmat[None].keys(), dumat[None].keys())
 
                 dunknowns.vec *= -1.0
                 dunknowns.vec += rhs
 
-                print('pre solve', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre solve', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
                 sub.solve_linear(sub.dunknowns.vec, sub.dunknowns, sub.dresids,
                                  mode=mode)
 
-                print('pre apply', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre apply', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
 
                 if isinstance(sub, Component):
 
@@ -124,8 +128,8 @@ class LinearGaussSeidel(LinearSolver):
                     sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
                                      sub.dunknowns, sub.dresids, mode)
 
-                print('pre scatter', dparams.vec, dunknowns.vec, dresids.vec)
-                system._varmanager._transfer_data(name, mode='rev', deriv=True)
-                print('post scatter', dparams.vec, dunknowns.vec, dresids.vec)
+                print('pre scatter', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
+                system._transfer_data(name, mode='rev', deriv=True)
+                print('post scatter', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
 
             return dresids.vec
