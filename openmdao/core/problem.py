@@ -383,8 +383,6 @@ class Problem(System):
 
         root.jacobian(params, unknowns, root.resids)
 
-        rhs = np.zeros((len(unknowns.vec), ))
-
         # Initialize Jacobian
         if return_format == 'dict':
             J = {}
@@ -413,6 +411,8 @@ class Problem(System):
         # If Adjoint mode, solve linear system for each unknown
         j = 0
         for param in input_list:
+
+            rhs = np.zeros((len(unknowns.vec), ))
 
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
