@@ -105,22 +105,26 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                print(name, dpmat[None].keys(), dumat[None].keys())
+                print(name, dpmat[voi].keys(), dumat[voi].keys())
 
-                dunknowns.vec *= -1.0
-                dunknowns.vec += rhs
+                dumat[voi].vec *= 0.0
 
-                print('pre solve', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
-                sub.solve_linear(sub.dunknowns.vec, sub.dunknowns, sub.dresids,
+                print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                system._transfer_data(name, mode='rev', deriv=True)
+                print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+
+                dumat[voi].vec *= -1.0
+                dumat[voi].vec += rhs
+
+                sub.solve_linear(sub.dumat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
-
-                print('pre apply', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
+                print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode)
+                    system._sub_apply_linear_wrapper(sub, mode, voi)
 
                 else:
                     # Groups and all other systems just call their own
@@ -128,8 +132,7 @@ class LinearGaussSeidel(LinearSolver):
                     sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
                                      sub.dunknowns, sub.dresids, mode)
 
-                print('pre scatter', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
-                system._transfer_data(name, mode='rev', deriv=True)
-                print('post scatter', dpmat[None].vec, dumat[None].vec, drmat[None].vec)
 
-            return dresids.vec
+                print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+
+            return drmat[voi].vec
