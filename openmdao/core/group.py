@@ -606,7 +606,7 @@ class Group(System):
             # Full Scatter
             self._transfer_data(mode='rev', deriv=True)
 
-    def _sub_apply_linear_wrapper(self, system, mode, voi):
+    def _sub_apply_linear_wrapper(self, system, mode, voi, id_vars=None):
         """ Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
@@ -623,21 +623,30 @@ class Group(System):
 
         voi: index
             Index to quantity (RHS) of interest
+
+        idvars: list
+            List of valid input names. If None, then don't check them.
         """
 
         dresids = system.drmat[voi]
         dunknowns = system.dumat[voi]
         dparams = system.dpmat[voi]
 
+        # Linear GS imposes a stricter requirement on whether or not to run.
+        abs_inputs = [dparams.metadata(name)['pathname'] for name in dparams.keys()]
+
         # Forward Mode
         if mode == 'fwd':
 
-            if system.fd_options['force_fd'] == True:
-                system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                         dunknowns, dresids, mode)
-            else:
-                system.apply_linear(system.params, system.unknowns, dparams,
-                                    dunknowns, dresids, mode)
+            dresids.vec[:] = 0.0
+
+            if id_vars is None or set(abs_inputs).intersection(id_vars):
+                if system.fd_options['force_fd'] == True:
+                    system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                             dunknowns, dresids, mode)
+                else:
+                    system.apply_linear(system.params, system.unknowns, dparams,
+                                        dunknowns, dresids, mode)
             dresids.vec *= -1.0
 
             for var in dunknowns.keys():
@@ -658,12 +667,13 @@ class Group(System):
             # our local 'arg' by -1, and then revert it afterwards.
             dresids.vec *= -1.0
 
-            if system.fd_options['force_fd'] == True:
-                system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                         dunknowns, dresids, mode)
-            else:
-                system.apply_linear(system.params, system.unknowns, dparams,
-                                    dunknowns, dresids, mode)
+            if id_vars is None or set(abs_inputs).intersection(id_vars):
+                if system.fd_options['force_fd'] == True:
+                    system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                             dunknowns, dresids, mode)
+                else:
+                    system.apply_linear(system.params, system.unknowns, dparams,
+                                        dunknowns, dresids, mode)
 
             dresids.vec *= -1.0
 

@@ -59,7 +59,7 @@ class LinearGaussSeidel(LinearSolver):
                     dumat[name].vec[:] = 0.0
                     drmat[name].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
-        drmat[None].vec[:] = 0.0
+        drmat[None].vec[:] = -rhs # KTM 0
 
         #FIXME: Just want to get LGS working by itself before considering matmat
         voi = None
@@ -73,20 +73,23 @@ class LinearGaussSeidel(LinearSolver):
                 print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, deriv=True)
 
-                drmat[voi].vec[:] = 0.0
+                #drmat[voi].vec[:] = 0.0 # KTM uncomment
                 print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                if isinstance(sub, ParamComp):
-                    # For parameters we call their applyJ without any of
-                    # the preprocessing that components need.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     sub.dumat[voi], sub.drmat[voi], mode)
+                id_vars = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
 
-                elif isinstance(sub, Component):
+                #if isinstance(sub, ParamComp):
+                    ## For parameters we call their applyJ without any of
+                    ## the preprocessing that components need.
+                    #sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     #sub.dumat[voi], sub.drmat[voi], mode)
+
+                # KTM if branch for ParamComp
+                if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi)
+                    system._sub_apply_linear_wrapper(sub, mode, voi, id_vars)
 
                 else:
                     # Groups and all other systems just call their own
@@ -126,13 +129,13 @@ class LinearGaussSeidel(LinearSolver):
                                  mode=mode)
                 print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                if isinstance(sub, ParamComp):
-                    # For parameters we call their applyJ without any of
-                    # the preprocessing that components need.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     sub.dumat[voi], sub.drmat[voi], mode)
+                #if isinstance(sub, ParamComp):
+                    ## For parameters we call their applyJ without any of
+                    ## the preprocessing that components need.
+                    #sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     #sub.dumat[voi], sub.drmat[voi], mode)
 
-                elif isinstance(sub, Component):
+                if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
@@ -141,8 +144,8 @@ class LinearGaussSeidel(LinearSolver):
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dparams,
-                                     sub.dunknowns, sub.dresids, mode)
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     sub.dumat[voi], sub.drmat[voi], mode)
 
 
                 print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
