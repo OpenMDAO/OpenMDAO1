@@ -73,10 +73,16 @@ class LinearGaussSeidel(LinearSolver):
                 print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, deriv=True)
 
-                #dresids.vec[:] = 0.0
+                drmat[voi].vec[:] = 0.0
                 print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                if isinstance(sub, Component):
+                if isinstance(sub, ParamComp):
+                    # For parameters we call their applyJ without any of
+                    # the preprocessing that components need.
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     sub.dumat[voi], sub.drmat[voi], mode)
+
+                elif isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
@@ -120,7 +126,13 @@ class LinearGaussSeidel(LinearSolver):
                                  mode=mode)
                 print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                if isinstance(sub, Component):
+                if isinstance(sub, ParamComp):
+                    # For parameters we call their applyJ without any of
+                    # the preprocessing that components need.
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     sub.dumat[voi], sub.drmat[voi], mode)
+
+                elif isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns

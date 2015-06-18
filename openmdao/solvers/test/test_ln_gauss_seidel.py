@@ -85,6 +85,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         top = Problem()
         top.root = group
         top.root.ln_solver = LinearGaussSeidel()
+        top.root.sub.ln_solver = LinearGaussSeidel()
         top.setup()
         top.run()
 
