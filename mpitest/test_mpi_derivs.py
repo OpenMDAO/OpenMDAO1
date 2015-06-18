@@ -50,13 +50,37 @@ class TestScipyGMRES(MPITestCase):
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
-    def test_fan_in_grouped(self):
+    def test_simple_deriv_xfer(self):
 
         top = Problem(impl=impl)
         top.root = FanInGrouped()
         top.setup()
 
-        #top.root.sub._transfer_data(mode='rev', deriv=True)
+        top.root.comp3.dpmat[None]['x1'] = 7.
+        top.root.comp3.dpmat[None]['x2'] = 11.
+        top.root._transfer_data(mode='rev', deriv=True)
+
+        if not MPI or self.comm.rank == 0:
+            self.assertEqual(top.root.sub.comp1.dumat[None]['y'], 7.)
+
+        if not MPI or self.comm.rank == 1:
+            self.assertEqual(top.root.sub.comp2.dumat[None]['y'], 11.)
+
+        top.root.comp3.dpmat[None]['x1'] = 0.
+        top.root.comp3.dpmat[None]['x2'] = 0.
+        self.assertEqual(top.root.comp3.dpmat[None]['x1'], 0.)
+        self.assertEqual(top.root.comp3.dpmat[None]['x2'], 0.)
+
+        top.root._transfer_data(mode='fwd', deriv=True)
+
+        self.assertEqual(top.root.comp3.dpmat[None]['x1'], 7.)
+        self.assertEqual(top.root.comp3.dpmat[None]['x2'], 11.)
+
+    #def test_fan_in(self):
+
+        #top = Problem(impl=impl)
+        #top.root = FanInGrouped()
+        #top.setup()
 
         #param_list = ['p1.x1', 'p2.x2']
         #unknown_list = ['comp3.y']

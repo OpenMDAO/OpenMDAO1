@@ -502,7 +502,10 @@ class VecWrapper(object):
         for v, meta in self.items():
             if meta.get('pass_by_obj') or meta.get('remote'):
                 continue
-            uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
+            if v in self._slices:
+                uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
+            else:
+                uslice = ''
             out_stream.write("{0:<{nwid}} {1:<{swid}} {2:>{vwid}}\n".format(v,
                                                                        uslice,
                                                                        repr(self[v]),

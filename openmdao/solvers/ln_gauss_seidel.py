@@ -71,7 +71,7 @@ class LinearGaussSeidel(LinearSolver):
                 print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                system._transfer_data(name, deriv=True)
+                system._transfer_data(name, deriv=True, var_of_interest=voi)
 
                 #dresids.vec[:] = 0.0
                 print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -85,8 +85,8 @@ class LinearGaussSeidel(LinearSolver):
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat,
-                                     sub.dumat, sub.drmat, mode)
+                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
+                                     sub.dumat[voi], sub.drmat[voi], mode)
 
                 print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
