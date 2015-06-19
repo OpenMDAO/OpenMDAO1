@@ -28,7 +28,7 @@ class ExecComp(Component):
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
-    **kwargs: dict of named args
+    \*\*kwargs: dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
     """

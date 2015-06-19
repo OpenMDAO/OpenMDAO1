@@ -199,16 +199,15 @@ class Component(System):
         must execute its solve nonlinear method. Implicit components should
         override this and calculate their residuals in place.
 
-        Parameters
-        ----------
-        params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+        Args:
+            params : `VecWrapper`
+                `VecWrapper` containing parameters (p)
 
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            unknowns : `VecWrapper`
+                `VecWrapper` containing outputs and states (u)
 
-        resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            resids : `VecWrapper`
+                `VecWrapper`  containing residuals. (r)
         """
 
         # Since explicit comps don't put anything in resids, we can use it to
@@ -339,3 +338,13 @@ class Component(System):
                                                                          nwid=nwid))
 
         out_stream.flush()
+
+    def generate_numpydocstring(self):
+        #print "TYPE: {type}".format(type=self.type())
+        innards=dir(self)
+        print "Innards: {innards}".format(innards=dir(self))
+        for innard in innards:
+            #print "item: {thingy}".format(thingy=self.str(innard))
+            print innard
+        print self.__dict__
+        print help(self)
