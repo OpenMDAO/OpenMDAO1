@@ -15,7 +15,7 @@ class TestComponent(unittest.TestCase):
     def test_promotes(self):
         self.comp.add_param("xxyyzz", 0.0)
         self.comp.add_param("foobar", 0.0)
-        self.comp.add_output("a.bcd.efg", -1)
+        self.comp.add_output("a:bcd:efg", -1)
         self.comp.add_output("x_y_z", np.zeros(10))
 
         self.comp._promotes = ('*',)
@@ -38,14 +38,14 @@ class TestComponent(unittest.TestCase):
             else:
                 self.assertFalse(self.comp.promoted(name))
 
-        self.comp._promotes = ('*.efg',)
+        self.comp._promotes = ('*:efg',)
         for name in self.comp._params_dict:
-            if name.endswith('.efg'):
+            if name.endswith(':efg'):
                 self.assertTrue(self.comp.promoted(name))
             else:
                 self.assertFalse(self.comp.promoted(name))
         for name in self.comp._unknowns_dict:
-            if name.endswith('.efg'):
+            if name.endswith(':efg'):
                 self.assertTrue(self.comp.promoted(name))
             else:
                 self.assertFalse(self.comp.promoted(name))

@@ -1,6 +1,7 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
 import sys
+import re
 from pprint import pformat
 from collections import OrderedDict
 import functools
@@ -19,6 +20,9 @@ Object to represent default value for `add_output`.
 '''
 _NotSet = object()
 
+# regex to check for valid variable names.
+namecheck_rgx = re.compile(
+    '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -91,6 +95,10 @@ class Component(System):
         if name in self._params_dict or name in self._unknowns_dict:
             raise RuntimeError("%s: variable '%s' already exists" %
                                (self.pathname, name))
+
+        match = namecheck_rgx.match(name)
+        if match is None or match.group() != name:
+            raise NameError("%s: '%s' is not a valid variable name." % (self.pathname, name))
 
     def _get_fd_params(self):
         """
