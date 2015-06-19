@@ -349,7 +349,7 @@ class VecWrapper(object):
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
 
-    def to_idx_array(indices):
+    def to_idx_array(self, indices):
         """
         Given some iterator of indices, return an index array of the
         right int type for the current implementation.
@@ -365,7 +365,7 @@ class VecWrapper(object):
             Index array containing all of the given indices.
 
         """
-        return numpy.array(indices, dtype=idx_arr_type)
+        return numpy.array(indices, dtype=self.idx_arr_type)
 
     def merge_idxs(self, src_idxs, tgt_idxs):
         """
@@ -728,7 +728,8 @@ class TgtVecWrapper(VecWrapper):
         """
         vmeta = meta.copy()
         vmeta['pathname'] = pathname
-        vmeta['size'] = src_meta['size']
+        if 'src_indices' not in vmeta:
+            vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:

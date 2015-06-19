@@ -30,6 +30,7 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
+        self._src_idxs = {}
         self._data_xfer = {}
 
         self._local_unknown_sizes = None
@@ -152,7 +153,7 @@ class Group(System):
         system.name = name
         return system
 
-    def connect(self, source, targets):
+    def connect(self, source, targets, src_indices=None):
         """Connect the given source variable to the given target
         variable.
 
@@ -166,10 +167,12 @@ class Group(System):
             The name of one or more target variables.
         """
         if isinstance(targets, str):
-            self._src[targets] = source
-        else:
-            for target in targets:
-                self._src[target] = source
+            targets = [targets]
+
+        for target in targets:
+            self._src[target] = source
+            if src_indices is not None:
+                self._src_idxs[target] = src_indices
 
     def subsystems(self, local=False, recurse=False, typ=System):
         """
@@ -250,6 +253,8 @@ class Group(System):
             for p, meta in subparams.items():
                 meta = meta.copy()
                 meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                if p in self._src_idxs:
+                    meta['src_indices'] = self._src_idxs[p]
                 self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
@@ -319,8 +324,6 @@ class Group(System):
         if not self.is_active():
             return
 
-        self.distrib_idxs = {}  # this will be non-empty if some systems have distributed vars
-
         self._impl_factory = impl
         self._relevance = relevance
 
@@ -351,6 +354,11 @@ class Group(System):
                             self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
                         self._setup_data_transfer(my_params, relevance, voi)
+
+        # convert any src_indices to index arrays
+        for pname, meta in self._params_dict.items():
+            if 'src_indices' in meta:
+                meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
@@ -947,7 +955,7 @@ class Group(System):
             return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
 
         if 'src_indices' in pmeta:
-            arg_idxs = pvec.to_idx_array(pmeta['src_idxs'])
+            arg_idxs = pvec.to_idx_array(pmeta['src_indices'])
         else:
             arg_idxs = pvec.make_idx_array(0, pmeta['size'])
 
