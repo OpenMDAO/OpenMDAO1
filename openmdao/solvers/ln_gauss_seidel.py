@@ -76,7 +76,7 @@ class LinearGaussSeidel(LinearSolver):
                 #drmat[voi].vec[:] = 0.0 # KTM uncomment
                 print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                id_vars = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
+                ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
 
                 #if isinstance(sub, ParamComp):
                     ## For parameters we call their applyJ without any of
@@ -89,7 +89,7 @@ class LinearGaussSeidel(LinearSolver):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi, id_vars)
+                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own

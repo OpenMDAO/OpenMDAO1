@@ -543,7 +543,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode, ls_inputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -574,6 +574,10 @@ class Group(System):
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
+
+        ls_inputs : list
+            We can only solve derivatives for the inputs the instigating
+            system has access to.
         """
         if not self.is_active():
             return
@@ -593,20 +597,20 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                self._sub_apply_linear_wrapper(system, mode, voi)
+                self._sub_apply_linear_wrapper(system, mode, voi, ls_inputs)
 
 
             # Groups and all other systems just call their own apply_linear.
             else:
                 system.apply_linear(system.params, system.unknowns,
                                     system.dpmat[None], system.dumat[None],
-                                    system.drmat[None], mode)
+                                    system.drmat[None], mode, ls_inputs)
 
         if mode == 'rev':
             # Full Scatter
             self._transfer_data(mode='rev', deriv=True)
 
-    def _sub_apply_linear_wrapper(self, system, mode, voi, id_vars=None):
+    def _sub_apply_linear_wrapper(self, system, mode, voi, ls_inputs=None):
         """ Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
@@ -624,8 +628,9 @@ class Group(System):
         voi: index
             Index to quantity (RHS) of interest
 
-        idvars: list
-            List of valid input names. If None, then don't check them.
+        ls_inputs : list
+            We can only solve derivatives for the inputs the instigating
+            system has access to.
         """
 
         dresids = system.drmat[voi]
@@ -638,9 +643,13 @@ class Group(System):
         # Forward Mode
         if mode == 'fwd':
 
+            #print(abs_inputs)
+            #print(ls_inputs)
+            #if ls_inputs is not None:
+            #    print(set(abs_inputs).intersection(ls_inputs))
             dresids.vec[:] = 0.0
 
-            if id_vars is None or set(abs_inputs).intersection(id_vars):
+            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
                 if system.fd_options['force_fd'] == True:
                     system._apply_linear_jac(system.params, system.unknowns, dparams,
                                              dunknowns, dresids, mode)
@@ -660,6 +669,8 @@ class Group(System):
         # Adjoint Mode
         elif mode == 'rev':
 
+            dparams.vec[:] = 0.0
+
             # Sign on the local Jacobian needs to be -1 before
             # we add in the fake residual. Since we can't modify
             # the 'du' vector at this point without stomping on the
@@ -667,7 +678,7 @@ class Group(System):
             # our local 'arg' by -1, and then revert it afterwards.
             dresids.vec *= -1.0
 
-            if id_vars is None or set(abs_inputs).intersection(id_vars):
+            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
                 if system.fd_options['force_fd'] == True:
                     system._apply_linear_jac(system.params, system.unknowns, dparams,
                                              dunknowns, dresids, mode)
@@ -725,7 +736,7 @@ class Group(System):
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_vec.vec[:] = rhs[:]
-        rhs_buf = rhs_vec.vec.copy()
+        rhs_buf = rhs.copy()
         print('before', self.params.vec, sol_vec.vec, rhs_vec.vec)
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
         print('after', self.params.vec, sol_vec.vec, rhs_vec.vec)

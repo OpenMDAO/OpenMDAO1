@@ -10,7 +10,8 @@ class ParamComp(Component):
 
         self.add_output(name, val, **kwargs)
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode,
+                     ls_inputs=None):
         """For `ParamComp`, just pass on the incoming values.
 
         Parameters
@@ -36,13 +37,17 @@ class ParamComp(Component):
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
+
+        ls_inputs : list
+            We can only solve derivatives for the inputs the instigating
+            system has access to. (Not used here.)
         """
         if mode=='fwd':
             sol_vec, rhs_vec = dunknowns, dresids
         else:
             sol_vec, rhs_vec = dresids, dunknowns
 
-        rhs_vec.vec[:] += sol_vec.vec[:]
+        rhs_vec.vec[:] = sol_vec.vec[:]
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass

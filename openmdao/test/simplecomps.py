@@ -39,9 +39,10 @@ class SimpleCompDerivMatVec(SimpleComp):
         """Returns the product of the incoming vector with the Jacobian."""
 
         if mode == 'fwd':
-            dresids['y'] = self.multiplier*dparams['x']
+            dresids['y'] += self.multiplier*dparams['x']
 
         elif mode == 'rev':
+            print('HEY', dparams['x'])
             dparams['x'] = self.multiplier*dresids['y']
 
 
