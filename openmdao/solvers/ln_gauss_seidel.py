@@ -80,13 +80,13 @@ class LinearGaussSeidel(LinearSolver):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs)
+                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs=ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub.apply_linear(sub.params, sub.unknowns, sub.dpmat,
-                                     sub.dumat, sub.drmat, mode)
+                                     sub.dumat, sub.drmat, mode, ls_inputs=ls_inputs)
 
                 #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
@@ -126,13 +126,13 @@ class LinearGaussSeidel(LinearSolver):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs)
+                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs=ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     sub.dumat[voi], sub.drmat[voi], mode)
+                                     sub.dumat[voi], sub.drmat[voi], mode, ls_inputs=ls_inputs)
 
 
                 print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)

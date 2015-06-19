@@ -50,7 +50,8 @@ class ScipyGMRES(LinearSolver):
         ndarray : Solution vector
         """
 
-        #TODO: When to record?
+        # Scipy can only handle one right-hand-side at a time.
+        self.vois = [None]
 
         n_edge = len(rhs)
         A = LinearOperator((n_edge, n_edge),
@@ -88,11 +89,11 @@ class ScipyGMRES(LinearSolver):
         system = self.system
         mode = self.mode
 
-        # FIXME: dumat/drmat keys won't always be None
+        voi = self.vois[0]
         if mode=='fwd':
-            sol_vec, rhs_vec = system.dumat[None], system.drmat[None]
+            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
         else:
-            sol_vec, rhs_vec = system.drmat[None], system.dumat[None]
+            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
         sol_vec.vec[:] = arg[:]
@@ -117,7 +118,7 @@ class ScipyGMRES(LinearSolver):
 
         system.apply_linear(system.params, system.unknowns, system.dpmat[None],
                             system.dumat[None], system.drmat[None], mode,
-                            ls_inputs)
+                            ls_inputs=ls_inputs)
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

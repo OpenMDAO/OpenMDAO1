@@ -12,6 +12,9 @@ class ExplicitSolver(ScipyGMRES):
     linalg.solve."""
 
     def solve(self, rhs, system, mode):
+
+        self.vois = [None]
+
         #TODO: When to record?
         self.system = system
         self.mode = mode

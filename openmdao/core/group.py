@@ -604,7 +604,8 @@ class Group(System):
             else:
                 system.apply_linear(system.params, system.unknowns,
                                     system.dpmat[None], system.dumat[None],
-                                    system.drmat[None], mode, ls_inputs)
+                                    system.drmat[None], mode,
+                                    ls_inputs=ls_inputs)
 
         if mode == 'rev':
             # Full Scatter
@@ -643,10 +644,6 @@ class Group(System):
         # Forward Mode
         if mode == 'fwd':
 
-            #print(abs_inputs)
-            #print(ls_inputs)
-            #if ls_inputs is not None:
-            #    print(set(abs_inputs).intersection(ls_inputs))
             dresids.vec[:] = 0.0
 
             if ls_inputs is None or abs_inputs.intersection(ls_inputs):
