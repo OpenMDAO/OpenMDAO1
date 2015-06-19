@@ -74,7 +74,7 @@ class LinearGaussSeidel(LinearSolver):
 
 #                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
+                ls_inputs = {x for x in dpmat[voi] if x not in sub.dpmat[voi]}
 
                 if isinstance(sub, Component):
 
