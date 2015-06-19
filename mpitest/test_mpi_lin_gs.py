@@ -54,14 +54,12 @@ class MPITests1(MPITestCase):
         unknown_list = ['comp3.y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print(J)
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #print(J)
-        #assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests
