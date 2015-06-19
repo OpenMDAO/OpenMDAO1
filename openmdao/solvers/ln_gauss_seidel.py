@@ -58,6 +58,7 @@ class LinearGaussSeidel(LinearSolver):
                 if name in dumat:
                     dumat[name].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
+        #drmat[None].vec[:] = -rhs
 
         #FIXME: Just want to get LGS working by itself before considering matmat
         voi = None
@@ -119,11 +120,13 @@ class LinearGaussSeidel(LinearSolver):
                                  mode=mode)
                 #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
+                ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
+
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi)
+                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own
