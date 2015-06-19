@@ -33,9 +33,10 @@ class LinearGaussSeidel(LinearSolver):
 
         Parameters
         ----------
-        rhs : ndarray
-            Array containing the right-hand side for the linear solve. Also
-            possibly a 2D array with multiple right-hand sides.
+        rhs_mat : dict of ndarray
+            Dictionary containing one ndarry per top level quantity of
+            interest. Each array contains the right-hand side for the linear
+            solve.
 
         system : `System`
             Parent `System` object.
@@ -45,7 +46,7 @@ class LinearGaussSeidel(LinearSolver):
 
         Returns
         -------
-        ndarray : Solution vector
+        dict of ndarray : Solution vectors
         """
 
         dumat = system.dumat
@@ -62,7 +63,8 @@ class LinearGaussSeidel(LinearSolver):
 
         #FIXME: Just want to get LGS working by itself before considering matmat
         voi = None
-        vois = [None]
+        vois = rhs.keys()
+        sol_buf = {}
 
         if mode == 'fwd':
 
@@ -92,13 +94,14 @@ class LinearGaussSeidel(LinearSolver):
 
                 for voi in vois:
                     drmat[voi].vec *= -1.0
-                    drmat[voi].vec += rhs
+                    drmat[voi].vec += rhs[voi]
 
-                sub.solve_linear(sub.drmat[voi].vec, sub.dumat[voi], sub.drmat[voi],
-                                 mode=mode)
+                sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
                 #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-            return dumat[voi].vec
+            for voi in vois:
+                sol_buf[voi] = dumat[voi].vec
+            return sol_buf
 
         else:
 
@@ -117,10 +120,9 @@ class LinearGaussSeidel(LinearSolver):
 
                 for voi in vois:
                     dumat[voi].vec *= -1.0
-                    dumat[voi].vec += rhs
+                    dumat[voi].vec += rhs[voi]
 
-                sub.solve_linear(sub.dumat[voi].vec, sub.dumat[voi], sub.drmat[voi],
-                                 mode=mode)
+                sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
                 #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 ls_inputs = [x for x in dpmat[None].keys() if x not in sub.dpmat[None].keys()]
@@ -139,4 +141,6 @@ class LinearGaussSeidel(LinearSolver):
 
                 #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-            return drmat[voi].vec
+            for voi in vois:
+                sol_buf[voi] = drmat[voi].vec
+            return sol_buf

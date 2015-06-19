@@ -433,7 +433,9 @@ class Problem(System):
                 rhs[irhs] = 1.0
 
                 # Solve the linear system
-                dx = root.ln_solver.solve(rhs, root, mode)
+                rhs_mat = {None : rhs}
+                dx_mat = root.ln_solver.solve(rhs_mat, root, mode)
+                dx = dx_mat[None]
 
                 rhs[irhs] = 0.0
 

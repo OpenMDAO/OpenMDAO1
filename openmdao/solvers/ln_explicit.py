@@ -11,23 +11,48 @@ class ExplicitSolver(ScipyGMRES):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve."""
 
-    def solve(self, rhs, system, mode):
+    def solve(self, rhs_mat, system, mode):
+        """ Solves the linear system for the problem in self.system. The
+        full solution vector is returned.
 
-        self.vois = [None]
+        Parameters
+        ----------
+        rhs_mat : dict of ndarray
+            Dictionary containing one ndarry per top level quantity of
+            interest. Each array contains the right-hand side for the linear
+            solve.
 
-        #TODO: When to record?
-        self.system = system
-        self.mode = mode
+        system : `System`
+            Parent `System` object.
 
-        n_edge = len(rhs)
-        I = np.eye(n_edge)
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
 
-        partials = np.empty((n_edge, n_edge))
+        Returns
+        -------
+        dict of ndarray : Solution vectors
+        """
+        sol_buf = {}
 
-        for i in range(n_edge):
-            partials[:, i] = self.mult(I[:, i])
+        # TODO: This solver could probably work with multiple RHS
+        for voi, rhs in rhs_mat.items():
+            self.vois = [None]
 
-        deriv = np.linalg.solve(partials, rhs)
+            #TODO: When to record?
+            self.system = system
+            self.mode = mode
 
-        self.system = None
-        return deriv
+            n_edge = len(rhs)
+            I = np.eye(n_edge)
+
+            partials = np.empty((n_edge, n_edge))
+
+            for i in range(n_edge):
+                partials[:, i] = self.mult(I[:, i])
+
+            deriv = np.linalg.solve(partials, rhs)
+
+            self.system = None
+            sol_buf[voi] = deriv
+
+        return sol_buf

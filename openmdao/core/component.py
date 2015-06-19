@@ -280,24 +280,26 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
-    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
+    def solve_linear(self, dumat, drmat, vois, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
         Parameters
         ----------
-        rhs: `ndarray`
-            Right-hand side for our linear solve.
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
+        dumat : dict of `VecWrappers`
+            In forward mode, each `VecWrapper` contains the incoming vector
+            for the states. There is one vector per quantity of interest for
+            this problem. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecWrapper`
+        drmat : `dict of VecWrappers`
             `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
+            or the incoming vector in reverse mode. There is one vector per
+            quantity of interest for this problem. (dr)
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
@@ -305,12 +307,13 @@ class Component(System):
             system's ln_solver.options.
         """
 
-        if mode == 'fwd':
-            dresids.vec[:] = rhs[:]
-            dunknowns.vec[:] = dresids.vec[:]
+        if mode=='fwd':
+            sol_vec, rhs_vec = self.dumat, self.drmat
         else:
-            dunknowns.vec[:] = rhs[:]
-            dresids.vec[:] = dunknowns.vec[:]
+            sol_vec, rhs_vec = self.drmat, self.dumat
+
+        for voi in vois:
+                sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
