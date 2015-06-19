@@ -62,6 +62,7 @@ class LinearGaussSeidel(LinearSolver):
 
         #FIXME: Just want to get LGS working by itself before considering matmat
         voi = None
+        vois = [None]
 
         if mode == 'fwd':
 
@@ -72,26 +73,26 @@ class LinearGaussSeidel(LinearSolver):
                 #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, deriv=True)
 
-#                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = {x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()}
+                ls_inputs = {x for x in dpmat[None].keys() if x not in sub.dpmat[None].keys()}
 
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs=ls_inputs)
+                    system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat,
-                                     sub.dumat, sub.drmat, mode, ls_inputs=ls_inputs)
+                    sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
                 #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                drmat[voi].vec *= -1.0
-                drmat[voi].vec += rhs
+                for voi in vois:
+                    drmat[voi].vec *= -1.0
+                    drmat[voi].vec += rhs
 
                 sub.solve_linear(sub.drmat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
@@ -105,36 +106,37 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                print(name, dpmat[voi].keys(), dumat[voi].keys())
+                #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
-                dumat[voi].vec *= 0.0
+                for voi in vois:
+                    dumat[voi].vec *= 0.0
 
-                print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, mode='rev', deriv=True)
-                print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                dumat[voi].vec *= -1.0
-                dumat[voi].vec += rhs
+                for voi in vois:
+                    dumat[voi].vec *= -1.0
+                    dumat[voi].vec += rhs
 
                 sub.solve_linear(sub.dumat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
-                print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
+                ls_inputs = [x for x in dpmat[None].keys() if x not in sub.dpmat[None].keys()]
 
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
                     # for explicit unknowns
-                    system._sub_apply_linear_wrapper(sub, mode, voi, ls_inputs=ls_inputs)
+                    system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=ls_inputs)
 
                 else:
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     sub.dumat[voi], sub.drmat[voi], mode, ls_inputs=ls_inputs)
+                    sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
 
-                print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             return drmat[voi].vec

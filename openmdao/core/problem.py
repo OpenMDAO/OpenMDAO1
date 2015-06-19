@@ -10,6 +10,7 @@ import sys
 # pylint: disable=E0611, F0401
 import numpy as np
 
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
@@ -505,7 +506,7 @@ class Problem(System):
         skip_keys = []
         model_hierarchy = _find_all_comps(root)
 
-        # FIXME:
+        # Derivatives should just be checked without parallel adjoint for now.
         voi = None
 
         # Check derivative calculations for all comps at every level of the
@@ -515,6 +516,10 @@ class Problem(System):
 
                 # No need to check comps that don't have any derivs.
                 if comp.fd_options['force_fd'] == True:
+                    continue
+
+                # Paramcomps are just clutter too.
+                if isinstance(comp, ParamComp):
                     continue
 
                 cname = comp.pathname

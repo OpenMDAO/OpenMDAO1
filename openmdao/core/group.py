@@ -543,7 +543,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode, ls_inputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -553,31 +553,15 @@ class Group(System):
         Parameters
         ----------
 
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
         ls_inputs : set
             We can only solve derivatives for the inputs the instigating
             system has access to.
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
         """
         if not self.is_active():
             return
@@ -585,9 +569,6 @@ class Group(System):
         if mode == 'fwd':
             # Full Scatter
             self._transfer_data(deriv=True)
-
-        #FIXME:
-        voi = None
 
         for name, system in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
@@ -597,21 +578,18 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                self._sub_apply_linear_wrapper(system, mode, voi, ls_inputs)
+                self._sub_apply_linear_wrapper(system, mode, vois, ls_inputs)
 
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                system.apply_linear(system.params, system.unknowns,
-                                    system.dpmat[None], system.dumat[None],
-                                    system.drmat[None], mode,
-                                    ls_inputs=ls_inputs)
+                system.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
         if mode == 'rev':
             # Full Scatter
             self._transfer_data(mode='rev', deriv=True)
 
-    def _sub_apply_linear_wrapper(self, system, mode, voi, ls_inputs=None):
+    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None):
         """ Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
@@ -626,71 +604,73 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        voi: index
-            Index to quantity (RHS) of interest
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
         ls_inputs : set
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
 
-        dresids = system.drmat[voi]
-        dunknowns = system.dumat[voi]
-        dparams = system.dpmat[voi]
+        for voi in vois:
 
-        # Linear GS imposes a stricter requirement on whether or not to run.
-        abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
+            dresids = system.drmat[voi]
+            dunknowns = system.dumat[voi]
+            dparams = system.dpmat[voi]
 
-        # Forward Mode
-        if mode == 'fwd':
+            # Linear GS imposes a stricter requirement on whether or not to run.
+            abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
 
-            dresids.vec[:] = 0.0
+            # Forward Mode
+            if mode == 'fwd':
 
-            if ls_inputs is None or abs_inputs.intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
-            dresids.vec *= -1.0
+                dresids.vec[:] = 0.0
 
-            for var in dunknowns.keys():
+                if ls_inputs is None or abs_inputs.intersection(ls_inputs):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
+                dresids.vec *= -1.0
 
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                for var in dunknowns.keys():
 
-                dresids[var] += dunknowns[var]
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
 
-        # Adjoint Mode
-        elif mode == 'rev':
+                    dresids[var] += dunknowns[var]
 
-            dparams.vec[:] = 0.0
+            # Adjoint Mode
+            elif mode == 'rev':
 
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dresids.vec *= -1.0
+                dparams.vec[:] = 0.0
 
-            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
+                # Sign on the local Jacobian needs to be -1 before
+                # we add in the fake residual. Since we can't modify
+                # the 'du' vector at this point without stomping on the
+                # previous component's contributions, we can multiply
+                # our local 'arg' by -1, and then revert it afterwards.
+                dresids.vec *= -1.0
 
-            dresids.vec *= -1.0
+                if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
 
-            for var in dunknowns.keys():
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                dresids.vec *= -1.0
 
-                dunknowns[var] += dresids[var]
+                for var in dunknowns.keys():
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
+
+                    dunknowns[var] += dresids[var]
 
     def solve_linear(self, rhs, dunknowns, dresids, mode=None):
         """

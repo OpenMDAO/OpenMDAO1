@@ -116,9 +116,7 @@ class ScipyGMRES(LinearSolver):
                     if src in abs_uvec:
                         ls_inputs.add(intinp_abs)
 
-        system.apply_linear(system.params, system.unknowns, system.dpmat[None],
-                            system.dumat[None], system.drmat[None], mode,
-                            ls_inputs=ls_inputs)
+        system.apply_linear(mode, ls_inputs=ls_inputs, vois=self.vois)
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)
