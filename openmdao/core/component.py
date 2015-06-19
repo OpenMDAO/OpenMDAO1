@@ -100,6 +100,14 @@ class Component(System):
         if match is None or match.group() != name:
             raise NameError("%s: '%s' is not a valid variable name." % (self.pathname, name))
 
+    def setup_param_indices(self):
+        """
+        Override this in your Component to set specific indices that will be pulled from
+        source variables to fill your parameters.  This method should set the 'src_indices'
+        metadata for any parameters that require it.
+        """
+        pass
+
     def _get_fd_params(self):
         """
         Get the list of parameters that are needed to perform a
@@ -129,6 +137,8 @@ class Component(System):
         to use absolute variable names, and stores them
         as attributes of the component
         """
+
+        self.setup_param_indices()
 
         # rekey with absolute path names and add relative names
         _new_params = OrderedDict()

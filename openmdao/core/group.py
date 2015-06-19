@@ -945,8 +945,8 @@ class Group(System):
             # just return empty index arrays for remote vars
             return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
 
-        if pname in self.distrib_idxs:
-            raise NotImplementedError("distrib comps not supported yet")
+        if 'src_indices' in pmeta:
+            arg_idxs = pvec.to_idx_array(pmeta['src_idxs'])
         else:
             arg_idxs = pvec.make_idx_array(0, pmeta['size'])
 
