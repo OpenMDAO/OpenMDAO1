@@ -95,38 +95,38 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('tgtC', TgtCompC())
         prob.root.add('tgtK', TgtCompK())
         prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
-        prob.root.connect('x1', 'src:x1')
-        prob.root.connect('src:x2', 'tgtF:x2')
-        prob.root.connect('src:x2', 'tgtC:x2')
-        prob.root.connect('src:x2', 'tgtK:x2')
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+        prob.root.connect('src.x2', 'tgtC.x2')
+        prob.root.connect('src.x2', 'tgtK.x2')
 
         prob.setup()
         prob.run()
 
-        assert_rel_error(self, prob['src:x2'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtF:x3'], 212.0, 1e-6)
-        assert_rel_error(self, prob['tgtC:x3'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
+        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root.params._get_metadata('tgtC:x2').get('unit_conv'),
+        self.assertEqual(prob.root.params._get_metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']
-        unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
                                return_format='dict')
 
-        assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
 
-        assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
     def test_basic_implicit_conn(self):
 
@@ -142,29 +142,29 @@ class TestUnitConversion(unittest.TestCase):
         prob.run()
 
         assert_rel_error(self, prob['x2'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtF:x3'], 212.0, 1e-6)
-        assert_rel_error(self, prob['tgtC:x3'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtK:x3'], 373.15, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root.params._get_metadata('tgtC:x2').get('unit_conv'),
+        self.assertEqual(prob.root.params._get_metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']
-        unknown_list = ['tgtF:x3', 'tgtC:x3', 'tgtK:x3']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
                                return_format='dict')
 
-        assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
 
-        assert_rel_error(self, J['tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
     def test_basic_grouped(self):
 
@@ -177,38 +177,38 @@ class TestUnitConversion(unittest.TestCase):
         sub2.add('tgtC', TgtCompC())
         sub2.add('tgtK', TgtCompK())
         prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
-        prob.root.connect('x1', 'sub1:src:x1')
-        prob.root.connect('sub1:src:x2', 'sub2:tgtF:x2')
-        prob.root.connect('sub1:src:x2', 'sub2:tgtC:x2')
-        prob.root.connect('sub1:src:x2', 'sub2:tgtK:x2')
+        prob.root.connect('x1', 'sub1.src.x1')
+        prob.root.connect('sub1.src.x2', 'sub2.tgtF.x2')
+        prob.root.connect('sub1.src.x2', 'sub2.tgtC.x2')
+        prob.root.connect('sub1.src.x2', 'sub2.tgtK.x2')
 
         prob.setup()
         prob.run()
 
-        assert_rel_error(self, prob['sub1:src:x2'], 100.0, 1e-6)
-        assert_rel_error(self, prob['sub2:tgtF:x3'], 212.0, 1e-6)
-        assert_rel_error(self, prob['sub2:tgtC:x3'], 100.0, 1e-6)
-        assert_rel_error(self, prob['sub2:tgtK:x3'], 373.15, 1e-6)
+        assert_rel_error(self, prob['sub1.src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.subsystem('sub2').params._get_metadata('tgtC:x2').get('unit_conv'),
+        self.assertEqual(prob.root.sub2.params._get_metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']
-        unknown_list = ['sub2:tgtF:x3', 'sub2:tgtC:x3', 'sub2:tgtK:x3']
+        unknown_list = ['sub2.tgtF.x3', 'sub2.tgtC.x3', 'sub2.tgtK.x3']
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
                                return_format='dict')
 
-        assert_rel_error(self, J['sub2:tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['sub2:tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['sub2:tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev',
                                return_format='dict')
 
-        assert_rel_error(self, J['sub2:tgtF:x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['sub2:tgtC:x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['sub2:tgtK:x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
     def test_incompatible_connections(self):
 
@@ -224,11 +224,11 @@ class TestUnitConversion(unittest.TestCase):
         prob.root = Group()
         prob.root.add('src', SrcComp())
         prob.root.add('dest', BadComp())
-        prob.root.connect('src:x2', 'dest:x2')
+        prob.root.connect('src.x2', 'dest.x2')
         with self.assertRaises(TypeError) as cm:
             prob.setup()
 
-        expected_msg = "Unit 'degC' in source 'src:x2' is incompatible with unit 'm' in target 'dest:x2'."
+        expected_msg = "Unit 'degC' in source 'src.x2' is incompatible with unit 'm' in target 'dest.x2'."
 
         self.assertEquals(str(cm.exception), expected_msg)
 

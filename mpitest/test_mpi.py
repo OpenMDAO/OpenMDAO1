@@ -65,33 +65,33 @@ class MPITests1(MPITestCase):
         C1 = prob.root.add('C1', ABCDArrayComp(size))
         C2 = prob.root.add('C2', ABCDArrayComp(size))
 
-        prob.root.connect('A1:a', 'C1:a')
-        prob.root.connect('B1:b', 'C1:b')
-        # prob.root.connect('S1:s', 'C1:in_string')
-        # prob.root.connect('L1:l', 'C1:in_list')
+        prob.root.connect('A1.a', 'C1.a')
+        prob.root.connect('B1.b', 'C1.b')
+        # prob.root.connect('S1:s', 'C1.in_string')
+        # prob.root.connect('L1:l', 'C1.in_list')
 
-        prob.root.connect('C1:c', 'C2:a')
-        prob.root.connect('B2:b', 'C2:b')
-        # prob.root.connect('C1:out_string', 'C2:in_string')
-        # prob.root.connect('C1:out_list',   'C2:in_list')
+        prob.root.connect('C1.c', 'C2.a')
+        prob.root.connect('B2.b', 'C2.b')
+        # prob.root.connect('C1.out_string', 'C2.in_string')
+        # prob.root.connect('C1.out_list',   'C2.in_list')
 
         prob.setup()
 
-        prob['A1:a'] = np.ones(size, float) * 3.0
-        prob['B1:b'] = np.ones(size, float) * 7.0
-        prob['B2:b'] = np.ones(size, float) * 5.0
+        prob['A1.a'] = np.ones(size, float) * 3.0
+        prob['B1.b'] = np.ones(size, float) * 7.0
+        prob['B2.b'] = np.ones(size, float) * 5.0
 
         prob.run()
 
         if not MPI or self.comm.rank == 0:
-            self.assertTrue(all(prob['C2:a']==np.ones(size, float)*10.))
-            self.assertTrue(all(prob['C2:b']==np.ones(size, float)*5.))
-            self.assertTrue(all(prob['C2:c']==np.ones(size, float)*15.))
-            self.assertTrue(all(prob['C2:d']==np.ones(size, float)*5.))
+            self.assertTrue(all(prob['C2.a']==np.ones(size, float)*10.))
+            self.assertTrue(all(prob['C2.b']==np.ones(size, float)*5.))
+            self.assertTrue(all(prob['C2.c']==np.ones(size, float)*15.))
+            self.assertTrue(all(prob['C2.d']==np.ones(size, float)*5.))
 
             # TODO: can't do MPI pass_by_object yet
-            # self.assertTrue(prob['C2:out_string']=='_C1_C2')
-            # self.assertTrue(prob['C2:out_list']==[1.5, 1.5])
+            # self.assertTrue(prob['C2.out_string']=='_C1_C2')
+            # self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
 
     def test_parallel_fan_in(self):
         size = 3
@@ -104,17 +104,17 @@ class MPITests1(MPITestCase):
 
         prob.root.add('C1', ABCDArrayComp(size))
 
-        prob.root.connect('G1:P1:x', 'C1:a')
-        prob.root.connect('G1:P2:x', 'C1:b')
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
 
         prob.setup()
         prob.run()
 
         if not MPI or self.comm.rank == 0:
-            self.assertTrue(all(prob.subsystem('C1').params['a']==np.ones(size, float)*1.0))
-            self.assertTrue(all(prob.subsystem('C1').params['b']==np.ones(size, float)*2.0))
-            self.assertTrue(all(prob['C1:c']==np.ones(size, float)*3.0))
-            self.assertTrue(all(prob['C1:d']==np.ones(size, float)*-1.0))
+            self.assertTrue(all(prob.root.C1.params['a']==np.ones(size, float)*1.0))
+            self.assertTrue(all(prob.root.C1.params['b']==np.ones(size, float)*2.0))
+            self.assertTrue(all(prob['C1.c']==np.ones(size, float)*3.0))
+            self.assertTrue(all(prob['C1.d']==np.ones(size, float)*-1.0))
             # TODO: not handling non-flattenable vars yet
 
     def test_parallel_diamond(self):
@@ -127,28 +127,28 @@ class MPITests1(MPITestCase):
         G1.add('C2', ABCDArrayComp(size))
         root.add('C3', ABCDArrayComp(size))
 
-        root.connect('P1:x', 'G1:C1:a')
-        root.connect('P1:x', 'G1:C2:b')
-        root.connect('G1:C1:c', 'C3:a')
-        root.connect('G1:C2:d', 'C3:b')
+        root.connect('P1.x', 'G1.C1.a')
+        root.connect('P1.x', 'G1.C2.b')
+        root.connect('G1.C1.c', 'C3.a')
+        root.connect('G1.C2.d', 'C3.b')
 
         prob.setup()
         prob.run()
 
         if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, prob.subsystem('G1:C1').unknowns['c'],
+            assert_rel_error(self, prob.root.G1.C1.unknowns['c'],
                              np.ones(size)*2.1, 1.e-10)
-            assert_rel_error(self, prob.subsystem('G1:C1').unknowns['d'],
+            assert_rel_error(self, prob.root.G1.C1.unknowns['d'],
                              np.ones(size)*.1, 1.e-10)
-            assert_rel_error(self, prob.subsystem('C3').params['a'],
+            assert_rel_error(self, prob.root.C3.params['a'],
                              np.ones(size)*2.1, 1.e-10)
-            assert_rel_error(self, prob.subsystem('C3').params['b'],
+            assert_rel_error(self, prob.root.C3.params['b'],
                              np.ones(size)*-.1, 1.e-10)
 
         if not MPI or self.comm.rank == 1:
-            assert_rel_error(self, prob.subsystem('G1:C2').unknowns['c'],
+            assert_rel_error(self, prob.root.G1.C2.unknowns['c'],
                              np.ones(size)*2.1, 1.e-10)
-            assert_rel_error(self, prob.subsystem('G1:C2').unknowns['d'],
+            assert_rel_error(self, prob.root.G1.C2.unknowns['d'],
                              np.ones(size)*-.1, 1.e-10)
 
 

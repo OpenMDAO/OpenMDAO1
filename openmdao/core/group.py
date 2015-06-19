@@ -14,7 +14,6 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.system import System
-from openmdao.core.varmanager import VarManager
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
@@ -31,11 +30,17 @@ class Group(System):
         self._subsystems = OrderedDict()
         self._local_subsystems = OrderedDict()
         self._src = {}
-        self._varmanager = None
+        self._data_xfer = {}
+
+        self._local_unknown_sizes = None
+        self._local_param_sizes = None
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
+
+    def __getattr__(self, name):
+        return self._subsystems[name]
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
@@ -51,7 +56,7 @@ class Group(System):
             except KeyError:
                 # look in params
                 try:
-                    subname, vname = name.rsplit(':', 1)
+                    subname, vname = name.rsplit('.', 1)
                     self.subsystem(subname).params[vname] = val
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
@@ -78,19 +83,19 @@ class Group(System):
                                  (self.pathname, name))
 
         # if arg is a tuple or no subsystem found, then search for a variable
-        if not self._varmanager:
+        if not self._local_unknown_sizes:
             raise RuntimeError('setup() must be called before variables can be accessed')
 
         try:
             return self.unknowns[name]
         except KeyError:
-            subsys, subname = name.split(':', 1)
+            subsys, subname = name.split('.', 1)
             try:
                 return self._subsystems[subsys][subname]
             except:
                 # look in params
                 try:
-                    subname, vname = name.rsplit(':', 1)
+                    subname, vname = name.rsplit('.', 1)
                     return self.subsystem(subname).params[vname]
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
@@ -99,7 +104,8 @@ class Group(System):
     def subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
-        subsystem of the this system.
+        subsystem of the this system.  Raises an exception if the given name
+        doesn't reference a subsystem.
 
         Parameters
         ----------
@@ -111,14 +117,12 @@ class Group(System):
         `System`
             A reference to the named subsystem.
         """
-        sys = self
-        parts = name.split(':')
+        s = self
+        parts = name.split('.')
         for part in parts:
-            sys = getattr(sys, '_subsystems', {}).get(part)
-            if sys is None:
-                break
-        else:
-            return sys
+            s = s._subsystems[part]
+
+        return s
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -265,7 +269,7 @@ class Group(System):
         if subsystem.promoted(name):
             return name
         if len(subsystem.name) > 0:
-            return subsystem.name+':'+name
+            return subsystem.name+'.'+name
         else:
             return name
 
@@ -315,6 +319,8 @@ class Group(System):
         if not self.is_active():
             return
 
+        self.distrib_idxs = {}  # this will be non-empty if some systems have distributed vars
+
         self._impl_factory = impl
         self._relevance = relevance
 
@@ -325,11 +331,15 @@ class Group(System):
         else:
             self._create_views(top_unknowns, parent, my_params, relevance, var_of_interest=None)
 
-        self._varmanager = VarManager(self, my_params, impl=impl)
+        self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
+        self._local_param_sizes = self.params._get_flattened_sizes()
 
-        ## loop over vars_of_interest and relevant subvecs for each
+        self._setup_data_transfer(my_params, relevance, None)
+
         ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
         ##       an array of that size, and sub-allocate from that for all relevant subvecs
+        ##       We should never need more memory than the largest sized collection of parallel
+        ##       vecs.
 
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
         for vois in self._relevance.vars_of_interest():
@@ -338,6 +348,8 @@ class Group(System):
                     self._create_vecs(my_params, relevance, voi, impl)
                 else:
                     self._create_views(top_unknowns, parent, my_params, relevance, voi)
+
+                self._setup_data_transfer(my_params, relevance, voi)
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
@@ -355,14 +367,18 @@ class Group(System):
             or sources that are outside of this `Group` .
         """
         conns = self.connections
-        mypath = self.pathname + ':' if self.pathname else ''
+        mypath = self.pathname + '.' if self.pathname else ''
 
         params = []
         for tgt, src in conns.items():
             if tgt.startswith(mypath):
                 # look up the Component that contains the source variable
-                src_comp = self.subsystem(src.rsplit(':', 1)[0][len(mypath):])
-                if not src.startswith(mypath) or isinstance(src_comp, ParamComp):
+                scname = src.rsplit('.', 1)[0]
+                if scname.startswith(mypath):
+                    src_comp = self.subsystem(scname[len(mypath):])
+                    if isinstance(src_comp, ParamComp):
+                        params.append(tgt[len(mypath):])
+                else:
                     params.append(tgt[len(mypath):])
 
         return params
@@ -378,11 +394,11 @@ class Group(System):
             List of names of unknowns for this `Group` that don't come from a
             `ParamComp`.
         """
-        mypath = self.pathname + ':' if self.pathname else ''
+        mypath = self.pathname + '.' if self.pathname else ''
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self.subsystem(meta['pathname'].rsplit(':',1)[0][len(mypath):])
+            sub = self.subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
@@ -458,7 +474,7 @@ class Group(System):
 
         # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(self, name)
+            self._transfer_data(name)
             if sub.is_active():
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -482,7 +498,7 @@ class Group(System):
 
         # transfer data to each subsystem and then apply_nonlinear to it
         for name, sub in self.subsystems():
-            self._varmanager._transfer_data(self, name)
+            self._transfer_data(name)
             if sub.is_active():
                 sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
@@ -564,7 +580,7 @@ class Group(System):
 
         if mode == 'fwd':
             # Full Scatter
-            self._varmanager._transfer_data(self, deriv=True)
+            self._transfer_data(deriv=True)
 
         #FIXME:
         voi = None
@@ -634,7 +650,7 @@ class Group(System):
 
         if mode == 'rev':
             # Full Scatter
-            self._varmanager._transfer_data(self, mode='rev', deriv=True)
+            self._transfer_data(mode='rev', deriv=True)
 
     def solve_linear(self, rhs, params, unknowns, mode="auto"):
         """
@@ -713,8 +729,8 @@ class Group(System):
                       pvec.vec.size,
                       commsz))
 
-        vec_conns = dict(self._varmanager.data_xfer[('', 'fwd')].vec_conns)
-        byobj_conns = dict(self._varmanager.data_xfer[('', 'fwd')].byobj_conns)
+        vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
+        byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
         # collect width info
         lens = [len(u)+sum(map(len,v)) for u,v in
@@ -808,6 +824,240 @@ class Group(System):
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
 
+    def _get_global_offset(self, name, var_rank, sizes_table):
+        """
+        Parameters
+        ----------
+        name : str
+            The variable name.
+
+        var_rank : int
+            The rank the the offset is requested for.
+
+        sizes_table : list of OrderDicts mappping var name to size.
+            Size information for all vars in all ranks.
+
+        Returns
+        -------
+        int
+            The offset into the distributed vector for the named variable
+            in the specified rank (process).
+        """
+        offset = 0
+        rank = 0
+
+        # first get the offset of the distributed storage for var_rank
+        while rank < var_rank:
+            offset += sum(sizes_table[rank].values())
+            rank += 1
+
+        # now, get the offset into the var_rank storage for the variable
+        for vname, size in sizes_table[var_rank].items():
+            if vname == name:
+                break
+            offset += size
+
+        return offset
+
+    def _get_global_idxs(self, uname, pname, uvec, pvec, var_of_interest, mode):
+        """
+        Parameters
+        ----------
+        uname : str
+            Name of variable in the unknowns vector.
+
+        pname : str
+            Name of the variable in the params vector.
+
+        uvec : `VecWrapper`
+            unknowns/dunknowns vec wrapper.
+
+        pvec : `VecWrapper`
+            params/dparams vec wrapper.
+
+        var_of_interest : str or None
+            Name of variable of interest used to determine relevance.
+
+        Returns
+        -------
+        tuple of (idx_array, idx_array)
+            index array into the global unknowns vector and the corresponding
+            index array into the global params vector.
+        """
+        umeta = uvec.metadata(uname)
+        pmeta = pvec.metadata(pname)
+
+        # FIXME: if we switch to push scatters, this check will flip
+        if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
+            # just return empty index arrays for remote vars
+            return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
+
+        if pname in self.distrib_idxs:
+            raise NotImplementedError("distrib comps not supported yet")
+        else:
+            arg_idxs = pvec.make_idx_array(0, pmeta['size'])
+
+        var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
+        src_idxs = arg_idxs + offset
+
+        var_rank = self._get_owning_rank(pname, self._local_param_sizes)
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes)
+        tgt_idxs = tgt_start + pvec.make_idx_array(0, len(arg_idxs))
+
+        return src_idxs, tgt_idxs
+
+    def _setup_data_transfer(self, my_params, relevance, var_of_interest):
+        """
+        Create `DataXfer` objects to handle data transfer for all of the
+        connections that involve parameters for which this `VarManager`
+        is responsible.
+
+        Parameters
+        ----------
+
+        my_params : list
+            List of pathnames for parameters that the VarManager is
+            responsible for propagating.
+
+        relevance : `Relevance`
+            An object containing info about what variables are relevant
+            to a variable of interest.
+
+        var_of_interest : str or None
+            The name of a variable of interest.
+
+        """
+
+        xfer_dict = {}
+        for param, unknown in self.connections.items():
+            if not (relevance.is_relevant(var_of_interest, param) or
+                    relevance.is_relevant(var_of_interest, unknown)):
+                continue
+
+            if param in my_params:
+                # remove our system pathname from the abs pathname of the param and
+                # get the subsystem name from that
+                start = len(self.pathname)+1 if self.pathname else 0
+
+                tgt_sys = param[start:].split('.', 1)[0]
+                src_sys = unknown[start:].split('.', 1)[0]
+
+                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
+                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+
+                rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
+                    xfer_dict.setdefault((src_sys, 'rev'), ([],[],[],[]))
+
+                urelname = self.unknowns.get_relative_varname(unknown)
+                prelname = self.params.get_relative_varname(param)
+
+                if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                    byobj_conns.append((prelname, urelname))
+                else: # pass by vector
+                    #forward
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                         self.unknowns, self.params,
+                                                         var_of_interest, 'fwd')
+                    vec_conns.append((prelname, urelname))
+                    src_idx_list.append(sidxs)
+                    dest_idx_list.append(didxs)
+
+                    # reverse
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                         self.unknowns, self.params,
+                                                         var_of_interest, 'rev')
+                    rev_vec_conns.append((prelname, urelname))
+                    rev_src_idx_list.append(sidxs)
+                    rev_dest_idx_list.append(didxs)
+
+        for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
+            src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
+            if vec_conns or byobj_conns:
+                self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
+                    self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                        vec_conns, byobj_conns)
+
+        # create a DataXfer object that combines all of the
+        # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
+        # scatter to all subsystems can be done at the same time.  Store that DataXfer
+        # object under the name ''.
+
+        for mode in ('fwd', 'rev'):
+            full_srcs = []
+            full_tgts = []
+            full_flats = []
+            full_byobjs = []
+            for (tgt_sys, direction), (srcs, tgts, flats, byobjs) in xfer_dict.items():
+                if mode == direction:
+                    full_srcs.extend(srcs)
+                    full_tgts.extend(tgts)
+                    full_flats.extend(flats)
+                    full_byobjs.extend(byobjs)
+
+            src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
+            self._data_xfer[('', mode, var_of_interest)] = \
+                self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                                                    full_flats, full_byobjs)
+
+    def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
+                       var_of_interest=None):
+        """
+        Transfer data to/from target_system depending on mode.
+
+        Parameters
+        ----------
+
+        target_sys : str, optional
+            Name of the target `System`.  A name of '', the default, indicates that data
+            should be transfered to all subsystems at once.
+
+        mode : { 'fwd', 'rev' }, optional
+            Specifies forward or reverse data transfer. Default is 'fwd'.
+
+        deriv : bool, optional
+            If True, use du/dp for scatter instead of u/p.  Default is False.
+
+        var_of_interest : str or None
+            Specifies the variable of interest to determine relevance.
+
+        """
+        x = self._data_xfer.get((target_sys, mode, var_of_interest))
+        if x is not None:
+            if deriv:
+                x.transfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                           mode, deriv=True)
+            else:
+                x.transfer(self.unknowns, self.params, mode)
+
+    def _get_owning_rank(self, name, sizes_table):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the variable to find the owning rank for
+
+        sizes_table : list of ordered dicts mapping name to size
+            Size info for all vars in all ranks.
+
+        Returns
+        -------
+        int
+            The current rank if it has a local copy of the named variable, else
+            the rank of the lowest ranked process that has a local copy.
+        """
+        if self.comm is None:
+            return 0
+
+        if sizes_table[self.comm.rank][name]:
+            return self.comm.rank
+        else:
+            for i in range(self.comm.size):
+                if sizes_table[i][name]:
+                    return i
+            else:
+                raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
+                                   name)
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

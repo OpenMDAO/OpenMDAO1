@@ -21,7 +21,7 @@ class TestUnitComp(unittest.TestCase):
         prob.root = g = Group()
         g.add('uc', UnitComp(shape=1, param_name='in', out_name='out', units='junk'))
         g.add('pc', ParamComp('x', 0., units='ft'))
-        g.connect('pc:x', 'uc:in')
+        g.connect('pc.x', 'uc.in')
         with self.assertRaises(ValueError) as cm:
             prob.setup()
 
@@ -34,11 +34,11 @@ class TestUnitComp(unittest.TestCase):
         prob.root = g = Group()
         g.add('uc', UnitComp(shape=1, param_name='in', out_name='out', units='degC'))
         g.add('pc', ParamComp('x', 0., units='ft'))
-        g.connect('pc:x', 'uc:in')
+        g.connect('pc.x', 'uc.in')
         with self.assertRaises(TypeError) as cm:
             prob.setup()
 
-        expected_msg = "Unit 'ft' in source 'pc:x' is incompatible with unit 'degC' in target 'uc:in'."
+        expected_msg = "Unit 'ft' in source 'pc.x' is incompatible with unit 'degC' in target 'uc.in'."
 
         self.assertEqual(expected_msg, str(cm.exception))
 

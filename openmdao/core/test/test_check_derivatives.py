@@ -43,7 +43,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.root.add('comp', SimpleArrayComp())
         top.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()
@@ -66,7 +66,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.root.add('comp', SimpleImplicitComp())
         top.root.add('p1', ParamComp('x', 0.5))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()
@@ -97,7 +97,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         top.root.add('comp', BadComp())
         top.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()
@@ -122,18 +122,18 @@ class TestProblemFullFD(unittest.TestCase):
         top.root.add('comp', SimpleCompDerivMatVec())
         top.root.add('p1', ParamComp('x', 1.0))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.root.fd_options['force_fd'] = True
 
         top.setup()
         top.run()
 
-        param_list = ['comp:x']
-        unknown_list = ['comp:y']
+        param_list = ['comp.x']
+        unknown_list = ['comp.y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp:y']['comp:x'][0][0], 2.0, 1e-6)
+        assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
 
 
     def test_full_model_fd_simple_comp_promoted(self):
@@ -155,11 +155,11 @@ class TestProblemFullFD(unittest.TestCase):
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
-        param_list = ['sub:comp:x']
-        unknown_list = ['sub:comp:y']
+        param_list = ['sub.comp.x']
+        unknown_list = ['sub.comp.y']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['sub:comp:y']['sub:comp:x'][0][0], 2.0, 1e-6)
+        assert_rel_error(self, J['sub.comp.y']['sub.comp.x'][0][0], 2.0, 1e-6)
 
 
     def test_full_model_fd_double_diamond_grouped(self):
@@ -171,15 +171,15 @@ class TestProblemFullFD(unittest.TestCase):
 
         top.root.fd_options['force_fd'] = True
 
-        param_list = ['sub1:comp1:x1']
-        unknown_list = ['comp7:y1']
+        param_list = ['sub1.comp1.x1']
+        unknown_list = ['comp7.y1']
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp7:y1']['sub1:comp1:x1'][0][0], -40.75, 1e-6)
+        assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
         top.root.fd_options['form'] = 'central'
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp7:y1']['sub1:comp1:x1'][0][0], -40.75, 1e-6)
+        assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
 
 class TestProblemCheckTotals(unittest.TestCase):
@@ -210,7 +210,7 @@ class TestProblemCheckTotals(unittest.TestCase):
         top.root.add('comp', SimpleImplicitComp())
         top.root.add('p1', ParamComp('x', 0.5))
 
-        top.root.connect('p1:x', 'comp:x')
+        top.root.connect('p1.x', 'comp.x')
 
         top.setup()
         top.run()

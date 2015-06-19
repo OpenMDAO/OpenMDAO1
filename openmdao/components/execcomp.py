@@ -51,7 +51,7 @@ class ExecComp(Component):
         for expr in exprs:
             lhs, rhs = expr.split('=')
             outs.update(parse_for_vars(lhs))
-            allvars.update(parse_for_vars(expr))
+            allvars.update(parse_for_vars(expr, kwargs.keys()))
 
         for var in allvars:
             # if user supplied an initial value, use it, otherwise set to 0.0
@@ -117,7 +117,7 @@ class ExecComp(Component):
                         J[(u,param)] = numpy.zeros((jval.size, psize))
 
                     # set the column in the Jacobian entry
-                    J[(u,param)][:,i] = jval
+                    J[(u,param)][:,i] = jval.flat
 
                 # restore old param value
                 if idx is None:
