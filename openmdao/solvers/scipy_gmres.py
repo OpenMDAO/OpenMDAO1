@@ -103,7 +103,7 @@ class ScipyGMRES(LinearSolver):
 
         # Need a list lf valid interior or owned inputs.
         # TODO: clean this up
-        ls_inputs = system.dpmat[None].keys()
+        ls_inputs = list(system.dpmat[None].keys())
         data = _find_all_comps(system)
         abs_uvec = [system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None].keys()]
         for comps in data.values():
