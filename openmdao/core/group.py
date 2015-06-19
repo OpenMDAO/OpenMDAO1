@@ -575,7 +575,7 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : list
+        ls_inputs : set
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
@@ -628,7 +628,7 @@ class Group(System):
         voi: index
             Index to quantity (RHS) of interest
 
-        ls_inputs : list
+        ls_inputs : set
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
@@ -638,7 +638,7 @@ class Group(System):
         dparams = system.dpmat[voi]
 
         # Linear GS imposes a stricter requirement on whether or not to run.
-        abs_inputs = [dparams.metadata(name)['pathname'] for name in dparams.keys()]
+        abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
 
         # Forward Mode
         if mode == 'fwd':
@@ -649,7 +649,7 @@ class Group(System):
             #    print(set(abs_inputs).intersection(ls_inputs))
             dresids.vec[:] = 0.0
 
-            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
+            if ls_inputs is None or abs_inputs.intersection(ls_inputs):
                 if system.fd_options['force_fd'] == True:
                     system._apply_linear_jac(system.params, system.unknowns, dparams,
                                              dunknowns, dresids, mode)
