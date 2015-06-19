@@ -342,14 +342,15 @@ class Group(System):
         ##       vecs.
 
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
-        for vois in self._relevance.vars_of_interest():
-            for voi in vois:
-                if parent is None:
-                    self._create_vecs(my_params, relevance, voi, impl)
-                else:
-                    self._create_views(top_unknowns, parent, my_params, relevance, voi)
+        for group, vois in self._relevance.groups.items():
+            if group is not None:
+                    for voi in vois:
+                        if parent is None:
+                            self._create_vecs(my_params, relevance, voi, impl)
+                        else:
+                            self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
-                self._setup_data_transfer(my_params, relevance, voi)
+                        self._setup_data_transfer(my_params, relevance, voi)
 
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
