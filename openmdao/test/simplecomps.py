@@ -42,7 +42,6 @@ class SimpleCompDerivMatVec(SimpleComp):
             dresids['y'] += self.multiplier*dparams['x']
 
         elif mode == 'rev':
-            print('HEY', dparams['x'])
             dparams['x'] = self.multiplier*dresids['y']
 
 

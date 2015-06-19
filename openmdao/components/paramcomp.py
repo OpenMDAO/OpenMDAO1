@@ -47,7 +47,7 @@ class ParamComp(Component):
         else:
             sol_vec, rhs_vec = dresids, dunknowns
 
-        rhs_vec.vec[:] = sol_vec.vec[:]
+        rhs_vec.vec[:] += sol_vec.vec[:]
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass

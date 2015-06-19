@@ -57,9 +57,7 @@ class LinearGaussSeidel(LinearSolver):
             for name in names:
                 if name in dumat:
                     dumat[name].vec[:] = 0.0
-                    drmat[name].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
-        drmat[None].vec[:] = -rhs # KTM 0
 
         #FIXME: Just want to get LGS working by itself before considering matmat
         voi = None
@@ -68,23 +66,15 @@ class LinearGaussSeidel(LinearSolver):
 
             for name, sub in system.subsystems(local=True):
 
-                print(name, dpmat[voi].keys(), dumat[voi].keys())
+                #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
-                print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, deriv=True)
 
-                #drmat[voi].vec[:] = 0.0 # KTM uncomment
-                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+#                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
 
-                #if isinstance(sub, ParamComp):
-                    ## For parameters we call their applyJ without any of
-                    ## the preprocessing that components need.
-                    #sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     #sub.dumat[voi], sub.drmat[voi], mode)
-
-                # KTM if branch for ParamComp
                 if isinstance(sub, Component):
 
                     # Components need to reverse sign and add 1 on diagonal
@@ -97,14 +87,14 @@ class LinearGaussSeidel(LinearSolver):
                     sub.apply_linear(sub.params, sub.unknowns, sub.dpmat,
                                      sub.dumat, sub.drmat, mode)
 
-                print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 drmat[voi].vec *= -1.0
                 drmat[voi].vec += rhs
 
                 sub.solve_linear(sub.drmat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
-                print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             return dumat[voi].vec
 
@@ -114,26 +104,20 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                print(name, dpmat[voi].keys(), dumat[voi].keys())
+                #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 dumat[voi].vec *= 0.0
 
-                print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                 system._transfer_data(name, mode='rev', deriv=True)
-                print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 dumat[voi].vec *= -1.0
                 dumat[voi].vec += rhs
 
                 sub.solve_linear(sub.dumat[voi].vec, sub.dumat[voi], sub.drmat[voi],
                                  mode=mode)
-                print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-
-                #if isinstance(sub, ParamComp):
-                    ## For parameters we call their applyJ without any of
-                    ## the preprocessing that components need.
-                    #sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     #sub.dumat[voi], sub.drmat[voi], mode)
+                #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 if isinstance(sub, Component):
 
@@ -148,6 +132,6 @@ class LinearGaussSeidel(LinearSolver):
                                      sub.dumat[voi], sub.drmat[voi], mode)
 
 
-                print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             return drmat[voi].vec

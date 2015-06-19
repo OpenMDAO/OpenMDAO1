@@ -101,9 +101,10 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
+        # Need a list lf valid interior or owned inputs.
+        # TODO: clean this up
         ls_inputs = system.dpmat[None].keys()
         data = _find_all_comps(system)
-        print('before', ls_inputs)
         abs_uvec = [system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None].keys()]
         for comps in data.values():
             for comp in comps:
@@ -114,11 +115,10 @@ class ScipyGMRES(LinearSolver):
                     if src in abs_uvec:
                         ls_inputs.append(intinp_abs)
 
-        print('after', ls_inputs)
         system.apply_linear(system.params, system.unknowns, system.dpmat[None],
                             system.dumat[None], system.drmat[None], mode,
                             ls_inputs)
 
-        debug("arg", arg)
-        debug("result", rhs_vec.vec)
+        #debug("arg", arg)
+        #debug("result", rhs_vec.vec)
         return rhs_vec.vec[:]

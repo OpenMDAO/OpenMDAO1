@@ -737,10 +737,7 @@ class Group(System):
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_vec.vec[:] = rhs[:]
         rhs_buf = rhs.copy()
-        print('before', self.params.vec, sol_vec.vec, rhs_vec.vec)
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
-        print('after', self.params.vec, sol_vec.vec, rhs_vec.vec)
-        print(sol_buf)
         rhs_buf[:] = 0.0
         sol_vec.vec[:] = sol_buf[:]
 
