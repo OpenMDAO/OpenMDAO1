@@ -305,9 +305,6 @@ class Component(System):
             system's ln_solver.options.
         """
 
-        if mode is None:
-            mode = self.fd_options['step_size']
-
         if mode == 'fwd':
             dresids.vec[:] = rhs[:]
             dunknowns.vec[:] = dresids.vec[:]

@@ -1,19 +1,21 @@
 """ Test out some crucial linear GS tests in parallel."""
 
+from __future__ import print_function
 
+from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpiunittest import MPITestCase
 from openmdao.test.simplecomps import FanOutGrouped, FanInGrouped
 from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
+from openmdao.test.testutil import assert_rel_error
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
 else:
     from openmdao.core.basicimpl import BasicImpl as impl
 
-from openmdao.test.testutil import assert_rel_error
 
 class MPITests1(MPITestCase):
 
@@ -32,16 +34,16 @@ class MPITests1(MPITestCase):
         unknown_list = ['sub.comp2.y', "sub.comp3.y"]
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print J
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-            #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        #J = top.root.get_combined_J(J)
+        print(J)
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        print 'J2',J
-        if not MPI or self.comm.rank == 1:
-            #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        #J = top.root.get_combined_J(J)
+        print('j2',J)
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
     def test_fan_in_grouped(self):
 

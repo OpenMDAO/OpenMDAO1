@@ -724,7 +724,7 @@ class Group(System):
             return
 
         if mode is None:
-            mode = self.fd_options['step_size']
+            mode = self.fd_options['mode']
 
         if mode == 'fwd':
             sol_vec, rhs_vec = dunknowns, dresids
