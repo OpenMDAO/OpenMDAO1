@@ -73,7 +73,7 @@ class LinearGaussSeidel(LinearSolver):
 
 #                print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
+                ls_inputs = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
 
                 if isinstance(sub, Component):
 
@@ -85,7 +85,7 @@ class LinearGaussSeidel(LinearSolver):
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub.apply_linear(sub.params, sub.unknowns, sub.dpmat[voi],
-                                     sub.dumat[voi], sub.drmat[voi], mode)
+                                     sub.dumat[voi], sub.drmat[voi], mode, ls_inputs)
 
                 #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 

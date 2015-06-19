@@ -515,11 +515,10 @@ class VecWrapper(object):
 
         for v, meta in self.items():
             if meta.get('pass_by_obj') and not meta.get('remote'):
-                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v,
-                                                                                '(by obj)',
-                                                                                repr(self[v]),
-                                                                                nwid=nwid,
-                                                                                swid=swid))
+                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v, '(by obj)',
+                                                                        repr(self[v]),
+                                                                        nwid=nwid,
+                                                                        swid=swid))
         if return_str:
             return out_stream.getvalue()
 

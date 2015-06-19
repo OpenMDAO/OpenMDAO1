@@ -5,6 +5,7 @@ from six import string_types
 
 import networkx as nx
 
+from openmdao.core.group import get_absvarpathnames
 
 class Relevance(object):
     def __init__(self, params_dict, unknowns_dict, connections,
@@ -31,6 +32,14 @@ class Relevance(object):
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
+
+        # for lin GS, store absolute names of outputs
+        self.abs_outputs = []
+        for outs in self.outputs:
+            for out in outs:
+                self.abs_outputs.append(get_absvarpathnames(out,
+                                                            self.unknowns_dict,
+                                                            'unknowns'))
 
     def __getitem__(self, name):
         # if name is None, everything is relevant

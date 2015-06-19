@@ -611,7 +611,8 @@ class Group(System):
             self._transfer_data(mode='rev', deriv=True)
 
     def _sub_apply_linear_wrapper(self, system, mode, voi, ls_inputs=None):
-        """ Calls apply_linear on any Component-like subsystem. This
+        """
+        Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
 
@@ -1110,6 +1111,25 @@ class Group(System):
             else:
                 raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
                                    name)
+
+    def _find_all_solvers(self):
+        """Recursively finds all solvers in the given group and sub-groups."""
+        yield (self, (self.ln_solver, self.nl_solver))
+        for _, sub in self.subgroups():
+            for solvers in sub._find_all_solvers():
+                yield solvers
+
+    def _find_all_comps(self):
+        """ Recursive function that assembles a dictionary whose keys are Group
+        instances and whose values are lists of Component instances.
+        """
+
+        data = {self:[]}
+        for c_name, c in self.components():
+            data[self].append(c)
+        for sg_name, sg in self.subgroups():
+            data.update(sg._find_all_comps())
+        return data
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

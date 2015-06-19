@@ -503,7 +503,7 @@ class Problem(System):
 
         data = {}
         skip_keys = []
-        model_hierarchy = _find_all_comps(root)
+        model_hierarchy = root._find_all_comps()
 
         # FIXME:
         voi = None
@@ -693,7 +693,7 @@ class Problem(System):
         for recorder in self.driver.recorders:
             recorder.startup(self.root)
 
-        for group, solvers in _find_all_solvers(self.root):
+        for group, solvers in self.root._find_all_solvers():
             for solver in solvers:
                 for recorder in solver.recorders:
                     recorder.startup(group)
@@ -778,25 +778,6 @@ def assign_parameters(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
-
-
-def _find_all_solvers(group):
-    """Recursively finds all solvers in the given group and sub-groups."""
-    yield (group, (group.ln_solver, group.nl_solver))
-    for _, sub in group.subgroups():
-        for solvers in _find_all_solvers(sub):
-            yield solvers
-
-def _find_all_comps(group):
-    """ Recursive function that assembles a dictionary whose keys are Group
-    instances and whose values are lists of Component instances."""
-
-    data = {group:[]}
-    for c_name, c in group.components():
-        data[group].append(c)
-    for sg_name, sg in group.subgroups():
-        data.update(_find_all_comps(sg))
-    return data
 
 
 def jac_to_flat_dict(jac):
