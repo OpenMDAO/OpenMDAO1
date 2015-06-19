@@ -315,7 +315,7 @@ class Problem(System):
                             fd_okey = meta['relative_name']
                             break
 
-                # FD Input keys are a little funny...
+                # FD Input keys are a little funny....
                 fd_ikey = ikey
                 if fd_ikey not in params:
 
@@ -383,8 +383,6 @@ class Problem(System):
 
         root.jacobian(params, unknowns, root.resids)
 
-        rhs = np.zeros((len(unknowns.vec), ))
-
         # Initialize Jacobian
         if return_format == 'dict':
             J = {}
@@ -414,10 +412,16 @@ class Problem(System):
         j = 0
         for param in input_list:
 
+            rhs = np.zeros((len(unknowns.vec), ))
+
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
             else:
-                param_src = root.connections.get(param)
+                try:
+                    param_src = root.connections[param]
+                except KeyError:
+                    raise KeyError("'%s' is not connected to an unknown." % item)
+
                 param_src = unknowns.get_relative_varname(param_src)
                 in_size, in_idxs = unknowns.get_local_idxs(param_src)
 
@@ -438,7 +442,10 @@ class Problem(System):
                     if item in unknowns:
                         out_size, out_idxs = unknowns.get_local_idxs(item)
                     else:
-                        param_src = root.connections.get(item)
+                        try:
+                            param_src = root.connections[item]
+                        except KeyError:
+                            raise KeyError("'%s' is not connected to an unknown." % item)
                         param_src = unknowns.get_relative_varname(param_src)
                         out_size, out_idxs = unknowns.get_local_idxs(param_src)
 

@@ -93,7 +93,7 @@ class UnitComp(Component):
         """
 
         if mode == 'fwd':
-            dresids[self.out_name] = dparams[self.param_name]
+            dresids[self.out_name] += dparams[self.param_name]
 
         elif mode == 'rev':
-            dparams[self.param_name] = dresids[self.out_name]
+            dparams[self.param_name] += dresids[self.out_name]
