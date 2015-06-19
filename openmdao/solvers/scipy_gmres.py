@@ -6,8 +6,9 @@ from __future__ import print_function
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.solvers.solverbase import LinearSolver
+from openmdao.core.problem import _find_all_comps
 from openmdao.devtools.debug import debug
+from openmdao.solvers.solverbase import LinearSolver
 
 
 class ScipyGMRES(LinearSolver):
@@ -100,8 +101,23 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
+        # Need a list lf valid interior or owned inputs.
+        # TODO: clean this up
+        ls_inputs = system.dpmat[None].keys()
+        data = _find_all_comps(system)
+        abs_uvec = [system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None].keys()]
+        for comps in data.values():
+            for comp in comps:
+                for intinp_rel in comp.dpmat[None]:
+                    intinp_abs = comp.dpmat[None].metadata(intinp_rel)['pathname']
+                    src = system.connections.get(intinp_abs)
+
+                    if src in abs_uvec:
+                        ls_inputs.append(intinp_abs)
+
         system.apply_linear(system.params, system.unknowns, system.dpmat[None],
-                            system.dumat[None], system.drmat[None], mode)
+                            system.dumat[None], system.drmat[None], mode,
+                            ls_inputs)
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)
