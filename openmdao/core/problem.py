@@ -431,7 +431,7 @@ class Problem(System):
 
                 rhs[irhs] = 1.0
 
-                # Call GMRES to solve the linear system
+                # Solve the linear system
                 dx = root.ln_solver.solve(rhs, root, mode)
 
                 rhs[irhs] = 0.0
