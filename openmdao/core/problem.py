@@ -440,7 +440,7 @@ class Problem(System):
 
             param = params[0]
 
-            # Size all of our Right Hand Sides
+            # Allocate all of our Right Hand Sides for this parallel set.
             rhs = {}
             if len(params) == 1:
                 rhs[None] = np.zeros((len(unknowns.vec), ))
@@ -463,45 +463,51 @@ class Problem(System):
 
             for irhs in in_idxs:
 
-                rhs[None][irhs] = 1.0
+                for voi in rhs:
+                    rhs[voi][irhs] = 1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
-                dx = dx_mat[None]
 
-                rhs[None][irhs] = 0.0
+                for voi in rhs:
+                    rhs[voi][irhs] = 0.0
 
-                i = 0
-                for item in output_list:
+                for param, dx in dx_mat.items():
 
-                    if item in unknowns:
-                        out_size, out_idxs = unknowns.get_local_idxs(item)
-                    else:
-                        try:
-                            param_src = root.connections[item]
-                        except KeyError:
-                            raise KeyError("'%s' is not connected to an unknown." % item)
-                        param_src = unknowns.get_relative_varname(param_src)
-                        out_size, out_idxs = unknowns.get_local_idxs(param_src)
+                    if param is None:
+                        param = params[0]
 
-                    nk = len(out_idxs)
+                    i = 0
+                    for item in output_list:
 
-                    if return_format == 'dict':
-                        if mode == 'fwd':
-                            if J[item][param] is None:
-                                J[item][param] = np.zeros((nk, len(in_idxs)))
-                            J[item][param][:, j-jbase] = dx[out_idxs]
+                        if item in unknowns:
+                            out_size, out_idxs = unknowns.get_local_idxs(item)
                         else:
-                            if J[param][item] is None:
-                                J[param][item] = np.zeros((len(in_idxs), nk))
-                            J[param][item][j-jbase, :] = dx[out_idxs]
+                            try:
+                                param_src = root.connections[item]
+                            except KeyError:
+                                raise KeyError("'%s' is not connected to an unknown." % item)
+                            param_src = unknowns.get_relative_varname(param_src)
+                            out_size, out_idxs = unknowns.get_local_idxs(param_src)
 
-                    else:
-                        if mode == 'fwd':
-                            J[i:i+nk, j] = dx[out_idxs]
+                        nk = len(out_idxs)
+
+                        if return_format == 'dict':
+                            if mode == 'fwd':
+                                if J[item][param] is None:
+                                    J[item][param] = np.zeros((nk, len(in_idxs)))
+                                J[item][param][:, j-jbase] = dx[out_idxs]
+                            else:
+                                if J[param][item] is None:
+                                    J[param][item] = np.zeros((len(in_idxs), nk))
+                                J[param][item][j-jbase, :] = dx[out_idxs]
+
                         else:
-                            J[j, i:i+nk] = dx[out_idxs]
-                        i += nk
+                            if mode == 'fwd':
+                                J[i:i+nk, j] = dx[out_idxs]
+                            else:
+                                J[j, i:i+nk] = dx[out_idxs]
+                            i += nk
 
                 j += 1
 

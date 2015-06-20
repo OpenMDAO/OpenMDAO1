@@ -135,8 +135,8 @@ class TestExecComp(unittest.TestCase):
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp.y']['comp.x'], np.array([6.0]), 0.00001)
+        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp.y']['p1.x'], np.array([6.0]), 0.00001)
 
-        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['comp.y']['comp.x'], np.array([6.0]), 0.00001)
+        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp.y']['p1.x'], np.array([6.0]), 0.00001)
