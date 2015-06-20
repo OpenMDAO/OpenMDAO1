@@ -110,7 +110,8 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                #print(name, dpmat[voi].keys(), dumat[voi].keys())
+                #for voi in vois:
+                #    print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 for voi in vois:
                     dumat[voi].vec *= 0.0
@@ -123,7 +124,8 @@ class LinearGaussSeidel(LinearSolver):
                     dumat[voi].vec += rhs[voi]
 
                 sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 ls_inputs = [x for x in dpmat[None].keys() if x not in sub.dpmat[None].keys()]
 
@@ -139,7 +141,8 @@ class LinearGaussSeidel(LinearSolver):
                     sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
 
-                #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                #    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             for voi in vois:
                 sol_buf[voi] = drmat[voi].vec

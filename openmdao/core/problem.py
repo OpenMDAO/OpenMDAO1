@@ -389,12 +389,6 @@ class Problem(System):
         # Call arg > ln_solver option > auto-detect
         mode = self._mode(mode, param_list, unknown_list)
 
-        # Process our inputs/outputs of interest for parallel groups
-        if MPI or not MPI:
-            ooi = self.driver._outputs_of_interest
-            ioi = self.driver._inputs_of_interest
-
-
         # Initialize Jacobian
         if return_format == 'dict':
             J = {}
@@ -415,12 +409,44 @@ class Problem(System):
         else:
             input_list, output_list = unknown_list, param_list
 
+        # Process our inputs/outputs of interest for parallel groups
+        if mode == 'fwd':
+            all_vois = self.driver._inputs_of_interest
+        else:
+            all_vois = self.driver._outputs_of_interest
+
+        # Our variables of interest inlude all sets for which at least
+        # one variable is requested.
+        voi_sets = []
+        for voi_set in all_vois:
+            if any(voi in input_list for voi in voi_set):
+                voi_sets.append(voi_set)
+
+        # Add any variables that the user "forgot". TODO: This won't be
+        # necessary when we have an API to automatically generated the
+        # IOI and OOI.
+        flat_voi = [item for sublist in all_vois for item in sublist]
+        for item in input_list:
+            if item not in flat_voi:
+                # Put them in serial groups
+                voi_sets.append((item, ))
+
+        print(voi_sets)
+
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         j = 0
-        for param in input_list:
+        for params in voi_sets:
 
-            rhs = np.zeros((len(unknowns.vec), ))
+            param = params[0]
+
+            # Size all of our Right Hand Sides
+            rhs = {}
+            if len(params) == 1:
+                rhs[None] = np.zeros((len(unknowns.vec), ))
+            else:
+                for voi in params:
+                    rhs[voi] = np.zeros((len(root.dumat[voi].vec), ))
 
             if param in unknowns:
                 in_size, in_idxs = unknowns.get_local_idxs(param)
@@ -437,14 +463,13 @@ class Problem(System):
 
             for irhs in in_idxs:
 
-                rhs[irhs] = 1.0
+                rhs[None][irhs] = 1.0
 
                 # Solve the linear system
-                rhs_mat = {None : rhs}
-                dx_mat = root.ln_solver.solve(rhs_mat, root, mode)
+                dx_mat = root.ln_solver.solve(rhs, root, mode)
                 dx = dx_mat[None]
 
-                rhs[irhs] = 0.0
+                rhs[None][irhs] = 0.0
 
                 i = 0
                 for item in output_list:
