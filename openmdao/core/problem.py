@@ -382,7 +382,18 @@ class Problem(System):
         root.dumat[None].vec[:] = 0.0
         root.drmat[None].vec[:] = 0.0
 
+        # Linearize Model
         root.jacobian(params, unknowns, root.resids)
+
+        # Respect choice of mode based on precedence.
+        # Call arg > ln_solver option > auto-detect
+        mode = self._mode(mode, param_list, unknown_list)
+
+        # Process our inputs/outputs of interest for parallel groups
+        if MPI or not MPI:
+            ooi = self.driver._outputs_of_interest
+            ioi = self.driver._inputs_of_interest
+
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -398,10 +409,6 @@ class Problem(System):
             num_input = system.get_size(param_list)
             num_output = system.get_size(unknown_list)
             J = np.zeros((num_output, num_input))
-
-        # Respect choice of mode based on precedence.
-        # Call arg > ln_solver option > auto-detect
-        mode = self._mode(mode, param_list, unknown_list)
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list

@@ -61,8 +61,6 @@ class LinearGaussSeidel(LinearSolver):
         dumat[None].vec[:] = 0.0
         #drmat[None].vec[:] = -rhs
 
-        #FIXME: Just want to get LGS working by itself before considering matmat
-        voi = None
         vois = rhs.keys()
         sol_buf = {}
 
@@ -73,7 +71,8 @@ class LinearGaussSeidel(LinearSolver):
                 #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                system._transfer_data(name, deriv=True, var_of_interest=voi)
+                for voi in vois:
+                    system._transfer_data(name, deriv=True, var_of_interest=voi)
 
                 #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
@@ -114,11 +113,10 @@ class LinearGaussSeidel(LinearSolver):
                 for voi in vois:
                     dumat[voi].vec *= 0.0
 
-                #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                system._transfer_data(name, mode='rev', deriv=True)
-                #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    system._transfer_data(name, mode='rev', deriv=True)
+                    #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                for voi in vois:
                     dumat[voi].vec *= -1.0
                     dumat[voi].vec += rhs[voi]
 
