@@ -8,12 +8,14 @@ from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpiunittest import MPITestCase
 from openmdao.test.simplecomps import FanOutGrouped, FanInGrouped
+from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
 from openmdao.test.testutil import assert_rel_error
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
 else:
     from openmdao.core.basicimpl import BasicImpl as impl
+
 
 class MPITests1(MPITestCase):
 

@@ -349,7 +349,7 @@ class VecWrapper(object):
         """
         return numpy.arange(start, end, dtype=self.idx_arr_type)
 
-    def to_idx_array(indices):
+    def to_idx_array(self, indices):
         """
         Given some iterator of indices, return an index array of the
         right int type for the current implementation.
@@ -365,7 +365,7 @@ class VecWrapper(object):
             Index array containing all of the given indices.
 
         """
-        return numpy.array(indices, dtype=idx_arr_type)
+        return numpy.array(indices, dtype=self.idx_arr_type)
 
     def merge_idxs(self, src_idxs, tgt_idxs):
         """
@@ -502,7 +502,10 @@ class VecWrapper(object):
         for v, meta in self.items():
             if meta.get('pass_by_obj') or meta.get('remote'):
                 continue
-            uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
+            if v in self._slices:
+                uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
+            else:
+                uslice = ''
             out_stream.write("{0:<{nwid}} {1:<{swid}} {2:>{vwid}}\n".format(v,
                                                                        uslice,
                                                                        repr(self[v]),
@@ -512,11 +515,10 @@ class VecWrapper(object):
 
         for v, meta in self.items():
             if meta.get('pass_by_obj') and not meta.get('remote'):
-                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v,
-                                                                                '(by obj)',
-                                                                                repr(self[v]),
-                                                                                nwid=nwid,
-                                                                                swid=swid))
+                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v, '(by obj)',
+                                                                        repr(self[v]),
+                                                                        nwid=nwid,
+                                                                        swid=swid))
         if return_str:
             return out_stream.getvalue()
 
@@ -726,7 +728,8 @@ class TgtVecWrapper(VecWrapper):
         """
         vmeta = meta.copy()
         vmeta['pathname'] = pathname
-        vmeta['size'] = src_meta['size']
+        if 'src_indices' not in vmeta:
+            vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:

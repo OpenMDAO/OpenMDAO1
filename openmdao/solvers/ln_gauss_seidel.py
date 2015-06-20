@@ -73,11 +73,11 @@ class LinearGaussSeidel(LinearSolver):
                 #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                system._transfer_data(name, deriv=True)
+                system._transfer_data(name, deriv=True, var_of_interest=voi)
 
                 #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = {x for x in dpmat[None].keys() if x not in sub.dpmat[None].keys()}
+                ls_inputs = {x for x in dpmat[None] if x not in sub.dpmat[None]}
 
                 if isinstance(sub, Component):
 
