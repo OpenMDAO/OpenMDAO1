@@ -1,6 +1,7 @@
 """ Defines the base class for a Component in OpenMDAO."""
 
 import sys
+import re
 from pprint import pformat
 from collections import OrderedDict
 import functools
@@ -19,6 +20,9 @@ Object to represent default value for `add_output`.
 '''
 _NotSet = object()
 
+# regex to check for valid variable names.
+namecheck_rgx = re.compile(
+    '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -92,6 +96,18 @@ class Component(System):
             raise RuntimeError("%s: variable '%s' already exists" %
                                (self.pathname, name))
 
+        match = namecheck_rgx.match(name)
+        if match is None or match.group() != name:
+            raise NameError("%s: '%s' is not a valid variable name." % (self.pathname, name))
+
+    def setup_param_indices(self):
+        """
+        Override this in your Component to set specific indices that will be pulled from
+        source variables to fill your parameters.  This method should set the 'src_indices'
+        metadata for any parameters that require it.
+        """
+        pass
+
     def _get_fd_params(self):
         """
         Get the list of parameters that are needed to perform a
@@ -121,6 +137,8 @@ class Component(System):
         to use absolute variable names, and stores them
         as attributes of the component
         """
+
+        self.setup_param_indices()
 
         # rekey with absolute path names and add relative names
         _new_params = OrderedDict()
@@ -304,9 +322,6 @@ class Component(System):
             called without mode so that the user can set the mode in this
             system's ln_solver.options.
         """
-
-        if mode is None:
-            mode = self.fd_options['step_size']
 
         if mode == 'fwd':
             dresids.vec[:] = rhs[:]
