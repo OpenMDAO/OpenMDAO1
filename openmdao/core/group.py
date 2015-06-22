@@ -867,7 +867,7 @@ class Group(System):
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
 
-    def _get_global_offset(self, name, var_rank, sizes_table):
+    def _get_global_offset(self, name, var_rank, sizes_table, var_of_interest):
         """
         Parameters
         ----------
@@ -880,6 +880,10 @@ class Group(System):
         sizes_table : list of OrderDicts mappping var name to size.
             Size information for all vars in all ranks.
 
+        var_of_interest : str
+            Name of the current variable of interest, the key into the
+            dumat,drmat, and dpmat dicts.
+
         Returns
         -------
         int
@@ -891,19 +895,26 @@ class Group(System):
 
         # first get the offset of the distributed storage for var_rank
         while rank < var_rank:
-            offset += sum(sizes_table[rank].values())
+            for vname, size in sizes_table[rank].items():
+                if self._relevance.is_relevant(var_of_interest, vname):
+                    offset += size
             rank += 1
 
         # now, get the offset into the var_rank storage for the variable
         for vname, size in sizes_table[var_rank].items():
             if vname == name:
                 break
-            offset += size
+            if self._relevance.is_relevant(var_of_interest, vname):
+                offset += size
 
         return offset
 
-    def _get_global_idxs(self, uname, pname, uvec, pvec, var_of_interest, mode):
+    def _get_global_idxs(self, uname, pname, var_of_interest, mode):
         """
+        Return the global indices into the distributed unknowns and params vector
+        for the given unknown and param.  The given unknown and param have already
+        been tested for relevance.
+
         Parameters
         ----------
         uname : str
@@ -911,12 +922,6 @@ class Group(System):
 
         pname : str
             Name of the variable in the params vector.
-
-        uvec : `VecWrapper`
-            unknowns/dunknowns vec wrapper.
-
-        pvec : `VecWrapper`
-            params/dparams vec wrapper.
 
         var_of_interest : str or None
             Name of variable of interest used to determine relevance.
@@ -927,26 +932,30 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
-        umeta = uvec.metadata(uname)
-        pmeta = pvec.metadata(pname)
+        umeta = self.unknowns.metadata(uname)
+        pmeta = self.params.metadata(pname)
 
         # FIXME: if we switch to push scatters, this check will flip
         if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
             # just return empty index arrays for remote vars
-            return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if 'src_indices' in pmeta:
-            arg_idxs = pvec.to_idx_array(pmeta['src_indices'])
+            arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
-            arg_idxs = pvec.make_idx_array(0, pmeta['size'])
+            if self.comm is None:
+                iproc = 0
+            else:
+                iproc = self.comm.rank
+            arg_idxs = self.params.make_idx_array(0, self._local_param_sizes[iproc][pname])
 
         var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
-        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes, var_of_interest)
         src_idxs = arg_idxs + offset
 
         var_rank = self._get_owning_rank(pname, self._local_param_sizes)
-        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes)
-        tgt_idxs = tgt_start + pvec.make_idx_array(0, len(arg_idxs))
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes, var_of_interest)
+        tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
 
@@ -1000,7 +1009,6 @@ class Group(System):
                 else: # pass by vector
                     #forward
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
                                                          var_of_interest, 'fwd')
                     vec_conns.append((prelname, urelname))
                     src_idx_list.append(sidxs)
@@ -1008,7 +1016,6 @@ class Group(System):
 
                     # reverse
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
                                                          var_of_interest, 'rev')
                     rev_vec_conns.append((prelname, urelname))
                     rev_src_idx_list.append(sidxs)
