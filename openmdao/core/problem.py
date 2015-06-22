@@ -40,14 +40,13 @@ class Problem(System):
             self.driver = driver
 
     def __getitem__(self, name):
-        """Retrieve unflattened value of named variable from the root system.
+        """Retrieve unflattened value of named unknown or unconnected
+        param variable from the root system.
 
         Parameters
         ----------
-        name : str   OR   tuple : (name, vector)
-             The name of the variable to retrieve from the unknowns vector OR
-             a tuple of the name of the variable and the vector to get its
-             value from.
+        name : str
+             The name of the variable.
 
         Returns
         -------
