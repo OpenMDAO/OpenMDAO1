@@ -10,7 +10,7 @@ class ParamComp(Component):
 
         self.add_output(name, val, **kwargs)
 
-    def apply_linear(self,mode, ls_inputs=None, vois=[None]):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """For `ParamComp`, just pass on the incoming values.
 
         Parameters

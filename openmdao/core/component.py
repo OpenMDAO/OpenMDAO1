@@ -331,7 +331,7 @@ class Component(System):
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-                sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
+            sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
