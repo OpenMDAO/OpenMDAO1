@@ -17,47 +17,61 @@ class ConnectError(Exception):
         return cls(msg)
 
     @classmethod
+    def size_mismatch_error(cls, src, target):
+        msg  = "Size {len(target[src_indices])} of the indexed sub-part of source '{src[relative_name]}' must match the size '{target[size]}' of the target '{target[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+
+        return cls(msg)
+
+    @classmethod
+    def indices_too_large(cls, src, target):
+        msg  = "Size {len(target[src_indices])} of target indices is larger than size {src[size]} of source '{src[relative_name]}'"
+        msg = msg.format(src=src, target=target)
+
+        return cls(msg)
+
+    @classmethod
     def val_and_shape_mismatch_error(cls, src, target):
         msg = "Shape of the initial value '{src[val].shape}' of source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
-        
+
     @classmethod
     def nonexistent_src_error(cls, src, target):
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{src}' does not exist.")
-               
+
         msg = msg.format(src=src, target=target)
-        
+
         return cls(msg)
-        
+
     @classmethod
     def nonexistent_target_error(cls, src, target):
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{target}' does not exist.")
-               
+
         msg = msg.format(src=src, target=target)
-        
+
         return cls(msg)
-        
+
     @classmethod
     def invalid_target_error(cls, src, target):
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "Target must be a parameter but '{target}' is an unknown.")
-               
+
         msg = msg.format(src=src, target=target)
-        
+
         return cls(msg)
-        
-    
+
+
     @classmethod
     def invalid_src_error(cls, src, target):
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "Source must be an unknown but '{src}' is a parameter.")
-               
+
         msg = msg.format(src=src, target=target)
-        
+
         return cls(msg)
 
 def __make_metadata(metadata):
@@ -104,7 +118,13 @@ def check_shapes_match(source, target):
 
 def __check_shapes_match(src, target):
     if src['shape'] != target['shape']:
-        raise ConnectError.shape_mismatch_error(src, target)
+        if 'src_indices' in target:
+            if len(target['src_indices']) != target['size']:
+                raise ConnectError.size_mismatch_error(src, target)
+            elif len(target['src_indices']) > src['size']:
+                raise ConnectError.indices_too_large(src, target)
+        else:
+            raise ConnectError.shape_mismatch_error(src, target)
 
 def __check_val_and_shape_match(src, target):
     if src['val'].shape != target['shape']:
