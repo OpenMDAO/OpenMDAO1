@@ -111,22 +111,22 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                #for voi in vois:
-                #    print(name, dpmat[voi].keys(), dumat[voi].keys())
+                for voi in vois:
+                    print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 for voi in vois:
                     dumat[voi].vec *= 0.0
 
-                    #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                    system._transfer_data(name, mode='rev', deriv=True)
-                    #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    system._transfer_data(name, mode='rev', deriv=True, var_of_interest=voi)
+                    print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     dumat[voi].vec *= -1.0
                     dumat[voi].vec += rhs[voi]
 
                 sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                #for voi in vois:
-                #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                for voi in vois:
+                    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     ls_inputs[voi] = [x for x in dpmat[voi].keys() \
@@ -144,8 +144,8 @@ class LinearGaussSeidel(LinearSolver):
                     sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
 
-                #for voi in vois:
-                #    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                for voi in vois:
+                    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             for voi in vois:
                 sol_buf[voi] = drmat[voi].vec
