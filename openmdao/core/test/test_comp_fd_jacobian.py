@@ -325,10 +325,13 @@ class CompFDinSystemTestCase(unittest.TestCase):
         comp.fd_options['force_fd'] = True
         comp.fd_options['form'] = 'forward'
 
+        top.driver._inputs_of_interest = ['p1.x']
+        top.driver._outputs_of_interest = ['comp.f_xy']
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = top.calc_gradient(top.driver._inputs_of_interest,
+                              top.driver._outputs_of_interest, return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
@@ -534,13 +537,18 @@ class CompFDinSystemTestCase(unittest.TestCase):
         comp.fd_options['force_fd'] = True
         comp.fd_options['step_size'] = 1e3
 
+        top.driver._inputs_of_interest = ['p11.x1']
+        top.driver._outputs_of_interest = ['comp.f_xy']
+
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['p11.x1'], ['comp.f_xy'], return_format='dict')
+        J = top.calc_gradient(top.driver._inputs_of_interest,
+                              top.driver._outputs_of_interest, return_format='dict')
         self.assertGreater(J['comp.f_xy']['p11.x1'][0][0], 0.0)
 
-        J = top.calc_gradient(['p12.x2'], ['comp.f_xy'], return_format='dict')
+        J = top.calc_gradient(['p12.x2'],
+                              top.driver._outputs_of_interest, return_format='dict')
         self.assertLess(J['comp.f_xy']['p12.x2'][0][0], 0.0)
 
 

@@ -199,15 +199,21 @@ class Component(System):
         self._relevance = relevance
         self._impl_factory = impl
 
-        self._create_views(top_unknowns, parent, [], relevance)
+        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        for group, vois in relevance.groups.items():
+            if group is not None:
+                for voi in vois:
+                    self._create_views(top_unknowns, parent, [], relevance, voi)
 
-        params = self.params
+        # we don't get non deriv vecs (u, p, r) unless we have a None group, so force
+        # their creation here
+        self._create_views(top_unknowns, parent, [], relevance, None)
 
         # create params vec entries for any unconnected params
         for pathname, meta in self._params_dict.items():
-            name = params._scoped_abs_name(pathname)
-            if name not in params:
-                params._add_unconnected_var(pathname, meta)
+            name = self.params._scoped_abs_name(pathname)
+            if name not in self.params:
+                self.params._add_unconnected_var(pathname, meta)
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
