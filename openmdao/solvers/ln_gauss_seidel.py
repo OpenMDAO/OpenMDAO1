@@ -63,6 +63,7 @@ class LinearGaussSeidel(LinearSolver):
 
         vois = rhs.keys()
         sol_buf = {}
+        ls_inputs = {}
 
         if mode == 'fwd':
 
@@ -76,7 +77,7 @@ class LinearGaussSeidel(LinearSolver):
                     system._transfer_data(name, deriv=True, var_of_interest=voi)
                     print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
+                    ls_inputs[voi] = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
 
                 if isinstance(sub, Component):
 
@@ -127,7 +128,9 @@ class LinearGaussSeidel(LinearSolver):
                 #for voi in vois:
                 #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                ls_inputs = [x for x in dpmat[voi].keys() if x not in sub.dpmat[voi].keys()]
+                for voi in vois:
+                    ls_inputs[voi] = [x for x in dpmat[voi].keys() \
+                                      if x not in sub.dpmat[voi].keys()]
 
                 if isinstance(sub, Component):
 

@@ -18,7 +18,7 @@ class ParamComp(Component):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to. (Not used here.)
 

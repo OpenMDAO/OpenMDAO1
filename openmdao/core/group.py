@@ -564,7 +564,7 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
 
@@ -616,7 +616,7 @@ class Group(System):
         vois: list of strings
             List of all quantities of interest to key into the mats.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
@@ -635,7 +635,7 @@ class Group(System):
 
                 dresids.vec[:] = 0.0
 
-                if ls_inputs is None or abs_inputs.intersection(ls_inputs):
+                if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
                     if system.fd_options['force_fd'] == True:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                  dunknowns, dresids, mode)
@@ -664,7 +664,7 @@ class Group(System):
                 # our local 'arg' by -1, and then revert it afterwards.
                 dresids.vec *= -1.0
 
-                if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
+                if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
                     if system.fd_options['force_fd'] == True:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                  dunknowns, dresids, mode)
