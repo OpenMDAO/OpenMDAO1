@@ -119,13 +119,13 @@ class MPITestsMatxMat(MPITestCase):
         unknown_list = ['c2.y', 'c3.y']
         param_list = ['p.x']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
