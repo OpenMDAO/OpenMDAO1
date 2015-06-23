@@ -939,6 +939,10 @@ class Group(System):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
+        if not self._relevance.is_relevant(var_of_interest, uname) or \
+           not self._relevance.is_relevant(var_of_interest, pname):
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
         if 'src_indices' in pmeta:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
@@ -949,11 +953,13 @@ class Group(System):
             arg_idxs = self.params.make_idx_array(0, self._local_param_sizes[iproc][pname])
 
         var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
-        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes, var_of_interest)
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes,
+                                         var_of_interest)
         src_idxs = arg_idxs + offset
 
         var_rank = self._get_owning_rank(pname, self._local_param_sizes)
-        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes, var_of_interest)
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes,
+                                            var_of_interest)
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
