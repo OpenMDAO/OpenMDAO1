@@ -10,44 +10,28 @@ class ParamComp(Component):
 
         self.add_output(name, val, **kwargs)
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode,
-                     ls_inputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """For `ParamComp`, just pass on the incoming values.
 
         Parameters
         ----------
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to. (Not used here.)
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
         """
         if mode=='fwd':
-            sol_vec, rhs_vec = dunknowns, dresids
+            sol_vec, rhs_vec = self.dumat, self.drmat
         else:
-            sol_vec, rhs_vec = dresids, dunknowns
+            sol_vec, rhs_vec = self.drmat, self.dumat
 
-        rhs_vec.vec[:] += sol_vec.vec[:]
+        for voi in vois:
+            rhs_vec[voi].vec[:] += sol_vec[voi].vec[:]
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass

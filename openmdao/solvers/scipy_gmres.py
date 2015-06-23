@@ -28,15 +28,16 @@ class ScipyGMRES(LinearSolver):
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
 
-    def solve(self, rhs, system, mode):
+    def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
         Parameters
         ----------
-        rhs : ndarray
-            Array containing the right-hand side for the linear solve. Also
-            possibly a 2D array with multiple right-hand sides.
+        rhs_mat : dict of ndarray
+            Dictionary containing one ndarry per top level quantity of
+            interest. Each array contains the right-hand side for the linear
+            solve.
 
         system : `System`
             Parent `System` object.
@@ -46,39 +47,45 @@ class ScipyGMRES(LinearSolver):
 
         Returns
         -------
-        ndarray : Solution vector
+        dict of ndarray : Solution vectors
         """
 
-        #TODO: When to record?
+        unknowns_mat = {}
+        for voi, rhs in rhs_mat.items():
 
-        n_edge = len(rhs)
-        A = LinearOperator((n_edge, n_edge),
-                           matvec=self.mult,
-                           dtype=float)
+            # Scipy can only handle one right-hand-side at a time.
+            self.voi = voi
 
-        self.system = system
-        options = self.options
-        self.mode = mode
+            n_edge = len(rhs)
+            A = LinearOperator((n_edge, n_edge),
+                               matvec=self.mult,
+                               dtype=float)
 
-        # Call GMRES to solve the linear system
-        d_unknowns, info = gmres(A, rhs,
-                                 tol=options['atol'],
-                                 maxiter=options['maxiter'])
+            self.system = system
+            options = self.options
+            self.mode = mode
 
-        # TODO: Talk about warn/error logging
-        if info > 0:
-            msg = "ERROR in solve in '%s': gmres failed to converge " \
-                  "after %d iterations"
-            print(msg)
-            #logger.error(msg, system.name, info)
-        elif info < 0:
-            msg = "ERROR in solve in '%s': gmres failed"
-            print(msg)
-            #logger.error(msg, system.name)
+            # Call GMRES to solve the linear system
+            d_unknowns, info = gmres(A, rhs,
+                                     tol=options['atol'],
+                                     maxiter=options['maxiter'])
 
-        #print system.name, 'Linear solution vec', d_unknowns
-        self.system = None
-        return d_unknowns
+            # TODO: Talk about warn/error logging
+            if info > 0:
+                msg = "ERROR in solve in '%s': gmres failed to converge " \
+                      "after %d iterations"
+                print(msg)
+                #logger.error(msg, system.name, info)
+            elif info < 0:
+                msg = "ERROR in solve in '%s': gmres failed"
+                print(msg)
+                #logger.error(msg, system.name)
+
+            unknowns_mat[voi] = d_unknowns
+
+            #print system.name, 'Linear solution vec', d_unknowns
+            self.system = None
+        return unknowns_mat
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
@@ -87,11 +94,11 @@ class ScipyGMRES(LinearSolver):
         system = self.system
         mode = self.mode
 
-        # FIXME: dumat/drmat keys won't always be None
+        voi = self.voi
         if mode=='fwd':
-            sol_vec, rhs_vec = system.dumat[None], system.drmat[None]
+            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
         else:
-            sol_vec, rhs_vec = system.drmat[None], system.dumat[None]
+            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
         sol_vec.vec[:] = arg[:]
@@ -103,7 +110,8 @@ class ScipyGMRES(LinearSolver):
         # Need a list lf valid interior or owned inputs.
         # TODO: clean this up
 
-        ls_inputs = set(system.dpmat[None].keys())
+        ls_inputs = {}
+        ls_inputs[voi] = set(system.dpmat[None].keys())
         data = system._find_all_comps()
         abs_uvec = {system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None]}
 
@@ -114,11 +122,9 @@ class ScipyGMRES(LinearSolver):
                     src = system.connections.get(intinp_abs)
 
                     if src in abs_uvec:
-                        ls_inputs.add(intinp_abs)
+                        ls_inputs[voi].add(intinp_abs)
 
-        system.apply_linear(system.params, system.unknowns, system.dpmat[None],
-                            system.dumat[None], system.drmat[None], mode,
-                            ls_inputs)
+        system.apply_linear(mode, ls_inputs=ls_inputs, vois=[voi])
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

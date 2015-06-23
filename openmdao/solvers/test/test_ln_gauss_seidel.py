@@ -154,6 +154,26 @@ class TestLinearGaussSeidel(unittest.TestCase):
         assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
+    def test_fan_out_grouped_GS_GS(self):
+
+        top = Problem()
+        top.root = FanOutGrouped()
+        top.root.ln_solver = LinearGaussSeidel()
+        top.root.sub.ln_solver = LinearGaussSeidel()
+        top.setup()
+        top.run()
+
+        param_list = ['p.x']
+        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
     def test_fan_in(self):
 
         top = Problem()

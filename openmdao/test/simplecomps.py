@@ -318,6 +318,11 @@ class FanOutGrouped(Group):
         sub.add('comp2', ExecComp(['y=-2.0*x']))
         sub.add('comp3', ExecComp(['y=5.0*x']))
 
+        self.add('c2', ExecComp(['y=x']))
+        self.add('c3', ExecComp(['y=x']))
+        self.connect('sub.comp2.y', 'c2.x')
+        self.connect('sub.comp3.y', 'c3.x')
+
         self.connect("comp1.y", "sub.comp2.x")
         self.connect("comp1.y", "sub.comp3.x")
         self.connect("p.x", "comp1.x")

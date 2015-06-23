@@ -31,19 +31,20 @@ class MPITests1(MPITestCase):
         top.run()
 
         param_list = ['p.x']
-        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+        #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+        unknown_list = ['c2.y', "c3.y"]
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #J = top.root.get_combined_J(J)
-        print(J)
-        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #J = top.root.get_combined_J(J)
-        print('j2',J)
-        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
     def test_fan_in_grouped(self):
 
