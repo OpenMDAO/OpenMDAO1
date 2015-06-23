@@ -31,8 +31,8 @@ class LinearGaussSeidel(LinearSolver):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
-        Parameters
-        ----------
+        Args
+        ----
         rhs : ndarray
             Array containing the right-hand side for the linear solve. Also
             possibly a 2D array with multiple right-hand sides.

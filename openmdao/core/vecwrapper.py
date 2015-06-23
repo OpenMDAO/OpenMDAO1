@@ -45,8 +45,8 @@ class VecWrapper(object):
     """
     A dict-like container of a collection of variables.
 
-    Parameters
-    ----------
+    Args
+    ----
     pathname : str, optional
         the pathname of the containing `System`
 
@@ -97,8 +97,8 @@ class VecWrapper(object):
         """
         Retrieve unflattened value of named var.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the value for.
 
@@ -138,8 +138,8 @@ class VecWrapper(object):
         """
         Set the value of the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the value for.
 
@@ -228,8 +228,8 @@ class VecWrapper(object):
         """
         Returns the metadata for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the metadata for.
 
@@ -244,8 +244,8 @@ class VecWrapper(object):
         """
         Returns all of the indices for the named variable in this vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the indices for.
 
@@ -284,8 +284,8 @@ class VecWrapper(object):
         """
         Return a new `VecWrapper` that is a view into this one.
 
-        Parameters
-        ----------
+        Args
+        ----
         sys_pathname : str
             pathname of the system for which the view is being created
 
@@ -333,8 +333,8 @@ class VecWrapper(object):
         Return an index vector of the right int type for
         the current implementation.
 
-        Parameters
-        ----------
+        Args
+        ----
         start : int
             The starting index.
 
@@ -354,8 +354,8 @@ class VecWrapper(object):
         Given some iterator of indices, return an index array of the
         right int type for the current implementation.
 
-        Parameters
-        ----------
+        Args
+        ----
         indices : iterator of ints
             An iterator of indices.
 
@@ -373,8 +373,8 @@ class VecWrapper(object):
         smaller index arrays and combined in order of ascending source
         index (to allow us to convert src indices to a slice in some cases).
 
-        Parameters
-        ----------
+        Args
+        ----
         src_idxs : array
             Source indices.
 
@@ -410,8 +410,8 @@ class VecWrapper(object):
         Returns the relative pathname for the given absolute variable
         pathname.
 
-        Parameters
-        ----------
+        Args
+        ----
         abs_name : str
             Absolute pathname of a variable.
 
@@ -454,8 +454,8 @@ class VecWrapper(object):
 
     def _scoped_abs_name(self, name):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The absolute pathname of a variable.
 
@@ -473,9 +473,8 @@ class VecWrapper(object):
 
     def dump(self, out_stream=sys.stdout):
         """
-        Parameters
-        ----------
-
+        Args
+        ----
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to return a str.
@@ -530,8 +529,8 @@ class SrcVecWrapper(VecWrapper):
         in unknowns. If store_byobjs is True, then 'pass by object' variables
         will also be stored.
 
-        Parameters
-        ----------
+        Args
+        ----
         unknowns_dict : dict
             Dictionary of metadata for unknown variables collected from
             components.
@@ -575,8 +574,8 @@ class SrcVecWrapper(VecWrapper):
         """
         Populate the metadata dict for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
            The name of the variable to add.
 
@@ -616,8 +615,8 @@ class TgtVecWrapper(VecWrapper):
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
 
-        Parameters
-        ----------
+        Args
+        ----
         parent_params_vec : `VecWrapper` or None
             `VecWrapper` of parameters from the parent `System`.
 
@@ -706,8 +705,8 @@ class TgtVecWrapper(VecWrapper):
         """
         Populate the metadata dict for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         pathname : str
             Absolute name of the variable.
 

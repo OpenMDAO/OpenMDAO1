@@ -59,8 +59,8 @@ def find_files(start, match=None, exclude=None,
     Walks all subdirectories below each specified starting directory,
     subject to directory filtering.
 
-    Parameters
-    ----------
+    Args
+    ----
     start : str or list of str
         Starting directory or list of directories.
 
@@ -134,8 +134,8 @@ def find_up(name, path=None):
     assumed to be a basename, not a path.  Returns the absolute path
     of the file or directory if found, or None otherwise.
 
-    Parameters
-    ----------
+    Args
+    ----
     name : str
         Base name of the file or directory being searched for.
 
@@ -180,8 +180,8 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
     file and directory filtering.
 
-    Parameters
-    ----------
+    Args
+    ----
     fmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match files only.
@@ -207,8 +207,8 @@ def _file_dir_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files and directories under
     the given directory, with optional file and directory filtering.
 
-    Parameters
-    ----------
+    Args
+    ----
     fmatch : predicate funct
         A predicate function that returns True on a match.
         This is used to match files only.

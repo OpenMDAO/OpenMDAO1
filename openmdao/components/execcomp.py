@@ -21,8 +21,8 @@ class ExecComp(Component):
     type float unless the initial value for that variable is supplied
     in \*\*kwargs.  Derivatives are calculated using complex step.
 
-    Parameters
-    ----------
+    Args
+    ----
     exprs: str or iter of str
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
@@ -135,8 +135,8 @@ class TmpDict(object):
     thereafter by the wrapper.  This protects the inner dict from
     modification.
 
-    Parameters
-    ----------
+    Args
+    ----
     inner : dict-like
         The dictionary to be wrapped.
 
@@ -177,8 +177,8 @@ class _UPDict(object):
     objects.  Items are first looked for in the unknowns
     and then the params.
 
-    Parameters
-    ----------
+    Args
+    ----
     unknowns : dict-like
         The unknowns object to be wrapped.
 
@@ -208,8 +208,8 @@ def _import_functs(mod, dct, names=None):
     """
     Maps attributes attrs from the given module into the given dict.
 
-    Parameters
-    ----------
+    Args
+    ----
     dct : dict
         Dictionary that will contain the mapping
 

@@ -14,8 +14,8 @@ class ParamComp(Component):
                      ls_inputs=None):
         """For `ParamComp`, just pass on the incoming values.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
