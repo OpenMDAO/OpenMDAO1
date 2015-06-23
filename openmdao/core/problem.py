@@ -89,30 +89,8 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
-        # TODO: move this into impl simewhere...
-        # determine the 'owning' rank of each variable. The owning rank
-        # is the lowest rank where the variable is local.
-        if MPI:
-            local_ps = [k for k,m in params_dict.items() if not m.get('remote')]
-            local_us = [k for k,m in unknowns_dict.items() if not m.get('remote')]
-            all_local_ps = self.root.comm.allgather(local_ps)
-            all_local_us = self.root.comm.allgather(local_us)
-
-            for p,meta in params_dict.items():
-                for rank in range(self.root.comm.size):
-                    if p in all_local_ps[rank]:
-                        meta['rank'] = rank
-                        break
-            for u,meta in unknowns_dict.items():
-                for rank in range(self.root.comm.size):
-                    if u in all_local_us[rank]:
-                        meta['rank'] = rank
-                        break
-        else:
-            for p,meta in params_dict.items():
-                meta['rank'] = 0
-            for u,meta in unknowns_dict.items():
-                meta['rank'] = 0
+        self._set_root_rank(params_dict)
+        self._set_root_rank(unknowns_dict)
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -817,6 +795,31 @@ class Problem(System):
             # TODO : Only Linear GS is supported on sub
 
         return mode
+
+    def _set_root_rank(self, vdict):
+        """
+        Determine the 'owning' rank of each variable and update the metadata
+        for that variable. The owning rank is the lowest rank where the
+        variable is local.
+
+        Parameters
+        ----------
+        vdict : OrderedDict
+            A variable metadata dictionary.
+        """
+
+        local_vars = [k for k,m in vdict.items() if not m.get('remote')]
+
+        if MPI:
+            all_locals = self.root.comm.allgather(local_vars)
+        else:
+            all_locals = [local_vars]
+
+        for v,meta in vdict.items():
+            for rank, locvars in enumerate(all_locals):
+                if v in locvars:
+                    meta['rank'] = rank
+                    break
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
