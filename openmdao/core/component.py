@@ -390,11 +390,8 @@ class Component(System):
         out_stream.flush()
 
     def generate_numpydocstring(self):
-        #print "TYPE: {type}".format(type=self.type())
         innards=dir(self)
-        print "Innards: {innards}".format(innards=dir(self))
         for innard in innards:
-            #print "item: {thingy}".format(thingy=self.str(innard))
             print innard
-        print self.__dict__
-        print help(self)
+            
+        #print self.__dict__
