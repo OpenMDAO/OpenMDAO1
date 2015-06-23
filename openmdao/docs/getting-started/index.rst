@@ -20,6 +20,14 @@ This document does not help you with operating system problems, problems with
 bad numpy or scipy installations, nor other types of software that you may have
 installed that may interfere with OpenMDAO.
 
+=================
+What is OpenMDAO?
+=================
+
+OpenMDAO is a high-performance computing platform for systems analysis and optimization
+that enables you to heavily decompose your models, making them easier to build and
+maintain, while solving them in a tightly-coupled manner with efficient parallel
+numerical methods.
 
 ===================
 Supported Platforms
@@ -184,8 +192,8 @@ Virtenv
 
 
 
-Install Using pip
-+++++++++++++++++
+Install OpenMDAO Using pip
+++++++++++++++++++++++++++
 
 Finally, do this: `pip install -e openmdao`
 
@@ -195,3 +203,5 @@ Testing
 =======
 
 You can test using any python test framework from the openmdao level of the repository
+
+e.g. `nosetest`
