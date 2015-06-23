@@ -77,15 +77,14 @@ class Group(System):
         -------
         The unflattened value of the given variable.
         """
+        # if setup has not been called, then there is no variable information to access
+        if not self._local_unknown_sizes:
+            raise RuntimeError('setup() must be called before variables can be accessed')
 
         # if system is not active, then it's not valid to access it's variables
         if not self.is_active():
             raise AttributeError("System '%s' is inactive, so can't access variable '%s'" %
                                  (self.pathname, name))
-
-        # if arg is a tuple or no subsystem found, then search for a variable
-        if not self._local_unknown_sizes:
-            raise RuntimeError('setup() must be called before variables can be accessed')
 
         try:
             return self.unknowns[name]
