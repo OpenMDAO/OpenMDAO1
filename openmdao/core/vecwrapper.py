@@ -672,7 +672,6 @@ class TgtVecWrapper(VecWrapper):
                             common = get_common_ancestor(src, pathname)
                             if common == self.pathname or (self.pathname+'.') not in common:
                                 missing.append(pathname)
-
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
@@ -693,7 +692,7 @@ class TgtVecWrapper(VecWrapper):
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
-            if relevant_vars is None or pathname in relevant_vars:
+            if pathname in my_params and (relevant_vars is None or pathname in relevant_vars):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
                     scale, offset = unitconv
