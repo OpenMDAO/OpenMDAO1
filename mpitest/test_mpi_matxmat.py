@@ -102,28 +102,28 @@ class MPITestsMatxMat(MPITestCase):
 
     def test_fan_out_parallel_sets(self):
 
-        #top = Problem(impl=impl)
-        #top.root = FanOutGrouped()
-        #top.root.ln_solver = LinearGaussSeidel()
-        ##top.root.ln_solver.options['mode'] = 'rev'
-        #top.root.sub.ln_solver = LinearGaussSeidel()
-        ##top.root.sub.ln_solver.options['mode'] = 'rev'
+        top = Problem(impl=impl)
+        top.root = FanOutGrouped()
+        top.root.ln_solver = LinearGaussSeidel()
+        #top.root.ln_solver.options['mode'] = 'rev'
+        top.root.sub.ln_solver = LinearGaussSeidel()
+        #top.root.sub.ln_solver.options['mode'] = 'rev'
 
-        ## Parallel Groups
-        #top.driver._outputs_of_interest = [('c2.y', 'c3.y', )]
-        #top.driver._inputs_of_interest = ['p.x']
+        # Parallel Groups
+        top.driver._outputs_of_interest = [('c2.y', 'c3.y', )]
+        top.driver._inputs_of_interest = ['p.x']
 
-        #top.setup()
-        #top.run()
+        top.setup()
+        top.run()
 
-        #unknown_list = ['c2.y', 'c3.y']
-        #param_list = ['p.x']
+        unknown_list = ['c2.y', 'c3.y']
+        param_list = ['p.x']
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        ##assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        ##assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
-        #assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
         # Have to run a second time, this time adjoint.
 
