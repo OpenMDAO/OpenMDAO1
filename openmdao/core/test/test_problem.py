@@ -13,6 +13,7 @@ from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
+from openmdao.test.simplecomps import SimpleImplicitComp
 
 if PY3:
     def py3fix(s):
@@ -79,6 +80,25 @@ class TestProblem(unittest.TestCase):
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
+
+    def test_conflicting_promoted_state_vars(self):
+        # verify we get an error if we have conflicting promoted state variables
+        root = Group()
+
+        comp1 = SimpleImplicitComp()
+        comp2 = SimpleImplicitComp()
+
+        root.add('c1', comp1, promotes=('z',))  # promote the state, 'z'
+        root.add('c2', comp2, promotes=('z',))  # promote the state, 'z'
+
+        prob = Problem(root)
+
+        with self.assertRaises(RuntimeError) as err:
+            prob.setup()
+
+        expected_msg = "Promoted name 'z' matches multiple unknowns: ['c1.z', 'c2.z']"
+
+        self.assertEqual(str(err.exception), expected_msg)
 
     def test_hanging_params(self):
         # test that a warning is issued for an unconnected parameter

@@ -150,10 +150,10 @@ else:
 
         mod = __import__('__main__')
 
-        if '-s' in args:
-            nocap = True
-        else:
+        if '-ns' in args:
             nocap = False
+        else:
+            nocap = True
 
         tests = [n for n in args if not n.startswith('-')]
         options = [n for n in args if n.startswith('-')]

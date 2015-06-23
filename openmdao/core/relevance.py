@@ -5,6 +5,7 @@ from six import string_types
 
 import networkx as nx
 
+from openmdao.core.group import get_absvarpathnames
 
 class Relevance(object):
     def __init__(self, params_dict, unknowns_dict, connections,
@@ -14,23 +15,52 @@ class Relevance(object):
         self.unknowns_dict = unknowns_dict
         self.mode = mode
 
+        param_groups = {}
+        output_groups = {}
+        g_id = 0
+
         # turn all inputs and outputs, even singletons, into tuples
         self.inputs = []
         for inp in inputs:
             if isinstance(inp, string_types):
+                param_groups.setdefault(None, []).append(inp)
                 self.inputs.append((inp,))
             else:
+                if len(inp) == 1:
+                    param_groups.setdefault(None, []).append(inp[0])
+                else:
+                    param_groups[g_id] = tuple(inp)
+                    g_id += 1
                 self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
             if isinstance(out, string_types):
+                output_groups.setdefault(None, []).append(out)
                 self.outputs.append((out,))
             else:
+                if len(out) == 1:
+                    output_groups.setdefault(None, []).append(out)
+                else:
+                    output_groups[g_id] = tuple(out)
+                    g_id += 1
                 self.outputs.append(tuple(out))
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
+
+        if mode == 'fwd':
+            self.groups = param_groups
+        else:
+            self.groups = output_groups
+
+        # for lin GS, store absolute names of outputs
+        self.abs_outputs = []
+        for outs in self.outputs:
+            for out in outs:
+                self.abs_outputs.append(get_absvarpathnames(out,
+                                                            self.unknowns_dict,
+                                                            'unknowns'))
 
     def __getitem__(self, name):
         # if name is None, everything is relevant
