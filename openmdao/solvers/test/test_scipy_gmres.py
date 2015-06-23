@@ -177,9 +177,6 @@ class TestScipyGMRES(unittest.TestCase):
         param_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        top.driver._inputs_of_interest = param_list
-        top.driver._outputs_of_interest = unknown_list
-
         top.setup()
         top.run()
 

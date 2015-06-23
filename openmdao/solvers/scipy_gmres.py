@@ -54,7 +54,7 @@ class ScipyGMRES(LinearSolver):
         for voi, rhs in rhs_mat.items():
 
             # Scipy can only handle one right-hand-side at a time.
-            self.vois = [voi]
+            self.voi = voi
 
             n_edge = len(rhs)
             A = LinearOperator((n_edge, n_edge),
@@ -94,7 +94,7 @@ class ScipyGMRES(LinearSolver):
         system = self.system
         mode = self.mode
 
-        voi = self.vois[0]
+        voi = self.voi
         if mode=='fwd':
             sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
         else:
@@ -123,7 +123,7 @@ class ScipyGMRES(LinearSolver):
                     if src in abs_uvec:
                         ls_inputs.add(intinp_abs)
 
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=self.vois)
+        system.apply_linear(mode, ls_inputs=ls_inputs, vois=[voi])
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

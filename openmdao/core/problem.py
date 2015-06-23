@@ -502,40 +502,36 @@ class Problem(System):
                         vkey = voi
 
                     i = 0
-                    for items in output_list:
-                        if isinstance(items, str):
-                            items = (items,)
+                    for item in output_list:
 
-                        for item in items:
+                        if item in unknowns:
+                            out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
+                        else:
+                            try:
+                                param_src = root.connections[item]
+                            except KeyError:
+                                raise KeyError("'%s' is not connected to an unknown." % item)
+                            param_src = unknowns.get_relative_varname(param_src)
+                            out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(param_src)
 
-                            if item in unknowns:
-                                out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
+                        nk = len(out_idxs)
+
+                        if return_format == 'dict':
+                            if mode == 'fwd':
+                                if J[item][param] is None:
+                                    J[item][param] = np.zeros((nk, len(in_idxs)))
+                                J[item][param][:, j-jbase] = dx[out_idxs]
                             else:
-                                try:
-                                    param_src = root.connections[item]
-                                except KeyError:
-                                    raise KeyError("'%s' is not connected to an unknown." % item)
-                                param_src = unknowns.get_relative_varname(param_src)
-                                out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(param_src)
+                                if J[param][item] is None:
+                                    J[param][item] = np.zeros((len(in_idxs), nk))
+                                J[param][item][j-jbase, :] = dx[out_idxs]
 
-                            nk = len(out_idxs)
-
-                            if return_format == 'dict':
-                                if mode == 'fwd':
-                                    if J[item][param] is None:
-                                        J[item][param] = np.zeros((nk, len(in_idxs)))
-                                    J[item][param][:, j-jbase] = dx[out_idxs]
-                                else:
-                                    if J[param][item] is None:
-                                        J[param][item] = np.zeros((len(in_idxs), nk))
-                                    J[param][item][j-jbase, :] = dx[out_idxs]
-
+                        else:
+                            if mode == 'fwd':
+                                J[i:i+nk, j] = dx[out_idxs]
                             else:
-                                if mode == 'fwd':
-                                    J[i:i+nk, j] = dx[out_idxs]
-                                else:
-                                    J[j, i:i+nk] = dx[out_idxs]
-                                i += nk
+                                J[j, i:i+nk] = dx[out_idxs]
+                            i += nk
 
                 j += 1
 

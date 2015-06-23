@@ -56,9 +56,6 @@ class TestGroupDerivatves(unittest.TestCase):
         param_list = ['sub.p.x']
         unknown_list = ['sub.comp7.y1']
 
-        top.driver._inputs_of_interest = param_list
-        top.driver._outputs_of_interest = unknown_list
-
         top.setup()
         top.run()
 
@@ -67,7 +64,6 @@ class TestGroupDerivatves(unittest.TestCase):
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
-
 
 
 if __name__ == "__main__":

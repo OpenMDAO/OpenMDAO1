@@ -36,7 +36,7 @@ class ExplicitSolver(ScipyGMRES):
 
         # TODO: This solver could probably work with multiple RHS
         for voi, rhs in rhs_mat.items():
-            self.vois = [None]
+            self.voi = None
 
             #TODO: When to record?
             self.system = system
