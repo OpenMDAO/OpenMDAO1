@@ -64,6 +64,13 @@ class Newton(NonLinearSolver):
         f_norm0 = f_norm
         print('Residual:', f_norm)
 
+        if mode == 'fwd':
+            arg = system.drmat[None]
+            result = system.dumat[None]
+        else:
+            arg = system.dumat[None]
+            result = system.drmat[None]
+
         itercount = 0
         alpha_base = alpha
         while itercount < maxiter and f_norm > atol and \
@@ -73,16 +80,11 @@ class Newton(NonLinearSolver):
             system.jacobian(params, unknowns, resids)
 
             # Calculate direction to take step
-            if mode == 'fwd':
-                system.drmat[None].vec[:] = -resids.vec[:]
-            else:
-                system.dumat[None].vec[:] = -resids.vec[:]
-
+            arg.vec[:] = resids.vec[:]
             system.solve_linear(system.dumat, system.drmat, [None], mode=mode)
-            dresids = system.drmat[None]
 
             #print "LS 1", uvec.array, '+', dfvec.array
-            unknowns.vec[:] += alpha*dresids.vec[:]
+            unknowns.vec[:] += alpha*result.vec[:]
 
             # Just evaluate the model with the new points
             system.apply_nonlinear(params, unknowns, resids)
@@ -99,7 +101,7 @@ class Newton(NonLinearSolver):
                   f_norm/f_norm0 > ls_rtol:
 
                 alpha *= 0.5
-                unknowns.vec[:] -= alpha*dresids.vec[:]
+                unknowns.vec[:] -= alpha*result.vec[:]
 
                 # Just evaluate the model with the new points
                 system.apply_nonlinear(params, unknowns, resids)
