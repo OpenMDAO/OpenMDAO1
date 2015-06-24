@@ -8,7 +8,7 @@ from openmdao.core.mpiwrap import MPI, under_mpirun
 
 if under_mpirun():
     def debug(*msg):
-        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
+        newmsg = list(msg) #["%d: " % MPI.COMM_WORLD.rank] + list(msg)
         for m in newmsg:
             sys.stdout.write("%s " % m)
         sys.stdout.write('\n')

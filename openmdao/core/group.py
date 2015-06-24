@@ -17,6 +17,7 @@ from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.core.mpiwrap import MPI
 
 from openmdao.core.checks import ConnectError
 
@@ -335,6 +336,7 @@ class Group(System):
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
+        self._owning_ranks = self._get_owning_ranks()
 
         self._setup_data_transfer(my_params, relevance, None)
 
@@ -925,6 +927,9 @@ class Group(System):
         var_of_interest : str or None
             Name of variable of interest used to determine relevance.
 
+        mode : str
+            Solution mode, either 'fwd' or 'rev'
+
         Returns
         -------
         tuple of (idx_array, idx_array)
@@ -936,28 +941,39 @@ class Group(System):
 
         # FIXME: if we switch to push scatters, this check will flip
         if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
+            print("NO LOCAL var. %s mode: %s, p remote: %s, u remote: %s, voi: %s" %
+                  (str((uname,pname)), mode,pmeta.get('remote'), umeta.get('remote'), var_of_interest))
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if not self._relevance.is_relevant(var_of_interest, uname) or \
            not self._relevance.is_relevant(var_of_interest, pname):
+            print("VAR not RELEVANT: %s  %s %s" % ((uname,pname),self._relevance.is_relevant(var_of_interest, uname),
+                                            self._relevance.is_relevant(var_of_interest, pname)))
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        if self.comm is None:
+            iproc = 0
+        else:
+            iproc = self.comm.rank
 
         if 'src_indices' in pmeta:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
-            if self.comm is None:
-                iproc = 0
-            else:
-                iproc = self.comm.rank
-            arg_idxs = self.params.make_idx_array(0, self._local_param_sizes[iproc][pname])
+            arg_idxs = self.params.make_idx_array(0, pmeta['size']) #self._local_param_sizes[iproc][pname])
 
-        var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
+        if mode == 'fwd':
+            var_rank = self._owning_ranks[uname] #self._get_owning_rank(uname, self._local_unknown_sizes)
+        else:
+            var_rank = iproc
         offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes,
                                          var_of_interest)
         src_idxs = arg_idxs + offset
 
-        var_rank = self._get_owning_rank(pname, self._local_param_sizes)
+        if mode == 'fwd':
+            var_rank = iproc
+        else:
+            var_rank = self._owning_ranks[pname] #self._get_owning_rank(pname, self._local_param_sizes)
         tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes,
                                             var_of_interest)
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
@@ -1019,9 +1035,14 @@ class Group(System):
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
+                    print("fwd: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
+
                     # reverse
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                          var_of_interest, 'rev')
+
+                    print("rev: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
+
                     rev_vec_conns.append((prelname, urelname))
                     rev_src_idx_list.append(sidxs)
                     rev_dest_idx_list.append(didxs)
@@ -1132,6 +1153,31 @@ class Group(System):
         for sg_name, sg in self.subgroups():
             data.update(sg._find_all_comps())
         return data
+
+    def _get_owning_ranks(self):
+        """
+        Determine the 'owning' rank of each variable and return a dict
+        mapping variables to their owning rank. The owning rank is the lowest
+        rank where the variable is local.
+
+        """
+        ranks = {}
+
+        local_vars = [k for k,m in self.unknowns.items() if not m.get('remote')]
+        local_vars.extend([k for k,m in self.params.items() if not m.get('remote')])
+
+        if MPI:
+            all_locals = self.comm.allgather(local_vars)
+        else:
+            all_locals = [local_vars]
+
+        for rank in range(len(all_locals)):
+            for v in all_locals[rank]:
+                if v not in ranks:
+                    ranks[v] = rank
+                    print("%s owned by rank %d" % (v, rank))
+
+        return ranks
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

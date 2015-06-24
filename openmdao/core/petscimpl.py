@@ -253,8 +253,9 @@ class PetscDataXfer(DataXfer):
 
         try:
             if trace:
-                debug("'%s': creating scatter %s --> %s" % (name, src_idx_set.indices,
-                                                          tgt_idx_set.indices))
+                debug("'%s': creating scatter \n%s --> %s\n%s --> %s" %
+                      (name, [v for u,v in vec_conns], [u for u,v in vec_conns],
+                       src_idx_set.indices, tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
         except Exception as err:

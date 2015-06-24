@@ -8,7 +8,7 @@ import numpy as np
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.solvers.solverbase import LinearSolver
-
+from openmdao.devtools.debug import debug
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
@@ -65,6 +65,8 @@ class LinearGaussSeidel(LinearSolver):
         sol_buf = {}
         ls_inputs = {}
 
+        debug("dpmat keys:",dpmat.keys())
+        debug("dumat keys:",dumat.keys())
         if mode == 'fwd':
 
             for name, sub in system.subsystems(local=True):
@@ -73,9 +75,9 @@ class LinearGaussSeidel(LinearSolver):
                     print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 for voi in vois:
-                    print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                     system._transfer_data(name, deriv=True, var_of_interest=voi)
-                    print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     ls_inputs[voi] = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
 
@@ -90,16 +92,16 @@ class LinearGaussSeidel(LinearSolver):
                     # apply_linear.
                     sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
-                for voi in vois:
-                    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                    #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     drmat[voi].vec *= -1.0
                     drmat[voi].vec += rhs[voi]
 
                 sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
-                for voi in vois:
-                    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                    #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             for voi in vois:
                 sol_buf[voi] = dumat[voi].vec
@@ -111,22 +113,22 @@ class LinearGaussSeidel(LinearSolver):
 
             for subsystem in reversed(rev_systems):
                 name, sub = subsystem
-                for voi in vois:
-                    print(name, dpmat[voi].keys(), dumat[voi].keys())
+                #for voi in vois:
+                    #print(name, dpmat[voi].keys(), dumat[voi].keys())
 
                 for voi in vois:
                     dumat[voi].vec *= 0.0
 
-                    print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                     system._transfer_data(name, mode='rev', deriv=True, var_of_interest=voi)
-                    print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     dumat[voi].vec *= -1.0
                     dumat[voi].vec += rhs[voi]
 
                 sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                for voi in vois:
-                    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                    #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     ls_inputs[voi] = [x for x in dpmat[voi].keys() \
@@ -143,9 +145,8 @@ class LinearGaussSeidel(LinearSolver):
                     # apply_linear.
                     sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
-
-                for voi in vois:
-                    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                #for voi in vois:
+                    #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
             for voi in vois:
                 sol_buf[voi] = drmat[voi].vec
