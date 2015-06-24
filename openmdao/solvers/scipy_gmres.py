@@ -32,8 +32,8 @@ class ScipyGMRES(LinearSolver):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
-        Parameters
-        ----------
+        Args
+        ----
         rhs_mat : dict of ndarray
             Dictionary containing one ndarry per top level quantity of
             interest. Each array contains the right-hand side for the linear

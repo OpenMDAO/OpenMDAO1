@@ -15,8 +15,8 @@ class LinearSolver(object):
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
 
-        Parameters
-        ----------
+        Args
+        ----
         recorder: `BaseRecorder`
             A recorder object.
         """
@@ -27,8 +27,8 @@ class LinearSolver(object):
         full solution vector is returned. This function must be defined
         when inheriting.
 
-        Parameters
-        ----------
+        Args
+        ----
         rhs : ndarray
             Array containing the right-hand side for the linear solve. Also
             possibly a 2D array with multiple right-hand sides.
@@ -58,8 +58,8 @@ class NonLinearSolver(object):
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
 
-        Parameters
-        ----------
+        Args
+        ----
         recorder: `BaseRecorder`
             A recorder object.
         """
@@ -70,8 +70,8 @@ class NonLinearSolver(object):
         This includes all implicit components. This function must be defined
         when inheriting.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 

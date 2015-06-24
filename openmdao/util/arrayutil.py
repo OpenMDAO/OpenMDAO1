@@ -48,8 +48,8 @@ def array_idx_iter(shape):
     """
     Return an iterator over the indices into a n-dimensional array.
 
-    Parameters
-    ----------
+    Args
+    ----
     shape : tuple
         shape of the array.
     """
@@ -63,8 +63,8 @@ def evenly_distrib_idxs(num_divisions, arr_size):
     into pieces according to number of divisions, keeping the distribution
     of entries as even as possible.
 
-    Parameters
-    ----------
+    Args
+    ----
     num_divisions : int
         Number of parts to divide the array into.
 
