@@ -57,6 +57,7 @@ class Newton(NonLinearSolver):
         alpha = self.options['alpha']
 
         # perform an initial run
+        system.children_solve_nonlinear()
         system.apply_nonlinear(params, unknowns, resids)
 
         f_norm = resids.norm()
