@@ -124,6 +124,8 @@ class SellarNoDerivatives(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
 
         self.nl_solver = NLGaussSeidel()
+        self.d1.fd_options['force_fd'] = True
+        self.d2.fd_options['force_fd'] = True
 
 
 class SellarDerivatives(Group):
