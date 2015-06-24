@@ -13,8 +13,8 @@ class ParamComp(Component):
     def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """For `ParamComp`, just pass on the incoming values.
 
-        Parameters
-        ----------
+        Args
+        ----
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 

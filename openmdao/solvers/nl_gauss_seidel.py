@@ -25,8 +25,8 @@ class NLGaussSeidel(NonLinearSolver):
     def solve(self, params, unknowns, resids, system):
         """ Solves the system using Gauss Seidel.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 

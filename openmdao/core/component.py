@@ -175,8 +175,8 @@ class Component(System):
         """
         Set up local `VecWrappers` to store this component's variables.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_owners : dict
             a dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating. (ignored)
@@ -223,8 +223,8 @@ class Component(System):
         must execute its solve nonlinear method. Implicit components should
         override this and calculate their residuals in place.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 
@@ -252,8 +252,8 @@ class Component(System):
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -277,8 +277,8 @@ class Component(System):
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -309,8 +309,8 @@ class Component(System):
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         dumat : dict of `VecWrappers`
             In forward mode, each `VecWrapper` contains the incoming vector
             for the states. There is one vector per quantity of interest for
@@ -343,8 +343,8 @@ class Component(System):
         """
         Writes a formated dump of this `Component` to file.
 
-        Parameters
-        ----------
+        Args
+        ----
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 

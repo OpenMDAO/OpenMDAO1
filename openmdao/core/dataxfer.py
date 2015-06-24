@@ -10,8 +10,8 @@ class DataXfer(object):
     An object that performs data transfer between a source vector and a
     target vector.
 
-    Parameters
-    ----------
+    Args
+    ----
     src_idxs : array
         Indices of the source variables in the source vector.
 
@@ -42,8 +42,8 @@ class DataXfer(object):
         """
         Performs data transfer between a source vector and a target vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         src_idxs : array
             Indices of the source variables in the source vector.
 

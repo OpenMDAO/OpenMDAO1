@@ -46,8 +46,8 @@ class Group(System):
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
              the name of the variable to set into the unknowns vector
         """
@@ -68,8 +68,8 @@ class Group(System):
         Retrieve unflattened value of named unknown or unconnected
         param variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
              The name of the variable to retrieve from the unknowns vector.
 
@@ -107,8 +107,8 @@ class Group(System):
         subsystem of the this system.  Raises an exception if the given name
         doesn't reference a subsystem.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of the subsystem to retrieve.
 
@@ -128,8 +128,8 @@ class Group(System):
         """Add a subsystem to this group, specifying its name and any variables
         that it promotes to the parent level.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         name : str
             The name by which the subsystem is to be known.
@@ -156,8 +156,8 @@ class Group(System):
         """Connect the given source variable to the given target
         variable.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         source : source
             The name of the source variable.
@@ -175,8 +175,8 @@ class Group(System):
 
     def subsystems(self, local=False, recurse=False, typ=System):
         """
-        Parameters
-        ----------
+        Args
+        ----
         local : bool, optional
             If True, only return those `Components` that are local. Default is False.
 
@@ -225,8 +225,8 @@ class Group(System):
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
 
-        Parameter
-        ---------
+        Args
+        ----
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
@@ -281,8 +281,8 @@ class Group(System):
         """
         Assign communicator to this `Group` and all of its subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
@@ -300,8 +300,8 @@ class Group(System):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_owners : dict
             A dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating.
@@ -413,8 +413,9 @@ class Group(System):
         return fd_unknowns
 
     def _get_explicit_connections(self):
-        """ Returns
-            -------
+        """
+        Returns
+        -------
             dict
                 Explicit connections in this `Group`, represented as a mapping
                 from the pathname of the target to the pathname of the source.
@@ -457,8 +458,8 @@ class Group(System):
         """
         Solves the group using the slotted nl_solver.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`, optional
             `VecWrapper` containing parameters. (p)
 
@@ -490,8 +491,8 @@ class Group(System):
         """
         Evaluates the residuals of our children systems.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -514,8 +515,8 @@ class Group(System):
         """
         Linearize all our subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -558,8 +559,8 @@ class Group(System):
 
         df = du - dGdp * dp or du = df and dp = -dGdp^T * df
 
-        Parameters
-        ----------
+        Args
+        ----
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
@@ -603,8 +604,8 @@ class Group(System):
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         system : `System`
             Subsystem of interest, either a `Component` or a `Group` that is
@@ -686,8 +687,8 @@ class Group(System):
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         dumat : dict of `VecWrappers`
             In forward mode, each `VecWrapper` contains the incoming vector
             for the states. There is one vector per quantity of interest for
@@ -735,8 +736,8 @@ class Group(System):
         """
         Writes a formated dump of the `System` tree to file.
 
-        Parameters
-        ----------
+        Args
+        ----
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 
@@ -868,8 +869,8 @@ class Group(System):
 
     def _get_global_offset(self, name, var_rank, sizes_table, var_of_interest):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The variable name.
 
@@ -914,8 +915,8 @@ class Group(System):
         for the given unknown and param.  The given unknown and param have already
         been tested for relevance.
 
-        Parameters
-        ----------
+        Args
+        ----
         uname : str
             Name of variable in the unknowns vector.
 
@@ -970,8 +971,8 @@ class Group(System):
         connections that involve parameters for which this `VarManager`
         is responsible.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         my_params : list
             List of pathnames for parameters that the VarManager is
@@ -1060,8 +1061,8 @@ class Group(System):
         """
         Transfer data to/from target_system depending on mode.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         target_sys : str, optional
             Name of the target `System`.  A name of '', the default, indicates that data
@@ -1087,8 +1088,8 @@ class Group(System):
 
     def _get_owning_rank(self, name, sizes_table):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of the variable to find the owning rank for
 
@@ -1135,8 +1136,8 @@ class Group(System):
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
-    Parameters
-    ----------
+    Args
+    ----
     var_name : str
         Name of a variable relative to a `System`.
 

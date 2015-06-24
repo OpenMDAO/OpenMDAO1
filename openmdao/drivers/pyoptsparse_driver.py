@@ -60,8 +60,8 @@ class pyOptSparseDriver(Driver):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
 
-        Parameters
-        ----------
+        Args
+        ----
         problem : `Problem`
             Our parent `Problem`.
         """
@@ -300,4 +300,3 @@ class pyOptSparseDriver(Driver):
         #print(dv_dict)
         #print(sens_dict)
         return sens_dict, fail
-

@@ -47,8 +47,8 @@ class PetscImpl(object):
         Create an object for performing data transfer between source
         and target vectors.
 
-        Parameters
-        ----------
+        Args
+        ----
         system : `System`
             The `System` that manages this data transfer.
 
@@ -82,8 +82,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         """
         Create internal data storage for variables in unknowns_dict.
 
-        Parameters
-        ----------
+        Args
+        ----
         unknowns_dict : `OrderedDict`
             A dictionary of absolute variable names keyed to an associated
             metadata dictionary.
@@ -162,8 +162,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
 
-        Parameters
-        ----------
+        Args
+        ----
         parent_params_vec : `VecWrapper` or None
             `VecWrapper` of parameters from the parent `System`.
 
@@ -212,8 +212,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
 class PetscDataXfer(DataXfer):
     """
-    Parameters
-    ----------
+    Args
+    ----
     system : `System`
         The `System` that contains the `VecWrappers` used for this data transfer.
 
@@ -267,8 +267,8 @@ class PetscDataXfer(DataXfer):
         """Performs data transfer between a distributed source vector and
         a distributed target vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         src_idxs : array
             Indices of the source variables in the source vector.
 

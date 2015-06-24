@@ -123,8 +123,8 @@ class Relevance(object):
 
     def _get_relevant_vars(self, g):
         """
-        Parameters
-        ----------
+        Args
+        ----
         g : nx.DiGraph
             A graph of variable dependencies.
 
