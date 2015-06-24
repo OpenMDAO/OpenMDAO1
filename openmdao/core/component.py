@@ -398,10 +398,3 @@ class Component(System):
                                                                          nwid=nwid))
 
         out_stream.flush()
-
-    # def generate_numpydocstring(self):
-    #     innards=dir(self)
-    #     for innard in innards:
-    #         print innard
-
-        #print self.__dict__

@@ -126,9 +126,9 @@ Choose one of these tools and install it.
 
 Git
 +++
-Git is a very popular and efficient open-source version control system.
+Git is a very popular and efficient open-source version control system that we use for our source code.
 It tracks content such as files and directories. OpenMDAO keeps its code on GitHub, the Git website.
-Download Git_ for use to later grab the OpenMDAO repository during installation.
+Download Git_ for later use to grab the OpenMDAO repository during installation.
 
 .. _Git: http://git-scm.com/download
 
@@ -189,7 +189,7 @@ numpy and scipy:
 Virtualenv
 ----------
 
-How to create an installation environment?
+
 
 
 Activate Environment
@@ -224,15 +224,13 @@ Windows:
 &&&&&&&&
 ::
 
-    activate openmdao
-    deactivate
+
 
 Linux/OSX:
 &&&&&&&&&&
 ::
 
-    source activate openmdao
-    source deactivate
+
 
 
 Git the OpenMDAO Source Code
@@ -249,16 +247,15 @@ the source code from Github.
 Install OpenMDAO Using pip
 ++++++++++++++++++++++++++
 
-Finally, do this:
+From your activated environment, from the top level of the OpenMDAO repository,
+you'll want to pip install OpenMDAO into your environment
 
 ::
-    pip install -e openmdao .
+    pip install -e .
 
 
 =======
 Testing
 =======
 
-You can test using any python test framework from the openmdao level of the repository
-
-e.g. `nosetest`
+You can test using any python test framework, e.g. `unittest`, `nosetest`.
