@@ -56,7 +56,7 @@ class Newton(NonLinearSolver):
         ls_maxiter = self.options['ls_maxiter']
         alpha = self.options['alpha']
 
-        # perform an initial run
+        # Perform an initial run to propagate srcs to targets.
         system.children_solve_nonlinear()
         system.apply_nonlinear(params, unknowns, resids)
 
