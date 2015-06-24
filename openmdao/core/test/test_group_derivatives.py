@@ -52,18 +52,18 @@ class TestGroupDerivatves(unittest.TestCase):
         top = Problem()
         top.root = Group()
         top.root.add('sub', ConvergeDivergeGroups())
-        top.setup()
-        top.run()
 
         param_list = ['sub.p.x']
         unknown_list = ['sub.comp7.y1']
+
+        top.setup()
+        top.run()
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
         J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
-
 
 
 if __name__ == "__main__":

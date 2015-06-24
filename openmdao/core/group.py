@@ -225,8 +225,8 @@ class Group(System):
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
 
-        Parameter
-        ---------
+        Args
+        ----
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
@@ -413,8 +413,9 @@ class Group(System):
         return fd_unknowns
 
     def _get_explicit_connections(self):
-        """ Returns
-            -------
+        """
+        Returns
+        -------
             dict
                 Explicit connections in this `Group`, represented as a mapping
                 from the pathname of the target to the pathname of the source.
@@ -551,7 +552,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode, ls_inputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -561,31 +562,15 @@ class Group(System):
         Args
         ----
 
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
         """
         if not self.is_active():
             return
@@ -593,9 +578,6 @@ class Group(System):
         if mode == 'fwd':
             # Full Scatter
             self._transfer_data(deriv=True)
-
-        #FIXME:
-        voi = None
 
         for name, system in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
@@ -605,20 +587,18 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                self._sub_apply_linear_wrapper(system, mode, voi, ls_inputs)
+                self._sub_apply_linear_wrapper(system, mode, vois, ls_inputs)
 
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                system.apply_linear(system.params, system.unknowns,
-                                    system.dpmat[None], system.dumat[None],
-                                    system.drmat[None], mode, ls_inputs)
+                system.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
         if mode == 'rev':
             # Full Scatter
             self._transfer_data(mode='rev', deriv=True)
 
-    def _sub_apply_linear_wrapper(self, system, mode, voi, ls_inputs=None):
+    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None):
         """
         Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
@@ -634,94 +614,94 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        voi: index
-            Index to quantity (RHS) of interest
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
 
-        dresids = system.drmat[voi]
-        dunknowns = system.dumat[voi]
-        dparams = system.dpmat[voi]
+        for voi in vois:
 
-        # Linear GS imposes a stricter requirement on whether or not to run.
-        abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
+            dresids = system.drmat[voi]
+            dunknowns = system.dumat[voi]
+            dparams = system.dpmat[voi]
 
-        # Forward Mode
-        if mode == 'fwd':
+            # Linear GS imposes a stricter requirement on whether or not to run.
+            abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
 
-            #print(abs_inputs)
-            #print(ls_inputs)
-            #if ls_inputs is not None:
-            #    print(set(abs_inputs).intersection(ls_inputs))
-            dresids.vec[:] = 0.0
+            # Forward Mode
+            if mode == 'fwd':
 
-            if ls_inputs is None or abs_inputs.intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
-            dresids.vec *= -1.0
+                dresids.vec[:] = 0.0
 
-            for var in dunknowns.keys():
+                if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
+                dresids.vec *= -1.0
 
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                for var in dunknowns.keys():
 
-                dresids[var] += dunknowns[var]
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
 
-        # Adjoint Mode
-        elif mode == 'rev':
+                    dresids[var] += dunknowns[var]
 
-            dparams.vec[:] = 0.0
+            # Adjoint Mode
+            elif mode == 'rev':
 
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dresids.vec *= -1.0
+                dparams.vec[:] = 0.0
 
-            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
+                # Sign on the local Jacobian needs to be -1 before
+                # we add in the fake residual. Since we can't modify
+                # the 'du' vector at this point without stomping on the
+                # previous component's contributions, we can multiply
+                # our local 'arg' by -1, and then revert it afterwards.
+                dresids.vec *= -1.0
 
-            dresids.vec *= -1.0
+                if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
 
-            for var in dunknowns.keys():
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                dresids.vec *= -1.0
 
-                dunknowns[var] += dresids[var]
+                for var in dunknowns.keys():
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
 
-    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
+                    dunknowns[var] += dresids[var]
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
         Args
         ----
-        rhs: `ndarray`
-            Right-hand side for our linear solve.
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
+        dumat : dict of `VecWrappers`
+            In forward mode, each `VecWrapper` contains the incoming vector
+            for the states. There is one vector per quantity of interest for
+            this problem. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecWrapper`
+        drmat : `dict of VecWrappers`
             `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
+            or the incoming vector in reverse mode. There is one vector per
+            quantity of interest for this problem. (dr)
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
@@ -735,20 +715,22 @@ class Group(System):
             mode = self.fd_options['mode']
 
         if mode == 'fwd':
-            sol_vec, rhs_vec = dunknowns, dresids
+            sol_vec, rhs_vec = dumat, drmat
         else:
-            sol_vec, rhs_vec = dresids, dunknowns
+            sol_vec, rhs_vec = drmat, dumat
 
+        # TODO: Need the norm. Loop over vois here.
         #if np.linalg.norm(rhs) < 1e-15:
         #    sol_vec.vec[:] = 0.0
         #    return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
-        rhs_vec.vec[:] = rhs[:]
-        rhs_buf = rhs.copy()
+        rhs_buf = {}
+        for voi in vois:
+            rhs_buf[voi] = rhs_vec[voi].vec.copy()
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
-        rhs_buf[:] = 0.0
-        sol_vec.vec[:] = sol_buf[:]
+        for voi in vois:
+            sol_vec[voi].vec[:] = sol_buf[voi][:]
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
@@ -885,7 +867,7 @@ class Group(System):
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
 
-    def _get_global_offset(self, name, var_rank, sizes_table):
+    def _get_global_offset(self, name, var_rank, sizes_table, var_of_interest):
         """
         Args
         ----
@@ -898,6 +880,10 @@ class Group(System):
         sizes_table : list of OrderDicts mappping var name to size.
             Size information for all vars in all ranks.
 
+        var_of_interest : str
+            Name of the current variable of interest, the key into the
+            dumat,drmat, and dpmat dicts.
+
         Returns
         -------
         int
@@ -909,19 +895,26 @@ class Group(System):
 
         # first get the offset of the distributed storage for var_rank
         while rank < var_rank:
-            offset += sum(sizes_table[rank].values())
+            for vname, size in sizes_table[rank].items():
+                if self._relevance.is_relevant(var_of_interest, vname):
+                    offset += size
             rank += 1
 
         # now, get the offset into the var_rank storage for the variable
         for vname, size in sizes_table[var_rank].items():
             if vname == name:
                 break
-            offset += size
+            if self._relevance.is_relevant(var_of_interest, vname):
+                offset += size
 
         return offset
 
-    def _get_global_idxs(self, uname, pname, uvec, pvec, var_of_interest, mode):
+    def _get_global_idxs(self, uname, pname, var_of_interest, mode):
         """
+        Return the global indices into the distributed unknowns and params vector
+        for the given unknown and param.  The given unknown and param have already
+        been tested for relevance.
+
         Args
         ----
         uname : str
@@ -929,12 +922,6 @@ class Group(System):
 
         pname : str
             Name of the variable in the params vector.
-
-        uvec : `VecWrapper`
-            unknowns/dunknowns vec wrapper.
-
-        pvec : `VecWrapper`
-            params/dparams vec wrapper.
 
         var_of_interest : str or None
             Name of variable of interest used to determine relevance.
@@ -945,26 +932,36 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
-        umeta = uvec.metadata(uname)
-        pmeta = pvec.metadata(pname)
+        umeta = self.unknowns.metadata(uname)
+        pmeta = self.params.metadata(pname)
 
         # FIXME: if we switch to push scatters, this check will flip
         if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
             # just return empty index arrays for remote vars
-            return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        if not self._relevance.is_relevant(var_of_interest, uname) or \
+           not self._relevance.is_relevant(var_of_interest, pname):
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if 'src_indices' in pmeta:
-            arg_idxs = pvec.to_idx_array(pmeta['src_indices'])
+            arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
-            arg_idxs = pvec.make_idx_array(0, pmeta['size'])
+            if self.comm is None:
+                iproc = 0
+            else:
+                iproc = self.comm.rank
+            arg_idxs = self.params.make_idx_array(0, self._local_param_sizes[iproc][pname])
 
         var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
-        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes,
+                                         var_of_interest)
         src_idxs = arg_idxs + offset
 
         var_rank = self._get_owning_rank(pname, self._local_param_sizes)
-        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes)
-        tgt_idxs = tgt_start + pvec.make_idx_array(0, len(arg_idxs))
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes,
+                                            var_of_interest)
+        tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
 
@@ -1018,7 +1015,6 @@ class Group(System):
                 else: # pass by vector
                     #forward
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
                                                          var_of_interest, 'fwd')
                     vec_conns.append((prelname, urelname))
                     src_idx_list.append(sidxs)
@@ -1026,7 +1022,6 @@ class Group(System):
 
                     # reverse
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
                                                          var_of_interest, 'rev')
                     rev_vec_conns.append((prelname, urelname))
                     rev_src_idx_list.append(sidxs)
