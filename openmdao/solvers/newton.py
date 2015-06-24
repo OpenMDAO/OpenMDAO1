@@ -48,7 +48,6 @@ class Newton(NonLinearSolver):
             Parent `System` object.
         """
 
-        mode = system.ln_solver.options['mode']
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
@@ -64,12 +63,8 @@ class Newton(NonLinearSolver):
         f_norm0 = f_norm
         print('Residual:', f_norm)
 
-        if mode == 'fwd':
-            arg = system.drmat[None]
-            result = system.dumat[None]
-        else:
-            arg = system.dumat[None]
-            result = system.drmat[None]
+        arg = system.drmat[None]
+        result = system.dumat[None]
 
         itercount = 0
         alpha_base = alpha
@@ -81,7 +76,7 @@ class Newton(NonLinearSolver):
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec[:]
-            system.solve_linear(system.dumat, system.drmat, [None], mode=mode)
+            system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
             #print "LS 1", uvec.array, '+', dfvec.array
             unknowns.vec[:] += alpha*result.vec[:]
