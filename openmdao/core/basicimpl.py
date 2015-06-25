@@ -9,8 +9,8 @@ class BasicImpl(object):
         """
         Create a vecwrapper for source variables.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -25,8 +25,8 @@ class BasicImpl(object):
         """
         Create a vecwrapper for target variables.
 
-        Parameters
-        ----------
+        Args
+        -----
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -42,8 +42,8 @@ class BasicImpl(object):
         Create an object for performing data transfer between source
         and target vectors.
 
-        Parameters
-        ----------
+        Args
+        ----
         system : `System`
             The `System` that managers this data transfer.
 
@@ -67,4 +67,3 @@ class BasicImpl(object):
             A `DataXfer` object.
         """
         return DataXfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
-

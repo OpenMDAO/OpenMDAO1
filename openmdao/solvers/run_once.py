@@ -15,8 +15,8 @@ class RunOnce(NonLinearSolver):
     def solve(self, params, unknowns, resids, system):
         """ Executes each item in the system hierarchy sequentially.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 

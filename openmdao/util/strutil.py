@@ -46,8 +46,8 @@ class ExprVarScanner(ast.NodeVisitor):
 
 def parse_for_vars(expr, vnames=()):
     """
-    Parameters
-    ----------
+    Args
+    ----
     expr : str
         An expression string that we want to parse for variable names.
 
@@ -60,4 +60,3 @@ def parse_for_vars(expr, vnames=()):
     scanner = ExprVarScanner(vnames)
     scanner.visit(root)
     return scanner.varnames
-

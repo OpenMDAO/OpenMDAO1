@@ -25,8 +25,8 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
     Dumps the system tree with associated metadata for the params and unknowns
     `VecWrappers`.
 
-    Parameters
-    ----------
+    Args
+    ----
     system : `System`
         The node in the `System` tree where dumping begins.
 

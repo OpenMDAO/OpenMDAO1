@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 # pylint: disable=E0611, F0401
-import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.devtools.debug import debug
@@ -28,12 +27,19 @@ class ScipyGMRES(LinearSolver):
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
 
+        # These are defined whenever we call solve to provide info we need in
+        # the callback.
+        self.system = None
+        self.voi = None
+        self.mode = None
+        self.ls_inputs = {}
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
 
-        Parameters
-        ----------
+        Args
+        ----
         rhs_mat : dict of ndarray
             Dictionary containing one ndarry per top level quantity of
             interest. Each array contains the right-hand side for the linear
@@ -50,11 +56,16 @@ class ScipyGMRES(LinearSolver):
         dict of ndarray : Solution vectors
         """
 
+        # Need a list of valid interior or owned inputs for this voi.
+        ls_inputs = system._all_params(None)
+
         unknowns_mat = {}
         for voi, rhs in rhs_mat.items():
 
             # Scipy can only handle one right-hand-side at a time.
             self.voi = voi
+
+            self.ls_inputs[voi] = ls_inputs
 
             n_edge = len(rhs)
             A = LinearOperator((n_edge, n_edge),
@@ -95,7 +106,7 @@ class ScipyGMRES(LinearSolver):
         mode = self.mode
 
         voi = self.voi
-        if mode=='fwd':
+        if mode == 'fwd':
             sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
         else:
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
@@ -107,24 +118,7 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        # Need a list lf valid interior or owned inputs.
-        # TODO: clean this up
-
-        ls_inputs = {}
-        ls_inputs[voi] = set(system.dpmat[None].keys())
-        data = system._find_all_comps()
-        abs_uvec = {system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None]}
-
-        for comps in data.values():
-            for comp in comps:
-                for intinp_rel in comp.dpmat[None]:
-                    intinp_abs = comp.dpmat[None].metadata(intinp_rel)['pathname']
-                    src = system.connections.get(intinp_abs)
-
-                    if src in abs_uvec:
-                        ls_inputs[voi].add(intinp_abs)
-
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=[voi])
+        system.apply_linear(mode, ls_inputs=self.ls_inputs, vois=[voi])
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

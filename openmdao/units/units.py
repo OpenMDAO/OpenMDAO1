@@ -104,7 +104,7 @@ class PhysicalQuantity(object):
     Addition and subtraction check that the units of the two operands
     are compatible and return the result in the units of the first
     operand.
-    
+
     There are two constructor calling patterns:
 
                 1. PhysicalQuantity(value, unit), where value is any number
@@ -115,18 +115,18 @@ class PhysicalQuantity(object):
                    i.e., '1.5 m/s'. This form is provided for more convenient
                    interactive use.
 
-    Parameters
-    ----------
+    Args
+    ----
     args : tuple of a number, str or tuple of a str
         Either (value, unit) or (value_with_unit,).
     """
-    
+
     #class attributes
     _number = re.compile('[+-]?[0-9]+(\\.[0-9]*)?([eE][+-]?[0-9]+)?')
 
     def __init__(self, *args):
-        
-        
+
+
         if len(args) == 2:
             self.value = args[0]
             self.unit = _find_unit(args[1])
@@ -241,13 +241,13 @@ class PhysicalQuantity(object):
         the combination is equivalent to the original one. The new unit
         must be compatible with the previous unit of the object.
 
-        Parameters
-	---------- 
+        Args
+    	----
 	unit : str
 	    A unit.
-        
+
         Raises
-	------
+	    ------
 	TypeError
 	    If the unit string is not a known unit or a
             unit incompatible with the current one.
@@ -269,18 +269,18 @@ class PhysicalQuantity(object):
         are integers. This is used to convert to irregular unit
         systems like hour/minute/second.
 
-        Parameters
-	----------
+        Args
+	    ----
 	unit : str or sequence of str
 	    One or several units.
-        
+
         Returns
-	-------
+	    -------
 	PhysicalQuantity or tuple of PhysicalQuantity
 	    One or more physical quantities.
-	    
+
         Raises
-	------
+	    ------
 	TypeError
 	    If any of the specified units are not compatible
             with the original unit.
@@ -295,10 +295,10 @@ class PhysicalQuantity(object):
     def in_base_units(self):
         """
         Returns
-	-------
+	    -------
 	PhysicalQuantity
 	    The same quantity converted to base units,
-	    i.e., SI units in most cases. 	    
+	    i.e., SI units in most cases.
         """
         new_value = self.value * self.unit.factor
         num = ''
@@ -322,14 +322,14 @@ class PhysicalQuantity(object):
 
     def is_compatible(self, unit):
         """
-        Parameters
-	---------- 
+        Args
+	    ----
 	unit : str
 	    A unit.
-	     
+
         Returns
-	-------
-	bool  
+	    -------
+	bool
 	    True if the specified unit is compatible with the
             one of the quantity.
         """
@@ -421,28 +421,28 @@ class PhysicalUnit(object):
     A physical unit is defined by a name (possibly composite), a scaling
     factor, and the exponentials of each of the SI base units that enter into
     it. Units can be multiplied, divided, and raised to integer powers.
-    
-    Parameters
-    ----------
+
+    Args
+    ----
     names : dict or str
         A dictionary mapping each name component to its
         associated integer power (e.g., C{{'m': 1, 's': -1}})
         for M{m/s}). As a shorthand, a string may be passed
         which is assigned an implicit power 1.
-       
+
     factor : float
         A scaling factor.
-        
+
     powers : list of int
         The integer powers for each of the nine base units.
-       
+
     offset : float
         An additive offset to the base unit (used only for temperatures).
     """
 
     def __init__(self, names, factor, powers, offset=0):
-        
-        
+
+
         if isinstance(names, str):
             self.names = NumberDict(((names, 1),))
             #self.names[names] = 1;
@@ -537,22 +537,22 @@ class PhysicalUnit(object):
 
     def conversion_factor_to(self, other):
         """
-        Parameters
-	----------
+        Args
+	----
 	other : PhysicalUnit
 	    Another unit.
-        
+
         Returns
-	------- 
-	float  
+	-------
+	float
 	   The conversion factor from this unit to another unit.
-        
+
         Raises
 	------
 	TypeError
 	    If the units are not compatible.
         """
-	
+
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 
@@ -566,22 +566,22 @@ class PhysicalUnit(object):
     # added 1998/09/29 GPW
     def conversion_tuple_to(self, other):
         """
-        Parameters
-	----------
+        Args
+	----
 	other : PhysicalUnit
 	    Another unit.
-        
+
 	Returns
 	-------
 	Tuple with two floats
 	    The conversion factor and offset from this unit to another unit.
-        
+
         Raises
-	------ 
+	------
 	TypeError
 	    If the units are not compatible.
         """
-	
+
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 
@@ -874,8 +874,8 @@ def convert_units(value, units, convunits):
     """Return the given value (given in units) converted
     to convunits.
 
-    Parameters
-    ----------
+    Args
+    ----
     value : float
         Quantity you would like to convert.
 
@@ -896,8 +896,8 @@ def convert_units(value, units, convunits):
 def get_conversion_tuple(src_units, target_units):
     """Return the factor and offset between the 2 compatible units.
 
-    Parameters
-    ----------
+    Args
+    ----
     value : float
         Quantity you would like to convert.
 
@@ -920,4 +920,3 @@ def get_conversion_tuple(src_units, target_units):
 default_lib = open(os.path.join(os.path.dirname(__file__),
                                    'unit_library.ini'))
 import_library(default_lib)
-

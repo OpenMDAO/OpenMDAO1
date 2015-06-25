@@ -45,8 +45,8 @@ class Problem(System):
         """Retrieve unflattened value of named unknown or unconnected
         param variable from the root system.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
              The name of the variable.
 
@@ -59,8 +59,8 @@ class Problem(System):
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
              The name of the variable to set into the unknowns vector.
         """
@@ -231,8 +231,8 @@ class Problem(System):
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_list : list of strings (optional)
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
@@ -275,8 +275,8 @@ class Problem(System):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_list : list of strings (optional)
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
@@ -344,8 +344,8 @@ class Problem(System):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_list : list of strings (optional)
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
@@ -545,8 +545,8 @@ class Problem(System):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
@@ -709,8 +709,8 @@ class Problem(System):
     def check_total_derivatives(self, out_stream=sys.stdout):
         """ Checks total derivatives for problem defined at the top.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
@@ -800,8 +800,8 @@ def _setup_units(connections, params_dict, unknowns_dict):
     Calculate unit conversion factors for any connected
     variables having different units and store them in params_dict.
 
-    Parameters
-    ----------
+    Args
+    ----
     connections : dict
         A dict of target variables (absolute name) mapped
         to the absolute name of their source variable.
@@ -857,8 +857,8 @@ def jac_to_flat_dict(jac):
     """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go
     from [out][in] to [out,in].
 
-    Parameters
-    ----------
+    Args
+    ----
 
     jac : dict of dicts of ndarrays
         Jacobian that comes from calc_gradient when the return_type is 'dict'.
@@ -960,8 +960,8 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     This should only be called using params and unknowns from the
     top level `Group` in the system tree.
 
-    Parameters
-    ----------
+    Args
+    ----
     params_dict : dict
         dictionary of metadata for all parameters in this `Group`
 
@@ -1002,4 +1002,3 @@ def _get_implicit_connections(params_dict, unknowns_dict):
             connections[p] = uabs[0]
 
     return connections
-
