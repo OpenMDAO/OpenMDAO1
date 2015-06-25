@@ -34,9 +34,13 @@ class ExplicitSolver(ScipyGMRES):
         """
         sol_buf = {}
 
+        # Need a list of valid interior or owned inputs for this voi.
+        ls_inputs = system._all_params(None)
+
         # TODO: This solver could probably work with multiple RHS
         for voi, rhs in rhs_mat.items():
             self.voi = None
+            self.ls_inputs[voi] = ls_inputs
 
             #TODO: When to record?
             self.system = system
