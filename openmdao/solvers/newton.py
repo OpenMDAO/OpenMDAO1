@@ -1,4 +1,4 @@
-""" Gauss Seidel non-linear solver that implements a Newton's method."""
+""" Non-linear solver that implements a Newton's method."""
 
 from __future__ import print_function
 
@@ -112,3 +112,4 @@ class Newton(NonLinearSolver):
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
         system.children_solve_nonlinear()
+
