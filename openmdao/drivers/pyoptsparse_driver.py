@@ -148,12 +148,14 @@ class pyOptSparseDriver(Driver):
                                  desc='Set to True to let pyOpt calculate the gradient')
         self.options.add_option('exit_flag', 0,
                                  desc='0 for fail, 1 for ok')
-        self.options.add_option('SNOPT', OptionsDictionary(),
-                                 desc='SNOPT-specific options')
+        # self.options.add_option('SNOPT', OptionsDictionary(),
+        #                          desc='SNOPT-specific options')
 
-        for key,value in _snopt_options.items():
-            default_val, description = value
-            self.options['SNOPT'].add_option(key,default_val,desc=description)
+        self.opt_settings = {}
+
+        # for key,value in _snopt_options.items():
+        #     default_val, description = value
+        #     self.options['SNOPT'].add_option(key,default_val,desc=description)
 
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
                                'pyopt_diff', 'exit_flag', 'SNOPT']
@@ -262,9 +264,8 @@ class pyOptSparseDriver(Driver):
         opt = optname()
 
         #Set optimization options
-        for option, value in self.options[optimizer].items():
-            if value is not None:
-                opt.setOption(option, value)
+        for option, value in self.opt_settings.items():
+            opt.setOption(option, value)
 
         self._problem = problem
 
