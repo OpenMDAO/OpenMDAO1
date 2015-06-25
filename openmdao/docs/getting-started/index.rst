@@ -101,27 +101,27 @@ your machine.  Currently, we are supporting two different versions of Python:
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 
-Anaconda or Virtualenv
-++++++++++++++++++++++
+Anaconda
+++++++++
 
-In order to install OpenMDAO, you'll have to install either
+OpenMDAO works best using some kind of Python environment into which you can install it and
+its pre-requisistes. We here at OpenMDAO.org recommend Anaconda, for the cleanest and
+easiest installation experience.  The examples that follow will use Anaconda, but feel
+free to use any type of Python environment (e.g. Virtualenv, Autoenv, etc.) to do the equivalent
+things.
 
  Anaconda_  (version 3.7.4 or higher) is a Python distribution for scientific
  computing that includes Scipy and Numpy, among many other packages.
 
- Virtualenv_ (version 12.1 or higher)
-
 .. _Anaconda: http://continuum.io/downloads
 
-.. _Virtualenv: https://pypi.python.org/pypi/virtualenv
 
-These two programs help you to create isolated Python environments into which one may install OpenMDAO.
+If you're not familiar with an isolated Python environment, Anaconda (and products like
+it) helps you to create a space into which one may install OpenMDAO.
 These environments are kind of like sandboxes into which you can install many different
-packages without dirtying your machine's system level.  Or, another way of thinking of it
+packages without "dirtying" your machine's system level.  Or, another way of thinking of it
 might be that you can install a piece of software into an isolated environment so
 that changes to system-level libraries won't "break" the installation of said software.
-We here at OpenMDAO.org recommend Anaconda, for the cleanest and easiest installation experience.
-Choose one of these tools and install it.
 
 
 Git
@@ -181,24 +181,28 @@ If no `== [version]` is given, the latest version will be installed.
 
 This example creates a conda env named "openmdao" (you can name the env whatever you'd
 like, for our examples, we'll use "openmdao") with Python 2.7.9 and the latest
-numpy and scipy:
+numpy and scipy. We will also need a pip installed within the conda env for use
+in the installation of OpenMDAO:
+
 ::
 
-    conda create --name openmdao python==2.7.9 numpy scipy
-
-Virtualenv
-----------
+    conda create --name openmdao python==2.7.9 numpy scipy pip
 
 
+NOTE: Anything not installed at the time of creation can be added to the environment
+later by simply doing, from and activated prompt:
 
+::
+
+    conda install `[item]`
 
 Activate Environment
 ++++++++++++++++++++
 
-Once you have created a virtualenv or conda environment, you need to activate it
+Once you have created an Anaconda environment, you need to activate it
 in order to enter into it and use it. To leave the environment, you'll need to
 deactivate.  Each product has different, platform-specific ways of achieving these
-things.
+things, here's how it works in Anaconda.
 
 Anaconda
 --------
@@ -217,21 +221,6 @@ Linux/OSX:
     source activate openmdao
     source deactivate
 
-Virtenv
--------
-
-Windows:
-&&&&&&&&
-::
-
-
-
-Linux/OSX:
-&&&&&&&&&&
-::
-
-
-
 
 Git the OpenMDAO Source Code
 ++++++++++++++++++++++++++++
@@ -244,11 +233,16 @@ the source code from Github.
 
     git clone http://github.com/OpenMDAO/OpenMDAO-Framework
 
+
+
+
 Install OpenMDAO Using pip
 ++++++++++++++++++++++++++
 
 From your activated environment, from the top level of the OpenMDAO repository,
-you'll want to pip install OpenMDAO into your environment
+you'll want to pip install OpenMDAO into your environment.  The pip that you use
+to do this installation needs to be pointing at the python inside your environment.
+This is why we install pip into the env above.
 
 ::
     pip install -e .
