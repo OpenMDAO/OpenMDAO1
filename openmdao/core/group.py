@@ -732,6 +732,30 @@ class Group(System):
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 
+    def _all_params(self, voi=None):
+        """ Returns the set of all parameters in this system and all subsystems.
+
+        Args
+        ----
+        voi: string
+            Variable of interest, default is None."""
+
+        # TODO: clean this up
+        ls_inputs = set(self.dpmat[voi].keys())
+        data = self._find_all_comps()
+        abs_uvec = {self.dumat[voi].metadata(x)['pathname'] for x in self.dumat[voi]}
+
+        for comps in data.values():
+            for comp in comps:
+                for intinp_rel in comp.dpmat[voi]:
+                    intinp_abs = comp.dpmat[voi].metadata(intinp_rel)['pathname']
+                    src = self.connections.get(intinp_abs)
+
+                    if src in abs_uvec:
+                        ls_inputs.add(intinp_abs)
+
+        return ls_inputs
+
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of the `System` tree to file.
