@@ -104,7 +104,7 @@ class PhysicalQuantity(object):
     Addition and subtraction check that the units of the two operands
     are compatible and return the result in the units of the first
     operand.
-    
+
     There are two constructor calling patterns:
 
                 1. PhysicalQuantity(value, unit), where value is any number
@@ -120,13 +120,11 @@ class PhysicalQuantity(object):
     args : tuple of a number, str or tuple of a str
         Either (value, unit) or (value_with_unit,).
     """
-    
+
     #class attributes
     _number = re.compile('[+-]?[0-9]+(\\.[0-9]*)?([eE][+-]?[0-9]+)?')
 
     def __init__(self, *args):
-        
-        
         if len(args) == 2:
             self.value = args[0]
             self.unit = _find_unit(args[1])
@@ -242,14 +240,14 @@ class PhysicalQuantity(object):
         must be compatible with the previous unit of the object.
 
         Parameters
-	---------- 
-	unit : str
-	    A unit.
-        
+        ----------
+        unit : str
+            A unit.
+
         Raises
-	------
-	TypeError
-	    If the unit string is not a known unit or a
+        ------
+        TypeError
+            If the unit string is not a known unit or a
             unit incompatible with the current one.
         """
         unit = _find_unit(unit)
@@ -270,19 +268,19 @@ class PhysicalQuantity(object):
         systems like hour/minute/second.
 
         Parameters
-	----------
-	unit : str or sequence of str
-	    One or several units.
-        
+        ----------
+        unit : str or sequence of str
+            One or several units.
+
         Returns
-	-------
-	PhysicalQuantity or tuple of PhysicalQuantity
-	    One or more physical quantities.
-	    
+        -------
+        PhysicalQuantity or tuple of PhysicalQuantity
+            One or more physical quantities.
+
         Raises
-	------
-	TypeError
-	    If any of the specified units are not compatible
+        ------
+        TypeError
+            If any of the specified units are not compatible
             with the original unit.
         """
         unit = _find_unit(unit)
@@ -295,10 +293,10 @@ class PhysicalQuantity(object):
     def in_base_units(self):
         """
         Returns
-	-------
-	PhysicalQuantity
-	    The same quantity converted to base units,
-	    i.e., SI units in most cases. 	    
+        -------
+        PhysicalQuantity
+            The same quantity converted to base units,
+            i.e., SI units in most cases.
         """
         new_value = self.value * self.unit.factor
         num = ''
@@ -323,14 +321,14 @@ class PhysicalQuantity(object):
     def is_compatible(self, unit):
         """
         Parameters
-	---------- 
-	unit : str
-	    A unit.
-	     
+        ----------
+        unit : str
+            A unit.
+
         Returns
-	-------
-	bool  
-	    True if the specified unit is compatible with the
+        -------
+        bool
+            True if the specified unit is compatible with the
             one of the quantity.
         """
         unit = _find_unit(unit)
@@ -421,7 +419,7 @@ class PhysicalUnit(object):
     A physical unit is defined by a name (possibly composite), a scaling
     factor, and the exponentials of each of the SI base units that enter into
     it. Units can be multiplied, divided, and raised to integer powers.
-    
+
     Parameters
     ----------
     names : dict or str
@@ -429,20 +427,20 @@ class PhysicalUnit(object):
         associated integer power (e.g., C{{'m': 1, 's': -1}})
         for M{m/s}). As a shorthand, a string may be passed
         which is assigned an implicit power 1.
-       
+
     factor : float
         A scaling factor.
-        
+
     powers : list of int
         The integer powers for each of the nine base units.
-       
+
     offset : float
         An additive offset to the base unit (used only for temperatures).
     """
 
     def __init__(self, names, factor, powers, offset=0):
-        
-        
+
+
         if isinstance(names, str):
             self.names = NumberDict(((names, 1),))
             #self.names[names] = 1;
@@ -538,21 +536,21 @@ class PhysicalUnit(object):
     def conversion_factor_to(self, other):
         """
         Parameters
-	----------
-	other : PhysicalUnit
-	    Another unit.
-        
+        ----------
+        other : PhysicalUnit
+            Another unit.
+
         Returns
-	------- 
-	float  
-	   The conversion factor from this unit to another unit.
-        
+        -------
+        float
+           The conversion factor from this unit to another unit.
+
         Raises
-	------
-	TypeError
-	    If the units are not compatible.
+        ------
+        TypeError
+            If the units are not compatible.
         """
-	
+
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 
@@ -567,21 +565,21 @@ class PhysicalUnit(object):
     def conversion_tuple_to(self, other):
         """
         Parameters
-	----------
-	other : PhysicalUnit
-	    Another unit.
-        
-	Returns
-	-------
-	Tuple with two floats
-	    The conversion factor and offset from this unit to another unit.
-        
+        ----------
+        other : PhysicalUnit
+            Another unit.
+
+        Returns
+        -------
+        Tuple with two floats
+            The conversion factor and offset from this unit to another unit.
+
         Raises
-	------ 
-	TypeError
-	    If the units are not compatible.
+        ------
+        TypeError
+            If the units are not compatible.
         """
-	
+
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
 

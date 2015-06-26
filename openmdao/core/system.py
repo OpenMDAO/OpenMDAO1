@@ -7,6 +7,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
+from openmdao.core.vecwrapper import PlaceholderVecWrapper
 from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
 
@@ -26,6 +27,14 @@ class System(object):
         self._promotes = ()
 
         self.comm = None
+
+        # create placeholders for all of the vectors
+        self.unknowns  = PlaceholderVecWrapper('unknowns')
+        self.resids    = PlaceholderVecWrapper('resids')
+        self.params    = PlaceholderVecWrapper('params')
+        self.dunknowns = PlaceholderVecWrapper('dunknowns')
+        self.dresids   = PlaceholderVecWrapper('dresids')
+        self.dparams   = PlaceholderVecWrapper('dparams')
 
         # dicts of vectors used for parallel solution of multiple RHS
         self.dumat = {}
