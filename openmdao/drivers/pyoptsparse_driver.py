@@ -12,7 +12,6 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
-from openmdao.core.options import OptionsDictionary
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
@@ -47,14 +46,8 @@ class pyOptSparseDriver(Driver):
                                  desc='Set to True to let pyOpt calculate the gradient')
         self.options.add_option('exit_flag', 0,
                                  desc='0 for fail, 1 for ok')
-        # self.options.add_option('SNOPT', OptionsDictionary(),
-        #                          desc='SNOPT-specific options')
 
         self.opt_settings = {}
-
-        # for key,value in _snopt_options.items():
-        #     default_val, description = value
-        #     self.options['SNOPT'].add_option(key,default_val,desc=description)
 
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
                                'pyopt_diff', 'exit_flag', 'SNOPT']
