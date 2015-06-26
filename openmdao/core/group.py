@@ -17,6 +17,7 @@ from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.util.strutil import name_relative_to
 from openmdao.core.mpiwrap import MPI
 #from openmdao.devtools.debug import debug
 
@@ -51,7 +52,7 @@ class Group(System):
         Args
         ----
         name : str
-             the name of the variable to set into the unknowns vector
+             The name of the variable to set into the unknowns vector.
         """
         if self.is_active():
             try:
@@ -60,7 +61,7 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    self.subsystem(subname).params[vname] = val
+                    self._subsystem(subname).params[vname] = val
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
@@ -98,12 +99,12 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    return self.subsystem(subname).params[vname]
+                    return self._subsystem(subname).params[vname]
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
 
-    def subsystem(self, name):
+    def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
@@ -120,8 +121,7 @@ class Group(System):
             A reference to the named subsystem.
         """
         s = self
-        parts = name.split('.')
-        for part in parts:
+        for part in name.split('.'):
             s = s._subsystems[part]
 
         return s
@@ -253,24 +253,24 @@ class Group(System):
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 if p in self._src_idxs:
                     meta['src_indices'] = self._src_idxs[p]
                 self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
 
         return self._params_dict, self._unknowns_dict
 
-    def _var_pathname(self, name, subsystem):
+    def _promoted_name(self, name, subsystem):
         """
         Returns
         -------
         str
-            The pathname of the given variable, based on its promotion status.
+            The promoted name of the given variable.
         """
         if subsystem.promoted(name):
             return name
@@ -386,7 +386,7 @@ class Group(System):
                 # look up the Component that contains the source variable
                 scname = src.rsplit('.', 1)[0]
                 if scname.startswith(mypath):
-                    src_comp = self.subsystem(scname[len(mypath):])
+                    src_comp = self._subsystem(scname[len(mypath):])
                     if isinstance(src_comp, ParamComp):
                         params.append(tgt[len(mypath):])
                 else:
@@ -409,7 +409,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self.subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
+            sub = self._subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
@@ -1028,8 +1028,10 @@ class Group(System):
                 # get the subsystem name from that
                 start = len(self.pathname)+1 if self.pathname else 0
 
-                tgt_sys = param[start:].split('.', 1)[0]
-                src_sys = unknown[start:].split('.', 1)[0]
+                tgt_sys = name_relative_to(self.pathname, param)
+                #param[start:].split('.', 1)[0]
+                src_sys = name_relative_to(self.pathname, unknown)
+                #unknown[start:].split('.', 1)[0]
 
                 for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
@@ -1195,7 +1197,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
 
     pnames = []
     for pathname, meta in var_dict.items():
-        if meta['relative_name'] == var_name:
+        if meta['promoted_name'] == var_name:
             pnames.append(pathname)
 
     if not pnames:

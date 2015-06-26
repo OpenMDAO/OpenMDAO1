@@ -148,7 +148,7 @@ class Component(System):
             else:
                 var_pathname = '.'.join([self.pathname, name])
             _new_params[var_pathname] = meta
-            meta['relative_name'] = name
+            meta['promoted_name'] = name
 
         self._params_dict = _new_params
 
@@ -159,7 +159,7 @@ class Component(System):
             else:
                 var_pathname = '.'.join([self.pathname, name])
             _new_unknowns[var_pathname] = meta
-            meta['relative_name'] = name
+            meta['promoted_name'] = name
         self._unknowns_dict = _new_unknowns
 
         self._post_setup = True

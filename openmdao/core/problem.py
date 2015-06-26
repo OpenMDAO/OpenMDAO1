@@ -194,7 +194,7 @@ class Problem(System):
                         else:
                             for key in p_dict:
                                 metadata = root.params.metadata(key)
-                                if metadata['relative_name'] == param:
+                                if metadata['promoted_name'] == param:
                                     meta = p_dict[metadata['pathname']]
                                     break
 
@@ -212,7 +212,7 @@ class Problem(System):
                         for key in root.unknowns:
                             metadata = root.unknowns.metadata(key)
                             if metadata['pathname'] == unkn:
-                                meta = u_dict[metadata['relative_name']]
+                                meta = u_dict[metadata['promoted_name']]
                                 break
 
                     u_length += meta['size']
@@ -313,7 +313,7 @@ class Problem(System):
                     for key in unknowns:
                         meta = unknowns.metadata(key)
                         if meta['pathname'] == fd_okey:
-                            fd_okey = meta['relative_name']
+                            fd_okey = meta['promoted_name']
                             break
 
                 # FD Input keys are a little funny....
@@ -333,7 +333,7 @@ class Problem(System):
                     if fd_ikey not in params:
                         for key in params:
                             meta = params.metadata(key)
-                            if meta['relative_name'] == fd_ikey:
+                            if meta['promoted_name'] == fd_ikey:
                                 fd_ikey = meta['pathname']
                                 break
 
@@ -608,7 +608,7 @@ class Problem(System):
             states = []
             for u_name, meta in iteritems(comp._unknowns_dict):
                 if meta.get('state'):
-                    states.append(meta['relative_name'])
+                    states.append(meta['promoted_name'])
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
@@ -735,7 +735,7 @@ class Problem(System):
         params = self.root.params
         for param in abs_param_list:
             if param not in self.root.unknowns:
-                param_list.append(params.metadata(param)['relative_name'])
+                param_list.append(params.metadata(param)['promoted_name'])
             else:
                 param_list.append(param)
 
@@ -824,9 +824,9 @@ def _setup_units(connections, params_dict, unknowns_dict):
             scale, offset = get_conversion_tuple(src_unit, tgt_unit)
         except TypeError as err:
             if str(err) == "Incompatible units":
-                msg = "Unit '{s[units]}' in source '{s[relative_name]}' "\
+                msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
                     "is incompatible with unit '{t[units]}' "\
-                    "in target '{t[relative_name]}'.".format(s=smeta, t=tmeta)
+                    "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
                 raise TypeError(msg)
             else:
                 raise
@@ -979,11 +979,11 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     # collect all absolute names that map to each relative name
     abs_unknowns = {}
     for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
+        abs_unknowns.setdefault(u['promoted_name'], []).append(abs_name)
 
     abs_params = {}
     for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['relative_name'], []).append(abs_name)
+        abs_params.setdefault(p['promoted_name'], []).append(abs_name)
 
     # check if any relative names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():
