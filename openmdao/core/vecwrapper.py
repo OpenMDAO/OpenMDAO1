@@ -780,8 +780,8 @@ class PlaceholderVecWrapper(object):
     """
     A placeholder for a dict-like container of a collection of variables.
 
-    Parameters
-    ----------
+    Args
+    ----
     name : str
         the name of the vector
     """
@@ -795,8 +795,8 @@ class PlaceholderVecWrapper(object):
         placeholder, will raise an exception stating that setup() has
         not been called yet.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the value for.
 
