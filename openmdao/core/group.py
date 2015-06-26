@@ -238,16 +238,17 @@ class Group(System):
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
-        """Create dictionaries of metadata for parameters and for unknowns for
-           this `Group` and stores them as attributes of the `Group`. The
-           relative name of subsystem variables with respect to this `Group`
-           system is included in the metadata.
+        """
+        Create dictionaries of metadata for parameters and for unknowns for
+        this `Group` and stores them as attributes of the `Group`. The
+        promoted name of subsystem variables with respect to this `Group`
+        is included in the metadata.
 
-           Returns
-           -------
-           tuple
-               A dictionary of metadata for parameters and for unknowns
-               for all subsystems.
+        Returns
+        -------
+        tuple
+            A dictionary of metadata for parameters and for unknowns
+            for all subsystems.
         """
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
@@ -365,6 +366,12 @@ class Group(System):
         for name, sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
                                relevance=relevance, top_unknowns=top_unknowns)
+
+        # now that all of the vectors and subvecs are allocated, calculate
+        # and cache the ls_inputs.
+        self._ls_inputs = {}
+        for voi, vec in self.dumat.items():
+            self._ls_inputs[voi] = self._all_params(voi)
 
     def _get_fd_params(self):
         """

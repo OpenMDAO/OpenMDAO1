@@ -131,8 +131,8 @@ class LinearGaussSeidel(LinearSolver):
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
-                        ls_inputs[voi] = [x for x in dpmat[voi].keys() \
-                                          if x not in sub.dpmat[voi].keys()]
+                        ls_inputs[voi] = [x for x in dpmat[voi]
+                                             if x not in sub.dpmat[voi]]
 
                     if isinstance(sub, Component):
 
@@ -158,7 +158,7 @@ class LinearGaussSeidel(LinearSolver):
                 norm = 0.0
             else:
                 norm = self._norm(system, mode, rhs_mat)
-                print('Residual:', norm)
+                #print('Residual:', norm)
 
         return sol_buf
 
@@ -184,11 +184,7 @@ class LinearGaussSeidel(LinearSolver):
         else:
             rhs_vec = system.drmat
 
-        ls_inputs = {}
-        for voi in rhs_mat:
-            ls_inputs[voi] = system._all_params(voi)
-
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=rhs_mat.keys())
+        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys())
 
         norm = 0.0
         for voi, rhs in rhs_mat.items():

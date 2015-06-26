@@ -57,7 +57,7 @@ class ScipyGMRES(LinearSolver):
         """
 
         # Need a list of valid interior or owned inputs for this voi.
-        ls_inputs = system._all_params(None)
+        ls_inputs = system._ls_inputs[None]
 
         unknowns_mat = {}
         for voi, rhs in rhs_mat.items():
