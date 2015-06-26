@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from openmdao.core.component import Component
 from openmdao.solvers.solverbase import LinearSolver
-
+from openmdao.devtools.debug import debug
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
@@ -73,7 +73,7 @@ class LinearGaussSeidel(LinearSolver):
                 for name, sub in system.subsystems(local=True):
 
                     #for voi in vois:
-                        #print(name, dpmat[voi].keys(), dumat[voi].keys())
+                        #print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
 
                     for voi in vois:
                         #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
