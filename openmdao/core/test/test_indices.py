@@ -23,8 +23,8 @@ class TestIndices(unittest.TestCase):
         root.add('C1', ExecComp('y = x * 2.', y=np.zeros(size/2), x = np.zeros(size/2)))
         root.add('C2', ExecComp('y = x * 3.', y=np.zeros(size/2), x = np.zeros(size/2)))
 
-        root.connect('P1.x', "C1.x", src_indices=list(range(size/2)))
-        root.connect('P1.x', "C2.x", src_indices=list(range(size/2, size)))
+        root.connect('P1.x', "C1.x", src_indices=list(range(int(size/2))))
+        root.connect('P1.x', "C2.x", src_indices=list(range(int(size/2), size)))
 
         prob.setup()
 

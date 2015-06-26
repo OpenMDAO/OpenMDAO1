@@ -341,10 +341,10 @@ class Group(System):
 
         self._setup_data_transfer(my_params, relevance, None)
 
-        ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
-        ##       an array of that size, and sub-allocate from that for all relevant subvecs
-        ##       We should never need more memory than the largest sized collection of parallel
-        ##       vecs.
+        # TODO: determine the size of the largest grouping of parallel subvecs, allocate
+        #       an array of that size, and sub-allocate from that for all relevant subvecs
+        #       We should never need more memory than the largest sized collection of parallel
+        #       vecs.
 
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():

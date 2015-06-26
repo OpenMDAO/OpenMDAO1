@@ -77,6 +77,7 @@ class pyOptSparseDriver(Driver):
         # Add all parameters
         param_meta = self.get_param_metadata()
         param_list = param_meta.keys()
+        param_vals = self.get_params()
         for name, meta in param_meta.items():
 
             vartype = 'c'
@@ -84,7 +85,7 @@ class pyOptSparseDriver(Driver):
             upper_bounds = meta['high']
             n_vals = meta['size']
 
-            opt_prob.addVarGroup(name, n_vals, type=vartype,
+            opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
                                  lower=lower_bounds, upper=upper_bounds)
             param_list.append(name)
 
