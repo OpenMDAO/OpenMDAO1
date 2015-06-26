@@ -13,7 +13,6 @@ from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 
-
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
@@ -48,8 +47,10 @@ class pyOptSparseDriver(Driver):
         self.options.add_option('exit_flag', 0,
                                  desc='0 for fail, 1 for ok')
 
+        self.opt_settings = {}
+
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                               'pyopt_diff', 'exit_flag']
+                               'pyopt_diff', 'exit_flag' ]
 
         self.pyOpt_solution = None
 
@@ -154,10 +155,8 @@ class pyOptSparseDriver(Driver):
         optname = vars()[optimizer]
         opt = optname()
 
-        # Set optimization options
-        for option, value in self.options.items():
-            if option in self.pyopt_excludes:
-                continue
+        #Set optimization options
+        for option, value in self.opt_settings.items():
             opt.setOption(option, value)
 
         self._problem = problem
