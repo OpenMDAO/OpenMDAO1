@@ -83,6 +83,7 @@ class Newton(NonLinearSolver):
             unknowns.vec[:] += alpha*result.vec[:]
 
             # Just evaluate the model with the new points
+            system.children_solve_nonlinear()
             system.apply_nonlinear(params, unknowns, resids)
 
             f_norm = resids.norm()
