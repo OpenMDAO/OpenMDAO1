@@ -765,12 +765,9 @@ class TgtVecWrapper(VecWrapper):
             in this `VecWrapper`.
         """
         psizes = OrderedDict()
-        i = 0
         for name, m in self.items():
             if m.get('pass_by_obj') or not m.get('owned'):
                 continue
-            m['v_id'] = i  # store the variable index for later lookup in local_param_sizes
-            i += 1
             if m.get('remote'):
                 psizes[name] = 0
             else:
