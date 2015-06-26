@@ -32,7 +32,6 @@ class ScipyGMRES(LinearSolver):
         self.system = None
         self.voi = None
         self.mode = None
-        self.ls_inputs = {}
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -56,16 +55,11 @@ class ScipyGMRES(LinearSolver):
         dict of ndarray : Solution vectors
         """
 
-        # Need a list of valid interior or owned inputs for this voi.
-        ls_inputs = system._ls_inputs[None]
-
         unknowns_mat = {}
         for voi, rhs in rhs_mat.items():
 
             # Scipy can only handle one right-hand-side at a time.
             self.voi = voi
-
-            self.ls_inputs[voi] = ls_inputs
 
             n_edge = len(rhs)
             A = LinearOperator((n_edge, n_edge),
@@ -119,7 +113,7 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.apply_linear(mode, ls_inputs=self.ls_inputs, vois=[voi])
+        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

@@ -98,13 +98,15 @@ class Component(System):
 
         match = namecheck_rgx.match(name)
         if match is None or match.group() != name:
-            raise NameError("%s: '%s' is not a valid variable name." % (self.pathname, name))
+            raise NameError("%s: '%s' is not a valid variable name." %
+                               (self.pathname, name))
 
     def setup_param_indices(self):
         """
-        Override this in your Component to set specific indices that will be pulled from
-        source variables to fill your parameters.  This method should set the 'src_indices'
-        metadata for any parameters that require it.
+        Override this in your Component to set specific indices that will be
+        pulled from source variables to fill your parameters.  This method
+        should set the 'src_indices' metadata for any parameters that require
+        it.
         """
         pass
 
@@ -133,7 +135,8 @@ class Component(System):
         return [k for k,m in self.unknowns.items() if not m.get('pass_by_obj')]
 
     def _setup_variables(self):
-        """Returns our params and unknowns dictionaries, re-keyed
+        """
+        Returns our params and unknowns dictionaries, re-keyed
         to use absolute variable names, and stores them
         as attributes of the component
         """
@@ -160,6 +163,7 @@ class Component(System):
                 var_pathname = '.'.join([self.pathname, name])
             _new_unknowns[var_pathname] = meta
             meta['promoted_name'] = name
+
         self._unknowns_dict = _new_unknowns
 
         self._post_setup = True
@@ -205,8 +209,8 @@ class Component(System):
                 for voi in vois:
                     self._create_views(top_unknowns, parent, [], relevance, voi)
 
-        # we don't get non deriv vecs (u, p, r) unless we have a None group, so force
-        # their creation here
+        # we don't get non-deriv vecs (u, p, r) unless we have a None group,
+        # so force their creation here
         self._create_views(top_unknowns, parent, [], relevance, None)
 
         # create params vec entries for any unconnected params
