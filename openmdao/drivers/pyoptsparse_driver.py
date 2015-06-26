@@ -50,7 +50,7 @@ class pyOptSparseDriver(Driver):
         self.opt_settings = {}
 
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                               'pyopt_diff', 'exit_flag', 'SNOPT']
+                               'pyopt_diff', 'exit_flag' ]
 
         self.pyOpt_solution = None
 
