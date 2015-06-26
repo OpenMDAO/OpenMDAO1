@@ -18,7 +18,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 from openmdao.core.mpiwrap import MPI
-from openmdao.devtools.debug import debug
+#from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -346,10 +346,8 @@ class Group(System):
         ##       We should never need more memory than the largest sized collection of parallel
         ##       vecs.
 
-        debug("'%s': SETTING UP VOI VECS and XFERS" % self.pathname)
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():
-            debug("group: %s,  vois: %s" % (group, vois))
             if group is not None:
                     for voi in vois:
                         if parent is None:
@@ -358,7 +356,6 @@ class Group(System):
                             self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
                         self._setup_data_transfer(my_params, relevance, voi)
-        debug("'%s': VOI SETUP DONE" % self.pathname)
 
         # convert any src_indices to index arrays
         for pname, meta in self._params_dict.items():
@@ -970,15 +967,11 @@ class Group(System):
 
         # FIXME: if we switch to push scatters, this check will flip
         if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
-            print("NO LOCAL var. %s mode: %s, p remote: %s, u remote: %s, voi: %s" %
-                  (str((uname,pname)), mode,pmeta.get('remote'), umeta.get('remote'), var_of_interest))
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if not self._relevance.is_relevant(var_of_interest, uname) or \
            not self._relevance.is_relevant(var_of_interest, pname):
-            print("VAR not RELEVANT: %s  %s %s" % ((uname,pname),self._relevance.is_relevant(var_of_interest, uname),
-                                            self._relevance.is_relevant(var_of_interest, pname)))
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if self.comm is None:
@@ -1064,13 +1057,13 @@ class Group(System):
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
-                    print("fwd: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
+                    #print("fwd: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
 
                     # reverse
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                          var_of_interest, 'rev')
 
-                    print("rev: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
+                    #print("rev: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
 
                     rev_vec_conns.append((prelname, urelname))
                     rev_src_idx_list.append(sidxs)
@@ -1079,7 +1072,7 @@ class Group(System):
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
-                debug("'%s': creating xfer %s" % (self.pathname, str((tgt_sys, mode, var_of_interest))))
+                #debug("'%s': creating xfer %s" % (self.pathname, str((tgt_sys, mode, var_of_interest))))
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
                     self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
@@ -1103,7 +1096,7 @@ class Group(System):
                     full_byobjs.extend(byobjs)
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-            debug("'%s': creating xfer %s" % (self.pathname, str(('', mode, var_of_interest))))
+            #debug("'%s': creating xfer %s" % (self.pathname, str(('', mode, var_of_interest))))
             self._data_xfer[('', mode, var_of_interest)] = \
                 self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
@@ -1134,9 +1127,9 @@ class Group(System):
         x = self._data_xfer.get((target_sys, mode, var_of_interest))
         if x is not None:
             if deriv:
-                debug("xfer: '%s': target: %s, mode: %s, voi: %s, du: %s, dp: %s" %
-                       (self.pathname, target_sys, mode, var_of_interest, self.dumat[var_of_interest].vec,
-                        self.dpmat[var_of_interest].vec))
+                #debug("xfer: '%s': target: %s, mode: %s, voi: %s, du: %s, dp: %s" %
+                #       (self.pathname, target_sys, mode, var_of_interest, self.dumat[var_of_interest].vec,
+                #       self.dpmat[var_of_interest].vec))
                 x.transfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                            mode, deriv=True)
             else:
@@ -1211,7 +1204,7 @@ class Group(System):
             for v in all_locals[rank]:
                 if v not in ranks:
                     ranks[v] = rank
-                    print("%s owned by rank %d" % (v, rank))
+                    #print("%s owned by rank %d" % (v, rank))
 
         return ranks
 

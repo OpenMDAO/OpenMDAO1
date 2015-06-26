@@ -377,8 +377,6 @@ class Problem(System):
         # Call arg > ln_solver option > auto-detect
         mode = self._mode(mode, param_list, unknown_list)
 
-        debug("MODE: %s" % mode)
-
         # Prepare model for calculation
         root.clear_dparams()
         for names in root._relevance.vars_of_interest(mode):
@@ -455,7 +453,6 @@ class Problem(System):
         # If Adjoint mode, solve linear system for each unknown
         j = 0
         for params in voi_sets:
-            debug("params:",str(params))
             rhs = {}
             voi_idxs = {}
 
@@ -491,7 +488,7 @@ class Problem(System):
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        print("setting %s to 1.0 in rank %d" % (voi, iproc))
+                        #print("setting %s to 1.0 in rank %d" % (voi, iproc))
                         rhs[vkey][voi_idxs[vkey][i]] = 1.0
 
                 # Solve the linear system

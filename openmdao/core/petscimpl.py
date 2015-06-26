@@ -12,9 +12,10 @@ from petsc4py import PETSc
 
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
-from openmdao.devtools.debug import debug
 
 trace = os.environ.get('TRACE_PETSC')
+if trace:
+    from openmdao.devtools.debug import debug
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
@@ -301,22 +302,22 @@ class PetscDataXfer(DataXfer):
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
             if trace:
-                for u,v in self.vec_conns:
-                    debug("'%s': reverse scattering %s --> %s  %s --> %s" %
-                            (srcvec.pathname, u, v, self.tgt_idxs, self.src_idxs))
-                debug("%s: srcvec, tgtvec = \n%s\n%s" % (srcvec.pathname,
-                                                         srcvec.petsc_vec.array,
-                                                         tgtvec.petsc_vec.array))
+                conns = ['%s <-- %s' % (u,v) for u,v in self.vec_conns]
+                debug("'%s': rev scatter %s  %s <-- %s" %
+                            (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
+                debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
+                                                        srcvec.petsc_vec.array,
+                                                        tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
         else:
             # forward mode, source to target including pass_by_object
             if trace:
-                for u,v in self.vec_conns:
-                    debug("'%s': scattering %s --> %s  %s --> %s" %
-                            (srcvec.pathname, v, u, self.src_idxs, self.tgt_idxs))
-                debug("%s: srcvec, tgtvec = \n%s\n%s" % (srcvec.pathname,
-                                                         srcvec.petsc_vec.array,
-                                                         tgtvec.petsc_vec.array))
+                conns = ['%s --> %s' % (u,v) for u,v in self.vec_conns]
+                debug("'%s': fwd scatter %s  %s --> %s" %
+                            (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
+                debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
+                                                        srcvec.petsc_vec.array,
+                                                        tgtvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
             if trace: debug("scatter done")
 

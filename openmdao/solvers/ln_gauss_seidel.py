@@ -72,8 +72,8 @@ class LinearGaussSeidel(LinearSolver):
 
                 for name, sub in system.subsystems(local=True):
 
-                    for voi in vois:
-                        print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
+                    #for voi in vois:
+                        #print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
 
                     for voi in vois:
                         #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
