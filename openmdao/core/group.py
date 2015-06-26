@@ -18,6 +18,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 from openmdao.core.mpiwrap import MPI
+from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -345,8 +346,10 @@ class Group(System):
         ##       We should never need more memory than the largest sized collection of parallel
         ##       vecs.
 
+        debug("'%s': SETTING UP VOI VECS and XFERS" % self.pathname)
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():
+            debug("group: %s,  vois: %s" % (group, vois))
             if group is not None:
                     for voi in vois:
                         if parent is None:
@@ -355,6 +358,7 @@ class Group(System):
                             self._create_views(top_unknowns, parent, my_params, relevance, voi)
 
                         self._setup_data_transfer(my_params, relevance, voi)
+        debug("'%s': VOI SETUP DONE" % self.pathname)
 
         # convert any src_indices to index arrays
         for pname, meta in self._params_dict.items():
@@ -1075,8 +1079,10 @@ class Group(System):
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
+                debug("'%s': creating xfer %s" % (self.pathname, str((tgt_sys, mode, var_of_interest))))
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                                                        src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns)
 
         # create a DataXfer object that combines all of the
@@ -1097,8 +1103,10 @@ class Group(System):
                     full_byobjs.extend(byobjs)
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
+            debug("'%s': creating xfer %s" % (self.pathname, str(('', mode, var_of_interest))))
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                                                    src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
@@ -1126,6 +1134,9 @@ class Group(System):
         x = self._data_xfer.get((target_sys, mode, var_of_interest))
         if x is not None:
             if deriv:
+                debug("xfer: '%s': target: %s, mode: %s, voi: %s, du: %s, dp: %s" %
+                       (self.pathname, target_sys, mode, var_of_interest, self.dumat[var_of_interest].vec,
+                        self.dpmat[var_of_interest].vec))
                 x.transfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                            mode, deriv=True)
             else:

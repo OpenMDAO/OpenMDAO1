@@ -9,6 +9,7 @@ import numpy as np
 
 from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
+from openmdao.devtools.debug import debug
 
 
 class System(object):

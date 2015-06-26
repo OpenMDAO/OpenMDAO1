@@ -373,6 +373,12 @@ class Problem(System):
         params = root.params
         iproc = root.comm.rank
 
+        # Respect choice of mode based on precedence.
+        # Call arg > ln_solver option > auto-detect
+        mode = self._mode(mode, param_list, unknown_list)
+
+        debug("MODE: %s" % mode)
+
         # Prepare model for calculation
         root.clear_dparams()
         for names in root._relevance.vars_of_interest(mode):
@@ -385,10 +391,6 @@ class Problem(System):
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
-
-        # Respect choice of mode based on precedence.
-        # Call arg > ln_solver option > auto-detect
-        mode = self._mode(mode, param_list, unknown_list)
 
         # Initialize Jacobian
         if return_format == 'dict':
