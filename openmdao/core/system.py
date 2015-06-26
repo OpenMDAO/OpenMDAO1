@@ -59,8 +59,8 @@ class System(object):
         """
         Return the variable or subsystem of the given name from this system.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The name of the variable or subsystem.
 
@@ -77,8 +77,8 @@ class System(object):
         """Determine if the given variable name is being promoted from this
         `System`.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The name of a variable, relative to this `System`.
 
@@ -146,7 +146,7 @@ class System(object):
     def apply_nonlinear(self, params, unknowns, resids):
         pass
 
-    def solve_linear(self, rhs, params, unknowns, mode="fwd"):
+    def solve_linear(self, params, unknowns, vois, mode="fwd"):
         pass
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):
@@ -176,8 +176,8 @@ class System(object):
         """
         Assign communicator to this `System` and all of its subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
@@ -201,8 +201,8 @@ class System(object):
         """Finite difference across all unknowns in this system w.r.t. all
         params.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -450,8 +450,8 @@ class System(object):
         A manager of the data transfer of a possibly distributed collection of
         variables.  The variables are based on views into an existing VarManager.
 
-        Parameters
-        ----------
+        Args
+        ----
         top_unknowns : `VecWrapper`
             The `Problem` level unknowns `VecWrapper`.
 
@@ -559,8 +559,8 @@ class System(object):
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
-    Parameters
-    ----------
+    Args
+    ----
     unknowns : `VecWrapper`
         A dict-like object containing variables keyed using relative names.
 

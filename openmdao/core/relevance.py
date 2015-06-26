@@ -73,13 +73,15 @@ class Relevance(object):
             return True
         return varname in self.relevant[var_of_interest]
 
-    def vars_of_interest(self):
-        if self.mode == 'fwd':
-            return iter(self.inputs)
-        elif self.mode == 'rev':
-            return iter(self.outputs)
+    def vars_of_interest(self, mode=None):
+        if mode is None:
+            mode = self.mode
+        if mode == 'fwd':
+            return self.inputs
+        elif mode == 'rev':
+            return self.outputs
         else:
-            return iter(self.inputs+self.outputs)
+            return self.inputs+self.outputs
 
     def _setup_graph(self, connections):
         """
@@ -121,8 +123,8 @@ class Relevance(object):
 
     def _get_relevant_vars(self, g):
         """
-        Parameters
-        ----------
+        Args
+        ----
         g : nx.DiGraph
             A graph of variable dependencies.
 
