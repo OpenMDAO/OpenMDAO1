@@ -1031,43 +1031,30 @@ class Group(System):
                 tgt_sys = param[start:].split('.', 1)[0]
                 src_sys = unknown[start:].split('.', 1)[0]
 
-                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+                for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
+                    src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
+                        xfer_dict.setdefault((sname, mode), ([],[],[],[]))
 
-                rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
-                    xfer_dict.setdefault((src_sys, 'rev'), ([],[],[],[]))
+                    urelname = self.unknowns.get_relative_varname(unknown)
+                    prelname = self.params.get_relative_varname(param)
 
-                urelname = self.unknowns.get_relative_varname(unknown)
-                prelname = self.params.get_relative_varname(param)
-
-                if self.unknowns.metadata(urelname).get('pass_by_obj'):
-                    byobj_conns.append((prelname, urelname))
-                else: # pass by vector
-                    #forward
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         var_of_interest, 'fwd')
-                    vec_conns.append((prelname, urelname))
-                    src_idx_list.append(sidxs)
-                    dest_idx_list.append(didxs)
-
-                    #print("fwd: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
-
-                    # reverse
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         var_of_interest, 'rev')
-
-                    #print("rev: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
-
-                    rev_vec_conns.append((prelname, urelname))
-                    rev_src_idx_list.append(sidxs)
-                    rev_dest_idx_list.append(didxs)
+                    if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                        # rev is for derivs only, so no by_obj passing needed
+                        if mode == 'fwd':
+                            byobj_conns.append((prelname, urelname))
+                    else: # pass by vector
+                        sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                             var_of_interest, mode)
+                        vec_conns.append((prelname, urelname))
+                        src_idx_list.append(sidxs)
+                        dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
-                #debug("'%s': creating xfer %s" % (self.pathname, str((tgt_sys, mode, var_of_interest))))
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                        self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns)
 
@@ -1089,9 +1076,9 @@ class Group(System):
                     full_byobjs.extend(byobjs)
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-            #debug("'%s': creating xfer %s" % (self.pathname, str(('', mode, var_of_interest))))
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                    self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs)
 
@@ -1120,9 +1107,6 @@ class Group(System):
         x = self._data_xfer.get((target_sys, mode, var_of_interest))
         if x is not None:
             if deriv:
-                #debug("xfer: '%s': target: %s, mode: %s, voi: %s, du: %s, dp: %s" %
-                #       (self.pathname, target_sys, mode, var_of_interest, self.dumat[var_of_interest].vec,
-                #       self.dpmat[var_of_interest].vec))
                 x.transfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                            mode, deriv=True)
             else:
