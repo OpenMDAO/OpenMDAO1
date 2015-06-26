@@ -434,7 +434,7 @@ class Problem(System):
                     break
 
         # Add any variables that the user "forgot". TODO: This won't be
-        # necessary when we have an API to automatically generated the
+        # necessary when we have an API to automatically generate the
         # IOI and OOI.
         flat_voi = [item for sublist in all_vois for item in sublist]
         for items in input_list:
