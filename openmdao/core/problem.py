@@ -502,7 +502,7 @@ class Problem(System):
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
                     else:
-                        vkey = voi
+                        vkey = param
 
                     i = 0
                     for item in output_list:

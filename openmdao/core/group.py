@@ -741,21 +741,20 @@ class Group(System):
         Args
         ----
         voi: string
-            Variable of interest, default is None."""
+            Variable of interest, default is None.
+        """
 
         # TODO: clean this up
         ls_inputs = set(self.dpmat[voi].keys())
-        data = self._find_all_comps()
         abs_uvec = {self.dumat[voi].metadata(x)['pathname'] for x in self.dumat[voi]}
 
-        for comps in data.values():
-            for comp in comps:
-                for intinp_rel in comp.dpmat[voi]:
-                    intinp_abs = comp.dpmat[voi].metadata(intinp_rel)['pathname']
-                    src = self.connections.get(intinp_abs)
+        for cname, comp in self.components(local=True, recurse=True):
+            for intinp_rel in comp.dpmat[voi]:
+                intinp_abs = comp.dpmat[voi].metadata(intinp_rel)['pathname']
+                src = self.connections.get(intinp_abs)
 
-                    if src in abs_uvec:
-                        ls_inputs.add(intinp_abs)
+                if src in abs_uvec:
+                    ls_inputs.add(intinp_abs)
 
         return ls_inputs
 

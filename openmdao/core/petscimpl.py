@@ -315,9 +315,10 @@ class PetscDataXfer(DataXfer):
                 conns = ['%s --> %s' % (u,v) for u,v in self.vec_conns]
                 debug("'%s': fwd scatter %s  %s --> %s" %
                             (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
-                debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
-                                                        srcvec.petsc_vec.array,
-                                                        tgtvec.petsc_vec.array))
+                debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
+                                                            srcvec.petsc_vec.array,
+                                                            srcvec.pathname,
+                                                            tgtvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
             if trace: debug("scatter done")
 
