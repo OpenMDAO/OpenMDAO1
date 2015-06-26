@@ -88,9 +88,6 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
-        self._set_root_rank(params_dict)
-        self._set_root_rank(unknowns_dict)
-
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
@@ -374,6 +371,11 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
+        iproc = root.comm.rank
+
+        # Respect choice of mode based on precedence.
+        # Call arg > ln_solver option > auto-detect
+        mode = self._mode(mode, param_list, unknown_list)
 
         # Prepare model for calculation
         root.clear_dparams()
@@ -387,10 +389,6 @@ class Problem(System):
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
-
-        # Respect choice of mode based on precedence.
-        # Call arg > ln_solver option > auto-detect
-        mode = self._mode(mode, param_list, unknown_list)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -449,20 +447,18 @@ class Problem(System):
 
         #print(voi_sets)
 
+        voi_srcs = {}
+
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         j = 0
         for params in voi_sets:
-
             rhs = {}
             voi_idxs = {}
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                if len(params) == 1:
-                    vkey = None
-                else:
-                    vkey = voi
+                vkey = voi if len(params) > 1 else None
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -470,12 +466,14 @@ class Problem(System):
                 if voi in duvec:
                     in_size, in_idxs = duvec.get_local_idxs(voi)
                     voi_idxs[vkey] = in_idxs
+                    voi_srcs[vkey] = voi
                 else:
                     try:
                         param_src = root.connections[voi]
                     except KeyError:
                         raise KeyError("'%s' is not connected to an unknown." % item)
 
+                    voi_srcs[vkey] = param_src
                     param_src = duvec.get_relative_varname(param_src)
                     in_size, in_idxs = duvec.get_local_idxs(param_src)
                     voi_idxs[vkey] = in_idxs
@@ -486,8 +484,12 @@ class Problem(System):
 
             for i in range(len(in_idxs)):
 
-                for voi in rhs:
-                    rhs[voi][voi_idxs[voi][i]] = 1.0
+                for voi in params:
+                    vkey = voi if len(params) > 1 else None
+                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
+                        #print("setting %s to 1.0 in rank %d" % (voi, iproc))
+                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
@@ -500,7 +502,7 @@ class Problem(System):
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
                     else:
-                        vkey = voi
+                        vkey = param
 
                     i = 0
                     for item in output_list:
@@ -792,31 +794,6 @@ class Problem(System):
             # TODO : Only Linear GS is supported on sub
 
         return mode
-
-    def _set_root_rank(self, vdict):
-        """
-        Determine the 'owning' rank of each variable and update the metadata
-        for that variable. The owning rank is the lowest rank where the
-        variable is local.
-
-        Parameters
-        ----------
-        vdict : OrderedDict
-            A variable metadata dictionary.
-        """
-
-        local_vars = [k for k,m in vdict.items() if not m.get('remote')]
-
-        if MPI:
-            all_locals = self.root.comm.allgather(local_vars)
-        else:
-            all_locals = [local_vars]
-
-        for v,meta in vdict.items():
-            for rank, locvars in enumerate(all_locals):
-                if v in locvars:
-                    meta['rank'] = rank
-                    break
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """

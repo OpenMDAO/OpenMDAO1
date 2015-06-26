@@ -347,7 +347,10 @@ class FanIn(Group):
 
 
 class FanInGrouped(Group):
-    """ Topology where two comps feed a single comp."""
+    """
+    Topology where two comps in a Group feed a single comp
+    outside of that Group.
+    """
 
     def __init__(self):
         super(FanInGrouped, self).__init__()
