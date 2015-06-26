@@ -419,9 +419,9 @@ class Group(System):
         """
         Returns
         -------
-            dict
-                Explicit connections in this `Group`, represented as a mapping
-                from the pathname of the target to the pathname of the source.
+        dict
+            Explicit connections in this `Group`, represented as a mapping
+            from the pathname of the target to the pathname of the source.
         """
         connections = {}
         for _, sub in self.subgroups():
@@ -430,28 +430,22 @@ class Group(System):
         for tgt, src in self._src.items():
             try:
                 src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(src, self._params_dict, 'params')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_src_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_src_error(src, tgt)
 
             try:
                 for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
                     connections[tgt_pathname] = src_pathname
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_target_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_target_error(src, tgt)
 
@@ -1169,18 +1163,6 @@ class Group(System):
         for _, sub in self.subgroups():
             for solvers in sub._find_all_solvers():
                 yield solvers
-
-    def _find_all_comps(self):
-        """ Recursive function that assembles a dictionary whose keys are Group
-        instances and whose values are lists of Component instances.
-        """
-
-        data = {self:[]}
-        for c_name, c in self.components():
-            data[self].append(c)
-        for sg_name, sg in self.subgroups():
-            data.update(sg._find_all_comps())
-        return data
 
     def _get_owning_ranks(self):
         """

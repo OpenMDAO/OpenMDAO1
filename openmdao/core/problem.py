@@ -571,137 +571,134 @@ class Problem(System):
 
         data = {}
         skip_keys = []
-        model_hierarchy = root._find_all_comps()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for group, comps in model_hierarchy.items():
-            for comp in comps:
+        for cname, comp in root.components(recurse=True):
 
-                # No need to check comps that don't have any derivs.
-                if comp.fd_options['force_fd'] == True:
-                    continue
+            # No need to check comps that don't have any derivs.
+            if comp.fd_options['force_fd'] == True:
+                continue
 
-                # Paramcomps are just clutter too.
-                if isinstance(comp, ParamComp):
-                    continue
+            # Paramcomps are just clutter too.
+            if isinstance(comp, ParamComp):
+                continue
 
-                cname = comp.pathname
-                data[cname] = {}
-                jac_fwd = {}
-                jac_rev = {}
-                jac_fd = {}
+            data[cname] = {}
+            jac_fwd = {}
+            jac_rev = {}
+            jac_fd = {}
 
-                params = comp.params
-                unknowns = comp.unknowns
-                resids = comp.resids
-                dparams = comp.dpmat[voi]
-                dunknowns = comp.dumat[voi]
-                dresids = comp.drmat[voi]
+            params = comp.params
+            unknowns = comp.unknowns
+            resids = comp.resids
+            dparams = comp.dpmat[voi]
+            dunknowns = comp.dumat[voi]
+            dresids = comp.drmat[voi]
 
-                if out_stream is not None:
-                    out_stream.write('-'*(len(cname)+15) + '\n')
-                    out_stream.write("Component: '%s'\n" % cname)
-                    out_stream.write('-'*(len(cname)+15) + '\n')
+            if out_stream is not None:
+                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write("Component: '%s'\n" % cname)
+                out_stream.write('-'*(len(cname)+15) + '\n')
 
-                # Figure out implicit states for this comp
-                states = []
-                for u_name, meta in iteritems(comp._unknowns_dict):
-                    if meta.get('state'):
-                        states.append(meta['relative_name'])
+            # Figure out implicit states for this comp
+            states = []
+            for u_name, meta in iteritems(comp._unknowns_dict):
+                if meta.get('state'):
+                    states.append(meta['relative_name'])
 
-                # Create all our keys and allocate Jacs
-                for p_name in chain(dparams, states):
+            # Create all our keys and allocate Jacs
+            for p_name in chain(dparams, states):
 
-                    dinputs = dunknowns if p_name in states else dparams
-                    p_size = np.size(dinputs[p_name])
+                dinputs = dunknowns if p_name in states else dparams
+                p_size = np.size(dinputs[p_name])
 
-                    # Check dimensions of user-supplied Jacobian
-                    for u_name in unknowns:
+                # Check dimensions of user-supplied Jacobian
+                for u_name in unknowns:
 
-                        u_size = np.size(dunknowns[u_name])
-                        if comp._jacobian_cache is not None:
-
-                            # Go no further if we aren't defined.
-                            if (u_name, p_name) not in comp._jacobian_cache:
-                                skip_keys.append((u_name, p_name))
-                                continue
-
-                            user = comp._jacobian_cache[(u_name, p_name)].shape
-
-                            # User may use floats for scalar jacobians
-                            if len(user) < 2:
-                                user = (user[0], 1)
-
-                            if user[0] != u_size or user[1] != p_size:
-                                msg = "Jacobian in component '{}' between the" + \
-                                " variables '{}' and '{}' is the wrong size. " + \
-                                "It should be {} by {}"
-                                msg = msg.format(cname, p_name, u_name, p_size,
-                                                 u_size)
-                                raise ValueError(msg)
-
-                        jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
-                        jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
-
-                # Reverse derivatives first
-                for u_name in dresids:
                     u_size = np.size(dunknowns[u_name])
+                    if comp._jacobian_cache is not None:
 
-                    # Send columns of identity
-                    for idx in range(u_size):
-                        dresids.vec[:] = 0.0
-                        root.clear_dparams()
-                        dunknowns.vec[:] = 0.0
+                        # Go no further if we aren't defined.
+                        if (u_name, p_name) not in comp._jacobian_cache:
+                            skip_keys.append((u_name, p_name))
+                            continue
 
-                        dresids.flat[u_name][idx] = 1.0
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'rev')
+                        user = comp._jacobian_cache[(u_name, p_name)].shape
 
-                        for p_name in chain(dparams, states):
-                            if (u_name, p_name) in skip_keys:
-                                continue
+                        # User may use floats for scalar jacobians
+                        if len(user) < 2:
+                            user = (user[0], 1)
 
-                            dinputs = dunknowns if p_name in states else dparams
+                        if user[0] != u_size or user[1] != p_size:
+                            msg = "Jacobian in component '{}' between the" + \
+                            " variables '{}' and '{}' is the wrong size. " + \
+                            "It should be {} by {}"
+                            msg = msg.format(cname, p_name, u_name, p_size,
+                                             u_size)
+                            raise ValueError(msg)
 
-                            jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+                    jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
+                    jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
-                # Forward derivatives second
-                for p_name in chain(dparams, states):
+            # Reverse derivatives first
+            for u_name in dresids:
+                u_size = np.size(dunknowns[u_name])
 
-                    dinputs = dunknowns if p_name in states else dparams
-                    p_size = np.size(dinputs[p_name])
+                # Send columns of identity
+                for idx in range(u_size):
+                    dresids.vec[:] = 0.0
+                    root.clear_dparams()
+                    dunknowns.vec[:] = 0.0
 
-                    # Send columns of identity
-                    for idx in range(p_size):
-                        dresids.vec[:] = 0.0
-                        root.clear_dparams()
-                        dunknowns.vec[:] = 0.0
+                    dresids.flat[u_name][idx] = 1.0
+                    comp.apply_linear(params, unknowns, dparams,
+                                      dunknowns, dresids, 'rev')
 
-                        dinputs.flat[p_name][idx] = 1.0
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'fwd')
+                    for p_name in chain(dparams, states):
+                        if (u_name, p_name) in skip_keys:
+                            continue
 
-                        for u_name in dresids:
-                            if (u_name, p_name) in skip_keys:
-                                continue
+                        dinputs = dunknowns if p_name in states else dparams
 
-                            jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                        jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
-                # Finite Difference goes last
-                dresids.vec[:] = 0.0
-                root.clear_dparams()
-                dunknowns.vec[:] = 0.0
-                jac_fd = comp.fd_jacobian(params, unknowns, resids,
-                                          step_size=1e-6)
+            # Forward derivatives second
+            for p_name in chain(dparams, states):
 
-                # Assemble and Return all metrics.
-                _assemble_deriv_data(chain(dparams, states), resids, data[cname],
-                                     jac_fwd, jac_rev, jac_fd, out_stream,
-                                     skip_keys, c_name=cname)
+                dinputs = dunknowns if p_name in states else dparams
+                p_size = np.size(dinputs[p_name])
+
+                # Send columns of identity
+                for idx in range(p_size):
+                    dresids.vec[:] = 0.0
+                    root.clear_dparams()
+                    dunknowns.vec[:] = 0.0
+
+                    dinputs.flat[p_name][idx] = 1.0
+                    comp.apply_linear(params, unknowns, dparams,
+                                      dunknowns, dresids, 'fwd')
+
+                    for u_name in dresids:
+                        if (u_name, p_name) in skip_keys:
+                            continue
+
+                        jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+
+            # Finite Difference goes last
+            dresids.vec[:] = 0.0
+            root.clear_dparams()
+            dunknowns.vec[:] = 0.0
+            jac_fd = comp.fd_jacobian(params, unknowns, resids,
+                                      step_size=1e-6)
+
+            # Assemble and Return all metrics.
+            _assemble_deriv_data(chain(dparams, states), resids, data[cname],
+                                 jac_fwd, jac_rev, jac_fd, out_stream,
+                                 skip_keys, c_name=cname)
 
         return data
 
