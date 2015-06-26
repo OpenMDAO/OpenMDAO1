@@ -57,7 +57,7 @@ class VecWrapper(object):
 
     Attributes
     ----------
-    idx_arr_type : dtype
+    idx_arr_type : dtype, optional
         A dtype indicating how index arrays are to be represented.
         The value 'i' indicates an numpy integer array, other
         implementations, e.g., petsc, will define this differently.
@@ -775,6 +775,38 @@ class TgtVecWrapper(VecWrapper):
 
         return [psizes]
 
+
+class PlaceholderVecWrapper(object):
+    """
+    A placeholder for a dict-like container of a collection of variables.
+
+    Args
+    ----
+    name : str
+        the name of the vector
+    """
+
+    def __init__(self, name=''):
+        self.name = name
+
+    def __getitem__(self, name):
+        """
+        Retrieve unflattened value of named var. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
 
 def idx_merge(idxs):
     """

@@ -450,19 +450,29 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
 
-        self.assertEqual(prob['G2.C1.x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob['G2.G1.C2.y'], 5.5)            # output from ExecComp
-        self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
-        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
+        self.assertEqual(prob['G2.C1.x'], 5.)                 # default output from ParamComp
+        self.assertEqual(prob['G2.G1.C2.y'], 5.5)             # output from ExecComp
+        self.assertEqual(prob.root.G3.C3.params['x'], 0.)     # initial value for a parameter
+        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)  # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)  # initial value for a parameter
 
         # __setitem__
         prob['G2.G1.C2.y'] = 99.
         self.assertEqual(prob['G2.G1.C2.y'], 99.)
 
+    def test_run_before_setup(self):
+        prob = Problem(root=ExampleGroup())
+
+        try:
+            prob.run()
+        except AttributeError as err:
+            msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
 
     def test_basic_run(self):
         prob = Problem(root=ExampleGroup())
