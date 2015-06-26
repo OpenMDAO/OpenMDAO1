@@ -7,7 +7,7 @@ from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.devtools.debug import debug
 from openmdao.solvers.solverbase import LinearSolver
-
+#from openmdao.devtools.debug import debug
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
@@ -96,6 +96,7 @@ class ScipyGMRES(LinearSolver):
 
             #print system.name, 'Linear solution vec', d_unknowns
             self.system = None
+
         return unknowns_mat
 
     def mult(self, arg):

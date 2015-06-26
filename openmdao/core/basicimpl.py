@@ -37,15 +37,21 @@ class BasicImpl(object):
         return TgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(system, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def create_data_xfer(src_vec, tgt_vec,
+                         src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors.
 
         Args
         ----
-        system : `System`
-            The `System` that managers this data transfer.
+        src_vec : `VecWrapper`
+            Source vecwrapper for the transfer.  In rev mode it will be the
+            target.
+
+        tgt_vec : `VecWrapper`
+            Target vecwrapper for the transfer. In rev mode it will be the
+            source.
 
         src_idxs : array
             Indices of the source variables in the source vector.
