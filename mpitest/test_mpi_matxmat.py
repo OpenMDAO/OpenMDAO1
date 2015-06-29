@@ -88,11 +88,32 @@ class MatMatTestCase(MPITestCase):
         # Parallel Groups
         top.driver.add_param('p1.x1')
         top.driver.add_param('p2.x2')
-        top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
         top.driver.add_objective('comp3.y')
+
+        # make sure we can't mix inputs and outputs in parallel sets
+        try:
+            top.driver.group_vars_of_interest(['p1.x1','comp3.y'])
+        except Exception as err:
+            self.assertEqual(str(err),
+               "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
+               "params and ['comp3.y'] are not.")
+        else:
+            self.fail("Exception expected")
+
+        top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
 
         self.assertEqual(top.driver.inputs_of_interest(),
                          [('p1.x1','p2.x2')])
+
+        # make sure we can't add a VOI to multiple groups
+        try:
+            top.driver.group_vars_of_interest(['p1.x1','p3.x3'])
+        except Exception as err:
+            self.assertEqual(str(err),
+               "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
+               "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
+        else:
+            self.fail("Exception expected")
 
         top.setup()
         top.run()

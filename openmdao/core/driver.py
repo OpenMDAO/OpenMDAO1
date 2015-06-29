@@ -110,8 +110,10 @@ class Driver(object):
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
-                    raise RuntimeError("'%s' has already been added to the following set of VOIs: %s" %
-                                         grp)
+                    raise RuntimeError("'%s' cannot be added to VOI set "
+                                       "%s because it already "
+                                       "exists in VOI set: %s" %
+                                         (vname, tuple(vnames), grp))
         param_intsect = set(vnames).intersection(self._params.keys())
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
@@ -158,6 +160,8 @@ class Driver(object):
         param = {}
         param['low'] = low
         param['high'] = high
+        if indices:
+            param['indices'] = indices
 
         self._params[name] = param
 
@@ -218,6 +222,8 @@ class Driver(object):
         # TODO: Check validity of input.
 
         obj = {}
+        if indices:
+            obj['indices'] = indices
         self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):
@@ -279,6 +285,8 @@ class Driver(object):
         con = {}
         con['linear'] = linear
         con['ctype'] = ctype
+        if indices:
+            con['indices'] = indices
         self._cons[name] = con
 
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
