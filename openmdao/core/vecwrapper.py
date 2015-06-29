@@ -57,7 +57,7 @@ class VecWrapper(object):
 
     Attributes
     ----------
-    idx_arr_type : dtype
+    idx_arr_type : dtype, optional
         A dtype indicating how index arrays are to be represented.
         The value 'i' indicates an numpy integer array, other
         implementations, e.g., petsc, will define this differently.
@@ -547,7 +547,7 @@ class SrcVecWrapper(VecWrapper):
         vec_size = 0
         for name, meta in unknowns_dict.items():
             if relevant_vars is None or name in relevant_vars:
-                relname = meta['relative_name']
+                relname = meta['promoted_name']
                 vmeta = self._setup_var_meta(name, meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[relname] = (vec_size, vec_size + vmeta['size'])
@@ -568,7 +568,7 @@ class SrcVecWrapper(VecWrapper):
         if store_byobjs:
             for name, meta in unknowns_dict.items():
                 if (relevant_vars is None or name in relevant_vars) and not meta.get('remote'):
-                    self[meta['relative_name']] = meta['val']
+                    self[meta['promoted_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
         """
@@ -686,7 +686,7 @@ class TgtVecWrapper(VecWrapper):
             newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
-                newmeta['relative_name'] = meta['relative_name']
+                newmeta['promoted_name'] = meta['promoted_name']
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
@@ -775,6 +775,38 @@ class TgtVecWrapper(VecWrapper):
 
         return [psizes]
 
+
+class PlaceholderVecWrapper(object):
+    """
+    A placeholder for a dict-like container of a collection of variables.
+
+    Args
+    ----
+    name : str
+        the name of the vector
+    """
+
+    def __init__(self, name=''):
+        self.name = name
+
+    def __getitem__(self, name):
+        """
+        Retrieve unflattened value of named var. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
 
 def idx_merge(idxs):
     """

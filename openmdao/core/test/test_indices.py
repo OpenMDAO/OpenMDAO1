@@ -13,15 +13,15 @@ from openmdao.test.testutil import assert_rel_error
 
 class TestIndices(unittest.TestCase):
 
-    def test__indices(self):
+    def test_indices(self):
         size = 10
 
         prob = Problem(root=Group())
         root = prob.root
 
         root.add('P1', ParamComp('x', np.zeros(size)))
-        root.add('C1', ExecComp('y = x * 2.', y=np.zeros(size//2), x = np.zeros(size//2)))
-        root.add('C2', ExecComp('y = x * 3.', y=np.zeros(size//2), x = np.zeros(size//2)))
+        root.add('C1', ExecComp('y = x * 2.', y=np.zeros(size//2), x=np.zeros(size//2)))
+        root.add('C2', ExecComp('y = x * 3.', y=np.zeros(size//2), x=np.zeros(size//2)))
 
         root.connect('P1.x', "C1.x", src_indices=list(range(size//2)))
         root.connect('P1.x', "C2.x", src_indices=list(range(size//2, size)))

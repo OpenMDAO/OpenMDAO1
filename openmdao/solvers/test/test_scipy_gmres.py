@@ -12,6 +12,7 @@ from openmdao.components.execcomp import ExecComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
+from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                       FanOutGrouped, \
                                       FanInGrouped, ArrayComp2D
@@ -278,6 +279,48 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
+    def test_sellar_derivs_grouped(self):
+
+        top = Problem()
+        top.root = SellarDerivativesGrouped()
+
+        top.root.mda.nl_solver.options['atol'] = 1e-12
+        top.setup()
+        top.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, top['y1'], 25.58830273, .00001)
+        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+
+        param_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        top.root.fd_options['form'] = 'central'
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
 if __name__ == "__main__":
     unittest.main()

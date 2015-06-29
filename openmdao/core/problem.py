@@ -88,9 +88,6 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
-        self._set_root_rank(params_dict)
-        self._set_root_rank(unknowns_dict)
-
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
@@ -197,7 +194,7 @@ class Problem(System):
                         else:
                             for key in p_dict:
                                 metadata = root.params.metadata(key)
-                                if metadata['relative_name'] == param:
+                                if metadata['promoted_name'] == param:
                                     meta = p_dict[metadata['pathname']]
                                     break
 
@@ -215,7 +212,7 @@ class Problem(System):
                         for key in root.unknowns:
                             metadata = root.unknowns.metadata(key)
                             if metadata['pathname'] == unkn:
-                                meta = u_dict[metadata['relative_name']]
+                                meta = u_dict[metadata['promoted_name']]
                                 break
 
                     u_length += meta['size']
@@ -316,7 +313,7 @@ class Problem(System):
                     for key in unknowns:
                         meta = unknowns.metadata(key)
                         if meta['pathname'] == fd_okey:
-                            fd_okey = meta['relative_name']
+                            fd_okey = meta['promoted_name']
                             break
 
                 # FD Input keys are a little funny....
@@ -336,7 +333,7 @@ class Problem(System):
                     if fd_ikey not in params:
                         for key in params:
                             meta = params.metadata(key)
-                            if meta['relative_name'] == fd_ikey:
+                            if meta['promoted_name'] == fd_ikey:
                                 fd_ikey = meta['pathname']
                                 break
 
@@ -374,6 +371,11 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
+        iproc = root.comm.rank
+
+        # Respect choice of mode based on precedence.
+        # Call arg > ln_solver option > auto-detect
+        mode = self._mode(mode, param_list, unknown_list)
 
         # Prepare model for calculation
         root.clear_dparams()
@@ -387,10 +389,6 @@ class Problem(System):
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
-
-        # Respect choice of mode based on precedence.
-        # Call arg > ln_solver option > auto-detect
-        mode = self._mode(mode, param_list, unknown_list)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -436,7 +434,7 @@ class Problem(System):
                     break
 
         # Add any variables that the user "forgot". TODO: This won't be
-        # necessary when we have an API to automatically generated the
+        # necessary when we have an API to automatically generate the
         # IOI and OOI.
         flat_voi = [item for sublist in all_vois for item in sublist]
         for items in input_list:
@@ -449,20 +447,18 @@ class Problem(System):
 
         #print(voi_sets)
 
+        voi_srcs = {}
+
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         j = 0
         for params in voi_sets:
-
             rhs = {}
             voi_idxs = {}
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                if len(params) == 1:
-                    vkey = None
-                else:
-                    vkey = voi
+                vkey = voi if len(params) > 1 else None
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -470,12 +466,14 @@ class Problem(System):
                 if voi in duvec:
                     in_size, in_idxs = duvec.get_local_idxs(voi)
                     voi_idxs[vkey] = in_idxs
+                    voi_srcs[vkey] = voi
                 else:
                     try:
                         param_src = root.connections[voi]
                     except KeyError:
                         raise KeyError("'%s' is not connected to an unknown." % item)
 
+                    voi_srcs[vkey] = param_src
                     param_src = duvec.get_relative_varname(param_src)
                     in_size, in_idxs = duvec.get_local_idxs(param_src)
                     voi_idxs[vkey] = in_idxs
@@ -486,8 +484,12 @@ class Problem(System):
 
             for i in range(len(in_idxs)):
 
-                for voi in rhs:
-                    rhs[voi][voi_idxs[voi][i]] = 1.0
+                for voi in params:
+                    vkey = voi if len(params) > 1 else None
+                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
+                        #print("setting %s to 1.0 in rank %d" % (voi, iproc))
+                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
@@ -500,7 +502,7 @@ class Problem(System):
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
                     else:
-                        vkey = voi
+                        vkey = param
 
                     i = 0
                     for item in output_list:
@@ -569,137 +571,134 @@ class Problem(System):
 
         data = {}
         skip_keys = []
-        model_hierarchy = root._find_all_comps()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for group, comps in model_hierarchy.items():
-            for comp in comps:
+        for cname, comp in root.components(recurse=True):
 
-                # No need to check comps that don't have any derivs.
-                if comp.fd_options['force_fd'] == True:
-                    continue
+            # No need to check comps that don't have any derivs.
+            if comp.fd_options['force_fd'] == True:
+                continue
 
-                # Paramcomps are just clutter too.
-                if isinstance(comp, ParamComp):
-                    continue
+            # Paramcomps are just clutter too.
+            if isinstance(comp, ParamComp):
+                continue
 
-                cname = comp.pathname
-                data[cname] = {}
-                jac_fwd = {}
-                jac_rev = {}
-                jac_fd = {}
+            data[cname] = {}
+            jac_fwd = {}
+            jac_rev = {}
+            jac_fd = {}
 
-                params = comp.params
-                unknowns = comp.unknowns
-                resids = comp.resids
-                dparams = comp.dpmat[voi]
-                dunknowns = comp.dumat[voi]
-                dresids = comp.drmat[voi]
+            params = comp.params
+            unknowns = comp.unknowns
+            resids = comp.resids
+            dparams = comp.dpmat[voi]
+            dunknowns = comp.dumat[voi]
+            dresids = comp.drmat[voi]
 
-                if out_stream is not None:
-                    out_stream.write('-'*(len(cname)+15) + '\n')
-                    out_stream.write("Component: '%s'\n" % cname)
-                    out_stream.write('-'*(len(cname)+15) + '\n')
+            if out_stream is not None:
+                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write("Component: '%s'\n" % cname)
+                out_stream.write('-'*(len(cname)+15) + '\n')
 
-                # Figure out implicit states for this comp
-                states = []
-                for u_name, meta in iteritems(comp._unknowns_dict):
-                    if meta.get('state'):
-                        states.append(meta['relative_name'])
+            # Figure out implicit states for this comp
+            states = []
+            for u_name, meta in iteritems(comp._unknowns_dict):
+                if meta.get('state'):
+                    states.append(meta['promoted_name'])
 
-                # Create all our keys and allocate Jacs
-                for p_name in chain(dparams, states):
+            # Create all our keys and allocate Jacs
+            for p_name in chain(dparams, states):
 
-                    dinputs = dunknowns if p_name in states else dparams
-                    p_size = np.size(dinputs[p_name])
+                dinputs = dunknowns if p_name in states else dparams
+                p_size = np.size(dinputs[p_name])
 
-                    # Check dimensions of user-supplied Jacobian
-                    for u_name in unknowns:
+                # Check dimensions of user-supplied Jacobian
+                for u_name in unknowns:
 
-                        u_size = np.size(dunknowns[u_name])
-                        if comp._jacobian_cache is not None:
-
-                            # Go no further if we aren't defined.
-                            if (u_name, p_name) not in comp._jacobian_cache:
-                                skip_keys.append((u_name, p_name))
-                                continue
-
-                            user = comp._jacobian_cache[(u_name, p_name)].shape
-
-                            # User may use floats for scalar jacobians
-                            if len(user) < 2:
-                                user = (user[0], 1)
-
-                            if user[0] != u_size or user[1] != p_size:
-                                msg = "Jacobian in component '{}' between the" + \
-                                " variables '{}' and '{}' is the wrong size. " + \
-                                "It should be {} by {}"
-                                msg = msg.format(cname, p_name, u_name, p_size,
-                                                 u_size)
-                                raise ValueError(msg)
-
-                        jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
-                        jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
-
-                # Reverse derivatives first
-                for u_name in dresids:
                     u_size = np.size(dunknowns[u_name])
+                    if comp._jacobian_cache is not None:
 
-                    # Send columns of identity
-                    for idx in range(u_size):
-                        dresids.vec[:] = 0.0
-                        root.clear_dparams()
-                        dunknowns.vec[:] = 0.0
+                        # Go no further if we aren't defined.
+                        if (u_name, p_name) not in comp._jacobian_cache:
+                            skip_keys.append((u_name, p_name))
+                            continue
 
-                        dresids.flat[u_name][idx] = 1.0
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'rev')
+                        user = comp._jacobian_cache[(u_name, p_name)].shape
 
-                        for p_name in chain(dparams, states):
-                            if (u_name, p_name) in skip_keys:
-                                continue
+                        # User may use floats for scalar jacobians
+                        if len(user) < 2:
+                            user = (user[0], 1)
 
-                            dinputs = dunknowns if p_name in states else dparams
+                        if user[0] != u_size or user[1] != p_size:
+                            msg = "Jacobian in component '{}' between the" + \
+                            " variables '{}' and '{}' is the wrong size. " + \
+                            "It should be {} by {}"
+                            msg = msg.format(cname, p_name, u_name, p_size,
+                                             u_size)
+                            raise ValueError(msg)
 
-                            jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+                    jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
+                    jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
-                # Forward derivatives second
-                for p_name in chain(dparams, states):
+            # Reverse derivatives first
+            for u_name in dresids:
+                u_size = np.size(dunknowns[u_name])
 
-                    dinputs = dunknowns if p_name in states else dparams
-                    p_size = np.size(dinputs[p_name])
+                # Send columns of identity
+                for idx in range(u_size):
+                    dresids.vec[:] = 0.0
+                    root.clear_dparams()
+                    dunknowns.vec[:] = 0.0
 
-                    # Send columns of identity
-                    for idx in range(p_size):
-                        dresids.vec[:] = 0.0
-                        root.clear_dparams()
-                        dunknowns.vec[:] = 0.0
+                    dresids.flat[u_name][idx] = 1.0
+                    comp.apply_linear(params, unknowns, dparams,
+                                      dunknowns, dresids, 'rev')
 
-                        dinputs.flat[p_name][idx] = 1.0
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'fwd')
+                    for p_name in chain(dparams, states):
+                        if (u_name, p_name) in skip_keys:
+                            continue
 
-                        for u_name in dresids:
-                            if (u_name, p_name) in skip_keys:
-                                continue
+                        dinputs = dunknowns if p_name in states else dparams
 
-                            jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                        jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
-                # Finite Difference goes last
-                dresids.vec[:] = 0.0
-                root.clear_dparams()
-                dunknowns.vec[:] = 0.0
-                jac_fd = comp.fd_jacobian(params, unknowns, resids,
-                                          step_size=1e-6)
+            # Forward derivatives second
+            for p_name in chain(dparams, states):
 
-                # Assemble and Return all metrics.
-                _assemble_deriv_data(chain(dparams, states), resids, data[cname],
-                                     jac_fwd, jac_rev, jac_fd, out_stream,
-                                     skip_keys, c_name=cname)
+                dinputs = dunknowns if p_name in states else dparams
+                p_size = np.size(dinputs[p_name])
+
+                # Send columns of identity
+                for idx in range(p_size):
+                    dresids.vec[:] = 0.0
+                    root.clear_dparams()
+                    dunknowns.vec[:] = 0.0
+
+                    dinputs.flat[p_name][idx] = 1.0
+                    comp.apply_linear(params, unknowns, dparams,
+                                      dunknowns, dresids, 'fwd')
+
+                    for u_name in dresids:
+                        if (u_name, p_name) in skip_keys:
+                            continue
+
+                        jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+
+            # Finite Difference goes last
+            dresids.vec[:] = 0.0
+            root.clear_dparams()
+            dunknowns.vec[:] = 0.0
+            jac_fd = comp.fd_jacobian(params, unknowns, resids,
+                                      step_size=1e-6)
+
+            # Assemble and Return all metrics.
+            _assemble_deriv_data(chain(dparams, states), resids, data[cname],
+                                 jac_fwd, jac_rev, jac_fd, out_stream,
+                                 skip_keys, c_name=cname)
 
         return data
 
@@ -736,7 +735,7 @@ class Problem(System):
         params = self.root.params
         for param in abs_param_list:
             if param not in self.root.unknowns:
-                param_list.append(params.metadata(param)['relative_name'])
+                param_list.append(params.metadata(param)['promoted_name'])
             else:
                 param_list.append(param)
 
@@ -792,31 +791,6 @@ class Problem(System):
 
         return mode
 
-    def _set_root_rank(self, vdict):
-        """
-        Determine the 'owning' rank of each variable and update the metadata
-        for that variable. The owning rank is the lowest rank where the
-        variable is local.
-
-        Parameters
-        ----------
-        vdict : OrderedDict
-            A variable metadata dictionary.
-        """
-
-        local_vars = [k for k,m in vdict.items() if not m.get('remote')]
-
-        if MPI:
-            all_locals = self.root.comm.allgather(local_vars)
-        else:
-            all_locals = [local_vars]
-
-        for v,meta in vdict.items():
-            for rank, locvars in enumerate(all_locals):
-                if v in locvars:
-                    meta['rank'] = rank
-                    break
-
 def _setup_units(connections, params_dict, unknowns_dict):
     """
     Calculate unit conversion factors for any connected
@@ -850,9 +824,9 @@ def _setup_units(connections, params_dict, unknowns_dict):
             scale, offset = get_conversion_tuple(src_unit, tgt_unit)
         except TypeError as err:
             if str(err) == "Incompatible units":
-                msg = "Unit '{s[units]}' in source '{s[relative_name]}' "\
+                msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
                     "is incompatible with unit '{t[units]}' "\
-                    "in target '{t[relative_name]}'.".format(s=smeta, t=tmeta)
+                    "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
                 raise TypeError(msg)
             else:
                 raise
@@ -1005,11 +979,11 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     # collect all absolute names that map to each relative name
     abs_unknowns = {}
     for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['relative_name'], []).append(abs_name)
+        abs_unknowns.setdefault(u['promoted_name'], []).append(abs_name)
 
     abs_params = {}
     for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['relative_name'], []).append(abs_name)
+        abs_params.setdefault(p['promoted_name'], []).append(abs_name)
 
     # check if any relative names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():

@@ -125,8 +125,6 @@ class PhysicalQuantity(object):
     _number = re.compile('[+-]?[0-9]+(\\.[0-9]*)?([eE][+-]?[0-9]+)?')
 
     def __init__(self, *args):
-
-
         if len(args) == 2:
             self.value = args[0]
             self.unit = _find_unit(args[1])
@@ -242,14 +240,14 @@ class PhysicalQuantity(object):
         must be compatible with the previous unit of the object.
 
         Args
-    	----
-	unit : str
-	    A unit.
+        ----
+        unit : str
+            A unit.
 
         Raises
-	    ------
-	TypeError
-	    If the unit string is not a known unit or a
+        ------
+        TypeError
+            If the unit string is not a known unit or a
             unit incompatible with the current one.
         """
         unit = _find_unit(unit)
@@ -270,19 +268,19 @@ class PhysicalQuantity(object):
         systems like hour/minute/second.
 
         Args
-	    ----
-	unit : str or sequence of str
-	    One or several units.
+        ----
+        unit : str or sequence of str
+            One or several units.
 
         Returns
-	    -------
-	PhysicalQuantity or tuple of PhysicalQuantity
-	    One or more physical quantities.
+        -------
+        PhysicalQuantity or tuple of PhysicalQuantity
+            One or more physical quantities.
 
         Raises
-	    ------
-	TypeError
-	    If any of the specified units are not compatible
+        ------
+        TypeError
+            If any of the specified units are not compatible
             with the original unit.
         """
         unit = _find_unit(unit)
@@ -295,10 +293,10 @@ class PhysicalQuantity(object):
     def in_base_units(self):
         """
         Returns
-	    -------
-	PhysicalQuantity
-	    The same quantity converted to base units,
-	    i.e., SI units in most cases.
+        -------
+        PhysicalQuantity
+            The same quantity converted to base units,
+            i.e., SI units in most cases.
         """
         new_value = self.value * self.unit.factor
         num = ''
@@ -323,14 +321,14 @@ class PhysicalQuantity(object):
     def is_compatible(self, unit):
         """
         Args
-	    ----
-	unit : str
-	    A unit.
+        ----
+        unit : str
+            A unit.
 
         Returns
-	    -------
-	bool
-	    True if the specified unit is compatible with the
+        -------
+        bool
+            True if the specified unit is compatible with the
             one of the quantity.
         """
         unit = _find_unit(unit)
@@ -538,19 +536,19 @@ class PhysicalUnit(object):
     def conversion_factor_to(self, other):
         """
         Args
-	----
-	other : PhysicalUnit
-	    Another unit.
+        ----
+        other : PhysicalUnit
+            Another unit.
 
         Returns
-	-------
-	float
-	   The conversion factor from this unit to another unit.
+        -------
+        float
+           The conversion factor from this unit to another unit.
 
         Raises
-	------
-	TypeError
-	    If the units are not compatible.
+        ------
+        TypeError
+            If the units are not compatible.
         """
 
         if self.powers != other.powers:
@@ -567,19 +565,19 @@ class PhysicalUnit(object):
     def conversion_tuple_to(self, other):
         """
         Args
-	----
-	other : PhysicalUnit
-	    Another unit.
+        ----
+        other : PhysicalUnit
+            Another unit.
 
-	Returns
-	-------
-	Tuple with two floats
-	    The conversion factor and offset from this unit to another unit.
+        Returns
+        -------
+        Tuple with two floats
+            The conversion factor and offset from this unit to another unit.
 
         Raises
-	------
-	TypeError
-	    If the units are not compatible.
+        ------
+        TypeError
+            If the units are not compatible.
         """
 
         if self.powers != other.powers:

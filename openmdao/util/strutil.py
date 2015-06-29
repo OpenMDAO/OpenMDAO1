@@ -21,6 +21,17 @@ def get_common_ancestor(name1, name2):
     else:
         return ''
 
+def name_relative_to(parent_abspath, child_abspath):
+    """
+    Returns
+    -------
+    str
+        Name of the child relative to the parent.
+    """
+    start = len(parent_abspath)+1 if parent_abspath else 0
+    return child_abspath[start:].split('.', 1)[0]
+
+
 class ExprVarScanner(ast.NodeVisitor):
     """
     This node visitor collects all variable names found in the

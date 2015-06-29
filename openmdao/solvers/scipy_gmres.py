@@ -3,12 +3,11 @@
 from __future__ import print_function
 
 # pylint: disable=E0611, F0401
-import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.devtools.debug import debug
 from openmdao.solvers.solverbase import LinearSolver
-
+#from openmdao.devtools.debug import debug
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
@@ -27,6 +26,12 @@ class ScipyGMRES(LinearSolver):
                        desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
+
+        # These are defined whenever we call solve to provide info we need in
+        # the callback.
+        self.system = None
+        self.voi = None
+        self.mode = None
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -85,6 +90,7 @@ class ScipyGMRES(LinearSolver):
 
             #print system.name, 'Linear solution vec', d_unknowns
             self.system = None
+
         return unknowns_mat
 
     def mult(self, arg):
@@ -95,7 +101,7 @@ class ScipyGMRES(LinearSolver):
         mode = self.mode
 
         voi = self.voi
-        if mode=='fwd':
+        if mode == 'fwd':
             sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
         else:
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
@@ -107,24 +113,7 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        # Need a list lf valid interior or owned inputs.
-        # TODO: clean this up
-
-        ls_inputs = {}
-        ls_inputs[voi] = set(system.dpmat[None].keys())
-        data = system._find_all_comps()
-        abs_uvec = {system.dumat[None].metadata(x)['pathname'] for x in system.dumat[None]}
-
-        for comps in data.values():
-            for comp in comps:
-                for intinp_rel in comp.dpmat[None]:
-                    intinp_abs = comp.dpmat[None].metadata(intinp_rel)['pathname']
-                    src = system.connections.get(intinp_abs)
-
-                    if src in abs_uvec:
-                        ls_inputs[voi].add(intinp_abs)
-
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=[voi])
+        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
         #debug("arg", arg)
         #debug("result", rhs_vec.vec)

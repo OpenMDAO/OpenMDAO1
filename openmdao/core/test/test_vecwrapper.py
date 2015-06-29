@@ -17,7 +17,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -64,7 +64,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for p, meta in params.items():
             meta['pathname'] = p
-            meta['relative_name'] = p
+            meta['promoted_name'] = p
 
         connections = {}
         for p in params:
@@ -96,7 +96,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -135,7 +135,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -160,7 +160,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -175,7 +175,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -197,7 +197,7 @@ class TestVecWrapper(unittest.TestCase):
 
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['relative_name'] = u
+            meta['promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)

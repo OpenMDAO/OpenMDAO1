@@ -22,7 +22,7 @@ class LinearSolver(object):
         """
         self.recorders.append(recorder)
 
-    def solve(self, params, unknowns, resids, system):
+    def solve(self, rhs, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned. This function must be defined
         when inheriting.
@@ -65,7 +65,7 @@ class NonLinearSolver(object):
         """
         self.recorders.append(recorder)
 
-    def solve(self):
+    def solve(self, params, unknowns, resids, system):
         """ Drive all residuals in self.system and all subsystems to zero.
         This includes all implicit components. This function must be defined
         when inheriting.
