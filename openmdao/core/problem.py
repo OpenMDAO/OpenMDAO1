@@ -136,13 +136,12 @@ class Problem(System):
         for name, sub in self.root.subsystems(recurse=True):
             sub.connections = connections
 
-        mode = self._check_for_matrix_matrix(self.driver._inputs_of_interest,
-                                             self.driver._outputs_of_interest)
+        iois = self.driver.inputs_of_interest()
+        oois = self.driver.outputs_of_interest()
+        mode = self._check_for_matrix_matrix(iois, oois)
 
         relevance = Relevance(params_dict, unknowns_dict, connections,
-                              self.driver._inputs_of_interest,
-                              self.driver._outputs_of_interest,
-                              mode)
+                              iois, oois, mode)
 
         # create VarManagers and VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, relevance=relevance,
@@ -233,20 +232,20 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        mode : string (optional)
+        mode : string, optional
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
         Returns
@@ -277,15 +276,15 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
         Returns
@@ -346,18 +345,18 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
-        mode : string (optional)
+        mode : string, optional
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.

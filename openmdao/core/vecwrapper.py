@@ -539,7 +539,7 @@ class SrcVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
 
@@ -638,7 +638,7 @@ class TgtVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
 
@@ -720,7 +720,7 @@ class TgtVecWrapper(VecWrapper):
             Metadata for the source variable that this target variable is
             connected to.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """

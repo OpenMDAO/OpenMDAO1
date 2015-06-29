@@ -29,7 +29,15 @@ class Relevance(object):
             else:
                 param_groups[g_id] = tuple(inp)
                 g_id += 1
-            self.inputs.append(tuple(inp))
+
+            inps = []
+            for i in inp:
+                if i in params_dict or i in unknowns_dict:
+                    inps.append(i)
+                else:
+                    inps.extend(get_absvarpathnames(i, params_dict, 'params_dict'))
+
+            self.inputs.append(tuple(inps))
 
         self.outputs = []
         for out in outputs:
@@ -40,7 +48,9 @@ class Relevance(object):
             else:
                 output_groups[g_id] = tuple(out)
                 g_id += 1
-            self.outputs.append(tuple(out))
+
+            self.outputs.append(tuple([get_absvarpathnames(o, unknowns_dict, 'unknowns_dict')[0]
+                                        for o in out]))
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -49,14 +59,6 @@ class Relevance(object):
             self.groups = param_groups
         else:
             self.groups = output_groups
-
-        # for lin GS, store absolute names of outputs
-        self.abs_outputs = []
-        for outs in self.outputs:
-            for out in outs:
-                self.abs_outputs.append(get_absvarpathnames(out,
-                                                            self.unknowns_dict,
-                                                            'unknowns'))
 
     def __getitem__(self, name):
         # if name is None, everything is relevant

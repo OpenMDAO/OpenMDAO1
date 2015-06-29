@@ -30,8 +30,9 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver._inputs_of_interest = [('p1.x1', ), ('p2.x2', )]
-        top.driver._outputs_of_interest = ['comp3.y']
+        top.driver.add_param('p1.x1')
+        top.driver.add_param('p2.x2')
+        top.driver.add_objective('comp3.y')
 
         top.setup()
         top.run()
@@ -55,8 +56,9 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver._outputs_of_interest = [('c2.y', ), ('c3.y', )]
-        top.driver._inputs_of_interest = ['p.x']
+        top.driver.add_param('p.x')
+        top.driver.add_constraint('c2.y')
+        top.driver.add_constraint('c3.y')
 
         top.setup()
         top.run()
@@ -84,8 +86,13 @@ class MatMatTestCase(MPITestCase):
         # properly.
 
         # Parallel Groups
-        top.driver._inputs_of_interest = [('p1.x1', 'p2.x2')]
-        top.driver._outputs_of_interest = ['comp3.y']
+        top.driver.add_param('p1.x1')
+        top.driver.add_param('p2.x2')
+        top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
+        top.driver.add_objective('comp3.y')
+
+        self.assertEqual(top.driver.inputs_of_interest(),
+                         [('p1.x1','p2.x2')])
 
         top.setup()
         top.run()
@@ -114,8 +121,13 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver.options['mode'] = 'rev'
 
         # Parallel Groups
-        top.driver._outputs_of_interest = [('c2.y', 'c3.y', )]
-        top.driver._inputs_of_interest = ['p.x']
+        top.driver.add_param('p.x')
+        top.driver.add_constraint('c2.y')
+        top.driver.add_constraint('c3.y')
+        top.driver.group_vars_of_interest(['c2.y','c3.y'])
+
+        self.assertEqual(top.driver.outputs_of_interest(),
+                         [('c2.y','c3.y')])
 
         top.setup()
         top.run()

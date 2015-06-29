@@ -32,16 +32,16 @@ class OptionsDictionary(object):
         value : object
             Default value for this option. The type of this value will be enforced.
 
-        low : float (optional)
+        low : float, optional
             Lower bounds for a float value.
 
-        high : float (optional)
+        high : float, optional
             Upper bounds for a float value.
 
-        values : list (optional)
+        values : list, optional
             List of all possible values for an enumeration option.
 
-        desc : str (optional)
+        desc : str, optional
             String containing documentation of this option.
         """
 
