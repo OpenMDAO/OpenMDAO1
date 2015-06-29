@@ -61,7 +61,6 @@ class LinearGaussSeidel(LinearSolver):
 
         vois = rhs_mat.keys()
         sol_buf = {}
-        ls_inputs = {}
         norm0, norm = 1.0, 1.0
         counter = 0
         while counter < self.options['maxiter'] and \
@@ -80,18 +79,16 @@ class LinearGaussSeidel(LinearSolver):
                         system._transfer_data(name, deriv=True, var_of_interest=voi)
                         #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                        ls_inputs[voi] = [x for x in dpmat[voi] if x not in sub.dpmat[voi]]
-
                     if isinstance(sub, Component):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
-                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=ls_inputs)
+                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs)
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
+                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois)
 
                     #for voi in vois:
                         #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -130,20 +127,16 @@ class LinearGaussSeidel(LinearSolver):
                     #for voi in vois:
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                    for voi in vois:
-                        ls_inputs[voi] = [x for x in dpmat[voi].keys() \
-                                          if x not in sub.dpmat[voi].keys()]
-
                     if isinstance(sub, Component):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
-                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=ls_inputs)
+                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs)
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
+                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois)
 
 
                     #for voi in vois:
@@ -158,7 +151,7 @@ class LinearGaussSeidel(LinearSolver):
                 norm = 0.0
             else:
                 norm = self._norm(system, mode, rhs_mat)
-                print('Residual:', norm)
+                #print('Residual:', norm)
 
         return sol_buf
 
@@ -184,11 +177,7 @@ class LinearGaussSeidel(LinearSolver):
         else:
             rhs_vec = system.drmat
 
-        ls_inputs = {}
-        for voi in rhs_mat:
-            ls_inputs[voi] = system._all_params(voi)
-
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=rhs_mat.keys())
+        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys())
 
         norm = 0.0
         for voi, rhs in rhs_mat.items():
