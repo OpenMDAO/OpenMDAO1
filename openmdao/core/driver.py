@@ -77,7 +77,7 @@ class Driver(object):
                 vois.append((v,))
         return vois
 
-    def inputs_of_interest(self):
+    def params_of_interest(self):
         """
         Returns
         -------

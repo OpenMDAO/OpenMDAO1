@@ -102,7 +102,7 @@ class MatMatTestCase(MPITestCase):
 
         top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
 
-        self.assertEqual(top.driver.inputs_of_interest(),
+        self.assertEqual(top.driver.params_of_interest(),
                          [('p1.x1','p2.x2')])
 
         # make sure we can't add a VOI to multiple groups

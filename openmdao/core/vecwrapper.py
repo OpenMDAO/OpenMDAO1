@@ -405,7 +405,7 @@ class VecWrapper(object):
 
         return idx_merge(new_src), idx_merge(new_tgt)
 
-    def get_relative_varname(self, abs_name):
+    def get_promoted_varname(self, abs_name):
         """
         Returns the relative pathname for the given absolute variable
         pathname.
@@ -655,7 +655,7 @@ class TgtVecWrapper(VecWrapper):
                     src_pathname = connections.get(pathname)
                     if src_pathname is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
-                    src_rel_name = srcvec.get_relative_varname(src_pathname)
+                    src_rel_name = srcvec.get_promoted_varname(src_pathname)
                     src_meta = srcvec.metadata(src_rel_name)
 
                     vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)

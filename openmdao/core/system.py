@@ -278,12 +278,9 @@ class System(object):
             param_src = self.connections.get(p_name)
             if param_src is not None:
 
-                # Have to convert to relative name to key into unknowns
+                # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
-                    for name in unknowns:
-                        meta = unknowns.metadata(name)
-                        if meta['pathname'] == param_src:
-                            param_src = meta['promoted_name']
+                    param_src = self.unknowns.get_promoted_varname(param_src)
 
                 target_input = unknowns.flat[param_src]
 
@@ -480,7 +477,7 @@ class System(object):
         unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
 
-        # map relative name in parent to corresponding relative name in this view
+        # map promoted name in parent to corresponding promoted name in this view
         umap = get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
 
         if var_of_interest is None:
@@ -558,27 +555,45 @@ class System(object):
         # return the combined dict
         return comm.bcast(J, root=0)
 
+    def _get_src_info(self, srcvec, name):
+        """
+        Return size, indices and name of the source indicated by name.
+        If name specifies a target instead, return the size, indices,
+        and name of its source.
+        """
+        if name in srcvec:
+            size, idxs = srcvec.get_local_idxs(name)
+            param_src = name
+        else:
+            try:
+                param_src = self.connections[name]
+            except KeyError:
+                raise KeyError("'%s' is not connected to an unknown." % name)
+            param_src = srcvec.get_promoted_varname(param_src)
+            size, idxs = srcvec.get_local_idxs(param_src)
+
+        return size, idxs, param_src
+
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
     Args
     ----
     unknowns : `VecWrapper`
-        A dict-like object containing variables keyed using relative names.
+        A dict-like object containing variables keyed using promoted names.
 
     unknowns_dict : `OrderedDict`
         An ordered mapping of absolute variable name to its metadata.
 
     child_name : str
-        The pathname of the child for which to get relative name.
+        The pathname of the child for which to get promoted name.
 
     Returns
     -------
     dict
-        Maps relative name in parent (owner of unknowns and unknowns_dict) to
-        the corresponding relative name in the child, where relative name may
-        include the 'promoted' name of a variable.
+        Maps promoted name in parent (owner of unknowns and unknowns_dict) to
+        the corresponding promoted name in the child.
     """
-    # unknowns is keyed on name relative to the parent system
+    # unknowns is keyed on promoted name relative to the parent system
     # unknowns_dict is keyed on absolute pathname
     umap = {}
     for rel, meta in unknowns.items():
@@ -592,3 +607,4 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
             umap[rel] = newrel
 
     return umap
+

@@ -143,7 +143,7 @@ class Component(System):
 
         self.setup_param_indices()
 
-        # rekey with absolute path names and add relative names
+        # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
         for name, meta in self._params_dict.items():
             if not self.pathname:
