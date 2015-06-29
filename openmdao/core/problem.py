@@ -583,7 +583,6 @@ class Problem(System):
 
                 # No need to check comps that don't have any derivs.
                 if comp.fd_options['force_fd'] == True:
-                    print('skipping', comp.name)
                     continue
 
                 # Paramcomps are just clutter too.
