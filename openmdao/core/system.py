@@ -448,7 +448,8 @@ class System(object):
     def _create_views(self, top_unknowns, parent, my_params, relevance, var_of_interest=None):
         """
         A manager of the data transfer of a possibly distributed collection of
-        variables.  The variables are based on views into an existing VarManager.
+        variables.  The variables are based on views into an existing
+        `VecWrapper`.
 
         Args
         ----
@@ -459,7 +460,7 @@ class System(object):
             The `System` which provides the `VecWrapper` on which to create views.
 
         my_params : list
-            List of pathnames for parameters that this `VarManager` is
+            List of pathnames for parameters that this `Group` is
             responsible for propagating.
 
         relevance : `Relevance`

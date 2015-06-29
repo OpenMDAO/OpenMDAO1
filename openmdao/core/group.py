@@ -300,7 +300,7 @@ class Group(System):
 
     def _setup_vectors(self, param_owners, parent=None,
                        relevance=None, top_unknowns=None, impl=BasicImpl):
-        """Create a `VarManager` for this `Group` and all below it in the
+        """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
         Args
@@ -310,8 +310,7 @@ class Group(System):
             they are reponsible for propagating.
 
         parent : `Group`, optional
-            The `Group` that contains this `Group`, if any, into which this
-            `VarManager` will provide a view.
+            The `Group` that contains this `Group`, if any.
 
         relevance : `Relevance`
             An object that stores relevance information for each variable of interest.
@@ -1005,14 +1004,14 @@ class Group(System):
     def _setup_data_transfer(self, my_params, relevance, var_of_interest):
         """
         Create `DataXfer` objects to handle data transfer for all of the
-        connections that involve parameters for which this `VarManager`
+        connections that involve parameters for which this `Group`
         is responsible.
 
         Args
         ----
 
         my_params : list
-            List of pathnames for parameters that the VarManager is
+            List of pathnames for parameters that the `Group` is
             responsible for propagating.
 
         relevance : `Relevance`

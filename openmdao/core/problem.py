@@ -143,7 +143,7 @@ class Problem(System):
         relevance = Relevance(params_dict, unknowns_dict, connections,
                               iois, oois, mode)
 
-        # create VarManagers and VecWrappers for all groups in the system tree.
+        # create VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, relevance=relevance,
                                  impl=self._impl)
 
