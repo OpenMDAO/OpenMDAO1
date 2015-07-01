@@ -13,7 +13,6 @@ from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 
-
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
@@ -48,8 +47,10 @@ class pyOptSparseDriver(Driver):
         self.options.add_option('exit_flag', 0,
                                  desc='0 for fail, 1 for ok')
 
+        self.opt_settings = {}
+
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                               'pyopt_diff', 'exit_flag']
+                               'pyopt_diff', 'exit_flag' ]
 
         self.pyOpt_solution = None
 
@@ -60,8 +61,8 @@ class pyOptSparseDriver(Driver):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
 
-        Parameters
-        ----------
+        Args
+        ----
         problem : `Problem`
             Our parent `Problem`.
         """
@@ -75,7 +76,8 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = param_meta.keys()
+        param_list = list(param_meta.keys())
+        param_vals = self.get_params()
         for name, meta in param_meta.items():
 
             vartype = 'c'
@@ -83,13 +85,13 @@ class pyOptSparseDriver(Driver):
             upper_bounds = meta['high']
             n_vals = meta['size']
 
-            opt_prob.addVarGroup(name, n_vals, type=vartype,
+            opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
                                  lower=lower_bounds, upper=upper_bounds)
             param_list.append(name)
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = objs.keys()
+        self.quantities = list(objs.keys())
         for name, obj in objs.items():
             opt_prob.addObj(name)
 
@@ -104,7 +106,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += econs.keys()
+        self.quantities += list(econs.keys())
         for name, con in econs.items():
             size = con_meta[name]['size']
             lower = np.zeros((size))
@@ -118,7 +120,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += incons.keys()
+        self.quantities += list(incons.keys())
         for name, con in incons.items():
             size = con_meta[name]['size']
             upper = np.zeros((size))
@@ -154,10 +156,8 @@ class pyOptSparseDriver(Driver):
         optname = vars()[optimizer]
         opt = optname()
 
-        # Set optimization options
-        for option, value in self.options.items():
-            if option in self.pyopt_excludes:
-                continue
+        #Set optimization options
+        for option, value in self.opt_settings.items():
             opt.setOption(option, value)
 
         self._problem = problem
@@ -300,4 +300,3 @@ class pyOptSparseDriver(Driver):
         #print(dv_dict)
         #print(sens_dict)
         return sens_dict, fail
-

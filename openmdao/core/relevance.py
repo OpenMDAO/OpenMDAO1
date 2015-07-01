@@ -23,28 +23,24 @@ class Relevance(object):
         self.inputs = []
         for inp in inputs:
             if isinstance(inp, string_types):
-                param_groups.setdefault(None, []).append(inp)
-                self.inputs.append((inp,))
+                inp = (inp,)
+            if len(inp) == 1:
+                param_groups.setdefault(None, []).append(inp[0])
             else:
-                if len(inp) == 1:
-                    param_groups.setdefault(None, []).append(inp[0])
-                else:
-                    param_groups[g_id] = tuple(inp)
-                    g_id += 1
-                self.inputs.append(tuple(inp))
+                param_groups[g_id] = tuple(inp)
+                g_id += 1
+            self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
             if isinstance(out, string_types):
+                out = (out,)
+            if len(out) == 1:
                 output_groups.setdefault(None, []).append(out)
-                self.outputs.append((out,))
             else:
-                if len(out) == 1:
-                    output_groups.setdefault(None, []).append(out)
-                else:
-                    output_groups[g_id] = tuple(out)
-                    g_id += 1
-                self.outputs.append(tuple(out))
+                output_groups[g_id] = tuple(out)
+                g_id += 1
+            self.outputs.append(tuple(out))
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -73,13 +69,15 @@ class Relevance(object):
             return True
         return varname in self.relevant[var_of_interest]
 
-    def vars_of_interest(self):
-        if self.mode == 'fwd':
-            return iter(self.inputs)
-        elif self.mode == 'rev':
-            return iter(self.outputs)
+    def vars_of_interest(self, mode=None):
+        if mode is None:
+            mode = self.mode
+        if mode == 'fwd':
+            return self.inputs
+        elif mode == 'rev':
+            return self.outputs
         else:
-            return iter(self.inputs+self.outputs)
+            return self.inputs+self.outputs
 
     def _setup_graph(self, connections):
         """
@@ -121,8 +119,8 @@ class Relevance(object):
 
     def _get_relevant_vars(self, g):
         """
-        Parameters
-        ----------
+        Args
+        ----
         g : nx.DiGraph
             A graph of variable dependencies.
 

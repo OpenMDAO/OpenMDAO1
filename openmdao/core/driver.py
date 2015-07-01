@@ -63,8 +63,8 @@ class Driver(object):
     def add_param(self, name, low=None, high=None):
         """ Adds a param to this driver.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : string
            Name of the paramcomp in the root system.
 
@@ -125,8 +125,8 @@ class Driver(object):
     def set_param(self, name, value):
         """ Sets a parameter.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : string
            Name of the paramcomp in the root system.
 
@@ -138,8 +138,8 @@ class Driver(object):
     def add_objective(self, name):
         """ Adds an objective to this driver.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : string
             Promoted pathname of the output that will serve as the objective.
         """
@@ -152,8 +152,8 @@ class Driver(object):
     def get_objectives(self, return_type='dict'):
         """ Adds a constraint to this driver.
 
-        Parameters
-        ----------
+        Args
+        ----
         return_type : string
             Set to 'dict' to return a dictionary, or set to 'array' to return a
             flat ndarray.
@@ -177,8 +177,8 @@ class Driver(object):
     def add_constraint(self, name, ctype='ineq', linear=False, jacs=None):
         """ Adds a constraint to this driver.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : string
             Promoted pathname of the output that will serve as the objective.
 
@@ -208,8 +208,8 @@ class Driver(object):
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
         """ Gets all constraints for this driver.
 
-        Parameters
-        ----------
+        Args
+        ----
         ctype : string
             Default is 'all'. Optionally return just the inequality constraints
             with 'ineq' or the equality constraints with 'eq'.
@@ -265,8 +265,8 @@ class Driver(object):
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
 
-        Parameters
-        ----------
+        Args
+        ----
         problem : `Problem`
             Our parent `Problem`.
         """

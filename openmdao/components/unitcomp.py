@@ -5,8 +5,8 @@ class UnitComp(Component):
     """
     A Component that converts the input into the requested units.
 
-    Parameters
-    ----------
+    Args
+    ----
     shape : tuple or int
         A tuple (or int if one-dimensional) that describes the shape of the
         input and output.
@@ -35,8 +35,8 @@ class UnitComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """For `UnitComp`, just pass on the incoming values.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 
@@ -67,8 +67,8 @@ class UnitComp(Component):
         Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode).
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 

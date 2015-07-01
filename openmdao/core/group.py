@@ -17,6 +17,9 @@ from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.util.strutil import name_relative_to
+from openmdao.core.mpiwrap import MPI
+#from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -46,10 +49,10 @@ class Group(System):
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
-             the name of the variable to set into the unknowns vector
+             The name of the variable to set into the unknowns vector.
         """
         if self.is_active():
             try:
@@ -58,7 +61,7 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    self.subsystem(subname).params[vname] = val
+                    self._subsystem(subname).params[vname] = val
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
@@ -68,8 +71,8 @@ class Group(System):
         Retrieve unflattened value of named unknown or unconnected
         param variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
              The name of the variable to retrieve from the unknowns vector.
 
@@ -96,19 +99,19 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    return self.subsystem(subname).params[vname]
+                    return self._subsystem(subname).params[vname]
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
 
-    def subsystem(self, name):
+    def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
         doesn't reference a subsystem.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of the subsystem to retrieve.
 
@@ -118,8 +121,7 @@ class Group(System):
             A reference to the named subsystem.
         """
         s = self
-        parts = name.split('.')
-        for part in parts:
+        for part in name.split('.'):
             s = s._subsystems[part]
 
         return s
@@ -128,8 +130,8 @@ class Group(System):
         """Add a subsystem to this group, specifying its name and any variables
         that it promotes to the parent level.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         name : str
             The name by which the subsystem is to be known.
@@ -156,8 +158,8 @@ class Group(System):
         """Connect the given source variable to the given target
         variable.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         source : source
             The name of the source variable.
@@ -175,8 +177,8 @@ class Group(System):
 
     def subsystems(self, local=False, recurse=False, typ=System):
         """
-        Parameters
-        ----------
+        Args
+        ----
         local : bool, optional
             If True, only return those `Components` that are local. Default is False.
 
@@ -225,8 +227,8 @@ class Group(System):
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
 
-        Parameter
-        ---------
+        Args
+        ----
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
@@ -236,39 +238,40 @@ class Group(System):
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
-        """Create dictionaries of metadata for parameters and for unknowns for
-           this `Group` and stores them as attributes of the `Group`. The
-           relative name of subsystem variables with respect to this `Group`
-           system is included in the metadata.
+        """
+        Create dictionaries of metadata for parameters and for unknowns for
+        this `Group` and stores them as attributes of the `Group`. The
+        promoted name of subsystem variables with respect to this `Group`
+        is included in the metadata.
 
-           Returns
-           -------
-           tuple
-               A dictionary of metadata for parameters and for unknowns
-               for all subsystems.
+        Returns
+        -------
+        tuple
+            A dictionary of metadata for parameters and for unknowns
+            for all subsystems.
         """
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 if p in self._src_idxs:
                     meta['src_indices'] = self._src_idxs[p]
                 self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
 
         return self._params_dict, self._unknowns_dict
 
-    def _var_pathname(self, name, subsystem):
+    def _promoted_name(self, name, subsystem):
         """
         Returns
         -------
         str
-            The pathname of the given variable, based on its promotion status.
+            The promoted name of the given variable.
         """
         if subsystem.promoted(name):
             return name
@@ -281,8 +284,8 @@ class Group(System):
         """
         Assign communicator to this `Group` and all of its subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
@@ -300,8 +303,8 @@ class Group(System):
         """Create a `VarManager` for this `Group` and all below it in the
         `System` tree.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_owners : dict
             A dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating.
@@ -335,13 +338,14 @@ class Group(System):
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
+        self._owning_ranks = self._get_owning_ranks()
 
         self._setup_data_transfer(my_params, relevance, None)
 
-        ## TODO: determine the size of the largest grouping of parallel subvecs, allocate
-        ##       an array of that size, and sub-allocate from that for all relevant subvecs
-        ##       We should never need more memory than the largest sized collection of parallel
-        ##       vecs.
+        # TODO: determine the size of the largest grouping of parallel subvecs, allocate
+        #       an array of that size, and sub-allocate from that for all relevant subvecs
+        #       We should never need more memory than the largest sized collection of parallel
+        #       vecs.
 
         # create storage for the relevant vecwrappers, keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():
@@ -363,6 +367,12 @@ class Group(System):
             sub._setup_vectors(param_owners, parent=self,
                                relevance=relevance, top_unknowns=top_unknowns)
 
+        # now that all of the vectors and subvecs are allocated, calculate
+        # and cache the ls_inputs.
+        self._ls_inputs = {}
+        for voi, vec in self.dumat.items():
+            self._ls_inputs[voi] = self._all_params(voi)
+
     def _get_fd_params(self):
         """
         Get the list of parameters that are needed to perform a
@@ -383,7 +393,7 @@ class Group(System):
                 # look up the Component that contains the source variable
                 scname = src.rsplit('.', 1)[0]
                 if scname.startswith(mypath):
-                    src_comp = self.subsystem(scname[len(mypath):])
+                    src_comp = self._subsystem(scname[len(mypath):])
                     if isinstance(src_comp, ParamComp):
                         params.append(tgt[len(mypath):])
                 else:
@@ -406,18 +416,19 @@ class Group(System):
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self.subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
+            sub = self._subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
         return fd_unknowns
 
     def _get_explicit_connections(self):
-        """ Returns
-            -------
-            dict
-                Explicit connections in this `Group`, represented as a mapping
-                from the pathname of the target to the pathname of the source.
+        """
+        Returns
+        -------
+        dict
+            Explicit connections in this `Group`, represented as a mapping
+            from the pathname of the target to the pathname of the source.
         """
         connections = {}
         for _, sub in self.subgroups():
@@ -426,28 +437,22 @@ class Group(System):
         for tgt, src in self._src.items():
             try:
                 src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(src, self._params_dict, 'params')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_src_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_src_error(src, tgt)
 
             try:
                 for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
                     connections[tgt_pathname] = src_pathname
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_target_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_target_error(src, tgt)
 
@@ -457,8 +462,8 @@ class Group(System):
         """
         Solves the group using the slotted nl_solver.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`, optional
             `VecWrapper` containing parameters. (p)
 
@@ -490,8 +495,8 @@ class Group(System):
         """
         Evaluates the residuals of our children systems.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -514,8 +519,8 @@ class Group(System):
         """
         Linearize all our subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -551,41 +556,25 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode, ls_inputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
 
         df = du - dGdp * dp or du = df and dp = -dGdp^T * df
 
-        Parameters
-        ----------
-
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
+        Args
+        ----
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
         """
         if not self.is_active():
             return
@@ -593,9 +582,6 @@ class Group(System):
         if mode == 'fwd':
             # Full Scatter
             self._transfer_data(deriv=True)
-
-        #FIXME:
-        voi = None
 
         for name, system in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
@@ -605,27 +591,25 @@ class Group(System):
                 system.fd_options['force_fd'] == True) and \
                 not isinstance(system, ParamComp):
 
-                self._sub_apply_linear_wrapper(system, mode, voi, ls_inputs)
+                self._sub_apply_linear_wrapper(system, mode, vois, ls_inputs)
 
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                system.apply_linear(system.params, system.unknowns,
-                                    system.dpmat[None], system.dumat[None],
-                                    system.drmat[None], mode, ls_inputs)
+                system.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
         if mode == 'rev':
             # Full Scatter
             self._transfer_data(mode='rev', deriv=True)
 
-    def _sub_apply_linear_wrapper(self, system, mode, voi, ls_inputs=None):
+    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None):
         """
         Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
         2) puts a 1 on the diagonal for all explicit outputs.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         system : `System`
             Subsystem of interest, either a `Component` or a `Group` that is
@@ -634,94 +618,94 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        voi: index
-            Index to quantity (RHS) of interest
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
-        ls_inputs : set
+        ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
         """
 
-        dresids = system.drmat[voi]
-        dunknowns = system.dumat[voi]
-        dparams = system.dpmat[voi]
+        for voi in vois:
 
-        # Linear GS imposes a stricter requirement on whether or not to run.
-        abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
+            dresids = system.drmat[voi]
+            dunknowns = system.dumat[voi]
+            dparams = system.dpmat[voi]
 
-        # Forward Mode
-        if mode == 'fwd':
+            # Linear GS imposes a stricter requirement on whether or not to run.
+            abs_inputs = {dparams.metadata(name)['pathname'] for name in dparams.keys()}
 
-            #print(abs_inputs)
-            #print(ls_inputs)
-            #if ls_inputs is not None:
-            #    print(set(abs_inputs).intersection(ls_inputs))
-            dresids.vec[:] = 0.0
+            # Forward Mode
+            if mode == 'fwd':
 
-            if ls_inputs is None or abs_inputs.intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
-            dresids.vec *= -1.0
+                dresids.vec[:] = 0.0
 
-            for var in dunknowns.keys():
+                if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
+                dresids.vec *= -1.0
 
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                for var in dunknowns.keys():
 
-                dresids[var] += dunknowns[var]
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
 
-        # Adjoint Mode
-        elif mode == 'rev':
+                    dresids[var] += dunknowns[var]
 
-            dparams.vec[:] = 0.0
+            # Adjoint Mode
+            elif mode == 'rev':
 
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dresids.vec *= -1.0
+                dparams.vec[:] = 0.0
 
-            if ls_inputs is None or set(abs_inputs).intersection(ls_inputs):
-                if system.fd_options['force_fd'] == True:
-                    system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                             dunknowns, dresids, mode)
-                else:
-                    system.apply_linear(system.params, system.unknowns, dparams,
-                                        dunknowns, dresids, mode)
+                # Sign on the local Jacobian needs to be -1 before
+                # we add in the fake residual. Since we can't modify
+                # the 'du' vector at this point without stomping on the
+                # previous component's contributions, we can multiply
+                # our local 'arg' by -1, and then revert it afterwards.
+                dresids.vec *= -1.0
 
-            dresids.vec *= -1.0
+                if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
+                    if system.fd_options['force_fd'] == True:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
 
-            for var in dunknowns.keys():
-                # Skip all states
-                if dunknowns.metadata(var).get('state'):
-                    continue
+                dresids.vec *= -1.0
 
-                dunknowns[var] += dresids[var]
+                for var in dunknowns.keys():
+                    # Skip all states
+                    if dunknowns.metadata(var).get('state'):
+                        continue
 
-    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
+                    dunknowns[var] += dresids[var]
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
-        Parameters
-        ----------
-        rhs: `ndarray`
-            Right-hand side for our linear solve.
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
+        Args
+        ----
+        dumat : dict of `VecWrappers`
+            In forward mode, each `VecWrapper` contains the incoming vector
+            for the states. There is one vector per quantity of interest for
+            this problem. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecWrapper`
+        drmat : `dict of VecWrappers`
             `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
+            or the incoming vector in reverse mode. There is one vector per
+            quantity of interest for this problem. (dr)
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
@@ -735,27 +719,52 @@ class Group(System):
             mode = self.fd_options['mode']
 
         if mode == 'fwd':
-            sol_vec, rhs_vec = dunknowns, dresids
+            sol_vec, rhs_vec = dumat, drmat
         else:
-            sol_vec, rhs_vec = dresids, dunknowns
+            sol_vec, rhs_vec = drmat, dumat
 
+        # TODO: Need the norm. Loop over vois here.
         #if np.linalg.norm(rhs) < 1e-15:
         #    sol_vec.vec[:] = 0.0
         #    return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
-        rhs_vec.vec[:] = rhs[:]
-        rhs_buf = rhs.copy()
+        rhs_buf = {}
+        for voi in vois:
+            rhs_buf[voi] = rhs_vec[voi].vec.copy()
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
-        rhs_buf[:] = 0.0
-        sol_vec.vec[:] = sol_buf[:]
+        for voi in vois:
+            sol_vec[voi].vec[:] = sol_buf[voi][:]
+
+    def _all_params(self, voi=None):
+        """ Returns the set of all parameters in this system and all subsystems.
+
+        Args
+        ----
+        voi: string
+            Variable of interest, default is None.
+        """
+
+        # TODO: clean this up
+        ls_inputs = set(self.dpmat[voi].keys())
+        abs_uvec = {self.dumat[voi].metadata(x)['pathname'] for x in self.dumat[voi]}
+
+        for cname, comp in self.components(local=True, recurse=True):
+            for intinp_rel in comp.dpmat[voi]:
+                intinp_abs = comp.dpmat[voi].metadata(intinp_rel)['pathname']
+                src = self.connections.get(intinp_abs)
+
+                if src in abs_uvec:
+                    ls_inputs.add(intinp_abs)
+
+        return ls_inputs
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of the `System` tree to file.
 
-        Parameters
-        ----------
+        Args
+        ----
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 
@@ -885,10 +894,10 @@ class Group(System):
         for name, sub in self.subgroups():
             sub._update_sub_unit_conv(self._params_dict)
 
-    def _get_global_offset(self, name, var_rank, sizes_table):
+    def _get_global_offset(self, name, var_rank, sizes_table, var_of_interest):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The variable name.
 
@@ -897,6 +906,10 @@ class Group(System):
 
         sizes_table : list of OrderDicts mappping var name to size.
             Size information for all vars in all ranks.
+
+        var_of_interest : str
+            Name of the current variable of interest, the key into the
+            dumat,drmat, and dpmat dicts.
 
         Returns
         -------
@@ -909,35 +922,39 @@ class Group(System):
 
         # first get the offset of the distributed storage for var_rank
         while rank < var_rank:
-            offset += sum(sizes_table[rank].values())
+            for vname, size in sizes_table[rank].items():
+                if self._relevance.is_relevant(var_of_interest, vname):
+                    offset += size
             rank += 1
 
         # now, get the offset into the var_rank storage for the variable
         for vname, size in sizes_table[var_rank].items():
             if vname == name:
                 break
-            offset += size
+            if self._relevance.is_relevant(var_of_interest, vname):
+                offset += size
 
         return offset
 
-    def _get_global_idxs(self, uname, pname, uvec, pvec, var_of_interest, mode):
+    def _get_global_idxs(self, uname, pname, var_of_interest, mode):
         """
-        Parameters
-        ----------
+        Return the global indices into the distributed unknowns and params vector
+        for the given unknown and param.  The given unknown and param have already
+        been tested for relevance.
+
+        Args
+        ----
         uname : str
             Name of variable in the unknowns vector.
 
         pname : str
             Name of the variable in the params vector.
 
-        uvec : `VecWrapper`
-            unknowns/dunknowns vec wrapper.
-
-        pvec : `VecWrapper`
-            params/dparams vec wrapper.
-
         var_of_interest : str or None
             Name of variable of interest used to determine relevance.
+
+        mode : str
+            Solution mode, either 'fwd' or 'rev'
 
         Returns
         -------
@@ -945,26 +962,43 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
-        umeta = uvec.metadata(uname)
-        pmeta = pvec.metadata(pname)
+        umeta = self.unknowns.metadata(uname)
+        pmeta = self.params.metadata(pname)
 
         # FIXME: if we switch to push scatters, this check will flip
         if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
             # just return empty index arrays for remote vars
-            return pvec.make_idx_array(0, 0), pvec.make_idx_array(0, 0)
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        if not self._relevance.is_relevant(var_of_interest, uname) or \
+           not self._relevance.is_relevant(var_of_interest, pname):
+            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
+        if self.comm is None:
+            iproc = 0
+        else:
+            iproc = self.comm.rank
 
         if 'src_indices' in pmeta:
-            arg_idxs = pvec.to_idx_array(pmeta['src_indices'])
+            arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
-            arg_idxs = pvec.make_idx_array(0, pmeta['size'])
+            arg_idxs = self.params.make_idx_array(0, pmeta['size']) #self._local_param_sizes[iproc][pname])
 
-        var_rank = self._get_owning_rank(uname, self._local_unknown_sizes)
-        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes)
+        if mode == 'fwd':
+            var_rank = self._owning_ranks[uname] #self._get_owning_rank(uname, self._local_unknown_sizes)
+        else:
+            var_rank = iproc
+        offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes,
+                                         var_of_interest)
         src_idxs = arg_idxs + offset
 
-        var_rank = self._get_owning_rank(pname, self._local_param_sizes)
-        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes)
-        tgt_idxs = tgt_start + pvec.make_idx_array(0, len(arg_idxs))
+        if mode == 'fwd':
+            var_rank = iproc
+        else:
+            var_rank = self._owning_ranks[pname] #self._get_owning_rank(pname, self._local_param_sizes)
+        tgt_start = self._get_global_offset(pname, var_rank, self._local_param_sizes,
+                                            var_of_interest)
+        tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
 
@@ -974,8 +1008,8 @@ class Group(System):
         connections that involve parameters for which this `VarManager`
         is responsible.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         my_params : list
             List of pathnames for parameters that the VarManager is
@@ -1001,42 +1035,36 @@ class Group(System):
                 # get the subsystem name from that
                 start = len(self.pathname)+1 if self.pathname else 0
 
-                tgt_sys = param[start:].split('.', 1)[0]
-                src_sys = unknown[start:].split('.', 1)[0]
+                tgt_sys = name_relative_to(self.pathname, param)
+                #param[start:].split('.', 1)[0]
+                src_sys = name_relative_to(self.pathname, unknown)
+                #unknown[start:].split('.', 1)[0]
 
-                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+                for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
+                    src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
+                        xfer_dict.setdefault((sname, mode), ([],[],[],[]))
 
-                rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
-                    xfer_dict.setdefault((src_sys, 'rev'), ([],[],[],[]))
+                    urelname = self.unknowns.get_relative_varname(unknown)
+                    prelname = self.params.get_relative_varname(param)
 
-                urelname = self.unknowns.get_relative_varname(unknown)
-                prelname = self.params.get_relative_varname(param)
-
-                if self.unknowns.metadata(urelname).get('pass_by_obj'):
-                    byobj_conns.append((prelname, urelname))
-                else: # pass by vector
-                    #forward
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
-                                                         var_of_interest, 'fwd')
-                    vec_conns.append((prelname, urelname))
-                    src_idx_list.append(sidxs)
-                    dest_idx_list.append(didxs)
-
-                    # reverse
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         self.unknowns, self.params,
-                                                         var_of_interest, 'rev')
-                    rev_vec_conns.append((prelname, urelname))
-                    rev_src_idx_list.append(sidxs)
-                    rev_dest_idx_list.append(didxs)
+                    if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                        # rev is for derivs only, so no by_obj passing needed
+                        if mode == 'fwd':
+                            byobj_conns.append((prelname, urelname))
+                    else: # pass by vector
+                        sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                             var_of_interest, mode)
+                        vec_conns.append((prelname, urelname))
+                        src_idx_list.append(sidxs)
+                        dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                        self.dpmat[var_of_interest],
+                                                        src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns)
 
         # create a DataXfer object that combines all of the
@@ -1058,7 +1086,9 @@ class Group(System):
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self, src_idxs, tgt_idxs,
+                self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                    self.dpmat[var_of_interest],
+                                                    src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
@@ -1066,8 +1096,8 @@ class Group(System):
         """
         Transfer data to/from target_system depending on mode.
 
-        Parameters
-        ----------
+        Args
+        ----
 
         target_sys : str, optional
             Name of the target `System`.  A name of '', the default, indicates that data
@@ -1093,8 +1123,8 @@ class Group(System):
 
     def _get_owning_rank(self, name, sizes_table):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of the variable to find the owning rank for
 
@@ -1127,22 +1157,35 @@ class Group(System):
             for solvers in sub._find_all_solvers():
                 yield solvers
 
-    def _find_all_comps(self):
-        """ Recursive function that assembles a dictionary whose keys are Group
-        instances and whose values are lists of Component instances.
+    def _get_owning_ranks(self):
         """
+        Determine the 'owning' rank of each variable and return a dict
+        mapping variables to their owning rank. The owning rank is the lowest
+        rank where the variable is local.
 
-        data = {self:[]}
-        for c_name, c in self.components():
-            data[self].append(c)
-        for sg_name, sg in self.subgroups():
-            data.update(sg._find_all_comps())
-        return data
+        """
+        ranks = {}
+
+        local_vars = [k for k,m in self.unknowns.items() if not m.get('remote')]
+        local_vars.extend([k for k,m in self.params.items() if not m.get('remote')])
+
+        if MPI:
+            all_locals = self.comm.allgather(local_vars)
+        else:
+            all_locals = [local_vars]
+
+        for rank in range(len(all_locals)):
+            for v in all_locals[rank]:
+                if v not in ranks:
+                    ranks[v] = rank
+                    #print("%s owned by rank %d" % (v, rank))
+
+        return ranks
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
-    Parameters
-    ----------
+    Args
+    ----
     var_name : str
         Name of a variable relative to a `System`.
 
@@ -1161,7 +1204,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
 
     pnames = []
     for pathname, meta in var_dict.items():
-        if meta['relative_name'] == var_name:
+        if meta['promoted_name'] == var_name:
             pnames.append(pathname)
 
     if not pnames:

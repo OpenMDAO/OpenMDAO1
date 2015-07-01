@@ -7,6 +7,7 @@ from six import string_types, iteritems
 
 import numpy as np
 
+from openmdao.core.vecwrapper import PlaceholderVecWrapper
 from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
 
@@ -26,6 +27,14 @@ class System(object):
         self._promotes = ()
 
         self.comm = None
+
+        # create placeholders for all of the vectors
+        self.unknowns  = PlaceholderVecWrapper('unknowns')
+        self.resids    = PlaceholderVecWrapper('resids')
+        self.params    = PlaceholderVecWrapper('params')
+        self.dunknowns = PlaceholderVecWrapper('dunknowns')
+        self.dresids   = PlaceholderVecWrapper('dresids')
+        self.dparams   = PlaceholderVecWrapper('dparams')
 
         # dicts of vectors used for parallel solution of multiple RHS
         self.dumat = {}
@@ -50,8 +59,8 @@ class System(object):
         """
         Return the variable or subsystem of the given name from this system.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The name of the variable or subsystem.
 
@@ -68,8 +77,8 @@ class System(object):
         """Determine if the given variable name is being promoted from this
         `System`.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The name of a variable, relative to this `System`.
 
@@ -86,7 +95,7 @@ class System(object):
         for prom in self._promotes:
             if fnmatch(name, prom):
                 for n, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
-                    rel = meta.get('relative_name', n)
+                    rel = meta.get('promoted_name', n)
                     if rel == name:
                         return True
 
@@ -137,7 +146,7 @@ class System(object):
     def apply_nonlinear(self, params, unknowns, resids):
         pass
 
-    def solve_linear(self, rhs, params, unknowns, mode="fwd"):
+    def solve_linear(self, params, unknowns, vois, mode="fwd"):
         pass
 
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):
@@ -167,8 +176,8 @@ class System(object):
         """
         Assign communicator to this `System` and all of its subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
@@ -192,8 +201,8 @@ class System(object):
         """Finite difference across all unknowns in this system w.r.t. all
         params.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -248,7 +257,7 @@ class System(object):
             resultvec = resids
             for u_name, meta in iteritems(self._unknowns_dict):
                 if meta.get('state'):
-                    states.append(meta['relative_name'])
+                    states.append(meta['promoted_name'])
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
@@ -274,13 +283,13 @@ class System(object):
                     for name in unknowns:
                         meta = unknowns.metadata(name)
                         if meta['pathname'] == param_src:
-                            param_src = meta['relative_name']
+                            param_src = meta['promoted_name']
 
                 target_input = unknowns.flat[param_src]
 
             mydict = {}
             for key, val in self._params_dict.items():
-                if val['relative_name'] == p_name:
+                if val['promoted_name'] == p_name:
                     mydict = val
                     break
 
@@ -399,9 +408,9 @@ class System(object):
             # Vectors are flipped during adjoint
 
             if mode == 'fwd':
-                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
+                dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
             else:
-                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
+                arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
 
     def _create_vecs(self, my_params, relevance, var_of_interest, impl):
         comm = self.comm
@@ -441,8 +450,8 @@ class System(object):
         A manager of the data transfer of a possibly distributed collection of
         variables.  The variables are based on views into an existing VarManager.
 
-        Parameters
-        ----------
+        Args
+        ----
         top_unknowns : `VecWrapper`
             The `Problem` level unknowns `VecWrapper`.
 
@@ -514,7 +523,7 @@ class System(object):
 
                 # Params are already only on this process. We need to add
                 # only outputs of components that are on this process.
-                sys = self.subsystem(output.partition('.')[0])
+                sys = getattr(self, output.partition('.')[0])
                 if sys.is_active() and value is not None and value.size > 0:
                     tups.append((output, param))
 
@@ -550,8 +559,8 @@ class System(object):
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
-    Parameters
-    ----------
+    Args
+    ----
     unknowns : `VecWrapper`
         A dict-like object containing variables keyed using relative names.
 
@@ -576,7 +585,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         if abspath.startswith(child_name+'.'):
             newmeta = unknowns_dict.get(abspath)
             if newmeta is not None:
-                newrel = newmeta['relative_name']
+                newrel = newmeta['promoted_name']
             else:
                 newrel = rel
             umap[rel] = newrel

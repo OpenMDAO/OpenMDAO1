@@ -98,13 +98,15 @@ class Component(System):
 
         match = namecheck_rgx.match(name)
         if match is None or match.group() != name:
-            raise NameError("%s: '%s' is not a valid variable name." % (self.pathname, name))
+            raise NameError("%s: '%s' is not a valid variable name." %
+                               (self.pathname, name))
 
     def setup_param_indices(self):
         """
-        Override this in your Component to set specific indices that will be pulled from
-        source variables to fill your parameters.  This method should set the 'src_indices'
-        metadata for any parameters that require it.
+        Override this in your Component to set specific indices that will be
+        pulled from source variables to fill your parameters.  This method
+        should set the 'src_indices' metadata for any parameters that require
+        it.
         """
         pass
 
@@ -133,7 +135,8 @@ class Component(System):
         return [k for k,m in self.unknowns.items() if not m.get('pass_by_obj')]
 
     def _setup_variables(self):
-        """Returns our params and unknowns dictionaries, re-keyed
+        """
+        Returns our params and unknowns dictionaries, re-keyed
         to use absolute variable names, and stores them
         as attributes of the component
         """
@@ -148,7 +151,7 @@ class Component(System):
             else:
                 var_pathname = '.'.join([self.pathname, name])
             _new_params[var_pathname] = meta
-            meta['relative_name'] = name
+            meta['promoted_name'] = name
 
         self._params_dict = _new_params
 
@@ -159,7 +162,8 @@ class Component(System):
             else:
                 var_pathname = '.'.join([self.pathname, name])
             _new_unknowns[var_pathname] = meta
-            meta['relative_name'] = name
+            meta['promoted_name'] = name
+
         self._unknowns_dict = _new_unknowns
 
         self._post_setup = True
@@ -175,8 +179,8 @@ class Component(System):
         """
         Set up local `VecWrappers` to store this component's variables.
 
-        Parameters
-        ----------
+        Args
+        ----
         param_owners : dict
             a dictionary mapping `System` pathnames to the pathnames of parameters
             they are reponsible for propagating. (ignored)
@@ -199,15 +203,21 @@ class Component(System):
         self._relevance = relevance
         self._impl_factory = impl
 
-        self._create_views(top_unknowns, parent, [], relevance)
+        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        for group, vois in relevance.groups.items():
+            if group is not None:
+                for voi in vois:
+                    self._create_views(top_unknowns, parent, [], relevance, voi)
 
-        params = self.params
+        # we don't get non-deriv vecs (u, p, r) unless we have a None group,
+        # so force their creation here
+        self._create_views(top_unknowns, parent, [], relevance, None)
 
         # create params vec entries for any unconnected params
         for pathname, meta in self._params_dict.items():
-            name = params._scoped_abs_name(pathname)
-            if name not in params:
-                params._add_unconnected_var(pathname, meta)
+            name = self.params._scoped_abs_name(pathname)
+            if name not in self.params:
+                self.params._add_unconnected_var(pathname, meta)
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
@@ -217,8 +227,8 @@ class Component(System):
         must execute its solve nonlinear method. Implicit components should
         override this and calculate their residuals in place.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters (p)
 
@@ -246,8 +256,8 @@ class Component(System):
         returns something. J should be a dictionary whose keys are tuples of
         the form ('unknown', 'param') and whose values are ndarrays.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -271,8 +281,8 @@ class Component(System):
         transpose Jacobian (rev mode). If the user doesn't provide this
         method, then we just multiply by self._jacobian_cache.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -298,24 +308,26 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                               mode)
 
-    def solve_linear(self, rhs, dunknowns, dresids, mode=None):
+    def solve_linear(self, dumat, drmat, vois, mode=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
 
-        Parameters
-        ----------
-        rhs: `ndarray`
-            Right-hand side for our linear solve.
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
+        Args
+        ----
+        dumat : dict of `VecWrappers`
+            In forward mode, each `VecWrapper` contains the incoming vector
+            for the states. There is one vector per quantity of interest for
+            this problem. In reverse mode, it contains the outgoing vector for
             the states. (du)
 
-        dresids : `VecWrapper`
+        drmat : `dict of VecWrappers`
             `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
+            or the incoming vector in reverse mode. There is one vector per
+            quantity of interest for this problem. (dr)
+
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
 
         mode : string
             Derivative mode, can be 'fwd' or 'rev', but generally should be
@@ -323,19 +335,20 @@ class Component(System):
             system's ln_solver.options.
         """
 
-        if mode == 'fwd':
-            dresids.vec[:] = rhs[:]
-            dunknowns.vec[:] = dresids.vec[:]
+        if mode=='fwd':
+            sol_vec, rhs_vec = self.dumat, self.drmat
         else:
-            dunknowns.vec[:] = rhs[:]
-            dresids.vec[:] = dunknowns.vec[:]
+            sol_vec, rhs_vec = self.drmat, self.dumat
+
+        for voi in vois:
+            sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """
         Writes a formated dump of this `Component` to file.
 
-        Parameters
-        ----------
+        Args
+        ----
         nest : int, optional
             Starting nesting level.  Defaults to 0.
 

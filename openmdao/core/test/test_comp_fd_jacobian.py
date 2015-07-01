@@ -50,19 +50,19 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x',
+                             'promoted_name' : 'x',
                              'shape': 2, 'size' : 2}
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y',
+                               'promoted_name' : 'y',
                              'shape': 2, 'size' : 2 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y',
+                             'promoted_name' : 'y',
                              'shape': 2, 'size' : 2}
 
         params = SrcVecWrapper()
@@ -82,19 +82,19 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x',
+                             'promoted_name' : 'x',
                              'shape': 2, 'size' : 2 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y',
+                               'promoted_name' : 'y',
                              'shape': 2, 'size' : 2 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y',
+                             'promoted_name' : 'y',
                              'shape': 2, 'size' : 2 }
 
         params = SrcVecWrapper()
@@ -120,19 +120,19 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.ones((2, 2)),
                              'pathname' : 'x',
-                             'relative_name' : 'x',
+                             'promoted_name' : 'x',
                              'shape': (2,2), 'size' : 4 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.zeros((2, 2)),
                                'pathname' : 'y',
-                               'relative_name' : 'y',
+                               'promoted_name' : 'y',
                              'shape': (2,2), 'size' : 4 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.zeros((2, 2)),
                              'pathname' : 'y',
-                             'relative_name' : 'y',
+                             'promoted_name' : 'y',
                              'shape': (2,2), 'size' : 4 }
 
         params = SrcVecWrapper()
@@ -161,27 +161,27 @@ class CompFDTestCase(unittest.TestCase):
         params_dict = OrderedDict()
         params_dict['x'] = { 'val': np.array([0.5]),
                              'pathname' : 'x',
-                             'relative_name' : 'x',
+                             'promoted_name' : 'x',
                              'shape': (1,), 'size' : 1 }
 
         unknowns_dict = OrderedDict()
         unknowns_dict['y'] = { 'val': np.array([0.0]),
                                'pathname' : 'y',
-                               'relative_name' : 'y',
+                               'promoted_name' : 'y',
                              'shape': (1,), 'size' : 1 }
         unknowns_dict['z'] = { 'val': np.array([0.0]),
                                'pathname' : 'z',
-                               'relative_name' : 'z',
+                               'promoted_name' : 'z',
                              'shape': (1,), 'size' : 1 }
 
         resids_dict = OrderedDict()
         resids_dict['y'] = { 'val': np.array([0.0]),
                              'pathname' : 'y',
-                             'relative_name' : 'y',
+                             'promoted_name' : 'y',
                              'shape': (1,), 'size' : 1 }
         resids_dict['z'] = { 'val': np.array([0.0]),
                              'pathname' : 'z',
-                             'relative_name' : 'z',
+                             'promoted_name' : 'z',
                              'shape': (1,), 'size' : 1 }
 
         params = SrcVecWrapper()
@@ -238,11 +238,11 @@ class CompFDinSystemTestCase(unittest.TestCase):
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp.y']['p1.x'][0][0], 2.0, 1e-6)
 
-        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp.y']['p1.x'][0][0], 2.0, 1e-6)
 
     def test_overrides(self):
 
@@ -284,8 +284,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x'], ['comp.y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['comp.y']['comp.x'][0][0], 7.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp.y']['p1.x'][0][0], 7.0, 1e-6)
 
     def test_fd_options_step_size(self):
 
@@ -302,15 +302,15 @@ class CompFDinSystemTestCase(unittest.TestCase):
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 39.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure step_size is used
         # Derivative should be way high with this.
         comp.fd_options['step_size'] = 1e5
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        self.assertGreater(J['comp.f_xy']['comp.x'][0][0], 1000.0)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 1000.0)
 
     def test_fd_options_form(self):
 
@@ -325,38 +325,40 @@ class CompFDinSystemTestCase(unittest.TestCase):
         comp.fd_options['force_fd'] = True
         comp.fd_options['form'] = 'forward'
 
+        param_list = ['p1.x']
+        unknowns_list = ['comp.f_xy']
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 39.0, 1e-6)
+        J = top.calc_gradient(param_list, unknowns_list, return_format='dict')
+        assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'backward'
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 39.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'central'
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 39.0, 1e-6)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Now, Make sure we really are going foward and backward
         comp.fd_options['form'] = 'forward'
         comp.fd_options['step_size'] = 1e3
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        self.assertGreater(J['comp.f_xy']['comp.x'][0][0], 0.0)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 0.0)
 
         comp.fd_options['form'] = 'backward'
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        self.assertLess(J['comp.f_xy']['comp.x'][0][0], 0.0)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        self.assertLess(J['comp.f_xy']['p1.x'][0][0], 0.0)
 
         # Central should get pretty close even for the bad stepsize
         comp.fd_options['form'] = 'central'
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 39.0, 1e-1)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-1)
 
     def test_fd_options_step_type(self):
 
@@ -412,15 +414,15 @@ class CompFDinSystemTestCase(unittest.TestCase):
         top.setup()
         top.run()
 
-        J1 = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
+        J1 = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
         comp.fd_options['step_type'] = 'relative'
-        J2 = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
+        J2 = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
         # Couldnt put together a case where one is much worse, so just make sure they
         # are not equal.
-        self.assertNotEqual(self, J1['comp.f_xy']['comp.x'][0][0],
-                                  J2['comp.f_xy']['comp.x'][0][0])
+        self.assertNotEqual(self, J1['comp.f_xy']['p1.x'][0][0],
+                                  J2['comp.f_xy']['p1.x'][0][0])
 
     def test_fd_options_meta_step_size(self):
 
@@ -476,8 +478,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
         # Make sure bad meta step_size is used
         # Derivative should be way high with this.
 
-        J = top.calc_gradient(['comp.x'], ['comp.f_xy'], return_format='dict')
-        self.assertGreater(J['comp.f_xy']['comp.x'][0][0], 1000.0)
+        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 1000.0)
 
     def test_fd_options_meta_form(self):
 
@@ -534,14 +536,17 @@ class CompFDinSystemTestCase(unittest.TestCase):
         comp.fd_options['force_fd'] = True
         comp.fd_options['step_size'] = 1e3
 
+        params_list = ['p11.x1']
+        unknowns_list = ['comp.f_xy']
+
         top.setup()
         top.run()
 
-        J = top.calc_gradient(['comp.x1'], ['comp.f_xy'], return_format='dict')
-        self.assertGreater(J['comp.f_xy']['comp.x1'][0][0], 0.0)
+        J = top.calc_gradient(params_list, unknowns_list, return_format='dict')
+        self.assertGreater(J['comp.f_xy']['p11.x1'][0][0], 0.0)
 
-        J = top.calc_gradient(['comp.x2'], ['comp.f_xy'], return_format='dict')
-        self.assertLess(J['comp.f_xy']['comp.x2'][0][0], 0.0)
+        J = top.calc_gradient(['p12.x2'], unknowns_list, return_format='dict')
+        self.assertLess(J['comp.f_xy']['p12.x2'][0][0], 0.0)
 
 
 if __name__ == "__main__":

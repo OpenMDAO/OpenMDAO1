@@ -45,8 +45,8 @@ class VecWrapper(object):
     """
     A dict-like container of a collection of variables.
 
-    Parameters
-    ----------
+    Args
+    ----
     pathname : str, optional
         the pathname of the containing `System`
 
@@ -57,7 +57,7 @@ class VecWrapper(object):
 
     Attributes
     ----------
-    idx_arr_type : dtype
+    idx_arr_type : dtype, optional
         A dtype indicating how index arrays are to be represented.
         The value 'i' indicates an numpy integer array, other
         implementations, e.g., petsc, will define this differently.
@@ -97,8 +97,8 @@ class VecWrapper(object):
         """
         Retrieve unflattened value of named var.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the value for.
 
@@ -138,8 +138,8 @@ class VecWrapper(object):
         """
         Set the value of the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the value for.
 
@@ -228,8 +228,8 @@ class VecWrapper(object):
         """
         Returns the metadata for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the metadata for.
 
@@ -244,8 +244,8 @@ class VecWrapper(object):
         """
         Returns all of the indices for the named variable in this vector.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of variable to get the indices for.
 
@@ -284,8 +284,8 @@ class VecWrapper(object):
         """
         Return a new `VecWrapper` that is a view into this one.
 
-        Parameters
-        ----------
+        Args
+        ----
         sys_pathname : str
             pathname of the system for which the view is being created
 
@@ -333,8 +333,8 @@ class VecWrapper(object):
         Return an index vector of the right int type for
         the current implementation.
 
-        Parameters
-        ----------
+        Args
+        ----
         start : int
             The starting index.
 
@@ -354,8 +354,8 @@ class VecWrapper(object):
         Given some iterator of indices, return an index array of the
         right int type for the current implementation.
 
-        Parameters
-        ----------
+        Args
+        ----
         indices : iterator of ints
             An iterator of indices.
 
@@ -373,8 +373,8 @@ class VecWrapper(object):
         smaller index arrays and combined in order of ascending source
         index (to allow us to convert src indices to a slice in some cases).
 
-        Parameters
-        ----------
+        Args
+        ----
         src_idxs : array
             Source indices.
 
@@ -410,8 +410,8 @@ class VecWrapper(object):
         Returns the relative pathname for the given absolute variable
         pathname.
 
-        Parameters
-        ----------
+        Args
+        ----
         abs_name : str
             Absolute pathname of a variable.
 
@@ -454,8 +454,8 @@ class VecWrapper(object):
 
     def _scoped_abs_name(self, name):
         """
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             The absolute pathname of a variable.
 
@@ -473,9 +473,8 @@ class VecWrapper(object):
 
     def dump(self, out_stream=sys.stdout):
         """
-        Parameters
-        ----------
-
+        Args
+        ----
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to return a str.
@@ -530,8 +529,8 @@ class SrcVecWrapper(VecWrapper):
         in unknowns. If store_byobjs is True, then 'pass by object' variables
         will also be stored.
 
-        Parameters
-        ----------
+        Args
+        ----
         unknowns_dict : dict
             Dictionary of metadata for unknown variables collected from
             components.
@@ -548,7 +547,7 @@ class SrcVecWrapper(VecWrapper):
         vec_size = 0
         for name, meta in unknowns_dict.items():
             if relevant_vars is None or name in relevant_vars:
-                relname = meta['relative_name']
+                relname = meta['promoted_name']
                 vmeta = self._setup_var_meta(name, meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[relname] = (vec_size, vec_size + vmeta['size'])
@@ -569,14 +568,14 @@ class SrcVecWrapper(VecWrapper):
         if store_byobjs:
             for name, meta in unknowns_dict.items():
                 if (relevant_vars is None or name in relevant_vars) and not meta.get('remote'):
-                    self[meta['relative_name']] = meta['val']
+                    self[meta['promoted_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
         """
         Populate the metadata dict for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
            The name of the variable to add.
 
@@ -616,8 +615,8 @@ class TgtVecWrapper(VecWrapper):
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
 
-        Parameters
-        ----------
+        Args
+        ----
         parent_params_vec : `VecWrapper` or None
             `VecWrapper` of parameters from the parent `System`.
 
@@ -673,7 +672,6 @@ class TgtVecWrapper(VecWrapper):
                             common = get_common_ancestor(src, pathname)
                             if common == self.pathname or (self.pathname+'.') not in common:
                                 missing.append(pathname)
-
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
@@ -688,13 +686,13 @@ class TgtVecWrapper(VecWrapper):
             newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
-                newmeta['relative_name'] = meta['relative_name']
+                newmeta['promoted_name'] = meta['promoted_name']
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
         for pathname, meta in params_dict.items():
-            if relevant_vars is None or pathname in relevant_vars:
+            if pathname in my_params and (relevant_vars is None or pathname in relevant_vars):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
                     scale, offset = unitconv
@@ -706,8 +704,8 @@ class TgtVecWrapper(VecWrapper):
         """
         Populate the metadata dict for the named variable.
 
-        Parameters
-        ----------
+        Args
+        ----
         pathname : str
             Absolute name of the variable.
 
@@ -778,6 +776,59 @@ class TgtVecWrapper(VecWrapper):
         return [psizes]
 
 
+class PlaceholderVecWrapper(object):
+    """
+    A placeholder for a dict-like container of a collection of variables.
+
+    Args
+    ----
+    name : str
+        the name of the vector
+    """
+
+    def __init__(self, name=''):
+        self.name = name
+
+    def __getitem__(self, name):
+        """
+        Retrieve unflattened value of named var. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
+
+    def __setitem__(self, name, value):
+        """
+        Set the value of the named variable. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        value :
+            The unflattened value of the named variable.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
 def idx_merge(idxs):
     """
     Combines a mixed iterator of int and iterator indices into an

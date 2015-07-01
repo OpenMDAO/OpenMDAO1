@@ -8,8 +8,8 @@ class ParallelGroup(Group):
     def apply_nonlinear(self, params, unknowns, resids):
         """ Evaluates the residuals of our children systems.
 
-        Parameters
-        ----------
+        Args
+        ----
         params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
@@ -67,8 +67,8 @@ class ParallelGroup(Group):
         """
         Assign communicator to this `ParallelGroup` and all of its subsystems.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """

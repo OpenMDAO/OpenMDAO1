@@ -463,6 +463,24 @@ class TestProblem(unittest.TestCase):
         prob['G2.G1.C2.y'] = 99.
         self.assertEqual(prob['G2.G1.C2.y'], 99.)
 
+    def test_variable_access_before_setup(self):
+        prob = Problem(root=ExampleGroup())
+
+        try:
+            prob['G2.C1.x'] = 5.
+        except AttributeError as err:
+            msg = "'unknowns' has not been initialized, setup() must be called before 'G2.C1.x' can be accessed"
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
+
+        try:
+            prob.run()
+        except AttributeError as err:
+            msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
+            self.assertEquals(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
 
     def test_basic_run(self):
         prob = Problem(root=ExampleGroup())

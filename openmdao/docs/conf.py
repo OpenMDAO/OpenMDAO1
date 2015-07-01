@@ -15,6 +15,103 @@
 import sys
 import os
 import shlex
+#------------------------begin monkeypatch-----------------------
+#monkeypatch to make our docs say "Args" instead of "Parameters"
+from numpydoc.docscrape_sphinx import SphinxDocString
+from numpydoc.docscrape import NumpyDocString, Reader
+import textwrap
+
+_parsed_data = {
+            'Signature': '',
+            'Summary': [''],
+            'Extended Summary': [],
+            'Args': [],
+            'Returns': [],
+            'Raises': [],
+            'Warns': [],
+            'Other Args': [],
+            'Attributes': [],
+            'Methods': [],
+            'See Also': [],
+            'Notes': [],
+            'Warnings': [],
+            'References': '',
+            'Examples': '',
+            'index': {}
+            }
+
+def _parse(self):
+        self._doc.reset()
+        self._parse_summary()
+
+        for (section,content) in self._read_sections():
+            if not section.startswith('..'):
+                section = ' '.join([s.capitalize() for s in section.split(' ')])
+            if section in ('Args', 'Returns', 'Raises', 'Warns',
+                           'Other Args', 'Attributes', 'Methods'):
+                self[section] = self._parse_param_list(content)
+            elif section.startswith('.. index::'):
+                self['index'] = self._parse_index(section, content)
+            elif section == 'See Also':
+                self['See Also'] = self._parse_see_also(content)
+            else:
+                self[section] = content
+
+
+def __str__(self, indent=0, func_role="obj"):
+        out = []
+        out += self._str_signature()
+        out += self._str_index() + ['']
+        out += self._str_summary()
+        out += self._str_extended_summary()
+        out += self._str_param_list('Args')
+        out += self._str_returns()
+        for param_list in ('Other Args', 'Raises', 'Warns'):
+            out += self._str_param_list(param_list)
+        out += self._str_warnings()
+        out += self._str_see_also(func_role)
+        out += self._str_section('Notes')
+        out += self._str_references()
+        out += self._str_examples()
+        for param_list in ('Attributes', 'Methods'):
+            out += self._str_member_list(param_list)
+        out = self._str_indent(out,indent)
+        return '\n'.join(out)
+
+def __init__(self, docstring, config={}):
+
+        docstring = textwrap.dedent(docstring).split('\n')
+
+        self._doc = Reader(docstring)
+        self._parsed_data = {
+            'Signature': '',
+            'Summary': [''],
+            'Extended Summary': [],
+            'Args': [],
+            'Returns': [],
+            'Raises': [],
+            'Warns': [],
+            'Other Args': [],
+            'Attributes': [],
+            'Methods': [],
+            'See Also': [],
+            'Notes': [],
+            'Warnings': [],
+            'References': '',
+            'Examples': '',
+            'index': {}
+            }
+
+        self._parse()
+        
+#Do the actual patch switchover to these local versions
+NumpyDocString.__init__ = __init__
+SphinxDocString._parsed_data = _parsed_data
+SphinxDocString._parse = _parse
+SphinxDocString.__str__ = __str__
+#--------------end monkeypatch---------------------
+
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

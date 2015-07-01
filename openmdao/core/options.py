@@ -9,8 +9,8 @@ class OptionsDictionary(object):
     can only set or get keys that have been registered with add_option, and
     2) type is enforced
 
-    Parameters
-    ----------
+    Args
+    ----
     read_only : bool
         If this is True, these options should not be modified at run time,
         and should not be printed in the docs.
@@ -24,8 +24,8 @@ class OptionsDictionary(object):
                    desc=''):
         """ Adds an option to this options dictionary.
 
-        Parameters
-        ----------
+        Args
+        ----
         name : str
             Name of the option.
 

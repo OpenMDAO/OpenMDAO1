@@ -9,8 +9,8 @@ class BasicImpl(object):
         """
         Create a vecwrapper for source variables.
 
-        Parameters
-        ----------
+        Args
+        ----
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -25,8 +25,8 @@ class BasicImpl(object):
         """
         Create a vecwrapper for target variables.
 
-        Parameters
-        ----------
+        Args
+        -----
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -37,15 +37,21 @@ class BasicImpl(object):
         return TgtVecWrapper(pathname, comm)
 
     @staticmethod
-    def create_data_xfer(system, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def create_data_xfer(src_vec, tgt_vec,
+                         src_idxs, tgt_idxs, vec_conns, byobj_conns):
         """
         Create an object for performing data transfer between source
         and target vectors.
 
-        Parameters
-        ----------
-        system : `System`
-            The `System` that managers this data transfer.
+        Args
+        ----
+        src_vec : `VecWrapper`
+            Source vecwrapper for the transfer.  In rev mode it will be the
+            target.
+
+        tgt_vec : `VecWrapper`
+            Target vecwrapper for the transfer. In rev mode it will be the
+            source.
 
         src_idxs : array
             Indices of the source variables in the source vector.
@@ -67,4 +73,3 @@ class BasicImpl(object):
             A `DataXfer` object.
         """
         return DataXfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
-
