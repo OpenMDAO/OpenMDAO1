@@ -791,6 +791,27 @@ class Problem(System):
 
         return mode
 
+    def json_system_tree(self):
+
+        def _tree_dict(system):
+            dct = OrderedDict()
+            for name, s in system.subsystems(recurse=True):
+                if isinstance(s, Group):
+                    dct[name] = _tree_dict(s)
+                else:
+                    dct[name] = OrderedDict()
+                    for vname, meta in s.unknowns.items():
+                        dct[name][vname] = m = meta.copy()
+                        for mname in m:
+                            if isinstance(m[mname], np.ndarray):
+                                m[mname] = m[mname].tolist()
+            return dct
+
+        tree = OrderedDict()
+        tree['root'] = _tree_dict(self.root)
+        return json.dumps(tree)
+
+
 def _setup_units(connections, params_dict, unknowns_dict):
     """
     Calculate unit conversion factors for any connected
