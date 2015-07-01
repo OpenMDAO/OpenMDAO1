@@ -10,7 +10,7 @@ from openmdao.components.execcomp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simplecomps import SimpleArrayComp, ArrayComp2D
+from openmdao.test.simplecomps import SimpleArrayComp, ArrayComp2D, FanOut
 from openmdao.test.testutil import assert_rel_error
 
 SKIP = False
@@ -142,6 +142,35 @@ class TestPyoptSparse(unittest.TestCase):
 
         obj = top['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
+
+    def test_fan_out(self):
+
+        top = Problem()
+        root = top.root = FanOut()
+
+        root.add('obj', ExecComp('o = i1 + i2'))
+        root.add('con1', ExecComp('c = 20.0 + i'))
+        root.add('con2', ExecComp('c = 20.0 + i'))
+
+        # hook up non explicit
+        root.connect('comp2.y', 'con1.i')
+        root.connect('comp3.y', 'con2.i')
+        root.connect('comp2.y', 'obj.i1')
+        root.connect('comp3.y', 'obj.i2')
+
+        top.driver = pyOptSparseDriver()
+        top.driver.add_param('p.x', low=-50.0, high=50.0)
+        top.driver.add_objective('obj.o')
+        top.driver.add_constraint('con1.c', ctype='eq')
+        top.driver.add_constraint('con2.c', ctype='eq')
+
+        top.setup()
+        top.run()
+
+        print top['obj.o']
+        print top['con1.c']
+        print top['con2.c']
+
 
 if __name__ == "__main__":
     unittest.main()
