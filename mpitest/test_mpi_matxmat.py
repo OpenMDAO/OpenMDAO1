@@ -101,10 +101,6 @@ class MatMatTestCase(MPITestCase):
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        print(top.json_system_tree())
-        print("----")
-        print(top.root._relevance.json_dependencies())
-
     def test_fan_out_parallel_sets(self):
 
         top = Problem(impl=impl)

@@ -1,6 +1,7 @@
 """ OpenMDAO Problem class defintion."""
 
 from itertools import chain
+from collections import OrderedDict
 import json
 from six import string_types
 
