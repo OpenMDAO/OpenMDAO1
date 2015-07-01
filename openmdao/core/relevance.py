@@ -161,12 +161,11 @@ class Relevance(object):
         name labels.
         """
         idxs = OrderedDict()
+        matrix = []
+        size = len(self._vgraph.nodes())
+
         for i, node in enumerate(self._vgraph.nodes_iter()):
             idxs[node] = i
-
-        matrix = []
-        size = len(idxs)
-        for i, node in enumerate(self._vgraph.nodes_iter()):
             matrix.append([0]*size)
 
         for u, v in self._vgraph.edges_iter():
