@@ -4,35 +4,35 @@ from six.moves import zip
 class ConnectError(Exception):
     @classmethod
     def type_mismatch_error(cls, src, target):
-        msg = "Type '{src[type]}' of source '{src[relative_name]}' must be the same as type '{target[type]}' of target '{target[relative_name]}'"
+        msg = "Type '{src[type]}' of source '{src[promoted_name]}' must be the same as type '{target[type]}' of target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def shape_mismatch_error(cls, src, target):
-        msg  = "Shape '{src[shape]}' of the source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg  = "Shape '{src[shape]}' of the source '{src[promoted_name]}' must match the shape '{target[shape]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def size_mismatch_error(cls, src, target):
-        msg  = "Size {len(target[src_indices])} of the indexed sub-part of source '{src[relative_name]}' must match the size '{target[size]}' of the target '{target[relative_name]}'"
+        msg  = "Size {len(target[src_indices])} of the indexed sub-part of source '{src[promoted_name]}' must match the size '{target[size]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def indices_too_large(cls, src, target):
-        msg  = "Size {len(target[src_indices])} of target indices is larger than size {src[size]} of source '{src[relative_name]}'"
+        msg  = "Size {len(target[src_indices])} of target indices is larger than size {src[size]} of source '{src[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def val_and_shape_mismatch_error(cls, src, target):
-        msg = "Shape of the initial value '{src[val].shape}' of source '{src[relative_name]}' must match the shape '{target[shape]}' of the target '{target[relative_name]}'"
+        msg = "Shape of the initial value '{src[val].shape}' of source '{src[promoted_name]}' must match the shape '{target[shape]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)

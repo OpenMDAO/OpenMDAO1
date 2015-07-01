@@ -17,6 +17,7 @@ from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
+from openmdao.util.strutil import name_relative_to
 from openmdao.core.mpiwrap import MPI
 #from openmdao.devtools.debug import debug
 
@@ -51,7 +52,7 @@ class Group(System):
         Args
         ----
         name : str
-             the name of the variable to set into the unknowns vector
+             The name of the variable to set into the unknowns vector.
         """
         if self.is_active():
             try:
@@ -60,7 +61,7 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    self.subsystem(subname).params[vname] = val
+                    self._subsystem(subname).params[vname] = val
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
@@ -98,12 +99,12 @@ class Group(System):
                 # look in params
                 try:
                     subname, vname = name.rsplit('.', 1)
-                    return self.subsystem(subname).params[vname]
+                    return self._subsystem(subname).params[vname]
                 except:
                     raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
                                    (name, self.pathname))
 
-    def subsystem(self, name):
+    def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
@@ -120,8 +121,7 @@ class Group(System):
             A reference to the named subsystem.
         """
         s = self
-        parts = name.split('.')
-        for part in parts:
+        for part in name.split('.'):
             s = s._subsystems[part]
 
         return s
@@ -238,39 +238,40 @@ class Group(System):
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
-        """Create dictionaries of metadata for parameters and for unknowns for
-           this `Group` and stores them as attributes of the `Group`. The
-           relative name of subsystem variables with respect to this `Group`
-           system is included in the metadata.
+        """
+        Create dictionaries of metadata for parameters and for unknowns for
+        this `Group` and stores them as attributes of the `Group`. The
+        promoted name of subsystem variables with respect to this `Group`
+        is included in the metadata.
 
-           Returns
-           -------
-           tuple
-               A dictionary of metadata for parameters and for unknowns
-               for all subsystems.
+        Returns
+        -------
+        tuple
+            A dictionary of metadata for parameters and for unknowns
+            for all subsystems.
         """
         for name, sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 if p in self._src_idxs:
                     meta['src_indices'] = self._src_idxs[p]
                 self._params_dict[p] = meta
 
             for u, meta in subunknowns.items():
                 meta = meta.copy()
-                meta['relative_name'] = self._var_pathname(meta['relative_name'], sub)
+                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
 
         return self._params_dict, self._unknowns_dict
 
-    def _var_pathname(self, name, subsystem):
+    def _promoted_name(self, name, subsystem):
         """
         Returns
         -------
         str
-            The pathname of the given variable, based on its promotion status.
+            The promoted name of the given variable.
         """
         if subsystem.promoted(name):
             return name
@@ -366,6 +367,12 @@ class Group(System):
             sub._setup_vectors(param_owners, parent=self,
                                relevance=relevance, top_unknowns=top_unknowns)
 
+        # now that all of the vectors and subvecs are allocated, calculate
+        # and cache the ls_inputs.
+        self._ls_inputs = {}
+        for voi, vec in self.dumat.items():
+            self._ls_inputs[voi] = self._all_params(voi)
+
     def _get_fd_params(self):
         """
         Get the list of parameters that are needed to perform a
@@ -386,7 +393,7 @@ class Group(System):
                 # look up the Component that contains the source variable
                 scname = src.rsplit('.', 1)[0]
                 if scname.startswith(mypath):
-                    src_comp = self.subsystem(scname[len(mypath):])
+                    src_comp = self._subsystem(scname[len(mypath):])
                     if isinstance(src_comp, ParamComp):
                         params.append(tgt[len(mypath):])
                 else:
@@ -409,7 +416,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self.subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
+            sub = self._subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
@@ -419,9 +426,9 @@ class Group(System):
         """
         Returns
         -------
-            dict
-                Explicit connections in this `Group`, represented as a mapping
-                from the pathname of the target to the pathname of the source.
+        dict
+            Explicit connections in this `Group`, represented as a mapping
+            from the pathname of the target to the pathname of the source.
         """
         connections = {}
         for _, sub in self.subgroups():
@@ -430,28 +437,22 @@ class Group(System):
         for tgt, src in self._src.items():
             try:
                 src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(src, self._params_dict, 'params')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_src_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_src_error(src, tgt)
 
             try:
                 for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
                     connections[tgt_pathname] = src_pathname
-
             except KeyError as error:
                 try:
                     get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
-
                 except KeyError as error:
                     raise ConnectError.nonexistent_target_error(src, tgt)
-
                 else:
                     raise ConnectError.invalid_target_error(src, tgt)
 
@@ -1034,46 +1035,35 @@ class Group(System):
                 # get the subsystem name from that
                 start = len(self.pathname)+1 if self.pathname else 0
 
-                tgt_sys = param[start:].split('.', 1)[0]
-                src_sys = unknown[start:].split('.', 1)[0]
+                tgt_sys = name_relative_to(self.pathname, param)
+                #param[start:].split('.', 1)[0]
+                src_sys = name_relative_to(self.pathname, unknown)
+                #unknown[start:].split('.', 1)[0]
 
-                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                    xfer_dict.setdefault((tgt_sys, 'fwd'), ([],[],[],[]))
+                for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
+                    src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
+                        xfer_dict.setdefault((sname, mode), ([],[],[],[]))
 
-                rev_src_idx_list, rev_dest_idx_list, rev_vec_conns, rev_byobj_conns = \
-                    xfer_dict.setdefault((src_sys, 'rev'), ([],[],[],[]))
+                    urelname = self.unknowns.get_relative_varname(unknown)
+                    prelname = self.params.get_relative_varname(param)
 
-                urelname = self.unknowns.get_relative_varname(unknown)
-                prelname = self.params.get_relative_varname(param)
-
-                if self.unknowns.metadata(urelname).get('pass_by_obj'):
-                    byobj_conns.append((prelname, urelname))
-                else: # pass by vector
-                    #forward
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         var_of_interest, 'fwd')
-                    vec_conns.append((prelname, urelname))
-                    src_idx_list.append(sidxs)
-                    dest_idx_list.append(didxs)
-
-                    #print("fwd: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
-
-                    # reverse
-                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         var_of_interest, 'rev')
-
-                    #print("rev: %s: %s,  %s: %s" % (prelname, didxs, urelname, sidxs))
-
-                    rev_vec_conns.append((prelname, urelname))
-                    rev_src_idx_list.append(sidxs)
-                    rev_dest_idx_list.append(didxs)
+                    if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                        # rev is for derivs only, so no by_obj passing needed
+                        if mode == 'fwd':
+                            byobj_conns.append((prelname, urelname))
+                    else: # pass by vector
+                        sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                             var_of_interest, mode)
+                        vec_conns.append((prelname, urelname))
+                        src_idx_list.append(sidxs)
+                        dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
-                #debug("'%s': creating xfer %s" % (self.pathname, str((tgt_sys, mode, var_of_interest))))
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                        self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns)
 
@@ -1095,9 +1085,9 @@ class Group(System):
                     full_byobjs.extend(byobjs)
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
-            #debug("'%s': creating xfer %s" % (self.pathname, str(('', mode, var_of_interest))))
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
+                self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                                                    self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs)
 
@@ -1126,9 +1116,6 @@ class Group(System):
         x = self._data_xfer.get((target_sys, mode, var_of_interest))
         if x is not None:
             if deriv:
-                #debug("xfer: '%s': target: %s, mode: %s, voi: %s, du: %s, dp: %s" %
-                #       (self.pathname, target_sys, mode, var_of_interest, self.dumat[var_of_interest].vec,
-                #       self.dpmat[var_of_interest].vec))
                 x.transfer(self.dumat[var_of_interest], self.dpmat[var_of_interest],
                            mode, deriv=True)
             else:
@@ -1169,18 +1156,6 @@ class Group(System):
         for _, sub in self.subgroups():
             for solvers in sub._find_all_solvers():
                 yield solvers
-
-    def _find_all_comps(self):
-        """ Recursive function that assembles a dictionary whose keys are Group
-        instances and whose values are lists of Component instances.
-        """
-
-        data = {self:[]}
-        for c_name, c in self.components():
-            data[self].append(c)
-        for sg_name, sg in self.subgroups():
-            data.update(sg._find_all_comps())
-        return data
 
     def _get_owning_ranks(self):
         """
@@ -1229,7 +1204,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
 
     pnames = []
     for pathname, meta in var_dict.items():
-        if meta['relative_name'] == var_name:
+        if meta['promoted_name'] == var_name:
             pnames.append(pathname)
 
     if not pnames:

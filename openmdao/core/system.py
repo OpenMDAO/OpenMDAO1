@@ -95,7 +95,7 @@ class System(object):
         for prom in self._promotes:
             if fnmatch(name, prom):
                 for n, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
-                    rel = meta.get('relative_name', n)
+                    rel = meta.get('promoted_name', n)
                     if rel == name:
                         return True
 
@@ -257,7 +257,7 @@ class System(object):
             resultvec = resids
             for u_name, meta in iteritems(self._unknowns_dict):
                 if meta.get('state'):
-                    states.append(meta['relative_name'])
+                    states.append(meta['promoted_name'])
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
@@ -283,13 +283,13 @@ class System(object):
                     for name in unknowns:
                         meta = unknowns.metadata(name)
                         if meta['pathname'] == param_src:
-                            param_src = meta['relative_name']
+                            param_src = meta['promoted_name']
 
                 target_input = unknowns.flat[param_src]
 
             mydict = {}
             for key, val in self._params_dict.items():
-                if val['relative_name'] == p_name:
+                if val['promoted_name'] == p_name:
                     mydict = val
                     break
 
@@ -408,9 +408,9 @@ class System(object):
             # Vectors are flipped during adjoint
 
             if mode == 'fwd':
-                dresids[unknown] += J.dot(arg_vec[param].flatten()).reshape(result.shape)
+                dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
             else:
-                arg_vec[param] += J.T.dot(result.flatten()).reshape(arg_vec[param].shape)
+                arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
 
     def _create_vecs(self, my_params, relevance, var_of_interest, impl):
         comm = self.comm
@@ -523,7 +523,7 @@ class System(object):
 
                 # Params are already only on this process. We need to add
                 # only outputs of components that are on this process.
-                sys = self.subsystem(output.partition('.')[0])
+                sys = getattr(self, output.partition('.')[0])
                 if sys.is_active() and value is not None and value.size > 0:
                     tups.append((output, param))
 
@@ -585,7 +585,7 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
         if abspath.startswith(child_name+'.'):
             newmeta = unknowns_dict.get(abspath)
             if newmeta is not None:
-                newrel = newmeta['relative_name']
+                newrel = newmeta['promoted_name']
             else:
                 newrel = rel
             umap[rel] = newrel

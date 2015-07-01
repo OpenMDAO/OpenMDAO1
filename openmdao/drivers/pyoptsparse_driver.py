@@ -76,7 +76,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = param_meta.keys()
+        param_list = list(param_meta.keys())
         param_vals = self.get_params()
         for name, meta in param_meta.items():
 
@@ -91,7 +91,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = objs.keys()
+        self.quantities = list(objs.keys())
         for name, obj in objs.items():
             opt_prob.addObj(name)
 
@@ -106,7 +106,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += econs.keys()
+        self.quantities += list(econs.keys())
         for name, con in econs.items():
             size = con_meta[name]['size']
             lower = np.zeros((size))
@@ -120,7 +120,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += incons.keys()
+        self.quantities += list(incons.keys())
         for name, con in incons.items():
             size = con_meta[name]['size']
             upper = np.zeros((size))
