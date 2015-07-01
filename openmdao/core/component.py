@@ -400,9 +400,41 @@ class Component(System):
         out_stream.flush()
 
 
-    def generate_numpydocstring(self):
-        innards=dir(self)
-        for innard in innards:
-            print innard
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user's component.
 
-        print self.__dict__
+        Returns
+        -------
+        docstring : str
+                string that contains a basicnumpydocstring
+
+        """
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
+        docstring += '\n\tAttributes\n\t----------\n\n'
+
+        if self._params_dict:
+            for key, value in self._params_dict.iteritems():
+                docstring += "\t\t"+key
+                docstring += " : param \n"
+                #docstring += type(value).__name__
+                docstring += "\n\t\t\t<Insert description here.>\n\n"
+
+        if self._unknowns_dict:
+            for key, value in self._unknowns_dict.iteritems():
+                docstring += "\t\t"+key
+                docstring += " : "
+                typ = type(value).__name__
+
+                if typ=='dict':
+                    docstring += " unknown \n"
+                else: docstring += typ + "\n"
+                docstring += "\n\t\t\t<Insert description here.>\n\n"
+
+
+        docstring += '\n\tNote\n\t----\n\n'
+
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring
