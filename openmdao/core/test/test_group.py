@@ -324,8 +324,8 @@ class TestGroup(unittest.TestCase):
         prob.setup()
 
         # check that we can access values from unknowns (default) and params
-        self.assertEqual(prob.root['G2.C1.x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob.root['G2.G1.C2.y'], 5.5)            # output from ExecComp
+        self.assertEqual(prob.root['G2.C1.x'], 5.)             # default output from ParamComp
+        self.assertEqual(prob.root['G2.G1.C2.y'], 5.5)         # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
@@ -340,7 +340,7 @@ class TestGroup(unittest.TestCase):
 
         # and make sure we get the correct value after a transfer
         prob.root.G2._transfer_data('G1')
-        self.assertEqual(prob.root.G2.G1.C2.params['x'], 99.)   # transferred value of parameter
+        self.assertEqual(prob.root.G2.G1.C2.params['x'], 99.)  # transferred value of parameter
 
     def test_subsystem_access(self):
         prob = Problem(root=ExampleGroup())

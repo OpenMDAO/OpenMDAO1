@@ -88,8 +88,8 @@ class TestProblem(unittest.TestCase):
         comp1 = SimpleImplicitComp()
         comp2 = SimpleImplicitComp()
 
-        root.add('c1', comp1, promotes=('z',))  # promote the state, 'z'
-        root.add('c2', comp2, promotes=('z',))  # promote the state, 'z'
+        root.add('c1', comp1, promotes=['z'])  # promote the state, z
+        root.add('c2', comp2, promotes=['z'])  # promote the state, z, again.. BAD
 
         prob = Problem(root)
 
@@ -450,14 +450,14 @@ class TestProblem(unittest.TestCase):
 
         prob.setup()
 
-        self.assertEqual(prob['G2.C1.x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob['G2.G1.C2.y'], 5.5)            # output from ExecComp
+        self.assertEqual(prob['G2.C1.x'], 5.)                  # default output from ParamComp
+        self.assertEqual(prob['G2.G1.C2.y'], 5.5)              # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
         prob.setup()
-        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)      # initial value for a parameter
+        self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
         # __setitem__
         prob['G2.G1.C2.y'] = 99.
