@@ -1,14 +1,24 @@
 """ OpenMDAO class definition for ParamComp"""
+import collections
 
 from openmdao.core.component import Component
 
 class ParamComp(Component):
     """A Component that provides an output to connect to a parameter."""
 
-    def __init__(self, name, val, **kwargs):
+    def __init__(self, name, val=None, **kwargs):
         super(ParamComp, self).__init__()
 
-        self.add_output(name, val, **kwargs)
+        if isinstance(name, str):
+            if val is None:
+                raise ValueError('a value must be provided as the second argument to init')
+            self.add_output(name, val, **kwargs)
+
+        elif isinstance(name, collections.Iterable):
+            for n, v, kwargs in name:
+                self.add_output(n, v, **kwargs)
+        else:
+            raise ValueError("first argument to the init must be either of type `str` or an iterable")
 
     def apply_linear(self, mode, ls_inputs=None, vois=[None]):
         """For `ParamComp`, just pass on the incoming values.
