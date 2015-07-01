@@ -58,7 +58,21 @@ class Driver(object):
                 # Size is useful metadata to save
                 meta['size'] = root.unknowns.metadata(name)['size']
 
-    def _vois_of_interest(self, voi_list):
+                # set indices of interest
+                if 'indices' in meta:
+                    if name in root.unknowns:
+                        for voi, vw in root.dumat.items():
+                            if name in vw:
+                                vw.metadata(name)['deriv_indices'] = meta['indices']
+                    elif name in root.params:
+                        for voi, vw in root.dpmat.items():
+                            if name in vw:
+                                vw.metadata(name)['deriv_indices'] = meta['indices']
+                    else:
+                        raise RuntimeError("'%s' isn't in top level unknowns "
+                                           "or params" % name)
+
+    def _of_interest(self, voi_list):
         """Return a list of tuples, with the given voi_list organized
         into tuples based on the previously defined grouping of VOIs.
         """
@@ -85,7 +99,7 @@ class Driver(object):
             The list of params, organized into tuples according to previously
             defined VOI groups.
         """
-        return self._vois_of_interest(self._params)
+        return self._of_interest(self._params)
 
     def outputs_of_interest(self):
         """
@@ -95,7 +109,7 @@ class Driver(object):
             The list of constraints and objectives, organized into tuples
             according to previously defined VOI groups.
         """
-        return self._vois_of_interest(list(chain(self._objs, self._cons)))
+        return self._of_interest(list(chain(self._objs, self._cons)))
 
     def group_vars_of_interest(self, vnames):
         """
@@ -224,6 +238,11 @@ class Driver(object):
         obj = {}
         if indices:
             obj['indices'] = indices
+            if len(indices) > 1 and not self.supports['Multiple Objectives']:
+                raise RuntimeError("Multiple objective indices specified for "
+                                   "variable '%s', but driver '%s' doesn't "
+                                   "support multiple objectives." %
+                                   (name, self.pathname))
         self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):

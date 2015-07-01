@@ -439,8 +439,6 @@ class Problem(System):
                     # Put them in serial groups
                     voi_sets.append((item,))
 
-        #print(voi_sets)
-
         voi_srcs = {}
 
         # If Forward mode, solve linear system for each param
@@ -457,7 +455,8 @@ class Problem(System):
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
-                in_size, in_idxs, voi_srcs[vkey] = self.root._get_src_info(duvec, voi)
+                voi_srcs[vkey] = psrc = self.root._get_src(duvec, voi)
+                in_size, in_idxs = duvec.get_local_idxs(psrc)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -465,7 +464,6 @@ class Problem(System):
             jbase = j
 
             for i in range(len(in_idxs)):
-
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
@@ -489,7 +487,8 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        out_size, out_idxs, _ = self.root._get_src_info(self.root.dumat[vkey], item)
+                        src = self.root._get_src(self.root.dumat[vkey], item)
+                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(src)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':
@@ -591,7 +590,7 @@ class Problem(System):
                 for u_name in unknowns:
 
                     u_size = np.size(dunknowns[u_name])
-                    if comp._jacobian_cache is not None:
+                    if comp._jacobian_cache:
 
                         # Go no further if we aren't defined.
                         if (u_name, p_name) not in comp._jacobian_cache:

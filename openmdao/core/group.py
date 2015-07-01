@@ -920,6 +920,8 @@ class Group(System):
             rank += 1
 
         # now, get the offset into the var_rank storage for the variable
+        print("sizes_table",sizes_table)
+        print("var_rank",var_rank)
         for vname, size in sizes_table[var_rank].items():
             if vname == name:
                 break

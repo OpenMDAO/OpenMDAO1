@@ -261,13 +261,21 @@ class VecWrapper(object):
 
         meta = self._vardict[name]
         if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
+            raise RuntimeError("No vector indices can be provided "
+                               "for 'pass by object' variable '%s'" % name)
 
         if name not in self._slices:
-            return meta['size'], []
+            return meta['size'], self.make_idx_array(0, 0)
 
         start, end = self._slices[name]
-        return meta['size'], self.make_idx_array(start, end)
+        if 'deriv_indices' in meta:
+            idxs = self.to_idx_array(meta['deriv_indices']) + start
+            if idxs.size > (end-start) or max(idxs) >= end:
+                raise RuntimeError("Indices of interest specified for '%s'"
+                                   "are too large" % name)
+            return idxs.size, idxs
+        else:
+            return meta['size'], self.make_idx_array(start, end)
 
     def norm(self):
         """
