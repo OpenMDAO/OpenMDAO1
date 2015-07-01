@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import os
 import warnings
+import json
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, string_types
 import sys
@@ -13,7 +15,7 @@ import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
-from openmdao.core.group import get_absvarpathnames
+from openmdao.core.group import Group, get_absvarpathnames
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
@@ -760,6 +762,29 @@ class Problem(System):
             # TODO : Only Linear GS is supported on sub
 
         return mode
+
+    def json_system_tree(self):
+
+        def _tree_dict(system):
+            dct = OrderedDict()
+            for name, s in system.subsystems(recurse=True):
+                if isinstance(s, Group):
+                    dct[name] = _tree_dict(s)
+                else:
+                    dct[name] = OrderedDict()
+                    for vname, meta in s.unknowns.items():
+                        dct[name][vname] = m = meta.copy()
+                        for mname in m:
+                            if isinstance(m[mname], np.ndarray):
+                                m[mname] = m[mname].tolist()
+            return dct
+
+        tree = OrderedDict()
+        tree['root'] = _tree_dict(self.root)
+        return json.dumps(tree)
+
+    def json_dependencies(self):
+        return self.root._relevance.json_dependencies()
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
