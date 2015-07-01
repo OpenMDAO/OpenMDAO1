@@ -68,6 +68,7 @@ class pyOptSparseDriver(Driver):
         """
 
         self.pyOpt_solution = None
+        rel = problem.root._relevance
 
         # Initial Run
         problem.root.solve_nonlinear()
@@ -77,6 +78,9 @@ class pyOptSparseDriver(Driver):
         # Add all parameters
         param_meta = self.get_param_metadata()
         param_list = list(param_meta.keys())
+        abs_params = [problem.root.unknowns._get_metadata(param)['pathname'] \
+                      for param in param_list]
+
         param_vals = self.get_params()
         for name, meta in param_meta.items():
 
@@ -87,7 +91,6 @@ class pyOptSparseDriver(Driver):
 
             opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
                                  lower=lower_bounds, upper=upper_bounds)
-            param_list.append(name)
 
         # Add all objectives
         objs = self.get_objectives()
@@ -111,12 +114,21 @@ class pyOptSparseDriver(Driver):
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            if name in rel.relevant:
+                aname = name
+            else:
+                aname = problem.root.unknowns._get_metadata(name)['pathname']
+            wrt = rel.relevant[aname].intersection(abs_params)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     linear=True, wrt=param_list,
+                                     linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, lower=lower, upper=upper)
+                opt_prob.addConGroup(name, size, lower=lower, upper=upper,
+                                     wrt=wrt)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -124,11 +136,19 @@ class pyOptSparseDriver(Driver):
         for name, con in incons.items():
             size = con_meta[name]['size']
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            if name in rel.relevant:
+                aname = name
+            else:
+                aname = problem.root.unknowns._get_metadata(name)['pathname']
+            wrt = rel.relevant[aname].intersection(abs_params)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                wrt=param_list, jac=self.lin_jacs[name])
+                wrt=wrt, jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, upper=upper)
+                opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
