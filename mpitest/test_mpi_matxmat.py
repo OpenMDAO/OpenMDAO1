@@ -30,8 +30,9 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver._inputs_of_interest = [('p1.x1', ), ('p2.x2', )]
-        top.driver._outputs_of_interest = ['comp3.y']
+        top.driver.add_param('p1.x1')
+        top.driver.add_param('p2.x2')
+        top.driver.add_objective('comp3.y')
 
         top.setup()
         top.run()
@@ -55,8 +56,9 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver._outputs_of_interest = [('c2.y', ), ('c3.y', )]
-        top.driver._inputs_of_interest = ['p.x']
+        top.driver.add_param('p.x')
+        top.driver.add_constraint('c2.y')
+        top.driver.add_constraint('c3.y')
 
         top.setup()
         top.run()
@@ -84,8 +86,34 @@ class MatMatTestCase(MPITestCase):
         # properly.
 
         # Parallel Groups
-        top.driver._inputs_of_interest = [('p1.x1', 'p2.x2')]
-        top.driver._outputs_of_interest = ['comp3.y']
+        top.driver.add_param('p1.x1')
+        top.driver.add_param('p2.x2')
+        top.driver.add_objective('comp3.y')
+
+        # make sure we can't mix inputs and outputs in parallel sets
+        try:
+            top.driver.group_vars_of_interest(['p1.x1','comp3.y'])
+        except Exception as err:
+            self.assertEqual(str(err),
+               "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
+               "params and ['comp3.y'] are not.")
+        else:
+            self.fail("Exception expected")
+
+        top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
+
+        self.assertEqual(top.driver.params_of_interest(),
+                         [('p1.x1','p2.x2')])
+
+        # make sure we can't add a VOI to multiple groups
+        try:
+            top.driver.group_vars_of_interest(['p1.x1','p3.x3'])
+        except Exception as err:
+            self.assertEqual(str(err),
+               "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
+               "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
+        else:
+            self.fail("Exception expected")
 
         top.setup()
         top.run()
@@ -114,8 +142,13 @@ class MatMatTestCase(MPITestCase):
         top.root.sub.ln_solver.options['mode'] = 'rev'
 
         # Parallel Groups
-        top.driver._outputs_of_interest = [('c2.y', 'c3.y', )]
-        top.driver._inputs_of_interest = ['p.x']
+        top.driver.add_param('p.x')
+        top.driver.add_constraint('c2.y')
+        top.driver.add_constraint('c3.y')
+        top.driver.group_vars_of_interest(['c2.y','c3.y'])
+
+        self.assertEqual(top.driver.outputs_of_interest(),
+                         [('c2.y','c3.y')])
 
         top.setup()
         top.run()

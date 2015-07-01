@@ -581,7 +581,7 @@ class TestProblem(unittest.TestCase):
         mode = top._mode('auto', ['p1.a'], ['comp.x'])
         self.assertEqual(mode, 'fwd')
 
-        mode = top._mode('auto', ['p1.a', 'p1.b'], ['comp.x'])
+        mode = top._mode('auto', ['p1.a', 'p2.b'], ['comp.x'])
         self.assertEqual(mode, 'rev')
 
         mode = top._mode('auto', ['a'], ['x'])

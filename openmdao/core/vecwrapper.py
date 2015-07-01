@@ -405,7 +405,7 @@ class VecWrapper(object):
 
         return idx_merge(new_src), idx_merge(new_tgt)
 
-    def get_relative_varname(self, abs_name):
+    def get_promoted_varname(self, abs_name):
         """
         Returns the relative pathname for the given absolute variable
         pathname.
@@ -539,7 +539,7 @@ class SrcVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
 
@@ -638,7 +638,7 @@ class TgtVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
 
@@ -655,7 +655,7 @@ class TgtVecWrapper(VecWrapper):
                     src_pathname = connections.get(pathname)
                     if src_pathname is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
-                    src_rel_name = srcvec.get_relative_varname(src_pathname)
+                    src_rel_name = srcvec.get_promoted_varname(src_pathname)
                     src_meta = srcvec.metadata(src_rel_name)
 
                     vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
@@ -720,7 +720,7 @@ class TgtVecWrapper(VecWrapper):
             Metadata for the source variable that this target variable is
             connected to.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """

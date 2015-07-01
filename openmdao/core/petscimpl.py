@@ -188,7 +188,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,

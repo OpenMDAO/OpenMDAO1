@@ -13,6 +13,7 @@ import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
+from openmdao.core.group import get_absvarpathnames
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
@@ -91,8 +92,8 @@ class Problem(System):
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
-        # go through relative names of all top level params/unknowns
-        # if relative name in unknowns matches relative name in params
+        # go through promoted names of all top level params/unknowns
+        # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
         implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
@@ -136,15 +137,14 @@ class Problem(System):
         for name, sub in self.root.subsystems(recurse=True):
             sub.connections = connections
 
-        mode = self._check_for_matrix_matrix(self.driver._inputs_of_interest,
-                                             self.driver._outputs_of_interest)
+        pois = self.driver.params_of_interest()
+        oois = self.driver.outputs_of_interest()
+        mode = self._check_for_matrix_matrix(pois, oois)
 
         relevance = Relevance(params_dict, unknowns_dict, connections,
-                              self.driver._inputs_of_interest,
-                              self.driver._outputs_of_interest,
-                              mode)
+                              pois, oois, mode)
 
-        # create VarManagers and VecWrappers for all groups in the system tree.
+        # create VecWrappers for all groups in the system tree.
         self.root._setup_vectors(param_owners, relevance=relevance,
                                  impl=self._impl)
 
@@ -177,10 +177,21 @@ class Problem(System):
                 # Sum up param size
                 p_length = 0
                 for param in param_list:
-
                     if param in p_dict:
                         meta = p_dict[param]
+                    elif param in u_dict:
+                        meta = u_dict[param]
                     else:
+                        # try to convert promoted name to absolute name
+                        try:
+                            param = get_absvarpathnames(param, u_dict, 'unknowns_dict')[0]
+                        except KeyError:
+                            try:
+                                param = get_absvarpathnames(param, p_dict, 'params_dict')[0]
+                            except KeyError:
+                                raise NameError("'%s' cannot be converted into an absolute name." %
+                                                param)
+
                         # The user sometimes specifies the parameter output
                         # name instead of its target because it is more
                         # convenient
@@ -188,15 +199,8 @@ class Problem(System):
                             if val == param:
                                 meta = u_dict[param]
                                 break
-
-                        # We need the absolute name, but the fd Jacobian
-                        # holds relative promoted inputs
                         else:
-                            for key in p_dict:
-                                metadata = root.params.metadata(key)
-                                if metadata['promoted_name'] == param:
-                                    meta = p_dict[metadata['pathname']]
-                                    break
+                            raise RuntimeError("Can't determine size of '%s'" % param)
 
                     p_length += meta['size']
 
@@ -204,17 +208,10 @@ class Problem(System):
                 u_length = 0
                 for unkn in unknown_list:
 
-                    if unkn in u_dict:
-                        meta = u_dict[unkn]
-                    else:
-                        # We need the absolute name, but the fd Jacobian
-                        # holds relative promoted inputs
-                        for key in root.unknowns:
-                            metadata = root.unknowns.metadata(key)
-                            if metadata['pathname'] == unkn:
-                                meta = u_dict[metadata['promoted_name']]
-                                break
+                    if unkn not in u_dict:
+                        unkn = get_absvarpathnames(unkn, u_dict, 'unknowns_dict')[0]
 
+                    meta = u_dict[unkn]
                     u_length += meta['size']
 
                 # Choose mode based on size
@@ -233,20 +230,20 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        mode : string (optional)
+        mode : string, optional
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
         Returns
@@ -277,15 +274,15 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
         Returns
@@ -310,11 +307,7 @@ class Problem(System):
                 # User might request an output via the absolute pathname
                 fd_okey = okey
                 if fd_okey not in unknowns:
-                    for key in unknowns:
-                        meta = unknowns.metadata(key)
-                        if meta['pathname'] == fd_okey:
-                            fd_okey = meta['promoted_name']
-                            break
+                    fd_okey = unknowns.get_promoted_varname(fd_okey)
 
                 # FD Input keys are a little funny....
                 fd_ikey = ikey
@@ -331,11 +324,12 @@ class Problem(System):
                     # We need the absolute name, but the fd Jacobian
                     # holds relative promoted inputs
                     if fd_ikey not in params:
-                        for key in params:
-                            meta = params.metadata(key)
+                        for key, meta in params.items():
                             if meta['promoted_name'] == fd_ikey:
-                                fd_ikey = meta['pathname']
+                                fd_ikey = key
                                 break
+                        else:
+                            raise RuntimeError("Can't find '%s' in params." % fd_ikey)
 
                 J[okey][ikey] = Jfd[fd_okey, fd_ikey]
         return J
@@ -346,18 +340,18 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings (optional)
+        param_list : list of strings, optional
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings (optional)
+        unknown_list : list of strings, optional
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string (optional)
+        return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
-        mode : string (optional)
+        mode : string, optional
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
@@ -463,20 +457,8 @@ class Problem(System):
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
-                if voi in duvec:
-                    in_size, in_idxs = duvec.get_local_idxs(voi)
-                    voi_idxs[vkey] = in_idxs
-                    voi_srcs[vkey] = voi
-                else:
-                    try:
-                        param_src = root.connections[voi]
-                    except KeyError:
-                        raise KeyError("'%s' is not connected to an unknown." % item)
-
-                    voi_srcs[vkey] = param_src
-                    param_src = duvec.get_relative_varname(param_src)
-                    in_size, in_idxs = duvec.get_local_idxs(param_src)
-                    voi_idxs[vkey] = in_idxs
+                in_size, in_idxs, voi_srcs[vkey] = self.root._get_src_info(duvec, voi)
+                voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
 
@@ -507,16 +489,7 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        if item in unknowns:
-                            out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
-                        else:
-                            try:
-                                param_src = root.connections[item]
-                            except KeyError:
-                                raise KeyError("'%s' is not connected to an unknown." % item)
-                            param_src = unknowns.get_relative_varname(param_src)
-                            out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(param_src)
-
+                        out_size, out_idxs, _ = self.root._get_src_info(self.root.dumat[vkey], item)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':
@@ -528,14 +501,12 @@ class Problem(System):
                                 if J[param][item] is None:
                                     J[param][item] = np.zeros((len(in_idxs), nk))
                                 J[param][item][j-jbase, :] = dx[out_idxs]
-
                         else:
                             if mode == 'fwd':
                                 J[i:i+nk, j] = dx[out_idxs]
                             else:
                                 J[j, i:i+nk] = dx[out_idxs]
                             i += nk
-
                 j += 1
 
         return J
@@ -729,7 +700,7 @@ class Problem(System):
         abs_param_list = self.root._get_fd_params()
         unknown_list = self.root._get_fd_unknowns()
 
-        # Convert absolute parameter names to relative ones because it is
+        # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
         param_list = []
         params = self.root.params
@@ -949,7 +920,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
 def _get_implicit_connections(params_dict, unknowns_dict):
     """
-    Finds all matches between relative names of parameters and
+    Finds all matches between promoted names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
     connections are expressed using absolute pathnames.
 
@@ -976,7 +947,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
         if a a promoted variable name matches multiple unknowns
     """
 
-    # collect all absolute names that map to each relative name
+    # collect all absolute names that map to each promoted name
     abs_unknowns = {}
     for abs_name, u in unknowns_dict.items():
         abs_unknowns.setdefault(u['promoted_name'], []).append(abs_name)
@@ -985,7 +956,7 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     for abs_name, p in params_dict.items():
         abs_params.setdefault(p['promoted_name'], []).append(abs_name)
 
-    # check if any relative names correspond to mutiple unknowns
+    # check if any promoted names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():
         if len(lst) > 1:
             raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
