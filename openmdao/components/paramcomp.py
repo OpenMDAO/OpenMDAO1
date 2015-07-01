@@ -15,8 +15,8 @@ class ParamComp(Component):
             self.add_output(name, val, **kwargs)
 
         elif isinstance(name, collections.Iterable):
-            for n, v, kwargs in name:
-                self.add_output(n, v, **kwargs)
+            for n, v, kw in name:
+                self.add_output(n, v, **kw)
         else:
             raise ValueError("first argument to the init must be either of type `str` or an iterable")
 
