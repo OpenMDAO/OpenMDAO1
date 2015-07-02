@@ -8,3 +8,5 @@ User Guide
    :maxdepth: 2
 
    intro.rst
+   design.rst
+   examples.rst
