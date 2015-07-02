@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
+from openmdao.core.component import Component
 
 class ParallelGroup(Group):
     def apply_nonlinear(self, params, unknowns, resids):
@@ -26,14 +27,17 @@ class ParallelGroup(Group):
         for name, sub in self.subsystems(local=True):
             sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
-    def children_solve_nonlinear(self):
+    def children_solve_nonlinear(self, metadata):
         """Loops over our children systems and asks them to solve."""
 
         # full scatter
         self._transfer_data()
 
         for name, sub in self.subsystems(local=True):
-            sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+            if isinstance(sub, Component):
+                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+            else:
+                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
     def get_req_procs(self):
         """

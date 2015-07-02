@@ -167,9 +167,9 @@ class TestPyoptSparse(unittest.TestCase):
         top.setup()
         top.run()
 
-        print top['obj.o']
-        print top['con1.c']
-        print top['con2.c']
+        print(top['obj.o'])
+        print(top['con1.c'])
+        print(top['con2.c'])
 
 
 if __name__ == "__main__":
