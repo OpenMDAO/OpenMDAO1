@@ -115,15 +115,35 @@ class Problem(System):
         # in absolute form.
         implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
 
-        # check for conflicting explicit/implicit connections
-        for tgt, src in connections.items():
-            if tgt in implicit_conns:
-                msg = "'%s' is explicitly connected to '%s' but implicitly connected to '%s'" % \
-                      (tgt, connections[tgt], implicit_conns[tgt])
-                raise RuntimeError(msg)
-
         # combine implicit and explicit connections
-        connections.update(implicit_conns)
+        for tgt, srcs in implicit_conns.items():
+            for src in srcs:
+                connections.setdefault(tgt, []).append(src)
+
+        # resolve any input to input explicit connections
+        input_sets = {}
+        for tgt, srcs in connections.items():
+            for src in srcs:
+                if src in params_dict:
+                    input_sets.setdefault(src, set()).update((tgt,src))
+                    input_sets.setdefault(tgt, set()).update((tgt,src))
+
+        newconns = {}
+        for tgt, srcs in connections.items():
+            tgts = (tgt,)
+            if tgt in input_sets and tgt not in newconns:
+                srcs = [s for s in srcs if s in unknowns_dict]
+                if srcs:
+                    tgts = input_sets[tgt]
+
+            if len(srcs) > 1:
+                raise RuntimeError("Target '%s' is connected to multiple sources: %s" %
+                                   (tgt, srcs))
+            for target in tgts:
+                if srcs:
+                    newconns[target] = srcs[0]
+
+        connections = newconns
 
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
@@ -321,11 +341,6 @@ class Problem(System):
                 if isinstance(ikey, tuple):
                     ikey = ikey[0]
 
-                # User might request an output via the absolute pathname
-                fd_okey = okey
-                if fd_okey not in unknowns:
-                    fd_okey = unknowns.get_promoted_varname(fd_okey)
-
                 # FD Input keys are a little funny....
                 fd_ikey = ikey
                 if fd_ikey not in params:
@@ -348,7 +363,7 @@ class Problem(System):
                         else:
                             raise RuntimeError("Can't find '%s' in params." % fd_ikey)
 
-                J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+                J[okey][ikey] = Jfd[okey, fd_ikey]
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
@@ -591,10 +606,7 @@ class Problem(System):
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Figure out implicit states for this comp
-            states = []
-            for u_name, meta in iteritems(comp._unknowns_dict):
-                if meta.get('state'):
-                    states.append(meta['promoted_name'])
+            states = [n for n,m in comp.unknowns.items() if m.get('state')]
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
@@ -999,6 +1011,6 @@ def _get_implicit_connections(params_dict, unknowns_dict):
     for uname, uabs in abs_unknowns.items():
         pabs = abs_params.get(uname, ())
         for p in pabs:
-            connections[p] = uabs[0]
+            connections[p] = uabs
 
     return connections
