@@ -33,14 +33,7 @@ class Relevance(object):
                 param_groups[g_id] = tuple(inp)
                 g_id += 1
 
-            inps = []
-            for i in inp:
-                if i in params_dict or i in unknowns_dict:
-                    inps.append(i)
-                else:
-                    inps.extend(get_absvarpathnames(i, params_dict, 'params_dict'))
-
-            self.inputs.append(tuple(inps))
+            self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
@@ -52,8 +45,7 @@ class Relevance(object):
                 output_groups[g_id] = tuple(out)
                 g_id += 1
 
-            self.outputs.append(tuple([get_absvarpathnames(o, unknowns_dict, 'unknowns_dict')[0]
-                                        for o in out]))
+            self.outputs.append(out)
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -134,7 +126,6 @@ class Relevance(object):
             if u == v:
                 vgraph.remove_edge(u, v)
 
-        print("vgraph=",vgraph.edges())
         return vgraph
 
     def _get_relevant_vars(self, g):

@@ -80,6 +80,7 @@ class Group(System):
         -------
         The unflattened value of the given variable.
         """
+
         # if setup has not been called, then there is no variable information to access
         if not self._local_unknown_sizes:
             raise RuntimeError('setup() must be called before variables can be accessed')
@@ -173,7 +174,7 @@ class Group(System):
             if src_indices is not None:
                 self._src_idxs[target] = src_indices
 
-    def subsystems(self, local=False, recurse=False, typ=System):
+    def subsystems(self, local=False, recurse=False, typ=System, include_self=False):
         """
         Args
         ----
@@ -188,11 +189,18 @@ class Group(System):
             If a class is specified here, only those subsystems that are instances
             of that type will be returned.  Default type is `System`.
 
+        include_self : bool, optional
+            If True, yield self before iterating over subsystems, assuming type
+            of self is appropriate. Default is False.
+
         Returns
         -------
         iterator
             Iterator over subsystems.
         """
+        if include_self and isinstance(self, typ):
+            yield ('', self)
+
         subs = self._local_subsystems if local else self._subsystems
 
         for name, sub in subs.items():
@@ -202,24 +210,26 @@ class Group(System):
                 for n, s in sub.subsystems(local, recurse, typ):
                     yield n, s
 
-    def subgroups(self, local=False, recurse=False):
+    def subgroups(self, local=False, recurse=False, include_self=False):
         """
         Returns
         -------
         iterator
             Iterator over subgroups.
         """
-        for name, sub in self.subsystems(local, recurse, typ=Group):
+        for name, sub in self.subsystems(local, recurse, typ=Group,
+                                         include_self=include_self):
             yield name, sub
 
-    def components(self, local=False, recurse=False):
+    def components(self, local=False, recurse=False, include_self=False):
         """
         Returns
         -------
         iterator
             Iterator over sub-`Components`.
         """
-        for name, sub in self.subsystems(local, recurse, typ=Component):
+        for name, sub in self.subsystems(local, recurse, typ=Component,
+                                         include_self=include_self):
             yield name, sub
 
     def _setup_paths(self, parent_path):

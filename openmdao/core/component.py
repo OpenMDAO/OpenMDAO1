@@ -149,7 +149,7 @@ class Component(System):
             if not self.pathname:
                 var_pathname = name
             else:
-                var_pathname = '.'.join([self.pathname, name])
+                var_pathname = '.'.join((self.pathname, name))
             _new_params[var_pathname] = meta
             meta['promoted_name'] = name
 
@@ -160,7 +160,7 @@ class Component(System):
             if not self.pathname:
                 var_pathname = name
             else:
-                var_pathname = '.'.join([self.pathname, name])
+                var_pathname = '.'.join((self.pathname, name))
             _new_unknowns[var_pathname] = meta
             meta['promoted_name'] = name
 

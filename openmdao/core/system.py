@@ -72,7 +72,6 @@ class System(object):
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
 
-
     def promoted(self, name):
         """Determine if the given variable name is being promoted from this
         `System`.
@@ -101,10 +100,11 @@ class System(object):
 
         return False
 
-    def subsystems(self, local=False, recurse=False):
+    def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
-        return []
+        if include_self:
+            yield ('', self)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -549,7 +549,8 @@ class System(object):
         """
         Return the name given if the name refers to a source variable.
         Otherwise, return the source variable connected to the named
-        variable.  If no source is found, raise an exception.
+        variable.  If no source is found, raise an exception. The given
+        name must be a promoted name.
         """
         if name in srcvec:
             return name

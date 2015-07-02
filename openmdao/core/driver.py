@@ -76,17 +76,9 @@ class Driver(object):
         for name, meta in chain(self._params.items(), self._cons.items(), self._objs.items()):
             # set indices of interest
             if 'indices' in meta:
-                if name in root.unknowns:
-                    for voi, vw in root.dumat.items():
-                        if name in vw:
-                            vw.metadata(name)['deriv_indices'] = meta['indices']
-                elif name in root.params:
-                    for voi, vw in root.dpmat.items():
-                        if name in vw:
-                            vw.metadata(name)['deriv_indices'] = meta['indices']
-                else:
-                    raise RuntimeError("'%s' isn't in top level unknowns "
-                                       "or params" % name)
+                for vname, vmeta in chain(unknowns_dict.items(), params_dict.items()):
+                    if name == vmeta['promoted_name']:
+                        vmeta['deriv_indices'] = meta['indices']
 
     def _of_interest(self, voi_list):
         """Return a list of tuples, with the given voi_list organized

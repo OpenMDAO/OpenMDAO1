@@ -91,6 +91,16 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
+        # create a mapping from absolute name to top level promoted name
+        abs_to_prom = {}
+        for name, meta in chain(params_dict.items(), unknowns_dict.items()):
+            abs_to_prom[name] = meta['promoted_name']
+
+        # propagate top level promoted names down to all subsystems
+        for name, sub in self.root.subsystems(recurse=True, include_self=True):
+            for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
+                meta['top_promoted_name'] = abs_to_prom[vname]
+
         # update metadata with VOI indices
         self.driver._set_voi_indices(params_dict, unknowns_dict)
 
