@@ -71,6 +71,7 @@ class pyOptSparseDriver(Driver):
         """
 
         self.pyOpt_solution = None
+        rel = problem.root._relevance
 
         # Metadata Setup
         self.metadata = create_local_meta(None, self.options['optimizer'])
@@ -93,7 +94,6 @@ class pyOptSparseDriver(Driver):
 
             opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
                                  lower=lower_bounds, upper=upper_bounds)
-            param_list.append(name)
 
         # Add all objectives
         objs = self.get_objectives()
@@ -117,12 +117,17 @@ class pyOptSparseDriver(Driver):
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     linear=True, wrt=param_list,
+                                     linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, lower=lower, upper=upper)
+                opt_prob.addConGroup(name, size, lower=lower, upper=upper,
+                                     wrt=wrt)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -130,11 +135,15 @@ class pyOptSparseDriver(Driver):
         for name, con in incons.items():
             size = con_meta[name]['size']
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                wrt=param_list, jac=self.lin_jacs[name])
+                wrt=wrt, jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, upper=upper)
+                opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints

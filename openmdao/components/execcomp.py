@@ -49,7 +49,6 @@ class ExecComp(Component):
         # find all of the variables and which ones are outputs
         for expr in exprs:
             lhs, rhs = expr.split('=', 1)
-            print('rhs',rhs)
             outs.update(parse_for_vars(lhs))
             allvars.update(parse_for_vars(expr, kwargs.keys()))
 
