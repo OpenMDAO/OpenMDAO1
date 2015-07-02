@@ -177,10 +177,12 @@ class MatMatIndicesTestCase(MPITestCase):
         top = Problem(root=Group(), impl=impl)
         root = top.root
         root.ln_solver = LinearGaussSeidel()
+        root.ln_solver.options['mode'] = 'rev'
 
         p = root.add('p', ParamComp('x', np.arange(asize, dtype=float)+1.0))
         G1 = root.add('G1', ParallelGroup())
         G1.ln_solver = LinearGaussSeidel()
+        G1.ln_solver.options['mode'] = 'rev'
 
         c2 = G1.add('c2', ExecComp4Test('y = x * 2.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
@@ -191,7 +193,7 @@ class MatMatIndicesTestCase(MPITestCase):
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
-        top.driver.add_param('p.x')
+        top.driver.add_param('p.x', indices=[1,2])
         top.driver.add_constraint('c4.y', indices=[1])
         top.driver.add_constraint('c5.y', indices=[2])
         top.driver.group_vars_of_interest(['c4.y','c5.y'])
@@ -208,8 +210,15 @@ class MatMatIndicesTestCase(MPITestCase):
                               ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
 
-        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([15.,20.,25.]), 1e-6)
-        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([0.,8.,0.]), 1e-6)
+        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
+
+        J = top.calc_gradient(['p.x'],
+                              ['c4.y','c5.y'],
+                              mode='rev', return_format='dict')
+
+        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests
