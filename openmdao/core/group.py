@@ -458,7 +458,7 @@ class Group(System):
 
         return connections
 
-    def solve_nonlinear(self, params=None, unknowns=None, resids=None):
+    def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
         """
         Solves the group using the slotted nl_solver.
 
@@ -472,26 +472,37 @@ class Group(System):
 
         resids : `VecWrapper`, optional
             `VecWrapper`  containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         if self.is_active():
             params   = params   if params   is not None else self.params
             unknowns = unknowns if unknowns is not None else self.unknowns
             resids   = resids   if resids   is not None else self.resids
 
-            self.nl_solver.solve(params, unknowns, resids, self)
+            self.nl_solver.solve(params, unknowns, resids, self, metadata)
 
-    def children_solve_nonlinear(self):
+    def children_solve_nonlinear(self, metadata):
         """
         Loops over our children systems and asks them to solve.
+
+        Args
+        ----
+        metadata : dict
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
         for name, sub in self.subsystems():
             self._transfer_data(name)
             if sub.is_active():
-                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                if isinstance(sub, Component):
+                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                else:
+                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
-    def apply_nonlinear(self, params, unknowns, resids):
+    def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """
         Evaluates the residuals of our children systems.
 
@@ -505,6 +516,9 @@ class Group(System):
 
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         if not self.is_active():
             return
@@ -513,7 +527,10 @@ class Group(System):
         for name, sub in self.subsystems():
             self._transfer_data(name)
             if sub.is_active():
-                sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                if isinstance(sub, Component):
+                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                else:
+                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
     def jacobian(self, params, unknowns, resids):
         """

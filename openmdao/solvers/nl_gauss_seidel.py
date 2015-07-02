@@ -1,6 +1,7 @@
 """ Gauss Seidel non-linear solver."""
 
 from openmdao.solvers.solverbase import NonLinearSolver
+from openmdao.util.recordutil import update_local_meta, create_local_meta
 
 
 class NLGaussSeidel(NonLinearSolver):
@@ -21,8 +22,7 @@ class NLGaussSeidel(NonLinearSolver):
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
 
-
-    def solve(self, params, unknowns, resids, system):
+    def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
 
         Args
@@ -38,16 +38,27 @@ class NLGaussSeidel(NonLinearSolver):
 
         system : `System`
             Parent `System` object.
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
-        #TODO: When to record?
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
 
         # Initial run
         self.iter_count = 1
-        system.children_solve_nonlinear()
+
+        # Metadata setup
+        local_meta = create_local_meta(metadata, system.name)
+        update_local_meta(local_meta, (self.iter_count,))
+
+        # Initial Solve
+        system.children_solve_nonlinear(local_meta)
+
+        for recorder in self.recorders:
+            recorder.raw_record(params, unknowns, resids, local_meta)
 
         # Bail early if the user wants to.
         if maxiter == 1:
@@ -61,12 +72,17 @@ class NLGaussSeidel(NonLinearSolver):
         basenorm = normval if normval > atol else 1.0
 
         while self.iter_count < maxiter and \
-              normval > atol and \
-              normval/basenorm > rtol:
+                normval > atol and \
+                normval/basenorm > rtol:
+
+            # Metadata update
+            self.iter_count += 1
+            update_local_meta(local_meta, (self.iter_count,))
 
             # Runs an iteration
-            system.children_solve_nonlinear()
-            self.iter_count += 1
+            system.children_solve_nonlinear(local_meta)
+            for recorder in self.recorders:
+                recorder.raw_record(params, unknowns, resids, local_meta)
 
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)

@@ -5,6 +5,7 @@ from collections import OrderedDict
 import numpy as np
 
 from openmdao.core.options import OptionsDictionary
+from openmdao.util.recordutil import create_local_meta, update_local_meta
 
 
 class Driver(object):
@@ -37,6 +38,8 @@ class Driver(object):
 
         # We take root during setup
         self.root = None
+
+        self.iter_count = 0
 
     def _setup(self, root):
         """ Prepares some things we need."""
@@ -271,6 +274,9 @@ class Driver(object):
             Our parent `Problem`.
         """
         system = problem.root
-        system.solve_nonlinear()
+        self.iter_count += 1
+        metadata = create_local_meta(None, 'Driver')
+        update_local_meta(metadata, (self.iter_count,))
+        system.solve_nonlinear(metadata=metadata)
         for recorder in self.recorders:
-            recorder._record(system.params, system.unknowns, system.resids)
+            recorder.raw_record(system.params, system.unknowns, system.resids, metadata)

@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 from openmdao.solvers.solverbase import NonLinearSolver
+from openmdao.util.recordutil import update_local_meta, create_local_meta
 
 
 class Newton(NonLinearSolver):
@@ -29,8 +30,7 @@ class Newton(NonLinearSolver):
         opt.add_option('alpha', 1.0,
                        desc='Initial over-relaxation factor.')
 
-
-    def solve(self, params, unknowns, resids, system):
+    def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
         Args
@@ -46,6 +46,9 @@ class Newton(NonLinearSolver):
 
         system : `System`
             Parent `System` object.
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
         atol = self.options['atol']
@@ -57,7 +60,7 @@ class Newton(NonLinearSolver):
         alpha = self.options['alpha']
 
         # Perform an initial run to propagate srcs to targets.
-        system.children_solve_nonlinear()
+        system.children_solve_nonlinear(None)
         system.apply_nonlinear(params, unknowns, resids)
 
         f_norm = resids.norm()
@@ -67,10 +70,14 @@ class Newton(NonLinearSolver):
         arg = system.drmat[None]
         result = system.dumat[None]
 
-        itercount = 0
+        # Metadata setup
+        local_meta = create_local_meta(metadata, system.name)
+
+        self.iter_count = 0
+
         alpha_base = alpha
-        while itercount < maxiter and f_norm > atol and \
-              f_norm/f_norm0 > rtol:
+        while self.iter_count < maxiter and f_norm > atol and \
+                f_norm/f_norm0 > rtol:
 
             # Linearize Model
             system.jacobian(params, unknowns, resids)
@@ -82,34 +89,47 @@ class Newton(NonLinearSolver):
             #print "LS 1", uvec.array, '+', dfvec.array
             unknowns.vec[:] += alpha*result.vec[:]
 
+            # Metadata update
+            self.iter_count += 1
+            ls_itercount = 0
+            update_local_meta(local_meta, (self.iter_count, ls_itercount))
+
             # Just evaluate the model with the new points
-            system.apply_nonlinear(params, unknowns, resids)
+            system.apply_nonlinear(params, unknowns, resids, local_meta)
+
+            for recorder in self.recorders:
+                recorder.raw_record(params, unknowns, resids, local_meta)
 
             f_norm = resids.norm()
             print('Residual:', f_norm)
 
-            itercount += 1
-            ls_itercount = 0
-
             # Backtracking Line Search
             while ls_itercount < ls_maxiter and \
-                  f_norm > ls_atol and \
-                  f_norm/f_norm0 > ls_rtol:
+                    f_norm > ls_atol and \
+                    f_norm/f_norm0 > ls_rtol:
 
                 alpha *= 0.5
                 unknowns.vec[:] -= alpha*result.vec[:]
+                ls_itercount += 1
+
+                # Metadata update
+                update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
                 # Just evaluate the model with the new points
-                system.apply_nonlinear(params, unknowns, resids)
+                system.apply_nonlinear(params, unknowns, resids, local_meta)
+
+                for recorder in self.recorders:
+                    recorder.raw_record(params, unknowns, resids, local_meta)
 
                 f_norm = resids.norm()
-
-                ls_itercount += 1
 
             # Reset backtracking
             alpha = alpha_base
 
+            for recorder in self.recorders:
+                recorder.raw_record(params, unknowns, resids, local_meta)
+
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
-        system.children_solve_nonlinear()
+        system.children_solve_nonlinear(None)
 
