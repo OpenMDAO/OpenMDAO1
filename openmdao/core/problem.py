@@ -321,11 +321,6 @@ class Problem(System):
                 if isinstance(ikey, tuple):
                     ikey = ikey[0]
 
-                # User might request an output via the absolute pathname
-                fd_okey = okey
-                if fd_okey not in unknowns:
-                    fd_okey = unknowns.get_promoted_varname(fd_okey)
-
                 # FD Input keys are a little funny....
                 fd_ikey = ikey
                 if fd_ikey not in params:
@@ -348,7 +343,7 @@ class Problem(System):
                         else:
                             raise RuntimeError("Can't find '%s' in params." % fd_ikey)
 
-                J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+                J[okey][ikey] = Jfd[okey, fd_ikey]
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
@@ -591,10 +586,7 @@ class Problem(System):
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Figure out implicit states for this comp
-            states = []
-            for u_name, meta in iteritems(comp._unknowns_dict):
-                if meta.get('state'):
-                    states.append(meta['promoted_name'])
+            states = [n for n,m in comp.unknowns.items() if m.get('state')]
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
