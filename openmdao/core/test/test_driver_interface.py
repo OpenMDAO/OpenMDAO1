@@ -5,9 +5,13 @@ import unittest
 
 import numpy as np
 
+from openmdao.components.execcomp import ExecComp
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.driver import Driver
+from openmdao.core.group import Group
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.problem import Problem
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivatives
 
 class MySimpleDriver(Driver):
@@ -96,6 +100,52 @@ class TestDriver(unittest.TestCase):
 
         obj = top['obj']
         self.assertLess(obj, 28.0)
+
+    def test_scaler_adder(self):
+
+        class ScaleAddDriver(Driver):
+
+            def run(self, problem):
+                """ Save away scaled info."""
+
+                params = self.get_params()
+                param_meta = self.get_param_metadata()
+
+                self.set_param('x', 0.5)
+                problem.root.solve_nonlinear()
+
+                objective = self.get_objectives()
+                constraint = self.get_constraints()
+
+                # Stuff we saved should be in the scaled coordinates.
+                self.param = params['x']
+                self.obj_scaled = objective['f_xy']
+                self.con_scaled = constraint['con']
+                self.param_high = param_meta['x']['high']
+                self.param_low = param_meta['x']['low']
+
+        top = Problem()
+        root = top.root = Group()
+        driver = top.driver = ScaleAddDriver()
+
+        root.add('p1', ParamComp('x', val=60000.0), promotes=['*'])
+        root.add('p2', ParamComp('y', val=60000.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
+
+        driver.add_param('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
+        driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
+        driver.add_constraint('con', adder=-10890487502.0, scaler=1.0/20)
+
+        top.setup()
+        top.run()
+
+        self.assertEqual(driver.param_high, 1.0)
+        self.assertEqual(driver.param_low, -1.0)
+        self.assertEqual(driver.param, 0.0)
+        self.assertEqual(top['x'], 60500.0)
+        self.assertEqual(driver.obj_scaled[0], 1.0)
+        self.assertEqual(driver.con_scaled[0], 1.0)
 
 if __name__ == "__main__":
     unittest.main()
