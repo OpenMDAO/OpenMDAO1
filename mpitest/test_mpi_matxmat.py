@@ -184,16 +184,16 @@ class MatMatIndicesTestCase(MPITestCase):
 
         c2 = G1.add('c2', ExecComp4Test('y = x * 2.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
-        c3 = G1.add('c3', ExecComp4Test('y = x.dot(numpy.array([3.0, 4.0, 5.0]))',
+        c3 = G1.add('c3', ExecComp4Test('y = numpy.ones(3).T*x.dot(numpy.arange(3.,6.))',
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c4 = root.add('c4', ExecComp4Test('y = x * 4.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
-        top.driver.add_param('p.x', indices=[2])
+        top.driver.add_param('p.x')
         top.driver.add_constraint('c4.y', indices=[1])
-        top.driver.add_constraint('c5.y', indices=[1])
+        top.driver.add_constraint('c5.y', indices=[2])
         top.driver.group_vars_of_interest(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
@@ -208,7 +208,6 @@ class MatMatIndicesTestCase(MPITestCase):
                               ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
 
-        print(J)
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([15.,20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([0.,8.,0.]), 1e-6)
 

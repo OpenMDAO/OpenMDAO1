@@ -91,18 +91,20 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
+        # get map of vars to VOI indices
+        voi_indices = self.driver._map_voi_indices(params_dict, unknowns_dict)
+
         # create a mapping from absolute name to top level promoted name
         abs_to_prom = {}
         for name, meta in chain(params_dict.items(), unknowns_dict.items()):
             abs_to_prom[name] = meta['promoted_name']
 
-        # propagate top level promoted names down to all subsystems
-        for name, sub in self.root.subsystems(recurse=True, include_self=True):
+        # propagate top level promoted names and voi_indices down to all subsystems
+        for _, sub in self.root.subsystems(recurse=True, include_self=True):
             for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
                 meta['top_promoted_name'] = abs_to_prom[vname]
-
-        # update metadata with VOI indices
-        self.driver._set_voi_indices(params_dict, unknowns_dict)
+                if vname in voi_indices:
+                    meta['voi_indices'] = voi_indices[vname]
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
