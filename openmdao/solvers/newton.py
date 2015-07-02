@@ -96,6 +96,7 @@ class Newton(NonLinearSolver):
             update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
             # Just evaluate the model with the new points
+            system.children_solve_nonlinear(local_meta)
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 
             for recorder in self.recorders:
@@ -117,6 +118,8 @@ class Newton(NonLinearSolver):
                 update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
                 # Just evaluate the model with the new points
+
+                system.children_solve_nonlinear(local_meta)
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
 
                 for recorder in self.recorders:
