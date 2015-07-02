@@ -472,8 +472,8 @@ class Problem(System):
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
-                voi_srcs[vkey] = psrc = self.root._get_src(duvec, voi)
-                in_size, in_idxs = duvec.get_local_idxs(psrc)
+                voi_srcs[vkey] = voi
+                in_size, in_idxs = duvec.get_local_idxs(voi)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -504,8 +504,7 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        src = self.root._get_src(self.root.dumat[vkey], item)
-                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(src)
+                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':
@@ -714,17 +713,12 @@ class Problem(System):
 
         # Params and Unknowns that we provide at this level.
         abs_param_list = self.root._get_fd_params()
+        param_srcs = [self.root.connections[p] for p in abs_param_list]
         unknown_list = self.root._get_fd_unknowns()
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        param_list = []
-        params = self.root.params
-        for param in abs_param_list:
-            if param not in self.root.unknowns:
-                param_list.append(params.metadata(param)['promoted_name'])
-            else:
-                param_list.append(param)
+        param_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',

@@ -545,20 +545,6 @@ class System(object):
         # return the combined dict
         return comm.bcast(J, root=0)
 
-    def _get_src(self, srcvec, name):
-        """
-        Return the name given if the name refers to a source variable.
-        Otherwise, return the source variable connected to the named
-        variable.  If no source is found, raise an exception. The given
-        name must be a promoted name.
-        """
-        if name in srcvec:
-            return name
-        try:
-            src = self.connections[name]
-        except KeyError:
-            raise KeyError("'%s' is not connected to an unknown." % name)
-        return src
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
