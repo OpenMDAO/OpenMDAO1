@@ -274,9 +274,13 @@ class Driver(object):
             Our parent `Problem`.
         """
         system = problem.root
+
+        # Metadata Setup
         self.iter_count += 1
         metadata = create_local_meta(None, 'Driver')
         update_local_meta(metadata, (self.iter_count,))
+
+        # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
         for recorder in self.recorders:
             recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
