@@ -1,6 +1,7 @@
 """ Base class for Driver."""
 
 from collections import OrderedDict
+from itertools import chain
 
 import numpy as np
 
@@ -17,8 +18,6 @@ class Driver(object):
     def __init__(self):
         super(Driver, self).__init__()
         self.recorders = []
-        self._outputs_of_interest = []
-        self._inputs_of_interest = []
 
         # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
@@ -35,6 +34,8 @@ class Driver(object):
         self._params = OrderedDict()
         self._objs = OrderedDict()
         self._cons = OrderedDict()
+
+        self._voi_sets = []
 
         # We take root during setup
         self.root = None
@@ -60,22 +61,101 @@ class Driver(object):
                 # Size is useful metadata to save
                 meta['size'] = root.unknowns.metadata(name)['size']
 
+    def _map_voi_indices(self, params_dict, unknowns_dict):
+        voi_indices = {}
+        for name, meta in chain(self._params.items(), self._cons.items(), self._objs.items()):
+            # set indices of interest
+            if 'indices' in meta:
+                for vname, vmeta in chain(unknowns_dict.items(), params_dict.items()):
+                    if name == vmeta['promoted_name']:
+                        voi_indices[vname] = meta['indices']
+
+        return voi_indices
+
+    def _of_interest(self, voi_list):
+        """Return a list of tuples, with the given voi_list organized
+        into tuples based on the previously defined grouping of VOIs.
+        """
+        vois = []
+        done_sets = set()
+        for v in voi_list:
+            for voi_set in self._voi_sets:
+                if voi_set in done_sets:
+                    break
+                if v in voi_set:
+                    vois.append(tuple([x for x in voi_set
+                                         if x in voi_list]))
+                    done_sets.add(voi_set)
+                    break
+            else:
+                vois.append((v,))
+        return vois
+
+    def params_of_interest(self):
+        """
+        Returns
+        -------
+        list of tuples of str
+            The list of params, organized into tuples according to previously
+            defined VOI groups.
+        """
+        return self._of_interest(self._params)
+
+    def outputs_of_interest(self):
+        """
+        Returns
+        -------
+        list of tuples of str
+            The list of constraints and objectives, organized into tuples
+            according to previously defined VOI groups.
+        """
+        return self._of_interest(list(chain(self._objs, self._cons)))
+
+    def parallel_derivs(self, vnames):
+        """
+        Specifies that the named variables of interest are to be grouped
+        together so that their derivatives can be solved for concurrently.
+
+        Args
+        ----
+        vnames : iter of str
+            The names of variables of interest that are to be grouped.
+        """
+        for grp in self._voi_sets:
+            for vname in vnames:
+                if vname in grp:
+                    raise RuntimeError("'%s' cannot be added to VOI set "
+                                       "%s because it already "
+                                       "exists in VOI set: %s" %
+                                         (vname, tuple(vnames), grp))
+        param_intsect = set(vnames).intersection(self._params.keys())
+        if param_intsect and len(param_intsect) != len(vnames):
+            raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
+                                 (vnames, list(param_intsect),
+                                 list(set(vnames).difference(param_intsect))))
+        self._voi_sets.append(tuple(vnames))
+
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
 
-    def add_param(self, name, low=None, high=None):
-        """ Adds a param to this driver.
+    def add_param(self, name, low=None, high=None, indices=None):
+        """
+        Adds a parameter to this driver.
 
         Args
         ----
         name : string
            Name of the paramcomp in the root system.
 
-        low : float or ndarray (optional)
+        low : float or ndarray, optional
             Lower boundary for the param
 
-        high : upper or ndarray (optional)
+        high : upper or ndarray, optional
             Lower boundary for the param
+
+        indices : iter of int, optional
+            If a param is an array, these indicate which entries are of
+            interest for derivatives.
         """
 
         if low is None:
@@ -94,6 +174,8 @@ class Driver(object):
         param = {}
         param['low'] = low
         param['high'] = high
+        if indices:
+            param['indices'] = indices
 
         self._params[name] = param
 
@@ -138,22 +220,33 @@ class Driver(object):
         """
         self.root.unknowns[name] = value
 
-    def add_objective(self, name):
+    def add_objective(self, name, indices=None):
         """ Adds an objective to this driver.
 
         Args
         ----
         name : string
             Promoted pathname of the output that will serve as the objective.
+
+        indices : iter of int, optional
+            If an objective is an array, these indicate which entries are of
+            interest for derivatives.
         """
 
         # TODO: Check validity of input.
 
         obj = {}
+        if indices:
+            obj['indices'] = indices
+            if len(indices) > 1 and not self.supports['Multiple Objectives']:
+                raise RuntimeError("Multiple objective indices specified for "
+                                   "variable '%s', but driver '%s' doesn't "
+                                   "support multiple objectives." %
+                                   (name, self.pathname))
         self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):
-        """ Adds a constraint to this driver.
+        """ Gets all objectives of this driver.
 
         Args
         ----
@@ -164,10 +257,10 @@ class Driver(object):
         Returns
         -------
         dict (for return_type 'dict')
-            Key is the constraint name string, value is an ndarray with the values.
+            Key is the objective name string, value is an ndarray with the values.
 
         ndarray (for return_type 'array')
-            Array containing all constraint values in the order they were added.
+            Array containing all objective values in the order they were added.
         """
         uvec = self.root.unknowns
         objs = OrderedDict()
@@ -177,7 +270,8 @@ class Driver(object):
 
         return objs
 
-    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None):
+    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None,
+                       indices=None):
         """ Adds a constraint to this driver.
 
         Args
@@ -199,6 +293,10 @@ class Driver(object):
             Jacobian of this constraint with repsect to the params of
             this driver, as indicated by the dictionary keys. Default is None
             to let OpenMDAO calculate all derivatives.
+
+        indices : iter of int, optional
+            If a constraint is an array, these indicate which entries are of
+            interest for derivatives.
         """
 
         # TODO: Check validity of input.
@@ -206,6 +304,8 @@ class Driver(object):
         con = {}
         con['linear'] = linear
         con['ctype'] = ctype
+        if indices:
+            con['indices'] = indices
         self._cons[name] = con
 
     def get_constraints(self, ctype='all', lintype='all', return_type='dict'):

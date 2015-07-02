@@ -58,7 +58,7 @@ class DataXfer(object):
             Mapping of 'pass by object' variables to the source variables that
             they are connected to.
 
-        mode : 'fwd' or 'rev' (optional)
+        mode : 'fwd' or 'rev', optional
             Direction of the data transfer, source to target ('fwd', the default)
             or target to source ('rev').
 

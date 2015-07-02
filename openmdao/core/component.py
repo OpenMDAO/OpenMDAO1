@@ -143,13 +143,13 @@ class Component(System):
 
         self.setup_param_indices()
 
-        # rekey with absolute path names and add relative names
+        # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
         for name, meta in self._params_dict.items():
             if not self.pathname:
                 var_pathname = name
             else:
-                var_pathname = '.'.join([self.pathname, name])
+                var_pathname = '.'.join((self.pathname, name))
             _new_params[var_pathname] = meta
             meta['promoted_name'] = name
 
@@ -160,7 +160,7 @@ class Component(System):
             if not self.pathname:
                 var_pathname = name
             else:
-                var_pathname = '.'.join([self.pathname, name])
+                var_pathname = '.'.join((self.pathname, name))
             _new_unknowns[var_pathname] = meta
             meta['promoted_name'] = name
 
