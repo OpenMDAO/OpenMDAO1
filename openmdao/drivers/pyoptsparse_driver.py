@@ -12,6 +12,8 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
+from openmdao.util.recordutil import create_local_meta, update_local_meta
+
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
@@ -56,6 +58,7 @@ class pyOptSparseDriver(Driver):
 
         self.lin_jacs = {}
         self.quantities = []
+        self.metadata = None
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -68,6 +71,10 @@ class pyOptSparseDriver(Driver):
         """
 
         self.pyOpt_solution = None
+        rel = problem.root._relevance
+
+        # Metadata Setup
+        self.metadata = create_local_meta(None, self.options['optimizer'])
 
         # Initial Run
         problem.root.solve_nonlinear()
@@ -87,7 +94,6 @@ class pyOptSparseDriver(Driver):
 
             opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
                                  lower=lower_bounds, upper=upper_bounds)
-            param_list.append(name)
 
         # Add all objectives
         objs = self.get_objectives()
@@ -111,12 +117,17 @@ class pyOptSparseDriver(Driver):
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     linear=True, wrt=param_list,
+                                     linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, lower=lower, upper=upper)
+                opt_prob.addConGroup(name, size, lower=lower, upper=upper,
+                                     wrt=wrt)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -124,11 +135,15 @@ class pyOptSparseDriver(Driver):
         for name, con in incons.items():
             size = con_meta[name]['size']
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                wrt=param_list, jac=self.lin_jacs[name])
+                wrt=wrt, jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, upper=upper)
+                opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
@@ -215,7 +230,8 @@ class pyOptSparseDriver(Driver):
 
         fail = 1
         func_dict = {}
-
+        metadata = self.metadata
+        system = self.root
         try:
 
             for name, param in self.get_params().items():
@@ -224,7 +240,13 @@ class pyOptSparseDriver(Driver):
             # Execute the model
             #print("Setting DV")
             #print(dv_dict)
-            self.root.solve_nonlinear()
+
+            self.iter_count += 1
+            update_local_meta(metadata, (self.iter_count,))
+
+            system.solve_nonlinear(metadata=metadata)
+            for recorder in self.recorders:
+                recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
 
             # Get the objective function evaluations
             for name, obj in self.get_objectives().items():

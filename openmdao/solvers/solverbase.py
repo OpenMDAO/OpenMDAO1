@@ -65,7 +65,7 @@ class NonLinearSolver(object):
         """
         self.recorders.append(recorder)
 
-    def solve(self, params, unknowns, resids, system):
+    def solve(self, params, unknowns, resids, system, metadata=None):
         """ Drive all residuals in self.system and all subsystems to zero.
         This includes all implicit components. This function must be defined
         when inheriting.
@@ -83,5 +83,8 @@ class NonLinearSolver(object):
 
         system : `System`
             Parent `System` object.
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         pass

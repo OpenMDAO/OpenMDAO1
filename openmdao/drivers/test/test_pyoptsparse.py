@@ -143,5 +143,47 @@ class TestPyoptSparse(unittest.TestCase):
         obj = top['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
 
+    def test_fan_out(self):
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('x', 1.0))
+        root.add('p2', ParamComp('x', 1.0))
+
+        root.add('comp1', ExecComp('y = 3.0*x'))
+        root.add('comp2', ExecComp('y = 5.0*x'))
+
+        root.add('obj', ExecComp('o = i1 + i2'))
+        root.add('con1', ExecComp('c = 15.0 - x'))
+        root.add('con2', ExecComp('c = 15.0 - x'))
+
+        # hook up non explicitly
+        root.connect('p1.x', 'comp1.x')
+        root.connect('p2.x', 'comp2.x')
+        root.connect('comp1.y', 'obj.i1')
+        root.connect('comp2.y', 'obj.i2')
+        root.connect('comp1.y', 'con1.x')
+        root.connect('comp2.y', 'con2.x')
+
+        top.driver = pyOptSparseDriver()
+        top.driver.add_param('p1.x', low=-50.0, high=50.0)
+        top.driver.add_param('p2.x', low=-50.0, high=50.0)
+        top.driver.add_objective('obj.o')
+        top.driver.add_constraint('con1.c', ctype='eq')
+        top.driver.add_constraint('con2.c', ctype='eq')
+
+        top.setup()
+        top.run()
+
+        obj = top['obj.o']
+        assert_rel_error(self, obj, 30.0, 1e-6)
+
+        # Verify that pyOpt has the correct wrt names
+        con1 = top.driver.pyOpt_solution.constraints['con1.c']
+        self.assertEqual(con1.wrt, ['p1.x'])
+        con2 = top.driver.pyOpt_solution.constraints['con2.c']
+        self.assertEqual(con2.wrt, ['p2.x'])
+
 if __name__ == "__main__":
     unittest.main()
