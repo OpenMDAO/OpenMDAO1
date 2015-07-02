@@ -174,7 +174,7 @@ class MatMatIndicesTestCase(MPITestCase):
 
     def test_indices(self):
         asize = 3
-        top = Problem(root=Group())
+        top = Problem(root=Group(), impl=impl)
         root = top.root
         root.ln_solver = LinearGaussSeidel()
 
@@ -184,18 +184,17 @@ class MatMatIndicesTestCase(MPITestCase):
 
         c2 = G1.add('c2', ExecComp4Test('y = x * 2.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
-        c3 = G1.add('c3', ExecComp4Test('y = x * 3.0',
+        c3 = G1.add('c3', ExecComp4Test('y = x.dot(numpy.array([3.0, 4.0, 5.0]))',
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c4 = root.add('c4', ExecComp4Test('y = x * 4.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
-        top.driver.add_param('p.x')
-        top.driver.add_constraint('G1.c2.y', indices=[1])
+        top.driver.add_param('p.x', indices=[2])
         top.driver.add_constraint('c4.y', indices=[1])
         top.driver.add_constraint('c5.y', indices=[1])
-        top.driver.group_vars_of_interest(['G1.c2.y','c4.y','c5.y'])
+        top.driver.group_vars_of_interest(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')
@@ -205,13 +204,13 @@ class MatMatIndicesTestCase(MPITestCase):
         top.setup()
         top.run()
 
-        print("c5.y",c5.unknowns['y'])
-
         J = top.calc_gradient(['p.x'],
-                              ['G1.c2.y','c4.y','c5.y'],
+                              ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
 
         print(J)
+        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([15.,20.,25.]), 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([0.,8.,0.]), 1e-6)
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests

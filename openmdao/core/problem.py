@@ -91,6 +91,9 @@ class Problem(System):
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
 
+        # update metadata with VOI indices
+        self.driver._set_voi_indices(params_dict, unknowns_dict)
+
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
