@@ -30,11 +30,6 @@ class RunOnce(NonLinearSolver):
         system : `System`
             Parent `System` object.
         """
-        if metadata is None:
-            parent_coordinate = []
-            parent_iteration = {}
-        else:
-            parent_coordinate, parent_iteration = metadata['current']
 
         self.iter_count += 1
         # Metadata setup
@@ -42,6 +37,7 @@ class RunOnce(NonLinearSolver):
         update_local_meta(local_meta, (self.iter_count,))
 
         system.children_solve_nonlinear(local_meta)
+
         for recorder in self.recorders:
             recorder.raw_record(system.params, system.unknowns, system.resids, local_meta)
 

@@ -29,14 +29,6 @@ class DumpCaseRecorder(BaseRecorder):
     def startup(self, group):
         """ Write out info that applies to the entire run"""
         super(DumpCaseRecorder, self).startup(group)
-        
-        # write = self.out.write
-        # sim_info = self.get_simulation_info()
-        # write("Simulation Info:\n")
-        # write("  OpenMDAO Version: %s\n" % sim_info['OpenMDAO_Version'])
-        # driver_info = self.get_driver_info()
-        # write("Driver Info:\n")
-        # write("  Driver Class: %s\n" % driver_info['class_name'])
 
     def record(self, params, unknowns, resids, metadata):
         """Dump the given run data in a "pretty" form."""
@@ -57,7 +49,6 @@ class DumpCaseRecorder(BaseRecorder):
         write("Resids:\n")
         for resid, val in sorted(resids.items()):
             write("  %s: %s\n" % ( resid, str(val)))
-
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

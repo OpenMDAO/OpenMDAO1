@@ -59,8 +59,14 @@ class Newton(NonLinearSolver):
         ls_maxiter = self.options['ls_maxiter']
         alpha = self.options['alpha']
 
+        # Metadata setup
+        self.iter_count = 0
+        ls_itercount = 0
+        local_meta = create_local_meta(metadata, system.name)
+        update_local_meta(local_meta, (self.iter_count, ls_itercount))
+
         # Perform an initial run to propagate srcs to targets.
-        system.children_solve_nonlinear(None)
+        system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids)
 
         f_norm = resids.norm()
@@ -69,11 +75,6 @@ class Newton(NonLinearSolver):
 
         arg = system.drmat[None]
         result = system.dumat[None]
-
-        # Metadata setup
-        local_meta = create_local_meta(metadata, system.name)
-
-        self.iter_count = 0
 
         alpha_base = alpha
         while self.iter_count < maxiter and f_norm > atol and \
@@ -131,5 +132,7 @@ class Newton(NonLinearSolver):
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
-        system.children_solve_nonlinear(None)
+        self.iter_count += 1
+        update_local_meta(local_meta, (self.iter_count, 0))
+        system.children_solve_nonlinear(local_meta)
 

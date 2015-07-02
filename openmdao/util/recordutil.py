@@ -73,10 +73,12 @@ def format_iteration_coordinate(coord):
     separator = '/'
     iteration_number_separator = '-'
 
-    tmp = []
+    iteration_coordinate = []
 
-    for name, iter_coord in zip(coord[::2], coord[1::2]):
-        tmp.append(name)
-        tmp.append(iteration_number_separator.join((map(str, iter_coord))))
+    for name, local_coord in zip(coord[::2], coord[1::2]):
+        iteration_coordinate.append(name)
+        iter_str = map(str, local_coord)
+        coord_str = iteration_number_separator.join(iter_str)
+        iteration_coordinate.append(coord_str)
 
-    return separator.join(tmp)
+    return separator.join(iteration_coordinate)

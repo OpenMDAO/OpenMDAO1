@@ -13,6 +13,7 @@ class BaseRecorder(object):
                                 '(processed after includes)')
 
         self._filtered = {}
+        # TODO: System specific includes/excludes
 
     def startup(self, group):
         """ Prepare for new run. """
