@@ -111,7 +111,7 @@ class Driver(object):
         """
         return self._of_interest(list(chain(self._objs, self._cons)))
 
-    def group_vars_of_interest(self, vnames):
+    def parallel_derivs(self, vnames):
         """
         Specifies that the named variables of interest are to be grouped
         together so that their derivatives can be solved for concurrently.

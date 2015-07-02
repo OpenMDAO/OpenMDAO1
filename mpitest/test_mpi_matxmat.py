@@ -96,7 +96,7 @@ class MatMatTestCase(MPITestCase):
 
         # make sure we can't mix inputs and outputs in parallel sets
         try:
-            top.driver.group_vars_of_interest(['p1.x1','comp3.y'])
+            top.driver.parallel_derivs(['p1.x1','comp3.y'])
         except Exception as err:
             self.assertEqual(str(err),
                "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
@@ -104,14 +104,14 @@ class MatMatTestCase(MPITestCase):
         else:
             self.fail("Exception expected")
 
-        top.driver.group_vars_of_interest(['p1.x1','p2.x2'])
+        top.driver.parallel_derivs(['p1.x1','p2.x2'])
 
         self.assertEqual(top.driver.params_of_interest(),
                          [('p1.x1','p2.x2')])
 
         # make sure we can't add a VOI to multiple groups
         try:
-            top.driver.group_vars_of_interest(['p1.x1','p3.x3'])
+            top.driver.parallel_derivs(['p1.x1','p3.x3'])
         except Exception as err:
             self.assertEqual(str(err),
                "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
@@ -149,7 +149,7 @@ class MatMatTestCase(MPITestCase):
         top.driver.add_param('p.x')
         top.driver.add_constraint('c2.y')
         top.driver.add_constraint('c3.y')
-        top.driver.group_vars_of_interest(['c2.y','c3.y'])
+        top.driver.parallel_derivs(['c2.y','c3.y'])
 
         self.assertEqual(top.driver.outputs_of_interest(),
                          [('c2.y','c3.y')])
@@ -196,7 +196,7 @@ class MatMatIndicesTestCase(MPITestCase):
         top.driver.add_param('p.x', indices=[1,2])
         top.driver.add_constraint('c4.y', indices=[1])
         top.driver.add_constraint('c5.y', indices=[2])
-        top.driver.group_vars_of_interest(['c4.y','c5.y'])
+        top.driver.parallel_derivs(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')
