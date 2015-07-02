@@ -1,6 +1,8 @@
 """ OpenMDAO Problem class defintion."""
 
 from itertools import chain
+from collections import OrderedDict
+import json
 from six import string_types
 
 import networkx as nx
@@ -150,3 +152,30 @@ class Relevance(object):
                         relevant.setdefault(inp, set()).update(common)
 
         return relevant
+
+    def json_dependencies(self):
+        """
+        Returns
+        -------
+        A json string with a dependency matrix and a list of variable
+        name labels.
+        """
+        idxs = OrderedDict()
+        matrix = []
+        size = len(self._vgraph.nodes())
+
+        for i, node in enumerate(self._vgraph.nodes_iter()):
+            idxs[node] = i
+            matrix.append([0]*size)
+
+        for u, v in self._vgraph.edges_iter():
+            matrix[idxs[u]][idxs[v]] = 1
+
+        dct = {
+            'dependencies': {
+                'matrix' : matrix,
+                'labels' : self._vgraph.nodes()
+            }
+        }
+
+        return json.dumps(dct)
