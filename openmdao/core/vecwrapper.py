@@ -261,13 +261,21 @@ class VecWrapper(object):
 
         meta = self._vardict[name]
         if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
+            raise RuntimeError("No vector indices can be provided "
+                               "for 'pass by object' variable '%s'" % name)
 
         if name not in self._slices:
-            return meta['size'], []
+            return meta['size'], self.make_idx_array(0, 0)
 
         start, end = self._slices[name]
-        return meta['size'], self.make_idx_array(start, end)
+        if 'voi_indices' in meta:
+            idxs = self.to_idx_array(meta['voi_indices']) + start
+            if idxs.size > (end-start) or max(idxs) >= end:
+                raise RuntimeError("Indices of interest specified for '%s'"
+                                   "are too large" % name)
+            return idxs.size, idxs
+        else:
+            return meta['size'], self.make_idx_array(start, end)
 
     def norm(self):
         """
@@ -546,14 +554,14 @@ class SrcVecWrapper(VecWrapper):
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
-            if relevant_vars is None or name in relevant_vars:
-                relname = meta['promoted_name']
+            promname = meta['promoted_name']
+            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
                 vmeta = self._setup_var_meta(name, meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
-                    self._slices[relname] = (vec_size, vec_size + vmeta['size'])
+                    self._slices[promname] = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
 
-                self._vardict[relname] = vmeta
+                self._vardict[promname] = vmeta
 
         self.vec = numpy.zeros(vec_size)
 
@@ -649,7 +657,7 @@ class TgtVecWrapper(VecWrapper):
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
-            if relevant_vars is None or pathname in relevant_vars:
+            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
                 if pathname in my_params:
                     # if connected, get metadata from the source
                     src_pathname = connections.get(pathname)
