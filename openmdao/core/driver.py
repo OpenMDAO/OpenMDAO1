@@ -158,12 +158,12 @@ class Driver(object):
         if low is None:
             low = -1e99
         elif isinstance(low, np.ndarray):
-            low = low.flat
+            low = low.flatten()
 
         if high is None:
             high = 1e99
         elif isinstance(high, np.ndarray):
-            high = high.flat
+            high = high.flatten()
 
         # Scale the low and high values
         low = (low + adder)*scaler
