@@ -6,6 +6,7 @@ from itertools import chain
 import numpy as np
 
 from openmdao.core.options import OptionsDictionary
+from openmdao.util.recordutil import create_local_meta, update_local_meta
 
 
 class Driver(object):
@@ -39,6 +40,8 @@ class Driver(object):
         # We take root during setup
         self.root = None
 
+        self.iter_count = 0
+
     def _setup(self, root):
         """ Prepares some things we need."""
         self.root = root
@@ -58,7 +61,18 @@ class Driver(object):
                 # Size is useful metadata to save
                 meta['size'] = root.unknowns.metadata(name)['size']
 
-    def _vois_of_interest(self, voi_list):
+    def _map_voi_indices(self, params_dict, unknowns_dict):
+        voi_indices = {}
+        for name, meta in chain(self._params.items(), self._cons.items(), self._objs.items()):
+            # set indices of interest
+            if 'indices' in meta:
+                for vname, vmeta in chain(unknowns_dict.items(), params_dict.items()):
+                    if name == vmeta['promoted_name']:
+                        voi_indices[vname] = meta['indices']
+
+        return voi_indices
+
+    def _of_interest(self, voi_list):
         """Return a list of tuples, with the given voi_list organized
         into tuples based on the previously defined grouping of VOIs.
         """
@@ -85,7 +99,7 @@ class Driver(object):
             The list of params, organized into tuples according to previously
             defined VOI groups.
         """
-        return self._vois_of_interest(self._params)
+        return self._of_interest(self._params)
 
     def outputs_of_interest(self):
         """
@@ -95,9 +109,9 @@ class Driver(object):
             The list of constraints and objectives, organized into tuples
             according to previously defined VOI groups.
         """
-        return self._vois_of_interest(list(chain(self._objs, self._cons)))
+        return self._of_interest(list(chain(self._objs, self._cons)))
 
-    def group_vars_of_interest(self, vnames):
+    def parallel_derivs(self, vnames):
         """
         Specifies that the named variables of interest are to be grouped
         together so that their derivatives can be solved for concurrently.
@@ -224,6 +238,11 @@ class Driver(object):
         obj = {}
         if indices:
             obj['indices'] = indices
+            if len(indices) > 1 and not self.supports['Multiple Objectives']:
+                raise RuntimeError("Multiple objective indices specified for "
+                                   "variable '%s', but driver '%s' doesn't "
+                                   "support multiple objectives." %
+                                   (name, self.pathname))
         self._objs[name] = obj
 
     def get_objectives(self, return_type='dict'):
@@ -355,6 +374,13 @@ class Driver(object):
             Our parent `Problem`.
         """
         system = problem.root
-        system.solve_nonlinear()
+
+        # Metadata Setup
+        self.iter_count += 1
+        metadata = create_local_meta(None, 'Driver')
+        update_local_meta(metadata, (self.iter_count,))
+
+        # Solve the system once and record results.
+        system.solve_nonlinear(metadata=metadata)
         for recorder in self.recorders:
-            recorder._record(system.params, system.unknowns, system.resids)
+            recorder.raw_record(system.params, system.unknowns, system.resids, metadata)

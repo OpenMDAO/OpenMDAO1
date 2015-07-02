@@ -72,7 +72,6 @@ class System(object):
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
 
-
     def promoted(self, name):
         """Determine if the given variable name is being promoted from this
         `System`.
@@ -101,10 +100,11 @@ class System(object):
 
         return False
 
-    def subsystems(self, local=False, recurse=False):
+    def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
-        return []
+        if include_self:
+            yield ('', self)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -291,18 +291,9 @@ class System(object):
                     break
 
             # Local settings for this var trump all
-            if 'fd_step_size' in mydict:
-                fdstep = mydict['fd_step_size']
-            else:
-                fdstep = step_size
-            if 'fd_step_type' in mydict:
-                fdtype = mydict['fd_step_type']
-            else:
-                fdtype = step_type
-            if 'fd_form' in mydict:
-                fdform = mydict['fd_form']
-            else:
-                fdform = form
+            fdstep = mydict.get('fd_step_size', step_size)
+            fdtype = mydict.get('fd_step_type', step_type)
+            fdform = mydict.get('fd_form', form)
 
             # Size our Inputs
             p_size = np.size(inputs[p_name])
@@ -380,11 +371,10 @@ class System(object):
         any derivative specification in any `Component` or `Group` to perform
         finite difference."""
 
-        if self._jacobian_cache is None:
+        if not self._jacobian_cache:
             msg = ("No derivatives defined for Component '{name}'")
             msg = msg.format(name=self.name)
             raise ValueError(msg)
-
 
         for key, J in iteritems(self._jacobian_cache):
             unknown, param = key
@@ -555,24 +545,6 @@ class System(object):
         # return the combined dict
         return comm.bcast(J, root=0)
 
-    def _get_src_info(self, srcvec, name):
-        """
-        Return size, indices and name of the source indicated by name.
-        If name specifies a target instead, return the size, indices,
-        and name of its source.
-        """
-        if name in srcvec:
-            size, idxs = srcvec.get_local_idxs(name)
-            param_src = name
-        else:
-            try:
-                param_src = self.connections[name]
-            except KeyError:
-                raise KeyError("'%s' is not connected to an unknown." % name)
-            param_src = srcvec.get_promoted_varname(param_src)
-            size, idxs = srcvec.get_local_idxs(param_src)
-
-        return size, idxs, param_src
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
@@ -607,4 +579,3 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
             umap[rel] = newrel
 
     return umap
-

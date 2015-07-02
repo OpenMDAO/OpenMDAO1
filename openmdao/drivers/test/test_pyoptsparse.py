@@ -176,11 +176,14 @@ class TestPyoptSparse(unittest.TestCase):
         top.setup()
         top.run()
 
-        print top['obj.o']
-        print top['con1.c']
-        print top['con2.c']
         obj = top['obj.o']
         assert_rel_error(self, obj, 30.0, 1e-6)
+
+        # Verify that pyOpt has the correct wrt names
+        con1 = top.driver.pyOpt_solution.constraints['con1.c']
+        self.assertEqual(con1.wrt, ['p1.x'])
+        con2 = top.driver.pyOpt_solution.constraints['con2.c']
+        self.assertEqual(con2.wrt, ['p2.x'])
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,7 +48,7 @@ class ExecComp(Component):
 
         # find all of the variables and which ones are outputs
         for expr in exprs:
-            lhs, rhs = expr.split('=')
+            lhs, rhs = expr.split('=', 1)
             outs.update(parse_for_vars(lhs))
             allvars.update(parse_for_vars(expr, kwargs.keys()))
 
@@ -201,7 +201,7 @@ class _UPDict(object):
         elif name in self._params:
             self._params[name] = value
         else:
-            raise KeyError(name)
+            self._unknowns[name] # will raise KeyError
 
 
 def _import_functs(mod, dct, names=None):
@@ -231,7 +231,7 @@ def _import_functs(mod, dct, names=None):
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {}
 
-# Note: no function in the math module support complex args, so the following can only be used
+# Note: no function in the math module supports complex args, so the following can only be used
 #       in ExecComps if derivatives are not required.  The functions below don't have numpy
 #       versions (which do support complex args), otherwise we'd just use those.  Some of these
 #       will be overridden if scipy is found.

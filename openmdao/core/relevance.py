@@ -1,6 +1,9 @@
 """ OpenMDAO Problem class defintion."""
+from __future__ import print_function
 
 from itertools import chain
+from collections import OrderedDict
+import json
 from six import string_types
 
 import networkx as nx
@@ -30,14 +33,7 @@ class Relevance(object):
                 param_groups[g_id] = tuple(inp)
                 g_id += 1
 
-            inps = []
-            for i in inp:
-                if i in params_dict or i in unknowns_dict:
-                    inps.append(i)
-                else:
-                    inps.extend(get_absvarpathnames(i, params_dict, 'params_dict'))
-
-            self.inputs.append(tuple(inps))
+            self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
@@ -49,8 +45,7 @@ class Relevance(object):
                 output_groups[g_id] = tuple(out)
                 g_id += 1
 
-            self.outputs.append(tuple([get_absvarpathnames(o, unknowns_dict, 'unknowns_dict')[0]
-                                        for o in out]))
+            self.outputs.append(out)
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -99,13 +94,19 @@ class Relevance(object):
         compins = {}  # maps input vars to components
         compouts = {} # maps output vars to components
 
-        for param in params_dict:
+        promote_map = {}
+
+        for param, meta in params_dict.items():
             tcomp = param.rsplit('.',1)[0]
             compins.setdefault(tcomp, []).append(param)
+            if meta['promoted_name'] != param:
+                promote_map[param] = meta['promoted_name']
 
-        for unknown in unknowns_dict:
+        for unknown, meta in unknowns_dict.items():
             scomp = unknown.rsplit('.',1)[0]
             compouts.setdefault(scomp, []).append(unknown)
+            if meta['promoted_name'] != unknown:
+                promote_map[unknown] = meta['promoted_name']
 
         for target, source in connections.items():
             vgraph.add_edge(source, target)
@@ -116,6 +117,14 @@ class Relevance(object):
             for inp in inputs:
                 for out in compouts.get(comp, ()):
                     vgraph.add_edge(inp, out)
+
+        # now collapse any var nodes with implicit connections
+        nx.relabel_nodes(vgraph, promote_map, copy=False)
+
+        # remove any self edges created by the relabeling
+        for u,v in vgraph.edges():
+            if u == v:
+                vgraph.remove_edge(u, v)
 
         return vgraph
 
@@ -152,3 +161,30 @@ class Relevance(object):
                         relevant.setdefault(inp, set()).update(common)
 
         return relevant
+
+    def json_dependencies(self):
+        """
+        Returns
+        -------
+        A json string with a dependency matrix and a list of variable
+        name labels.
+        """
+        idxs = OrderedDict()
+        matrix = []
+        size = len(self._vgraph.nodes())
+
+        for i, node in enumerate(self._vgraph.nodes_iter()):
+            idxs[node] = i
+            matrix.append([0]*size)
+
+        for u, v in self._vgraph.edges_iter():
+            matrix[idxs[u]][idxs[v]] = 1
+
+        dct = {
+            'dependencies': {
+                'matrix' : matrix,
+                'labels' : self._vgraph.nodes()
+            }
+        }
+
+        return json.dumps(dct)

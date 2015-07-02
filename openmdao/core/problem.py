@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import os
 import warnings
+import json
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, string_types
 import sys
@@ -13,7 +15,7 @@ import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
-from openmdao.core.group import get_absvarpathnames
+from openmdao.core.group import Group, get_absvarpathnames
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
@@ -88,6 +90,21 @@ class Problem(System):
 
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
+
+        # get map of vars to VOI indices
+        voi_indices = self.driver._map_voi_indices(params_dict, unknowns_dict)
+
+        # create a mapping from absolute name to top level promoted name
+        abs_to_prom = {}
+        for name, meta in chain(params_dict.items(), unknowns_dict.items()):
+            abs_to_prom[name] = meta['promoted_name']
+
+        # propagate top level promoted names and voi_indices down to all subsystems
+        for _, sub in self.root.subsystems(recurse=True, include_self=True):
+            for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
+                meta['top_promoted_name'] = abs_to_prom[vname]
+                if vname in voi_indices:
+                    meta['voi_indices'] = voi_indices[vname]
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -439,8 +456,6 @@ class Problem(System):
                     # Put them in serial groups
                     voi_sets.append((item,))
 
-        #print(voi_sets)
-
         voi_srcs = {}
 
         # If Forward mode, solve linear system for each param
@@ -457,7 +472,8 @@ class Problem(System):
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
-                in_size, in_idxs, voi_srcs[vkey] = self.root._get_src_info(duvec, voi)
+                voi_srcs[vkey] = voi
+                in_size, in_idxs = duvec.get_local_idxs(voi)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -465,7 +481,6 @@ class Problem(System):
             jbase = j
 
             for i in range(len(in_idxs)):
-
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
@@ -489,7 +504,7 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        out_size, out_idxs, _ = self.root._get_src_info(self.root.dumat[vkey], item)
+                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':
@@ -591,7 +606,7 @@ class Problem(System):
                 for u_name in unknowns:
 
                     u_size = np.size(dunknowns[u_name])
-                    if comp._jacobian_cache is not None:
+                    if comp._jacobian_cache:
 
                         # Go no further if we aren't defined.
                         if (u_name, p_name) not in comp._jacobian_cache:
@@ -698,17 +713,12 @@ class Problem(System):
 
         # Params and Unknowns that we provide at this level.
         abs_param_list = self.root._get_fd_params()
+        param_srcs = [self.root.connections[p] for p in abs_param_list]
         unknown_list = self.root._get_fd_unknowns()
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        param_list = []
-        params = self.root.params
-        for param in abs_param_list:
-            if param not in self.root.unknowns:
-                param_list.append(params.metadata(param)['promoted_name'])
-            else:
-                param_list.append(param)
+        param_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
@@ -761,6 +771,29 @@ class Problem(System):
             # TODO : Only Linear GS is supported on sub
 
         return mode
+
+    def json_system_tree(self):
+
+        def _tree_dict(system):
+            dct = OrderedDict()
+            for name, s in system.subsystems(recurse=True):
+                if isinstance(s, Group):
+                    dct[name] = _tree_dict(s)
+                else:
+                    dct[name] = OrderedDict()
+                    for vname, meta in s.unknowns.items():
+                        dct[name][vname] = m = meta.copy()
+                        for mname in m:
+                            if isinstance(m[mname], np.ndarray):
+                                m[mname] = m[mname].tolist()
+            return dct
+
+        tree = OrderedDict()
+        tree['root'] = _tree_dict(self.root)
+        return json.dumps(tree)
+
+    def json_dependencies(self):
+        return self.root._relevance.json_dependencies()
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """

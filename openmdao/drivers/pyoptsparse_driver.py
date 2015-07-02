@@ -12,6 +12,8 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
+from openmdao.util.recordutil import create_local_meta, update_local_meta
+
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
@@ -56,6 +58,7 @@ class pyOptSparseDriver(Driver):
 
         self.lin_jacs = {}
         self.quantities = []
+        self.metadata = None
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -70,6 +73,9 @@ class pyOptSparseDriver(Driver):
         self.pyOpt_solution = None
         rel = problem.root._relevance
 
+        # Metadata Setup
+        self.metadata = create_local_meta(None, self.options['optimizer'])
+
         # Initial Run
         problem.root.solve_nonlinear()
 
@@ -78,9 +84,6 @@ class pyOptSparseDriver(Driver):
         # Add all parameters
         param_meta = self.get_param_metadata()
         param_list = list(param_meta.keys())
-        abs_params = [problem.root.unknowns._get_metadata(param)['pathname'] \
-                      for param in param_list]
-
         param_vals = self.get_params()
         for name, meta in param_meta.items():
 
@@ -116,11 +119,7 @@ class pyOptSparseDriver(Driver):
             upper = np.zeros((size))
 
             # Sparsify Jacobian via relevance
-            if name in rel.relevant:
-                aname = name
-            else:
-                aname = problem.root.unknowns._get_metadata(name)['pathname']
-            wrt = rel.relevant[aname].intersection(abs_params)
+            wrt = rel.relevant[name].intersection(param_list)
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
@@ -138,11 +137,7 @@ class pyOptSparseDriver(Driver):
             upper = np.zeros((size))
 
             # Sparsify Jacobian via relevance
-            if name in rel.relevant:
-                aname = name
-            else:
-                aname = problem.root.unknowns._get_metadata(name)['pathname']
-            wrt = rel.relevant[aname].intersection(abs_params)
+            wrt = rel.relevant[name].intersection(param_list)
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
@@ -235,7 +230,8 @@ class pyOptSparseDriver(Driver):
 
         fail = 1
         func_dict = {}
-
+        metadata = self.metadata
+        system = self.root
         try:
 
             for name, param in self.get_params().items():
@@ -244,7 +240,13 @@ class pyOptSparseDriver(Driver):
             # Execute the model
             #print("Setting DV")
             #print(dv_dict)
-            self.root.solve_nonlinear()
+
+            self.iter_count += 1
+            update_local_meta(metadata, (self.iter_count,))
+
+            system.solve_nonlinear(metadata=metadata)
+            for recorder in self.recorders:
+                recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
 
             # Get the objective function evaluations
             for name, obj in self.get_objectives().items():
