@@ -808,6 +808,27 @@ class PlaceholderVecWrapper(object):
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
 
+    def __setitem__(self, name, value):
+        """
+        Set the value of the named variable. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        value :
+            The unflattened value of the named variable.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
 def idx_merge(idxs):
     """
     Combines a mixed iterator of int and iterator indices into an
