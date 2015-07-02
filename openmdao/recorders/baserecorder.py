@@ -47,8 +47,8 @@ class BaseRecorder(object):
         """
 
         """
-        # Coord will look like ['Driver', (1,), '', (1,), 'G1', (1,1), ...]
-        # So the pathname is composed of every other entry, starting with the third
+        # Coord will look like ['Driver', (1,), 'root', (1,), 'G1', (1,1), ...]
+        # So the pathname is composed of every other entry, starting with the fifth
         pathname = '.'.join(metadata['coord'][4::2])
         pnames, unames, rnames = self._filtered[pathname]
         filtered_params = {key: params[key] for key in pnames}
