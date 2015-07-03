@@ -219,6 +219,26 @@ class TestProblem(unittest.TestCase):
             [ 6.,   1.,   2., -1.],
         ]))
 
+        # check that calc_gradient returns proper dict value when mode is FD
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
+            [ -3., -3., -17.,  9.],
+        ]), decimal=5)
+        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]), decimal=5)
+
+        # check that calc_gradient returns proper array value when mode is FD
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([
+            [-3.,  -3., -17.,  9.],
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]), decimal=5)
+
         # when optimization is implemented, the following should also be true
         #self.assertAlmostEqual(comp.opt_objective,
         #                       prob['comp.f'], places=2)

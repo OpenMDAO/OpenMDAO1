@@ -303,44 +303,65 @@ class Problem(System):
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids,
                                total_derivs=True)
-        J = {}
-        for okey in unknown_list:
-            J[okey] = {}
-            for ikey in param_list:
-                if isinstance(ikey, tuple):
-                    ikey = ikey[0]
+        if return_format == 'dict':
+            J = {}
+            for okey in unknown_list:
+                J[okey] = {}
+                for ikey in param_list:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
 
-                # User might request an output via the absolute pathname
-                fd_okey = okey
-                if fd_okey not in unknowns:
-                    for key in unknowns:
-                        meta = unknowns.metadata(key)
-                        if meta['pathname'] == fd_okey:
-                            fd_okey = meta['promoted_name']
-                            break
-
-                # FD Input keys are a little funny....
-                fd_ikey = ikey
-                if fd_ikey not in params:
-
-                    # The user sometimes specifies the parameter output
-                    # name instead of its target because it is more
-                    # convenient
-                    for key, val in iteritems(root.connections):
-                        if val == ikey:
-                            fd_ikey = key
-                            break
-
-                    # We need the absolute name, but the fd Jacobian
-                    # holds relative promoted inputs
-                    if fd_ikey not in params:
-                        for key in params:
-                            meta = params.metadata(key)
-                            if meta['promoted_name'] == fd_ikey:
-                                fd_ikey = meta['pathname']
+                    # User might request an output via the absolute pathname
+                    fd_okey = okey
+                    if fd_okey not in unknowns:
+                        for key in unknowns:
+                            meta = unknowns.metadata(key)
+                            if meta['pathname'] == fd_okey:
+                                fd_okey = meta['promoted_name']
                                 break
 
-                J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+                    # FD Input keys are a little funny....
+                    fd_ikey = ikey
+                    if fd_ikey not in params:
+
+                        # The user sometimes specifies the parameter output
+                        # name instead of its target because it is more
+                        # convenient
+                        for key, val in iteritems(root.connections):
+                            if val == ikey:
+                                fd_ikey = key
+                                break
+
+                        # We need the absolute name, but the fd Jacobian
+                        # holds relative promoted inputs
+                        if fd_ikey not in params:
+                            for key in params:
+                                meta = params.metadata(key)
+                                if meta['promoted_name'] == fd_ikey:
+                                    fd_ikey = meta['pathname']
+                                    break
+
+                    J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+        else:
+            psize = 0
+            for p in param_list:
+                sys = p[:p.rfind('.')]      # up to last period
+                var = p.rsplit('.', 1)[1]   # after last period
+                psize += root._subsystem(sys).unknowns.metadata(var)['size']
+            usize = 0
+            for u in unknown_list:
+                sys = u[:u.rfind('.')]      # up to last period
+                var = u.rsplit('.', 1)[1]   # after last period
+                usize += root._subsystem(sys).unknowns.metadata(var)['size']
+            J = np.zeros((usize, psize))
+            print('Jfd:', Jfd)
+            iu = ip = 0
+            for u in unknown_list:
+                for p in param_list:
+                    J[iu][ip] = Jfd[(u, p)]
+                    ip +=1
+                iu +=1
+
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
