@@ -13,7 +13,7 @@ from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
-from openmdao.test.simplecomps import SimpleImplicitComp
+from openmdao.test.simplecomps import SimpleImplicitComp, RosenSuzuki
 
 if PY3:
     def py3fix(s):
@@ -185,89 +185,7 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
-    def test_rosen_suzuki(self):
-        class RosenSuzuki(Component):
-            """ From the CONMIN User's Manual:
-            EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
-
-                 MINIMIZE OBJ = X(1)**2 - 5*X(1) + X(2)**2 - 5*X(2) +
-                                2*X(3)**2 - 21*X(3) + X(4)**2 + 7*X(4) + 50
-
-                 Subject to:
-
-                      G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) +
-                             X(3)**2 + X(3) + X(4)**2 - X(4) - 8   .LE.0
-
-                      G(2) = X(1)**2 - X(1) + 2*X(2)**2 + X(3)**2 +
-                             2*X(4)**2 - X(4) - 10                  .LE.0
-
-                      G(3) = 2*X(1)**2 + 2*X(1) + X(2)**2 - X(2) +
-                             X(3)**2 - X(4) - 5                     .LE.0
-
-            This problem is solved beginning with an initial X-vector of
-                 X = (1.0, 1.0, 1.0, 1.0)
-            The optimum design is known to be
-                 OBJ = 6.000
-            and the corresponding X-vector is
-                 X = (0.0, 1.0, 2.0, -1.0)
-            """
-
-            def __init__(self, multiplier=2.0):
-                super(RosenSuzuki, self).__init__()
-
-                # Params
-                self.add_param('x', np.array([1., 1., 1., 1.])) # low=-10, high=99
-
-                # Unknowns
-                self.add_output('g', np.array([1., 1., 1.]))    # constraints
-                self.add_output('f', 0.)                        # objective
-
-                self.opt_objective = 6.
-                self.opt_design_vars = [0., 1., 2., -1.]
-
-            def solve_nonlinear(self, params, unknowns, resids):
-                """calculate the new objective value"""
-                x = params['x']
-
-                f = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
-                     2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
-
-                unknowns['f'] = np.array(f)
-
-                g = [1., 1., 1.]
-                g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
-                        x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
-                g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
-                        2*x[3]**2 - x[3] - 10)
-                g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
-                        x[2]**2 - x[3] - 5)
-
-                unknowns['g'] = np.array(g)
-
-                print('x:', x)
-                print('f:', f)
-                print('g:', g)
-
-            def jacobian(self, params, unknowns, resids):
-                """Analytical derivatives"""
-                J = {}
-
-                x = params['x']
-
-                J[('f', 'x')] = np.array([
-                    [2*x[0]-5, 2*x[1]-5, 4*x[2]-21, 2*x[3]+7]
-                ])
-
-                J[('g', 'x')] = np.array([
-                    [2*x[0]+1, 2*x[1]-1, 2*x[2]+1, 2*x[3]-1],
-                    [2*x[0]-1, 4*x[1],   2*x[2],   4*x[3]-1],
-                    [4*x[0]+2, 2*x[1]-1, 2*x[2],   -1],
-                ])
-
-                print J
-
-                return J
-
+    def test_calc_gradient_return_values(self):
         root = Group()
         parm = root.add('parm', ParamComp('x', np.array([1., 1., 1., 1.])))
         comp = root.add('comp', RosenSuzuki())
@@ -276,28 +194,42 @@ class TestProblem(unittest.TestCase):
 
         prob = Problem(root)
         prob.setup()
-        # someday: optimizer
         prob.run()
 
         param_list = ['parm.x']
-        unknown_list = ['comp.f']
+        unknown_list = ['comp.f', 'comp.g']
+
+        # check that calc_gradient returns proper dict value
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print(J)
+        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
+            [ -3., -3., -17.,  9.],
+        ]))
+        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
 
+        # check that calc_gradient returns proper array value
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([
+            [-3.,  -3., -17.,  9.],
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
 
-        print 'objective:', prob['comp.f']
-
-        # pylint: disable=E1101
-        self.assertAlmostEqual(comp.opt_objective,
-                               prob['comp.f'], places=2)
-        self.assertAlmostEqual(comp.opt_design_vars[0],
-                               prob['comp.x'][0], places=1)
-        self.assertAlmostEqual(comp.opt_design_vars[1],
-                               prob['comp.x'][1], places=1)
-        self.assertAlmostEqual(comp.opt_design_vars[2],
-                               prob['comp.x'][2], places=1)
-        self.assertAlmostEqual(comp.opt_design_vars[3],
-                               prob['comp.x'][3], places=1)
+        # when optimization is implemented, the following should also be true
+        #self.assertAlmostEqual(comp.opt_objective,
+        #                       prob['comp.f'], places=2)
+        #self.assertAlmostEqual(comp.opt_design_vars[0],
+        #                       prob['comp.x'][0], places=1)
+        #self.assertAlmostEqual(comp.opt_design_vars[1],
+        #                       prob['comp.x'][1], places=1)
+        #self.assertAlmostEqual(comp.opt_design_vars[2],
+        #                       prob['comp.x'][2], places=1)
+        #self.assertAlmostEqual(comp.opt_design_vars[3],
+        #                       prob['comp.x'][3], places=1)
 
     def test_explicit_connection_errors(self):
         class A(Component):

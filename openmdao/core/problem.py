@@ -407,10 +407,17 @@ class Problem(System):
                         for ikey in ikeys:
                             J[okey][ikey] = None
         else:
-            # TODO: need these functions
-            num_input = system.get_size(param_list)
-            num_output = system.get_size(unknown_list)
-            J = np.zeros((num_output, num_input))
+            psize = 0
+            for p in param_list:
+                sys = p[:p.rfind('.')]      # up to last period
+                var = p.rsplit('.', 1)[1]   # after last period
+                psize += root._subsystem(sys).unknowns.metadata(var)['size']
+            usize = 0
+            for u in unknown_list:
+                sys = u[:u.rfind('.')]      # up to last period
+                var = u.rsplit('.', 1)[1]   # after last period
+                usize += root._subsystem(sys).unknowns.metadata(var)['size']
+            J = np.zeros((usize, psize))
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list

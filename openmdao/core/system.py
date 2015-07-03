@@ -57,21 +57,19 @@ class System(object):
 
     def __getitem__(self, name):
         """
-        Return the variable or subsystem of the given name from this system.
+        Return the variable of the given name from this system.
 
         Args
         ----
         name : str
-            The name of the variable or subsystem.
+            The name of the variable.
 
         Returns
         -------
-        value OR `System`
-            The unflattened value of the given variable OR a reference to
-            the named `System`.
+        value
+            The unflattened value of the given variable.
         """
         raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
-
 
     def promoted(self, name):
         """Determine if the given variable name is being promoted from this

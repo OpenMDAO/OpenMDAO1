@@ -195,7 +195,6 @@ class VecWrapper(object):
         """
         return self._vardict.__iter__()
 
-
     def keys(self):
         """
         Returns
