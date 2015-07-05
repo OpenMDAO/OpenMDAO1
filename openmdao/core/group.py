@@ -167,10 +167,10 @@ class Group(System):
             The name of one or more target variables.
         """
         if isinstance(targets, str):
-            targets = [targets]
+            targets = (targets,)
 
         for target in targets:
-            self._src[target] = source
+            self._src.setdefault(target, []).append(source)
             if src_indices is not None:
                 self._src_idxs[target] = src_indices
 
@@ -443,27 +443,31 @@ class Group(System):
         for _, sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
-        for tgt, src in self._src.items():
-            try:
-                src_pathname = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')[0]
-            except KeyError as error:
+        for tgt, srcs in self._src.items():
+            for src in srcs:
                 try:
-                    get_absvarpathnames(src, self._params_dict, 'params')
+                    src_pathnames = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')
                 except KeyError as error:
-                    raise ConnectError.nonexistent_src_error(src, tgt)
-                else:
-                    raise ConnectError.invalid_src_error(src, tgt)
+                    try:
+                        # if src is a param, it must use scoped absolute naming, so convert to top
+                        # level absolute name for lookup in params_dict
+                        s = '.'.join((self.pathname, src)) if self.pathname else src
+                        # verify that src is actually in self._params_dict
+                        self._params_dict[s]
+                        src_pathnames = [s]
+                    except KeyError as error:
+                        raise ConnectError.nonexistent_src_error(src, tgt)
 
-            try:
-                for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
-                    connections[tgt_pathname] = src_pathname
-            except KeyError as error:
                 try:
-                    get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
+                    for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
+                        connections.setdefault(tgt_pathname,[]).extend(src_pathnames)
                 except KeyError as error:
-                    raise ConnectError.nonexistent_target_error(src, tgt)
-                else:
-                    raise ConnectError.invalid_target_error(src, tgt)
+                    try:
+                        get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
+                    except KeyError as error:
+                        raise ConnectError.nonexistent_target_error(src, tgt)
+                    else:
+                        raise ConnectError.invalid_target_error(src, tgt)
 
         return connections
 

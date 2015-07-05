@@ -71,6 +71,18 @@ class OptionsDictionary(object):
         self.check(name, value)
         self._options[name]['val'] = value
 
+    def get(self, name, default=None):
+        """
+        Returns
+        -------
+        object
+            The value of the named option.  If not found, returns the
+            default value that was passed in.
+        """
+        if name in self._options:
+            return self._options[name]['val']
+        return default
+
     def items(self):
         """
         Returns
