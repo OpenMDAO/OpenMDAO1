@@ -176,6 +176,11 @@ class Driver(object):
         elif isinstance(high, np.ndarray):
             high = high.flatten()
 
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
+
         # Scale the low and high values
         low = (low + adder)*scaler
         high = (high + adder)*scaler
@@ -205,10 +210,11 @@ class Driver(object):
         for key, val in self._params.items():
             scaler = val['scaler']
             adder = val['adder']
-            if scaler == 0.0 and adder == 1.0:
-                params[key] = uvec.flat[key]
-            else:
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
                 params[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                params[key] = uvec.flat[key]
 
         return params
 
@@ -236,10 +242,11 @@ class Driver(object):
         """
         scaler = self._params[name]['scaler']
         adder = self._params[name]['adder']
-        if scaler == 0.0 and adder == 1.0:
-            self.root.unknowns[name] = value
-        else:
+        if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+           or scaler != 0.0 or adder != 1.0:
             self.root.unknowns[name] = value/scaler - adder
+        else:
+            self.root.unknowns[name] = value
 
     def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
         """ Adds an objective to this driver.
@@ -262,7 +269,10 @@ class Driver(object):
             is first in precedence.
         """
 
-        # TODO: Check validity of input.
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
 
         obj = {}
         obj['adder'] = adder
@@ -299,10 +309,11 @@ class Driver(object):
         for key, val in self._objs.items():
             scaler = val['scaler']
             adder = val['adder']
-            if scaler == 0.0 and adder == 1.0:
-                objs[key] = uvec.flat[key]
-            else:
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
                 objs[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                objs[key] = uvec.flat[key]
 
         return objs
 
@@ -343,7 +354,10 @@ class Driver(object):
             is first in precedence.
         """
 
-        # TODO: Check validity of input.
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
 
         con = {}
         con['linear'] = linear
@@ -398,10 +412,11 @@ class Driver(object):
 
             scaler = val['scaler']
             adder = val['adder']
-            if scaler == 0.0 and adder == 1.0:
-                cons[key] = uvec.flat[key]
-            else:
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
                 cons[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                cons[key] = uvec.flat[key]
 
         return cons
 
