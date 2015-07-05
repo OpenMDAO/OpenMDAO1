@@ -163,7 +163,7 @@ class Driver(object):
 
         scaler: float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
-            is first in precedence.
+            is second in precedence.
         """
 
         if low is None:
@@ -266,7 +266,7 @@ class Driver(object):
 
         scaler: float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
-            is first in precedence.
+            is second in precedence.
         """
 
         if isinstance(adder, np.ndarray):
@@ -351,7 +351,7 @@ class Driver(object):
 
         scaler: float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
-            is first in precedence.
+            is second in precedence.
         """
 
         if isinstance(adder, np.ndarray):
