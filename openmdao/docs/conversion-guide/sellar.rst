@@ -1,105 +1,75 @@
-.. _OpenMDAO-Examples:
+The Sellar Problem
+------------------
 
-============
-Examples
-============
-
-Now that you have some sense of how OpenMDAO's pieces relate to one another,
-let's take a look a couple of concrete examples at work, Paraboloid, and the
-Sellar Problem.
-
-[This document is walking through these classes without any reference to the past
-OpenMDAO syntax/structure.]
-
-Paraboloid
-----------
+For more information on what the Sellar Problem is and how it works, see [link to
+User Guide].  Here's how the Sellar Problem was implemented in the previous versions
+of OpenMDAO:
 
 ::
 
-    """ paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
-    """
-    from openmdao.core.component import Component
+    """ Sellar Problem in OpenMDAO Classic """
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import Float
 
 
-    class Paraboloid(Component):
-        """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+    class Discipline1(Component):
+        """Component containing Discipline 1"""
 
-        def __init__(self):
-            super(Paraboloid, self).__init__()
+        # pylint: disable-msg=E1101
+        z1 = Float(0.0, iotype='in', desc='Global Design Variable')
+        z2 = Float(0.0, iotype='in', desc='Global Design Variable')
+        x1 = Float(0.0, iotype='in', desc='Local Design Variable')
+        y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
 
-            self.add_param('x', val=0.0)
-            self.add_param('y', val=0.0)
-
-            self.add_output('f_xy', val=0.0)
-
-        def solve_nonlinear(self, params, unknowns, resids):
-            """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-            Optimal solution (minimum): x = 6.6667; y = -7.3333
-            """
-
-            x = params['x']
-            y = params['y']
-
-            unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-
-        def jacobian(self, params, unknowns, resids):
-            """ Jacobian for our paraboloid."""
-
-            x = params['x']
-            y = params['y']
-            J = {}
-
-            J['f_xy','x'] = 2.0*x - 6.0 + y
-            J['f_xy','y'] = 2.0*y + 8.0 + x
-            return J
+        y1 = Float(iotype='out', desc='Output of this Discipline')
 
 
-Sellar
-------
+        def execute(self):
+            """Evaluates the equation
+            y1 = z1**2 + z2 + x1 - 0.2*y2"""
 
-[Sellar intro taken from existing docs, will need to be edited based on new framework/
-new code.]
-We will cover some of the more advanced capabilities of OpenMDAO. You should
-read and understand Simple Optimization and MetaModel before starting this one.
+            z1 = self.z1
+            z2 = self.z2
+            x1 = self.x1
+            y2 = self.y2
 
-This tutorial illustrates the features of OpenMDAO that support the use of
-decomposition-based MDAO architectures, such as:
+            self.y1 = z1**2 + z2 + x1 - 0.2*y2
 
-Multidisciplinary Design Feasible (MDF)
-Independent Design Feasible (IDF)
-Collaborative Optimization (CO)
 
-First we’ll walk through the manual implementation of these architectures on a simple
-  example problem. This will introduce you to using iteration hierarchy, metamodeling,
-  and Design of Experiments (DOE) to construct different kinds of optimization processes.
-  Understanding this section is important if you want to implement a new MDAO architecture
-  or an existing one that is not currently available within OpenMDAO.
 
-Once you understand how to construct an MDAO architecture by hand, you’ll see
-that it can take a good amount of work to set up. That’s why we’ll show you how
-to set up your problem so you can automatically apply a number of different MDAO
-architectures. Using the automatic implementation of an architecture will dramatically
-simplify your input files.
+    class Discipline2(Component):
+        """Component containing Discipline 2"""
 
-All of these tutorials use the Sellar Problem, which consists of two disciplines as follows:
+        # pylint: disable-msg=E1101
+        z1 = Float(0.0, iotype='in', desc='Global Design Variable')
+        z2 = Float(0.0, iotype='in', desc='Global Design Variable')
+        y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
 
-[insert sellar graphic here after moving it to the _static dir]
+        y2 = Float(iotype='out', desc='Output of this Discipline')
 
-Variables z1, z2, and x1 are the design variables over which we’d like to minimize
-  the objective. Both disciplines are functions of z1 and z2, so they are called
-  the global design variables, while only the first discipline is a function of x1,
-  so it is called the local design variable. The two disciplines are coupled by the
-  coupling variables y1 and y2. Discipline 1 takes y2 as an input, and computes y1
-  as an output, while Discipline 2 takes y1 as an input and computes y2 as an output.
-  As such, the two disciplines depend on each other’s output, so iteration is required
-  to find a set of coupling variables that satisfies both equations.
 
-Disciplines 1 and 2 were implemented in OpenMDAO as components.
-[note, old intro, but the code that follows is 1.0 code]
+        def execute(self):
+            """Evaluates the equation
+            y1 = y1**(.5) + z1 + z2"""
+
+            z1 = self.z1
+            z2 = self.z2
+
+            # Note: this may cause some issues. However, y1 is constrained to be
+            # above 3.16, so lets just let it converge, and the optimizer will
+            # throw it out
+            y1 = abs(self.y1)
+
+            self.y2 = y1**(.5) + z1 + z2
+
+
+[Discussion of how things WERE done, mention the way things have changed, then
+foreshadow how that will change paraboloid in 1.0...]
+Here's how it looks in OpenMDAO 1.0
 
 ::
 
-
+    """ Sellar Problem in OpenMDAO 1.0 """
     """ Test objects for the sellar two discipline problem.
     From Sellar's analytic problem.
 
@@ -341,3 +311,5 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
             self.connect('d2.y2', 'con_cmp2.y2')
 
             self.nl_solver = NLGaussSeidel()
+
+[reflect back on how things have changed and why.  do line-by-line examples if needed.]

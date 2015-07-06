@@ -245,6 +245,7 @@ to do this installation needs to be pointing at the python inside your environme
 This is why we install pip into the env above.
 
 ::
+
     pip install -e .
 
 
