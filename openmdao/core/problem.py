@@ -92,7 +92,7 @@ class Problem(System):
         params_dict, unknowns_dict = self.root._setup_variables()
 
         # get map of vars to VOI indices
-        voi_indices = self.driver._map_voi_indices(params_dict, unknowns_dict)
+        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
 
         # create a mapping from absolute name to top level promoted name
         abs_to_prom = {}
@@ -103,8 +103,6 @@ class Problem(System):
         for _, sub in self.root.subsystems(recurse=True, include_self=True):
             for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
                 meta['top_promoted_name'] = abs_to_prom[vname]
-                if vname in voi_indices:
-                    meta['voi_indices'] = voi_indices[vname]
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -437,8 +435,10 @@ class Problem(System):
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list
+            poi_indices, qoi_indices = self._poi_indices, self._qoi_indices
         else:
             input_list, output_list = unknown_list, param_list
+            qoi_indices, poi_indices = self._poi_indices, self._qoi_indices
 
         # Process our inputs/outputs of interest for parallel groups
         all_vois = self.root._relevance.vars_of_interest(mode)
@@ -488,7 +488,7 @@ class Problem(System):
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
-                in_size, in_idxs = duvec.get_local_idxs(voi)
+                in_size, in_idxs = duvec.get_local_idxs(voi, poi_indices)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -519,7 +519,8 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item)
+                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
+                                                                                  qoi_indices)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':

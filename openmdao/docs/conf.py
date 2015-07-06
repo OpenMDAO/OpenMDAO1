@@ -21,25 +21,6 @@ from numpydoc.docscrape_sphinx import SphinxDocString
 from numpydoc.docscrape import NumpyDocString, Reader
 import textwrap
 
-_parsed_data = {
-            'Signature': '',
-            'Summary': [''],
-            'Extended Summary': [],
-            'Args': [],
-            'Returns': [],
-            'Raises': [],
-            'Warns': [],
-            'Other Args': [],
-            'Attributes': [],
-            'Methods': [],
-            'See Also': [],
-            'Notes': [],
-            'Warnings': [],
-            'References': '',
-            'Examples': '',
-            'index': {}
-            }
-
 def _parse(self):
         self._doc.reset()
         self._parse_summary()
@@ -103,10 +84,9 @@ def __init__(self, docstring, config={}):
             }
 
         self._parse()
-        
+
 #Do the actual patch switchover to these local versions
 NumpyDocString.__init__ = __init__
-SphinxDocString._parsed_data = _parsed_data
 SphinxDocString._parse = _parse
 SphinxDocString.__str__ = __str__
 #--------------end monkeypatch---------------------

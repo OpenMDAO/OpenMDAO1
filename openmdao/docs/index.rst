@@ -13,6 +13,15 @@ Getting Started with OpenMDAO
 
    getting-started/index.rst
 
+=========================
+OpenMDAO Conversion Guide
+=========================
+
+.. toctree::
+   :maxdepth: 2
+
+   conversion-guide/index.rst
+
 ======================
 OpenMDAO User Guide
 ======================
