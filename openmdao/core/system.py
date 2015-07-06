@@ -94,8 +94,7 @@ class System(object):
         for prom in self._promotes:
             if fnmatch(name, prom):
                 for n, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
-                    rel = meta.get('promoted_name', n)
-                    if rel == name:
+                    if name == meta.get('promoted_name', n):
                         return True
 
         return False
@@ -239,29 +238,24 @@ class System(object):
         fd_unknowns = self._get_fd_unknowns()
 
         # Function call arguments have precedence over the system dict.
-        if step_size == None:
-            step_size = self.fd_options['step_size']
-        if form == None:
-            form = self.fd_options['form']
-        if step_type == None:
-            step_type = self.fd_options['step_type']
+        step_size = self.fd_options.get('step_size', step_size)
+        form = self.fd_options.get('form', form)
+        step_type = self.fd_options.get('step_type', step_type)
 
         jac = {}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        states = []
         if total_derivs == False:
             run_model = self.apply_nonlinear
             cache1 = resids.vec.copy()
             resultvec = resids
-            for u_name, meta in iteritems(self._unknowns_dict):
-                if meta.get('state'):
-                    states.append(meta['promoted_name'])
+            states = [name for name, meta in self.unknowns.items() if meta.get('state')]
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
             resultvec = unknowns
+            states = []
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):

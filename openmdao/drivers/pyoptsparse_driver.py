@@ -1,9 +1,11 @@
 """
 OpenMDAO Wrapper for pyoptsparse.
 
-pyoptsparse is based on pyOpt, which is an object-oriented framework for formulating and solving nonlinear
-constrained optimization problems, with additional MPI capability. Note: only SNOPT is supported right now.
+pyoptsparse is based on pyOpt, which is an object-oriented framework for
+formulating and solving nonlinear constrained optimization problems, with
+additional MPI capability. Note: only SNOPT is supported right now.
 """
+
 from __future__ import print_function
 
 # pylint: disable=E0611,F0401
@@ -43,22 +45,24 @@ class pyOptSparseDriver(Driver):
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
         self.options.add_option('print_results', True,
-                                 desc='Print pyOpt results if True')
+                                desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
-                                 desc='Set to True to let pyOpt calculate the gradient')
+                                desc='Set to True to let pyOpt calculate the gradient')
         self.options.add_option('exit_flag', 0,
-                                 desc='0 for fail, 1 for ok')
+                                desc='0 for fail, 1 for ok')
 
         self.opt_settings = {}
 
         self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                               'pyopt_diff', 'exit_flag' ]
+                            'pyopt_diff', 'exit_flag']
 
-        self.pyOpt_solution = None
+        self.pyopt_solution = None
 
         self.lin_jacs = {}
         self.quantities = []
         self.metadata = None
+        self.exit_flag = 0
+        self._problem = None
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -70,7 +74,7 @@ class pyOptSparseDriver(Driver):
             Our parent `Problem`.
         """
 
-        self.pyOpt_solution = None
+        self.pyopt_solution = None
         rel = problem.root._relevance
 
         # Metadata Setup
@@ -98,7 +102,7 @@ class pyOptSparseDriver(Driver):
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(objs.keys())
-        for name, obj in objs.items():
+        for name in objs:
             opt_prob.addObj(name)
 
         # Calculate and save gradient for any linear constraints.
@@ -113,7 +117,7 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(econs.keys())
-        for name, con in econs.items():
+        for name in econs:
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
@@ -132,7 +136,7 @@ class pyOptSparseDriver(Driver):
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
         self.quantities += list(incons.keys())
-        for name, con in incons.items():
+        for name in incons:
             size = con_meta[name]['size']
             upper = np.zeros((size))
 
@@ -141,7 +145,7 @@ class pyOptSparseDriver(Driver):
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                wrt=wrt, jac=self.lin_jacs[name])
+                                     wrt=wrt, jac=self.lin_jacs[name])
             else:
                 opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
 
@@ -166,7 +170,7 @@ class pyOptSparseDriver(Driver):
         except ImportError:
             msg = "Optimizer %s is not available in this installation." % \
                    optimizer
-            self.raise_exception(msg, ImportError)
+            raise ImportError(msg)
 
         optname = vars()[optimizer]
         opt = optname()
@@ -180,7 +184,8 @@ class pyOptSparseDriver(Driver):
         # Execute the optimization problem
         if self.options['pyopt_diff'] is True:
             # Use pyOpt's internal finite difference
-            sol = opt(opt_prob, sens='FD', sensStep=self.gradient_options.fd_step)
+            fd_step = problem.root.fd_options['step_size']
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step)
         else:
             # Use OpenMDAO's differentiator for the gradient
             sol = opt(opt_prob, sens=self.gradfunc)
@@ -194,14 +199,14 @@ class pyOptSparseDriver(Driver):
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        for name, param in self.get_params().items():
+        for name in self.get_params():
             val = dv_dict[name]
             self.set_param(name, val)
 
         self.root.solve_nonlinear()
 
         # Save the most recent solution.
-        self.pyOpt_solution = sol
+        self.pyopt_solution = sol
         try:
             exit_status = sol.optInform['value']
             self.exit_flag = 1
