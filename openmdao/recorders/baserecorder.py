@@ -2,6 +2,9 @@ from fnmatch import fnmatch
 
 from openmdao.core.options import OptionsDictionary
 from six.moves import filter
+from six import StringIO
+import sys
+
 
 class BaseRecorder(object):
     """ Base class for all case recorders. """
@@ -11,6 +14,8 @@ class BaseRecorder(object):
         self.options.add_option('includes', ['*'], desc='Patterns for variables to include in recording')
         self.options.add_option('excludes', [], desc='Patterns for variables to exclude from recording '
                                 '(processed after includes)')
+
+        self.out = None
 
         self._filtered = {}
         # TODO: System specific includes/excludes
@@ -64,3 +69,12 @@ class BaseRecorder(object):
 
     def record(self, params, unknowns, resids, metadata):
         raise NotImplementedError("record")
+
+    def close(self):
+        """Closes `out` unless it's ``sys.stdout``, ``sys.stderr``, or StringIO.
+        Note that a closed recorder will do nothing in :meth:`record`."""
+        # Closing a StringIO deletes its contents.
+        if self.out not in (None, sys.stdout, sys.stderr):
+            if not isinstance(self.out, StringIO):
+                self.out.close()
+            self.out = None

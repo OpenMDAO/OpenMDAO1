@@ -1,7 +1,6 @@
 import sys
 
-from six import StringIO, string_types
-from six.moves import cStringIO
+from six import string_types
 
 from openmdao.recorders.baserecorder import BaseRecorder
 from openmdao.util.recordutil import format_iteration_coordinate
@@ -40,22 +39,12 @@ class DumpCaseRecorder(BaseRecorder):
 
         write("Params:\n")
         for param, val in sorted(params.items()):
-            write("  %s: %s\n" % (param, str(val)))
+            write("  {0}: {1}\n".format(param, str(val)))
 
         write("Unknowns:\n")
         for unknown, val in sorted(unknowns.items()):
-            write("  %s: %s\n" % ( unknown, str(val)))
+            write("  {0}: {1}\n".format(unknown, str(val)))
 
         write("Resids:\n")
         for resid, val in sorted(resids.items()):
-            write("  %s: %s\n" % ( resid, str(val)))
-
-    def close(self):
-        """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
-        Note that a closed recorder will do nothing in :meth:`record`."""
-        if self.out not in (None, sys.stdout, sys.stderr):
-            if not isinstance(self.out,
-                              (StringIO, cStringIO.OutputType)):
-                # Closing a StringIO deletes its contents.
-                self.out.close()
-            self.out = None
+            write("  {0}: {1}\n".format(resid, str(val)))
