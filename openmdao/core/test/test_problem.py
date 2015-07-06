@@ -13,7 +13,8 @@ from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
-from openmdao.test.simplecomps import SimpleImplicitComp, RosenSuzuki
+from openmdao.test.simplecomps import SimpleImplicitComp, RosenSuzuki, FanIn
+
 
 if PY3:
     def py3fix(s):
@@ -208,7 +209,7 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
-    def test_calc_gradient_return_values(self):
+    def test_calc_gradient(self):
         root = Group()
         parm = root.add('parm', ParamComp('x', np.array([1., 1., 1., 1.])))
         comp = root.add('comp', RosenSuzuki())
@@ -293,6 +294,42 @@ class TestProblem(unittest.TestCase):
         #                       prob['comp.x'][2], places=1)
         #self.assertAlmostEqual(comp.opt_design_vars[3],
         #                       prob['comp.x'][3], places=1)
+
+    def test_calc_gradient_multiple_params(self):
+        top = Problem()
+        top.root = FanIn()
+        top.setup()
+        top.run()
+
+        param_list   = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
+
+        # check that calc_gradient returns proper dict value when mode is 'fwd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'fwd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+
+        # check that calc_gradient returns proper dict value when mode is 'rev'
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'rev'
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+
+        # check that calc_gradient returns proper dict value when mode is 'fd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'fd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
     def test_explicit_connection_errors(self):
         class A(Component):

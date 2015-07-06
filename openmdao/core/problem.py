@@ -380,16 +380,28 @@ class Problem(System):
                     fd_ikey = get_fd_ikey(ikey)
                     J[okey][ikey] = Jfd[(fd_okey, fd_ikey)]
         else:
-            J = None
-            for okey in unknown_list:
-                for ikey in param_list:
-                    fd_okey = get_fd_okey(okey)
-                    fd_ikey = get_fd_ikey(ikey)
-                    if J is None:
-                        J = Jfd[fd_okey, fd_ikey]
-                    else:
-                        J = np.concatenate((J, Jfd[fd_okey, fd_ikey]))
+            usize = 0
+            psize = 0
+            size = {}
+            for u in unknown_list:
+                size[u] = self._get_vector_size(u)
+                usize += size[u]
+            for p in param_list:
+                size[p] = self._get_vector_size(p)
+                psize += size[p]
+            J = np.zeros((usize, psize))
 
+            ui = 0
+            for u in unknown_list:
+                pi = 0
+                for p in param_list:
+                    pd = Jfd[get_fd_okey(u), get_fd_ikey(p)]
+                    rows, cols = pd.shape
+                    for row in range(0, rows):
+                        for col in range(0, size[p]):
+                            J[ui+row][pi+col] = pd[row][col]
+                    pi+=1
+                ui+=1
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
