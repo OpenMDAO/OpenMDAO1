@@ -1,7 +1,6 @@
 """ Unit test for the HDF5Recorder. """
 
 import unittest
-from six import assertCountEqual
 from openmdao.recorders.hdf5recorder import HDF5Recorder
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
