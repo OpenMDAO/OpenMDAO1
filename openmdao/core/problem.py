@@ -296,71 +296,67 @@ class Problem(System):
         ndarray or dict
             Jacobian of unknowns with respect to params.
         """
-
-        root = self.root
+        root     = self.root
         unknowns = root.unknowns
-        params = root.params
+        params   = root.params
 
-        Jfd = root.fd_jacobian(params, unknowns, root.resids,
-                               total_derivs=True)
+        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
+
+        def get_fd_okey(okey):
+            # User might request an output via the absolute pathname
+            fd_okey = okey
+            if fd_okey not in unknowns:
+                for key in unknowns:
+                    meta = unknowns.metadata(key)
+                    if meta['pathname'] == fd_okey:
+                        fd_okey = meta['promoted_name']
+                        break
+            return fd_okey
+
+        def get_fd_ikey(ikey):
+            # FD Input keys are a little funny....
+            if isinstance(ikey, tuple):
+                ikey = ikey[0]
+
+            fd_ikey = ikey
+
+            if fd_ikey not in params:
+                # The user sometimes specifies the parameter output
+                # name instead of its target because it is more
+                # convenient
+                for key, val in iteritems(root.connections):
+                    if val == ikey:
+                        fd_ikey = key
+                        break
+                # We need the absolute name, but the fd Jacobian
+                # holds relative promoted inputs
+                if fd_ikey not in params:
+                    for key in params:
+                        meta = params.metadata(key)
+                        if meta['promoted_name'] == fd_ikey:
+                            fd_ikey = meta['pathname']
+                            break
+
+            return fd_ikey
+
         if return_format == 'dict':
             J = {}
             for okey in unknown_list:
                 J[okey] = {}
                 for ikey in param_list:
-                    if isinstance(ikey, tuple):
-                        ikey = ikey[0]
-
-                    # User might request an output via the absolute pathname
-                    fd_okey = okey
-                    if fd_okey not in unknowns:
-                        for key in unknowns:
-                            meta = unknowns.metadata(key)
-                            if meta['pathname'] == fd_okey:
-                                fd_okey = meta['promoted_name']
-                                break
-
-                    # FD Input keys are a little funny....
-                    fd_ikey = ikey
-                    if fd_ikey not in params:
-
-                        # The user sometimes specifies the parameter output
-                        # name instead of its target because it is more
-                        # convenient
-                        for key, val in iteritems(root.connections):
-                            if val == ikey:
-                                fd_ikey = key
-                                break
-
-                        # We need the absolute name, but the fd Jacobian
-                        # holds relative promoted inputs
-                        if fd_ikey not in params:
-                            for key in params:
-                                meta = params.metadata(key)
-                                if meta['promoted_name'] == fd_ikey:
-                                    fd_ikey = meta['pathname']
-                                    break
-
-                    J[okey][ikey] = Jfd[fd_okey, fd_ikey]
+                    fd_okey = get_fd_okey(okey)
+                    fd_ikey = get_fd_ikey(ikey)
+                    J[okey][ikey] = Jfd[(fd_okey, fd_ikey)]
         else:
-            psize = 0
-            for p in param_list:
-                sys = p[:p.rfind('.')]      # up to last period
-                var = p.rsplit('.', 1)[1]   # after last period
-                psize += root._subsystem(sys).unknowns.metadata(var)['size']
-            usize = 0
-            for u in unknown_list:
-                sys = u[:u.rfind('.')]      # up to last period
-                var = u.rsplit('.', 1)[1]   # after last period
-                usize += root._subsystem(sys).unknowns.metadata(var)['size']
-            J = np.zeros((usize, psize))
-            print('Jfd:', Jfd)
-            iu = ip = 0
-            for u in unknown_list:
-                for p in param_list:
-                    J[iu][ip] = Jfd[(u, p)]
-                    ip +=1
-                iu +=1
+            J = None
+            for okey in unknown_list:
+                fd_okey = get_fd_okey(okey)
+                for ikey in param_list:
+                    fd_ikey = get_fd_ikey(ikey)
+                    if J is None:
+                        J = Jfd[fd_okey, fd_ikey]
+                    else:
+                        J = np.concatenate((J, Jfd[fd_okey, fd_ikey]))
 
         return J
 
@@ -428,16 +424,12 @@ class Problem(System):
                         for ikey in ikeys:
                             J[okey][ikey] = None
         else:
-            psize = 0
-            for p in param_list:
-                sys = p[:p.rfind('.')]      # up to last period
-                var = p.rsplit('.', 1)[1]   # after last period
-                psize += root._subsystem(sys).unknowns.metadata(var)['size']
             usize = 0
+            psize = 0
             for u in unknown_list:
-                sys = u[:u.rfind('.')]      # up to last period
-                var = u.rsplit('.', 1)[1]   # after last period
-                usize += root._subsystem(sys).unknowns.metadata(var)['size']
+                usize += self._get_vector_size(u)
+            for p in param_list:
+                psize += self._get_vector_size(p)
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':
@@ -844,6 +836,11 @@ class Problem(System):
 
     def json_dependencies(self):
         return self.root._relevance.json_dependencies()
+
+    def _get_vector_size(self, pathname):
+        sys = pathname[:pathname.rfind('.')]    # up to last period
+        var = pathname.rsplit('.', 1)[1]        # after last period
+        return self.root._subsystem(sys).unknowns.metadata(var)['size']
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
