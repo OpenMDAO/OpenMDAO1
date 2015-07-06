@@ -240,7 +240,7 @@ class VecWrapper(object):
         """
         return self._vardict[name]
 
-    def get_local_idxs(self, name):
+    def get_local_idxs(self, name, idx_dict):
         """
         Returns all of the indices for the named variable in this vector.
 
@@ -268,8 +268,8 @@ class VecWrapper(object):
             return meta['size'], self.make_idx_array(0, 0)
 
         start, end = self._slices[name]
-        if 'voi_indices' in meta:
-            idxs = self.to_idx_array(meta['voi_indices']) + start
+        if name in idx_dict:
+            idxs = self.to_idx_array(idx_dict[name]) + start
             if idxs.size > (end-start) or max(idxs) >= end:
                 raise RuntimeError("Indices of interest specified for '%s'"
                                    "are too large" % name)

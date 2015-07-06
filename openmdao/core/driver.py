@@ -59,18 +59,25 @@ class Driver(object):
                     raise ValueError(msg)
 
                 # Size is useful metadata to save
-                meta['size'] = root.unknowns.metadata(name)['size']
+                if 'indices' in meta:
+                    meta['size'] = len(meta['indices'])
+                else:
+                    meta['size'] = root.unknowns.metadata(name)['size']
 
-    def _map_voi_indices(self, params_dict, unknowns_dict):
-        voi_indices = {}
-        for name, meta in chain(self._params.items(), self._cons.items(), self._objs.items()):
+    def _map_voi_indices(self):
+        poi_indices = {}
+        qoi_indices = {}
+        for name, meta in chain(self._cons.items(), self._objs.items()):
             # set indices of interest
             if 'indices' in meta:
-                for vname, vmeta in chain(unknowns_dict.items(), params_dict.items()):
-                    if name == vmeta['promoted_name']:
-                        voi_indices[vname] = meta['indices']
+                qoi_indices[name] = meta['indices']
 
-        return voi_indices
+        for name, meta in self._params.items():
+            # set indices of interest
+            if 'indices' in meta:
+                poi_indices[name] = meta['indices']
+
+        return poi_indices, qoi_indices
 
     def _of_interest(self, voi_list):
         """Return a list of tuples, with the given voi_list organized
@@ -191,7 +198,7 @@ class Driver(object):
         param['adder'] = adder
         param['scaler'] = scaler
         if indices:
-            param['indices'] = indices
+            param['indices'] = np.array(indices, dtype=int)
 
         self._params[name] = param
 
@@ -207,14 +214,17 @@ class Driver(object):
         uvec = self.root.unknowns
         params = OrderedDict()
 
-        for key, val in self._params.items():
-            scaler = val['scaler']
-            adder = val['adder']
+        for key, meta in self._params.items():
+            scaler = meta['scaler']
+            adder = meta['adder']
+            flatval = uvec.flat[key]
+            if 'indices' in meta:
+                flatval = flatval[meta['indices']]
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or scaler != 0.0 or adder != 1.0:
-                params[key] = (uvec.flat[key] + adder)*scaler
+               or scaler != 1.0 or adder != 0.0:
+                params[key] = (flatval + adder)*scaler
             else:
-                params[key] = uvec.flat[key]
+                params[key] = flatval
 
         return params
 
@@ -306,14 +316,17 @@ class Driver(object):
         uvec = self.root.unknowns
         objs = OrderedDict()
 
-        for key, val in self._objs.items():
-            scaler = val['scaler']
-            adder = val['adder']
+        for key, meta in self._objs.items():
+            scaler = meta['scaler']
+            adder = meta['adder']
+            flatval = uvec.flat[key]
+            if 'indices' in meta:
+                flatval = flatval[meta['indices']]
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or scaler != 0.0 or adder != 1.0:
-                objs[key] = (uvec.flat[key] + adder)*scaler
+               or adder != 0.0 or scaler != 1.0:
+                objs[key] = (flatval + adder)*scaler
             else:
-                objs[key] = uvec.flat[key]
+                objs[key] = flatval
 
         return objs
 
@@ -396,27 +409,30 @@ class Driver(object):
         uvec = self.root.unknowns
         cons = OrderedDict()
 
-        for key, val in self._cons.items():
+        for key, meta in self._cons.items():
 
-            if lintype=='linear' and val['linear']==False:
+            if lintype=='linear' and meta['linear']==False:
                 continue
 
-            if lintype=='nonlinear' and val['linear']==True:
+            if lintype=='nonlinear' and meta['linear']==True:
                 continue
 
-            if ctype=='eq' and val['ctype']=='ineq':
+            if ctype=='eq' and meta['ctype']=='ineq':
                 continue
 
-            if ctype=='ineq' and val['ctype']=='eq':
+            if ctype=='ineq' and meta['ctype']=='eq':
                 continue
 
-            scaler = val['scaler']
-            adder = val['adder']
+            scaler = meta['scaler']
+            adder = meta['adder']
+            flatval = uvec.flat[key]
+            if 'indices' in meta:
+                flatval = flatval[meta['indices']]
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or scaler != 0.0 or adder != 1.0:
-                cons[key] = (uvec.flat[key] + adder)*scaler
+               or adder != 0.0 or scaler != 1.0:
+                cons[key] = (flatval + adder)*scaler
             else:
-                cons[key] = uvec.flat[key]
+                cons[key] = flatval
 
         return cons
 
