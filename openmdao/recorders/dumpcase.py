@@ -39,12 +39,12 @@ class DumpCaseRecorder(BaseRecorder):
 
         write("Params:\n")
         for param, val in sorted(params.items()):
-            write("  %s: %s\n" % (param, str(val)))
+            write("  {0}: {1}\n".format(param, str(val)))
 
         write("Unknowns:\n")
         for unknown, val in sorted(unknowns.items()):
-            write("  %s: %s\n" % ( unknown, str(val)))
+            write("  {0}: {1}\n".format(unknown, str(val)))
 
         write("Resids:\n")
         for resid, val in sorted(resids.items()):
-            write("  %s: %s\n" % ( resid, str(val)))
+            write("  {0}: {1}\n".format(resid, str(val)))

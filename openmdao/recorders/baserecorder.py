@@ -5,6 +5,7 @@ from six.moves import filter
 from six import StringIO
 import sys
 
+
 class BaseRecorder(object):
     """ Base class for all case recorders. """
 

@@ -64,7 +64,7 @@ class HDF5Recorder(BaseRecorder):
             for key, val in data.items():
                 if isinstance(val, (np.ndarray, Number)):
                     grp.create_dataset(key, data=val)
-                    # TODO: Compression/Checksums?
+                    # TODO: Compression/Checksum?
                 else:
                     # TODO: Handling non-numeric data
                     msg = "HDF5 Recorder does not support data of type '{0}'".format(type(val))

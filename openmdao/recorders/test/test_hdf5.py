@@ -7,6 +7,7 @@ from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.examplegroups import ExampleGroup
 from openmdao.test.testutil import assert_rel_error
 
+
 class TestHDF5Recorder(unittest.TestCase):
     eps = 1e-5
 
@@ -74,7 +75,6 @@ class TestHDF5Recorder(unittest.TestCase):
         self.assertDatasetEquals(unknowns, expected_unknowns, self.eps)
         self.assertDatasetEquals(resids, expected_resids, self.eps)
 
-
     def test_excludes(self):
 
         top = Problem()
@@ -139,13 +139,13 @@ class TestHDF5Recorder(unittest.TestCase):
         resids = f['Residuals']
 
         expected_params = {
-            "comp1.x1": 2.0,}
+            "comp1.x1": 2.0}
         expected_unknowns = {
             "comp1.y1": 8.0,
-            "comp1.y2": 6.0,}
+            "comp1.y2": 6.0}
         expected_resids = {
             "comp1.y1": 0.0,
-            "comp1.y2": 0.0,}
+            "comp1.y2": 0.0}
 
         self.assertDatasetEquals(params, expected_params, self.eps)
         self.assertDatasetEquals(unknowns, expected_unknowns, self.eps)
