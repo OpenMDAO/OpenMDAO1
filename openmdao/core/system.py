@@ -93,16 +93,16 @@ class System(object):
         for prom in self._promotes:
             if fnmatch(name, prom):
                 for n, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
-                    rel = meta.get('promoted_name', n)
-                    if rel == name:
+                    if name == meta.get('promoted_name', n):
                         return True
 
         return False
 
-    def subsystems(self, local=False, recurse=False):
+    def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
-        return []
+        if include_self:
+            yield ('', self)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -210,14 +210,14 @@ class System(object):
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
 
-        step_size : float (optional)
+        step_size : float, optional
             Override all other specifications of finite difference step size.
 
-        form : float (optional)
+        form : float, optional
             Override all other specifications of form. Can be forward,
             backward, or central.
 
-        step_type : float (optional)
+        step_type : float, optional
             Override all other specifications of step_type. Can be absolute
             or relative.
 
@@ -237,29 +237,24 @@ class System(object):
         fd_unknowns = self._get_fd_unknowns()
 
         # Function call arguments have precedence over the system dict.
-        if step_size == None:
-            step_size = self.fd_options['step_size']
-        if form == None:
-            form = self.fd_options['form']
-        if step_type == None:
-            step_type = self.fd_options['step_type']
+        step_size = self.fd_options.get('step_size', step_size)
+        form = self.fd_options.get('form', form)
+        step_type = self.fd_options.get('step_type', step_type)
 
         jac = {}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        states = []
         if total_derivs == False:
             run_model = self.apply_nonlinear
             cache1 = resids.vec.copy()
             resultvec = resids
-            for u_name, meta in iteritems(self._unknowns_dict):
-                if meta.get('state'):
-                    states.append(meta['promoted_name'])
+            states = [name for name, meta in self.unknowns.items() if meta.get('state')]
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
             resultvec = unknowns
+            states = []
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -276,12 +271,9 @@ class System(object):
             param_src = self.connections.get(p_name)
             if param_src is not None:
 
-                # Have to convert to relative name to key into unknowns
+                # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
-                    for name in unknowns:
-                        meta = unknowns.metadata(name)
-                        if meta['pathname'] == param_src:
-                            param_src = meta['promoted_name']
+                    param_src = self.unknowns.get_promoted_varname(param_src)
 
                 target_input = unknowns.flat[param_src]
 
@@ -292,18 +284,9 @@ class System(object):
                     break
 
             # Local settings for this var trump all
-            if 'fd_step_size' in mydict:
-                fdstep = mydict['fd_step_size']
-            else:
-                fdstep = step_size
-            if 'fd_step_type' in mydict:
-                fdtype = mydict['fd_step_type']
-            else:
-                fdtype = step_type
-            if 'fd_form' in mydict:
-                fdform = mydict['fd_form']
-            else:
-                fdform = form
+            fdstep = mydict.get('fd_step_size', step_size)
+            fdtype = mydict.get('fd_step_type', step_type)
+            fdform = mydict.get('fd_form', form)
 
             # Size our Inputs
             p_size = np.size(inputs[p_name])
@@ -381,11 +364,10 @@ class System(object):
         any derivative specification in any `Component` or `Group` to perform
         finite difference."""
 
-        if self._jacobian_cache is None:
+        if not self._jacobian_cache:
             msg = ("No derivatives defined for Component '{name}'")
             msg = msg.format(name=self.name)
             raise ValueError(msg)
-
 
         for key, J in iteritems(self._jacobian_cache):
             unknown, param = key
@@ -446,7 +428,8 @@ class System(object):
     def _create_views(self, top_unknowns, parent, my_params, relevance, var_of_interest=None):
         """
         A manager of the data transfer of a possibly distributed collection of
-        variables.  The variables are based on views into an existing VarManager.
+        variables.  The variables are based on views into an existing
+        `VecWrapper`.
 
         Args
         ----
@@ -457,7 +440,7 @@ class System(object):
             The `System` which provides the `VecWrapper` on which to create views.
 
         my_params : list
-            List of pathnames for parameters that this `VarManager` is
+            List of pathnames for parameters that this `Group` is
             responsible for propagating.
 
         relevance : `Relevance`
@@ -477,7 +460,7 @@ class System(object):
         unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
 
-        # map relative name in parent to corresponding relative name in this view
+        # map promoted name in parent to corresponding promoted name in this view
         umap = get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
 
         if var_of_interest is None:
@@ -555,27 +538,27 @@ class System(object):
         # return the combined dict
         return comm.bcast(J, root=0)
 
+
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
     Args
     ----
     unknowns : `VecWrapper`
-        A dict-like object containing variables keyed using relative names.
+        A dict-like object containing variables keyed using promoted names.
 
     unknowns_dict : `OrderedDict`
         An ordered mapping of absolute variable name to its metadata.
 
     child_name : str
-        The pathname of the child for which to get relative name.
+        The pathname of the child for which to get promoted name.
 
     Returns
     -------
     dict
-        Maps relative name in parent (owner of unknowns and unknowns_dict) to
-        the corresponding relative name in the child, where relative name may
-        include the 'promoted' name of a variable.
+        Maps promoted name in parent (owner of unknowns and unknowns_dict) to
+        the corresponding promoted name in the child.
     """
-    # unknowns is keyed on name relative to the parent system
+    # unknowns is keyed on promoted name relative to the parent system
     # unknowns_dict is keyed on absolute pathname
     umap = {}
     for rel, meta in unknowns.items():

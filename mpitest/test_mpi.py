@@ -24,7 +24,7 @@ from openmdao.test.testutil import assert_rel_error
 
 class ABCDArrayComp(Component):
 
-    def __init__(self, arr_size=9):
+    def __init__(self, arr_size=9, delay=0.01):
         super(ABCDArrayComp, self).__init__()
         self.add_param('a', np.ones(arr_size, float))
         self.add_param('b', np.ones(arr_size, float))
@@ -36,10 +36,10 @@ class ABCDArrayComp(Component):
         self.add_output('out_string', '')
         self.add_output('out_list', [])
 
-        self.delay = 0.01
+        self.delay = delay
 
     def solve_nonlinear(self, params, unknowns, resids):
-        #time.sleep(self.delay)
+        time.sleep(self.delay)
 
         unknowns['c'] = params['a'] + params['b']
         unknowns['d'] = params['a'] - params['b']

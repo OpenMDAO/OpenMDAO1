@@ -5,9 +5,14 @@ import unittest
 
 import numpy as np
 
+from openmdao.components.execcomp import ExecComp
+from openmdao.components.paramcomp import ParamComp
 from openmdao.core.driver import Driver
+from openmdao.core.group import Group
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.problem import Problem
+from openmdao.test.paraboloid import Paraboloid
+from openmdao.test.simplecomps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
 
 class MySimpleDriver(Driver):
@@ -77,6 +82,7 @@ class MySimpleDriver(Driver):
 
             itercount += 1
 
+
 class TestDriver(unittest.TestCase):
 
     def test_mydriver(self):
@@ -96,6 +102,122 @@ class TestDriver(unittest.TestCase):
 
         obj = top['obj']
         self.assertLess(obj, 28.0)
+
+    def test_scaler_adder(self):
+
+
+        class ScaleAddDriver(Driver):
+
+            def run(self, problem):
+                """ Save away scaled info."""
+
+                params = self.get_params()
+                param_meta = self.get_param_metadata()
+
+                self.set_param('x', 0.5)
+                problem.root.solve_nonlinear()
+
+                objective = self.get_objectives()
+                constraint = self.get_constraints()
+
+                # Stuff we saved should be in the scaled coordinates.
+                self.param = params['x']
+                self.obj_scaled = objective['f_xy']
+                self.con_scaled = constraint['con']
+                self.param_high = param_meta['x']['high']
+                self.param_low = param_meta['x']['low']
+
+        top = Problem()
+        root = top.root = Group()
+        driver = top.driver = ScaleAddDriver()
+
+        root.add('p1', ParamComp('x', val=60000.0), promotes=['*'])
+        root.add('p2', ParamComp('y', val=60000.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
+
+        driver.add_param('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
+        driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
+        driver.add_constraint('con', adder=-10890487502.0, scaler=1.0/20)
+
+        top.setup()
+        top.run()
+
+        self.assertEqual(driver.param_high, 1.0)
+        self.assertEqual(driver.param_low, -1.0)
+        self.assertEqual(driver.param, 0.0)
+        self.assertEqual(top['x'], 60500.0)
+        self.assertEqual(driver.obj_scaled[0], 1.0)
+        self.assertEqual(driver.con_scaled[0], 1.0)
+
+    def test_scaler_adder_array(self):
+
+
+        class ScaleAddDriver(Driver):
+
+            def run(self, problem):
+                """ Save away scaled info."""
+
+                params = self.get_params()
+                param_meta = self.get_param_metadata()
+
+                self.set_param('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
+                problem.root.solve_nonlinear()
+
+                objective = self.get_objectives()
+                constraint = self.get_constraints()
+
+                # Stuff we saved should be in the scaled coordinates.
+                self.param = params['x']
+                self.obj_scaled = objective['y']
+                self.con_scaled = constraint['con']
+                self.param_low = param_meta['x']['low']
+
+        top = Problem()
+        root = top.root = Group()
+        driver = top.driver = ScaleAddDriver()
+
+        root.add('p1', ParamComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+        root.add('comp', ArrayComp2D(), promotes=['*'])
+        root.add('constraint', ExecComp('con = x + y',
+                                        x=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        y=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        con=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+
+        driver.add_param('x', low=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
+                         adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+                         scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+        driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+                         scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+        driver.add_constraint('con', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+                              scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+        top.setup()
+        top.run()
+
+        self.assertEqual(driver.param[0], 11.0)
+        self.assertEqual(driver.param[1], 202.0)
+        self.assertEqual(driver.param[2], 3003.0)
+        self.assertEqual(driver.param[3], 40004.0)
+        self.assertEqual(top['x'][0, 0], 12.0)
+        self.assertEqual(top['x'][0, 1], 102.0)
+        self.assertEqual(top['x'][1, 0], 2003.0)
+        self.assertEqual(top['x'][1, 1], 20250.0)
+        self.assertEqual(driver.obj_scaled[0], (top['y'][0, 0] + 10.0)*1.0)
+        self.assertEqual(driver.obj_scaled[1], (top['y'][0, 1] + 100.0)*2.0)
+        self.assertEqual(driver.obj_scaled[2], (top['y'][1, 0] + 1000.0)*3.0)
+        self.assertEqual(driver.obj_scaled[3], (top['y'][1, 1] + 10000.0)*4.0)
+        self.assertEqual(driver.param_low[0], (-1e5 + 10.0)*1.0)
+        self.assertEqual(driver.param_low[1], (-1e5 + 100.0)*2.0)
+        self.assertEqual(driver.param_low[2], (-1e5 + 1000.0)*3.0)
+        self.assertEqual(driver.param_low[3], (-1e5 + 10000.0)*4.0)
+        conval = top['x'] + top['y']
+        self.assertEqual(driver.con_scaled[0], (conval[0, 0] + 10.0)*1.0)
+        self.assertEqual(driver.con_scaled[1], (conval[0, 1] + 100.0)*2.0)
+        self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
+        self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
 
 if __name__ == "__main__":
     unittest.main()

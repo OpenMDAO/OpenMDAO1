@@ -49,7 +49,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            msg = "'G3.C4.x' is explicitly connected to 'G3.C3.y' but implicitly connected to 'G2.C1.x'"
+            msg = "Target 'G3.C4.x' is connected to multiple sources: ['G3.C3.y', 'G2.C1.x']"
             self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
@@ -162,6 +162,29 @@ class TestProblem(unittest.TestCase):
                              "Can't find variable 'G1.x' in unknowns or params vectors in system ''")
         else:
             self.fail("exception expected")
+
+    def test_input_input_explicit_conns_no_conn(self):
+        prob = Problem(root=Group())
+        root = prob.root
+        root.add('p1', ParamComp('x', 1.0))
+        root.add('c1', ExecComp('y = x*2.0'))
+        root.add('c2', ExecComp('y = x*3.0'))
+        root.connect('c1.x', 'c2.x')
+        prob.setup()
+        prob.run()
+        self.assertEqual(root.connections, {})
+
+    def test_input_input_explicit_conns_w_conn(self):
+        prob = Problem(root=Group())
+        root = prob.root
+        root.add('p1', ParamComp('x', 1.0))
+        root.add('c1', ExecComp('y = x*2.0'))
+        root.add('c2', ExecComp('y = x*3.0'))
+        root.connect('c1.x', 'c2.x')
+        root.connect('p1.x', 'c2.x')
+        prob.setup()
+        prob.run()
+        self.assertEqual(root.connections, {'c1.x':'p1.x', 'c2.x':'p1.x'})
 
     def test_calc_gradient_interface_errors(self):
 
@@ -310,19 +333,6 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('A.x', 'B.y')
-
-        with self.assertRaises(ConnectError) as cm:
-            problem.setup()
-
-        self.assertEqual(str(cm.exception), expected_error_message)
-
-        expected_error_message = ("Source 'B.x' cannot be connected to target 'A.x': "
-                                  "Source must be an unknown but 'B.x' is a parameter.")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('B.x', 'A.x')
 
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
@@ -667,7 +677,7 @@ class TestProblem(unittest.TestCase):
         mode = top._mode('auto', ['p1.a'], ['comp.x'])
         self.assertEqual(mode, 'fwd')
 
-        mode = top._mode('auto', ['p1.a', 'p1.b'], ['comp.x'])
+        mode = top._mode('auto', ['p1.a', 'p2.b'], ['comp.x'])
         self.assertEqual(mode, 'rev')
 
         mode = top._mode('auto', ['a'], ['x'])

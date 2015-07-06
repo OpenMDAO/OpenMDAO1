@@ -3,7 +3,9 @@ import sys
 from six import StringIO, string_types
 from six.moves import cStringIO
 
-from openmdao.casehandlers.baserecorder import BaseRecorder
+from openmdao.recorders.baserecorder import BaseRecorder
+from openmdao.util.recordutil import format_iteration_coordinate
+
 
 class DumpCaseRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
@@ -13,8 +15,8 @@ class DumpCaseRecorder(BaseRecorder):
     If `out` is None, cases will be ignored.
     """
 
-    def __init__(self, driver, out='stdout'):
-        super(DumpCaseRecorder, self).__init__(driver)
+    def __init__(self, out='stdout'):
+        super(DumpCaseRecorder, self).__init__()
         if isinstance(out, string_types):
             if out == 'stdout':
                 out = sys.stdout
@@ -27,40 +29,26 @@ class DumpCaseRecorder(BaseRecorder):
     def startup(self, group):
         """ Write out info that applies to the entire run"""
         super(DumpCaseRecorder, self).startup(group)
-        
-        write = self.out.write
-        sim_info = self.get_simulation_info()
-        write("Simulation Info:\n")
-        write("  OpenMDAO Version: %s\n" % sim_info['OpenMDAO_Version'])
-        driver_info = self.get_driver_info()
-        write("Driver Info:\n")
-        write("  Driver Class: %s\n" % driver_info['class_name'])
 
-    def register(self, driver, inputs, outputs):
-        """Register names for later record call from `driver`."""
-        pass
-
-    def record(self, params, unknowns, resids):
+    def record(self, params, unknowns, resids, metadata):
         """Dump the given run data in a "pretty" form."""
         if not self.out:  # if self.out is None, just do nothing
             return
 
         write = self.out.write
+        write("Iteration Coordinate: {0:s}\n".format(format_iteration_coordinate(metadata['coord'])))
 
-        write("Case:\n")
-
-        write("  Params:\n")
+        write("Params:\n")
         for param, val in sorted(params.items()):
-            write("%s: %s\n" % ( param, str(val)))
+            write("  %s: %s\n" % (param, str(val)))
 
-        write("  Unknowns:\n")
+        write("Unknowns:\n")
         for unknown, val in sorted(unknowns.items()):
-            write("%s: %s\n" % ( unknown, str(val)))
+            write("  %s: %s\n" % ( unknown, str(val)))
 
-        write("  Resids:\n")
+        write("Resids:\n")
         for resid, val in sorted(resids.items()):
-            write("%s: %s\n" % ( resid, str(val)))
-
+            write("  %s: %s\n" % ( resid, str(val)))
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

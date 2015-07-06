@@ -1,4 +1,5 @@
 """ OpenMDAO Problem class defintion."""
+from __future__ import print_function
 
 from itertools import chain
 from collections import OrderedDict
@@ -31,6 +32,7 @@ class Relevance(object):
             else:
                 param_groups[g_id] = tuple(inp)
                 g_id += 1
+
             self.inputs.append(tuple(inp))
 
         self.outputs = []
@@ -42,7 +44,8 @@ class Relevance(object):
             else:
                 output_groups[g_id] = tuple(out)
                 g_id += 1
-            self.outputs.append(tuple(out))
+
+            self.outputs.append(out)
 
         self._vgraph = self._setup_graph(connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -51,14 +54,6 @@ class Relevance(object):
             self.groups = param_groups
         else:
             self.groups = output_groups
-
-        # for lin GS, store absolute names of outputs
-        self.abs_outputs = []
-        for outs in self.outputs:
-            for out in outs:
-                self.abs_outputs.append(get_absvarpathnames(out,
-                                                            self.unknowns_dict,
-                                                            'unknowns'))
 
     def __getitem__(self, name):
         # if name is None, everything is relevant
@@ -99,13 +94,19 @@ class Relevance(object):
         compins = {}  # maps input vars to components
         compouts = {} # maps output vars to components
 
-        for param in params_dict:
+        promote_map = {}
+
+        for param, meta in params_dict.items():
             tcomp = param.rsplit('.',1)[0]
             compins.setdefault(tcomp, []).append(param)
+            if meta['promoted_name'] != param:
+                promote_map[param] = meta['promoted_name']
 
-        for unknown in unknowns_dict:
+        for unknown, meta in unknowns_dict.items():
             scomp = unknown.rsplit('.',1)[0]
             compouts.setdefault(scomp, []).append(unknown)
+            if meta['promoted_name'] != unknown:
+                promote_map[unknown] = meta['promoted_name']
 
         for target, source in connections.items():
             vgraph.add_edge(source, target)
@@ -116,6 +117,14 @@ class Relevance(object):
             for inp in inputs:
                 for out in compouts.get(comp, ()):
                     vgraph.add_edge(inp, out)
+
+        # now collapse any var nodes with implicit connections
+        nx.relabel_nodes(vgraph, promote_map, copy=False)
+
+        # remove any self edges created by the relabeling
+        for u,v in vgraph.edges():
+            if u == v:
+                vgraph.remove_edge(u, v)
 
         return vgraph
 
