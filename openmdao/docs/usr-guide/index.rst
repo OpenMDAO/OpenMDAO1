@@ -9,4 +9,6 @@ OpenMDAO User Guide
 
    intro.rst
    design.rst
+   basics.rst
+   tutorials.rst
    examples.rst
