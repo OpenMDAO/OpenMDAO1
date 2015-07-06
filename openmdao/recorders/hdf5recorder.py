@@ -1,8 +1,10 @@
-from openmdao.recorders.baserecorder import BaseRecorder
-from h5py import File
-from openmdao.util.recordutil import format_iteration_coordinate
 import numpy as np
+
+from h5py import File
 from numbers import Number
+from openmdao.recorders.baserecorder import BaseRecorder
+from openmdao.util.recordutil import format_iteration_coordinate
+
 
 class HDF5Recorder(BaseRecorder):
     """
@@ -19,7 +21,7 @@ class HDF5Recorder(BaseRecorder):
     """
 
     def __init__(self, out, **driver_kwargs):
-        
+
         super(HDF5Recorder, self).__init__()
         self.out = File(out, 'w', **driver_kwargs)
 
