@@ -138,7 +138,7 @@ class Driver(object):
     def add_recorder(self, recorder):
         self.recorders.append(recorder)
 
-    def add_param(self, name, low=None, high=None, indices=None):
+    def add_param(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
         """
         Adds a parameter to this driver.
 
@@ -156,24 +156,40 @@ class Driver(object):
         indices : iter of int, optional
             If a param is an array, these indicate which entries are of
             interest for derivatives.
+
+        adder: float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler: float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
         """
 
         if low is None:
             low = -1e99
         elif isinstance(low, np.ndarray):
-            low = low.flat
+            low = low.flatten()
 
         if high is None:
             high = 1e99
         elif isinstance(high, np.ndarray):
-            high = high.flat
+            high = high.flatten()
 
-        # TODO: Check validity of param string.
-        # TODO: Check validity of everything else.
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
+
+        # Scale the low and high values
+        low = (low + adder)*scaler
+        high = (high + adder)*scaler
 
         param = {}
         param['low'] = low
         param['high'] = high
+        param['adder'] = adder
+        param['scaler'] = scaler
         if indices:
             param['indices'] = indices
 
@@ -192,7 +208,13 @@ class Driver(object):
         params = OrderedDict()
 
         for key, val in self._params.items():
-            params[key] = uvec.flat[key]
+            scaler = val['scaler']
+            adder = val['adder']
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
+                params[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                params[key] = uvec.flat[key]
 
         return params
 
@@ -218,9 +240,15 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        self.root.unknowns[name] = value
+        scaler = self._params[name]['scaler']
+        adder = self._params[name]['adder']
+        if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+           or scaler != 0.0 or adder != 1.0:
+            self.root.unknowns[name] = value/scaler - adder
+        else:
+            self.root.unknowns[name] = value
 
-    def add_objective(self, name, indices=None):
+    def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
         """ Adds an objective to this driver.
 
         Args
@@ -231,11 +259,24 @@ class Driver(object):
         indices : iter of int, optional
             If an objective is an array, these indicate which entries are of
             interest for derivatives.
+
+        adder: float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler: float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
         """
 
-        # TODO: Check validity of input.
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
 
         obj = {}
+        obj['adder'] = adder
+        obj['scaler'] = scaler
         if indices:
             obj['indices'] = indices
             if len(indices) > 1 and not self.supports['Multiple Objectives']:
@@ -266,12 +307,18 @@ class Driver(object):
         objs = OrderedDict()
 
         for key, val in self._objs.items():
-            objs[key] = uvec.flat[key]
+            scaler = val['scaler']
+            adder = val['adder']
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
+                objs[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                objs[key] = uvec.flat[key]
 
         return objs
 
     def add_constraint(self, name, ctype='ineq', linear=False, jacs=None,
-                       indices=None):
+                       indices=None, adder=0.0, scaler=1.0):
         """ Adds a constraint to this driver.
 
         Args
@@ -297,13 +344,26 @@ class Driver(object):
         indices : iter of int, optional
             If a constraint is an array, these indicate which entries are of
             interest for derivatives.
+
+        adder: float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler: float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
         """
 
-        # TODO: Check validity of input.
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler.flatten()
 
         con = {}
         con['linear'] = linear
         con['ctype'] = ctype
+        con['adder'] = adder
+        con['scaler'] = scaler
         if indices:
             con['indices'] = indices
         self._cons[name] = con
@@ -350,7 +410,13 @@ class Driver(object):
             if ctype=='ineq' and val['ctype']=='eq':
                 continue
 
-            cons[key] = uvec.flat[key]
+            scaler = val['scaler']
+            adder = val['adder']
+            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+               or scaler != 0.0 or adder != 1.0:
+                cons[key] = (uvec.flat[key] + adder)*scaler
+            else:
+                cons[key] = uvec.flat[key]
 
         return cons
 
