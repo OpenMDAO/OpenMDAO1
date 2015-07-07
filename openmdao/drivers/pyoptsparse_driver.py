@@ -90,14 +90,9 @@ class pyOptSparseDriver(Driver):
         param_list = list(param_meta.keys())
         param_vals = self.get_params()
         for name, meta in param_meta.items():
-
-            vartype = 'c'
-            lower_bounds = meta['low']
-            upper_bounds = meta['high']
-            n_vals = meta['size']
-
-            opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
-                                 lower=lower_bounds, upper=upper_bounds)
+            opt_prob.addVarGroup(name, meta['size'], type='c',
+                                 value=param_vals[name],
+                                 lower=meta['low'], upper=meta['high'])
 
         # Add all objectives
         objs = self.get_objectives()
@@ -157,11 +152,13 @@ class pyOptSparseDriver(Driver):
             #lower = con.low * np.ones((size))
             #name = '%s.out0' % con.pcomp_name
             #if con.linear is True:
-                #opt_prob.addConGroup(name, size, upper=upper, lower=lower,
+                #opt_prob.addConGroup(name,
+                #size, upper=upper, lower=lower,
                                      #linear=True, wrt=param_list,
                                      #jac=self.lin_jacs[name])
             #else:
-                #opt_prob.addConGroup(name, size, upper=upper, lower=lower)
+                #opt_prob.addConGroup(name,
+                #                     size, upper=upper, lower=lower)
 
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']

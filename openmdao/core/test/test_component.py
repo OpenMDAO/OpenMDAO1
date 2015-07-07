@@ -49,7 +49,6 @@ class TestComponent(unittest.TestCase):
                 self.assertTrue(self.comp.promoted(name))
             else:
                 self.assertFalse(self.comp.promoted(name))
-
         # catch bad type on _promotes
         try:
             self.comp._promotes = ('*')
@@ -119,7 +118,6 @@ class TestComponent(unittest.TestCase):
             self.comp.add_state("s6")
 
         self.assertEquals(str(cm.exception), "Shape of state 's6' must be specified because 'val' is not set")
-
         params, unknowns = self.comp._setup_variables()
 
         self.assertEquals(["s1", "s2", "s3", "s4", "s5"], list(unknowns.keys()))
@@ -140,6 +138,15 @@ class TestComponent(unittest.TestCase):
                              "Variable 'x_y_z' must be accessed from a containing Group")
         else:
             self.fail("Exception expected")
+
+    def test_generate_numpydocstring(self):
+        self.comp.add_param("xxyyzz", 0.0)
+        self.comp.add_param("t", shape=2)
+        self.comp.add_output("x", -1)
+        self.comp.add_state("s1", 0.0)
+
+        test_string = self.comp.generate_docstring()
+        self.assertEqual(test_string, '\t"""\n\n\tAttributes\n\t----------\n\n\t\txxyyzz : param \n\n\t\t\t<Insert description here.>\n\n\t\tt : param \n\n\t\t\t<Insert description here.>\n\n\t\tx :  unknown \n\n\t\t\t<Insert description here.>\n\n\t\ts1 :  unknown \n\n\t\t\t<Insert description here.>\n\n\n\tNote\n\t----\n\n\n\t"""\n')
 
 if __name__ == "__main__":
     unittest.main()
