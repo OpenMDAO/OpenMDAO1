@@ -1,11 +1,7 @@
 .. _User-Guide:
 
-===================
-OpenMDAO User Guide
-===================
-
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    intro.rst
    design.rst

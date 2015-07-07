@@ -1,11 +1,7 @@
 
 .. _Developer-Guide:
 
-===============
-Developer Guide
-===============
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 0
 
    intro.rst

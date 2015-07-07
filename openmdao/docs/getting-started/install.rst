@@ -1,6 +1,3 @@
-
-.. _Getting-Started:
-
 =======
 Purpose
 =======
@@ -93,24 +90,6 @@ your machine.  Currently, we are supporting two different versions of Python:
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 
-
-Git
-+++
-Git is a very popular and efficient open-source version control system that we use for our source code.
-It tracks content such as files and directories. OpenMDAO keeps its code on GitHub, the Git website.
-Download Git_ for later use to grab the OpenMDAO repository during installation.
-
-.. _Git: http://git-scm.com/download
-
-
-Compilers
-+++++++++
-The only compiled things in OpenMDAO are petsc and mpi. So if you want to use those
-packages, you'll need binaries for them for your platform, or you'll need a compiler.
-We don't have hard requirements for petsc or mpi, so if you don't want to do parallel operations,
-then you shouldn't need a compiler installed for OpenMDAO.
-
-
 Numpy
 +++++
 
@@ -134,6 +113,20 @@ version at system level that you don't want to mess with.
 
  * Version 0.15.1 or higher will be supported.
 
+Compilers
++++++++++
+The only compiled things in OpenMDAO are petsc and mpi. So if you want to use those
+packages, you'll need binaries for them for your platform, or you'll need a compiler.
+We don't have hard requirements for petsc or mpi, so if you don't want to do parallel operations,
+then you shouldn't need a compiler installed for OpenMDAO.
+
+Git
++++
+Git is a very popular and efficient open-source version control system that we use for our source code.
+It tracks content such as files and directories. OpenMDAO keeps its code on GitHub, the Git website.
+Download Git_ for later use to grab the OpenMDAO repository during installation.
+
+.. _Git: http://git-scm.com/download
 
 ============================
 Git the OpenMDAO Source Code
@@ -145,6 +138,11 @@ We will use Git to obtain the source code from Github.
 ::
 
     git clone http://github.com/OpenMDAO/OpenMDAO-Framework
+
+If you for some reason don't want to bother with installing Git, you could go to
+OpenMDAO's website and download the zip_ file of our code.
+
+.. _zip:: https://github.com/OpenMDAO/OpenMDAO-Framework/archive/dev.zip
 
 
 ==========================

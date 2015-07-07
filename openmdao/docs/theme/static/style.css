@@ -38,7 +38,7 @@ div.sphinxsidebarwrapper p.topless {
     overflow: hidden;
 }
 
-/*parameter bkgrd*/
+/*Args bkgrd in reference sheets*/
 table.field-list td, table.field-list th {
   border: 0 !important;
 }
@@ -60,10 +60,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /*in the source docs, the header for "Parameters"*/
 th {
-  background-color: #FFEEC9;
-  /*background-color: #BFD1D4;*/
+  /*background-color: #FFEEC9;*/
+  background-color: #BFD1D4;
   /*background-color: #FFFFB0;*/
-  background-color: #FFFFE0;
+  /*background-color: #FFFFE0;*/
 }
 
 body {
