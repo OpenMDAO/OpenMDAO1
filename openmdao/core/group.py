@@ -695,12 +695,19 @@ class Group(System):
                 dresids.vec *= -1.0
 
                 if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
-                    if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns, dparams,
-                                            dunknowns, dresids, mode)
+
+                    try:
+                        dparams._set_adjoint_mode(True)
+                        if system.fd_options['force_fd'] == True:
+                            system._apply_linear_jac(system.params,
+                                                     system.unknowns, dparams,
+                                                     dunknowns, dresids, mode)
+                        else:
+                            system.apply_linear(system.params, system.unknowns,
+                                                dparams, dunknowns, dresids, mode)
+
+                    finally:
+                        dparams._set_adjoint_mode(False)
 
                 dresids.vec *= -1.0
 

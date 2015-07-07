@@ -77,8 +77,8 @@ class VecWrapper(object):
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
-        #self._unit_conversion = {}
         self.deriv_units = False
+        self.adj_accumulate_mode = False
 
     def _get_metadata(self, name):
         """
@@ -114,8 +114,12 @@ class VecWrapper(object):
         unitconv = meta.get('unit_conv')
         shape = meta.get('shape')
 
-        # convert units
-        if unitconv:
+        # For dparam vector, getitem is disabled in adjoint mode.
+        if self.adj_accumulate_mode == True:
+            return numpy.zeros((shape))
+
+        # Convert units
+        elif unitconv:
             scale, offset = unitconv
 
             # Gradient is just the scale
@@ -127,6 +131,7 @@ class VecWrapper(object):
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
+
         else:
             # if shape is 1, it's a float
             if shape == 1:
@@ -154,21 +159,37 @@ class VecWrapper(object):
 
         unitconv = meta.get('unit_conv')
 
+        # For dparam vector in adjoint mode, assignement behaves as +=.
+        if self.adj_accumulate_mode is True:
+            if self.deriv_units and unitconv:
+                scale, offset = unitconv
+
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] += scale*value.flat[:]
+                else:
+                    meta['val'][0] += scale*value
+
+            else:
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] += value.flat[:]
+                else:
+                    meta['val'][0] += value
+
         # Convert Units
-        if self.deriv_units and unitconv:
-            scale, offset = unitconv
-
-            if isinstance(value, numpy.ndarray):
-                meta['val'][:] = scale*value.flat[:]
-            else:
-                meta['val'][0] = scale*value
-
         else:
-            if isinstance(value, numpy.ndarray):
-                meta['val'][:] = value.flat[:]
-            else:
-                meta['val'][0] = value
+            if self.deriv_units and unitconv:
+                scale, offset = unitconv
 
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] = scale*value.flat[:]
+                else:
+                    meta['val'][0] = scale*value
+
+            else:
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] = value.flat[:]
+                else:
+                    meta['val'][0] = value
 
     def __len__(self):
         """
@@ -527,6 +548,11 @@ class VecWrapper(object):
                                                                         swid=swid))
         if return_str:
             return out_stream.getvalue()
+
+    def _set_adjoint_mode(self, mode=False):
+        """ Turn on or off adjoint accumlate mode."""
+        self.adj_accumulate_mode = mode
+
 
 
 class SrcVecWrapper(VecWrapper):
