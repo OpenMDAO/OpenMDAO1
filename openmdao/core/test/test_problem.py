@@ -283,18 +283,6 @@ class TestProblem(unittest.TestCase):
             [ 6.,   1.,   2., -1.],
         ]), decimal=5)
 
-        # when optimization is implemented, the following should also be true
-        #self.assertAlmostEqual(comp.opt_objective,
-        #                       prob['comp.f'], places=2)
-        #self.assertAlmostEqual(comp.opt_design_vars[0],
-        #                       prob['comp.x'][0], places=1)
-        #self.assertAlmostEqual(comp.opt_design_vars[1],
-        #                       prob['comp.x'][1], places=1)
-        #self.assertAlmostEqual(comp.opt_design_vars[2],
-        #                       prob['comp.x'][2], places=1)
-        #self.assertAlmostEqual(comp.opt_design_vars[3],
-        #                       prob['comp.x'][3], places=1)
-
     def test_calc_gradient_multiple_params(self):
         top = Problem()
         top.root = FanIn()
