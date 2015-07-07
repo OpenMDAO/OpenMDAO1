@@ -390,10 +390,7 @@ class System(object):
             if mode == 'fwd':
                 dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
             else:
-                print('before', arg_vec[param])
-                print(param, unknown, J, result)
                 arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
-                print('after', arg_vec[param])
 
     def _create_vecs(self, my_params, relevance, var_of_interest, impl):
         comm = self.comm
