@@ -99,7 +99,7 @@ class Relevance(object):
         for param, meta in params_dict.items():
             tcomp = param.rsplit('.',1)[0]
             compins.setdefault(tcomp, []).append(param)
-            if meta['promoted_name'] != param:
+            if param in connections and meta['promoted_name'] != param:
                 promote_map[param] = meta['promoted_name']
 
         for unknown, meta in unknowns_dict.items():
