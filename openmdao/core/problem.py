@@ -382,13 +382,10 @@ class Problem(System):
         else:
             usize = 0
             psize = 0
-            size = {}
             for u in unknown_list:
-                size[u] = self._get_vector_size(u)
-                usize += size[u]
+                usize += self._get_vector_size(u)
             for p in param_list:
-                size[p] = self._get_vector_size(p)
-                psize += size[p]
+                psize += self._get_vector_size(p)
             J = np.zeros((usize, psize))
 
             ui = 0
@@ -398,7 +395,7 @@ class Problem(System):
                     pd = Jfd[get_fd_okey(u), get_fd_ikey(p)]
                     rows, cols = pd.shape
                     for row in range(0, rows):
-                        for col in range(0, size[p]):
+                        for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
                     pi+=1
                 ui+=1
