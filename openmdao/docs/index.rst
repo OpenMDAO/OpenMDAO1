@@ -10,6 +10,7 @@ Getting Started with OpenMDAO
 =============================
 
 .. toctree::
+   :maxdepth: 1
 
    getting-started/index.rst
 
@@ -18,7 +19,7 @@ OpenMDAO Conversion Guide
 =========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    conversion-guide/index.rst
 
@@ -27,7 +28,7 @@ OpenMDAO User Guide
 ======================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    usr-guide/index.rst
 

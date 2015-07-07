@@ -2,7 +2,7 @@
 .. _Conversion-Guide:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 0
 
    intro.rst
    paraboloid.rst
