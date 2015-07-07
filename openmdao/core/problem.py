@@ -692,10 +692,12 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dresids.flat[u_name][idx] = 1.0
-                    dparams._set_adjoint_mode(True)
-                    comp.apply_linear(params, unknowns, dparams,
-                                      dunknowns, dresids, 'rev')
-                    dparams._set_adjoint_mode(False)
+                    try:
+                        dparams._set_adjoint_mode(True)
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'rev')
+                    finally:
+                        dparams._set_adjoint_mode(False)
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:
