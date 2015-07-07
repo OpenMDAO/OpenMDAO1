@@ -117,13 +117,13 @@ class TestProblem(unittest.TestCase):
 
     def test_unconnected_param_access(self):
         prob = Problem(root=Group())
-        G1 = prob.root.add("G1", Group())
-        G2 = G1.add("G2", Group())
-        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+        G1 = prob.root.add('G1', Group())
+        G2 = G1.add('G2', Group())
+        C1 = G2.add('C1', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+        C2 = G2.add('C2', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        G2.connect("C1.y", "C2.x")
+        G2.connect('C1.y', 'C2.x')
 
         prob.setup()
         prob.run()
@@ -135,13 +135,13 @@ class TestProblem(unittest.TestCase):
 
     def test_unconnected_param_access_with_promotes(self):
         prob = Problem(root=Group())
-        G1 = prob.root.add("G1", Group())
-        G2 = G1.add("G2", Group(), promotes=['x'])
-        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+        G1 = prob.root.add('G1', Group())
+        G2 = G1.add('G2', Group(), promotes=['x'])
+        C1 = G2.add('C1', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']), promotes=['x'])
-        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+        C2 = G2.add('C2', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        G2.connect("C1.y", "C2.x")
+        G2.connect('C1.y', 'C2.x')
 
         prob.setup()
         prob.run()
