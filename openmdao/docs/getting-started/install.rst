@@ -93,9 +93,8 @@ your machine.  Currently, we are supporting two different versions of Python:
 Numpy
 +++++
 
-If you have Numpy_ installed at your system level, it will be available in your conda/
-virtualenv environments.  However, you can also choose to install Numpy into your environment
-if for any reason you don't want it in your system level.
+Install Numpy_, unless you already have a distribution like Anaconda that already
+includes Numpy.
 
 .. _Numpy: http://numpy.org
 
@@ -104,10 +103,8 @@ if for any reason you don't want it in your system level.
 Scipy
 +++++
 
-If you have Scipy_ installed at your system level, it will be available in your conda/
-virtualenv environments.  However, you can also choose to install Scipy into your environment
-if for any reason you don't want it in your system level, or if you have an older
-version at system level that you don't want to mess with.
+Install Scipy_, unless you already have a distribution like Anaconda that already
+includes Scipy.
 
 .. _Scipy: http://scipy.org
 
@@ -124,26 +121,26 @@ Git
 +++
 Git is a very popular and efficient open-source version control system that we use for our source code.
 It tracks content such as files and directories. OpenMDAO keeps its code on GitHub, the Git website.
-Download Git_ for later use to grab the OpenMDAO repository during installation.
+Git is not a hard requirement, though.  If you want, download Git_ for later use to grab the
+OpenMDAO repository during installation.
 
 .. _Git: http://git-scm.com/download
 
+
 ============================
-Git the OpenMDAO Source Code
+Get the OpenMDAO Source Code
 ============================
 
 Now that we have all of OpenMDAO's pre-requisistes, we need OpenMDAO itself.
-We will use Git to obtain the source code from Github.
+There are two ways to obtain the code: use Git, or download the code.
+
+1.  If you installed Git, use Git to obtain the OpenMDAO source code from Github:
 
 ::
 
     git clone http://github.com/OpenMDAO/OpenMDAO-Framework
 
-If you for some reason don't want to bother with installing Git, you could go to
-OpenMDAO's website and download the zip_ file of our code.
-
-.. _zip:: https://github.com/OpenMDAO/OpenMDAO-Framework/archive/dev.zip
-
+2.  Download a zip file of code from the `OpenMDAO Github website <http://github.com/OpenMDAO/OpenMDAO-Framework/>`_.
 
 ==========================
 Install OpenMDAO Using pip
@@ -157,9 +154,8 @@ into your environment using the following command:
     pip install -e .
 
 
-.. note:: If you want to install things the way the OpenMDAO devs do it, check out this section on using OpenMDAO in Anaconda_.
+.. note:: If you want to install things the way the OpenMDAO devs do it, check out this section on  using OpenMDAO in :ref:`Anaconda`.
 
-.. _Anaconda: anaconda.html
 
 =======
 Testing
