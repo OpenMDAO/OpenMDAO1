@@ -1,3 +1,4 @@
+
 .. warning::
 
         The following software is in an ALPHA state.  The version that you are downloading
@@ -88,7 +89,8 @@ your machine.  Currently, we are supporting two different versions of Python:
 .. note::
 
     If you want a bundled Python installation that has all our prerequisites
-    included, try :ref:`Anaconda`.  (This is the way the OpenMDAO developers do it.)
+    included, try Anaconda_.  (This is the way the OpenMDAO developers do it.)
+
 
 
 Numpy
@@ -160,8 +162,8 @@ Download File
     Download a zip file of code from the `OpenMDAO Github website <http://github.com/OpenMDAO/OpenMDAO-Framework/>`_,
     then unzip it locally.
 
-If you get the source code, then pip installation will work differently. From
-the top level of the OpenMDAO repository, you'll want to use the following command:
+If you get the source code, then pip installation will work differently. Change directories to
+the top level of the OpenMDAO repository, then you'll want to use the following command:
 
 ::
 
@@ -175,8 +177,3 @@ Testing
 
 You can test using any python test framework, e.g. `unittest`, `nosetest` to run
 the OpenMDAO test suite from the top level of the OpenMDAO repo.
-
-
-
-pip install straight from Git, other alternate install options like python setup.py install
-make some prereq OPTIONAL

@@ -1,4 +1,4 @@
-.. _Anaconda:
+.. _Anaconda-OpenMDAO:
 
 ========
 Anaconda
