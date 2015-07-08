@@ -403,7 +403,6 @@ class Component(System):
 
         out_stream.flush()
 
-
     def generate_docstring(self):
         """
         Generates a numpy-style docstring for a user's component.
@@ -419,14 +418,14 @@ class Component(System):
         docstring += '\n\tAttributes\n\t----------\n\n'
 
         if self._params_dict:
-            for key, value in self._params_dict.iteritems():
+            for key, value in iteritems(self._params_dict):
                 docstring += "\t\t"+key
                 docstring += " : param \n"
                 #docstring += type(value).__name__
                 docstring += "\n\t\t\t<Insert description here.>\n\n"
 
         if self._unknowns_dict:
-            for key, value in self._unknowns_dict.iteritems():
+            for key, value in iteritems(self._unknowns_dict):
                 docstring += "\t\t"+key
                 docstring += " : "
                 typ = type(value).__name__
