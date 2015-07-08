@@ -273,7 +273,7 @@ class Group(System):
                 self._unknowns_dict[u] = meta
 
             # check for any promotes that didn't match a variable
-            sub.check_promotes()
+            sub._check_promotes()
 
         return self._params_dict, self._unknowns_dict
 

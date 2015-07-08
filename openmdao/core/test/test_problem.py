@@ -55,7 +55,7 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("Error expected")
 
-    def test_promote_nonexistent_var(self):
+    def test_check_promotes(self):
         # verify we get an error at setup time if we have promoted a var that doesn't exist
 
         # valid case, no error

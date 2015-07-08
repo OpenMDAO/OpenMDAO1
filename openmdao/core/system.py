@@ -103,7 +103,7 @@ class System(object):
 
         return False
 
-    def check_promotes(self):
+    def _check_promotes(self):
         """Check that the `System`s promotes are valid. Raise an Exception if there
         are any promotes that do not match at least one variable in the `System`.
 
