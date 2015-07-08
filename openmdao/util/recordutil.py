@@ -21,7 +21,9 @@ def create_local_meta(metadata, name):
         parent_coordinate = []
         parent_meta = {}
     else:
-        parent_coordinate, parent_meta = metadata['current']
+        parent_coordinate = metadata['coord']
+        iteration = parent_coordinate[-1]
+        parent_meta = metadata[iteration]
 
     # The root group has no name, but we want the iteration coordinate to have one.
     if len(parent_coordinate) == 2 and name == '':
@@ -58,7 +60,6 @@ def update_local_meta(local_meta, iteration):
 
     # Update local metadata with the given information
     local_meta[iteration] = child_iteration
-    local_meta['current'] = (iter_coord, child_iteration)
 
 def format_iteration_coordinate(coord):
     """

@@ -99,9 +99,11 @@ class Problem(System):
         for name, meta in chain(params_dict.items(), unknowns_dict.items()):
             abs_to_prom[name] = meta['promoted_name']
 
-        # propagate top level promoted names and voi_indices down to all subsystems
+        # propagate top level promoted names and voi_indices
+        # down to all subsystems
         for _, sub in self.root.subsystems(recurse=True, include_self=True):
-            for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
+            for vname, meta in chain(sub._params_dict.items(),
+                                     sub._unknowns_dict.items()):
                 meta['top_promoted_name'] = abs_to_prom[vname]
 
         # Get all explicit connections (stated with absolute pathnames)
@@ -325,43 +327,78 @@ class Problem(System):
         ndarray or dict
             Jacobian of unknowns with respect to params.
         """
-
-        root = self.root
+        root     = self.root
         unknowns = root.unknowns
-        params = root.params
+        params   = root.params
 
-        Jfd = root.fd_jacobian(params, unknowns, root.resids,
-                               total_derivs=True)
-        J = {}
-        for okey in unknown_list:
-            J[okey] = {}
-            for ikey in param_list:
-                if isinstance(ikey, tuple):
-                    ikey = ikey[0]
+        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
 
-                # FD Input keys are a little funny....
-                fd_ikey = ikey
+        def get_fd_okey(okey):
+            # User might request an output via the absolute pathname
+            fd_okey = okey
+            if fd_okey not in unknowns:
+                for key in unknowns:
+                    meta = unknowns.metadata(key)
+                    if meta['pathname'] == fd_okey:
+                        fd_okey = meta['promoted_name']
+                        break
+            return fd_okey
+
+        def get_fd_ikey(ikey):
+            # FD Input keys are a little funny....
+            if isinstance(ikey, tuple):
+                ikey = ikey[0]
+
+            fd_ikey = ikey
+
+            if fd_ikey not in params:
+                # The user sometimes specifies the parameter output
+                # name instead of its target because it is more
+                # convenient
+                for key, val in iteritems(root.connections):
+                    if val == ikey:
+                        fd_ikey = key
+                        break
+
+                # We need the absolute name, but the fd Jacobian
+                # holds relative promoted inputs
                 if fd_ikey not in params:
-
-                    # The user sometimes specifies the parameter output
-                    # name instead of its target because it is more
-                    # convenient
-                    for key, val in iteritems(root.connections):
-                        if val == ikey:
-                            fd_ikey = key
+                    for key in params:
+                        meta = params.metadata(key)
+                        if meta['promoted_name'] == fd_ikey:
+                            fd_ikey = meta['pathname']
                             break
 
-                    # We need the absolute name, but the fd Jacobian
-                    # holds relative promoted inputs
-                    if fd_ikey not in params:
-                        for key, meta in params.items():
-                            if meta['promoted_name'] == fd_ikey:
-                                fd_ikey = key
-                                break
-                        else:
-                            raise RuntimeError("Can't find '%s' in params." % fd_ikey)
+            return fd_ikey
 
-                J[okey][ikey] = Jfd[okey, fd_ikey]
+        if return_format == 'dict':
+            J = {}
+            for okey in unknown_list:
+                J[okey] = {}
+                for ikey in param_list:
+                    fd_okey = get_fd_okey(okey)
+                    fd_ikey = get_fd_ikey(ikey)
+                    J[okey][ikey] = Jfd[(fd_okey, fd_ikey)]
+        else:
+            usize = 0
+            psize = 0
+            for u in unknown_list:
+                usize += self._get_vector_size(u)
+            for p in param_list:
+                psize += self._get_vector_size(p)
+            J = np.zeros((usize, psize))
+
+            ui = 0
+            for u in unknown_list:
+                pi = 0
+                for p in param_list:
+                    pd = Jfd[get_fd_okey(u), get_fd_ikey(p)]
+                    rows, cols = pd.shape
+                    for row in range(0, rows):
+                        for col in range(0, cols):
+                            J[ui+row][pi+col] = pd[row][col]
+                    pi+=1
+                ui+=1
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
@@ -428,10 +465,13 @@ class Problem(System):
                         for ikey in ikeys:
                             J[okey][ikey] = None
         else:
-            # TODO: need these functions
-            num_input = system.get_size(param_list)
-            num_output = system.get_size(unknown_list)
-            J = np.zeros((num_output, num_input))
+            usize = 0
+            psize = 0
+            for u in unknown_list:
+                usize += self._get_vector_size(u)
+            for p in param_list:
+                psize += self._get_vector_size(p)
+            J = np.zeros((usize, psize))
 
         if mode == 'fwd':
             input_list, output_list = param_list, unknown_list
@@ -654,8 +694,12 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dresids.flat[u_name][idx] = 1.0
-                    comp.apply_linear(params, unknowns, dparams,
-                                      dunknowns, dresids, 'rev')
+                    try:
+                        dparams._set_adjoint_mode(True)
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'rev')
+                    finally:
+                        dparams._set_adjoint_mode(False)
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:
@@ -807,6 +851,11 @@ class Problem(System):
 
     def json_dependencies(self):
         return self.root._relevance.json_dependencies()
+
+    def _get_vector_size(self, pathname):
+        sys = pathname[:pathname.rfind('.')]    # up to last period
+        var = pathname.rsplit('.', 1)[1]        # after last period
+        return self.root._subsystem(sys).unknowns.metadata(var)['size']
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """
