@@ -64,3 +64,10 @@ wingproj.wpr
 
 # Testflo output
 test_report.out
+
+# PyCharm Stuff
+.idea
+
+# SNOPT
+SNOPT_print.out
+SNOPT_summary.out

@@ -1,9 +1,11 @@
 """
 OpenMDAO Wrapper for pyoptsparse.
 
-pyoptsparse is based on pyOpt, which is an object-oriented framework for formulating and solving nonlinear
-constrained optimization problems, with additional MPI capability. Note: only SNOPT is supported right now.
+pyoptsparse is based on pyOpt, which is an object-oriented framework for
+formulating and solving nonlinear constrained optimization problems, with
+additional MPI capability. Note: only SNOPT is supported right now.
 """
+
 from __future__ import print_function
 
 # pylint: disable=E0611,F0401
@@ -12,6 +14,8 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
+from openmdao.util.recordutil import create_local_meta, update_local_meta
+
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
@@ -41,21 +45,22 @@ class pyOptSparseDriver(Driver):
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
         self.options.add_option('print_results', True,
-                                 desc='Print pyOpt results if True')
+                                desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
-                                 desc='Set to True to let pyOpt calculate the gradient')
+                                desc='Set to True to let pyOpt calculate the gradient')
         self.options.add_option('exit_flag', 0,
-                                 desc='0 for fail, 1 for ok')
+                                desc='0 for fail, 1 for ok')
 
+        # The user places optimizer-specific settings in here.
         self.opt_settings = {}
 
-        self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                               'pyopt_diff', 'exit_flag' ]
-
-        self.pyOpt_solution = None
+        self.pyopt_solution = None
 
         self.lin_jacs = {}
         self.quantities = []
+        self.metadata = None
+        self.exit_flag = 0
+        self._problem = None
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -67,7 +72,11 @@ class pyOptSparseDriver(Driver):
             Our parent `Problem`.
         """
 
-        self.pyOpt_solution = None
+        self.pyopt_solution = None
+        rel = problem.root._relevance
+
+        # Metadata Setup
+        self.metadata = create_local_meta(None, self.options['optimizer'])
 
         # Initial Run
         problem.root.solve_nonlinear()
@@ -76,23 +85,17 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = param_meta.keys()
+        param_list = list(param_meta.keys())
         param_vals = self.get_params()
         for name, meta in param_meta.items():
-
-            vartype = 'c'
-            lower_bounds = meta['low']
-            upper_bounds = meta['high']
-            n_vals = meta['size']
-
-            opt_prob.addVarGroup(name, n_vals, type=vartype, value=param_vals[name],
-                                 lower=lower_bounds, upper=upper_bounds)
-            param_list.append(name)
+            opt_prob.addVarGroup(name, meta['size'], type='c',
+                                 value=param_vals[name],
+                                 lower=meta['low'], upper=meta['high'])
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = objs.keys()
-        for name, obj in objs.items():
+        self.quantities = list(objs.keys())
+        for name in objs:
             opt_prob.addObj(name)
 
         # Calculate and save gradient for any linear constraints.
@@ -106,29 +109,38 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += econs.keys()
-        for name, con in econs.items():
+        self.quantities += list(econs.keys())
+        for name in econs:
             size = con_meta[name]['size']
             lower = np.zeros((size))
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     linear=True, wrt=param_list,
+                                     linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, lower=lower, upper=upper)
+                opt_prob.addConGroup(name, size, lower=lower, upper=upper,
+                                     wrt=wrt)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += incons.keys()
-        for name, con in incons.items():
+        self.quantities += list(incons.keys())
+        for name in incons:
             size = con_meta[name]['size']
             upper = np.zeros((size))
+
+            # Sparsify Jacobian via relevance
+            wrt = rel.relevant[name].intersection(param_list)
+
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                wrt=param_list, jac=self.lin_jacs[name])
+                                     wrt=wrt, jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, upper=upper)
+                opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
@@ -138,11 +150,13 @@ class pyOptSparseDriver(Driver):
             #lower = con.low * np.ones((size))
             #name = '%s.out0' % con.pcomp_name
             #if con.linear is True:
-                #opt_prob.addConGroup(name, size, upper=upper, lower=lower,
+                #opt_prob.addConGroup(name,
+                #size, upper=upper, lower=lower,
                                      #linear=True, wrt=param_list,
                                      #jac=self.lin_jacs[name])
             #else:
-                #opt_prob.addConGroup(name, size, upper=upper, lower=lower)
+                #opt_prob.addConGroup(name,
+                #                     size, upper=upper, lower=lower)
 
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
@@ -151,7 +165,7 @@ class pyOptSparseDriver(Driver):
         except ImportError:
             msg = "Optimizer %s is not available in this installation." % \
                    optimizer
-            self.raise_exception(msg, ImportError)
+            raise ImportError(msg)
 
         optname = vars()[optimizer]
         opt = optname()
@@ -165,7 +179,8 @@ class pyOptSparseDriver(Driver):
         # Execute the optimization problem
         if self.options['pyopt_diff'] is True:
             # Use pyOpt's internal finite difference
-            sol = opt(opt_prob, sens='FD', sensStep=self.gradient_options.fd_step)
+            fd_step = problem.root.fd_options['step_size']
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step)
         else:
             # Use OpenMDAO's differentiator for the gradient
             sol = opt(opt_prob, sens=self.gradfunc)
@@ -179,14 +194,14 @@ class pyOptSparseDriver(Driver):
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        for name, param in self.get_params().items():
+        for name in self.get_params():
             val = dv_dict[name]
             self.set_param(name, val)
 
         self.root.solve_nonlinear()
 
         # Save the most recent solution.
-        self.pyOpt_solution = sol
+        self.pyopt_solution = sol
         try:
             exit_status = sol.optInform['value']
             self.exit_flag = 1
@@ -215,7 +230,8 @@ class pyOptSparseDriver(Driver):
 
         fail = 1
         func_dict = {}
-
+        metadata = self.metadata
+        system = self.root
         try:
 
             for name, param in self.get_params().items():
@@ -224,7 +240,13 @@ class pyOptSparseDriver(Driver):
             # Execute the model
             #print("Setting DV")
             #print(dv_dict)
-            self.root.solve_nonlinear()
+
+            self.iter_count += 1
+            update_local_meta(metadata, (self.iter_count,))
+
+            system.solve_nonlinear(metadata=metadata)
+            for recorder in self.recorders:
+                recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
 
             # Get the objective function evaluations
             for name, obj in self.get_objectives().items():

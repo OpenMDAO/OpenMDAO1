@@ -40,7 +40,7 @@ setup(name='openmdao',
           'openmdao.surrogatemodels',
       ],
       install_requires=[
-        'six', 'Sphinx', 'numpydoc', 'networkx',
+        'six', 'Sphinx', 'numpydoc', 'networkx', 'numpy'
       ],
       entry_points= """
         [console_scripts]

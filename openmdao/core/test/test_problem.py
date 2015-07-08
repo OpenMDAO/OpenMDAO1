@@ -13,7 +13,8 @@ from openmdao.core.group import Group
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
-from openmdao.test.simplecomps import SimpleImplicitComp
+from openmdao.test.simplecomps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
+
 
 if PY3:
     def py3fix(s):
@@ -49,8 +50,44 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            msg = "'G3.C4.x' is explicitly connected to 'G3.C3.y' but implicitly connected to 'G2.C1.x'"
-            self.assertEquals(text_type(error), msg)
+            msg = "Target 'G3.C4.x' is connected to multiple sources: ['G3.C3.y', 'G2.C1.x']"
+            self.assertEqual(text_type(error), msg)
+        else:
+            self.fail("Error expected")
+
+    def test_check_promotes(self):
+        # verify we get an error at setup time if we have promoted a var that doesn't exist
+
+        # valid case, no error
+        prob = Problem(Group())
+        G = prob.root.add('G', Group())
+        C = G.add('C', SimpleComp(), promotes=['x*', 'y'])
+        # ignore warning about the unconnected param
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("ignore")
+            prob.setup()
+
+        # promoting a non-existent variable should throw an error
+        prob = Problem(Group())
+        G = prob.root.add('G', Group())
+        C = G.add('C', SimpleComp(), promotes=['spoon'])        # there is no spoon
+        try:
+            prob.setup()
+        except Exception as error:
+            msg = "'C' promotes 'spoon' but has no variables matching that specification"
+            self.assertEqual(text_type(error), msg)
+        else:
+            self.fail("Error expected")
+
+        # promoting a pattern with no matches should throw an error
+        prob = Problem(Group())
+        G = prob.root.add('G', Group())
+        P = G.add('P', ParamComp('x', 5.), promotes=['a*'])     # there is no match
+        try:
+            prob.setup()
+        except Exception as error:
+            msg = "'P' promotes 'a*' but has no variables matching that specification"
+            self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
 
@@ -77,7 +114,7 @@ class TestProblem(unittest.TestCase):
             prob.setup()
         except Exception as error:
             msg = "Promoted name 'G3.y' matches multiple unknowns: ['G3.C3.y', 'G3.C4.y']"
-            self.assertEquals(text_type(error), msg)
+            self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
 
@@ -88,8 +125,8 @@ class TestProblem(unittest.TestCase):
         comp1 = SimpleImplicitComp()
         comp2 = SimpleImplicitComp()
 
-        root.add('c1', comp1, promotes=('z',))  # promote the state, 'z'
-        root.add('c2', comp2, promotes=('z',))  # promote the state, 'z'
+        root.add('c1', comp1, promotes=['z'])  # promote the state, z
+        root.add('c2', comp2, promotes=['z'])  # promote the state, z, again.. BAD
 
         prob = Problem(root)
 
@@ -111,20 +148,24 @@ class TestProblem(unittest.TestCase):
             warnings.simplefilter("always")
             prob.setup()
             assert len(w) == 1, "Warning expected."
-            self.assertEquals("Parameters ['ls.A', 'ls.b'] have no associated unknowns.",
+            self.assertEqual("Parameters ['ls.A', 'ls.b'] have no associated unknowns.",
                               str(w[-1].message))
 
     def test_unconnected_param_access(self):
         prob = Problem(root=Group())
-        G1 = prob.root.add("G1", Group())
-        G2 = G1.add("G2", Group())
-        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+        G1 = prob.root.add('G1', Group())
+        G2 = G1.add('G2', Group())
+        C1 = G2.add('C1', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+        C2 = G2.add('C2', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        G2.connect("C1.y", "C2.x")
+        G2.connect('C1.y', 'C2.x')
 
-        prob.setup()
+        # ignore warning about the unconnected param
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("ignore")
+            prob.setup()
+
         prob.run()
 
         C1.params['x'] = 2.
@@ -134,15 +175,19 @@ class TestProblem(unittest.TestCase):
 
     def test_unconnected_param_access_with_promotes(self):
         prob = Problem(root=Group())
-        G1 = prob.root.add("G1", Group())
-        G2 = G1.add("G2", Group(), promotes=['x'])
-        C1 = G2.add("C1", ExecComp(['y=2.0*x',
+        G1 = prob.root.add('G1', Group())
+        G2 = G1.add('G2', Group(), promotes=['x'])
+        C1 = G2.add('C1', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']), promotes=['x'])
-        C2 = G2.add("C2", ExecComp(['y=2.0*x',
+        C2 = G2.add('C2', ExecComp(['y=2.0*x',
                                     'z=x*x-2.0']))
-        G2.connect("C1.y", "C2.x")
+        G2.connect('C1.y', 'C2.x')
 
-        prob.setup()
+        # ignore warning about the unconnected param
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("ignore")
+            prob.setup()
+
         prob.run()
 
         # still must use absolute naming to find params even if they're
@@ -163,9 +208,37 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail("exception expected")
 
+    def test_input_input_explicit_conns_no_conn(self):
+        prob = Problem(root=Group())
+        root = prob.root
+        root.add('p1', ParamComp('x', 1.0))
+        root.add('c1', ExecComp('y = x*2.0'))
+        root.add('c2', ExecComp('y = x*3.0'))
+        root.connect('c1.x', 'c2.x')
+
+        # ignore warning about the unconnected params
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("ignore")
+            prob.setup()
+
+        prob.run()
+        self.assertEqual(root.connections, {})
+
+    def test_input_input_explicit_conns_w_conn(self):
+        prob = Problem(root=Group())
+        root = prob.root
+        root.add('p1', ParamComp('x', 1.0))
+        root.add('c1', ExecComp('y = x*2.0'))
+        root.add('c2', ExecComp('y = x*3.0'))
+        root.connect('c1.x', 'c2.x')
+        root.connect('p1.x', 'c2.x')
+        prob.setup()
+        prob.run()
+        self.assertEqual(root.connections, {'c1.x':'p1.x', 'c2.x':'p1.x'})
+
     def test_calc_gradient_interface_errors(self):
 
-        root  = Group()
+        root = Group()
         prob = Problem(root=root)
         root.add('comp', ExecComp('y=x*2.0'))
 
@@ -173,7 +246,7 @@ class TestProblem(unittest.TestCase):
             prob.calc_gradient(['comp.x'], ['comp.y'], mode='junk')
         except Exception as error:
             msg = "mode must be 'auto', 'fwd', 'rev', or 'fd'"
-            self.assertEquals(text_type(error), msg)
+            self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
 
@@ -181,9 +254,119 @@ class TestProblem(unittest.TestCase):
             prob.calc_gradient(['comp.x'], ['comp.y'], return_format='junk')
         except Exception as error:
             msg = "return_format must be 'array' or 'dict'"
-            self.assertEquals(text_type(error), msg)
+            self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
+
+    def test_calc_gradient(self):
+        root = Group()
+        parm = root.add('parm', ParamComp('x', np.array([1., 1., 1., 1.])))
+        comp = root.add('comp', RosenSuzuki())
+
+        root.connect('parm.x', 'comp.x')
+
+        prob = Problem(root)
+        prob.setup()
+        prob.run()
+
+        param_list = ['parm.x']
+        unknown_list = ['comp.f', 'comp.g']
+
+        # check that calc_gradient returns proper dict value when mode is 'fwd'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
+            [ -3., -3., -17.,  9.],
+        ]))
+        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
+
+        # check that calc_gradient returns proper array value when mode is 'fwd'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([
+            [-3.,  -3., -17.,  9.],
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
+
+        # check that calc_gradient returns proper dict value when mode is 'rev'
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
+            [ -3., -3., -17.,  9.],
+        ]))
+        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
+
+        # check that calc_gradient returns proper array value when mode is 'rev'
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([
+            [-3.,  -3., -17.,  9.],
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]))
+
+        # check that calc_gradient returns proper dict value when mode is 'fd'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
+            [ -3., -3., -17.,  9.],
+        ]), decimal=5)
+        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]), decimal=5)
+
+        # check that calc_gradient returns proper array value when mode is 'fd'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([
+            [-3.,  -3., -17.,  9.],
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ]), decimal=5)
+
+    def test_calc_gradient_multiple_params(self):
+        top = Problem()
+        top.root = FanIn()
+        top.setup()
+        top.run()
+
+        param_list   = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
+
+        # check that calc_gradient returns proper dict value when mode is 'fwd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'fwd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+
+        # check that calc_gradient returns proper dict value when mode is 'rev'
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'rev'
+        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+
+        # check that calc_gradient returns proper dict value when mode is 'fd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
+        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+
+        # check that calc_gradient returns proper array value when mode is 'fd'
+        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
     def test_explicit_connection_errors(self):
         class A(Component):
@@ -224,19 +407,6 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A())
         problem.root.add('B', B())
         problem.root.connect('A.x', 'B.y')
-
-        with self.assertRaises(ConnectError) as cm:
-            problem.setup()
-
-        self.assertEqual(str(cm.exception), expected_error_message)
-
-        expected_error_message = ("Source 'B.x' cannot be connected to target 'A.x': "
-                                  "Source must be an unknown but 'B.x' is a parameter.")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('B.x', 'A.x')
 
         with self.assertRaises(ConnectError) as cm:
             problem.setup()
@@ -444,7 +614,7 @@ class TestProblem(unittest.TestCase):
             prob['G2.C1.x']
         except Exception as err:
             msg = 'setup() must be called before variables can be accessed'
-            self.assertEquals(text_type(err), msg)
+            self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 
@@ -463,14 +633,22 @@ class TestProblem(unittest.TestCase):
         prob['G2.G1.C2.y'] = 99.
         self.assertEqual(prob['G2.G1.C2.y'], 99.)
 
-    def test_run_before_setup(self):
+    def test_variable_access_before_setup(self):
         prob = Problem(root=ExampleGroup())
+
+        try:
+            prob['G2.C1.x'] = 5.
+        except AttributeError as err:
+            msg = "'unknowns' has not been initialized, setup() must be called before 'G2.C1.x' can be accessed"
+            self.assertEqual(text_type(err), msg)
+        else:
+            self.fail('Exception expected')
 
         try:
             prob.run()
         except AttributeError as err:
             msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
-            self.assertEquals(text_type(err), msg)
+            self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 
@@ -539,7 +717,7 @@ class TestProblem(unittest.TestCase):
         expected_error_message = "Shape '(2,)' of the source "\
                                   "'B1.y' must match the shape '(3,)' "\
                                   "of the target 'C1.x'"
-        self.assertEquals(expected_error_message, str(cm.exception))
+        self.assertEqual(expected_error_message, str(cm.exception))
 
         # Mismatched Scalar to Array Value
         prob = Problem()
@@ -553,7 +731,7 @@ class TestProblem(unittest.TestCase):
                                   "'x' must be the same as type "
                                   "'<type 'numpy.ndarray'>' of target "
                                   "'x'")
-        self.assertEquals(expected_error_message, str(cm.exception))
+        self.assertEqual(expected_error_message, str(cm.exception))
 
     def test_mode_auto(self):
         # Make sure mode=auto chooses correctly for all problem sizes as well
@@ -573,7 +751,7 @@ class TestProblem(unittest.TestCase):
         mode = top._mode('auto', ['p1.a'], ['comp.x'])
         self.assertEqual(mode, 'fwd')
 
-        mode = top._mode('auto', ['p1.a', 'p1.b'], ['comp.x'])
+        mode = top._mode('auto', ['p1.a', 'p2.b'], ['comp.x'])
         self.assertEqual(mode, 'rev')
 
         mode = top._mode('auto', ['a'], ['x'])
@@ -591,7 +769,7 @@ class TestProblem(unittest.TestCase):
             #mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
         #except Exception as err:
             #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
-            #self.assertEquals(text_type(err), msg)
+            #self.assertEqual(text_type(err), msg)
         #else:
             #self.fail('Exception expected')
 
@@ -622,7 +800,7 @@ class TestProblem(unittest.TestCase):
             mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
         except Exception as err:
             msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
-            self.assertEquals(text_type(err), msg)
+            self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 
@@ -633,7 +811,7 @@ class TestProblem(unittest.TestCase):
             mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
         except Exception as err:
             msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
-            self.assertEquals(text_type(err), msg)
+            self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 

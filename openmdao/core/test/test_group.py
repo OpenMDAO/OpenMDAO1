@@ -65,15 +65,18 @@ class TestGroup(unittest.TestCase):
         # verify we get correct connection information
         connections = root._get_explicit_connections()
         expected_connections = {
-            'C2.x': 'C1.y',
-            'C3.x': 'C1.y'
+            'C2.x': ['C1.y'],
+            'C3.x': ['C1.y']
         }
         self.assertEqual(connections, expected_connections)
 
     def test_connect(self):
         root = ExampleGroup()
+        prob = Problem(root=root)
 
-        root._setup_paths('')
+        prob.setup()
+
+        #root._setup_paths('')
 
         self.assertEqual(root.pathname, '')
         self.assertEqual(root.G3.pathname, 'G3')
@@ -81,63 +84,61 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(root.G1.pathname, 'G2.G1')
 
         # verify variables are set up correctly
-        root._setup_variables()
+        #root._setup_variables()
 
         # TODO: check for expected results from _setup_variables
         self.assertEqual(list(root.G1._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'C2.x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'C2.x'})])
         self.assertEqual(list(root.G1._unknowns_dict.items()),
-                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C2.y'})])
+                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
+                                          'val': 5.5, 'promoted_name': 'C2.y'})])
 
         self.assertEqual(list(root.G2._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G1.C2.x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x',
+                                          'val': 3.0, 'promoted_name': 'G1.C2.x'})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
-                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'val': 5.0, 'promoted_name': 'C1.x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G1.C2.y'})])
+                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.C1.x',
+                                          'val': 5.0, 'promoted_name': 'C1.x'}),
+                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
+                                          'val': 5.5, 'promoted_name': 'G1.C2.y'})])
 
         self.assertEqual(list(root.G3._params_dict.items()),
-                         [('G3.C3.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'C3.x'}),
-                          ('G3.C4.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'C4.x'})])
+                         [('G3.C3.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.x',
+                                       'val': 3.0, 'promoted_name': 'C3.x'}),
+                          ('G3.C4.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.x',
+                                       'val': 3.0, 'promoted_name': 'C4.x'})])
         self.assertEqual(list(root.G3._unknowns_dict.items()),
-                         [('G3.C3.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C3.y'}),
-                          ('G3.C4.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C4.y'})])
+                         [('G3.C3.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.y',
+                                       'val': 5.5, 'promoted_name': 'C3.y'}),
+                          ('G3.C4.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.y',
+                                       'val': 5.5, 'promoted_name': 'C4.y'})])
 
         self.assertEqual(list(root._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G2.G1.C2.x'}),
-                          ('G3.C3.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G3.C3.x'}),
-                          ('G3.C4.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G3.C4.x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x',
+                                          'val': 3.0, 'promoted_name': 'G2.G1.C2.x'}),
+                          ('G3.C3.x',    {'shape': 1, 'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x',
+                                          'val': 3.0, 'size': 1}),
+                          ('G3.C4.x',    {'shape': 1, 'promoted_name': 'G3.C4.x', 'top_promoted_name': 'G3.C4.x',
+                                          'val': 3.0, 'size': 1})])
         self.assertEqual(list(root._unknowns_dict.items()),
-                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'val': 5.0, 'promoted_name': 'G2.C1.x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G2.G1.C2.y'}),
-                          ('G3.C3.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G3.C3.y'}),
-                          ('G3.C4.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G3.C4.y'})])
+                         [('G2.C1.x', {'shape': 1, 'promoted_name': 'G2.C1.x', 'top_promoted_name': 'G2.C1.x',
+                                       'val': 5.0, 'size': 1}),
+                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'G2.G1.C2.y'}),
+                          ('G3.C3.y', {'shape': 1, 'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y',
+                                       'val': 5.5, 'size': 1}),
+                          ('G3.C4.y', {'shape': 1, 'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y',
+                                       'val': 5.5, 'size': 1})])
 
         # verify we get correct connection information
-        connections = root._get_explicit_connections()
+        #connections = root._get_explicit_connections()
         expected_connections = {
             'G2.G1.C2.x': 'G2.C1.x',
             'G3.C3.x':    'G2.G1.C2.y',
             'G3.C4.x':    'G3.C3.y'
         }
-        self.assertEqual(connections, expected_connections)
-
-        from openmdao.core.problem import assign_parameters
-        param_owners = assign_parameters(connections)
-        expected_owners = {
-            'G3': ['G3.C4.x'],
-            '':   ['G3.C3.x'],
-            'G2': ['G2.G1.C2.x']
-        }
-        self.assertEqual(param_owners, expected_owners)
-
-        relevance = Relevance(root._params_dict, root._unknowns_dict, connections,
-                              [], [], 'auto')
-
-        # verify vectors are set up correctly
-        root.connections = connections
-        for _,sub in root.subsystems(recurse=True):
-            sub.connections = connections
-        root._setup_vectors(param_owners, relevance=relevance)
+        self.assertEqual(root.connections, expected_connections)
 
         expected_root_params   = ['G3.C3.x']
         expected_root_unknowns = ['G2.C1.x', 'G2.G1.C2.y', 'G3.C3.y', 'G3.C4.y']
@@ -191,73 +192,61 @@ class TestGroup(unittest.TestCase):
 
     def test_promotes(self):
         root = ExampleGroupWithPromotes()
+        prob = Problem(root=root)
 
-        root._setup_paths('')
+        prob.setup()
 
         self.assertEqual(root.pathname, '')
         self.assertEqual(root.G3.pathname, 'G3')
         self.assertEqual(root.G2.pathname, 'G2')
         self.assertEqual(root.G1.pathname, 'G2.G1')
 
-        # verify variables are set up correctly
-        root._setup_variables()
-
         # TODO: check for expected results from _setup_variables
         self.assertEqual(list(root.G1._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x',
+                                          'val': 3.0, 'promoted_name': 'x'})])
         self.assertEqual(list(root.G1._unknowns_dict.items()),
-                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C2.y'})])
+                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
+                                          'val': 5.5, 'promoted_name': 'C2.y'})])
 
         self.assertEqual(list(root.G2._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'promoted_name': 'x', 'top_promoted_name': 'G2.x',
+                                          'val': 3.0, 'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
-                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'val': 5.0, 'promoted_name': 'x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G1.C2.y'})])
+                         [('G2.C1.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x', 'val': 5.0,
+                                       'promoted_name': 'x'}),
+                          ('G2.G1.C2.y', {'shape': 1, 'promoted_name': 'G1.C2.y',
+                                          'top_promoted_name': 'G2.G1.C2.y', 'val': 5.5, 'size': 1})])
 
         self.assertEqual(list(root.G3._params_dict.items()),
-                         [('G3.C3.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'C3.x'}),
-                          ('G3.C4.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'x'})])
+                         [('G3.C3.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.x', 'val': 3.0,
+                                       'promoted_name': 'C3.x'}),
+                          ('G3.C4.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'x', 'val': 3.0,
+                                       'promoted_name': 'x'})])
         self.assertEqual(list(root.G3._unknowns_dict.items()),
-                         [('G3.C3.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C3.y'}),
-                          ('G3.C4.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'C4.y'})])
+                         [('G3.C3.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.y', 'val': 5.5,
+                                       'promoted_name': 'C3.y'}),
+                          ('G3.C4.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.y', 'val': 5.5,
+                                       'promoted_name': 'C4.y'})]
+)
 
         self.assertEqual(list(root._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G2.x'}),
-                          ('G3.C3.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'G3.C3.x'}),
-                          ('G3.C4.x',    {'shape': 1, 'size': 1, 'val': 3.0, 'promoted_name': 'x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x', 'val': 3.0,
+                                          'promoted_name': 'G2.x'}),
+                          ('G3.C3.x', {'shape': 1, 'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x',
+                                       'val': 3.0, 'size': 1}),
+                          ('G3.C4.x', {'shape': 1, 'promoted_name': 'x', 'top_promoted_name': 'x',
+                                       'val': 3.0, 'size': 1})]
+)
         self.assertEqual(list(root._unknowns_dict.items()),
-                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'val': 5.0, 'promoted_name': 'G2.x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G2.G1.C2.y'}),
-                          ('G3.C3.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G3.C3.y'}),
-                          ('G3.C4.y',    {'shape': 1, 'size': 1, 'val': 5.5, 'promoted_name': 'G3.C4.y'})])
-
-        # verify we get correct connection information
-        connections = root._get_explicit_connections()
-        expected_connections = {
-            'G3.C3.x':    'G2.G1.C2.y',
-            'G3.C4.x':    'G3.C3.y'
-        }
-        self.assertEqual(connections, expected_connections)
-
-        connections.update(_get_implicit_connections(root._params_dict, root._unknowns_dict))
-
-        from openmdao.core.problem import assign_parameters
-        param_owners = assign_parameters(connections)
-        expected_owners = {
-            'G3': ['G3.C4.x'],
-            ''  : ['G3.C3.x'],
-            'G2': ['G2.G1.C2.x']
-        }
-        self.assertEqual(param_owners, expected_owners)
-
-        relevance = Relevance(root._params_dict, root._unknowns_dict, connections,
-                              [], [], 'auto')
-
-        # verify vectors are set up correctly
-        root.connections = connections
-        for _,sub in root.subsystems(recurse=True):
-            sub.connections = connections
-        root._setup_vectors(param_owners, relevance=relevance)
+                        [('G2.C1.x', {'shape': 1, 'promoted_name': 'G2.x', 'top_promoted_name': 'G2.x',
+                                      'val': 5.0, 'size': 1}),
+                         ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
+                                         'val': 5.5, 'promoted_name': 'G2.G1.C2.y'}),
+                         ('G3.C3.y', {'shape': 1, 'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y',
+                                      'val': 5.5, 'size': 1}),
+                         ('G3.C4.y', {'shape': 1, 'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y',
+                                      'val': 5.5, 'size': 1})])
 
         expected_root_params   = ['G3.C3.x']
         expected_root_unknowns = ['G2.x', 'G2.G1.C2.y', 'G3.C3.y', 'G3.C4.y']
@@ -324,8 +313,8 @@ class TestGroup(unittest.TestCase):
         prob.setup()
 
         # check that we can access values from unknowns (default) and params
-        self.assertEqual(prob.root['G2.C1.x'], 5.)                # default output from ParamComp
-        self.assertEqual(prob.root['G2.G1.C2.y'], 5.5)            # output from ExecComp
+        self.assertEqual(prob.root['G2.C1.x'], 5.)             # default output from ParamComp
+        self.assertEqual(prob.root['G2.G1.C2.y'], 5.5)         # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
@@ -340,7 +329,7 @@ class TestGroup(unittest.TestCase):
 
         # and make sure we get the correct value after a transfer
         prob.root.G2._transfer_data('G1')
-        self.assertEqual(prob.root.G2.G1.C2.params['x'], 99.)   # transferred value of parameter
+        self.assertEqual(prob.root.G2.G1.C2.params['x'], 99.)  # transferred value of parameter
 
     def test_subsystem_access(self):
         prob = Problem(root=ExampleGroup())

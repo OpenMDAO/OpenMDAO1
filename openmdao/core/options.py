@@ -32,16 +32,16 @@ class OptionsDictionary(object):
         value : object
             Default value for this option. The type of this value will be enforced.
 
-        low : float (optional)
+        low : float, optional
             Lower bounds for a float value.
 
-        high : float (optional)
+        high : float, optional
             Upper bounds for a float value.
 
-        values : list (optional)
+        values : list, optional
             List of all possible values for an enumeration option.
 
-        desc : str (optional)
+        desc : str, optional
             String containing documentation of this option.
         """
 
@@ -70,6 +70,18 @@ class OptionsDictionary(object):
 
         self.check(name, value)
         self._options[name]['val'] = value
+
+    def get(self, name, default=None):
+        """
+        Returns
+        -------
+        object
+            The value of the named option.  If not found, returns the
+            default value that was passed in.
+        """
+        if name in self._options:
+            return self._options[name]['val']
+        return default
 
     def items(self):
         """

@@ -77,8 +77,8 @@ class VecWrapper(object):
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
-        #self._unit_conversion = {}
         self.deriv_units = False
+        self.adj_accumulate_mode = False
 
     def _get_metadata(self, name):
         """
@@ -114,8 +114,12 @@ class VecWrapper(object):
         unitconv = meta.get('unit_conv')
         shape = meta.get('shape')
 
-        # convert units
-        if unitconv:
+        # For dparam vector, getitem is disabled in adjoint mode.
+        if self.adj_accumulate_mode == True:
+            return numpy.zeros((shape))
+
+        # Convert units
+        elif unitconv:
             scale, offset = unitconv
 
             # Gradient is just the scale
@@ -127,6 +131,7 @@ class VecWrapper(object):
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
+
         else:
             # if shape is 1, it's a float
             if shape == 1:
@@ -154,21 +159,37 @@ class VecWrapper(object):
 
         unitconv = meta.get('unit_conv')
 
+        # For dparam vector in adjoint mode, assignement behaves as +=.
+        if self.adj_accumulate_mode is True:
+            if self.deriv_units and unitconv:
+                scale, offset = unitconv
+
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] += scale*value.flat[:]
+                else:
+                    meta['val'][0] += scale*value
+
+            else:
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] += value.flat[:]
+                else:
+                    meta['val'][0] += value
+
         # Convert Units
-        if self.deriv_units and unitconv:
-            scale, offset = unitconv
-
-            if isinstance(value, numpy.ndarray):
-                meta['val'][:] = scale*value.flat[:]
-            else:
-                meta['val'][0] = scale*value
-
         else:
-            if isinstance(value, numpy.ndarray):
-                meta['val'][:] = value.flat[:]
-            else:
-                meta['val'][0] = value
+            if self.deriv_units and unitconv:
+                scale, offset = unitconv
 
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] = scale*value.flat[:]
+                else:
+                    meta['val'][0] = scale*value
+
+            else:
+                if isinstance(value, numpy.ndarray):
+                    meta['val'][:] = value.flat[:]
+                else:
+                    meta['val'][0] = value
 
     def __len__(self):
         """
@@ -194,7 +215,6 @@ class VecWrapper(object):
             A dictionary iterator over the items in _vardict.
         """
         return self._vardict.__iter__()
-
 
     def keys(self):
         """
@@ -240,7 +260,7 @@ class VecWrapper(object):
         """
         return self._vardict[name]
 
-    def get_local_idxs(self, name):
+    def get_local_idxs(self, name, idx_dict):
         """
         Returns all of the indices for the named variable in this vector.
 
@@ -261,13 +281,21 @@ class VecWrapper(object):
 
         meta = self._vardict[name]
         if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided for 'pass by object' variable '%s'" % name)
+            raise RuntimeError("No vector indices can be provided "
+                               "for 'pass by object' variable '%s'" % name)
 
         if name not in self._slices:
-            return meta['size'], []
+            return meta['size'], self.make_idx_array(0, 0)
 
         start, end = self._slices[name]
-        return meta['size'], self.make_idx_array(start, end)
+        if name in idx_dict:
+            idxs = self.to_idx_array(idx_dict[name]) + start
+            if idxs.size > (end-start) or max(idxs) >= end:
+                raise RuntimeError("Indices of interest specified for '%s'"
+                                   "are too large" % name)
+            return idxs.size, idxs
+        else:
+            return meta['size'], self.make_idx_array(start, end)
 
     def norm(self):
         """
@@ -405,7 +433,7 @@ class VecWrapper(object):
 
         return idx_merge(new_src), idx_merge(new_tgt)
 
-    def get_relative_varname(self, abs_name):
+    def get_promoted_varname(self, abs_name):
         """
         Returns the relative pathname for the given absolute variable
         pathname.
@@ -521,6 +549,11 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
+    def _set_adjoint_mode(self, mode=False):
+        """ Turn on or off adjoint accumlate mode."""
+        self.adj_accumulate_mode = mode
+
+
 
 class SrcVecWrapper(VecWrapper):
     def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
@@ -539,21 +572,21 @@ class SrcVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
 
         """
         vec_size = 0
         for name, meta in unknowns_dict.items():
-            if relevant_vars is None or name in relevant_vars:
-                relname = meta['promoted_name']
+            promname = meta['promoted_name']
+            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
                 vmeta = self._setup_var_meta(name, meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
-                    self._slices[relname] = (vec_size, vec_size + vmeta['size'])
+                    self._slices[promname] = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
 
-                self._vardict[relname] = vmeta
+                self._vardict[promname] = vmeta
 
         self.vec = numpy.zeros(vec_size)
 
@@ -638,7 +671,7 @@ class TgtVecWrapper(VecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
 
@@ -649,16 +682,17 @@ class TgtVecWrapper(VecWrapper):
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for pathname, meta in params_dict.items():
-            if relevant_vars is None or pathname in relevant_vars:
+            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
                 if pathname in my_params:
                     # if connected, get metadata from the source
                     src_pathname = connections.get(pathname)
                     if src_pathname is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
-                    src_rel_name = srcvec.get_relative_varname(src_pathname)
+                    src_rel_name = srcvec.get_promoted_varname(src_pathname)
                     src_meta = srcvec.metadata(src_rel_name)
 
-                    vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
+                    vmeta = self._setup_var_meta(pathname, meta, vec_size,
+                                                 src_meta, store_byobjs)
                     vmeta['owned'] = True
 
                     if not meta.get('remote'):
@@ -720,7 +754,7 @@ class TgtVecWrapper(VecWrapper):
             Metadata for the source variable that this target variable is
             connected to.
 
-        store_byobjs : bool (optional)
+        store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """
@@ -808,6 +842,27 @@ class PlaceholderVecWrapper(object):
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
 
+    def __setitem__(self, name, value):
+        """
+        Set the value of the named variable. Since this is just a
+        placeholder, will raise an exception stating that setup() has
+        not been called yet.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the value for.
+
+        value :
+            The unflattened value of the named variable.
+
+        Raises
+        ------
+        AttributeError
+        """
+        raise AttributeError("'%s' has not been initialized, "
+                             "setup() must be called before '%s' can be accessed" %
+                             (self.name, name))
 def idx_merge(idxs):
     """
     Combines a mixed iterator of int and iterator indices into an
