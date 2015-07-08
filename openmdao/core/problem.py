@@ -383,9 +383,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns._get_metadata(u)['size']
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns._get_metadata(p)['size']
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
             ui = 0
@@ -468,9 +468,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns._get_metadata(u)['size']
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns._get_metadata(p)['size']
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':
