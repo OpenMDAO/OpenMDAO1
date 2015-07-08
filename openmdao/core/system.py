@@ -186,14 +186,11 @@ class System(object):
         """
         Set 'remote' attribute in metadata of all variables for this subsystem.
         """
-        pname = self.pathname + '.'
         for name, meta in self._params_dict.items():
-            if name.startswith(pname):
-                meta['remote'] = True
+            meta['remote'] = True
 
         for name, meta in self._unknowns_dict.items():
-            if name.startswith(pname):
-                meta['remote'] = True
+            meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None, total_derivs=False):
