@@ -76,6 +76,7 @@ class ParallelGroup(Group):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
+        # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
             super(ParallelGroup, self)._setup_communicators(comm)
             return
