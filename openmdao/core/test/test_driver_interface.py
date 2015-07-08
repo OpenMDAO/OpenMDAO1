@@ -219,5 +219,28 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
         self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
 
+    def test_eq_ineq_error_messages(self):
+
+        top = Problem()
+        root = top.root = SellarDerivatives()
+
+        top.driver = MySimpleDriver()
+
+        # Don't try this at home, kids
+        top.driver.supports['Equality Constraints'] = False
+
+        with self.assertRaises(RuntimeError) as cm:
+            top.driver.add_constraint('con1', ctype='eq')
+
+        self.assertEquals(str(cm.exception), "Driver does not support equality constraint 'con1'.")
+
+        # Don't try this at home, kids
+        top.driver.supports['Inequality Constraints'] = False
+
+        with self.assertRaises(RuntimeError) as cm:
+            top.driver.add_constraint('con1', ctype='ineq')
+
+        self.assertEquals(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
+
 if __name__ == "__main__":
     unittest.main()
