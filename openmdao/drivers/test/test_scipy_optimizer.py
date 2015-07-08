@@ -64,10 +64,6 @@ class TestScipyOptimize(unittest.TestCase):
         assert_rel_error(self, top['x'], 6.666667, 1e-6)
         assert_rel_error(self, top['y'], -7.333333, 1e-6)
 
-        # Optimal solution (minimum): x = 6.6667; y = -7.3333
-        assert_rel_error(self, top['x'], 6.666667, 1e-6)
-        assert_rel_error(self, top['y'], -7.333333, 1e-6)
-
     def test_simple_paraboloid_unconstrained_COBYLA(self):
 
         top = Problem()

@@ -103,7 +103,7 @@ class ScipyOptimizer(Driver):
             i += size
 
             # Bounds if our optimizer supports them
-            if opt in _gradient_optimizers:
+            if opt in _bounds_optimizers:
                 meta_low = pmeta[name]['low']
                 meta_high = pmeta[name]['high']
                 for j in range(0, size):
