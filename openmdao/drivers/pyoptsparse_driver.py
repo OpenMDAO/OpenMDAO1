@@ -51,10 +51,8 @@ class pyOptSparseDriver(Driver):
         self.options.add_option('exit_flag', 0,
                                 desc='0 for fail, 1 for ok')
 
+        # The user places optimizer-specific settings in here.
         self.opt_settings = {}
-
-        self.pyopt_excludes = ['optimizer', 'title', 'print_results',
-                            'pyopt_diff', 'exit_flag']
 
         self.pyopt_solution = None
 
