@@ -81,9 +81,9 @@ class ScipyOptimizer(Driver):
         problem.root.solve_nonlinear()
 
         pmeta = self.get_param_metadata()
-        self.objs = self.get_objectives().keys()
+        self.objs = list(self.get_objectives().keys())
         con_meta = self.get_constraint_metadata()
-        self.cons = con_meta.keys()
+        self.cons = list(con_meta.keys())
 
         self.opt_settings['maxiter'] = self.options['maxiter']
         self.opt_settings['disp'] = self.options['disp']
