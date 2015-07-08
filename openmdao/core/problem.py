@@ -76,12 +76,6 @@ class Problem(System):
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
-        # divide MPI communicators among subsystems
-        if MPI:
-            self.root._setup_communicators(MPI.COMM_WORLD)
-        else:
-            self.root._setup_communicators(FakeComm())
-
         # Give every system a dictionary of parameters and of unknowns
         # that are visible to that system, keyed on absolute pathnames.
         # Metadata for each variable will contain the name of the
@@ -96,15 +90,15 @@ class Problem(System):
 
         # create a mapping from absolute name to top level promoted name
         abs_to_prom = {}
-        for name, meta in chain(params_dict.items(), unknowns_dict.items()):
-            abs_to_prom[name] = meta['promoted_name']
+        for meta in chain(params_dict.values(), unknowns_dict.values()):
+            abs_to_prom[meta['pathname']] = meta['promoted_name']
 
-        # propagate top level promoted names and voi_indices
+        # propagate top level promoted names
         # down to all subsystems
-        for _, sub in self.root.subsystems(recurse=True, include_self=True):
-            for vname, meta in chain(sub._params_dict.items(),
-                                     sub._unknowns_dict.items()):
-                meta['top_promoted_name'] = abs_to_prom[vname]
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            for meta in chain(sub._params_dict.values(),
+                              sub._unknowns_dict.values()):
+                meta['top_promoted_name'] = abs_to_prom[meta['pathname']]
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -145,9 +139,6 @@ class Problem(System):
 
         connections = newconns
 
-        # calculate unit conversions and store in param metadata
-        _setup_units(connections, params_dict, unknowns_dict)
-
         # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
@@ -161,6 +152,22 @@ class Problem(System):
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
             warnings.warn(msg)
 
+        # divide MPI communicators among subsystems
+        if MPI:
+            self.root._setup_communicators(MPI.COMM_WORLD)
+        else:
+            self.root._setup_communicators(FakeComm())
+
+        for comp in self.root.components(recurse=True):
+            if not comp.is_active():
+                comp._set_vars_as_remote()
+
+        # rerun _setup_variables to percolate up the 'remote' values
+        params_dict, unknowns_dict = self.root._setup_variables()
+
+        # calculate unit conversions and store in param metadata
+        _setup_units(connections, params_dict, unknowns_dict)
+
         # propagate top level metadata, e.g. unit_conv, to subsystems
         self.root._update_sub_unit_conv()
 
@@ -171,7 +178,7 @@ class Problem(System):
         # some mode determination requires connection information, so pass
         # it down the tree
         self.root.connections = connections
-        for name, sub in self.root.subsystems(recurse=True):
+        for sub in self.root.subsystems(recurse=True):
             sub.connections = connections
 
         pois = self.driver.params_of_interest()
@@ -619,7 +626,8 @@ class Problem(System):
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for cname, comp in root.components(recurse=True):
+        for comp in root.components(recurse=True):
+            cname = comp.pathname
 
             # No need to check comps that don't have any derivs.
             if comp.fd_options['force_fd'] == True:
@@ -815,7 +823,7 @@ class Problem(System):
 
         # TODO : Only Linear GS is supported on system
 
-        for _, sub in self.root.subgroups(recurse=True):
+        for sub in self.root.subgroups(recurse=True):
             sub_mode = sub.ln_solver.options['mode']
 
             # Modes must match root for all subs
@@ -833,13 +841,13 @@ class Problem(System):
 
         def _tree_dict(system):
             dct = OrderedDict()
-            for name, s in system.subsystems(recurse=True):
+            for s in system.subsystems(recurse=True):
                 if isinstance(s, Group):
-                    dct[name] = _tree_dict(s)
+                    dct[s.name] = _tree_dict(s)
                 else:
-                    dct[name] = OrderedDict()
+                    dct[s.name] = OrderedDict()
                     for vname, meta in s.unknowns.items():
-                        dct[name][vname] = m = meta.copy()
+                        dct[s.name][vname] = m = meta.copy()
                         for mname in m:
                             if isinstance(m[mname], np.ndarray):
                                 m[mname] = m[mname].tolist()
@@ -1044,12 +1052,12 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     # collect all absolute names that map to each promoted name
     abs_unknowns = {}
-    for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['promoted_name'], []).append(abs_name)
+    for u in unknowns_dict.values():
+        abs_unknowns.setdefault(u['promoted_name'], []).append(u['pathname'])
 
     abs_params = {}
-    for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['promoted_name'], []).append(abs_name)
+    for p in params_dict.values():
+        abs_params.setdefault(p['promoted_name'], []).append(p['pathname'])
 
     # check if any promoted names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():

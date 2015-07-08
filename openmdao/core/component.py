@@ -59,6 +59,7 @@ class Component(System):
         self._check_name(name)
         args = kwargs.copy()
 
+        args['promoted_name'] = name
         args['val'] = val = self._get_initial_val(val, shape)
 
         if is_differentiable(val) and not args.get('pass_by_obj'):
@@ -146,33 +147,22 @@ class Component(System):
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
         for name, meta in self._params_dict.items():
-            if not self.pathname:
-                var_pathname = name
-            else:
-                var_pathname = '.'.join((self.pathname, name))
-            _new_params[var_pathname] = meta
+            pathname = self._get_var_pathname(name)
+            _new_params[pathname] = meta
+            meta['pathname'] = pathname
             meta['promoted_name'] = name
-
-        self._params_dict = _new_params
+            self._params_dict[name]['promoted_name'] = name
 
         _new_unknowns = OrderedDict()
         for name, meta in self._unknowns_dict.items():
-            if not self.pathname:
-                var_pathname = name
-            else:
-                var_pathname = '.'.join((self.pathname, name))
-            _new_unknowns[var_pathname] = meta
+            pathname = self._get_var_pathname(name)
+            _new_unknowns[pathname] = meta
+            meta['pathname'] = pathname
             meta['promoted_name'] = name
-
-        self._unknowns_dict = _new_unknowns
 
         self._post_setup = True
 
-        # set 'remote' attribute if this comp is not active
-        if not self.is_active():
-            self._set_vars_as_remote()
-
-        return self._params_dict, self._unknowns_dict
+        return _new_params, _new_unknowns
 
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, relevance=None, impl=BasicImpl):
@@ -214,7 +204,8 @@ class Component(System):
         self._create_views(top_unknowns, parent, [], relevance, None)
 
         # create params vec entries for any unconnected params
-        for pathname, meta in self._params_dict.items():
+        for meta in self._params_dict.values():
+            pathname = meta['pathname']
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
