@@ -46,6 +46,37 @@ class TgtCompF(Component):
         J[('x3', 'x2')] = np.array([1.0])
         return J
 
+class TgtCompFMulti(Component):
+    # Some extra inputs that might trip things up.
+
+    def __init__(self):
+        super(TgtCompFMulti, self).__init__()
+
+        self.add_param('_x2', 100.0, units='degF')
+        self.add_param('x2', 100.0, units='degF')
+        self.add_param('x2_', 100.0, units='degF')
+        self.add_output('_x3', 100.0)
+        self.add_output('x3', 100.0)
+        self.add_output('x3_', 100.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ No action."""
+        unknowns['x3'] = params['x2']
+
+    def jacobian(self, params, unknowns, resids):
+        """ Derivative is 1.0"""
+        J = {}
+        J[('_x3', 'x2')] = np.array([1.0])
+        J[('_x3', '_x2')] = 0.0
+        J[('_x3', 'x2_')] = 0.0
+        J[('x3', 'x2')] = np.array([1.0])
+        J[('x3', '_x2')] = 0.0
+        J[('x3', 'x2_')] = 0.0
+        J[('x3_', 'x2')] = np.array([1.0])
+        J[('x3_', '_x2')] = 0.0
+        J[('x3_', 'x2_')] = 0.0
+        return J
+
 class TgtCompC(Component):
 
     def __init__(self):
@@ -209,6 +240,45 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+    def test_basic_grouped_bug_from_pycycle(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        sub1 = prob.root.add('sub1', Group(), promotes=['x2'])
+        sub1.add('src', SrcComp(), promotes = ['x2'])
+        root.add('tgtF', TgtCompFMulti())
+        root.add('tgtC', TgtCompC())
+        root.add('tgtK', TgtCompK())
+        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'sub1.src.x1')
+        prob.root.connect('x2', 'tgtF.x2')
+        prob.root.connect('x2', 'tgtC.x2')
+        prob.root.connect('x2', 'tgtK.x2')
+
+        prob.setup()
+        prob.run()
+
+        assert_rel_error(self, prob['x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
+
+        param_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
     def test_incompatible_connections(self):
 

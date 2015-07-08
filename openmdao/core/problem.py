@@ -99,9 +99,11 @@ class Problem(System):
         for name, meta in chain(params_dict.items(), unknowns_dict.items()):
             abs_to_prom[name] = meta['promoted_name']
 
-        # propagate top level promoted names and voi_indices down to all subsystems
+        # propagate top level promoted names and voi_indices
+        # down to all subsystems
         for _, sub in self.root.subsystems(recurse=True, include_self=True):
-            for vname, meta in chain(sub._params_dict.items(), sub._unknowns_dict.items()):
+            for vname, meta in chain(sub._params_dict.items(),
+                                     sub._unknowns_dict.items()):
                 meta['top_promoted_name'] = abs_to_prom[vname]
 
         # Get all explicit connections (stated with absolute pathnames)
@@ -692,8 +694,12 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dresids.flat[u_name][idx] = 1.0
-                    comp.apply_linear(params, unknowns, dparams,
-                                      dunknowns, dresids, 'rev')
+                    try:
+                        dparams._set_adjoint_mode(True)
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'rev')
+                    finally:
+                        dparams._set_adjoint_mode(False)
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:
