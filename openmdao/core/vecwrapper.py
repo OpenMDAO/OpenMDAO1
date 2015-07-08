@@ -691,7 +691,8 @@ class TgtVecWrapper(VecWrapper):
                     src_rel_name = srcvec.get_promoted_varname(src_pathname)
                     src_meta = srcvec.metadata(src_rel_name)
 
-                    vmeta = self._setup_var_meta(pathname, meta, vec_size, src_meta, store_byobjs)
+                    vmeta = self._setup_var_meta(pathname, meta, vec_size,
+                                                 src_meta, store_byobjs)
                     vmeta['owned'] = True
 
                     if not meta.get('remote'):

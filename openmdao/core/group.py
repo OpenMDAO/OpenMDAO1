@@ -272,6 +272,9 @@ class Group(System):
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
 
+            # check for any promotes that didn't match a variable
+            sub._check_promotes()
+
         return self._params_dict, self._unknowns_dict
 
     def _promoted_name(self, name, subsystem):
@@ -356,14 +359,16 @@ class Group(System):
         #       We should never need more memory than the largest sized collection of parallel
         #       vecs.
 
-        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        # create storage for the relevant vecwrappers,
+        # keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():
             if group is not None:
                     for voi in vois:
                         if parent is None:
                             self._create_vecs(my_params, relevance, voi, impl)
                         else:
-                            self._create_views(top_unknowns, parent, my_params, relevance, voi)
+                            self._create_views(top_unknowns, parent, my_params,
+                                               relevance, voi)
 
                         self._setup_data_transfer(my_params, relevance, voi)
 
