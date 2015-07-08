@@ -1,15 +1,30 @@
 """ Unit test for the HDF5Recorder. """
 
 import unittest
-from openmdao.recorders.hdf5recorder import HDF5Recorder
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.examplegroups import ExampleGroup
 from openmdao.test.testutil import assert_rel_error
 
+SKIP = False
+
+try:
+    from openmdao.recorders.hdf5recorder import HDF5Recorder
+except ImportError:
+    # Necessary for the file to parse
+    from openmdao.recorders.baserecorder import BaseRecorder
+    HDF5Recorder = BaseRecorder
+    SKIP = True
+
+
+
 
 class TestHDF5Recorder(unittest.TestCase):
     eps = 1e-5
+
+    def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest
 
     def assertDatasetEquals(self, actual, expected, tolerance):
         # If len(actual) == len(expected) and actual < expected, then
