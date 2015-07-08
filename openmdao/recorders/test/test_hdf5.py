@@ -24,7 +24,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
     def setUp(self):
         if SKIP:
-            raise unittest.SkipTest
+            raise unittest.SkipTest("Could not import HDF5Recorder. Is h5py installed?")
 
     def assertDatasetEquals(self, actual, expected, tolerance):
         # If len(actual) == len(expected) and actual < expected, then
