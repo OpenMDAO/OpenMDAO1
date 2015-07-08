@@ -73,6 +73,13 @@ class Problem(System):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.
         """
+        # if we modify the system tree, we'll need to call _setup_variables
+        # again
+        tree_changed = False
+
+        # get map of vars to VOI indices
+        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
+
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
@@ -84,21 +91,6 @@ class Problem(System):
 
         # Returns the parameters and unknowns dictionaries for the root.
         params_dict, unknowns_dict = self.root._setup_variables()
-
-        # get map of vars to VOI indices
-        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
-
-        # create a mapping from absolute name to top level promoted name
-        abs_to_prom = {}
-        for meta in chain(params_dict.values(), unknowns_dict.values()):
-            abs_to_prom[meta['pathname']] = meta['promoted_name']
-
-        # propagate top level promoted names
-        # down to all subsystems
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            for meta in chain(sub._params_dict.values(),
-                              sub._unknowns_dict.values()):
-                meta['top_promoted_name'] = abs_to_prom[meta['pathname']]
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
@@ -152,6 +144,8 @@ class Problem(System):
             msg = 'Parameters %s have no associated unknowns.' % hanging_params
             warnings.warn(msg)
 
+        # TODO: handle any automatic grouping of systems here...
+
         # divide MPI communicators among subsystems
         if MPI:
             self.root._setup_communicators(MPI.COMM_WORLD)
@@ -160,10 +154,27 @@ class Problem(System):
 
         for comp in self.root.components(recurse=True):
             if not comp.is_active():
+                tree_changed = True
                 comp._set_vars_as_remote()
 
-        # rerun _setup_variables to percolate up the 'remote' values
-        params_dict, unknowns_dict = self.root._setup_variables()
+        # All changes to the system tree must be complete at this point
+
+        # rerun _setup_variables to account for changes in system tree
+        if tree_changed:
+            params_dict, unknowns_dict = self.root._setup_variables()
+
+        # create a mapping from absolute name to top level promoted name
+        abs_to_prom = {}
+        for meta in chain(params_dict.values(), unknowns_dict.values()):
+            abs_to_prom[meta['pathname']] = meta['promoted_name']
+
+        # propagate top level promoted names and connections
+        # down to all subsystems
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            sub.connections = connections
+            for meta in chain(sub._params_dict.values(),
+                              sub._unknowns_dict.values()):
+                meta['top_promoted_name'] = abs_to_prom[meta['pathname']]
 
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
@@ -174,12 +185,6 @@ class Problem(System):
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
-
-        # some mode determination requires connection information, so pass
-        # it down the tree
-        self.root.connections = connections
-        for sub in self.root.subsystems(recurse=True):
-            sub.connections = connections
 
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
