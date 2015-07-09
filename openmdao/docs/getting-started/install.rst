@@ -17,9 +17,9 @@ on OS X, Windows or Linux.  For a guide of examples of how to use OpenMDAO,
 see the OpenMDAO User's Guide. (link)
 
 
-=========================
+=====
 TL;DR
-=========================
+=====
 Install Python via `Anaconda <http://continuum.io/downloads>`_., then:
 
 ::
@@ -39,21 +39,21 @@ maintain, while still solving them in a tightly-coupled manner with efficient pa
 numerical methods.
 
 We provide a library of sparse solvers and optimizers designed to work
-with our MPI based, distributed memory data passing scheme. But don't worry about
+with our MPI-based, distributed-memory data-passing scheme. But don't worry about
 installing MPI when you're just getting started. We can run really efficiently in
-serial using a numpy data passing implementation as well.
+serial using a numpy data-passing implementation as well.
 
 Our most unique capability is our automatic analytic multidisciplinary derivatives.
-Provide analytic derivatives each of your components, and
-OpenMDAO will solve the chain-rule across your entire model, to compute system
-level derivatives for newton solvers and/or gradient based optimizers. This lets you
-solve really large non-linear problems, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_ with over
-25,000 design variables using adjoint derivatives.
+Provide analytic derivatives for each of your components, and
+OpenMDAO will solve the chain-rule across your entire model, to compute system-
+level derivatives for Newton solvers and/or gradient-based optimizers. This lets you
+solve really large non-linear problems, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_
+with over 25,000 design variables using adjoint derivatives.
 
 You don't have to provide analytic derivatives for all of the components. OpenMDAO just
 finite-differences components that are missing them and then computes semi-analytic
 multidisciplinary derivatives. Semi-analytic derivatives offer a fast and easy
-way to gain a lot of computational efficiency. For example they gave us a 5x
+way to gain a lot of computational efficiency. For example, they gave us a 5x
 reduction in compute cost for an `aero-structural wind turbine optimization
 <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_.
 
@@ -69,8 +69,6 @@ Here are the systems on which we will test and support:
 
 Mac OS X
 ++++++++
-
-The 1.0.x versions of OpenMDAO should run on:
 
  * Mountain Lion (10.8.5)
 
@@ -117,15 +115,15 @@ Numpy and Scipy.
 Python
 ++++++
 
-Currently, we are supporting two different versions of Python:
+Currently, we are supporting two different versions of Python_:
 
 .. _Python: http://www.python.org
 
- * 2.7.9_ or higher versions of 2.7
+ * 2.7.9_ or higher versions of 2.7.x
 
 .. _2.7.9: https://www.python.org/downloads/release/python-279/
 
- * 3.4.3_ or higher versions of 3.4
+ * 3.4.3_ or higher versions of 3.4.x
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 
@@ -133,7 +131,7 @@ Currently, we are supporting two different versions of Python:
 Numpy
 +++++
 
-Install Numpy_, unless you already have a distribution like Anaconda that already
+Install Numpy_, unless you already have a distribution like Anaconda that
 includes Numpy.
 
 .. _Numpy: http://numpy.org
@@ -143,7 +141,7 @@ includes Numpy.
 Scipy
 +++++
 
-Install Scipy_, unless you already have a distribution like Anaconda that already
+Install Scipy_, unless you already have a distribution like Anaconda that
 includes Scipy.
 
 .. _Scipy: http://scipy.org
@@ -153,7 +151,7 @@ includes Scipy.
 Git (Optional)
 ++++++++++++++
 Git_ is a very popular open-source version control system that we use for our source code.
-It tracks content such as files and directories. OpenMDAO hosts its repo on `GitHub <https://github.com/openmdao/openmdao>`_.
+It tracks content such as files and directories. OpenMDAO hosts its repo on `GitHub <https://github.com/OpenMDAO/OpenMDAO>`_.
 Git_ is not a hard requirement, but it's a good way to stay up to date with the latest code
 updates (remember, we're still in ALPHA!).
 
@@ -162,7 +160,7 @@ updates (remember, we're still in ALPHA!).
 Compilers (Optional)
 ++++++++++++++++++++
 OpenMDAO doesn't have a strict requirement on any compiled code, but we can optionally
-make use of some compiled libraries, if they are present in your python environment.
+make use of some compiled libraries, if they are present in your Python environment.
 If you don't want to use any of these optional features, then you shouldn't need
 a compiler. You can install the compilers and build the libraries later on
 and OpenMDAO will use them. So its fine if you start out without the compiled stuff,
@@ -183,7 +181,7 @@ To pip install OpenMDAO directly from the OpenMDAO Github repository:
     pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
 =======================================
-Clone the repo and install from that
+Clone the Repo and Install From Source
 =======================================
 
 Since the code is in ALPHA state, and is changing daily, you might prefer to actually
