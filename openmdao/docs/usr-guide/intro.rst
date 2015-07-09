@@ -30,7 +30,11 @@ re-write of the framework from the ground up.  It is incompatible with all previ
 versions of OpenMDAO.  Why did we do this?  [Explain in detail the reasons for departure from
 old versions.]
 
+Purpose
+-------
+
 This document will first discuss the new structure of OpenMDAO, and the design
 decisions that have been made for version 1.0.  Then we'll move on to some
-concrete examples of implementing things like a Paraboloid component, and the
-Sellar Problem.
+concrete examples of implementing things like a Paraboloid component, some tutorials
+concerning common OpenMDAO tasks,  and then some more complicated operations, like
+the Sellar Problem.
