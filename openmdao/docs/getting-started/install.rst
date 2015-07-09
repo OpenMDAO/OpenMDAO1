@@ -48,7 +48,7 @@ solve really large non-linear problems, like a `cubesat design <http://openmdao.
 25,000 design variables using adjoint derivatives.
 
 You don't have to provide analytic derivatives for all of the components. OpenMDAO just
-finite-differences components where they are missing and then computes semi-analytic
+finite-differences components that are missing them and then computes semi-analytic
 multidisciplinary derivatives. Semi-analytic derivatives offer a fast and easy
 way to gain a lot of computational efficiency. For example they gave us a 5x
 reduction in compute cost for an `aero-structural wind turbine optimization
