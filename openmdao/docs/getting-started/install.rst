@@ -4,7 +4,7 @@ Getting Started
 
 .. warning::
 
-        The following software is in an ALPHA state.  The version that you are downloading
+        OpenMDAO 1.0 is in an ALPHA state.  The version that you are downloading
         and installing is under active development, and as such may be broken from time to time.
         Therefore, OpenMDAO 1.0 Alpha should be used at your own risk!
 
@@ -16,14 +16,46 @@ This document exists to explain what OpenMDAO is, how to get it, and how to inst
 on OS X, Windows or Linux.  For a guide of examples of how to use OpenMDAO,
 see the OpenMDAO User's Guide. (link)
 
+
+=========================
+TL;DR
+=========================
+Install Python via `Anaconda <http://continuum.io/downloads>`_., then:
+
+::
+
+    pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
+
+This will at least get you started, but you should read the rest of this guide...
+we worked really hard on it!
+
 =================
 What is OpenMDAO?
 =================
 
 OpenMDAO is a high-performance computing platform for systems analysis and optimization
 that enables you to decompose your models, making them easier to build and
-maintain, while solving them in a tightly-coupled manner with efficient parallel
+maintain, while still solving them in a tightly-coupled manner with efficient parallel
 numerical methods.
+
+We provide a library of sparse solvers and optimizers designed to work
+with our MPI based, distributed memory data passing scheme. But don't worry about
+installing MPI when you're just getting started. We can run really efficiently in
+serial using a numpy data passing implementation as well.
+
+Our most unique capability is our automatic analytic multidisciplinary derivatives.
+Provide analytic derivatives each of your components, and
+OpenMDAO will solve the chain-rule across your entire model, to compute system
+level derivatives for newton solvers and/or gradient based optimizers. This lets you
+solve really large non-linear problems, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_ with over
+25,000 design variables using adjoint derivatives.
+
+You don't have to provide analytic derivatives for all of the components. OpenMDAO just
+finite-differences components that are missing them and then computes semi-analytic
+multidisciplinary derivatives. Semi-analytic derivatives offer a fast and easy
+way to gain a lot of computational efficiency. For example they gave us a 5x
+reduction in compute cost for an `aero-structural wind turbine optimization
+<http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_.
 
 ===================
 Supported Platforms
@@ -73,11 +105,19 @@ Windows
 OpenMDAO Prerequisites
 ======================
 
+In order to use OpenMDAO, you will need Python_ installed on your system.
+You'll also need a few other basic scientific computing libraries for python:
+Numpy and Scipy.
+
+.. note::
+
+    If you want a bundled Python installation that has all our prerequisites
+    included, try Anaconda_.  (This is the way the OpenMDAO developers do it.)
+
 Python
 ++++++
 
-In order to use OpenMDAO, you will need Python_ installed at the system level of
-your machine.  Currently, we are supporting two different versions of Python:
+Currently, we are supporting two different versions of Python:
 
 .. _Python: http://www.python.org
 
@@ -88,12 +128,6 @@ your machine.  Currently, we are supporting two different versions of Python:
  * 3.4.3_ or higher versions of 3.4
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
-
-.. note::
-
-    If you want a bundled Python installation that has all our prerequisites
-    included, try Anaconda_.  (This is the way the OpenMDAO developers do it.)
-
 
 
 Numpy
@@ -116,22 +150,27 @@ includes Scipy.
 
  * Version 0.15.1 or higher will be supported.
 
+Git (Optional)
+++++++++++++++
+Git_ is a very popular open-source version control system that we use for our source code.
+It tracks content such as files and directories. OpenMDAO hosts its repo on `GitHub <https://github.com/openmdao/openmdao>`_.
+Git_ is not a hard requirement, but it's a good way to stay up to date with the latest code
+updates (remember, we're still in ALPHA!).
+
+.. _Git: http://git-scm.com/download
+
 Compilers (Optional)
 ++++++++++++++++++++
 OpenMDAO doesn't have a strict requirement on any compiled code, but we can optionally
 make use of some compiled libraries, if they are present in your python environment.
-In order to run things in parallel you'll need petsc4py and mpi4py. So if you want to use those
+If you don't want to use any of these optional features, then you shouldn't need
+a compiler. You can install the compilers and build the libraries later on
+and OpenMDAO will use them. So its fine if you start out without the compiled stuff,
+and add it in later.
+
+We can link to both the PyOpt and PyOpt-Sparse optimization libraries. Also in
+order to run things in parallel you'll need petsc4py and mpi4py. So if you want to use those
 packages, you'll need binaries for them for your platform, or you'll need a compiler.
-If you don't want to run in parallel, then you shouldn't need a compiler installed for OpenMDAO.
-
-Git (Optional)
-++++++++++++++
-Git is a very popular and efficient open-source version control system that we use for our source code.
-It tracks content such as files and directories. OpenMDAO keeps its code on GitHub, the Git website.
-Git is not a hard requirement, though.  If you want, download Git_ for later use to grab the
-OpenMDAO repository during installation.
-
-.. _Git: http://git-scm.com/download
 
 ==========================
 Install OpenMDAO Using pip
@@ -143,35 +182,25 @@ To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
     pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
-
 =======================================
-Get the OpenMDAO Source Code (optional)
+Clone the repo and install from that
 =======================================
 
-Some users might prefer to have the source code, and install from that.
-There are two ways to obtain the code: use Git, or download the code.
-
-Using Git
-+++++++++
- If you installed Git, use Git to obtain the OpenMDAO source code from Github:
+Since the code is in ALPHA state, and is changing daily, you might prefer to actually
+clone our repository and install from that. This way you can always pull down the latest
+changes without re-installing.
 
 ::
 
     git clone http://github.com/OpenMDAO/OpenMDAO-Framework
 
-Download File
-+++++++++++++
 
-    Download a zip file of code from the `OpenMDAO Github website <http://github.com/OpenMDAO/OpenMDAO-Framework/>`_,
-    then unzip it locally.
-
-If you get the source code, then pip installation will work differently. Change directories to
-the top level of the OpenMDAO repository, then you'll want to use the following command:
+Then you're going to use pip to install in development mode. Change directories to
+the top level of the OpenMDAO repository, and use the following command:
 
 ::
 
     pip install -e .
-
 
 
 =======
