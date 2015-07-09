@@ -1,6 +1,3 @@
-###############
-Getting Started
-###############
 
 .. warning::
 
@@ -20,13 +17,13 @@ see the OpenMDAO User's Guide. (link)
 =====
 TL;DR
 =====
-Install Python via `Anaconda <http://continuum.io/downloads>`_., then:
+Install Python via `Anaconda <http://continuum.io/downloads>`_, then:
 
 ::
 
     pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
-This will at least get you started, but you should read the rest of this guide...
+This will at least get you started, but you should read the rest of this guide--
 we worked really hard on it!
 
 =================
@@ -110,7 +107,9 @@ Numpy and Scipy.
 .. note::
 
     If you want a bundled Python installation that has all our prerequisites
-    included, try Anaconda_.  (This is the way the OpenMDAO developers do it.)
+    included, try Anaconda_.  (This is the way the OpenMDAO developers `do it`_.)
+
+    .. _do it: anaconda.html
 
 Python
 ++++++
@@ -180,9 +179,9 @@ To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
     pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
-=======================================
-Clone the Repo and Install From Source
-=======================================
+=================================================
+Clone the Repo and Install From Source (Optional)
+=================================================
 
 Since the code is in ALPHA state, and is changing daily, you might prefer to actually
 clone our repository and install from that. This way you can always pull down the latest
