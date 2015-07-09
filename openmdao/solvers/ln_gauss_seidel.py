@@ -64,23 +64,23 @@ class LinearGaussSeidel(LinearSolver):
         #for voi in vois:
         #    drmat[voi].vec[:] = -rhs_mat[voi]
         sol_buf = {}
-        norm0, norm = 1.0, 1.0
-        counter = 0
-        while counter < self.options['maxiter'] and \
-              norm > self.options['atol'] and \
-              norm/norm0 > self.options['rtol']:
+        f_norm0, f_norm = 1.0, 1.0
+        self.iter_count = 0
+        while self.iter_count < self.options['maxiter'] and \
+              f_norm > self.options['atol'] and \
+              f_norm/f_norm0 > self.options['rtol']:
 
             if mode == 'fwd':
 
                 for name, sub in system.subsystems(local=True):
 
-                    for voi in vois:
-                        print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
+                    #for voi in vois:
+                        #print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
 
                     for voi in vois:
-                        print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(name, deriv=True, var_of_interest=voi)
-                        print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     if isinstance(sub, Component):
 
@@ -93,16 +93,16 @@ class LinearGaussSeidel(LinearSolver):
                         # apply_linear.
                         sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois)
 
-                    for voi in vois:
-                        print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
                         drmat[voi].vec *= -1.0
                         drmat[voi].vec += rhs_mat[voi]
 
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
-                    for voi in vois:
-                        print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = dumat[voi].vec
@@ -149,12 +149,15 @@ class LinearGaussSeidel(LinearSolver):
                     sol_buf[voi] = drmat[voi].vec
 
 
-            counter += 1
+            self.iter_count += 1
             if self.options['maxiter'] == 1:
-                norm = 0.0
+                f_norm = 0.0
             else:
-                norm = self._norm(system, mode, rhs_mat)
-                print('Residual:', norm)
+                f_norm = self._norm(system, mode, rhs_mat)
+
+            if self.options['iprint'] > 0:
+                self.print_norm('LN_GS', self.local_meta, self.iter_count,
+                                f_norm, f_norm0, indent=1)
 
         return sol_buf
 
