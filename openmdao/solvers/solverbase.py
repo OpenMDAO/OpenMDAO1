@@ -18,7 +18,7 @@ class SolverBase(object):
         desc = 'Set to 0 to disable printing, set to 1 to print the ' \
                'residual to stdout each iteration, set to 2 to print ' \
                'subiteration residuals as well.'
-        self.options.add_option('iprint', 1, values=[0, 1, 2], desc=desc)
+        self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
         self.recorders = []
         self.local_meta = None
 
