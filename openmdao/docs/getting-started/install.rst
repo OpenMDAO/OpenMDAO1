@@ -17,7 +17,7 @@ see the OpenMDAO User's Guide. (link)
 =========================
 TL;DR
 =========================
-Install `Anaconda <http://continuum.io/downloads>`_., then: 
+Install `Anaconda <http://continuum.io/downloads>`_., then:
 
 ::
 
@@ -41,10 +41,10 @@ installing MPI when you're just getting started. We can run really efficiently i
 serial using a numpy data passing implementation as well.
 
 Our most unique capability is our automatic analytic multidisciplinary derivatives.
-You provide analytic derivatives for each of your components, and
+Provide analytic derivatives each of your components, and
 OpenMDAO will solve the chain-rule across your entire model, to compute system
 level derivatives for newton solvers and/or gradient based optimizers. This lets you
-solve large non-linear optimizations, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_ with over
+solve really large non-linear problems, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_ with over
 25,000 design variables using adjoint derivatives.
 
 You don't have to provide analytic derivatives for all of the components. OpenMDAO just
