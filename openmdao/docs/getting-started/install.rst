@@ -17,7 +17,7 @@ see the OpenMDAO User's Guide. (link)
 =========================
 TL;DR
 =========================
-Install `Anaconda <http://continuum.io/downloads>`_., then:
+Install Python via `Anaconda <http://continuum.io/downloads>`_., then:
 
 ::
 
