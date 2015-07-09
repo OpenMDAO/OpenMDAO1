@@ -69,29 +69,10 @@ class Problem(System):
         """
         self.root[name] = val
 
-    def setup(self):
-        """Performs all setup of vector storage, data transfer, etc.,
-        necessary to perform calculations.
+    def _setup_connections(self, params_dict, unknowns_dict):
+        """Generate a mapping of absolute param pathname to the pathname
+        of its unknown.
         """
-        # if we modify the system tree, we'll need to call _setup_variables
-        # again
-        tree_changed = False
-
-        # get map of vars to VOI indices
-        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
-
-        # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname)
-
-        # Give every system a dictionary of parameters and of unknowns
-        # that are visible to that system, keyed on absolute pathnames.
-        # Metadata for each variable will contain the name of the
-        # variable relative to that system as well as size and shape if
-        # known.
-
-        # Returns the parameters and unknowns dictionaries for the root.
-        params_dict, unknowns_dict = self.root._setup_variables()
-
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
@@ -134,6 +115,31 @@ class Problem(System):
         # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
+        return connections
+
+    def setup(self):
+        """Performs all setup of vector storage, data transfer, etc.,
+        necessary to perform calculations.
+        """
+        # if we modify the system tree, we'll need to call _setup_variables
+        # and _setup_connections again
+        tree_changed = False
+        meta_changed = False  # call _setup_variables again if we change metadata
+
+        # Give every system an absolute pathname
+        self.root._setup_paths(self.pathname)
+
+        # Give every system a dictionary of parameters and of unknowns
+        # that are visible to that system, keyed on absolute pathnames.
+        # Metadata for each variable will contain the name of the
+        # variable relative to that system as well as size and shape if
+        # known.
+
+        # Returns the parameters and unknowns dictionaries for the root.
+        params_dict, unknowns_dict = self.root._setup_variables()
+
+        connections = self._setup_connections(params_dict, unknowns_dict)
+
         # check for parameters that are not connected to a source/unknown
         hanging_params = []
         for p in params_dict:
@@ -154,13 +160,16 @@ class Problem(System):
 
         for comp in self.root.components(recurse=True):
             if not comp.is_active():
-                tree_changed = True
+                meta_changed = True
                 comp._set_vars_as_remote()
 
         # All changes to the system tree must be complete at this point
 
-        # rerun _setup_variables to account for changes in system tree
         if tree_changed:
+            self.root._setup_paths(self.pathname)
+            params_dict, unknowns_dict = self.root._setup_variables()
+            connections = self._setup_connections()
+        elif meta_changed:
             params_dict, unknowns_dict = self.root._setup_variables()
 
         # create a mapping from absolute name to top level promoted name
@@ -169,7 +178,8 @@ class Problem(System):
             abs_to_prom[meta['pathname']] = meta['promoted_name']
 
         # propagate top level promoted names and connections
-        # down to all subsystems
+        # down to all subsystems so it's easier to determine relevance
+        # at lower levels.
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
             for meta in chain(sub._params_dict.values(),
@@ -185,6 +195,9 @@ class Problem(System):
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
+
+        # get map of vars to VOI indices
+        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
 
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
