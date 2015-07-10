@@ -332,6 +332,12 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
         """
+        self.params = self.unknowns = self.resids = None
+        self.dumat, self.dpmat, self.drmat = {}, {}, {}
+        self._local_unknown_sizes = None
+        self._local_param_sizes = None
+        self._owning_ranks = None
+
         if not self.is_active():
             return
 

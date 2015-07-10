@@ -185,6 +185,9 @@ class Component(System):
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
         """
+        self.params = self.unknowns = self.resids = None
+        self.dumat, self.dpmat, self.drmat = {}, {}, {}
+
         if not self.is_active():
             return
 
