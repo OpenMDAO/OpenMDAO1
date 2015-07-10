@@ -14,8 +14,9 @@ Purpose
 
 This document exists to explain what OpenMDAO is, how to get it, and how to install it
 on OS X, Windows or Linux.  For a guide of examples of how to use OpenMDAO,
-see the OpenMDAO User's Guide. (link)
+see the `OpenMDAO User Guide`_.
 
+.. _OpenMDAO User Guide: ../usr-guide/design.html
 
 
 TL;DR
@@ -81,7 +82,7 @@ OpenMDAO will run on specified versions of Windows, Mac OS X, and Linux.
 However, we can't support every version of every OS.  So while you may very well
 be able to get OpenMDAO to run on a iPhone that's running a Windows 3.1 emulator,
 we're not going to be able to help you when something goes awry with that install.
-Here are the systems on which we will test and support:
+Here are the systems which we will support:
 
 Mac OS X
 ++++++++
@@ -125,9 +126,7 @@ Numpy and Scipy.
 .. note::
 
     If you want a bundled Python installation that has all our prerequisites
-    included, try Anaconda_.  (This is the way the OpenMDAO developers `do it`_.)
-
-    .. _do it: anaconda.html
+    included, try Anaconda_.
 
 Python
 ++++++
