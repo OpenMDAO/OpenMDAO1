@@ -68,44 +68,44 @@ What's New in OpenMDAO 1.0?
 
 If you're new to OpenMDAO, then all you need to know is that the API in 1.0 is different
 then in any older version. So, if you look at older models in a forum post or something,
-don't be surprised when the code doesn't quite look right.
+don't be surprised when the code doesn't look quite right.
 
 If you're an existing OpenMDAO user trying to move your models up into this version,
 then there are a bunch of API changes you need to be aware of.
 OpenMDAO 1.0 Alpha, is a departure from the versions that preceded it (OpenMDAO 0.0.1 through 0.13.0).
 In fact, OpenMDAO 1.0 is a complete re-write of the framework from the ground up. The new code base is
-much smaller (~5000 lines of code), and will be much easier for others to work with.
+much smaller (it's now ~5000 lines of code), and will be much easier for others to work with.
 
-We tried to follow a couple of guiding principals in the re-write:
+We tried to follow a couple of guiding principles in the re-write:
 
 #. The code base should have as few dependencies as possible
-#. The user facing API should be as small and self-consistent as possible
-#. There should not be any magic happening without the user's knowledge
+#. The user-facing API should be as small and self-consistent as possible
+#. There should not be any "magic" happening without the user's knowledge
 
-To that end we've made some very significant changes to the framework. Some of the
-most notable changes include:
+To that end we've made some significant changes to the framework. Some of the
+most notable differences include:
 
   - The Component execute method is now named `solve_nonlinear`
   - There are now three types of variables: `parameter`, `output`, and `state`
   - The way you define and access framework variables (we've removed our dependency on Traits)
   - The way you group sets of components together (Assembly has been replaced with Group)
-  - Solvers not drivers any more. Optimizers and DOE are still drivers
+  - Solvers are not drivers any more. Optimizers and DOE are still drivers
   - There is no more workflow
 
 If you'd like to get a more direct comparison between old and new OpenMDAO input files,
-check out our `guide to converting your models <Pre-1.0 Conversion Guide>`_.
-While a lot of the API has changed, the overall major concepts are mostly the same.
-You still have components, which get grouped together with connections defining data
+check out our `guide to converting your models, the <Pre-1.0 Conversion Guide>`_.
+While a lot of the API has changed, the overall concepts are mostly the same.
+You still have components, which get grouped together with connections, defining data
 passing between them. The new API helps draw a sharper line between what is a framework
-variable and what is a regular python attribute. It also lowers the amount of different
+variable and what is a regular Python attribute. The new API also reduces the number of different
 kinds of objects you have to interact with.
 
 Since this is still an Alpha release, there is a lot of missing functionality
-compared to the older versions. For example we're not yet automatically computing
-execution order for you, and we don't have full support for file wrapped components
-yet. We'll be working on adding in the missing features as we go, but the Alpha is
-already very capable, especially for gradient based optimization with analytic derivatives.
-We're putting it out specifically for our users to try the new API and can start to
+compared to the older versions. For example, we're not yet automatically computing
+execution order for you, and we don't have full support for file-wrapped components
+yet. We'll be working on adding the missing features as we go, but the Alpha is
+already very capable, especially for gradient-based optimization with analytic derivatives.
+We're putting it out specifically for our users to try the new API so that they can start to
 play around with it. If you have any feedback, we'd love to hear it.
 
 ===================
@@ -165,6 +165,8 @@ Numpy and Scipy.
     If you want a bundled Python installation that has all our prerequisites
     included, try Anaconda_.
 
+    .. _Anaconda: http://continuum.io/downloads
+
 Python
 ++++++
 
@@ -214,14 +216,13 @@ Compilers (Optional)
 ++++++++++++++++++++
 OpenMDAO doesn't have a strict requirement on any compiled code, but we can optionally
 make use of some compiled libraries, if they are present in your Python environment.
-If you don't want to use any of these optional features, then you shouldn't need
-a compiler. You can install the compilers and build the libraries later on
-and OpenMDAO will use them. So its fine if you start out without the compiled stuff,
-and add it in later.
+If you don't want to use any of these optional features, then you won't need
+a compiler. You can always install the compilers later and build the libraries then,
+and OpenMDAO will use them.
 
-We can link to both the PyOpt and PyOpt-Sparse optimization libraries. Also in
-order to run things in parallel you'll need petsc4py and mpi4py. So if you want to use those
-packages, you'll need binaries for them for your platform, or you'll need a compiler.
+We can link to both the PyOpt and PyOpt-Sparse optimization libraries. Also, in
+order to run things in parallel, you'll need petsc4py and mpi4py. So if you want to use those
+packages, you'll either need platform-specific binaries for them, or you'll need a compiler.
 
 
 Install OpenMDAO Using pip
@@ -255,12 +256,13 @@ the top level of the OpenMDAO repository, and use the following command:
 
 
 Testing
-=======
-You can run our test suite to see if your installation is working right.
-You can run any test manually by passing the test file to python, or you can
-use a test runner, like `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run
-the whole OpenMDAO test suite at once. Once you've installed it, go to the top of the
-OpenMDAO repo and run
+-------
+
+You can run our test suite to see if your installation is working correctly.
+Run any single test manually by simply passing the test file to python, or you can
+use a test-runner, like `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run
+the whole OpenMDAO test suite at once. Once you've installed nosetest, go to the top of the
+OpenMDAO repo and run:
 
 ::
 
@@ -269,7 +271,7 @@ OpenMDAO repo and run
 .. note::
 
     One of our developers wrote his own test runner, called
-    `testflo <https://github.com/naylor-b/testflo>`_. It is light weight
-    and it can run tests in parallel on multi-core processors. It's still a bit
-    experimental, but the OpenMDAO dev team uses instead of nosetest because
-    its faster.
+    `testflo <https://github.com/naylor-b/testflo>`_. It is lightweight,
+    and it can run tests in parallel on multi-core processors. It's still
+    experimental, but the OpenMDAO dev team uses testflo instead of nosetest because
+    testflo is faster.
