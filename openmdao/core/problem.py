@@ -124,20 +124,32 @@ class Problem(System):
         # if we modify the system tree, we'll need to call _setup_variables
         # and _setup_connections again
         tree_changed = False
-        meta_changed = False  # call _setup_variables again if we change metadata
+
+        # call _setup_variables again if we change metadata
+        meta_changed = False
 
         # Give every system an absolute pathname
         self.root._setup_paths(self.pathname)
 
-        # Give every system a dictionary of parameters and of unknowns
-        # that are visible to that system, keyed on absolute pathnames.
-        # Metadata for each variable will contain the name of the
-        # variable relative to that system as well as size and shape if
-        # known.
-
-        # Returns the parameters and unknowns dictionaries for the root.
+        # Returns the parameters and unknowns metadata dictionaries
+        # for the root, which has an entry for each variable contained
+        # in any child of root. Metadata for each variable will contain
+        # the name of the variable relative to that system, the absolute
+        # name of the variable, any user defined metadata, and the value,
+        # size and/or shape if known. For example:
+        #  unknowns_dict['G1.G2.foo.v1'] = {
+        #     'promoted_name' :  'v1',
+        #     'pathname' : 'G1.G2.foo.v1', # absolute path from the top
+        #     'size' : 1,
+        #     'shape' : 1,
+        #     'val': 2.5,   # the initial value of that variable (if known)
+        #  }
         params_dict, unknowns_dict = self.root._setup_variables()
 
+        # collect all connections, both implicit and explicit from
+        # anywhere in the tree, and put them in a dict where each key
+        # is an absolute param name that maps to the absolute name of
+        # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
 
         # check for parameters that are not connected to a source/unknown
@@ -163,7 +175,8 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        # All changes to the system tree must be complete at this point
+        # All changes to the system tree or variable metadata
+        # must be complete at this point.
 
         if tree_changed:
             self.root._setup_paths(self.pathname)
@@ -172,25 +185,24 @@ class Problem(System):
         elif meta_changed:
             params_dict, unknowns_dict = self.root._setup_variables()
 
-        # create a mapping from absolute name to top level promoted name
-        abs_to_prom = {}
-        for meta in chain(params_dict.values(), unknowns_dict.values()):
-            abs_to_prom[meta['pathname']] = meta['promoted_name']
-
-        # propagate top level promoted names and connections
-        # down to all subsystems so it's easier to determine relevance
-        # at lower levels.
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            sub.connections = connections
-            for meta in chain(sub._params_dict.values(),
-                              sub._unknowns_dict.values()):
-                meta['top_promoted_name'] = abs_to_prom[meta['pathname']]
-
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
 
-        # propagate top level metadata, e.g. unit_conv, to subsystems
-        self.root._update_sub_unit_conv()
+        # propagate top level promoted names, unit conversions,
+        # and connections down to all subsystems
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            sub.connections = connections
+
+            for meta in chain(sub._params_dict.values(),
+                              sub._unknowns_dict.values()):
+                path = meta['pathname']
+                if path in unknowns_dict:
+                    meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
+                else:
+                    meta['top_promoted_name'] = params_dict[path]['promoted_name']
+                    unit_conv = params_dict[path].get('unit_conv')
+                    if unit_conv:
+                        meta['unit_conv'] = unit_conv
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to

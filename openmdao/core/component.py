@@ -41,7 +41,6 @@ class Component(System):
             if shape == 1:
                 return 0.
             return np.zeros(shape)
-
         return val
 
     def _check_val(self, name, var_type, val, shape):
