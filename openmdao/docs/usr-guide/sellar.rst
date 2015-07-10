@@ -140,3 +140,64 @@ Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
 Concurrent Subspace Optimization for Multidisciplinary System Design,"
 *Proceedings References 79 of the 34th AIAA Aerospace Sciences Meeting and
 Exhibit,* Reno, NV, January 1996.
+
+
+
+Setting up the Optimization Problem
+===================================
+
+.. testcode:: Disciplines
+
+    from openmdao.components.execcomp import ExecComp
+    from openmdao.components.paramcomp import ParamComp
+    from openmdao.core.group import Group
+    from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+
+    class SellarDerivatives(Group):
+        """ Group containing the Sellar MDA. This version uses the disciplines
+        with derivatives."""
+
+        def __init__(self):
+            super(SellarDerivatives, self).__init__()
+
+            self.add('px', ParamComp('x', 1.0), promotes=['*'])
+            self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+
+            self.add('d1', SellarDis1(), promotes=['*'])
+            self.add('d2', SellarDis2(), promotes=['*'])
+
+            self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                         z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                     promotes=['*'])
+
+            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+
+            self.nl_solver = NLGaussSeidel()
+            self.nl_solver.options['atol'] = 1.0e-12
+
+
+
+.. testcode:: Disciplines
+
+        top = Problem()
+        top.root = SellarDerivatives()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-8
+
+        top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+                             high=np.array([10.0, 10.0]))
+        top.driver.add_param('x', low=0.0, high=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1')
+        top.driver.add_constraint('con2')
+
+        top.setup()
+        top.run()
+
+        assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
+        assert_rel_error(self, top['z'][1], 0.0, 1e-3)
+        assert_rel_error(self, top['x'], 0.0, 1e-3)
