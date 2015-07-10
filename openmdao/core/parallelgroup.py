@@ -77,6 +77,7 @@ class ParallelGroup(Group):
             The communicator being offered by the parent system.
         """
         self.comm = comm
+        self._local_subsystems = OrderedDict()
 
         # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
@@ -121,8 +122,6 @@ class ParallelGroup(Group):
                         assigned += 1
                         if assigned == limit:
                             break
-
-        self._local_subsystems = OrderedDict()
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > assigned_procs[i]:

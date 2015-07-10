@@ -33,9 +33,7 @@ class Component(System):
     def __init__(self):
         super(Component, self).__init__()
         self._post_setup = False
-
         self._jacobian_cache = {}
-        self._vecs = None
 
     def _get_initial_val(self, val, shape):
         if val is _NotSet:

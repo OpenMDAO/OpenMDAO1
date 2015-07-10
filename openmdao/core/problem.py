@@ -228,13 +228,11 @@ class Problem(System):
         precedence. If that is 'auto', then mode is determined by the width
         of the prameter and quantity space."""
 
-        root = self.root
-
         if mode == 'auto':
-            mode = root.ln_solver.options['mode']
+            mode = self.root.ln_solver.options['mode']
             if mode == 'auto':
-                p_dict = root._params_dict
-                u_dict = root._unknowns_dict
+                p_dict = self.root._params_dict
+                u_dict = self.root._unknowns_dict
 
                 # Sum up param size
                 p_length = 0
@@ -257,7 +255,7 @@ class Problem(System):
                         # The user sometimes specifies the parameter output
                         # name instead of its target because it is more
                         # convenient
-                        for key, val in iteritems(root.connections):
+                        for key, val in iteritems(self.root.connections):
                             if val == param:
                                 meta = u_dict[param]
                                 break

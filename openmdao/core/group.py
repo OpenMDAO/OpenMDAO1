@@ -258,6 +258,7 @@ class Group(System):
         """
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
+        self._data_xfer = {}
 
         for sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
