@@ -13,7 +13,6 @@ Getting Started
    :maxdepth: 1
 
    getting-started/install.rst
-   getting-started/anaconda.rst
 
 ==========
 User Guide

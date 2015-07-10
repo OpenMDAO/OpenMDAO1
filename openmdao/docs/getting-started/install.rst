@@ -5,18 +5,22 @@
         and installing is under active development, and as such may be broken from time to time.
         Therefore, OpenMDAO 1.0 Alpha should be used at your own risk!
 
-=======
+=====
+Intro
+=====
+
 Purpose
-=======
+-------
 
 This document exists to explain what OpenMDAO is, how to get it, and how to install it
 on OS X, Windows or Linux.  For a guide of examples of how to use OpenMDAO,
 see the OpenMDAO User's Guide. (link)
 
 
-=====
+
 TL;DR
-=====
+-----
+
 Install Python via `Anaconda <http://continuum.io/downloads>`_, then:
 
 ::
@@ -67,8 +71,11 @@ versions of OpenMDAO.  Why did we do this?  [Explain in detail the reasons for d
 old versions.]
 
 ===================
-Supported Platforms
+Installation
 ===================
+
+Supported Platforms
+-------------------
 
 OpenMDAO will run on specified versions of Windows, Mac OS X, and Linux.
 However, we can't support every version of every OS.  So while you may very well
@@ -108,9 +115,8 @@ Windows
  * Windows 8
 
 
-======================
 OpenMDAO Prerequisites
-======================
+----------------------
 
 In order to use OpenMDAO, you will need Python_ installed on your system.
 You'll also need a few other basic scientific computing libraries for python:
@@ -181,9 +187,9 @@ We can link to both the PyOpt and PyOpt-Sparse optimization libraries. Also in
 order to run things in parallel you'll need petsc4py and mpi4py. So if you want to use those
 packages, you'll need binaries for them for your platform, or you'll need a compiler.
 
-==========================
+
 Install OpenMDAO Using pip
-==========================
+--------------------------
 
 To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
@@ -191,9 +197,9 @@ To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
     pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
-=================================================
+
 Clone the Repo and Install From Source (Optional)
-=================================================
+-------------------------------------------------
 
 Since the code is in ALPHA state, and is changing daily, you might prefer to actually
 clone our repository and install from that. This way you can always pull down the latest
@@ -212,9 +218,8 @@ the top level of the OpenMDAO repository, and use the following command:
     pip install -e .
 
 
-=======
 Testing
-=======
+-------
 
 You can test using any python test framework, e.g. `unittest`, `nosetest` to run
 the OpenMDAO test suite from the top level of the OpenMDAO repo.

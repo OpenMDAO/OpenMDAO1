@@ -25,7 +25,7 @@ Installation of OpenMDAO in Anaconda
 ====================================
 
 Download and Install Anaconda
-+++++++++++++++++++++++++++
++++++++++++++++++++++++++++++
 
 Download the Anaconda_ distribution for your platform (version 3.7.4 or higher) and run the installer.
 
