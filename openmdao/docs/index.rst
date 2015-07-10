@@ -13,7 +13,6 @@ Getting Started
    :maxdepth: 1
 
    getting-started/install.rst
-   getting-started/anaconda.rst
 
 ==========
 User Guide
@@ -22,7 +21,6 @@ User Guide
 .. toctree::
    :maxdepth: 1
 
-   usr-guide/intro.rst
    usr-guide/design.rst
    usr-guide/basics.rst
    usr-guide/tutorials.rst
