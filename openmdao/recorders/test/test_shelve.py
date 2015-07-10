@@ -1,4 +1,4 @@
-""" Unit test for the DumpCaseRecorder. """
+""" Unit test for the ShelveRecorder. """
 
 import unittest
 import shelve
