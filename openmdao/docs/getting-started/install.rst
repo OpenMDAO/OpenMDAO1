@@ -93,12 +93,14 @@ most notable differences include:
   - There is no more workflow
 
 If you'd like to get a more direct comparison between old and new OpenMDAO input files,
-check out our `guide to converting your models, the <Pre-1.0 Conversion Guide>`_.
+check out our guide to converting your models, the `Pre-1.0 Conversion Guide`_.
 While a lot of the API has changed, the overall concepts are mostly the same.
 You still have components, which get grouped together with connections, defining data
 passing between them. The new API helps draw a sharper line between what is a framework
 variable and what is a regular Python attribute. The new API also reduces the number of different
 kinds of objects you have to interact with.
+
+.. _Pre-1.0 Conversion Guide: ../conversion-guide/intro.html
 
 Since this is still an Alpha release, there is a lot of missing functionality
 compared to the older versions. For example, we're not yet automatically computing
