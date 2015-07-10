@@ -71,3 +71,6 @@ test_report.out
 # SNOPT
 SNOPT_print.out
 SNOPT_summary.out
+
+# Testing
+shelve_test.*

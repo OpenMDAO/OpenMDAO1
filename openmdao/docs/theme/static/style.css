@@ -13,6 +13,9 @@ a {
     color: navy;
     text-decoration: none;
 }
+div.body h1 a, div.body h2 a, div.body h3 a, div.body h4 a, div.body h5 a, div.body h6 a {
+  color: navy!important;
+}
 
 a:visited {
     color: navy;
