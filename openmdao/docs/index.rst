@@ -22,7 +22,6 @@ User Guide
 .. toctree::
    :maxdepth: 1
 
-   usr-guide/intro.rst
    usr-guide/design.rst
    usr-guide/basics.rst
    usr-guide/tutorials.rst

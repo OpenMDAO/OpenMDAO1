@@ -54,6 +54,18 @@ way to gain a lot of computational efficiency. For example, they gave us a 5x
 reduction in compute cost for an `aero-structural wind turbine optimization
 <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_.
 
+===========================
+What's New in OpenMDAO 1.0?
+===========================
+
+If you're new to OpenMDAO, then everything is new to you.  If you're an existing
+OpenMDAO user, then everything in 1.0 is new to you, also!  The most recent release,
+OpenMDAO 1.0 Alpha, is a departure from the versions that
+preceded it (OpenMDAO 0.0.1 through 0.13.0).  In fact, OpenMDAO 1.0 is a complete
+re-write of the framework from the ground up.  It is incompatible with all previous
+versions of OpenMDAO.  Why did we do this?  [Explain in detail the reasons for departure from
+old versions.]
+
 ===================
 Supported Platforms
 ===================
