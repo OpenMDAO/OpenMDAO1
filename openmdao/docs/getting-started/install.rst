@@ -203,6 +203,19 @@ the top level of the OpenMDAO repository, and use the following command:
 =======
 Testing
 =======
+You can run our test suite to see if your installation is working right.
+You can run any test manually by passing the test file to python, or you can
+use a test runner, like `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run
+the whole OpenMDAO test suite at once. Once you've installed it, go to the top of the
+OpenMDAO repo and run
 
-You can test using any python test framework, e.g. `unittest`, `nosetest` to run
-the OpenMDAO test suite from the top level of the OpenMDAO repo.
+::
+
+    nosetest .
+
+.. note::
+
+    One of our developers wrote his own test runner, called
+    `testflo <https://github.com/naylor-b/testflo>`. It is light weight
+    and it can run tests in parallel on multi-core processors. It's still a bit
+    experimental, but the OpenMDAO dev team uses it to run our tests.
