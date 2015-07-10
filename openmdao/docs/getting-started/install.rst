@@ -19,8 +19,10 @@ see the `OpenMDAO User Guide`_.
 .. _OpenMDAO User Guide: ../usr-guide/design.html
 
 
-TL;DR
------
+`TL;DR`_
+---------
+
+.. _TL;DR: https://en.wikipedia.org/wiki/TL;DR
 
 Install Python via `Anaconda <http://continuum.io/downloads>`_, then:
 
