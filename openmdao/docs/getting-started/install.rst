@@ -67,7 +67,7 @@ What's New in OpenMDAO 1.0?
 ===========================
 
 If you're new to OpenMDAO, then all you need to know is that the API in 1.0 is different
-then in any older version. So, if you look at older models in a forum post or something,
+than in any older version. So, if you look at older models in a forum post or something,
 don't be surprised when the code doesn't look quite right.
 
 If you're an existing OpenMDAO user trying to move your models up into this version,
@@ -267,11 +267,3 @@ OpenMDAO repo and run:
 ::
 
     nosetest .
-
-.. note::
-
-    One of our developers wrote his own test runner, called
-    `testflo <https://github.com/naylor-b/testflo>`_. It is lightweight,
-    and it can run tests in parallel on multi-core processors. It's still
-    experimental, but the OpenMDAO dev team uses testflo instead of nosetest because
-    testflo is faster.
