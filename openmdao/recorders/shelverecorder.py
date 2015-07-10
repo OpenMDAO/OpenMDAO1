@@ -46,12 +46,11 @@ class ShelveRecorder(BaseRecorder):
         f = self.out
 
         groupings = (
-            ("/Parameters/", params),
-            ("/Unknowns/", unknowns),
-            ("/Residuals/", resids),
+            ("/Parameters", params),
+            ("/Unknowns", unknowns),
+            ("/Residuals", resids),
         )
 
         for label, values in groupings:
             local_name = group_name + label
-            for key, val in values.items():
-                f[local_name + key] = val
+            f[local_name] = values
