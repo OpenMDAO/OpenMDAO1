@@ -19,8 +19,10 @@ see the `OpenMDAO User Guide`_.
 .. _OpenMDAO User Guide: ../usr-guide/design.html
 
 
-TL;DR
------
+`TL;DR`_
+---------
+
+.. _TL;DR: https://en.wikipedia.org/wiki/TL;DR
 
 Install Python, Pip, Numpy, and Scipy. (`Anaconda Python <http://continuum.io/downloads>`_, comes
 bundled with everything you need). Next, install OpenMDAO with pip:
