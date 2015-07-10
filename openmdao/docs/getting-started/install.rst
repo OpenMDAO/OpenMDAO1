@@ -216,6 +216,7 @@ OpenMDAO repo and run
 .. note::
 
     One of our developers wrote his own test runner, called
-    `testflo <https://github.com/naylor-b/testflo>`. It is light weight
+    `testflo <https://github.com/naylor-b/testflo>`_. It is light weight
     and it can run tests in parallel on multi-core processors. It's still a bit
-    experimental, but the OpenMDAO dev team uses it to run our tests.
+    experimental, but the OpenMDAO dev team uses instead of nosetest because
+    its faster. 
