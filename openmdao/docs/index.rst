@@ -12,7 +12,8 @@ Getting Started
 .. toctree::
    :maxdepth: 1
 
-   getting-started/index.rst
+   getting-started/install.rst
+   getting-started/anaconda.rst
 
 ==========
 User Guide
@@ -21,7 +22,12 @@ User Guide
 .. toctree::
    :maxdepth: 1
 
-   usr-guide/index.rst
+   usr-guide/intro.rst
+   usr-guide/design.rst
+   usr-guide/basics.rst
+   usr-guide/tutorials.rst
+   usr-guide/examples.rst
+
 
 =========================
 Pre-1.0 Conversion Guide
@@ -30,7 +36,9 @@ Pre-1.0 Conversion Guide
 .. toctree::
    :maxdepth: 1
 
-   conversion-guide/index.rst
+   conversion-guide/intro.rst
+   conversion-guide/paraboloid.rst
+   conversion-guide/sellar.rst
 
 =========================
 OpenMDAO Reference Sheets

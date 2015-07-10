@@ -2,7 +2,7 @@
 .. _Getting-Started:
 
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 1
 
    install.rst
    anaconda.rst
