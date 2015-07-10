@@ -467,6 +467,7 @@ class Driver(object):
         # Metadata Setup
         self.iter_count += 1
         metadata = create_local_meta(None, 'Driver')
+        system.ln_solver.local_meta = metadata
         update_local_meta(metadata, (self.iter_count,))
 
         # Solve the system once and record results.
