@@ -156,13 +156,16 @@ class TestProblem(unittest.TestCase):
         prob.root.G1['G2.C1.x'] = 12.
         self.assertEqual(C1.params['x'], 12.)
 
-        try:
-            prob['G1.x'] = 11.
-        except Exception as err:
-            self.assertEqual(err.args[0],
-                             "Can't find variable 'G1.x' in unknowns or params vectors in system ''")
-        else:
-            self.fail("exception expected")
+        # dangling promoted params now automatically get a ParamComp
+        prob['G1.x'] = 17.
+
+        self.assertEqual(prob.root.G1.G2.C1.params['x'], 12.0)
+        prob.run()
+
+        # after run(), the 'dangling' param G1.x now has the value
+        # of its ParamComp output
+        self.assertEqual(prob.root.G1.G2.C1.params['x'], 17.0)
+
 
     def test_input_input_explicit_conns_no_conn(self):
         prob = Problem(root=Group())
@@ -711,25 +714,16 @@ class TestProblem(unittest.TestCase):
         top.setup()
         top.run()
 
-        mode = top._mode('auto', ['p1.a'], ['comp.x'])
-        self.assertEqual(mode, 'fwd')
-
-        mode = top._mode('auto', ['p1.a', 'p2.b'], ['comp.x'])
-        self.assertEqual(mode, 'rev')
-
         mode = top._mode('auto', ['a'], ['x'])
         self.assertEqual(mode, 'fwd')
 
         mode = top._mode('auto', ['a', 'b'], ['x'])
         self.assertEqual(mode, 'rev')
 
-        mode = top._mode('auto', ['comp.a'], ['x'])
-        self.assertEqual(mode, 'fwd')
-
         # make sure _check function does it too
 
         #try:
-            #mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            #mode = top._check_for_matrix_matrix(['a'], ['x'])
         #except Exception as err:
             #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
             #self.assertEquals(text_type(err), msg)
@@ -737,7 +731,7 @@ class TestProblem(unittest.TestCase):
             #self.fail('Exception expected')
 
         root.ln_solver.options['mode'] = 'fwd'
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        mode = top._check_for_matrix_matrix(['a', 'b'], ['x'])
         self.assertEqual(mode, 'fwd')
 
     def test_check_matrix_matrix(self):
@@ -754,7 +748,9 @@ class TestProblem(unittest.TestCase):
         top.setup()
         top.run()
 
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        # NOTE: this call won't actually calculate mode because default ln_solver
+        # is ScipyGMRES and its default mode is 'fwd', not 'auto'.
+        mode = top._check_for_matrix_matrix(['a'], ['x'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'

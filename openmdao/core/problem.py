@@ -80,12 +80,13 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
+        implicit_conns, dangling = _get_implicit_connections(params_dict,
+                                                             unknowns_dict,
+                                                             connections)
 
         # combine implicit and explicit connections
         for tgt, srcs in implicit_conns.items():
-            for src in srcs:
-                connections.setdefault(tgt, []).append(src)
+            connections.setdefault(tgt, []).extend(srcs)
 
         # resolve any input to input explicit connections
         input_sets = {}
@@ -115,7 +116,7 @@ class Problem(System):
         # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
-        return connections
+        return connections, dangling
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -150,17 +151,40 @@ class Problem(System):
         # anywhere in the tree, and put them in a dict where each key
         # is an absolute param name that maps to the absolute name of
         # a single source.
-        connections = self._setup_connections(params_dict, unknowns_dict)
+        connections, dangling_promoted = self._setup_connections(params_dict,
+                                                                 unknowns_dict)
 
-        # check for parameters that are not connected to a source/unknown
-        hanging_params = []
-        for p in params_dict:
-            if p not in connections.keys():
-                hanging_params.append(p)
+        # if there are any dangling promoted params, create a ParamComp
+        # at the appropriate Group level and connect it to all of the
+        # dangling params
+        added_pcomps = {}
+        for prom_name, abs_params in dangling_promoted.items():
+            tree_changed = True
+            parts = prom_name.rsplit('.', 1)
+            if len(parts) > 1:
+                grp = self.root._subsystem(parts[0])
+                vname = parts[1]
+            else:
+                grp = self.root
+                vname = prom_name
+            for absp in abs_params:
+                if 'val' in params_dict[absp]:
+                    val = params_dict[absp]['val']
+                    break
+            else:
+                raise RuntimeError("No initial value given for any of these "
+                                   "dangling promoted params: %s" % abs_params)
 
-        if hanging_params:
-            msg = 'Parameters %s have no associated unknowns.' % hanging_params
-            warnings.warn(msg)
+            pcomp_name = grp._unique_sys_name(prefix='_P')
+
+            # we need to add the new ParamComp before the other subsystems
+            # so that it will exectute early enough to update the params
+            # that it feeds.
+            subs = grp._subsystems
+            grp._subsystems = OrderedDict()
+            grp.add(pcomp_name, ParamComp(vname, val), promotes=[vname])
+            for name, sub in subs.items():
+                grp._subsystems[name] = sub
 
         # TODO: handle any automatic grouping of systems here...
 
@@ -170,6 +194,7 @@ class Problem(System):
         else:
             self.root._setup_communicators(FakeComm())
 
+        # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
             if not comp.is_active():
                 meta_changed = True
@@ -181,9 +206,18 @@ class Problem(System):
         if tree_changed:
             self.root._setup_paths(self.pathname)
             params_dict, unknowns_dict = self.root._setup_variables()
-            connections = self._setup_connections()
+            connections, dangling_promoted = self._setup_connections(params_dict,
+                                                                     unknowns_dict)
         elif meta_changed:
             params_dict, unknowns_dict = self.root._setup_variables()
+
+        # check for parameters that are not connected to a source/unknown.
+        # this includes ALL dangling params, both promoted and unpromoted.
+        dangling_params = [p for p in params_dict if p not in connections]
+
+        if dangling_params:
+            msg = 'Parameters %s have no associated unknowns.' % dangling_params
+            warnings.warn(msg)
 
         # calculate unit conversions and store in param metadata
         _setup_units(connections, params_dict, unknowns_dict)
@@ -218,7 +252,7 @@ class Problem(System):
         relevance = Relevance(params_dict, unknowns_dict, connections,
                               pois, oois, mode)
 
-        # create VecWrappers for all groups in the system tree.
+        # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, relevance=relevance,
                                  impl=self._impl)
 
@@ -238,53 +272,29 @@ class Problem(System):
         """ Determine the mode based on precedence. The mode in `mode` is
         first. If that is 'auto', then the mode in root.ln_options takes
         precedence. If that is 'auto', then mode is determined by the width
-        of the prameter and quantity space."""
+        of the parameter and quantity space."""
 
         if mode == 'auto':
             mode = self.root.ln_solver.options['mode']
             if mode == 'auto':
-                p_dict = self.root._params_dict
-                u_dict = self.root._unknowns_dict
-
-                # Sum up param size
                 p_length = 0
-                for param in param_list:
-                    if param in p_dict:
-                        meta = p_dict[param]
-                    elif param in u_dict:
-                        meta = u_dict[param]
-                    else:
-                        # try to convert promoted name to absolute name
-                        try:
-                            param = get_absvarpathnames(param, u_dict, 'unknowns_dict')[0]
-                        except KeyError:
-                            try:
-                                param = get_absvarpathnames(param, p_dict, 'params_dict')[0]
-                            except KeyError:
-                                raise NameError("'%s' cannot be converted into an absolute name." %
-                                                param)
-
-                        # The user sometimes specifies the parameter output
-                        # name instead of its target because it is more
-                        # convenient
-                        for key, val in iteritems(self.root.connections):
-                            if val == param:
-                                meta = u_dict[param]
-                                break
-                        else:
-                            raise RuntimeError("Can't determine size of '%s'" % param)
-
-                    p_length += meta['size']
-
-                # Sum up unknowns size
                 u_length = 0
-                for unkn in unknown_list:
+                uset = set(unknown_list)
+                pset = set(param_list)
+                for u, meta in chain(self.root._unknowns_dict.items(),
+                                     self.root._params_dict.items()):
+                    prom_name = meta['promoted_name']
+                    if prom_name in uset:
+                        u_length += meta['size']
+                        uset.remove(prom_name)
+                    elif prom_name in pset:
+                        p_length += meta['size']
+                        pset.remove(prom_name)
 
-                    if unkn not in u_dict:
-                        unkn = get_absvarpathnames(unkn, u_dict, 'unknowns_dict')[0]
-
-                    meta = u_dict[unkn]
-                    u_length += meta['size']
+                if uset:
+                    raise RuntimeError("Can't determine size of unknowns %s." % list(uset))
+                if pset:
+                    raise RuntimeError("Can't determine size of params %s." % list(pset))
 
                 # Choose mode based on size
                 if p_length > u_length:
@@ -1049,7 +1059,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n\n')
 
-def _get_implicit_connections(params_dict, unknowns_dict):
+def _get_implicit_connections(params_dict, unknowns_dict, explicit_conns):
     """
     Finds all matches between promoted names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
@@ -1065,6 +1075,9 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     unknowns_dict : dict
         dictionary of metadata for all unknowns in this `Group`
+
+    explicit_conns : dict
+        dictionary of explicit connections (target mapped to sources)
 
     Returns
     -------
@@ -1094,9 +1107,18 @@ def _get_implicit_connections(params_dict, unknowns_dict):
                                (name, lst))
 
     connections = {}
-    for uname, uabs in abs_unknowns.items():
-        pabs = abs_params.get(uname, ())
-        for p in pabs:
-            connections[p] = uabs
+    dangling = {} # maps promoted name to dangling params
+    for prom_name, pabs_list in abs_params.items():
+        for pabs in pabs_list:
+            uabs = abs_unknowns.get(prom_name, ())
+            if uabs:
+                connections[pabs] = uabs
+            elif prom_name not in dangling and prom_name != pabs_list[0]:
+                # if a param has an explicit connection, it's not dangling
+                for p in pabs_list:
+                    if p in explicit_conns:
+                        break
+                else:
+                    dangling[prom_name] = pabs_list
 
-    return connections
+    return connections, dangling
