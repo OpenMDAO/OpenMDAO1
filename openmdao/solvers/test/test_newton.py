@@ -9,6 +9,7 @@ from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
+from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.solvers.newton import Newton
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
@@ -53,6 +54,22 @@ class TestNewton(unittest.TestCase):
         top = Problem()
         top.root = SellarDerivatives()
         top.root.nl_solver = Newton()
+
+        top.setup()
+        top.run()
+
+        assert_rel_error(self, top['y1'], 25.58830273, .00001)
+        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(top.root.nl_solver.iter_count, 8)
+
+    def test_sellar_derivs_with_Lin_GS(self):
+
+        top = Problem()
+        top.root = SellarDerivatives()
+        top.root.nl_solver = Newton()
+        top.root.ln_solver = LinearGaussSeidel()
 
         top.setup()
         top.run()

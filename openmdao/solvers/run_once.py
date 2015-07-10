@@ -34,6 +34,7 @@ class RunOnce(NonLinearSolver):
         self.iter_count += 1
         # Metadata setup
         local_meta = create_local_meta(metadata, system.name)
+        system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count,))
 
         system.children_solve_nonlinear(local_meta)
