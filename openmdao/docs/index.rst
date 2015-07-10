@@ -4,19 +4,22 @@
 Documentation for OpenMDAO version: |version|
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+==================
+`Getting Started`_
+==================
 
-===============
-Getting Started
-===============
+.. _Getting Started: getting-started/install.html
 
 .. toctree::
    :maxdepth: 1
 
    getting-started/install.rst
 
-==========
-User Guide
-==========
+==============
+`User Guide`_
+==============
+
+.. _User Guide: usr-guide/design.html
 
 .. toctree::
    :maxdepth: 1
@@ -26,10 +29,11 @@ User Guide
    usr-guide/tutorials.rst
    usr-guide/examples.rst
 
+===========================
+`Pre-1.0 Conversion Guide`_
+===========================
 
-=========================
-Pre-1.0 Conversion Guide
-=========================
+.. _Pre-1.0 Conversion Guide: conversion-guide/intro.html
 
 .. toctree::
    :maxdepth: 1
@@ -38,21 +42,16 @@ Pre-1.0 Conversion Guide
    conversion-guide/paraboloid.rst
    conversion-guide/sellar.rst
 
-=========================
-OpenMDAO Reference Sheets
-=========================
+============================
+`OpenMDAO Reference Sheets`_
+============================
+
+.. _OpenMDAO Reference Sheets: srcdocs/index.html
 
 .. toctree::
    :maxdepth: 3
 
    srcdocs/index.rst
-
-==============================
-Appendix and Glossary
-==============================
-
-.. toctree::
-   :maxdepth: 1
 
 ==============================
 Index
