@@ -61,13 +61,27 @@ class Problem(System):
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
+        'name' is assumed to be a promoted name.
 
         Args
         ----
         name : str
-             The name of the variable to set into the unknowns vector.
+             The promoted name of the variable to set into the
+             unknowns vector, or into params vectors if the params are
+             unconnected.
         """
-        self.root[name] = val
+        if name in self.root.unknowns:
+            self.root.unknowns[name] = val
+        elif name in self._dangling:
+            for p in self._dangling[name]:
+                parts = p.rsplit('.', 1)
+                if len(parts) == 1:
+                    self.root.params[p] = val
+                else:
+                    grp = self.root._subsystem(parts[0])
+                    grp.params[parts[1]] = val
+        else:
+            raise KeyError("Variable '%s' not found." % name)
 
     def _setup_connections(self, params_dict, unknowns_dict):
         """Generate a mapping of absolute param pathname to the pathname
@@ -80,9 +94,7 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns, dangling = _get_implicit_connections(params_dict,
-                                                             unknowns_dict,
-                                                             connections)
+        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
 
         # combine implicit and explicit connections
         for tgt, srcs in implicit_conns.items():
@@ -96,27 +108,39 @@ class Problem(System):
                     input_sets.setdefault(src, set()).update((tgt,src))
                     input_sets.setdefault(tgt, set()).update((tgt,src))
 
-        newconns = {}
         for tgt, srcs in connections.items():
-            tgts = (tgt,)
-            if tgt in input_sets and tgt not in newconns:
-                srcs = [s for s in srcs if s in unknowns_dict]
-                if srcs:
-                    tgts = input_sets[tgt]
+            if tgt in input_sets:
+                for s in srcs:
+                    if s in unknowns_dict:
+                        for t in input_sets[tgt]:
+                            if s not in connections.get(t,()):
+                                connections.setdefault(t, []).append(s)
 
-            if len(srcs) > 1:
-                raise RuntimeError("Target '%s' is connected to multiple sources: %s" %
-                                   (tgt, srcs))
-            for target in tgts:
-                if srcs:
-                    newconns[target] = srcs[0]
+        prom_unknowns = { m['promoted_name'] for m in unknowns_dict.values() }
+        newconns = {}
+        self._dangling = {}
+        for tgt, srcs in connections.items():
+            unknown_srcs = [s for s in srcs if s in unknowns_dict]
+            if len(unknown_srcs) > 1:
+                raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
+                                   (tgt, unknown_srcs))
+
+            if unknown_srcs:
+                newconns[tgt] = unknown_srcs[0]
 
         connections = newconns
+
+        for p, meta in params_dict.items():
+            if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
+                self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
+            elif meta['pathname'] not in connections:
+                self._dangling[meta['promoted_name']] = set([meta['pathname']])
+
 
         # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
-        return connections, dangling
+        return connections
 
     def setup(self):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -151,40 +175,7 @@ class Problem(System):
         # anywhere in the tree, and put them in a dict where each key
         # is an absolute param name that maps to the absolute name of
         # a single source.
-        connections, dangling_promoted = self._setup_connections(params_dict,
-                                                                 unknowns_dict)
-
-        # if there are any dangling promoted params, create a ParamComp
-        # at the appropriate Group level and connect it to all of the
-        # dangling params
-        added_pcomps = {}
-        for prom_name, abs_params in dangling_promoted.items():
-            tree_changed = True
-            parts = prom_name.rsplit('.', 1)
-            if len(parts) > 1:
-                grp = self.root._subsystem(parts[0])
-                vname = parts[1]
-            else:
-                grp = self.root
-                vname = prom_name
-            for absp in abs_params:
-                if 'val' in params_dict[absp]:
-                    val = params_dict[absp]['val']
-                    break
-            else:
-                raise RuntimeError("No initial value given for any of these "
-                                   "dangling promoted params: %s" % abs_params)
-
-            pcomp_name = grp._unique_sys_name(prefix='_P')
-
-            # we need to add the new ParamComp before the other subsystems
-            # so that it will exectute early enough to update the params
-            # that it feeds.
-            subs = grp._subsystems
-            grp._subsystems = OrderedDict()
-            grp.add(pcomp_name, ParamComp(vname, val), promotes=[vname])
-            for name, sub in subs.items():
-                grp._subsystems[name] = sub
+        connections = self._setup_connections(params_dict, unknowns_dict)
 
         # TODO: handle any automatic grouping of systems here...
 
@@ -206,8 +197,7 @@ class Problem(System):
         if tree_changed:
             self.root._setup_paths(self.pathname)
             params_dict, unknowns_dict = self.root._setup_variables()
-            connections, dangling_promoted = self._setup_connections(params_dict,
-                                                                     unknowns_dict)
+            connections = self._setup_connections(params_dict, unknowns_dict)
         elif meta_changed:
             params_dict, unknowns_dict = self.root._setup_variables()
 
@@ -1059,7 +1049,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n\n')
 
-def _get_implicit_connections(params_dict, unknowns_dict, explicit_conns):
+def _get_implicit_connections(params_dict, unknowns_dict):
     """
     Finds all matches between promoted names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
@@ -1075,9 +1065,6 @@ def _get_implicit_connections(params_dict, unknowns_dict, explicit_conns):
 
     unknowns_dict : dict
         dictionary of metadata for all unknowns in this `Group`
-
-    explicit_conns : dict
-        dictionary of explicit connections (target mapped to sources)
 
     Returns
     -------
@@ -1107,18 +1094,10 @@ def _get_implicit_connections(params_dict, unknowns_dict, explicit_conns):
                                (name, lst))
 
     connections = {}
-    dangling = {} # maps promoted name to dangling params
     for prom_name, pabs_list in abs_params.items():
-        for pabs in pabs_list:
-            uabs = abs_unknowns.get(prom_name, ())
-            if uabs:
+        uabs = abs_unknowns.get(prom_name, ())
+        if uabs:  # param has a src in unknowns
+            for pabs in pabs_list:
                 connections[pabs] = uabs
-            elif prom_name not in dangling and prom_name != pabs_list[0]:
-                # if a param has an explicit connection, it's not dangling
-                for p in pabs_list:
-                    if p in explicit_conns:
-                        break
-                else:
-                    dangling[prom_name] = pabs_list
 
-    return connections, dangling
+    return connections

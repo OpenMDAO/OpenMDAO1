@@ -841,6 +841,9 @@ class PlaceholderVecWrapper(object):
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
 
+    def __contains__(self, name):
+        self.__getitem__(name)
+
     def __setitem__(self, name, value):
         """
         Set the value of the named variable. Since this is just a

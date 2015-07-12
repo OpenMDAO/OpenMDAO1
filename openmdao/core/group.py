@@ -1206,19 +1206,6 @@ class Group(System):
 
         return ranks
 
-    def _unique_sys_name(self, prefix):
-        """
-        Return a string of the form prefix+'_'+counter, where
-        counter gets incremented until no subsystem matching that string is
-        found in this Group.
-        """
-        counter = 1
-        while True:
-            name = "%s_%d" % (prefix, counter)
-            if name not in self._subsystems:
-                return name
-            counter += 1
-
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
     Args
