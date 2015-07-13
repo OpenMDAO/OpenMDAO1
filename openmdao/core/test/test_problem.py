@@ -200,7 +200,6 @@ class TestProblem(unittest.TestCase):
         prob.root.G1['G2.C1.x'] = 12.
         self.assertEqual(C1.params['x'], 12.)
 
-        # dangling promoted params now automatically get a ParamComp
         prob['G1.x'] = 17.
 
         self.assertEqual(prob.root.G1.G2.C1.params['x'], 17.0)
