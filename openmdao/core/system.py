@@ -97,8 +97,8 @@ class System(object):
 
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for n, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
-                    if name == meta.get('promoted_name', n):
+                for meta in chain(self._params_dict.values(), self._unknowns_dict.values()):
+                    if name == meta.get('promoted_name'):
                         return True
 
         return False
@@ -134,7 +134,7 @@ class System(object):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
         """
         if include_self:
-            yield ('', self)
+            yield self
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -161,7 +161,7 @@ class System(object):
         self.dpmat[None].vec[:] = 0.0
 
         # Recurse to clear all dparams vectors.
-        for name, system in self.subsystems(local=True):
+        for system in self.subsystems(local=True):
             system.clear_dparams()
 
     def preconditioner(self):
@@ -217,14 +217,11 @@ class System(object):
         """
         Set 'remote' attribute in metadata of all variables for this subsystem.
         """
-        pname = self.pathname + '.'
-        for name, meta in self._params_dict.items():
-            if name.startswith(pname):
-                meta['remote'] = True
+        for meta in self._params_dict.values():
+            meta['remote'] = True
 
-        for name, meta in self._unknowns_dict.items():
-            if name.startswith(pname):
-                meta['remote'] = True
+        for meta in self._unknowns_dict.values():
+            meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None, total_derivs=False):
@@ -310,7 +307,7 @@ class System(object):
                 target_input = unknowns.flat[param_src]
 
             mydict = {}
-            for key, val in self._params_dict.items():
+            for val in self._params_dict.values():
                 if val['promoted_name'] == p_name:
                     mydict = val
                     break
@@ -570,6 +567,10 @@ class System(object):
         # return the combined dict
         return comm.bcast(J, root=0)
 
+    def _get_var_pathname(self, name):
+        if self.pathname:
+            return '.'.join((self.pathname, name))
+        return name
 
 def get_relname_map(unknowns, unknowns_dict, child_name):
     """
@@ -596,9 +597,10 @@ def get_relname_map(unknowns, unknowns_dict, child_name):
     for rel, meta in unknowns.items():
         abspath = meta['pathname']
         if abspath.startswith(child_name+'.'):
-            newmeta = unknowns_dict.get(abspath)
-            if newmeta is not None:
-                newrel = newmeta['promoted_name']
+            for m in unknowns_dict.values():
+                if abspath == m['pathname']:
+                    newrel = m['promoted_name']
+                    break
             else:
                 newrel = rel
             umap[rel] = newrel

@@ -1,8 +1,6 @@
 """ Testing group-level finite difference. """
 
 import unittest
-from unittest import SkipTest
-
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
