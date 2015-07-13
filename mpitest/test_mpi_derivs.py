@@ -1,8 +1,6 @@
 """ Unit test for the Scipy GMRES linear solver. """
 
 import unittest
-from unittest import SkipTest
-
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp

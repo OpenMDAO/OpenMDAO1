@@ -27,7 +27,8 @@ class TestPyoptSparse(unittest.TestCase):
 
     def setUp(self):
         if SKIP is True:
-            raise unittest.SkipTest
+            raise unittest.SkipTest("Could not import pyOptSparseDriver. "
+                                    "Is pyoptsparse installed?")
 
     def test_simple_paraboloid(self):
 
