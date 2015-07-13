@@ -45,8 +45,8 @@ class TestShelveRecorder(RecorderTests.Tests):
                 del f[local_name]
         f.close()
 
-            # Having deleted all found values, the file should now be empty.
-            self.assertEqual(len(f), 0)
+        # Having deleted all found values, the file should now be empty.
+        self.assertEqual(len(f), 0)
 
 
 if __name__ == "__main__":
