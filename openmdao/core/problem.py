@@ -94,7 +94,7 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
+        implicit_conns, prom_noconns = _get_implicit_connections(params_dict, unknowns_dict)
 
         # combine implicit and explicit connections
         for tgt, srcs in implicit_conns.items():
@@ -108,6 +108,12 @@ class Problem(System):
                     input_sets.setdefault(src, set()).update((tgt,src))
                     input_sets.setdefault(tgt, set()).update((tgt,src))
 
+        # find any promoted but not connected inputs
+        for p, meta in params_dict.items():
+            prom = meta['promoted_name']
+            if prom in prom_noconns:
+                input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
+
         for tgt, srcs in connections.items():
             if tgt in input_sets:
                 for s in srcs:
@@ -116,9 +122,7 @@ class Problem(System):
                             if s not in connections.get(t,()):
                                 connections.setdefault(t, []).append(s)
 
-        prom_unknowns = { m['promoted_name'] for m in unknowns_dict.values() }
         newconns = {}
-        self._dangling = {}
         for tgt, srcs in connections.items():
             unknown_srcs = [s for s in srcs if s in unknowns_dict]
             if len(unknown_srcs) > 1:
@@ -130,11 +134,14 @@ class Problem(System):
 
         connections = newconns
 
+        self._dangling = {}
+        prom_unknowns = { m['promoted_name'] for m in unknowns_dict.values() }
         for p, meta in params_dict.items():
-            if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
-                self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
-            elif meta['pathname'] not in connections:
-                self._dangling[meta['promoted_name']] = set([meta['pathname']])
+            if meta['pathname'] not in connections:
+                if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
+                    self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
+                else:
+                    self._dangling[meta['promoted_name']] = set([meta['pathname']])
 
 
         # perform additional checks on connections (e.g. for compatible types and shapes)
@@ -1093,11 +1100,17 @@ def _get_implicit_connections(params_dict, unknowns_dict):
             raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
                                (name, lst))
 
+    prom_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
+
     connections = {}
+    dangling = {}
+
     for prom_name, pabs_list in abs_params.items():
         uabs = abs_unknowns.get(prom_name, ())
         if uabs:  # param has a src in unknowns
             for pabs in pabs_list:
                 connections[pabs] = uabs
+        elif prom_name not in prom_unknowns:
+            dangling.setdefault(prom_name, set()).update(pabs_list)
 
-    return connections
+    return connections, dangling
