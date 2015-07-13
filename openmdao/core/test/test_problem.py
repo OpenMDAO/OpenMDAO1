@@ -3,6 +3,7 @@
 import unittest
 import numpy as np
 from six import text_type, PY3
+from six.moves import cStringIO
 import warnings
 
 from openmdao.components.linear_system import LinearSystem
@@ -136,20 +137,6 @@ class TestProblem(unittest.TestCase):
         expected_msg = "Promoted name 'z' matches multiple unknowns: ['c1.z', 'c2.z']"
 
         self.assertEqual(str(err.exception), expected_msg)
-
-    def test_hanging_params(self):
-        # test that a warning is issued for an unconnected parameter
-        root  = Group()
-        root.add('ls', LinearSystem(size=10))
-
-        prob = Problem(root=root)
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            prob.setup()
-            assert len(w) == 1, "Warning expected."
-            self.assertEqual("Parameters ['ls.A', 'ls.b'] have no associated unknowns.",
-                              str(w[-1].message))
 
     def test_unconnected_param_access(self):
         prob = Problem(root=Group())
@@ -553,6 +540,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('D', D())
         problem.root.connect('A.y', 'D.y')
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
         problem = Problem()
@@ -560,6 +552,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Explicit
         problem = Problem()
@@ -568,6 +565,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('D', D())
         problem.root.connect('C.y', 'D.y')
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
         problem = Problem()
@@ -575,6 +577,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('C', C(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
     def test_simplest_run(self):
 
@@ -789,7 +796,7 @@ class TestProblem(unittest.TestCase):
         sub1.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            mode = top._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -800,7 +807,7 @@ class TestProblem(unittest.TestCase):
         sub2.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            mode = top._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -808,7 +815,8 @@ class TestProblem(unittest.TestCase):
             self.fail('Exception expected')
 
         sub1.ln_solver.options['mode'] = 'rev'
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        mode = top._check_for_matrix_matrix(['a'], ['x'])
+
 
 if __name__ == "__main__":
     unittest.main()

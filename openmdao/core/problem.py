@@ -3,12 +3,13 @@
 from __future__ import print_function
 
 import os
+import sys
 import warnings
 import json
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems, string_types
-import sys
+from six.moves import cStringIO
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -16,11 +17,12 @@ import numpy as np
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.mpiwrap import MPI, FakeComm, under_mpirun
 from openmdao.core.relevance import Relevance
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor
@@ -208,16 +210,8 @@ class Problem(System):
         elif meta_changed:
             params_dict, unknowns_dict = self.root._setup_variables()
 
-        # check for parameters that are not connected to a source/unknown.
-        # this includes ALL dangling params, both promoted and unpromoted.
-        dangling_params = [p for p in params_dict if p not in connections]
-
-        if dangling_params:
-            msg = 'Parameters %s have no associated unknowns.' % dangling_params
-            warnings.warn(msg)
-
         # calculate unit conversions and store in param metadata
-        _setup_units(connections, params_dict, unknowns_dict)
+        self._setup_units(connections, params_dict, unknowns_dict)
 
         # propagate top level promoted names, unit conversions,
         # and connections down to all subsystems
@@ -259,6 +253,104 @@ class Problem(System):
         # Prepare Driver
         self.driver._setup(self.root)
 
+    def check_setup(self, out_stream=sys.stdout):
+        """Write a report to the given stream indicating any potential problems found
+        with the current configuration.
+
+        Args
+        ----
+        out_stream : a file-like object
+            Stream where report will be written.
+        """
+
+        # check for parameters that are not connected to a source/unknown.
+        # this includes ALL dangling params, both promoted and unpromoted.
+        dangling_params = [p for p in self.root._params_dict
+                              if p not in self.root.connections]
+        if dangling_params:
+            print("\nThe following parameters have no associated unknowns:",
+                  file=out_stream)
+            for d in sorted(dangling_params):
+                print(d, file=out_stream)
+
+        # Adjoint vs Forward mode appropriateness
+        if self._calculated_mode != self.root._relevance.mode:
+            print("\nSpecified derivative mode is '%s', but calculated mode is '%s'\n(based "
+                  "on param size of %d and unknown size of %d)" % (self.root._relevance.mode,
+                                                                   self._calculated_mode,
+                                                                   self._p_length,
+                                                                   self._u_length),
+                  file=out_stream)
+
+        # list all unit conversions being made (including only units on one side)
+        if self._unit_diffs:
+            print("\nUnit Conversions")
+            for (src,tgt), (sunit,tunit) in self._unit_diffs.items():
+                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit), file=out_stream)
+
+        # Components without unknowns
+        nocomps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+                     if len(c.unknowns) == 0])
+        if nocomps:
+            print("\nThe following components have no unknowns:", file=out_stream)
+            for n in nocomps:
+                print(n, file=out_stream)
+
+        # Unconnected components
+        conn_comps = set([t.rsplit('.',1)[0] for t in self.root.connections.keys()])
+        conn_comps.update([s.rsplit('.',1)[0] for s in self.root.connections.values()])
+        noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+                          if c.pathname not in conn_comps])
+        if noconn_comps:
+            print("\nThe following components have no connections:", file=out_stream)
+            for comp in noconn_comps:
+                print(comp, file=out_stream)
+
+        # No case recorder
+        if not self.driver.recorders:
+            for grp in self.root.subgroups(recurse=True, local=True):
+                if grp.nl_solver.recorders or grp.ln_solver.recorders:
+                    break
+            else:
+                print("\nNo recorders have been specified, so no data will be saved.",
+                      file=out_stream)
+
+        if under_mpirun():
+            # Indicate that there are no parallel systems if user is running under MPI
+            if MPI.COMM_WORLD.rank == 0:
+                for grp in self.root.subgroups(recurse=True):
+                    if isinstance(grp, ParallelGroup):
+                        break
+                else:
+                    print("\nRunning under MPI, but no ParallelGroups were found.",
+                          file=out_stream)
+
+                mincpu, maxcpu = self.root.get_req_procs()
+                if maxcpu is not None and MPI.COMM_WORLD.size > maxcpu:
+                    print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
+                          (MPI.COMM_WORLD.size, maxcpu))
+        # or any ParalleGroups found when not running under MPI
+        else:
+            for grp in self.root.subgroups(recurse=True):
+                if isinstance(grp, ParallelGroup):
+                    print("\nFound ParallelGroup '%s', but not running under MPI." %
+                          grp.pathname, file=out_stream)
+
+        # Cycles in group w/o solver
+        # Components/Systems/Groups are not in the right execution order
+
+        # Incomplete optimization driver configuration
+        # Parallelizability for users running serial models
+        # io state of recorder-specific files?
+
+        # loop over subsystems and let them add any specific checks to the stream
+        for s in self.root.subsystems(recurse=True, local=True, include_self=True):
+            stream = cStringIO()
+            s.check_setup(out_stream=stream)
+            content = stream.getvalue()
+            if content:
+                print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
+
     def run(self):
         """ Runs the Driver in self.driver. """
 
@@ -271,33 +363,46 @@ class Problem(System):
         precedence. If that is 'auto', then mode is determined by the width
         of the parameter and quantity space."""
 
+        self._p_length = 0
+        self._u_length = 0
+        uset = set()
+        for unames in unknown_list:
+            if isinstance(unames, tuple):
+                uset.update(unames)
+            else:
+                uset.add(unames)
+        pset = set()
+        for pnames in param_list:
+            if isinstance(pnames, tuple):
+                pset.update(pnames)
+            else:
+                pset.add(pnames)
+
+        for meta in chain(self.root._unknowns_dict.values(),
+                          self.root._params_dict.values()):
+            prom_name = meta['promoted_name']
+            if prom_name in uset:
+                self._u_length += meta['size']
+                uset.remove(prom_name)
+            elif prom_name in pset:
+                self._p_length += meta['size']
+                pset.remove(prom_name)
+
+        if uset:
+            raise RuntimeError("Can't determine size of unknowns %s." % list(uset))
+        if pset:
+            raise RuntimeError("Can't determine size of params %s." % list(pset))
+
+        # Choose mode based on size
+        if self._p_length > self._u_length:
+            self._calculated_mode = 'rev'
+        else:
+            self._calculated_mode = 'fwd'
+
         if mode == 'auto':
             mode = self.root.ln_solver.options['mode']
             if mode == 'auto':
-                p_length = 0
-                u_length = 0
-                uset = set(unknown_list)
-                pset = set(param_list)
-                for u, meta in chain(self.root._unknowns_dict.items(),
-                                     self.root._params_dict.items()):
-                    prom_name = meta['promoted_name']
-                    if prom_name in uset:
-                        u_length += meta['size']
-                        uset.remove(prom_name)
-                    elif prom_name in pset:
-                        p_length += meta['size']
-                        pset.remove(prom_name)
-
-                if uset:
-                    raise RuntimeError("Can't determine size of unknowns %s." % list(uset))
-                if pset:
-                    raise RuntimeError("Can't determine size of params %s." % list(pset))
-
-                # Choose mode based on size
-                if p_length > u_length:
-                    mode = 'rev'
-                else:
-                    mode = 'fwd'
+                mode = self._calculated_mode
 
         return mode
 
@@ -843,8 +948,8 @@ class Problem(System):
         for recorder in self.driver.recorders:
             recorder.startup(self.root)
 
-        for group, solvers in self.root._find_all_solvers():
-            for solver in solvers:
+        for group in self.root.subgroups(recurse=True, include_self=True):
+            for solver in (group.nl_solver, group.ln_solver):
                 for recorder in solver.recorders:
                     recorder.startup(group)
 
@@ -896,50 +1001,58 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
 
-def _setup_units(connections, params_dict, unknowns_dict):
-    """
-    Calculate unit conversion factors for any connected
-    variables having different units and store them in params_dict.
+    def _setup_units(self, connections, params_dict, unknowns_dict):
+        """
+        Calculate unit conversion factors for any connected
+        variables having different units and store them in params_dict.
 
-    Args
-    ----
-    connections : dict
-        A dict of target variables (absolute name) mapped
-        to the absolute name of their source variable.
+        Args
+        ----
+        connections : dict
+            A dict of target variables (absolute name) mapped
+            to the absolute name of their source variable.
 
-    params_dict : OrderedDict
-        A dict of parameter metadata for the whole `Problem`.
+        params_dict : OrderedDict
+            A dict of parameter metadata for the whole `Problem`.
 
-    unknowns_dict : OrderedDict
-        A dict of unknowns metadata for the whole `Problem`.
-    """
+        unknowns_dict : OrderedDict
+            A dict of unknowns metadata for the whole `Problem`.
+        """
 
-    for target, source in connections.items():
-        tmeta = params_dict[target]
-        smeta = unknowns_dict[source]
+        self._unit_diffs = {}
+        for target, source in connections.items():
+            tmeta = params_dict[target]
+            smeta = unknowns_dict[source]
 
-        # units must be in both src and target to have a conversion
-        if 'units' not in tmeta or 'units' not in smeta:
-            continue
+            # units must be in both src and target to have a conversion
+            if 'units' not in tmeta or 'units' not in smeta:
+                # for later reporting in check_setup, keep track of any unit differences,
+                # even for connections where one side has units and the other doesn't
+                if 'units' in tmeta or 'units' in smeta:
+                    self._unit_diffs[(source, target)] = (smeta.get('units'),
+                                                          tmeta.get('units'))
+                continue
 
-        src_unit = smeta['units']
-        tgt_unit = tmeta['units']
+            src_unit = smeta['units']
+            tgt_unit = tmeta['units']
 
-        try:
-            scale, offset = get_conversion_tuple(src_unit, tgt_unit)
-        except TypeError as err:
-            if str(err) == "Incompatible units":
-                msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
-                    "is incompatible with unit '{t[units]}' "\
-                    "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
-                raise TypeError(msg)
-            else:
-                raise
+            try:
+                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+            except TypeError as err:
+                if str(err) == "Incompatible units":
+                    msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
+                        "is incompatible with unit '{t[units]}' "\
+                        "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
+                    raise TypeError(msg)
+                else:
+                    raise
 
-        # If units are not equivalent, store unit conversion tuple
-        # in the parameter metadata
-        if scale != 1.0 or offset != 0.0:
-            tmeta['unit_conv'] = (scale, offset)
+            # If units are not equivalent, store unit conversion tuple
+            # in the parameter metadata
+            if scale != 1.0 or offset != 0.0:
+                tmeta['unit_conv'] = (scale, offset)
+                self._unit_diffs[(source, target)] = (smeta.get('units'),
+                                                      tmeta.get('units'))
 
 
 def assign_parameters(connections):

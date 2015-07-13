@@ -1178,13 +1178,6 @@ class Group(System):
                 raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
                                    name)
 
-    def _find_all_solvers(self):
-        """Recursively finds all solvers in the given group and sub-groups."""
-        yield (self, (self.ln_solver, self.nl_solver))
-        for sub in self.subgroups():
-            for solvers in sub._find_all_solvers():
-                yield solvers
-
     def _get_owning_ranks(self):
         """
         Determine the 'owning' rank of each variable and return a dict
