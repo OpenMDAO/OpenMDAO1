@@ -18,6 +18,7 @@ class TestShelveRecorder(RecorderTests.Tests):
     def assertDatasetEquals(self, expected, tolerance):
         # Close the file to ensure it is written to disk.
         self.recorder.out.close()
+        self.recorder.out = None
 
         sentinel = object()
 
