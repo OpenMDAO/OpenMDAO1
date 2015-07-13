@@ -1,7 +1,5 @@
 """ Non-linear solver that implements a Newton's method."""
 
-from __future__ import print_function
-
 from openmdao.solvers.solverbase import NonLinearSolver
 from openmdao.util.recordutil import update_local_meta, create_local_meta
 
@@ -63,6 +61,7 @@ class Newton(NonLinearSolver):
         self.iter_count = 0
         ls_itercount = 0
         local_meta = create_local_meta(metadata, system.name)
+        system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
         # Perform an initial run to propagate srcs to targets.
@@ -71,7 +70,9 @@ class Newton(NonLinearSolver):
 
         f_norm = resids.norm()
         f_norm0 = f_norm
-        print('Residual:', f_norm)
+
+        if self.options['iprint'] > 0:
+            self.print_norm('NEWTON', local_meta, 0, f_norm, f_norm0)
 
         arg = system.drmat[None]
         result = system.dumat[None]
@@ -87,7 +88,6 @@ class Newton(NonLinearSolver):
             arg.vec[:] = resids.vec[:]
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
-            #print "LS 1", uvec.array, '+', dfvec.array
             unknowns.vec[:] += alpha*result.vec[:]
 
             # Metadata update
@@ -103,7 +103,8 @@ class Newton(NonLinearSolver):
                 recorder.raw_record(params, unknowns, resids, local_meta)
 
             f_norm = resids.norm()
-            print('Residual:', f_norm)
+            if self.options['iprint'] > 0:
+                self.print_norm('NEWTON', local_meta, self.iter_count, f_norm, f_norm0)
 
             # Backtracking Line Search
             while ls_itercount < ls_maxiter and \
@@ -126,6 +127,9 @@ class Newton(NonLinearSolver):
                     recorder.raw_record(params, unknowns, resids, local_meta)
 
                 f_norm = resids.norm()
+                if self.options['iprint'] > 1:
+                    self.print_norm('BK_TKG', local_meta, ls_itercount, f_norm,
+                                    f_norm/f_norm0, indent=1, solver='LS')
 
             # Reset backtracking
             alpha = alpha_base
@@ -135,7 +139,10 @@ class Newton(NonLinearSolver):
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
-        self.iter_count += 1
-        update_local_meta(local_meta, (self.iter_count, 0))
-        system.children_solve_nonlinear(local_meta)
+        #self.iter_count += 1
+        #update_local_meta(local_meta, (self.iter_count, 0))
+        #system.children_solve_nonlinear(local_meta)
 
+        if self.options['iprint'] > 0:
+            self.print_norm('NEWTON', local_meta, self.iter_count, f_norm,
+                            f_norm0, msg='Converged')

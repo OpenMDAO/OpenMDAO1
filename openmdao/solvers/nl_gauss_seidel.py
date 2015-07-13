@@ -46,12 +46,14 @@ class NLGaussSeidel(NonLinearSolver):
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
+        iprint = self.options['iprint']
 
         # Initial run
         self.iter_count = 1
 
         # Metadata setup
         local_meta = create_local_meta(metadata, system.name)
+        system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count,))
 
         # Initial Solve
@@ -71,6 +73,9 @@ class NLGaussSeidel(NonLinearSolver):
         normval = resids.norm()
         basenorm = normval if normval > atol else 1.0
 
+        if self.options['iprint'] > 0:
+            self.print_norm('NLN_GS', local_meta, 0, normval, basenorm)
+
         while self.iter_count < maxiter and \
                 normval > atol and \
                 normval/basenorm > rtol:
@@ -87,3 +92,11 @@ class NLGaussSeidel(NonLinearSolver):
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
+
+            if self.options['iprint'] > 0:
+                self.print_norm('NLN_GS', local_meta, self.iter_count, normval,
+                                basenorm)
+
+        if self.options['iprint'] > 0:
+            self.print_norm('NLN_GS', local_meta, self.iter_count, normval,
+                            basenorm, msg='Converged')

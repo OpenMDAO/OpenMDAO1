@@ -425,9 +425,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self._get_vector_size(u)
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self._get_vector_size(p)
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
             ui = 0
@@ -510,9 +510,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self._get_vector_size(u)
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self._get_vector_size(p)
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':
@@ -895,10 +895,6 @@ class Problem(System):
     def json_dependencies(self):
         return self.root._relevance.json_dependencies()
 
-    def _get_vector_size(self, pathname):
-        sys = pathname[:pathname.rfind('.')]    # up to last period
-        var = pathname.rsplit('.', 1)[1]        # after last period
-        return self.root._subsystem(sys).unknowns.metadata(var)['size']
 
 def _setup_units(connections, params_dict, unknowns_dict):
     """

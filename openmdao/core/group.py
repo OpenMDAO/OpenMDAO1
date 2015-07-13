@@ -274,6 +274,9 @@ class Group(System):
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
 
+            # check for any promotes that didn't match a variable
+            sub._check_promotes()
+
         return self._params_dict, self._unknowns_dict
 
     def _promoted_name(self, name, subsystem):

@@ -84,6 +84,11 @@ class System(object):
         -------
         bool
             True if the named variable is being promoted from this `System`.
+
+        Raises
+        ------
+        TypeError
+            if the promoted variable specifications are not in a valid format
         """
         if isinstance(self._promotes, string_types):
             raise TypeError("'%s' promotes must be specified as a list, "
@@ -97,6 +102,33 @@ class System(object):
                         return True
 
         return False
+
+    def _check_promotes(self):
+        """Check that the `System`s promotes are valid. Raise an Exception if there
+        are any promotes that do not match at least one variable in the `System`.
+
+        Raises
+        ------
+        TypeError
+            if the promoted variable specifications are not in a valid format
+
+        RuntimeError
+            if a promoted variable specification does not match any variables
+        """
+        if isinstance(self._promotes, string_types):
+            raise TypeError("'%s' promotes must be specified as a list, "
+                            "tuple or other iterator of strings, but '%s' was specified" %
+                            (self.name, self._promotes))
+
+        for prom in self._promotes:
+            found = False
+            for name, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
+                if fnmatch(meta.get('promoted_name', name), prom):
+                    found = True
+            if not found:
+                msg = "'%s' promotes '%s' but has no variables matching that specification"
+                raise RuntimeError(msg % (self.name, prom))
+
 
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.

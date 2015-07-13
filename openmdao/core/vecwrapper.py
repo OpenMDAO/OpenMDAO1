@@ -80,12 +80,24 @@ class VecWrapper(object):
         self.deriv_units = False
         self.adj_accumulate_mode = False
 
-    def _get_metadata(self, name):
+    def metadata(self, name):
         """
+        Returns the metadata for the named variable.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the metadata for.
+
         Returns
         -------
         dict
-            the metadata dict corresponding to the named variable
+            The metadata dict for the named variable.
+
+        Raises
+        -------
+        KeyError
+            If the named variable is not in this vector.
         """
         try:
             return self._vardict[name]
@@ -106,7 +118,7 @@ class VecWrapper(object):
         -------
             The unflattened value of the named variable.
         """
-        meta = self._get_metadata(name)
+        meta = self.metadata(name)
 
         if meta.get('pass_by_obj'):
             return meta['val'].val
@@ -151,7 +163,7 @@ class VecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        meta = self._get_metadata(name)
+        meta = self.metadata(name)
 
         if meta.get('pass_by_obj'):
             meta['val'].val = value
@@ -243,22 +255,6 @@ class VecWrapper(object):
         """
         for meta in self._vardict.values():
             yield meta
-
-    def metadata(self, name):
-        """
-        Returns the metadata for the named variable.
-
-        Args
-        ----
-        name : str
-            Name of variable to get the metadata for.
-
-        Returns
-        -------
-        dict
-            The metadata dict for the named variable.
-        """
-        return self._vardict[name]
 
     def get_local_idxs(self, name, idx_dict):
         """

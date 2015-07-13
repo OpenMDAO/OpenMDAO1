@@ -20,9 +20,9 @@ OpenMDAO User Guide_.
 
 If you do not have OpenMDAO v 1.0.0 installed, you should first view our Getting
 Started Guide_.  Then we would recommend becoming familiar with the new building
-blocks of OpenMDAO in the User Guide's 'Design' section
+blocks of OpenMDAO in the User Guide's 'Design_' section
 
-.. _Guide: ../getting-started/index.html
+.. _Design: ../getting-started/design.html
 
 [The idea is to show examples from old OpenMDAO converted into new, perhaps with
 side-by-side code, annotated.  Still thinking about the best way to present this.]
