@@ -43,10 +43,11 @@ class TestShelveRecorder(RecorderTests.Tests):
                         self.fail("Did not find key '{0}'".format(key))
                     assert_rel_error(self, found_val, val, tolerance)
                 del f[local_name]
-        f.close()
 
         # Having deleted all found values, the file should now be empty.
         self.assertEqual(len(f), 0)
+
+        f.close()
 
 
 if __name__ == "__main__":
