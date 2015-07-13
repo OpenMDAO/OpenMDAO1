@@ -1,5 +1,6 @@
 """ Base class for all systems in OpenMDAO."""
 
+import sys
 from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
@@ -102,6 +103,9 @@ class System(object):
                         return True
 
         return False
+
+    def check_setup(self, out_stream=sys.stdout):
+        pass
 
     def _check_promotes(self):
         """Check that the `System`s promotes are valid. Raise an Exception if there
