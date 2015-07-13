@@ -230,8 +230,10 @@ class TestProblem(unittest.TestCase):
         root.connect('c1.x', 'c2.x')
         root.connect('p1.x', 'c2.x')
         prob.setup()
-        #prob.run()
-        #self.assertEqual(root.connections, {'c1.x':'p1.x', 'c2.x':'p1.x'})
+        prob.run()
+        self.assertEqual(root.connections['c1.x'], 'p1.x')
+        self.assertEqual(root.connections['c2.x'], 'p1.x')
+        self.assertEqual(len(root.connections), 2)
 
     def test_calc_gradient_interface_errors(self):
 
