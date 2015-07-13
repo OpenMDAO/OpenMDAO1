@@ -2,6 +2,10 @@
 
 import unittest
 import shelve
+import random
+import string
+import os
+import glob
 from pickle import HIGHEST_PROTOCOL
 from openmdao.recorders.shelverecorder import ShelveRecorder
 from openmdao.recorders.test.recordertests import RecorderTests
@@ -10,10 +14,18 @@ from openmdao.test.testutil import assert_rel_error
 
 
 class TestShelveRecorder(RecorderTests.Tests):
-    filename = "shelve_test"
+    filename = ""
 
     def setUp(self):
+        rnd = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+        self.filename = "shelve_test." + rnd
+
         self.recorder = ShelveRecorder(self.filename, flag="n", protocol=HIGHEST_PROTOCOL)
+
+    def tearDown(self):
+        super(TestShelveRecorder, self).tearDown()
+        for fname in glob.glob("./" + self.filename + "*"):
+            os.remove(fname)
 
     def assertDatasetEquals(self, expected, tolerance):
         # Close the file to ensure it is written to disk.
