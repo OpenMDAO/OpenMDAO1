@@ -4,7 +4,7 @@ import unittest
 
 from six import StringIO
 from openmdao.recorders.dumpcase import DumpCaseRecorder
-from openmdao.recorders.test.recordertests import RecorderTests
+from recordertests import RecorderTests
 from openmdao.util.recordutil import format_iteration_coordinate
 
 class TestDumpCaseRecorder(RecorderTests.Tests):

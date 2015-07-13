@@ -113,9 +113,11 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
                 return J
 
-In building these discplines, we gave default values to all of the `params`
-and `unknowns` so that OpenMDAO can allocate the correct size in the vectors.
-The global design variables `z1` and `z1` were combined into a 2-element `ndarray`.
+For the most part, construction of these `Components` builds on what you
+learned in previous tutorials. In building these discplines, we gave default
+values to all of the `params` and `unknowns` so that OpenMDAO can allocate
+the correct size in the vectors. The global design variables `z1` and `z1`
+were combined into a 2-element `ndarray`.
 
 ``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
 of *y1,* the result would be imaginary, so the absolute value is taken before the square root
@@ -145,6 +147,8 @@ Exhibit,* Reno, NV, January 1996.
 
 Setting up the Optimization Problem
 ===================================
+
+Next we will set up the Sellar `Problem` and optimize it.
 
 .. testcode:: Disciplines
 
