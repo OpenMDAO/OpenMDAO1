@@ -114,7 +114,7 @@ class Problem(System):
             if prom in prom_noconns:
                 input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
 
-        for tgt, srcs in connections.items():
+        for tgt, srcs in list(connections.items()):
             if tgt in input_sets:
                 for s in srcs:
                     if s in unknowns_dict:

@@ -4,7 +4,7 @@ import unittest
 import shelve
 from pickle import HIGHEST_PROTOCOL
 from openmdao.recorders.shelverecorder import ShelveRecorder
-from openmdao.recorders.test.recordertests import RecorderTests
+from recordertests import RecorderTests
 from openmdao.util.recordutil import format_iteration_coordinate
 from openmdao.test.testutil import assert_rel_error
 
