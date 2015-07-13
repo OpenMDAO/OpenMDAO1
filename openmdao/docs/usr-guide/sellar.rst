@@ -148,7 +148,11 @@ Exhibit,* Reno, NV, January 1996.
 Setting up the Optimization Problem
 ===================================
 
-Next we will set up the Sellar `Problem` and optimize it.
+Next we will set up the Sellar `Problem` and optimize it. First we will take
+the `Components` that we just created and assemble them into a `Group`. We
+will also add the objective and the multivariable constraints to the problem
+using a shorthand `Component` that can be used for equations that are
+functions of OpenMDAO variables.
 
 .. testcode:: Disciplines
 
@@ -180,6 +184,35 @@ Next we will set up the Sellar `Problem` and optimize it.
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
 
+As in our previous tutorials, we use `add` to add `Components` or `Systems`
+to a `Group.` The order you add them to your `Group` is the order they will
+execute by default. We intend to add a method to change the order before
+execution, but for now, it is important to be careful to add them in the
+correct order. Here, this means starting with the ParamComps, then adding our
+disciplines, and finishing with the objective and constraints.
+
+We have also decided to declare all of our connections to be implicit by
+using the `promotes` argument when we added any component. When you
+promote '*', that means that every `param` and `unknown` is available in the
+parent system. Thus, if you wanted to connect something to variable `y1`, you
+would address it with the string `y1` instead of `dis1.y1`. The following is also valid
+
+.. testcode:: Disciplines
+
+    self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
+
+You may also notice the lack of connect statements. One benefit of variable
+promotion is that those variables are automatically connected. So in this
+case, our two disciplines both promote `y1` and `y2.` Discipline 1 provides
+`y1` as a source and discipline 2 needs it as a `param`, so when both of them
+promote `y1`, the connection is made for you. This is called an implicit
+connection.
+
+Due to the implicit connections, we now have a cycle between the two
+disciplines. This is fine because a nonlinear solver can converge the cycle
+to arrive at values of `y1` and `y2` that satisfy the equations in both
+discplines. We have selected the `NLGaussSeidel` solver (i.e., fixed point
+iteration), which will converge the model in our `Group`.
 
 
 .. testcode:: Disciplines
