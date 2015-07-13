@@ -22,27 +22,28 @@ class TestShelveRecorder(RecorderTests.Tests):
 
         sentinel = object()
 
-        with shelve.open(self.filename) as f:
-            for coord, expect in expected:
-                icoord = format_iteration_coordinate(coord)
-                groupings = (
-                    ("/Parameters", expect[0]),
-                    ("/Unknowns", expect[1]),
-                    ("/Residuals", expect[2])
-                )
+        f = shelve.open(self.filename)
+        for coord, expect in expected:
+            icoord = format_iteration_coordinate(coord)
+            groupings = (
+                ("/Parameters", expect[0]),
+                ("/Unknowns", expect[1]),
+                ("/Residuals", expect[2])
+            )
 
-                for label, values in groupings:
-                    local_name = icoord + label
-                    actual = f[local_name]
-                    # If len(actual) == len(expected) and actual <= expected, then
-                    # actual == expected.
-                    self.assertEqual(len(actual), len(values))
-                    for key, val in values:
-                        found_val = actual.get(key, sentinel)
-                        if found_val is sentinel:
-                            self.fail("Did not find key '{0}'".format(key))
-                        assert_rel_error(self, found_val, val, tolerance)
-                    del f[local_name]
+            for label, values in groupings:
+                local_name = icoord + label
+                actual = f[local_name]
+                # If len(actual) == len(expected) and actual <= expected, then
+                # actual == expected.
+                self.assertEqual(len(actual), len(values))
+                for key, val in values:
+                    found_val = actual.get(key, sentinel)
+                    if found_val is sentinel:
+                        self.fail("Did not find key '{0}'".format(key))
+                    assert_rel_error(self, found_val, val, tolerance)
+                del f[local_name]
+        f.close()
 
             # Having deleted all found values, the file should now be empty.
             self.assertEqual(len(f), 0)
