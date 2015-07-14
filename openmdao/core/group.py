@@ -199,16 +199,16 @@ class Group(System):
             Iterator over subsystems.
         """
         if include_self and isinstance(self, typ):
-            yield ('', self)
+            yield self
 
         subs = self._local_subsystems if local else self._subsystems
 
         for name, sub in subs.items():
             if isinstance(sub, typ):
-                yield name, sub
+                yield sub
             if recurse and isinstance(sub, Group):
-                for n, s in sub.subsystems(local, recurse, typ):
-                    yield n, s
+                for s in sub.subsystems(local, recurse, typ):
+                    yield s
 
     def subgroups(self, local=False, recurse=False, include_self=False):
         """
@@ -217,9 +217,8 @@ class Group(System):
         iterator
             Iterator over subgroups.
         """
-        for name, sub in self.subsystems(local, recurse, typ=Group,
-                                         include_self=include_self):
-            yield name, sub
+        return self.subsystems(local=local, recurse=recurse, typ=Group,
+                               include_self=include_self)
 
     def components(self, local=False, recurse=False, include_self=False):
         """
@@ -228,9 +227,8 @@ class Group(System):
         iterator
             Iterator over sub-`Components`.
         """
-        for name, sub in self.subsystems(local, recurse, typ=Component,
-                                         include_self=include_self):
-            yield name, sub
+        return self.subsystems(local=local, recurse=recurse, typ=Component,
+                               include_self=include_self)
 
     def _setup_paths(self, parent_path):
         """Set the absolute pathname of each `System` in the tree.
@@ -242,7 +240,7 @@ class Group(System):
             name of this child `System` and all subsystems.
         """
         super(Group, self)._setup_paths(parent_path)
-        for name, sub in self.subsystems():
+        for sub in self.subsystems():
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self):
@@ -258,7 +256,11 @@ class Group(System):
             A dictionary of metadata for parameters and for unknowns
             for all subsystems.
         """
-        for name, sub in self.subsystems():
+        self._params_dict = OrderedDict()
+        self._unknowns_dict = OrderedDict()
+        self._data_xfer = {}
+
+        for sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables()
             for p, meta in subparams.items():
                 meta = meta.copy()
@@ -287,7 +289,7 @@ class Group(System):
         if subsystem.promoted(name):
             return name
         if len(subsystem.name) > 0:
-            return subsystem.name+'.'+name
+            return '.'.join((subsystem.name, name))
         else:
             return name
 
@@ -304,7 +306,7 @@ class Group(System):
 
         self.comm = comm
 
-        for name, sub in self.subsystems():
+        for sub in self.subsystems():
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
                 self._local_subsystems[sub.name] = sub
@@ -333,6 +335,12 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataXfer` objects.
         """
+        self.params = self.unknowns = self.resids = None
+        self.dumat, self.dpmat, self.drmat = {}, {}, {}
+        self._local_unknown_sizes = None
+        self._local_param_sizes = None
+        self._owning_ranks = None
+
         if not self.is_active():
             return
 
@@ -373,11 +381,11 @@ class Group(System):
                         self._setup_data_transfer(my_params, relevance, voi)
 
         # convert any src_indices to index arrays
-        for pname, meta in self._params_dict.items():
+        for meta in self._params_dict.values():
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
-        for name, sub in self.subsystems():
+        for sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
                                relevance=relevance, top_unknowns=top_unknowns)
 
@@ -445,7 +453,7 @@ class Group(System):
             from the pathname of the target to the pathname of the source.
         """
         connections = {}
-        for _, sub in self.subgroups():
+        for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
         for tgt, srcs in self._src.items():
@@ -456,7 +464,7 @@ class Group(System):
                     try:
                         # if src is a param, it must use scoped absolute naming, so convert to top
                         # level absolute name for lookup in params_dict
-                        s = '.'.join((self.pathname, src)) if self.pathname else src
+                        s = self._get_var_pathname(src)
                         # verify that src is actually in self._params_dict
                         self._params_dict[s]
                         src_pathnames = [s]
@@ -512,8 +520,8 @@ class Group(System):
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
-        for name, sub in self.subsystems():
-            self._transfer_data(name)
+        for sub in self.subsystems():
+            self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
                     sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
@@ -542,8 +550,8 @@ class Group(System):
             return
 
         # transfer data to each subsystem and then apply_nonlinear to it
-        for name, sub in self.subsystems():
-            self._transfer_data(name)
+        for sub in self.subsystems():
+            self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
@@ -566,7 +574,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
 
-        for name, sub in self.subsystems(local=True):
+        for sub in self.subsystems(local=True):
 
             # Instigate finite difference on child if user requests.
             if sub.fd_options['force_fd'] == True:
@@ -619,18 +627,18 @@ class Group(System):
         if mode == 'fwd':
             self._transfer_data(deriv=True) # Full Scatter
 
-        for name, system in self.subsystems(local=True):
+        for sub in self.subsystems(local=True):
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if (isinstance(system, Component) or \
-                             system.fd_options['force_fd'] == True) and \
-                             not isinstance(system, ParamComp):
-                self._sub_apply_linear_wrapper(system, mode, vois, ls_inputs)
+            if (isinstance(sub, Component) or \
+                             sub.fd_options['force_fd'] == True) and \
+                             not isinstance(sub, ParamComp):
+                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                system.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
+                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
 
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter
@@ -784,7 +792,7 @@ class Group(System):
         ls_inputs = set(self.dpmat[voi].keys())
         abs_uvec = {meta['pathname'] for meta in self.dumat[voi].values()}
 
-        for cname, comp in self.components(local=True, recurse=True):
+        for comp in self.components(local=True, recurse=True):
             for intinp_rel, meta in comp.dpmat[voi].items():
                 intinp_abs = meta['pathname']
                 src = self.connections.get(intinp_abs)
@@ -889,7 +897,7 @@ class Group(System):
                                                                   nwid=nwid))
 
         nest += 3
-        for name, sub in self.subsystems(local=True):
+        for sub in self.subsystems(local=True):
             sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
 
         out_stream.flush()
@@ -905,7 +913,7 @@ class Group(System):
         min_procs = 1
         max_procs = 1
 
-        for name, sub in self.subsystems():
+        for sub in self.subsystems():
             sub_min, sub_max = sub.get_req_procs()
             min_procs = max(min_procs, sub_min)
             if max_procs is not None:
@@ -915,19 +923,6 @@ class Group(System):
                     max_procs = max(max_procs, sub_max)
 
         return (min_procs, max_procs)
-
-    def _update_sub_unit_conv(self, parent_params_dict=None):
-        """
-        Propagate unit conversion factors down the system tree.
-        """
-        if parent_params_dict:
-            for name, meta in self._params_dict.items():
-                pmeta = parent_params_dict.get(name)
-                if pmeta and 'unit_conv' in pmeta:
-                    meta['unit_conv'] = pmeta['unit_conv']
-
-        for name, sub in self.subgroups():
-            sub._update_sub_unit_conv(self._params_dict)
 
     def _get_global_offset(self, name, var_rank, sizes_table, var_of_interest):
         """
@@ -1183,13 +1178,6 @@ class Group(System):
                 raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
                                    name)
 
-    def _find_all_solvers(self):
-        """Recursively finds all solvers in the given group and sub-groups."""
-        yield (self, (self.ln_solver, self.nl_solver))
-        for _, sub in self.subgroups():
-            for solvers in sub._find_all_solvers():
-                yield solvers
-
     def _get_owning_ranks(self):
         """
         Determine the 'owning' rank of each variable and return a dict
@@ -1213,7 +1201,6 @@ class Group(System):
                     ranks[v] = rank
 
         return ranks
-
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

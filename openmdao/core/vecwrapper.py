@@ -574,10 +574,10 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vec_size = 0
-        for name, meta in unknowns_dict.items():
+        for meta in unknowns_dict.values():
             promname = meta['promoted_name']
             if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
-                vmeta = self._setup_var_meta(name, meta)
+                vmeta = self._setup_var_meta(meta['pathname'], meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[promname] = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
@@ -595,8 +595,8 @@ class SrcVecWrapper(VecWrapper):
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
-            for name, meta in unknowns_dict.items():
-                if (relevant_vars is None or name in relevant_vars) and not meta.get('remote'):
+            for meta in unknowns_dict.values():
+                if (relevant_vars is None or meta['pathname'] in relevant_vars) and not meta.get('remote'):
                     self[meta['promoted_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
@@ -614,8 +614,6 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vmeta = meta.copy()
-        vmeta['pathname'] = name
-
         val = meta['val']
         if not is_differentiable(val) or meta.get('pass_by_obj'):
             vmeta['val'] = _ByObjWrapper(val)
@@ -677,7 +675,8 @@ class TgtVecWrapper(VecWrapper):
 
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
-        for pathname, meta in params_dict.items():
+        for meta in params_dict.values():
+            pathname = meta['pathname']
             if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
                 if pathname in my_params:
                     # if connected, get metadata from the source
@@ -701,7 +700,7 @@ class TgtVecWrapper(VecWrapper):
                         if src:
                             common = get_common_ancestor(src, pathname)
                             if common == self.pathname or (self.pathname+'.') not in common:
-                                missing.append(pathname)
+                                missing.append(meta)
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
@@ -711,8 +710,8 @@ class TgtVecWrapper(VecWrapper):
                 meta['val'] = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
-        for pathname in missing:
-            meta = params_dict[pathname]
+        for meta in missing:
+            pathname = meta['pathname']
             newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
@@ -721,7 +720,8 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
-        for pathname, meta in params_dict.items():
+        for meta in params_dict.values():
+            pathname = meta['pathname']
             if pathname in my_params and (relevant_vars is None or pathname in relevant_vars):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
@@ -755,7 +755,6 @@ class TgtVecWrapper(VecWrapper):
             we're building.
         """
         vmeta = meta.copy()
-        vmeta['pathname'] = pathname
         if 'src_indices' not in vmeta:
             vmeta['size'] = src_meta['size']
 
@@ -837,6 +836,9 @@ class PlaceholderVecWrapper(object):
         raise AttributeError("'%s' has not been initialized, "
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
+
+    def __contains__(self, name):
+        self.__getitem__(name)
 
     def __setitem__(self, name, value):
         """

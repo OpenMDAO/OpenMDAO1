@@ -1,5 +1,4 @@
 import unittest
-from unittest import SkipTest
 import math
 from six import iteritems
 

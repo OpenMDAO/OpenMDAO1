@@ -1,8 +1,6 @@
 """ Unit test for the Gauss Seidel linear solver. """
 
 import unittest
-from unittest import SkipTest
-
 import numpy as np
 
 from openmdao.components.execcomp import ExecComp
