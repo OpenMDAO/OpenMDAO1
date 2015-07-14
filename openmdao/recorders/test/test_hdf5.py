@@ -2,7 +2,7 @@
 
 import unittest
 from openmdao.test.testutil import assert_rel_error
-from recordertests import RecorderTests
+from openmdao.recorders.test.recordertests import RecorderTests
 from openmdao.util.recordutil import format_iteration_coordinate
 from six.moves import zip
 
