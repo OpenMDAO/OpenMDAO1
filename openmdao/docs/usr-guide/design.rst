@@ -119,7 +119,7 @@ to the group level.  This means that you can reference the variable as if it
 were an attribute of the `Group` rather than the subsystem.  For Example:
 ::
     a = MyComp()
-    group3.add('a', promotes=['x'])
+    group3.add(a, promotes=['x'])
 
 Now you can access the parameter 'x' directly as 'group3.x'. If you promote
 multiple subsystem variables with the same name, then those variables will
@@ -127,11 +127,11 @@ be implicitly connected:
 ::
     a = MyComp()
     b = MyComp()
-    group4.add('a', promotes=['x'])
-    group4.add('b', promotes=['x'])
+    group4.add(a, promotes=['x'])
+    group4.add(b, promotes=['x'])
 
 Now setting a value for 'group4.x' will set the value on both `Components`,
-'a' and 'b', and they are said to be implicitly connected.  If you promote
+a and b, and they are said to be implicitly connected.  If you promote
 the output from one subsystem and the input of another with the same name,
 then that will have a similar effect to the explicit connection statement as
 shown above.
@@ -154,12 +154,19 @@ in the constructor or set later:
     root = ExampleGroup()
     prob = Problem(root)
 
-A `Problem` also has a `Driver`, which is responsible for iterating over
+A `Problem` also has a driver, which is responsible for iterating over
 the systems in the model and deriving a consistent solution.
 
-Driver is the base class for drivers in OpenMDAO, it is the simplest driver
+`Driver` is the base class for drivers in OpenMDAO, it is the simplest driver
 possible, running a problem once. By default, a driver solves using solve_nonlinear.
 
+The general procedure for defining a `Problem` is:
+- define `Components` (including their *solve_nonlinear* functions)
+- assembling `Components` into Groups
+- instantiating a `Problem` with the *root* `Group`
+- perform *setup* on the `Problem` to initialize all vectors and data structures
+- perform *check_setup* on the `Problem` to identify any issues
+- perform *run* on the Problem
 
 
 [perhaps we could make a few diagrams to show relationships?]
