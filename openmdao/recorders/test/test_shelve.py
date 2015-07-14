@@ -2,30 +2,34 @@
 
 import unittest
 import shelve
-import random
-import string
+from tempfile import mkdtemp
+from shutil import rmtree
 import os
-import glob
+import errno
 from pickle import HIGHEST_PROTOCOL
 from openmdao.recorders.shelverecorder import ShelveRecorder
 from openmdao.recorders.test.recordertests import RecorderTests
 from openmdao.util.recordutil import format_iteration_coordinate
 from openmdao.test.testutil import assert_rel_error
 
-
 class TestShelveRecorder(RecorderTests.Tests):
     filename = ""
+    dir = ""
 
     def setUp(self):
-        rnd = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
-        self.filename = "shelve_test." + rnd
+        self.dir = mkdtemp()
+        self.filename = os.path.join(self.dir, "shelve_test")
 
         self.recorder = ShelveRecorder(self.filename, flag="n", protocol=HIGHEST_PROTOCOL)
 
     def tearDown(self):
         super(TestShelveRecorder, self).tearDown()
-        for fname in glob.glob("./" + self.filename + "*"):
-            os.remove(fname)
+        try:
+            rmtree(self.dir)
+        except OSError as e:
+            # If directory already deleted, keep going
+            if e.errno != errno.ENOENT:
+                raise e
 
     def assertDatasetEquals(self, expected, tolerance):
         # Close the file to ensure it is written to disk.
