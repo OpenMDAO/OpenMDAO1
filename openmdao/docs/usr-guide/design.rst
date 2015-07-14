@@ -154,14 +154,11 @@ in the constructor or set later:
     root = ExampleGroup()
     prob = Problem(root)
 
+A `Problem` also has a `Driver`, which is responsible for iterating over
+the systems in the model and deriving a consistent solution.
 
-
-Driver
-------
-
-Driver is the base class for drivers in OpenMDAO, it is the simplest driver possible,
-running a problem once. Drivers can only be placed in a
-Problem, and every problem has a Driver.  By default, a driver solves using solve_nonlinear.
+Driver is the base class for drivers in OpenMDAO, it is the simplest driver
+possible, running a problem once. By default, a driver solves using solve_nonlinear.
 
 
 
