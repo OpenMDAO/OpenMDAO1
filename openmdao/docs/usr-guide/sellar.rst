@@ -29,6 +29,10 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
 .. testcode:: Disciplines
 
+        # For printing, use this import if you are running Python 2.x
+        from __future__ import print_function
+
+
         import numpy as np
 
         from openmdao.core.component import Component
@@ -184,7 +188,7 @@ functions of OpenMDAO variables.
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
 
-As in our previous tutorials, we use `add` to add `Components` or `Systems`
+As in our previous tutorial, we use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
 execute by default. We intend to add a method to change the order before
 execution, but for now, it is important to be careful to add them in the
@@ -212,10 +216,44 @@ Due to the implicit connections, we now have a cycle between the two
 disciplines. This is fine because a nonlinear solver can converge the cycle
 to arrive at values of `y1` and `y2` that satisfy the equations in both
 discplines. We have selected the `NLGaussSeidel` solver (i.e., fixed point
-iteration), which will converge the model in our `Group`.
+iteration), which will converge the model in our `Group`. We also specify a
+tighter tolerance in the solver's `options` dictionary, overriding the 1e-6
+default.
 
+We have declared the initial conditions for our design variables in the `Paramcomps`.
+
+We have introduced a new component class -- the `ExecComp`, which is really a
+shortcut for creating a `Component` that is a simple function of other
+variables in the model. We use it to create a `Component` for our objective
+goal, which is to minimize a funtion of `x`, `z`, `y1`, and `y2`.
 
 .. testcode:: Disciplines
+
+        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                 promotes=['*'])
+
+This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
+'y2', and with output 'obj'. The first argument is a string expression (or a
+list of expressions if you have multiple outputs) that contains the function.
+OpenMDAO can parse this expression so that the `solve_nonlinear` and
+`jacobian` methods are taken care of for you. Notice that standard math
+functions like `exp` are available to use. Because we promote every variable
+in our call to `add`, all of the inputs variables are automatically connected
+to sources in the model. We also specify our default initial values as the
+remaining arguments for the ExecComp. You are not required to do this for
+scalars, but you must always allocate the array inputs ('z' in this case).
+The output of the objective equation is stored in the promoted output 'obj'.
+
+We have also created two more ExecComps, one for each constraint equations,
+with the ouptuts being the promoted variables 'con1' and 'con2'. Now, that we
+are done creating the `Group` for the Sellar problem, let's hook it up to an
+optimizer.
+
+.. testcode:: Disciplines
+
+        from openmdao.core.problem import Problem
+        from openmdao.drivers.scipy_optimizer import ScipyOptimizer
 
         top = Problem()
         top.root = SellarDerivatives()
@@ -235,6 +273,61 @@ iteration), which will converge the model in our `Group`.
         top.setup()
         top.run()
 
-        assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
-        assert_rel_error(self, top['z'][1], 0.0, 1e-3)
-        assert_rel_error(self, top['x'], 0.0, 1e-3)
+        print("\n")
+        print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
+                                                 top['z'][1], \
+                                                 top['x']))
+        print("Couping vars: %f, %f" % (top['y1'], top['y2']))
+        print("Minimum objective: ", top['obj'])
+
+Just as in the previous tutorial, we create a clean `Problem` and set our
+Sellar group as its root. Then we set the driver to be the ScipyOptimizer,
+which wraps scipy's `minimize` function which itself is a wrapper around 9
+different multivariable optimizers. These include COBYLA and SLSQP, which are
+the only two choices that support constrained optimization. Additionally,
+SLSQP can make use of the OpenMDAO-supplied gradient, so we will use SLSQP.
+
+Next we add the parameter for 'z'. Recall that the first argument for
+`add_param` is a string containing the name of a variable declared in a
+`ParamComp`. Since we are promoting the output of this pcomp, we use the
+promoted name, which is 'z' (and likewise we use 'x' for the other
+parameter.) Variable 'z' is an 2-element array, and each element has a
+different set of bounds defined in the problem, so we must specify the `low`
+and `high` attributes as numpy arrays.
+
+Next, we add the objective by calling `add_objective` on the `driver` giving
+it the promoted path of the quantity we wish to minimize. All optimizers in
+OpenMDAO try to minimize the value of the objective, so to maximize a
+variable, you will have to place a minus sign in the expression you give to
+the objective `ExecComp`.
+
+Finally we add the constraints using the `add_constraint` method, which takes
+any valid `unknown` in the root model as the first argument. Constraints in
+OpenMDAO are defined so that a negative value means the constraint is
+satisfied, and a positive value means it is violated. When a constraint is
+equal to zero, it is called an 'active' constraint.
+
+Don't forget to call `setup` on your `Problem` before calling `run`. Also, we
+are using the Python 3.x print function to print results. To keep
+compatibilty with both Python 2.x and 3.x, don't forget the following import
+at the top of your python file:
+
+::
+
+    from __future__ import print_function
+
+If we take all of the code we have written in this tutorial and place it into
+a file called `sellar_MDF_optimization.py` and run it, the final output will look something like:
+
+::
+
+    $ python sellar_MDF_optimization.py
+    .
+    .
+    .
+    Minimum found at (1.977639, -0.000000, 0.000000)
+    Couping vars: 3.160000, 3.755278
+    Minimum objective:  3.18339395045
+
+Depending on print settings, there may be some additional optimizer output
+where the elipses are. This is the expected minimum for the Sellar problem.
