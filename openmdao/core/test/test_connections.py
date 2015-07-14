@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 from six import text_type, PY3
+from six.moves import cStringIO
 import warnings
 
 from openmdao.core.problem import Problem
@@ -51,6 +52,13 @@ class TestConnections(unittest.TestCase):
         self.p['G3.G4.C3.x'] = 999.
         self.assertEqual(self.p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(self.p.root.G3.G4.C4.params['x'], 999.)
+
+        stream = cStringIO()
+        self.p.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following parameters have no associated unknowns:\nG1.G2.C1.x\nG3.G4.C3.x\nG3.G4.C4.x" in content)
+        self.assertTrue("The following components have no connections:\nG1.G2.C1\nG1.G2.C2\nG3.G4.C3\nG3.G4.C4\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
     def test_inp_inp_conn_w_src(self):
         self.p.root.connect('G3.G4.C3.x', 'G3.G4.C4.x')
