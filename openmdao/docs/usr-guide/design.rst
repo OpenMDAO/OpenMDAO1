@@ -16,8 +16,9 @@ System
 
 Base class for systems in OpenMDAO.
 
-This class represents a system of equations, which is a set of equations that
-need to be solved together so that a single solution satisfies them all.
+This class represents a system of non-linear equations, which is a set of
+equations that need to be solved together so that a single solution satisfies
+them all.
 
 A system of equations is specified by one or more parameters (input values) and
 one or more unknowns (output values). For example, a really simple system may
@@ -37,9 +38,10 @@ given parameter values and put those values into the unknowns vector.
 
 There are a few other attributes and member functions in the `System` interface,
 mostly related to calculating derivatives of the equations, but this is the
-essential base abstraction. There are two subclasses of `System` that are used
-to actually build a model of a system of equations.  They are the `Component`
-class and the `Group` class.
+essential base abstraction.
+
+There are two subclasses of `System` that are used to actually build a model
+of a system of equations.  They are the `Component` class and the `Group` class.
 
 
 Component
@@ -58,7 +60,7 @@ values of the unknowns for a given set of parameter values.
 Variables are added to the system in the constructor (__init__ method) via the
 *add_parameter*, *add_output* and *add_state* functions. For example:
 ::
-    class MySystem(Component):
+    class MyComp(Component):
         def __init__(self):
             self.add_param('x', val=0.)
 
@@ -83,15 +85,15 @@ will contain entries for the variables declared in the constructor. For example:
 Group
 ------
 
-A complex system may be thought of as a number of coupled subsystems, which may
+A complex system may be modeled as a number of coupled subsystems, which may
 be represented as individual `Components` or groups of `Components`.  A `Group`
 is a subclass of `System` that used to encapsulate groupings of `Systems`.
 
 A `Group` is created simply by adding one or more `Components`, for example:
 ::
     group1 = Group()
-    a = my_group.add(MySystem())
-    b = my_group.add(MySystem())
+    a = group1.add(MyComp())
+    b = group1.add(MyComp())
 
 The `Systems` in a `Group` may be either `Components` or other `Groups`. For
 example, we can add a previously created `Group` to a new `Group` along with
@@ -99,13 +101,59 @@ other `Components`:
 ::
     group2 = Group()
     group2.add(group1)
-    group2.add(MySystem())
+    group2.add(MyComp())
+
+Interdependencies between `Systems` in a `Group`are represented as connections
+between the `Group`'s subsystems.  Connections can be made in two ways: explicitly
+or implicitly.
+
+An explicit connection is made from the output of one `System` to the input
+(parameter) of another using the `Group` *connect* function, as follows:
+::
+    group1.connect('a.y', 'b.x')
+
+Alternatively, you can use the *promotion* mechanism to implicitly connect two
+or more variables.  When a `System` is added to a `Group`, you may optionally
+specify a list of variable names that are to be *promoted* from the subsystem
+to the group level.  This means that you can reference the variable as if it
+were an attribute of the `Group` rather than the subsystem.  For Example:
+::
+    a = MyComp()
+    group3.add(a, promotes=['x'])
+
+Now you can access the parameter 'x' directly as 'group3.x'. If you promote
+multiple subsystem variables with the same name, then those variables will
+be implicitly connected:
+::
+    a = MyComp()
+    b = MyComp()
+    group4.add(a, promotes=['x'])
+    group4.add(b, promotes=['x'])
+
+Now setting a value for 'group4.x' will set the value on both `Components`,
+'a' and 'b', and they are said to be implicitly connected.  If you promote
+the output from one subsystem and the input of another with the same name,
+then that will have a similar effect to the explicit connection statement as
+shown above.
+
 
 
 Problem
 -------
 
-Is always the top object for running an OpenMDAO model.
+When a model has been fully developed as a `Group` with a collection of
+`Components` and sub-`Groups` it is time to solve the `System`.  This is
+done by definining a `Problem` that contains your `System`. A `Problem`
+always has a single top-level `Group` called *root*.  This can be passed
+in the constructor or set later:
+::
+    prob = Problem(ExampleGroup())
+
+    or
+
+    root = ExampleGroup()
+    prob = Problem(root)
+
 
 
 Driver
