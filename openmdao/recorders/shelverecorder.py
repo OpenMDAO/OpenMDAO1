@@ -20,6 +20,7 @@ class ShelveRecorder(BaseRecorder):
     def __init__(self, out, **shelve_args):
         super(ShelveRecorder, self).__init__()
         self.out = shelve.open(out, **shelve_args)
+        self.order = []
 
     def record(self, params, unknowns, resids, metadata):
         """
@@ -44,6 +45,8 @@ class ShelveRecorder(BaseRecorder):
         iteration_coordinate = metadata['coord']
         group_name = format_iteration_coordinate(iteration_coordinate)
 
+        self.order.append(group_name)
+
         f = self.out
 
         data = OrderedDict([('Parameters', params),
@@ -51,3 +54,4 @@ class ShelveRecorder(BaseRecorder):
                             ('Residuals', resids)])
 
         f[group_name] = data
+        f['order'] = self.order

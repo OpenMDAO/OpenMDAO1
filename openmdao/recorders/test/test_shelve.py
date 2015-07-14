@@ -40,8 +40,15 @@ class TestShelveRecorder(RecorderTests.Tests):
         sentinel = object()
 
         f = shelve.open(self.filename)
+
+        order = f['order']
+        del f['order']
+
         for coord, expect in expected:
             iter_coord = format_iteration_coordinate(coord)
+
+            self.assertEqual(order.pop(0), iter_coord)
+
             groupings = (
                 ("Parameters", expect[0]),
                 ("Unknowns", expect[1]),
@@ -64,6 +71,9 @@ class TestShelveRecorder(RecorderTests.Tests):
 
         # Having deleted all found values, the file should now be empty.
         self.assertEqual(len(f), 0)
+
+        # As should the ordering.
+        self.assertEqual(len(order), 0)
 
         f.close()
 
