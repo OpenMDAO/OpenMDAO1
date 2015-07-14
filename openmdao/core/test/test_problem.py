@@ -818,5 +818,65 @@ class TestProblem(unittest.TestCase):
         mode = top._check_for_matrix_matrix(['a'], ['x'])
 
 
+class TestCheckSetup(unittest.TestCase):
+
+    def test_out_of_order(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        G2.connect("C1.y", "C3.x")
+        G2.connect("C3.y", "C2.x")
+
+        top.setup()
+        stream = cStringIO()
+        top.check_setup(out_stream=stream)
+        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
+                        stream.getvalue())
+
+    def test_cycle(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        G2.connect("C1.y", "C3.x")
+        G2.connect("C3.y", "C2.x")
+        G2.connect("C2.y", "C1.x")
+
+        top.setup()
+        stream = cStringIO()
+        top.check_setup(out_stream=stream)
+        self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C3', 'C2']]" in
+                        stream.getvalue())
+        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
+                        stream.getvalue())
+
+    def test_before_setup(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        try:
+            top.check_setup()
+        except Exception as err:
+            self.assertEqual(str(err), 'setup() must be called before check_setup()')
+        else:
+            self.fail("Exception expected")
+
 if __name__ == "__main__":
     unittest.main()
