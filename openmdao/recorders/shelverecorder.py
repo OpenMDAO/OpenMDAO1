@@ -1,4 +1,5 @@
 import shelve
+from collections import OrderedDict
 from openmdao.recorders.baserecorder import BaseRecorder
 from openmdao.util.recordutil import format_iteration_coordinate
 
@@ -45,12 +46,8 @@ class ShelveRecorder(BaseRecorder):
 
         f = self.out
 
-        groupings = (
-            ("/Parameters", params),
-            ("/Unknowns", unknowns),
-            ("/Residuals", resids),
-        )
+        data = OrderedDict([('Parameters', params),
+                            ('Unknowns', unknowns),
+                            ('Residuals', resids)])
 
-        for label, values in groupings:
-            local_name = group_name + label
-            f[local_name] = values
+        f[group_name] = data

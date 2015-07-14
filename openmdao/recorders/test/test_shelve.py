@@ -1,16 +1,17 @@
 """ Unit test for the ShelveRecorder. """
 
-import unittest
-import shelve
-from tempfile import mkdtemp
-from shutil import rmtree
-import os
 import errno
-from pickle import HIGHEST_PROTOCOL
+import os
+import shelve
+import unittest
 from openmdao.recorders.shelverecorder import ShelveRecorder
 from openmdao.recorders.test.recordertests import RecorderTests
-from openmdao.util.recordutil import format_iteration_coordinate
 from openmdao.test.testutil import assert_rel_error
+from openmdao.util.recordutil import format_iteration_coordinate
+from pickle import HIGHEST_PROTOCOL
+from shutil import rmtree
+from tempfile import mkdtemp
+
 
 class TestShelveRecorder(RecorderTests.Tests):
     filename = ""
@@ -40,16 +41,17 @@ class TestShelveRecorder(RecorderTests.Tests):
 
         f = shelve.open(self.filename)
         for coord, expect in expected:
-            icoord = format_iteration_coordinate(coord)
+            iter_coord = format_iteration_coordinate(coord)
             groupings = (
-                ("/Parameters", expect[0]),
-                ("/Unknowns", expect[1]),
-                ("/Residuals", expect[2])
+                ("Parameters", expect[0]),
+                ("Unknowns", expect[1]),
+                ("Residuals", expect[2])
             )
 
+            actual_group = f[iter_coord]
+
             for label, values in groupings:
-                local_name = icoord + label
-                actual = f[local_name]
+                actual = actual_group[label]
                 # If len(actual) == len(expected) and actual <= expected, then
                 # actual == expected.
                 self.assertEqual(len(actual), len(values))
@@ -58,7 +60,7 @@ class TestShelveRecorder(RecorderTests.Tests):
                     if found_val is sentinel:
                         self.fail("Did not find key '{0}'".format(key))
                     assert_rel_error(self, found_val, val, tolerance)
-                del f[local_name]
+            del f[iter_coord]
 
         # Having deleted all found values, the file should now be empty.
         self.assertEqual(len(f), 0)
