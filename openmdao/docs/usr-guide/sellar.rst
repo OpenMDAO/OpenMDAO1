@@ -331,3 +331,85 @@ a file called `sellar_MDF_optimization.py` and run it, the final output will loo
 
 Depending on print settings, there may be some additional optimizer output
 where the elipses are. This is the expected minimum for the Sellar problem.
+
+
+Sellar with an Implicit Component
+=================================
+
+We have just built an implementation of the Sellar problem where the two
+discplines are connected with a cycle. We could also sever the direct
+connection and close the gap with an implicit component. The purpose of this
+component is to express as a residual the difference between the output side
+and the input side of the connection that we are replacing.
+
+At the moment, we don't have a shortcut for closing a connection with an
+implict component, but it is not difficult. In Sellar, we will leave the `y1`
+connection and replace the `y2` connection.
+
+.. testcode:: Disciplines
+
+    class StateConnection(Component):
+        """ Define connection with an explicit equation"""
+
+        def __init__(self):
+            super(StateConnection, self).__init__()
+
+            # Inputs
+            self.add_param('y2_actual', 1.0)
+
+            # States
+            self.add_state('y2_command', val=1.0)
+
+        def apply_nonlinear(self, params, unknowns, resids):
+            """ Don't solve; just calculate the residual."""
+
+            y2_actual = params['y2_actual']
+            y2_command = unknowns['y2_command']
+
+            resids['y2_command'] = y2_actual - y2_command
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            """ This is a dummy comp that doesn't modify its state."""
+            pass
+
+        def jacobian(self, params, unknowns, resids):
+            """Analytical derivatives."""
+
+            J = {}
+
+            # State equation
+            J[('y2_command', 'y2_command')] = -1.0
+            J[('y2_command', 'y2_actual')] = 1.0
+
+            return J
+
+
+.. testcode:: Disciplines
+
+    class SellarStateConnection(Group):
+        """ Group containing the Sellar MDA. This version uses the disciplines
+        with derivatives."""
+
+        def __init__(self):
+            super(SellarStateConnection, self).__init__()
+
+            self.add('px', ParamComp('x', 1.0), promotes=['*'])
+            self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+
+            self.add('state_eq', StateConnection())
+            self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
+            self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
+
+            self.connect('state_eq.y2_command', 'd1.y2')
+            self.connect('d2.y2', 'state_eq.y2_actual')
+
+            self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                         z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                      promotes=['x', 'z', 'y1'])
+            self.connect('d2.y2', 'obj_cmp.y2')
+
+            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
+            self.connect('d2.y2', 'con_cmp2.y2')
+
+            self.nl_solver = NLGaussSeidel()
