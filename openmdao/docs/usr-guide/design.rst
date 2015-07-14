@@ -103,7 +103,7 @@ other `Components`:
     group2.add(group1)
     group2.add(MyComp())
 
-Interdependencies between `Systems` in a `Group`are represented as connections
+Interdependencies between `Systems` in a `Group` are represented as connections
 between the `Group`'s subsystems.  Connections can be made in two ways: explicitly
 or implicitly.
 
@@ -119,7 +119,7 @@ to the group level.  This means that you can reference the variable as if it
 were an attribute of the `Group` rather than the subsystem.  For Example:
 ::
     a = MyComp()
-    group3.add(a, promotes=['x'])
+    group3.add('a', promotes=['x'])
 
 Now you can access the parameter 'x' directly as 'group3.x'. If you promote
 multiple subsystem variables with the same name, then those variables will
@@ -127,8 +127,8 @@ be implicitly connected:
 ::
     a = MyComp()
     b = MyComp()
-    group4.add(a, promotes=['x'])
-    group4.add(b, promotes=['x'])
+    group4.add('a', promotes=['x'])
+    group4.add('b', promotes=['x'])
 
 Now setting a value for 'group4.x' will set the value on both `Components`,
 'a' and 'b', and they are said to be implicitly connected.  If you promote
