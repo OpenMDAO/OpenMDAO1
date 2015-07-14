@@ -155,18 +155,18 @@ in the constructor or set later:
     prob = Problem(root)
 
 A `Problem` also has a driver, which is responsible for iterating over
-the systems in the model and deriving a consistent solution.
+the systems in the model and deriving a consistent solution. The base
+`Driver` class in OpenMDAO is the simplest driver possible, running a
+problem once. By default, a driver solves each subsystem using it's
+*solve_nonlinear* method.
 
-`Driver` is the base class for drivers in OpenMDAO, it is the simplest driver
-possible, running a problem once. By default, a driver solves using solve_nonlinear.
-
-The general procedure for defining a `Problem` is:
-- define `Components` (including their *solve_nonlinear* functions)
-- assembling `Components` into Groups
-- instantiating a `Problem` with the *root* `Group`
-- perform *setup* on the `Problem` to initialize all vectors and data structures
-- perform *check_setup* on the `Problem` to identify any issues
-- perform *run* on the Problem
+The general procedure for defining and solving a `Problem` is:
+    - define `Components` (including their *solve_nonlinear* functions)
+    - assembling `Components` into Groups
+    - instantiating a `Problem` with the *root* `Group`
+    - perform *setup* on the `Problem` to initialize all vectors and data structures
+    - perform *check_setup* on the `Problem` to identify any issues
+    - perform *run* on the Problem
 
 
 [perhaps we could make a few diagrams to show relationships?]
