@@ -134,31 +134,96 @@ difference.
 Finite Difference on Groups of Components
 =========================================
 
+Next, we show how to finite difference a group of components together. For
+this example, let's finite difference comp2 and comp3 as one entity. To do
+this, we need to add a Group to the model called 'sub' and place comp2 and
+comp3 in that group.
+
 .. testcode:: fd_example
 
-        class Model(Group):
-            """ Simple model to experiment with finite difference."""
+    class Model(Group):
+        """ Simple model to experiment with finite difference."""
 
-            def __init__(self):
-                super(Model, self).__init__()
+        def __init__(self):
+            super(Model, self).__init__()
 
-                self.add('px', ParamComp('x', 2.0))
+            self.add('px', ParamComp('x', 2.0))
 
-                self.add('comp1', SimpleComp())
-                sub = self.add('sub', Group())
-                sub.add('comp2', SimpleComp())
-                sub.add('comp3', SimpleComp())
-                self.add('comp4', SimpleComp())
+            self.add('comp1', SimpleComp())
 
-                self.connect('px.x', 'comp1.x')
-                self.connect('comp1.y', 'sub.comp2.x')
-                self.connect('sub.comp2.y', 'sub.comp3.x')
-                self.connect('sub.comp3.y', 'comp4.x')
+            # 2 and 3 are in a sub Group
+            sub = self.add('sub', Group())
+            sub.add('comp2', SimpleComp())
+            sub.add('comp3', SimpleComp())
 
-                # Tell the group with comps 2 and 3 to finite difference
-                self.sub.fd_options['force_fd'] = True
-                self.sub.fd_options['step_size'] = 1.0e-4
+            self.add('comp4', SimpleComp())
 
+            self.connect('px.x', 'comp1.x')
+            self.connect('comp1.y', 'sub.comp2.x')
+            self.connect('sub.comp2.y', 'sub.comp3.x')
+            self.connect('sub.comp3.y', 'comp4.x')
+
+            # Tell the group with comps 2 and 3 to finite difference
+            self.sub.fd_options['force_fd'] = True
+            self.sub.fd_options['step_size'] = 1.0e-4
+
+To turn on finite difference, we have set 'force_fd' to True in `self.sub`.
+
+There is no change to the execution code. The result looks like this:
+
+::
+
+    Start Calc Gradient
+    -------------------------
+    Calculate Derivatives: comp1
+    Execute comp2
+    Execute comp3
+    Calculate Derivatives: comp4
+    [[ 81.]]
+
+Here we see that, instead of calling 'jacobian', comp2 and comp3 execute
+during finite differnce of the group that owns them. This is as we expect.
 
 Finite Difference on an Entire Model
 ====================================
+
+Finally, let's finite difference the whole model in one operation. We tell
+OpenMDAO to do this by setting force_fd in the parent `Group`.
+
+.. testcode:: fd_example
+
+    class Model(Group):
+        """ Simple model to experiment with finite difference."""
+
+        def __init__(self):
+            super(Model, self).__init__()
+
+            self.add('px', ParamComp('x', 2.0))
+
+            self.add('comp1', SimpleComp())
+            self.add('comp2', SimpleComp())
+            self.add('comp3', SimpleComp())
+            self.add('comp4', SimpleComp())
+
+            self.connect('px.x', 'comp1.x')
+            self.connect('comp1.y', 'comp2.x')
+            self.connect('comp2.y', 'comp3.x')
+            self.connect('comp3.y', 'comp4.x')
+
+            # Tell these whole model to finite difference
+            self.fd_options['force_fd'] = True
+
+Nothing else changes in the original model. When we run it, we get:
+
+::
+
+    Start Calc Gradient
+    -------------------------
+    Execute comp1
+    Execute comp2
+    Execute comp3
+    Execute comp4
+    [[ 81.00000002]]
+
+So here, `jacobian` is never called in any component as the finite difference
+just executes the components in sequence. This is also as expected.
