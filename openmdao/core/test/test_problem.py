@@ -856,7 +856,7 @@ class TestCheckSetup(unittest.TestCase):
         top.setup()
         stream = cStringIO()
         top.check_setup(out_stream=stream)
-        self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C3', 'C2']]" in
+        self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
         self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
                         stream.getvalue())
