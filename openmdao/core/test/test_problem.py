@@ -3,6 +3,7 @@
 import unittest
 import numpy as np
 from six import text_type, PY3
+from six.moves import cStringIO
 import warnings
 
 from openmdao.components.linear_system import LinearSystem
@@ -50,8 +51,8 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup()
         except Exception as error:
-            msg = "Target 'G3.C4.x' is connected to multiple sources: ['G3.C3.y', 'G2.C1.x']"
-            self.assertEqual(text_type(error), msg)
+            msg = "Target 'G3.C4.x' is connected to multiple unknowns: ['G3.C3.y', 'G2.C1.x']"
+            self.assertEquals(text_type(error), msg)
         else:
             self.fail("Error expected")
 
@@ -137,20 +138,6 @@ class TestProblem(unittest.TestCase):
 
         self.assertEqual(str(err.exception), expected_msg)
 
-    def test_hanging_params(self):
-        # test that a warning is issued for an unconnected parameter
-        root  = Group()
-        root.add('ls', LinearSystem(size=10))
-
-        prob = Problem(root=root)
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            prob.setup()
-            assert len(w) == 1, "Warning expected."
-            self.assertEqual("Parameters ['ls.A', 'ls.b'] have no associated unknowns.",
-                              str(w[-1].message))
-
     def test_unconnected_param_access(self):
         prob = Problem(root=Group())
         G1 = prob.root.add('G1', Group())
@@ -195,18 +182,15 @@ class TestProblem(unittest.TestCase):
         C1.params['x'] = 2.
         self.assertEqual(prob['G1.G2.C1.x'], 2.0)
         self.assertEqual(prob.root['G1.G2.C1.x'], 2.0)
-        prob['G1.G2.C1.x'] = 99.
+        prob['G1.x'] = 99.
         self.assertEqual(C1.params['x'], 99.)
         prob.root.G1['G2.C1.x'] = 12.
         self.assertEqual(C1.params['x'], 12.)
 
-        try:
-            prob['G1.x'] = 11.
-        except Exception as err:
-            self.assertEqual(err.args[0],
-                             "Can't find variable 'G1.x' in unknowns or params vectors in system ''")
-        else:
-            self.fail("exception expected")
+        prob['G1.x'] = 17.
+
+        self.assertEqual(prob.root.G1.G2.C1.params['x'], 17.0)
+        prob.run()
 
     def test_input_input_explicit_conns_no_conn(self):
         prob = Problem(root=Group())
@@ -234,7 +218,9 @@ class TestProblem(unittest.TestCase):
         root.connect('p1.x', 'c2.x')
         prob.setup()
         prob.run()
-        self.assertEqual(root.connections, {'c1.x':'p1.x', 'c2.x':'p1.x'})
+        self.assertEqual(root.connections['c1.x'], 'p1.x')
+        self.assertEqual(root.connections['c2.x'], 'p1.x')
+        self.assertEqual(len(root.connections), 2)
 
     def test_calc_gradient_interface_errors(self):
 
@@ -554,6 +540,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('D', D())
         problem.root.connect('A.y', 'D.y')
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
         problem = Problem()
@@ -561,6 +552,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('A', A(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Explicit
         problem = Problem()
@@ -569,6 +565,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('D', D())
         problem.root.connect('C.y', 'D.y')
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
         problem = Problem()
@@ -576,6 +577,11 @@ class TestProblem(unittest.TestCase):
         problem.root.add('C', C(), promotes=['y'])
         problem.root.add('D', D(), promotes=['y'])
         problem.setup()
+        stream = cStringIO()
+        problem.check_setup(out_stream=stream)
+        content = stream.getvalue()
+        self.assertTrue("The following components have no unknowns:\nD\n" in content)
+        self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
     def test_simplest_run(self):
 
@@ -748,25 +754,16 @@ class TestProblem(unittest.TestCase):
         top.setup()
         top.run()
 
-        mode = top._mode('auto', ['p1.a'], ['comp.x'])
-        self.assertEqual(mode, 'fwd')
-
-        mode = top._mode('auto', ['p1.a', 'p2.b'], ['comp.x'])
-        self.assertEqual(mode, 'rev')
-
         mode = top._mode('auto', ['a'], ['x'])
         self.assertEqual(mode, 'fwd')
 
         mode = top._mode('auto', ['a', 'b'], ['x'])
         self.assertEqual(mode, 'rev')
 
-        mode = top._mode('auto', ['comp.a'], ['x'])
-        self.assertEqual(mode, 'fwd')
-
         # make sure _check function does it too
 
         #try:
-            #mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            #mode = top._check_for_matrix_matrix(['a'], ['x'])
         #except Exception as err:
             #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
             #self.assertEqual(text_type(err), msg)
@@ -774,7 +771,7 @@ class TestProblem(unittest.TestCase):
             #self.fail('Exception expected')
 
         root.ln_solver.options['mode'] = 'fwd'
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        mode = top._check_for_matrix_matrix(['a', 'b'], ['x'])
         self.assertEqual(mode, 'fwd')
 
     def test_check_matrix_matrix(self):
@@ -791,13 +788,15 @@ class TestProblem(unittest.TestCase):
         top.setup()
         top.run()
 
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        # NOTE: this call won't actually calculate mode because default ln_solver
+        # is ScipyGMRES and its default mode is 'fwd', not 'auto'.
+        mode = top._check_for_matrix_matrix(['a'], ['x'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            mode = top._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -808,7 +807,7 @@ class TestProblem(unittest.TestCase):
         sub2.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+            mode = top._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -816,7 +815,68 @@ class TestProblem(unittest.TestCase):
             self.fail('Exception expected')
 
         sub1.ln_solver.options['mode'] = 'rev'
-        mode = top._check_for_matrix_matrix(['p1.a'], ['comp.x'])
+        mode = top._check_for_matrix_matrix(['a'], ['x'])
+
+
+class TestCheckSetup(unittest.TestCase):
+
+    def test_out_of_order(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        G2.connect("C1.y", "C3.x")
+        G2.connect("C3.y", "C2.x")
+
+        top.setup()
+        stream = cStringIO()
+        top.check_setup(out_stream=stream)
+        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
+                        stream.getvalue())
+
+    def test_cycle(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        G2.connect("C1.y", "C3.x")
+        G2.connect("C3.y", "C2.x")
+        G2.connect("C2.y", "C1.x")
+
+        top.setup()
+        stream = cStringIO()
+        top.check_setup(out_stream=stream)
+        self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C3', 'C2']]" in
+                        stream.getvalue())
+        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
+                        stream.getvalue())
+
+    def test_before_setup(self):
+        top = Problem(root=Group())
+        root = top.root
+
+        G1 = root.add("G1", Group())
+        G2 = G1.add("G2", Group())
+        C1 = G2.add("C1", ExecComp('y=x*2.0'))
+        C2 = G2.add("C2", ExecComp('y=x*2.0'))
+        C3 = G2.add("C3", ExecComp('y=x*2.0'))
+
+        try:
+            top.check_setup()
+        except Exception as err:
+            self.assertEqual(str(err), 'setup() must be called before check_setup()')
+        else:
+            self.fail("Exception expected")
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,12 +3,14 @@
 from __future__ import print_function
 
 import os
+import sys
 import warnings
 import json
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems, string_types
-import sys
+from six.moves import cStringIO
+import networkx as nx
 
 # pylint: disable=E0611, F0401
 import numpy as np
@@ -16,14 +18,16 @@ import numpy as np
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm
+from openmdao.core.mpiwrap import MPI, FakeComm, under_mpirun
 from openmdao.core.relevance import Relevance
+from openmdao.solvers.run_once import RunOnce
 from openmdao.units.units import get_conversion_tuple
-from openmdao.util.strutil import get_common_ancestor
+from openmdao.util.strutil import get_common_ancestor, name_relative_to
 from openmdao.devtools.debug import debug
 
 
@@ -34,6 +38,7 @@ class Problem(System):
 
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
+        self._setup_complete = False
         self.root = root
         if impl is None:
             self._impl = BasicImpl
@@ -61,51 +66,32 @@ class Problem(System):
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
+        'name' is assumed to be a promoted name.
 
         Args
         ----
         name : str
-             The name of the variable to set into the unknowns vector.
+             The promoted name of the variable to set into the
+             unknowns vector, or into params vectors if the params are
+             unconnected.
         """
-        self.root[name] = val
-
-    def setup(self):
-        """Performs all setup of vector storage, data transfer, etc.,
-        necessary to perform calculations.
-        """
-        # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname)
-
-        # divide MPI communicators among subsystems
-        if MPI:
-            self.root._setup_communicators(MPI.COMM_WORLD)
+        if name in self.root.unknowns:
+            self.root.unknowns[name] = val
+        elif name in self._dangling:
+            for p in self._dangling[name]:
+                parts = p.rsplit('.', 1)
+                if len(parts) == 1:
+                    self.root.params[p] = val
+                else:
+                    grp = self.root._subsystem(parts[0])
+                    grp.params[parts[1]] = val
         else:
-            self.root._setup_communicators(FakeComm())
+            raise KeyError("Variable '%s' not found." % name)
 
-        # Give every system a dictionary of parameters and of unknowns
-        # that are visible to that system, keyed on absolute pathnames.
-        # Metadata for each variable will contain the name of the
-        # variable relative to that system as well as size and shape if
-        # known.
-
-        # Returns the parameters and unknowns dictionaries for the root.
-        params_dict, unknowns_dict = self.root._setup_variables()
-
-        # get map of vars to VOI indices
-        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
-
-        # create a mapping from absolute name to top level promoted name
-        abs_to_prom = {}
-        for name, meta in chain(params_dict.items(), unknowns_dict.items()):
-            abs_to_prom[name] = meta['promoted_name']
-
-        # propagate top level promoted names and voi_indices
-        # down to all subsystems
-        for _, sub in self.root.subsystems(recurse=True, include_self=True):
-            for vname, meta in chain(sub._params_dict.items(),
-                                     sub._unknowns_dict.items()):
-                meta['top_promoted_name'] = abs_to_prom[vname]
-
+    def _setup_connections(self, params_dict, unknowns_dict):
+        """Generate a mapping of absolute param pathname to the pathname
+        of its unknown.
+        """
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
@@ -113,12 +99,11 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns = _get_implicit_connections(params_dict, unknowns_dict)
+        implicit_conns, prom_noconns = _get_implicit_connections(params_dict, unknowns_dict)
 
         # combine implicit and explicit connections
         for tgt, srcs in implicit_conns.items():
-            for src in srcs:
-                connections.setdefault(tgt, []).append(src)
+            connections.setdefault(tgt, []).extend(srcs)
 
         # resolve any input to input explicit connections
         input_sets = {}
@@ -128,51 +113,133 @@ class Problem(System):
                     input_sets.setdefault(src, set()).update((tgt,src))
                     input_sets.setdefault(tgt, set()).update((tgt,src))
 
+        # find any promoted but not connected inputs
+        for p, meta in params_dict.items():
+            prom = meta['promoted_name']
+            if prom in prom_noconns:
+                input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
+
+        for tgt, srcs in list(connections.items()):
+            if tgt in input_sets:
+                for s in srcs:
+                    if s in unknowns_dict:
+                        for t in input_sets[tgt]:
+                            if s not in connections.get(t,()):
+                                connections.setdefault(t, []).append(s)
+
         newconns = {}
         for tgt, srcs in connections.items():
-            tgts = (tgt,)
-            if tgt in input_sets and tgt not in newconns:
-                srcs = [s for s in srcs if s in unknowns_dict]
-                if srcs:
-                    tgts = input_sets[tgt]
+            unknown_srcs = [s for s in srcs if s in unknowns_dict]
+            if len(unknown_srcs) > 1:
+                raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
+                                   (tgt, unknown_srcs))
 
-            if len(srcs) > 1:
-                raise RuntimeError("Target '%s' is connected to multiple sources: %s" %
-                                   (tgt, srcs))
-            for target in tgts:
-                if srcs:
-                    newconns[target] = srcs[0]
+            if unknown_srcs:
+                newconns[tgt] = unknown_srcs[0]
 
         connections = newconns
 
-        # calculate unit conversions and store in param metadata
-        _setup_units(connections, params_dict, unknowns_dict)
+        self._dangling = {}
+        prom_unknowns = { m['promoted_name'] for m in unknowns_dict.values() }
+        for p, meta in params_dict.items():
+            if meta['pathname'] not in connections:
+                if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
+                    self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
+                else:
+                    self._dangling[meta['promoted_name']] = set([meta['pathname']])
+
 
         # perform additional checks on connections (e.g. for compatible types and shapes)
         check_connections(connections, params_dict, unknowns_dict)
 
-        # check for parameters that are not connected to a source/unknown
-        hanging_params = []
-        for p in params_dict:
-            if p not in connections.keys():
-                hanging_params.append(p)
+        return connections
 
-        if hanging_params:
-            msg = 'Parameters %s have no associated unknowns.' % hanging_params
-            warnings.warn(msg)
+    def setup(self):
+        """Performs all setup of vector storage, data transfer, etc.,
+        necessary to perform calculations.
+        """
+        self._setup_complete = False
 
-        # propagate top level metadata, e.g. unit_conv, to subsystems
-        self.root._update_sub_unit_conv()
+        # if we modify the system tree, we'll need to call _setup_variables
+        # and _setup_connections again
+        tree_changed = False
+
+        # call _setup_variables again if we change metadata
+        meta_changed = False
+
+        # Give every system an absolute pathname
+        self.root._setup_paths(self.pathname)
+
+        # Returns the parameters and unknowns metadata dictionaries
+        # for the root, which has an entry for each variable contained
+        # in any child of root. Metadata for each variable will contain
+        # the name of the variable relative to that system, the absolute
+        # name of the variable, any user defined metadata, and the value,
+        # size and/or shape if known. For example:
+        #  unknowns_dict['G1.G2.foo.v1'] = {
+        #     'promoted_name' :  'v1',
+        #     'pathname' : 'G1.G2.foo.v1', # absolute path from the top
+        #     'size' : 1,
+        #     'shape' : 1,
+        #     'val': 2.5,   # the initial value of that variable (if known)
+        #  }
+        params_dict, unknowns_dict = self.root._setup_variables()
+
+        # collect all connections, both implicit and explicit from
+        # anywhere in the tree, and put them in a dict where each key
+        # is an absolute param name that maps to the absolute name of
+        # a single source.
+        connections = self._setup_connections(params_dict, unknowns_dict)
+
+        # TODO: handle any automatic grouping of systems here...
+
+        # divide MPI communicators among subsystems
+        if MPI:
+            self.root._setup_communicators(MPI.COMM_WORLD)
+        else:
+            self.root._setup_communicators(FakeComm())
+
+        # mark any variables in non-local Systems as 'remote'
+        for comp in self.root.components(recurse=True):
+            if not comp.is_active():
+                meta_changed = True
+                comp._set_vars_as_remote()
+
+        # All changes to the system tree or variable metadata
+        # must be complete at this point.
+
+        if tree_changed:
+            self.root._setup_paths(self.pathname)
+            params_dict, unknowns_dict = self.root._setup_variables()
+            connections = self._setup_connections(params_dict, unknowns_dict)
+        elif meta_changed:
+            params_dict, unknowns_dict = self.root._setup_variables()
+
+        # calculate unit conversions and store in param metadata
+        self._setup_units(connections, params_dict, unknowns_dict)
+
+        # propagate top level promoted names, unit conversions,
+        # and connections down to all subsystems
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            sub.connections = connections
+
+            for meta in chain(sub._params_dict.values(),
+                              sub._unknowns_dict.values()):
+                path = meta['pathname']
+                if path in unknowns_dict:
+                    meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
+                else:
+                    meta['top_promoted_name'] = params_dict[path]['promoted_name']
+                    unit_conv = params_dict[path].get('unit_conv')
+                    if unit_conv:
+                        meta['unit_conv'] = unit_conv
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
         param_owners = assign_parameters(connections)
 
-        # some mode determination requires connection information, so pass
-        # it down the tree
-        self.root.connections = connections
-        for name, sub in self.root.subsystems(recurse=True):
-            sub.connections = connections
+        # get map of vars to VOI indices
+        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
 
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
@@ -181,7 +248,7 @@ class Problem(System):
         relevance = Relevance(params_dict, unknowns_dict, connections,
                               pois, oois, mode)
 
-        # create VecWrappers for all groups in the system tree.
+        # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, relevance=relevance,
                                  impl=self._impl)
 
@@ -190,6 +257,177 @@ class Problem(System):
 
         # Prepare Driver
         self.driver._setup(self.root)
+
+        self._setup_complete = True
+
+    def _check_dangling_params(self, out_stream=sys.stdout):
+        # check for parameters that are not connected to a source/unknown.
+        # this includes ALL dangling params, both promoted and unpromoted.
+        dangling_params = [p for p in self.root._params_dict
+                              if p not in self.root.connections]
+        if dangling_params:
+            print("\nThe following parameters have no associated unknowns:",
+                  file=out_stream)
+            for d in sorted(dangling_params):
+                print(d, file=out_stream)
+
+    def _check_mode(self, out_stream=sys.stdout):
+        # Adjoint vs Forward mode appropriateness
+        if self._calculated_mode != self.root._relevance.mode:
+            print("\nSpecified derivative mode is '%s', but calculated mode is '%s'\n(based "
+                  "on param size of %d and unknown size of %d)" % (self.root._relevance.mode,
+                                                                   self._calculated_mode,
+                                                                   self._p_length,
+                                                                   self._u_length),
+                  file=out_stream)
+
+    def _list_unit_conversions(self, out_stream=sys.stdout):
+        # list all unit conversions being made (including only units on one side)
+        if self._unit_diffs:
+            print("\nUnit Conversions")
+            for (src,tgt), (sunit,tunit) in sorted(self._unit_diffs.items()):
+                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit), file=out_stream)
+
+    def _check_no_unknown_comps(self, out_stream=sys.stdout):
+        # Components without unknowns
+        nocomps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+                     if len(c.unknowns) == 0])
+        if nocomps:
+            print("\nThe following components have no unknowns:", file=out_stream)
+            for n in nocomps:
+                print(n, file=out_stream)
+
+    def _check_no_recorders(self, out_stream=sys.stdout):
+        # No case recorder
+        if not self.driver.recorders:
+            for grp in self.root.subgroups(recurse=True, local=True, include_self=True):
+                if grp.nl_solver.recorders or grp.ln_solver.recorders:
+                    break
+            else:
+                print("\nNo recorders have been specified, so no data will be saved.",
+                      file=out_stream)
+
+    def _check_no_connect_comps(self, out_stream=sys.stdout):
+        # Unconnected components
+        conn_comps = set([t.rsplit('.',1)[0] for t in self.root.connections.keys()])
+        conn_comps.update([s.rsplit('.',1)[0] for s in self.root.connections.values()])
+        noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+                          if c.pathname not in conn_comps])
+        if noconn_comps:
+            print("\nThe following components have no connections:", file=out_stream)
+            for comp in noconn_comps:
+                print(comp, file=out_stream)
+
+    def _check_mpi(self, out_stream=sys.stdout):
+        if under_mpirun():
+            # Indicate that there are no parallel systems if user is running under MPI
+            if MPI.COMM_WORLD.rank == 0:
+                for grp in self.root.subgroups(recurse=True, include_self=True):
+                    if isinstance(grp, ParallelGroup):
+                        break
+                else:
+                    print("\nRunning under MPI, but no ParallelGroups were found.",
+                          file=out_stream)
+
+                mincpu, maxcpu = self.root.get_req_procs()
+                if maxcpu is not None and MPI.COMM_WORLD.size > maxcpu:
+                    print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
+                          (MPI.COMM_WORLD.size, maxcpu))
+        # or any ParalleGroups found when not running under MPI
+        else:
+            for grp in self.root.subgroups(recurse=True, include_self=True):
+                if isinstance(grp, ParallelGroup):
+                    print("\nFound ParallelGroup '%s', but not running under MPI." %
+                          grp.pathname, file=out_stream)
+
+    def _check_graph(self, out_stream=sys.stdout):
+        # Cycles in group w/o solver
+        cgraph = self.root._relevance._cgraph
+        for grp in self.root.subgroups(recurse=True, include_self=True):
+            path = [] if not grp.pathname else grp.pathname.split('.')
+            graph = cgraph.subgraph([n for n in cgraph if n.startswith(grp.pathname)])
+            renames = {}
+            for node in graph.nodes_iter():
+                renames[node] = '.'.join(node.split('.')[:len(path)+1])
+                if renames[node] == node:
+                    del renames[node]
+
+            # get the graph of direct children of current group
+            nx.relabel_nodes(graph, renames, copy=False)
+
+            # remove self loops created by renaming
+            graph.remove_edges_from([(u,v) for u,v in graph.edges()
+                                         if u==v])
+
+            strong = [s for s in nx.strongly_connected_components(graph)
+                        if len(s)>1]
+
+            if strong and isinstance(grp.nl_solver, RunOnce): # no solver, cycles BAD
+                relstrong = []
+                for slist in strong:
+                    relstrong.append([])
+                    for s in slist:
+                        relstrong[-1].append(name_relative_to(grp.pathname, s))
+                print("Group '%s' has the following cycles: %s" %
+                     (grp.pathname, relstrong), file=out_stream)
+
+            # Components/Systems/Groups are not in the right execution order
+            subnames = [s.pathname for s in grp.subsystems()]
+            while strong:
+                # break cycles to check order
+                lsys = [s for s in subnames if s in strong[0]]
+                for p in graph.predecessors(lsys[0]):
+                    if p in lsys:
+                        graph.remove_edge(p, lsys[0])
+                strong = [s for s in nx.strongly_connected_components(graph)
+                            if len(s)>1]
+
+            visited = set()
+            out_of_order = set()
+            for sub in grp.subsystems():
+                visited.add(sub.pathname)
+                for u,v in nx.dfs_edges(graph, sub.pathname):
+                    if v in visited:
+                        out_of_order.add(v)
+
+            if out_of_order:
+                print("In group '%s', the following subsystems are out-of-order: %s" %
+                      (grp.pathname, sorted([name_relative_to(grp.pathname, n)
+                                                for n in out_of_order])), file=out_stream)
+
+    def check_setup(self, out_stream=sys.stdout):
+        """Write a report to the given stream indicating any potential problems found
+        with the current configuration.
+
+        Args
+        ----
+        out_stream : a file-like object
+            Stream where report will be written.
+        """
+        # make sure that setup() has been called before check_setup()
+        if not self._setup_complete:
+            raise RuntimeError("setup() must be called before check_setup()")
+
+        self._check_dangling_params(out_stream)
+        self._check_mode(out_stream)
+        self._list_unit_conversions(out_stream)
+        self._check_no_unknown_comps(out_stream)
+        self._check_no_connect_comps(out_stream)
+        self._check_no_recorders(out_stream)
+        self._check_mpi(out_stream)
+        self._check_graph(out_stream)
+
+        # TODO: Incomplete optimization driver configuration
+        # TODO: Parallelizability for users running serial models
+        # TODO: io state of recorder-specific files?
+
+        # loop over subsystems and let them add any specific checks to the stream
+        for s in self.root.subsystems(recurse=True, local=True, include_self=True):
+            stream = cStringIO()
+            s.check_setup(out_stream=stream)
+            content = stream.getvalue()
+            if content:
+                print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
 
     def run(self):
         """ Runs the Driver in self.driver. """
@@ -201,61 +439,48 @@ class Problem(System):
         """ Determine the mode based on precedence. The mode in `mode` is
         first. If that is 'auto', then the mode in root.ln_options takes
         precedence. If that is 'auto', then mode is determined by the width
-        of the prameter and quantity space."""
+        of the parameter and quantity space."""
 
-        root = self.root
+        self._p_length = 0
+        self._u_length = 0
+        uset = set()
+        for unames in unknown_list:
+            if isinstance(unames, tuple):
+                uset.update(unames)
+            else:
+                uset.add(unames)
+        pset = set()
+        for pnames in param_list:
+            if isinstance(pnames, tuple):
+                pset.update(pnames)
+            else:
+                pset.add(pnames)
+
+        for meta in chain(self.root._unknowns_dict.values(),
+                          self.root._params_dict.values()):
+            prom_name = meta['promoted_name']
+            if prom_name in uset:
+                self._u_length += meta['size']
+                uset.remove(prom_name)
+            elif prom_name in pset:
+                self._p_length += meta['size']
+                pset.remove(prom_name)
+
+        if uset:
+            raise RuntimeError("Can't determine size of unknowns %s." % list(uset))
+        if pset:
+            raise RuntimeError("Can't determine size of params %s." % list(pset))
+
+        # Choose mode based on size
+        if self._p_length > self._u_length:
+            self._calculated_mode = 'rev'
+        else:
+            self._calculated_mode = 'fwd'
 
         if mode == 'auto':
-            mode = root.ln_solver.options['mode']
+            mode = self.root.ln_solver.options['mode']
             if mode == 'auto':
-                p_dict = root._params_dict
-                u_dict = root._unknowns_dict
-
-                # Sum up param size
-                p_length = 0
-                for param in param_list:
-                    if param in p_dict:
-                        meta = p_dict[param]
-                    elif param in u_dict:
-                        meta = u_dict[param]
-                    else:
-                        # try to convert promoted name to absolute name
-                        try:
-                            param = get_absvarpathnames(param, u_dict, 'unknowns_dict')[0]
-                        except KeyError:
-                            try:
-                                param = get_absvarpathnames(param, p_dict, 'params_dict')[0]
-                            except KeyError:
-                                raise NameError("'%s' cannot be converted into an absolute name." %
-                                                param)
-
-                        # The user sometimes specifies the parameter output
-                        # name instead of its target because it is more
-                        # convenient
-                        for key, val in iteritems(root.connections):
-                            if val == param:
-                                meta = u_dict[param]
-                                break
-                        else:
-                            raise RuntimeError("Can't determine size of '%s'" % param)
-
-                    p_length += meta['size']
-
-                # Sum up unknowns size
-                u_length = 0
-                for unkn in unknown_list:
-
-                    if unkn not in u_dict:
-                        unkn = get_absvarpathnames(unkn, u_dict, 'unknowns_dict')[0]
-
-                    meta = u_dict[unkn]
-                    u_length += meta['size']
-
-                # Choose mode based on size
-                if p_length > u_length:
-                    mode = 'rev'
-                else:
-                    mode = 'fwd'
+                mode = self._calculated_mode
 
         return mode
 
@@ -383,9 +608,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns._get_metadata(u)['size']
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns._get_metadata(p)['size']
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
             ui = 0
@@ -468,9 +693,9 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns._get_metadata(u)['size']
+                usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns._get_metadata(p)['size']
+                psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':
@@ -619,7 +844,8 @@ class Problem(System):
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for cname, comp in root.components(recurse=True):
+        for comp in root.components(recurse=True):
+            cname = comp.pathname
 
             # No need to check comps that don't have any derivs.
             if comp.fd_options['force_fd'] == True:
@@ -800,8 +1026,8 @@ class Problem(System):
         for recorder in self.driver.recorders:
             recorder.startup(self.root)
 
-        for group, solvers in self.root._find_all_solvers():
-            for solver in solvers:
+        for group in self.root.subgroups(recurse=True, include_self=True):
+            for solver in (group.nl_solver, group.ln_solver):
                 for recorder in solver.recorders:
                     recorder.startup(group)
 
@@ -815,7 +1041,7 @@ class Problem(System):
 
         # TODO : Only Linear GS is supported on system
 
-        for _, sub in self.root.subgroups(recurse=True):
+        for sub in self.root.subgroups(recurse=True):
             sub_mode = sub.ln_solver.options['mode']
 
             # Modes must match root for all subs
@@ -833,13 +1059,13 @@ class Problem(System):
 
         def _tree_dict(system):
             dct = OrderedDict()
-            for name, s in system.subsystems(recurse=True):
+            for s in system.subsystems(recurse=True):
                 if isinstance(s, Group):
-                    dct[name] = _tree_dict(s)
+                    dct[s.name] = _tree_dict(s)
                 else:
-                    dct[name] = OrderedDict()
+                    dct[s.name] = OrderedDict()
                     for vname, meta in s.unknowns.items():
-                        dct[name][vname] = m = meta.copy()
+                        dct[s.name][vname] = m = meta.copy()
                         for mname in m:
                             if isinstance(m[mname], np.ndarray):
                                 m[mname] = m[mname].tolist()
@@ -853,50 +1079,58 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
 
-def _setup_units(connections, params_dict, unknowns_dict):
-    """
-    Calculate unit conversion factors for any connected
-    variables having different units and store them in params_dict.
+    def _setup_units(self, connections, params_dict, unknowns_dict):
+        """
+        Calculate unit conversion factors for any connected
+        variables having different units and store them in params_dict.
 
-    Args
-    ----
-    connections : dict
-        A dict of target variables (absolute name) mapped
-        to the absolute name of their source variable.
+        Args
+        ----
+        connections : dict
+            A dict of target variables (absolute name) mapped
+            to the absolute name of their source variable.
 
-    params_dict : OrderedDict
-        A dict of parameter metadata for the whole `Problem`.
+        params_dict : OrderedDict
+            A dict of parameter metadata for the whole `Problem`.
 
-    unknowns_dict : OrderedDict
-        A dict of unknowns metadata for the whole `Problem`.
-    """
+        unknowns_dict : OrderedDict
+            A dict of unknowns metadata for the whole `Problem`.
+        """
 
-    for target, source in connections.items():
-        tmeta = params_dict[target]
-        smeta = unknowns_dict[source]
+        self._unit_diffs = {}
+        for target, source in connections.items():
+            tmeta = params_dict[target]
+            smeta = unknowns_dict[source]
 
-        # units must be in both src and target to have a conversion
-        if 'units' not in tmeta or 'units' not in smeta:
-            continue
+            # units must be in both src and target to have a conversion
+            if 'units' not in tmeta or 'units' not in smeta:
+                # for later reporting in check_setup, keep track of any unit differences,
+                # even for connections where one side has units and the other doesn't
+                if 'units' in tmeta or 'units' in smeta:
+                    self._unit_diffs[(source, target)] = (smeta.get('units'),
+                                                          tmeta.get('units'))
+                continue
 
-        src_unit = smeta['units']
-        tgt_unit = tmeta['units']
+            src_unit = smeta['units']
+            tgt_unit = tmeta['units']
 
-        try:
-            scale, offset = get_conversion_tuple(src_unit, tgt_unit)
-        except TypeError as err:
-            if str(err) == "Incompatible units":
-                msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
-                    "is incompatible with unit '{t[units]}' "\
-                    "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
-                raise TypeError(msg)
-            else:
-                raise
+            try:
+                scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+            except TypeError as err:
+                if str(err) == "Incompatible units":
+                    msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
+                        "is incompatible with unit '{t[units]}' "\
+                        "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
+                    raise TypeError(msg)
+                else:
+                    raise
 
-        # If units are not equivalent, store unit conversion tuple
-        # in the parameter metadata
-        if scale != 1.0 or offset != 0.0:
-            tmeta['unit_conv'] = (scale, offset)
+            # If units are not equivalent, store unit conversion tuple
+            # in the parameter metadata
+            if scale != 1.0 or offset != 0.0:
+                tmeta['unit_conv'] = (scale, offset)
+                self._unit_diffs[(source, target)] = (smeta.get('units'),
+                                                      tmeta.get('units'))
 
 
 def assign_parameters(connections):
@@ -1040,12 +1274,12 @@ def _get_implicit_connections(params_dict, unknowns_dict):
 
     # collect all absolute names that map to each promoted name
     abs_unknowns = {}
-    for abs_name, u in unknowns_dict.items():
-        abs_unknowns.setdefault(u['promoted_name'], []).append(abs_name)
+    for u in unknowns_dict.values():
+        abs_unknowns.setdefault(u['promoted_name'], []).append(u['pathname'])
 
     abs_params = {}
-    for abs_name, p in params_dict.items():
-        abs_params.setdefault(p['promoted_name'], []).append(abs_name)
+    for p in params_dict.values():
+        abs_params.setdefault(p['promoted_name'], []).append(p['pathname'])
 
     # check if any promoted names correspond to mutiple unknowns
     for name, lst in abs_unknowns.items():
@@ -1053,10 +1287,17 @@ def _get_implicit_connections(params_dict, unknowns_dict):
             raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
                                (name, lst))
 
-    connections = {}
-    for uname, uabs in abs_unknowns.items():
-        pabs = abs_params.get(uname, ())
-        for p in pabs:
-            connections[p] = uabs
+    prom_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
 
-    return connections
+    connections = {}
+    dangling = {}
+
+    for prom_name, pabs_list in abs_params.items():
+        uabs = abs_unknowns.get(prom_name, ())
+        if uabs:  # param has a src in unknowns
+            for pabs in pabs_list:
+                connections[pabs] = uabs
+        elif prom_name not in prom_unknowns:
+            dangling.setdefault(prom_name, set()).update(pabs_list)
+
+    return connections, dangling

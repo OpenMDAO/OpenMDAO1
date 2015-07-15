@@ -57,26 +57,26 @@ class LinearGaussSeidel(LinearSolver):
                 if name in dumat:
                     dumat[name].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
-        #drmat[None].vec[:] = -rhs
 
         vois = rhs_mat.keys()
+        # John starts with the following. It is not necessary, but
+        # uncommenting it helps to debug when comparing print outputs to his.
+        #for voi in vois:
+        #    drmat[voi].vec[:] = -rhs_mat[voi]
         sol_buf = {}
-        norm0, norm = 1.0, 1.0
-        counter = 0
-        while counter < self.options['maxiter'] and \
-              norm > self.options['atol'] and \
-              norm/norm0 > self.options['rtol']:
+        f_norm0, f_norm = 1.0, 1.0
+        self.iter_count = 0
+        while self.iter_count < self.options['maxiter'] and \
+              f_norm > self.options['atol'] and \
+              f_norm/f_norm0 > self.options['rtol']:
 
             if mode == 'fwd':
 
-                for name, sub in system.subsystems(local=True):
-
-                    #for voi in vois:
-                        #print(name, voi, dpmat[voi].keys(), dumat[voi].keys())
+                for sub in system.subsystems(local=True):
 
                     for voi in vois:
                         #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                        system._transfer_data(name, deriv=True, var_of_interest=voi)
+                        system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
                         #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     if isinstance(sub, Component):
@@ -106,18 +106,12 @@ class LinearGaussSeidel(LinearSolver):
 
             else:
 
-                rev_systems = [sys for sys in system.subsystems(local=True)]
-
-                for subsystem in reversed(rev_systems):
-                    name, sub = subsystem
-                    #for voi in vois:
-                        #print(name, dpmat[voi].keys(), dumat[voi].keys())
-
+                for sub in reversed(list(system.subsystems(local=True))):
                     for voi in vois:
                         dumat[voi].vec *= 0.0
 
                         #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
-                        system._transfer_data(name, mode='rev', deriv=True, var_of_interest=voi)
+                        system._transfer_data(sub.name, mode='rev', deriv=True, var_of_interest=voi)
                         #print('post scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                         dumat[voi].vec *= -1.0
@@ -146,12 +140,15 @@ class LinearGaussSeidel(LinearSolver):
                     sol_buf[voi] = drmat[voi].vec
 
 
-            counter += 1
+            self.iter_count += 1
             if self.options['maxiter'] == 1:
-                norm = 0.0
+                f_norm = 0.0
             else:
-                norm = self._norm(system, mode, rhs_mat)
-                #print('Residual:', norm)
+                f_norm = self._norm(system, mode, rhs_mat)
+
+            if self.options['iprint'] > 0:
+                self.print_norm('LN_GS', self.local_meta, self.iter_count,
+                                f_norm, f_norm0, indent=1)
 
         return sol_buf
 
@@ -173,15 +170,19 @@ class LinearGaussSeidel(LinearSolver):
         """
 
         if mode == 'fwd':
-            rhs_vec = system.dumat
-        else:
             rhs_vec = system.drmat
+        else:
+            rhs_vec = system.dumat
 
-        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys())
+        outputs = {}
+        for voi in rhs_mat:
+            outputs[voi] = system.dumat[voi].keys()
+
+        system.apply_linear(mode, ls_inputs=outputs, vois=rhs_mat.keys())
 
         norm = 0.0
         for voi, rhs in rhs_mat.items():
             rhs_vec[voi].vec[:] -= rhs
             norm += rhs_vec[voi].norm()**2
 
-        return norm
+        return norm**0.5

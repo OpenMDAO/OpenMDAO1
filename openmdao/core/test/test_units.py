@@ -140,7 +140,49 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root.params._get_metadata('tgtC.x2').get('unit_conv'),
+        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
+                         None)
+
+        param_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+    def test_basic_input_input(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp())
+        prob.root.add('tgtF', TgtCompF())
+        prob.root.add('tgtC', TgtCompC())
+        prob.root.add('tgtK', TgtCompK())
+        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtC.x2')
+        prob.root.connect('tgtC.x2', 'tgtF.x2')
+        prob.root.connect('tgtC.x2', 'tgtK.x2')
+
+        prob.setup()
+        prob.run()
+
+        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
+
+        # Make sure we don't convert equal units
+        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']
@@ -178,7 +220,7 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root.params._get_metadata('tgtC.x2').get('unit_conv'),
+        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']
@@ -222,7 +264,7 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['sub2.tgtK.x3'], 373.15, 1e-6)
 
         # Make sure we don't convert equal units
-        self.assertEqual(prob.root.sub2.params._get_metadata('tgtC.x2').get('unit_conv'),
+        self.assertEqual(prob.root.sub2.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
         param_list = ['x1']

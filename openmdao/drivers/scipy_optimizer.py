@@ -76,14 +76,16 @@ class ScipyOptimizer(Driver):
         # Metadata Setup
         opt = self.options['optimizer']
         self.metadata = create_local_meta(None, opt)
+        self.iter_count = 0
+        update_local_meta(self.metadata, (self.iter_count,))
 
         # Initial Run
-        problem.root.solve_nonlinear()
+        problem.root.solve_nonlinear(metadata=self.metadata)
 
         pmeta = self.get_param_metadata()
-        self.objs = self.get_objectives().keys()
+        self.objs = list(self.get_objectives().keys())
         con_meta = self.get_constraint_metadata()
-        self.cons = con_meta.keys()
+        self.cons = list(con_meta.keys())
 
         self.opt_settings['maxiter'] = self.options['maxiter']
         self.opt_settings['disp'] = self.options['disp']
