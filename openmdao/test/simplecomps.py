@@ -409,7 +409,7 @@ class RosenSuzuki(Component):
         self.opt_design_vars = [0., 1., 2., -1.]
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """calculate the new objective value"""
+        """calculate the new objective and constraint values"""
         x = params['x']
 
         f = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +

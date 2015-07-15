@@ -100,8 +100,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(list(root.G2._params_dict.items()),
                          [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
                                           'promoted_name': 'G1.C2.x', 'top_promoted_name': 'G2.G1.C2.x',
-                                          'size': 1})]
-)
+                                          'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
                          [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
                                        'promoted_name': 'C1.x', 'top_promoted_name': 'G2.C1.x', 'size': 1}),
