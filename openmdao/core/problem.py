@@ -431,7 +431,6 @@ class Problem(System):
 
     def run(self):
         """ Runs the Driver in self.driver. """
-
         if self.root.is_active():
             self.driver.run(self)
 
