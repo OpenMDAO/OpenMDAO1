@@ -82,7 +82,7 @@ for package in packages:
     for sub_listing in sub_listings:
         #don't want to catalog files twice, nor use init files nor test dir
         if not "pyc" in sub_listing and not "__init__" in sub_listing \
-        and sub_listing != "test":
+        and not "ini" in sub_listing and sub_listing != "test":
             #just want the name of e.g. dataxfer not dataxfer.py
             sub_packages.append(sub_listing.rsplit('.')[0])
 
