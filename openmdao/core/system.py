@@ -514,62 +514,62 @@ class System(object):
                                           my_params, self.connections,
                                           relevant_vars=relevance[var_of_interest])
 
-    def get_combined_J(self, J):
-        """
-        Take a J dict that's distributed, i.e., has different values
-        across different MPI processes, and return a dict that
-        contains all of the values from all of the processes.  If
-        values are duplicated, use the value from the lowest rank
-        process.  Note that J has a nested dict structure.
-        """
-
-        comm = self.comm
-        if not self.is_active():
-            return J
-
-        myrank = comm.rank
-
-        tups = []
-
-        # Gather a list of local tuples for J.
-        for output, dct in J.items():
-            for param, value in dct.items():
-
-                # Params are already only on this process. We need to add
-                # only outputs of components that are on this process.
-                sys = getattr(self, output.partition('.')[0])
-                if sys.is_active() and value is not None and value.size > 0:
-                    tups.append((output, param))
-
-        dist_tups = comm.gather(tups, root=0)
-
-        tupdict = {}
-        if myrank == 0:
-            for rank, tups in enumerate(dist_tups):
-                for tup in tups:
-                    if not tup in tupdict:
-                        tupdict[tup] = rank
-
-            #get rid of tups from the root proc before bcast
-            for tup, rank in tupdict.items():
-                if rank == 0:
-                    del tupdict[tup]
-
-        tupdict = comm.bcast(tupdict, root=0)
-
-        if myrank == 0:
-            for (param, output), rank in tupdict.items():
-                J[param][output] = comm.recv(source=rank, tag=0)
-        else:
-            for (param, output), rank in tupdict.items():
-                if rank == myrank:
-                    comm.send(J[param][output], dest=0, tag=0)
-
-        # FIXME: rework some of this using knowledge of local_var_sizes in order
-        # to avoid any unnecessary data passing
-
-        # return the combined dict
-        return comm.bcast(J, root=0)
+    # def get_combined_J(self, J):
+    #     """
+    #     Take a J dict that's distributed, i.e., has different values
+    #     across different MPI processes, and return a dict that
+    #     contains all of the values from all of the processes.  If
+    #     values are duplicated, use the value from the lowest rank
+    #     process.  Note that J has a nested dict structure.
+    #     """
+    #
+    #     comm = self.comm
+    #     if not self.is_active():
+    #         return J
+    #
+    #     myrank = comm.rank
+    #
+    #     tups = []
+    #
+    #     # Gather a list of local tuples for J.
+    #     for output, dct in J.items():
+    #         for param, value in dct.items():
+    #
+    #             # Params are already only on this process. We need to add
+    #             # only outputs of components that are on this process.
+    #             sys = getattr(self, output.partition('.')[0])
+    #             if sys.is_active() and value is not None and value.size > 0:
+    #                 tups.append((output, param))
+    #
+    #     dist_tups = comm.gather(tups, root=0)
+    #
+    #     tupdict = {}
+    #     if myrank == 0:
+    #         for rank, tups in enumerate(dist_tups):
+    #             for tup in tups:
+    #                 if not tup in tupdict:
+    #                     tupdict[tup] = rank
+    #
+    #         #get rid of tups from the root proc before bcast
+    #         for tup, rank in tupdict.items():
+    #             if rank == 0:
+    #                 del tupdict[tup]
+    #
+    #     tupdict = comm.bcast(tupdict, root=0)
+    #
+    #     if myrank == 0:
+    #         for (param, output), rank in tupdict.items():
+    #             J[param][output] = comm.recv(source=rank, tag=0)
+    #     else:
+    #         for (param, output), rank in tupdict.items():
+    #             if rank == myrank:
+    #                 comm.send(J[param][output], dest=0, tag=0)
+    #
+    #     # FIXME: rework some of this using knowledge of local_var_sizes in order
+    #     # to avoid any unnecessary data passing
+    #
+    #     # return the combined dict
+    #     return comm.bcast(J, root=0)
 
     def _get_var_pathname(self, name):
         if self.pathname:

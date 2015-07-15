@@ -559,17 +559,6 @@ class Problem(System):
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
 
-        def get_fd_okey(okey):
-            # User might request an output via the absolute pathname
-            fd_okey = okey
-            if fd_okey not in unknowns:
-                for key in unknowns:
-                    meta = unknowns.metadata(key)
-                    if meta['pathname'] == fd_okey:
-                        fd_okey = meta['promoted_name']
-                        break
-            return fd_okey
-
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
             if isinstance(ikey, tuple):
@@ -602,9 +591,8 @@ class Problem(System):
             for okey in unknown_list:
                 J[okey] = {}
                 for ikey in param_list:
-                    fd_okey = get_fd_okey(okey)
                     fd_ikey = get_fd_ikey(ikey)
-                    J[okey][ikey] = Jfd[(fd_okey, fd_ikey)]
+                    J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
             usize = 0
             psize = 0
@@ -618,7 +606,7 @@ class Problem(System):
             for u in unknown_list:
                 pi = 0
                 for p in param_list:
-                    pd = Jfd[get_fd_okey(u), get_fd_ikey(p)]
+                    pd = Jfd[u, get_fd_ikey(p)]
                     rows, cols = pd.shape
                     for row in range(0, rows):
                         for col in range(0, cols):
