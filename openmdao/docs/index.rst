@@ -19,12 +19,11 @@ Documentation for OpenMDAO version: |release|
 `User Guide`_
 ==============
 
-.. _User Guide: usr-guide/design.html
+.. _User Guide: usr-guide/basics.html
 
 .. toctree::
    :maxdepth: 1
 
-   usr-guide/design.rst
    usr-guide/basics.rst
    usr-guide/tutorials.rst
    usr-guide/examples.rst

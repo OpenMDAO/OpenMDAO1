@@ -60,7 +60,9 @@ values of the unknowns for a given set of parameter values.
 
 Variables are added to the system in the constructor (__init__ method) via the
 *add_parameter*, *add_output* and *add_state* functions. For example:
+
 ::
+
     class MyComp(Component):
         def __init__(self):
             self.add_param('x', val=0.)
@@ -79,7 +81,9 @@ The *solve_nonlinear* function takes three arguments: the parameters vector, the
 unknowns vector, and a residuals vector. This function will be called using the
 vector attributes of the containing `System`, so those vectors will contain entries
 for the variables declared in the constructor. For example:
+
 ::
+
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y'] = params['x'] + 2
 
@@ -99,7 +103,9 @@ is a subclass of `System` that used to encapsulate groupings of `Systems`.
 A `Group` is created simply by adding one or more `Systems`. Those `Systems`
 may be either `Components` or other `Groups`. For example, we can add a `Group`
 to another `Group` along with some `Components`:
+
 ::
+
     c1 = MyComp()
     c2 = MyComp()
     c3 = MyComp()
@@ -118,7 +124,9 @@ or implicitly.
 
 An explicit connection is made from the output of one `System` to the input
 (parameter) of another using the `Group` *connect* method, as follows:
+
 ::
+
     g1.connect('c1.y', 'c2.x')
 
 Alternatively, you can use the *promotion* mechanism to implicitly connect two
@@ -126,13 +134,17 @@ or more variables.  When a `System` is added to a `Group`, you may optionally
 specify a list of variable names that are to be *promoted* from the subsystem
 to the group level. This means that you can reference the variable as if it
 were an attribute of the `Group` rather than the subsystem.  For Example:
+
 ::
+
     g2.add(c3, promotes=['x'])
 
 Now you can access the parameter 'x' from 'c3' as if it were an attribute of
 the group: 'g2.x'. If you promote multiple subsystem variables with the same
 name, then those variables will be implicitly connected:
+
 ::
+
     g2.add(g1, promotes=['c1.x'])
 
 Now setting a value for 'g2.x' will set the value for both 'c3.x' and 'g1.c1.x'
@@ -162,7 +174,9 @@ This is done by definining a `Problem` that contains the `System`.
 
 A `Problem` always has a single top-level `Group` called *root*.  This can
 be passed in the constructor or set later:
+
 ::
+
     prob = Problem(ExampleGroup())
 
     or
@@ -201,7 +215,9 @@ The general procedure for defining and solving a `Problem` in OpenMDAO is:
 A very basic example of defining and running a `Problem` as discussed here is shown below.
 This example makes use of a couple of convenience components to provide a source for the
 parameter (`ParamComp`) and to quickly define a `Component` for an equation (`ExecComp`).
+
 ::
+
     from openmdao.core.group import Group
     from openmdao.core.problem import Problem
     from openmdao.components.paramcomp import ParamComp
