@@ -98,7 +98,7 @@ To do so, we set 'force_fd' to True in comp2 and comp4. To further ilustrate
 setting options, we select central difference with a stepsize of 1.0e-4. Now
 let's run the model.
 
-::
+.. testcode:: fd_example
 
     # Setup and run the model.
     top = Problem()
@@ -114,17 +114,20 @@ let's run the model.
 
 We get output that looks like this:
 
-::
+.. testoutput:: fd_example
+   :options: +ELLIPSIS
 
-                Start Calc Gradient
-                -------------------------
-                Calculate Derivatives: comp1
-                Execute comp2
-                Execute comp2
-                Calculate Derivatives: comp3
-                Execute comp4
-                Execute comp4
-                [[ 81.]]
+   ...
+   Start Calc Gradient
+   -------------------------
+   Calculate Derivatives: comp1
+   Execute comp2
+   Execute comp2
+   Calculate Derivatives: comp3
+   Execute comp4
+   Execute comp4
+   [[ 81.]]
+
 
 The output shows that comp2 and comp4 aren't using their `jacobian` function,
 but instead are executing twice, as would be expected when using central
@@ -171,15 +174,32 @@ To turn on finite difference, we have set 'force_fd' to True in `self.sub`.
 
 There is no change to the execution code. The result looks like this:
 
-::
+.. testcode:: fd_example
+    :hide:
 
-    Start Calc Gradient
-    -------------------------
-    Calculate Derivatives: comp1
-    Execute comp2
-    Execute comp3
-    Calculate Derivatives: comp4
-    [[ 81.]]
+    # Setup and run the model.
+    top = Problem()
+    top.root = Model()
+    top.setup()
+    top.run()
+
+    print('\n\nStart Calc Gradient')
+    print ('-'*25)
+
+    J = top.calc_gradient(['px.x'], ['comp4.y'])
+    print(J)
+
+.. testoutput:: fd_example
+   :options: +ELLIPSIS
+
+   ...
+   Start Calc Gradient
+   -------------------------
+   Calculate Derivatives: comp1
+   Execute comp2
+   Execute comp3
+   Calculate Derivatives: comp4
+   [[ 81.]]
 
 Here we see that, instead of calling 'jacobian', comp2 and comp3 execute
 during finite differnce of the group that owns them. This is as we expect.
@@ -215,15 +235,32 @@ OpenMDAO to do this by setting force_fd in the parent `Group`.
 
 Nothing else changes in the original model. When we run it, we get:
 
-::
+.. testcode:: fd_example
+    :hide:
 
-    Start Calc Gradient
-    -------------------------
-    Execute comp1
-    Execute comp2
-    Execute comp3
-    Execute comp4
-    [[ 81.00000002]]
+    # Setup and run the model.
+    top = Problem()
+    top.root = Model()
+    top.setup()
+    top.run()
+
+    print('\n\nStart Calc Gradient')
+    print ('-'*25)
+
+    J = top.calc_gradient(['px.x'], ['comp4.y'])
+    print(J)
+
+.. testoutput:: fd_example
+   :options: +ELLIPSIS
+
+   ...
+   Start Calc Gradient
+   -------------------------
+   Execute comp1
+   Execute comp2
+   Execute comp3
+   Execute comp4
+   [[ 81.00000002]]
 
 So here, `jacobian` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
