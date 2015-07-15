@@ -4,7 +4,7 @@ import sys
 from distutils.core import setup
 
 setup(name='openmdao',
-      version=1.0,
+      version='1.0',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
 """,
@@ -32,13 +32,22 @@ setup(name='openmdao',
           'openmdao.core',
           'openmdao.core.test',
           'openmdao.util',
+          'openmdao.util.test',
           'openmdao.test',
+          'openmdao.test.test',
           'openmdao.units',
+          'openmdao.units.test',
           'openmdao.components',
+          'openmdao.components.test',
           'openmdao.drivers',
-          'openmdao.doegenerators',
-          'openmdao.surrogatemodels',
+          'openmdao.drivers.test',
+          'openmdao.solvers',
+          'openmdao.solvers.test',
+          'openmdao.recorders',
+          'openmdao.recorders.test',
+          'openmdao.devtools',
       ],
+      package_data = {'openmdao.units': ['unit_library.ini']},
       install_requires=[
         'six', 'Sphinx', 'numpydoc', 'networkx', 'numpy'
       ],
