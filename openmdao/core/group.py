@@ -578,8 +578,14 @@ class Group(System):
 
             # Instigate finite difference on child if user requests.
             if sub.fd_options['force_fd'] == True:
+                # Groups need total derivatives
+                if isinstance(sub, Group):
+                    total_derivs = True
+                else:
+                    total_derivs = False
                 jacobian_cache = sub.fd_jacobian(sub.params, sub.unknowns,
-                                                 sub.resids)
+                                                 sub.resids,
+                                                 total_derivs=total_derivs)
             else:
                 jacobian_cache = sub.jacobian(sub.params, sub.unknowns,
                                               sub.resids)

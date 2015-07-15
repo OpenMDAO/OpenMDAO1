@@ -11,3 +11,7 @@ Sellar Problem.
 [This document is walking through these classes without any reference to the past
 OpenMDAO syntax/structure.]
 
+.. toctree::
+   :maxdepth: 1
+
+   example_fd.rst
