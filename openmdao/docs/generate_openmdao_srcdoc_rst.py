@@ -81,8 +81,8 @@ for package in packages:
     #the sub_listing is going into each package dir and listing what's in it
     for sub_listing in sub_listings:
         #don't want to catalog files twice, nor use init files nor test dir
-        if not "pyc" in sub_listing and not "__init__" in sub_listing \
-        and not "ini" in sub_listing and sub_listing != "test":
+        if not sub_listing.endswith('.pyc') and not "__init__" in sub_listing \
+        and not sub_listing.endswith('.ini') and sub_listing != "test":
             #just want the name of e.g. dataxfer not dataxfer.py
             sub_packages.append(sub_listing.rsplit('.')[0])
 
