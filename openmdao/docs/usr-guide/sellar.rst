@@ -51,7 +51,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 self.add_param('x', val=0.)
 
                 # Coupling parameter
-                self.add_param('y2', val=0.)
+                self.add_param('y2', val=1.0)
 
                 # Coupling output
                 self.add_output('y1', val=1.0)
@@ -88,7 +88,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 self.add_param('z', val=np.zeros(2))
 
                 # Coupling parameter
-                self.add_param('y1', val=0.)
+                self.add_param('y1', val=1.0)
 
                 # Coupling output
                 self.add_output('y2', val=1.0)
@@ -317,7 +317,8 @@ at the top of your python file:
     from __future__ import print_function
 
 If we take all of the code we have written in this tutorial and place it into
-a file called `sellar_MDF_optimization.py` and run it, the final output will look something like:
+a file called `sellar_MDF_optimization.py` and run it, the final output will
+look something like:
 
 ::
 
@@ -390,7 +391,7 @@ for `y2` in Discipline1. Now this may look like we just replaced one cycle
 with another larger cycle, and that is true in the data graph. However, this
 component breaks the loop by not passing along the value of 'y2'. The solver
 sets the new value of y2 based on the models residuals, which now include the
-difference between 'y2' leaving Discipline2 2 and the 'y2' entering
+difference between 'y2' leaving Discipline2 and the 'y2' entering
 Discipline1. So the `solve_nonlinear` method does nothing, but we need to
 define `apply_nonlinear` to return this residual. Residuals live in the
 `resids` vector, so we set:
@@ -406,6 +407,8 @@ Next, we need to modify the model that we defined in `SellarDerivatives` to
 break the connection and use the `StateConnection`.
 
 .. testcode:: Disciplines
+
+    from openmdao.solvers.newton import Newton
 
     class SellarStateConnection(Group):
         """ Group containing the Sellar MDA. This version uses the disciplines
@@ -433,18 +436,23 @@ break the connection and use the `StateConnection`.
             self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
             self.connect('d2.y2', 'con_cmp2.y2')
 
-            self.nl_solver = NLGaussSeidel()
+            self.nl_solver = Newton()
 
 The first thing to notice is that we no longer promote the variable `y2` up
 to the group level. We need to add the connections manually because we really
 have two different variables named 'y2': they are 'd1.y2' and 'd2.y2'. In
 addition to the two connections to the 'state_eq' component, we also need to
-manually connect y2 to the objective and one of the constraints. Other than
-this, there are not other differences in the model, and the remaining
-optimization set up is the same as before. However, a small change in
-printing our results is required because 'y2' no longer exists in the group.
-We must print either 'd1.y2' or 'd2.y2' instead. It doesn't matter which one,
-since they should only differ by the solver tolerance at most.
+manually connect y2 to the objective and one of the constraints.
+
+We have also switched the solver to the Newton solver, since we no longer are
+iterating around a loop. Don't forget to change your import. The default
+settings should be fine for Sellar.
+
+Otherwise, there are no other differences in the model, and the
+remaining optimization set up is the same as before. However, a small change
+in printing our results is required because 'y2' no longer exists in the
+group. We must print either 'd1.y2' or 'd2.y2' instead. It doesn't matter
+which one, since they should only differ by the solver tolerance at most.
 
 .. testcode:: Disciplines
 

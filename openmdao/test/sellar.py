@@ -13,6 +13,7 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.newton import Newton
 
 
 class SellarDis1(Component):
@@ -28,7 +29,7 @@ class SellarDis1(Component):
         self.add_param('x', val=0.)
 
         # Coupling parameter
-        self.add_param('y2', val=0.)
+        self.add_param('y2', val=1.0)
 
         # Coupling output
         self.add_output('y1', val=1.0)
@@ -69,7 +70,7 @@ class SellarDis2(Component):
         self.add_param('z', val=np.zeros(2))
 
         # Coupling parameter
-        self.add_param('y1', val=0.)
+        self.add_param('y1', val=1.0)
 
         # Coupling output
         self.add_output('y2', val=1.0)
@@ -238,4 +239,4 @@ class SellarStateConnection(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
         self.connect('d2.y2', 'con_cmp2.y2')
 
-        self.nl_solver = NLGaussSeidel()
+        self.nl_solver = Newton()

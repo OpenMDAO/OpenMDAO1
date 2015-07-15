@@ -6,7 +6,7 @@ from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.newton import Newton
 
 
 class SellarDis1(Component):
@@ -151,7 +151,7 @@ class SellarStateConnection(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
         self.connect('d2.y2', 'con_cmp2.y2')
 
-        self.nl_solver = NLGaussSeidel()
+        self.nl_solver = Newton()
 
 
 # Setup and run the model.
