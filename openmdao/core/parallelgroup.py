@@ -24,7 +24,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for name, sub in self.subsystems(local=True):
+        for sub in self.subsystems(local=True):
             sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
 
     def children_solve_nonlinear(self, metadata):
@@ -33,7 +33,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for name, sub in self.subsystems(local=True):
+        for sub in self.subsystems(local=True):
             if isinstance(sub, Component):
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
@@ -50,7 +50,7 @@ class ParallelGroup(Group):
         min_procs = 0
         max_procs = 0
 
-        for name, sub in self.subsystems():
+        for sub in self.subsystems():
             sub_min, sub_max = sub.get_req_procs()
             min_procs += sub_min
             if max_procs is not None:
@@ -76,18 +76,21 @@ class ParallelGroup(Group):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
+        self.comm = comm
+        self._local_subsystems = OrderedDict()
+
+        # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
             super(ParallelGroup, self)._setup_communicators(comm)
             return
 
-        self.comm = comm
         size = comm.size
         rank = comm.rank
 
         subsystems = []
         requested_procs = []
         max_req_procs = []
-        for _, system in self.subsystems():
+        for system in self.subsystems():
             subsystems.append(system)
             mincpu, maxcpu = system.get_req_procs()
             assert(mincpu > 0)
@@ -120,8 +123,6 @@ class ParallelGroup(Group):
                         if assigned == limit:
                             break
 
-        self._local_subsystems = OrderedDict()
-
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > assigned_procs[i]:
                 raise RuntimeError("subsystem group %s requested %d processors but got %s" %
@@ -145,9 +146,9 @@ class ParallelGroup(Group):
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i, (name, sub) in enumerate(self.subsystems()):
+        for i, sub in enumerate(self.subsystems()):
             if i == rank_color:
-                self._local_subsystems[name] = sub
+                self._local_subsystems[sub.name] = sub
                 sub._setup_communicators(sub_comm)
             else:
                 sub._setup_communicators(MPI.COMM_NULL)

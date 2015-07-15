@@ -17,17 +17,18 @@ class TestGroup(unittest.TestCase):
         comp = ExecComp('y=x*2.0')
         group.add('mycomp', comp)
 
-        subs = dict(group.subsystems())
+        subs = list(group.subsystems())
         self.assertEqual(len(subs), 1)
-        self.assertEqual(subs['mycomp'], comp)
+        self.assertEqual(subs[0], comp)
+        self.assertEqual(subs[0].name, 'mycomp')
 
         comp2 = ExecComp('y=x*2.0')
         group.add("nextcomp", comp2)
 
-        subs = dict(group.subsystems())
+        subs = list(group.subsystems())
         self.assertEqual(len(subs), 2)
-        self.assertEqual(subs['mycomp'], comp)
-        self.assertEqual(subs['nextcomp'], comp2)
+        self.assertEqual(subs[0], comp)
+        self.assertEqual(subs[1], comp2)
 
         with self.assertRaises(RuntimeError) as cm:
             group.add('mycomp', comp)
@@ -88,48 +89,54 @@ class TestGroup(unittest.TestCase):
 
         # TODO: check for expected results from _setup_variables
         self.assertEqual(list(root.G1._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x', 'val': 3.0,
-                                          'promoted_name': 'C2.x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'C2.x',
+                                          'top_promoted_name': 'G2.G1.C2.x', 'size': 1})])
         self.assertEqual(list(root.G1._unknowns_dict.items()),
-                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
-                                          'val': 5.5, 'promoted_name': 'C2.y'})])
+                         [('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'C2.y', 'top_promoted_name': 'G2.G1.C2.y',
+                                          'size': 1})])
 
         self.assertEqual(list(root.G2._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x',
-                                          'val': 3.0, 'promoted_name': 'G1.C2.x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'G1.C2.x', 'top_promoted_name': 'G2.G1.C2.x',
+                                          'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
-                         [('G2.C1.x',    {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.C1.x',
-                                          'val': 5.0, 'promoted_name': 'C1.x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
-                                          'val': 5.5, 'promoted_name': 'G1.C2.y'})])
+                         [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
+                                       'promoted_name': 'C1.x', 'top_promoted_name': 'G2.C1.x', 'size': 1}),
+                          ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'G1.C2.y', 'top_promoted_name': 'G2.G1.C2.y',
+                                          'size': 1})])
 
         self.assertEqual(list(root.G3._params_dict.items()),
-                         [('G3.C3.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.x',
-                                       'val': 3.0, 'promoted_name': 'C3.x'}),
-                          ('G3.C4.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.x',
-                                       'val': 3.0, 'promoted_name': 'C4.x'})])
+                         [('G3.C3.x', {'shape': 1, 'pathname': 'G3.C3.x', 'val': 3.0,
+                                       'promoted_name': 'C3.x', 'top_promoted_name': 'G3.C3.x', 'size': 1}),
+                          ('G3.C4.x', {'shape': 1, 'pathname': 'G3.C4.x', 'val': 3.0,
+                                       'promoted_name': 'C4.x', 'top_promoted_name': 'G3.C4.x', 'size': 1})])
         self.assertEqual(list(root.G3._unknowns_dict.items()),
-                         [('G3.C3.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.y',
-                                       'val': 5.5, 'promoted_name': 'C3.y'}),
-                          ('G3.C4.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.y',
-                                       'val': 5.5, 'promoted_name': 'C4.y'})])
+                         [('G3.C3.y', {'shape': 1, 'pathname': 'G3.C3.y', 'val': 5.5,
+                                       'promoted_name': 'C3.y', 'top_promoted_name': 'G3.C3.y', 'size': 1}),
+                          ('G3.C4.y', {'shape': 1, 'pathname': 'G3.C4.y', 'val': 5.5,
+                                       'promoted_name': 'C4.y', 'top_promoted_name': 'G3.C4.y', 'size': 1})])
 
         self.assertEqual(list(root._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.x',
-                                          'val': 3.0, 'promoted_name': 'G2.G1.C2.x'}),
-                          ('G3.C3.x',    {'shape': 1, 'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x',
-                                          'val': 3.0, 'size': 1}),
-                          ('G3.C4.x',    {'shape': 1, 'promoted_name': 'G3.C4.x', 'top_promoted_name': 'G3.C4.x',
-                                          'val': 3.0, 'size': 1})])
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'G2.G1.C2.x',
+                                          'top_promoted_name': 'G2.G1.C2.x', 'size': 1}),
+                          ('G3.C3.x', {'shape': 1, 'pathname': 'G3.C3.x', 'val': 3.0,
+                                       'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x', 'size': 1}),
+                          ('G3.C4.x', {'shape': 1, 'pathname': 'G3.C4.x', 'val': 3.0,
+                                       'promoted_name': 'G3.C4.x', 'top_promoted_name': 'G3.C4.x', 'size': 1})])
         self.assertEqual(list(root._unknowns_dict.items()),
-                         [('G2.C1.x', {'shape': 1, 'promoted_name': 'G2.C1.x', 'top_promoted_name': 'G2.C1.x',
-                                       'val': 5.0, 'size': 1}),
-                          ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y', 'val': 5.5,
-                                          'promoted_name': 'G2.G1.C2.y'}),
-                          ('G3.C3.y', {'shape': 1, 'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y',
-                                       'val': 5.5, 'size': 1}),
-                          ('G3.C4.y', {'shape': 1, 'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y',
-                                       'val': 5.5, 'size': 1})])
+                         [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
+                                       'promoted_name': 'G2.C1.x', 'top_promoted_name': 'G2.C1.x', 'size': 1}),
+                          ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'G2.G1.C2.y', 'top_promoted_name': 'G2.G1.C2.y',
+                                          'size': 1}),
+                          ('G3.C3.y', {'shape': 1, 'pathname': 'G3.C3.y', 'val': 5.5,
+                                       'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y', 'size': 1}),
+                          ('G3.C4.y', {'shape': 1, 'pathname': 'G3.C4.y', 'val': 5.5,
+                                       'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y', 'size': 1})])
 
         # verify we get correct connection information
         #connections = root._get_explicit_connections()
@@ -203,50 +210,51 @@ class TestGroup(unittest.TestCase):
 
         # TODO: check for expected results from _setup_variables
         self.assertEqual(list(root.G1._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x',
-                                          'val': 3.0, 'promoted_name': 'x'})])
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'x', 'top_promoted_name': 'G2.x', 'size': 1})])
         self.assertEqual(list(root.G1._unknowns_dict.items()),
-                         [('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
-                                          'val': 5.5, 'promoted_name': 'C2.y'})])
+                         [('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'C2.y', 'top_promoted_name': 'G2.G1.C2.y', 'size': 1})])
 
         self.assertEqual(list(root.G2._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'promoted_name': 'x', 'top_promoted_name': 'G2.x',
-                                          'val': 3.0, 'size': 1})])
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'x', 'top_promoted_name': 'G2.x', 'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
-                         [('G2.C1.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x', 'val': 5.0,
-                                       'promoted_name': 'x'}),
-                          ('G2.G1.C2.y', {'shape': 1, 'promoted_name': 'G1.C2.y',
-                                          'top_promoted_name': 'G2.G1.C2.y', 'val': 5.5, 'size': 1})])
+                         [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
+                                       'promoted_name': 'x', 'top_promoted_name': 'G2.x', 'size': 1}),
+                          ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'G1.C2.y', 'top_promoted_name': 'G2.G1.C2.y', 'size': 1})])
 
         self.assertEqual(list(root.G3._params_dict.items()),
-                         [('G3.C3.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.x', 'val': 3.0,
-                                       'promoted_name': 'C3.x'}),
-                          ('G3.C4.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'x', 'val': 3.0,
-                                       'promoted_name': 'x'})])
+                         [('G3.C3.x', {'shape': 1, 'pathname': 'G3.C3.x', 'val': 3.0,
+                                       'promoted_name': 'C3.x', 'top_promoted_name': 'G3.C3.x', 'size': 1}),
+                          ('G3.C4.x', {'shape': 1, 'pathname': 'G3.C4.x', 'val': 3.0,
+                                       'promoted_name': 'x', 'top_promoted_name': 'x', 'size': 1})])
+
         self.assertEqual(list(root.G3._unknowns_dict.items()),
-                         [('G3.C3.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C3.y', 'val': 5.5,
-                                       'promoted_name': 'C3.y'}),
-                          ('G3.C4.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G3.C4.y', 'val': 5.5,
-                                       'promoted_name': 'C4.y'})]
-)
+                         [('G3.C3.y', {'shape': 1, 'pathname': 'G3.C3.y', 'val': 5.5,
+                                       'promoted_name': 'C3.y', 'top_promoted_name': 'G3.C3.y', 'size': 1}),
+                          ('G3.C4.y', {'shape': 1, 'pathname': 'G3.C4.y', 'val': 5.5,
+                                       'promoted_name': 'C4.y', 'top_promoted_name': 'G3.C4.y', 'size': 1})])
 
         self.assertEqual(list(root._params_dict.items()),
-                         [('G2.G1.C2.x', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.x', 'val': 3.0,
-                                          'promoted_name': 'G2.x'}),
-                          ('G3.C3.x', {'shape': 1, 'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x',
-                                       'val': 3.0, 'size': 1}),
-                          ('G3.C4.x', {'shape': 1, 'promoted_name': 'x', 'top_promoted_name': 'x',
-                                       'val': 3.0, 'size': 1})]
-)
+                         [('G2.G1.C2.x', {'shape': 1, 'pathname': 'G2.G1.C2.x', 'val': 3.0,
+                                          'promoted_name': 'G2.x', 'top_promoted_name': 'G2.x', 'size': 1}),
+                          ('G3.C3.x', {'shape': 1, 'pathname': 'G3.C3.x', 'val': 3.0,
+                                       'promoted_name': 'G3.C3.x', 'top_promoted_name': 'G3.C3.x', 'size': 1}),
+                          ('G3.C4.x', {'shape': 1, 'pathname': 'G3.C4.x', 'val': 3.0,
+                                       'promoted_name': 'x', 'top_promoted_name': 'x', 'size': 1})])
+
         self.assertEqual(list(root._unknowns_dict.items()),
-                        [('G2.C1.x', {'shape': 1, 'promoted_name': 'G2.x', 'top_promoted_name': 'G2.x',
-                                      'val': 5.0, 'size': 1}),
-                         ('G2.G1.C2.y', {'shape': 1, 'size': 1, 'top_promoted_name': 'G2.G1.C2.y',
-                                         'val': 5.5, 'promoted_name': 'G2.G1.C2.y'}),
-                         ('G3.C3.y', {'shape': 1, 'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y',
-                                      'val': 5.5, 'size': 1}),
-                         ('G3.C4.y', {'shape': 1, 'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y',
-                                      'val': 5.5, 'size': 1})])
+                         [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
+                                       'promoted_name': 'G2.x', 'top_promoted_name': 'G2.x', 'size': 1}),
+                          ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
+                                          'promoted_name': 'G2.G1.C2.y', 'top_promoted_name': 'G2.G1.C2.y',
+                                          'size': 1}),
+                          ('G3.C3.y', {'shape': 1, 'pathname': 'G3.C3.y', 'val': 5.5,
+                                       'promoted_name': 'G3.C3.y', 'top_promoted_name': 'G3.C3.y', 'size': 1}),
+                          ('G3.C4.y', {'shape': 1, 'pathname': 'G3.C4.y', 'val': 5.5,
+                                       'promoted_name': 'G3.C4.y', 'top_promoted_name': 'G3.C4.y', 'size': 1})])
 
         expected_root_params   = ['G3.C3.x']
         expected_root_unknowns = ['G2.x', 'G2.G1.C2.y', 'G3.C3.y', 'G3.C4.y']

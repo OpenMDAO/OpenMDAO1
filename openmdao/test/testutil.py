@@ -10,8 +10,8 @@ def assert_rel_error(test_case, actual, desired, tolerance):
     Determine that the relative error between `actual` and `desired`
     is within `tolerance`. If `desired` is zero, then use absolute error.
 
-    Parameters
-    ----------
+    Args
+    ----
     test_case : :class:`unittest.TestCase`
         TestCase instance used for assertions.
 

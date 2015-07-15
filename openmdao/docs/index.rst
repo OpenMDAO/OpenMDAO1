@@ -1,52 +1,56 @@
 .. _OpenMDAO-Documentation:
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Documentation for OpenMDAO version: |version|
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Documentation for OpenMDAO version: |release|
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+==================
+`Getting Started`_
+==================
 
-===============
-Getting Started
-===============
-
-.. toctree::
-   :maxdepth: 1
-
-   getting-started/index.rst
-
-==========
-User Guide
-==========
+.. _Getting Started: getting-started/install.html
 
 .. toctree::
    :maxdepth: 1
 
-   usr-guide/index.rst
+   getting-started/install.rst
 
-=========================
-Pre-1.0 Conversion Guide
-=========================
+==============
+`User Guide`_
+==============
+
+.. _User Guide: usr-guide/basics.html
 
 .. toctree::
    :maxdepth: 1
 
-   conversion-guide/index.rst
+   usr-guide/basics.rst
+   usr-guide/tutorials.rst
+   usr-guide/examples.rst
 
-=========================
-OpenMDAO Reference Sheets
-=========================
+===========================
+`Pre-1.0 Conversion Guide`_
+===========================
+
+.. _Pre-1.0 Conversion Guide: conversion-guide/intro.html
+
+.. toctree::
+   :maxdepth: 1
+
+   conversion-guide/intro.rst
+   conversion-guide/paraboloid.rst
+   conversion-guide/sellar.rst
+
+============================
+`OpenMDAO Reference Sheets`_
+============================
+
+.. _OpenMDAO Reference Sheets: srcdocs/index.html
 
 .. toctree::
    :maxdepth: 3
 
    srcdocs/index.rst
-
-==============================
-Appendix and Glossary
-==============================
-
-.. toctree::
-   :maxdepth: 1
 
 ==============================
 Index
