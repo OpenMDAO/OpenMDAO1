@@ -4,7 +4,7 @@ import sys
 from distutils.core import setup
 
 setup(name='openmdao',
-      version=1.0,
+      version='1.0',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
 """,
