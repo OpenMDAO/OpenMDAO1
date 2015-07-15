@@ -1,10 +1,4 @@
-""" Test objects for the sellar two discipline problem.
-From Sellar's analytic problem.
-
-    Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based, Concurrent Subspace
-    Optimization for Multidisciplinary System Design," Proceedings References 79 of the 34th AIAA
-    Aerospace Sciences Meeting and Exhibit, Reno, NV, January 1996.
-"""
+""" Optimize the Sellar problem using SLSQP."""
 
 import numpy as np
 
@@ -16,7 +10,7 @@ from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 
 
 class SellarDis1(Component):
-    """Component containing Discipline 1 -- no derivatives version."""
+    """Component containing Discipline 1."""
 
     def __init__(self):
         super(SellarDis1, self).__init__()
@@ -44,10 +38,6 @@ class SellarDis1(Component):
 
         unknowns['y1'] = z1**2 + z2 + x1 - 0.2*y2
 
-
-class SellarDis1withDerivatives(SellarDis1):
-    """Component containing Discipline 1 -- derivatives version."""
-
     def jacobian(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 1."""
         J = {}
@@ -60,7 +50,7 @@ class SellarDis1withDerivatives(SellarDis1):
 
 
 class SellarDis2(Component):
-    """Component containing Discipline 2 -- no derivatives version."""
+    """Component containing Discipline 2."""
 
     def __init__(self):
         super(SellarDis2, self).__init__()
@@ -89,10 +79,6 @@ class SellarDis2(Component):
 
         unknowns['y2'] = y1**.5 + z1 + z2
 
-
-class SellarDis2withDerivatives(SellarDis2):
-    """Component containing Discipline 2 -- derivatives version."""
-
     def jacobian(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 2."""
         J = {}
@@ -101,80 +87,6 @@ class SellarDis2withDerivatives(SellarDis2):
         J['y2', 'z'] = np.array([[1.0, 1.0]])
 
         return J
-
-
-class SellarNoDerivatives(Group):
-    """ Group containing the Sellar MDA. This version uses the disciplines
-    without derivatives."""
-
-    def __init__(self):
-        super(SellarNoDerivatives, self).__init__()
-
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
-
-        self.add('d1', SellarDis1(), promotes=['*'])
-        self.add('d2', SellarDis2(), promotes=['*'])
-
-        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
-                 promotes=['*'])
-
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
-
-        self.nl_solver = NLGaussSeidel()
-        self.d1.fd_options['force_fd'] = True
-        self.d2.fd_options['force_fd'] = True
-
-
-class SellarDerivatives(Group):
-    """ Group containing the Sellar MDA. This version uses the disciplines
-    with derivatives."""
-
-    def __init__(self):
-        super(SellarDerivatives, self).__init__()
-
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
-
-        self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
-
-        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
-                 promotes=['*'])
-
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
-
-        self.nl_solver = NLGaussSeidel()
-
-
-class SellarDerivativesGrouped(Group):
-    """ Group containing the Sellar MDA. This version uses the disciplines
-    without derivatives."""
-
-    def __init__(self):
-        super(SellarDerivativesGrouped, self).__init__()
-
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
-        sub = self.add('mda', Group(), promotes=['*'])
-
-        sub.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        sub.add('d2', SellarDis2withDerivatives(), promotes=['*'])
-
-        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                 promotes=['*'])
-
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
-
-        sub.nl_solver = NLGaussSeidel()
-        sub.d1.fd_options['force_fd'] = True
-        sub.d2.fd_options['force_fd'] = True
 
 
 class StateConnection(Component):
@@ -212,6 +124,7 @@ class StateConnection(Component):
 
         return J
 
+
 class SellarStateConnection(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
     with derivatives."""
@@ -223,15 +136,15 @@ class SellarStateConnection(Group):
         self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
         self.add('state_eq', StateConnection())
-        self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
-        self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
+        self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
+        self.add('d2', SellarDis2(), promotes=['z', 'y1'])
 
         self.connect('state_eq.y2_command', 'd1.y2')
         self.connect('d2.y2', 'state_eq.y2_actual')
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                 promotes=['x', 'z', 'y1', 'obj'])
+                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                  promotes=['x', 'z', 'y1', 'obj'])
         self.connect('d2.y2', 'obj_cmp.y2')
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
@@ -239,3 +152,34 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'con_cmp2.y2')
 
         self.nl_solver = NLGaussSeidel()
+
+
+# Setup and run the model.
+
+from openmdao.core.problem import Problem
+from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+
+top = Problem()
+top.root = SellarStateConnection()
+
+top.driver = ScipyOptimizer()
+top.driver.options['optimizer'] = 'SLSQP'
+top.driver.options['tol'] = 1.0e-8
+
+top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+                     high=np.array([10.0, 10.0]))
+top.driver.add_param('x', low=0.0, high=10.0)
+
+top.driver.add_objective('obj')
+top.driver.add_constraint('con1')
+top.driver.add_constraint('con2')
+
+top.setup()
+top.run()
+
+print("\n")
+print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
+                                         top['z'][1], \
+                                         top['x']))
+print("Coupling vars: %f, %f" % (top['y1'], top['d2.y2']))
+print("Minimum objective: ", top['obj'])

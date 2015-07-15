@@ -118,7 +118,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 return J
 
 For the most part, construction of these `Components` builds on what you
-learned in previous tutorials. In building these discplines, we gave default
+learned in previous tutorials. In building these disciplines, we gave default
 values to all of the `params` and `unknowns` so that OpenMDAO can allocate
 the correct size in the vectors. The global design variables `z1` and `z1`
 were combined into a 2-element `ndarray`.
@@ -129,7 +129,7 @@ is applied. This component is clearly not valid for ``y1 < 0``, but some solvers
 occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
 of the absolute value solves the problem without impacting the final converged solution.
 
-Now that you have defined the components for the Sellar Problem for yourself, let's take a momement to
+Now that you have defined the components for the Sellar Problem for yourself, let's take a moment to
 consider what we have really accomplished. Firstly, we have written two (very simple) analysis components.
 If you were working on a real problem, these would likely come in the form of some much more complex tools
 that you wrapped in the framework. But keep in mind that from an optimization point of view, whether they
@@ -179,7 +179,7 @@ functions of OpenMDAO variables.
             self.add('d2', SellarDis2(), promotes=['*'])
 
             self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                         z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                         z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
                      promotes=['*'])
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
@@ -215,7 +215,7 @@ connection.
 Due to the implicit connections, we now have a cycle between the two
 disciplines. This is fine because a nonlinear solver can converge the cycle
 to arrive at values of `y1` and `y2` that satisfy the equations in both
-discplines. We have selected the `NLGaussSeidel` solver (i.e., fixed point
+disciplines. We have selected the `NLGaussSeidel` solver (i.e., fixed point
 iteration), which will converge the model in our `Group`. We also specify a
 tighter tolerance in the solver's `options` dictionary, overriding the 1e-6
 default.
@@ -225,12 +225,12 @@ We have declared the initial conditions for our design variables in the `Paramco
 We have introduced a new component class -- the `ExecComp`, which is really a
 shortcut for creating a `Component` that is a simple function of other
 variables in the model. We use it to create a `Component` for our objective
-goal, which is to minimize a funtion of `x`, `z`, `y1`, and `y2`.
+goal, which is to minimize a function of `x`, `z`, `y1`, and `y2`.
 
 .. testcode:: Disciplines
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
                  promotes=['*'])
 
 This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
@@ -246,7 +246,7 @@ scalars, but you must always allocate the array inputs ('z' in this case).
 The output of the objective equation is stored in the promoted output 'obj'.
 
 We have also created two more ExecComps, one for each constraint equations,
-with the ouptuts being the promoted variables 'con1' and 'con2'. Now, that we
+with the outputs being the promoted variables 'con1' and 'con2'. Now, that we
 are done creating the `Group` for the Sellar problem, let's hook it up to an
 optimizer.
 
@@ -277,7 +277,7 @@ optimizer.
         print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
                                                  top['z'][1], \
                                                  top['x']))
-        print("Couping vars: %f, %f" % (top['y1'], top['y2']))
+        print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
         print("Minimum objective: ", top['obj'])
 
 Just as in the previous tutorial, we create a clean `Problem` and set our
@@ -309,7 +309,7 @@ equal to zero, it is called an 'active' constraint.
 
 Don't forget to call `setup` on your `Problem` before calling `run`. Also, we
 are using the Python 3.x print function to print results. To keep
-compatibilty with both Python 2.x and 3.x, don't forget the following import
+compatibility with both Python 2.x and 3.x, don't forget the following import
 at the top of your python file:
 
 ::
@@ -326,25 +326,26 @@ a file called `sellar_MDF_optimization.py` and run it, the final output will loo
     .
     .
     Minimum found at (1.977639, -0.000000, 0.000000)
-    Couping vars: 3.160000, 3.755278
+    Coupling vars: 3.160000, 3.755278
     Minimum objective:  3.18339395045
 
 Depending on print settings, there may be some additional optimizer output
-where the elipses are. This is the expected minimum for the Sellar problem.
+where the ellipses are. This is the expected minimum for the Sellar problem.
 
 
 Sellar with an Implicit Component
 =================================
 
 We have just built an implementation of the Sellar problem where the two
-discplines are connected with a cycle. We could also sever the direct
+disciplines are connected with a cycle. We could also sever the direct
 connection and close the gap with an implicit component. The purpose of this
 component is to express as a residual the difference between the output side
 and the input side of the connection that we are replacing.
 
 At the moment, we don't have a shortcut for closing a connection with an
-implict component, but it is not difficult. In Sellar, we will leave the `y1`
-connection and replace the `y2` connection.
+implicit component, but it is not difficult to create the `Component`. In
+Sellar, we will leave the `y1` connection and replace the `y2` connection.
+First we need to write the component to replace the connection:
 
 .. testcode:: Disciplines
 
@@ -383,6 +384,26 @@ connection and replace the `y2` connection.
 
             return J
 
+So this `Component` has one `state` and one `param`. The `StateConnection`
+will bridge the gap between the output of `y2` from Discipline2 and the input
+for `y2` in Discipline1. Now this may look like we just replaced one cycle
+with another larger cycle, and that is true in the data graph. However, this
+component breaks the loop by not passing along the value of 'y2'. The solver
+sets the new value of y2 based on the models residuals, which now include the
+difference between 'y2' leaving Discipline2 2 and the 'y2' entering
+Discipline1. So the `solve_nonlinear` method does nothing, but we need to
+define `apply_nonlinear` to return this residual. Residuals live in the
+`resids` vector, so we set:
+
+::
+
+    resids['y2_command'] = y2_actual - y2_command
+
+We also define the `Jacobian` method, and the derivatives are trivial to
+compute.
+
+Next, we need to modify the model that we defined in `SellarDerivatives` to
+break the connection and use the `StateConnection`.
 
 .. testcode:: Disciplines
 
@@ -397,15 +418,15 @@ connection and replace the `y2` connection.
             self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
             self.add('state_eq', StateConnection())
-            self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
-            self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
+            self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
+            self.add('d2', SellarDis2(), promotes=['z', 'y1'])
 
             self.connect('state_eq.y2_command', 'd1.y2')
             self.connect('d2.y2', 'state_eq.y2_actual')
 
             self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                         z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
-                      promotes=['x', 'z', 'y1'])
+                                         z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
+                      promotes=['x', 'z', 'y1', 'obj'])
             self.connect('d2.y2', 'obj_cmp.y2')
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
@@ -413,3 +434,46 @@ connection and replace the `y2` connection.
             self.connect('d2.y2', 'con_cmp2.y2')
 
             self.nl_solver = NLGaussSeidel()
+
+The first thing to notice is that we no longer promote the variable `y2` up
+to the group level. We need to add the connections manually because we really
+have two different variables named 'y2': they are 'd1.y2' and 'd2.y2'. In
+addition to the two connections to the 'state_eq' component, we also need to
+manually connect y2 to the objective and one of the constraints. Other than
+this, there are not other differences in the model, and the remaining
+optimization set up is the same as before. However, a small change in
+printing our results is required because 'y2' no longer exists in the group.
+We must print either 'd1.y2' or 'd2.y2' instead. It doesn't matter which one,
+since they should only differ by the solver tolerance at most.
+
+.. testcode:: Disciplines
+
+        from openmdao.core.problem import Problem
+        from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+
+        top = Problem()
+        top.root = SellarStateConnection()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-8
+
+        top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+                             high=np.array([10.0, 10.0]))
+        top.driver.add_param('x', low=0.0, high=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1')
+        top.driver.add_constraint('con2')
+
+        top.setup()
+        top.run()
+
+        print("\n")
+        print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
+                                                 top['z'][1], \
+                                                 top['x']))
+        print("Coupling vars: %f, %f" % (top['y1'], top['dis2.y2']))
+        print("Minimum objective: ", top['obj'])
+
+You can verify that the new model arrives at the same optimum as the old one.
