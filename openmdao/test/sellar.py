@@ -13,6 +13,7 @@ from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.newton import Newton
 
 
 class SellarDis1(Component):
@@ -28,7 +29,7 @@ class SellarDis1(Component):
         self.add_param('x', val=0.)
 
         # Coupling parameter
-        self.add_param('y2', val=0.)
+        self.add_param('y2', val=1.0)
 
         # Coupling output
         self.add_output('y1', val=1.0)
@@ -69,7 +70,7 @@ class SellarDis2(Component):
         self.add_param('z', val=np.zeros(2))
 
         # Coupling parameter
-        self.add_param('y1', val=0.)
+        self.add_param('y1', val=1.0)
 
         # Coupling output
         self.add_output('y2', val=1.0)
@@ -166,7 +167,7 @@ class SellarDerivativesGrouped(Group):
         sub.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
                  promotes=['*'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
@@ -230,12 +231,12 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'state_eq.y2_actual')
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
-                 promotes=['x', 'z', 'y1'])
+                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
+                 promotes=['x', 'z', 'y1', 'obj'])
         self.connect('d2.y2', 'obj_cmp.y2')
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
         self.connect('d2.y2', 'con_cmp2.y2')
 
-        self.nl_solver = NLGaussSeidel()
+        self.nl_solver = Newton()
