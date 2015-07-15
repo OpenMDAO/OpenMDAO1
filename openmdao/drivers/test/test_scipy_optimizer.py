@@ -11,7 +11,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.sellar import SellarDerivatives
+from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
 from openmdao.test.simplecomps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.testutil import assert_rel_error
 
@@ -299,6 +299,30 @@ class TestScipyOptimize(unittest.TestCase):
 
         top = Problem()
         top.root = SellarDerivatives()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-8
+
+        top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+                             high=np.array([10.0, 10.0]))
+        top.driver.add_param('x', low=0.0, high=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1')
+        top.driver.add_constraint('con2')
+
+        top.setup()
+        top.run()
+
+        assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
+        assert_rel_error(self, top['z'][1], 0.0, 1e-3)
+        assert_rel_error(self, top['x'], 0.0, 1e-3)
+
+    def test_Sellar_state_SLSQP(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
 
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
