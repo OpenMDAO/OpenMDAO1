@@ -13,7 +13,6 @@ Tutorials
 
 [This doc will contain things from the old Tutorials like:
 
-* Paraboloid
 * Simple Optimization
 * Scalers/Adders
 * Case Recording

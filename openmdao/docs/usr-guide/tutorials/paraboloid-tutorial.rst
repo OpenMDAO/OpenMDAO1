@@ -1,5 +1,5 @@
 Paraboloid Tutorial
-------------------
+-------------------
 
 This tutorial will take you through code needed to create a Component class based on the equation of a paraboloid and run it.
 
@@ -45,24 +45,24 @@ Here is the code that defines this Component and then runs it.
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-if __name__ == "__main__":
+    if __name__ == "__main__":
 
-    top = Problem()
+        top = Problem()
 
-    root = top.root = Group()
+        root = top.root = Group()
 
-    paraboloid = root.add('p', Paraboloid())
+        paraboloid = root.add('p', Paraboloid())
 
-    root.add('p1', ParamComp('x', 3.0))
-    root.connect('p1.x', 'p.x')
+        root.add('p1', ParamComp('x', 3.0))
+        root.connect('p1.x', 'p.x')
 
-    root.add('p2', ParamComp('y', -4.0))
-    root.connect('p2.y', 'p.y')
+        root.add('p2', ParamComp('y', -4.0))
+        root.connect('p2.y', 'p.y')
 
-    top.setup()
-    top.run()
+        top.setup()
+        top.run()
 
-    print paraboloid.unknowns['f_xy']
+        print paraboloid.unknowns['f_xy']
 
 
 Now we will go through each section and explain how this code works.
@@ -74,6 +74,8 @@ Now we will go through each section and explain how this code works.
     from openmdao.components.paramcomp import ParamComp
 
 We need to import some OpenMDAO classes.
+
+::
 
     class Paraboloid(Component):
 
@@ -129,13 +131,13 @@ The definition of the Paraboloid Component class is now complete. We will now ma
 
 ::
 
-if __name__ == "__main__":
+    if __name__ == "__main__":
 
-    top = Problem()
+        top = Problem()
 
-    root = top.root = Group()
+        root = top.root = Group()
 
-    paraboloid = root.add('p', Paraboloid())
+        paraboloid = root.add('p', Paraboloid())
 
 An instance of an OpenMDAO `Problem` is always the top object for running an model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a `System` that contains other `Systems`. 
 
@@ -176,6 +178,7 @@ Before we can run our model we need to do some setup. This is done using the `se
 Now we can run the model using the `run` method of `Problem`.
 
 ::
+
     print paraboloid.unknowns['f_xy']
 
 Finally, we print the output of the `Paraboloid` Component using the dictionary-style method of accessing the outputs.
