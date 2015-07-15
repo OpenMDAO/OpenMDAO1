@@ -24,18 +24,18 @@ blocks of OpenMDAO in the User Guide's 'Design_' section
 
 .. _Design: ../getting-started/design.html
 
-[The idea is to show examples from old OpenMDAO converted into new, perhaps with
-side-by-side code, annotated.  Still thinking about the best way to present this.]
+================
+Adding variables
+================
 
-===================================
-Difference in Classes and Structure
-===================================
 
-[Clippy vs. Classic, this differs from the Design section in that we are showing
-old vs. new rather than just discussing new]
+====================
+Locations of imports
+====================
+
 
 =========================
-Difference in Namespacing
+Changes in function names
 =========================
 
 [Clippy vs Classic]
