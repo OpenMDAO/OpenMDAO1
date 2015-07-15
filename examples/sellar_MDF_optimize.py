@@ -113,32 +113,33 @@ class SellarDerivatives(Group):
         self.nl_solver.options['atol'] = 1.0e-12
 
 
-# Setup and run the model.
+if __name__ == '__main__':
+    # Setup and run the model.
 
-from openmdao.core.problem import Problem
-from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+    from openmdao.core.problem import Problem
+    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
 
-top = Problem()
-top.root = SellarDerivatives()
+    top = Problem()
+    top.root = SellarDerivatives()
 
-top.driver = ScipyOptimizer()
-top.driver.options['optimizer'] = 'SLSQP'
-top.driver.options['tol'] = 1.0e-8
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+    top.driver.options['tol'] = 1.0e-8
 
-top.driver.add_param('z', low=np.array([-10.0, 0.0]),
-                     high=np.array([10.0, 10.0]))
-top.driver.add_param('x', low=0.0, high=10.0)
+    top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+                         high=np.array([10.0, 10.0]))
+    top.driver.add_param('x', low=0.0, high=10.0)
 
-top.driver.add_objective('obj')
-top.driver.add_constraint('con1')
-top.driver.add_constraint('con2')
+    top.driver.add_objective('obj')
+    top.driver.add_constraint('con1')
+    top.driver.add_constraint('con2')
 
-top.setup()
-top.run()
+    top.setup()
+    top.run()
 
-print("\n")
-print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
-                                         top['z'][1], \
-                                         top['x']))
-print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
-print("Minimum objective: ", top['obj'])
+    print("\n")
+    print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
+                                             top['z'][1], \
+                                             top['x']))
+    print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
+    print("Minimum objective: ", top['obj'])

@@ -201,7 +201,7 @@ promote '*', that means that every `param` and `unknown` is available in the
 parent system. Thus, if you wanted to connect something to variable `y1`, you
 would address it with the string `y1` instead of `dis1.y1`. The following is also valid
 
-.. testcode:: Disciplines
+::
 
     self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
 
@@ -227,7 +227,7 @@ shortcut for creating a `Component` that is a simple function of other
 variables in the model. We use it to create a `Component` for our objective
 goal, which is to minimize a function of `x`, `z`, `y1`, and `y2`.
 
-.. testcode:: Disciplines
+::
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
@@ -279,6 +279,17 @@ optimizer.
                                                  top['x']))
         print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
         print("Minimum objective: ", top['obj'])
+
+.. testoutput:: Disciplines
+   :hide:
+   :options: +ELLIPSIS
+
+   Optimization Complete
+   -----------------------------------
+   ...
+   Minimum found at (1.977..., ...0.000000, 0.000000)
+   Coupling vars: 3.160..., 3.755...
+   Minimum objective:  3.18339...
 
 Just as in the previous tutorial, we create a clean `Problem` and set our
 Sellar group as its root. Then we set the driver to be the ScipyOptimizer,
@@ -481,7 +492,20 @@ which one, since they should only differ by the solver tolerance at most.
         print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
                                                  top['z'][1], \
                                                  top['x']))
-        print("Coupling vars: %f, %f" % (top['y1'], top['dis2.y2']))
+        print("Coupling vars: %f, %f" % (top['y1'], top['d2.y2']))
         print("Minimum objective: ", top['obj'])
+
+.. testoutput:: Disciplines
+   :hide:
+   :options: +ELLIPSIS
+
+   Optimization Complete
+   -----------------------------------
+   ...
+   Minimum found at (1.977..., 0.000000, 0.000000)
+   Coupling vars: 3.160..., 3.755...
+   Minimum objective:  3.18339...
+
+
 
 You can verify that the new model arrives at the same optimum as the old one.

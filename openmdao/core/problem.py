@@ -368,6 +368,7 @@ class Problem(System):
                     relstrong.append([])
                     for s in slist:
                         relstrong[-1].append(name_relative_to(grp.pathname, s))
+                        relstrong[-1] = sorted(relstrong[-1])
                 print("Group '%s' has the following cycles: %s" %
                      (grp.pathname, relstrong), file=out_stream)
 
@@ -431,7 +432,6 @@ class Problem(System):
 
     def run(self):
         """ Runs the Driver in self.driver. """
-
         if self.root.is_active():
             self.driver.run(self)
 
