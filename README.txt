@@ -12,11 +12,11 @@ Install Python, Pip, Numpy, and Scipy. (Anaconda Python, comes bundled
 with everything you need:  (http://continuum.io)).
 
 Next, clone this repository:
-    git clone https://github.com/OpenMDAO/OpenMDAO.git
+    `git clone https://github.com/OpenMDAO/OpenMDAO.git`
 
 Lastly install it in development mode:
 
-    pip install -e openmdao
+    `pip install -e openmdao`
 
 For more information, visit our website at:
 http://openmdao.org
