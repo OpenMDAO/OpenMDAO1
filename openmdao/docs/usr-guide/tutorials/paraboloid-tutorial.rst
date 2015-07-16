@@ -1,17 +1,18 @@
 Paraboloid Tutorial
 -------------------
 
-This tutorial will take you through code needed to create a Component class based on the equation of a paraboloid and run it.
+This tutorial will take you through code needed to create a Component class
+based on the equation of a paraboloid and run it.
 
 Here is the code that defines this Component and then runs it.
 
 .. testcode:: parab
 
-    """ Paraboloid class written in OpenMDAO 1.0 """
-    """ paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
-    """
-    from openmdao.core.component import Component
+    from __future__ import print_function
 
+    from openmdao.components.paramcomp import ParamComp
+    from openmdao.core.component import Component
+    from openmdao.core.problem import Problem, Group
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -41,8 +42,8 @@ Here is the code that defines this Component and then runs it.
             y = params['y']
             J = {}
 
-            J['f_xy','x'] = 2.0*x - 6.0 + y
-            J['f_xy','y'] = 2.0*y + 8.0 + x
+            J['f_xy', 'x'] = 2.0*x - 6.0 + y
+            J['f_xy', 'y'] = 2.0*y + 8.0 + x
             return J
 
     if __name__ == "__main__":
@@ -51,35 +52,42 @@ Here is the code that defines this Component and then runs it.
 
         root = top.root = Group()
 
-        paraboloid = root.add('p', Paraboloid())
-
         root.add('p1', ParamComp('x', 3.0))
-        root.connect('p1.x', 'p.x')
-
         root.add('p2', ParamComp('y', -4.0))
+        root.add('p', Paraboloid())
+
+        root.connect('p1.x', 'p.x')
         root.connect('p2.y', 'p.y')
 
         top.setup()
         top.run()
 
-        print paraboloid.unknowns['f_xy']
+        print(root.p.unknowns['f_xy'])
 
 
 Now we will go through each section and explain how this code works.
 
 ::
 
+    from __future__ import print_function
+
+    from openmdao.components.paramcomp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.problem import Problem, Group
-    from openmdao.components.paramcomp import ParamComp
 
-We need to import some OpenMDAO classes.
+We need to import some OpenMDAO classes. We also import the print_function to
+insure compatibility between python 2.x and 3.x. You don't need the import if
+you are running in 3.
 
 ::
 
     class Paraboloid(Component):
 
-OpenMDAO provides a base class `Component` system. We will use that to create the `Paraboloid` component. `Components` can declare variables and they operate on their parameters to produce unknowns, which can be explicit outputs or implicit states. For the `Paraboloid` Component, we will only be using explicit outputs.
+OpenMDAO provides a base class `Component` system. We will use that to create
+the `Paraboloid` component. `Components` can declare variables and they
+operate on their parameters to produce unknowns, which can be explicit
+outputs or implicit states. For the `Paraboloid` Component, we will only be
+using explicit outputs.
 
 ::
 
@@ -92,7 +100,9 @@ OpenMDAO provides a base class `Component` system. We will use that to create th
             self.add_output('f_xy', val=0.0)
 
 
-This code defines the input parameters of the Component, `x` and `y`, and initializes them to 0.0. These could be design variables which could used to minimize the output when doing optimization, for example.
+This code defines the input parameters of the Component, `x` and `y`, and
+initializes them to 0.0. These could be design variables which could used to
+minimize the output when doing optimization, for example.
 
 It also defines the explicit output, `f_xy` and initializes it to 0.0.
 
@@ -108,9 +118,14 @@ It also defines the explicit output, `f_xy` and initializes it to 0.0.
 
             unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-The `solve_nonlinear` method is responsible for calculating outputs for a given set of parameters. The parameters are given in the `params` variable that is passed in to this method. You can access the values of the parameters in this variable as if it was a Python dictionary.
+The `solve_nonlinear` method is responsible for calculating outputs for a
+given set of parameters. The parameters are given in the `params` variable
+that is passed in to this method. You can access the values of the parameters
+in this variable as if it was a Python dictionary.
 
-Similarly, the outputs are assigned values using the `unknowns` variable that is passed in. The output variables are accessed as if `unknowns` was a dictionary.
+Similarly, the outputs are assigned values using the `unknowns` variable that
+is passed in. The output variables are accessed as if `unknowns` was a
+dictionary.
 
 ::
 
@@ -125,51 +140,80 @@ Similarly, the outputs are assigned values using the `unknowns` variable that is
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-The `jacobian` method is used to compute analytic values for Jacobian of this Component. The returned value, in this case `J`, should be a dictionary whose keys are tuples of the form (‘unknown’, ‘param’) and whose values are ndarrays or scalars. Just like for `solve_nonlinear`, the values for the parameters are accessed using dictionary style addressing.
+The `jacobian` method is used to compute analytic values for Jacobian of this
+Component. The returned value, in this case `J`, should be a dictionary whose
+keys are tuples of the form (‘unknown’, ‘param’) and whose values are
+ndarrays or scalars. Just like for `solve_nonlinear`, the values for the
+parameters are accessed using dictionary style addressing.
 
-The definition of the Paraboloid Component class is now complete. We will now make use of this class to run a model.
+The definition of the Paraboloid Component class is now complete. We will now
+make use of this class to run a model.
 
 ::
 
     if __name__ == "__main__":
 
         top = Problem()
-
         root = top.root = Group()
 
-        paraboloid = root.add('p', Paraboloid())
+An instance of an OpenMDAO `Problem` is always the top object for running an
+model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a
+`System` that contains other `Components` or `Groups`.
 
-An instance of an OpenMDAO `Problem` is always the top object for running an model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a `System` that contains other `Systems`.
-
-This code instantiates a `Problem` object, sets the root `Group` and adds our `Paraboloid` Component as a subsystem of the root `Group`.
+This code instantiates a `Problem` object, sets the root to be an empty `Group`.
 
 ::
 
     root.add('p1', ParamComp('x', 3.0))
     root.add('p2', ParamComp('y', -4.0))
 
+Now it is time to add components to the empty group. At present, they must be
+aded in execution order, so we need to start with the parameters. `ParamComp`
+is a `Component` that provides the source for a variable which we can assign
+as a parameter for a driver.
+
+So here, we created two `ParamComps`, one for each param on the `Paraboloid`
+component, and gave them names and added them to the root `Group`. The `add`
+method takes a name as the first argument, and a `Component` instance as the
+second argument.
+
+::
+
+    root.add('p', Paraboloid())
+
+Then we add the paraboloid using the same syntax as before, giving it the name 'p'.
+
+::
+
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
 
-We need some way to set the values for the parameters of the `Paraboloid`. For this tutorial, we will make use of OpenMDAO's `ParamComp`. `ParamComp` is a `Component` that provides an output which we can connect to a parameter.
+Then we connect up the outputs of the `ParamComps` to the parameters of the
+`Paraboloid`. Notice the dotted naming convention used to refer to variables.
+So, for example, `p1` represents the first `ParamComp` that we created to set
+the value of `x` and so we connect that to parameter `x` of the `Paraboloid`,
+which is named `x`. Since the `Paraboloid` is named `p` and has a parameter
+`x`, it is referred to as `p.x` in the call to the `connect` method.
 
-First we need to create the `ParamComps`, give them names and add them to the root `Group`.
-
-Then we connect up the outputs of the `ParamComps` to the parameters of the `Paraboloid`. Notice the dotted naming convention used to refer to variables. So, for example, `p1` represents the first `ParamComp` that we created to set the value of `x` and so we connect that to parameter `x` of the `Paraboloid`, which is named `x`. Since the `Paraboloid` is named `p` and has a parameter `x`, it is referred to as `p.x` in the call to the `connect` method.
-
-Every problem has a `Driver` and for most situations, we would want to set a `Driver` for the `Problem` using code like this
+Every problem has a `Driver` and for most situations, we would want to set a
+`Driver` for the `Problem` using code like this
 
 ::
 
     top.driver = SomeDriver()
 
-For this very simple tutorial, we will just use the default which is `Driver`. ( `Driver` also serves as the base class for all `Drivers`. ) `Driver` is the simplest driver possible, running a `Problem` once.
+For this very simple tutorial, we will just use the default which is
+`Driver`. ( `Driver` also serves as the base class for all `Drivers`. )
+`Driver` is the simplest driver possible, running a `Problem` once.
 
 ::
 
     top.setup()
 
-Before we can run our model we need to do some setup. This is done using the `setup` method on the `Problem`. This method performs all the setup of vector storage, data transfer, etc.., necessary to perform calculations. Calling `setup` is required before running the model.
+Before we can run our model we need to do some setup. This is done using the
+`setup` method on the `Problem`. This method performs all the setup of vector
+storage, data transfer, etc.., necessary to perform calculations. Calling
+`setup` is required before running the model.
 
 ::
 
@@ -179,11 +223,89 @@ Now we can run the model using the `run` method of `Problem`.
 
 ::
 
-    print paraboloid.unknowns['f_xy']
+    print(root.p.unknowns['f_xy'])
 
-Finally, we print the output of the `Paraboloid` Component using the dictionary-style method of accessing the outputs.
+Finally, we print the output of the `Paraboloid` Component using the
+dictionary-style method of accessing the outputs from a `Component` instance.
+Putting it all together:
+
+.. testcode:: parab
+
+    top = Problem()
+    root = top.root = Group()
+
+    root.add('p1', ParamComp('x', 3.0))
+    root.add('p2', ParamComp('y', -4.0))
+    root.add('p', Paraboloid())
+
+    root.connect('p1.x', 'p.x')
+    root.connect('p2.y', 'p.y')
+
+    top.setup()
+    top.run()
+
+    print(root.p.unknowns['f_xy'])
+
+The output should look like this:
+
+.. testoutput:: parab
+   :options: +ELLIPSIS
+
+   -15.0
 
 Future tutorials will show more complex `Problems`.
 
 
+Optimization with the Paraboloid
+================================
 
+Now that we have the paraboloid model set up, let's do a simple unconstrained
+optimization. Let's find the minimum point on the Paraboloid over the
+variables x and y. This requires the addition of just a few more lines.
+
+First, we need to import the optimizer.
+
+.. testcode:: parab
+
+    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+
+The main optimizer built into OpenMDAO is a wrapper around Scipy's `minimize`
+function. OpenMDAO supports 9 of the optimizers built into `minimize`. The
+ones that will most frequently used are SLSQP and COBYLA, since they are the
+only two in the `minimize` package that support constraints. We will use
+SLSQP because it supports OpenMDAO-supplied gradients.
+
+.. testcode:: parab
+
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('x', 3.0))
+        root.add('p2', ParamComp('y', -4.0))
+        root.add('p', Paraboloid())
+
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+
+        top.driver.add_param('p1.x', low=-50, high=50)
+        top.driver.add_param('p2.y', low=-50, high=50)
+        top.driver.add_objective('p.f_xy')
+
+        top.setup()
+        top.run()
+
+        print('\n')
+        print('Minimum of %f found at (%f, %f)' % (root['p.f_xy'], root['p.x'], root['p.y']))
+
+So we have set our driver to be the `ScipyOptimizer`. Every driver has an
+`options` dictionary which contains important settings for the driver. The "optimizer" setting
+
+.. testoutput:: parab
+   :options: +ELLIPSIS
+
+   ...
+   Minimum of -27.333333 found at (6.666667, -7.333333)
