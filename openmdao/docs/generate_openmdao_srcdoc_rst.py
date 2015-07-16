@@ -60,7 +60,7 @@ listings = os.listdir(dir + "..")
 for listing in listings:
     if os.path.isdir(".." + os.path.sep + listing):
         if listing != "docs" and listing != "test" and listing != "config"\
-        and listing != "devtools":
+        and listing != "devtools" and listing != "__pycache__":
             packages.append(listing)
 
 #begin writing the 'srcdocs/index.rst' file at top level.
@@ -82,7 +82,8 @@ for package in packages:
     for sub_listing in sub_listings:
         #don't want to catalog files twice, nor use init files nor test dir
         if not sub_listing.endswith('.pyc') and not "__init__" in sub_listing \
-        and not sub_listing.endswith('.ini') and sub_listing != "test":
+        and not sub_listing.endswith('.ini') and sub_listing != "test"\
+        and not "__pycache__" in sub_listing:
             #just want the name of e.g. dataxfer not dataxfer.py
             sub_packages.append(sub_listing.rsplit('.')[0])
 
