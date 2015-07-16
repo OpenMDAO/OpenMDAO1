@@ -241,6 +241,9 @@ class Component(System):
         resids.vec[:] += unknowns.vec[:]
         unknowns.vec[:] -= resids.vec[:]
 
+    def solve_nonlinear(self, params, unknowns, resids):
+        raise NotImplementedError("solve_nonlinear")
+
     def jacobian(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides and
