@@ -65,7 +65,7 @@ class Group(System):
                 except:
                     msg = "Can't find variable '%s' in unknowns or params " + \
                            "vectors in system '%s'"
-                    raise KeyError( msg % (name, self.pathname))
+                    raise KeyError(msg % (name, self.pathname))
 
     def __getitem__(self, name):
         """
@@ -373,14 +373,14 @@ class Group(System):
         # keyed by variable_of_interest
         for group, vois in self._relevance.groups.items():
             if group is not None:
-                    for voi in vois:
-                        if parent is None:
-                            self._create_vecs(my_params, relevance, voi, impl)
-                        else:
-                            self._create_views(top_unknowns, parent, my_params,
-                                               relevance, voi)
+                for voi in vois:
+                    if parent is None:
+                        self._create_vecs(my_params, relevance, voi, impl)
+                    else:
+                        self._create_views(top_unknowns, parent, my_params,
+                                           relevance, voi)
 
-                        self._setup_data_transfer(my_params, relevance, voi)
+                    self._setup_data_transfer(my_params, relevance, voi)
 
         # convert any src_indices to index arrays
         for meta in self._params_dict.values():
@@ -440,7 +440,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in self.unknowns.items():
             # look up the subsystem containing the unknown
-            sub = self._subsystem(meta['pathname'].rsplit('.',1)[0][len(mypath):])
+            sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
                 fd_unknowns.append(name)
 
@@ -475,7 +475,7 @@ class Group(System):
 
                 try:
                     for tgt_pathname in get_absvarpathnames(tgt, self._params_dict, 'params'):
-                        connections.setdefault(tgt_pathname,[]).extend(src_pathnames)
+                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
                 except KeyError as error:
                     try:
                         get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
@@ -505,9 +505,9 @@ class Group(System):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         if self.is_active():
-            params   = params   if params   is not None else self.params
+            params = params if params is not None else self.params
             unknowns = unknowns if unknowns is not None else self.unknowns
-            resids   = resids   if resids   is not None else self.resids
+            resids = resids if resids is not None else self.resids
 
             self.nl_solver.solve(params, unknowns, resids, self, metadata)
 
@@ -841,21 +841,21 @@ class Group(System):
 
         commsz = self.comm.size if hasattr(self.comm, 'size') else 0
 
-        out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
-                     (" "*nest,
-                      klass,
-                      self.name,
-                      self.get_req_procs(),
-                      uvec.vec.size,
-                      pvec.vec.size,
-                      commsz))
+        template = "%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n"
+        out_stream.write(template % (" "*nest,
+                                     klass,
+                                     self.name,
+                                     self.get_req_procs(),
+                                     uvec.vec.size,
+                                     pvec.vec.size,
+                                     commsz))
 
         vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
         byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
         # collect width info
-        lens = [len(u)+sum(map(len,v)) for u,v in
-                          chain(vec_conns.items(), byobj_conns.items())]
+        lens = [len(u)+sum(map(len, v)) for u, v in
+                chain(vec_conns.items(), byobj_conns.items())]
         if lens:
             nwid = max(lens) + 9
         else:
@@ -868,15 +868,15 @@ class Group(System):
                     continue
                 out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                pnames = [p for p,u in vec_conns.items() if u==v]
+                pnames = [p for p, u in vec_conns.items() if u == v]
 
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
-                        pslice = pvec._slices.get(pname, (-1,-1))
+                        pslice = pvec._slices.get(pname, (-1, -1))
                         pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [('%d:%d' % pvec._slices.get(p, (-1,-1))) for p in pnames]
+                        pslice = [('%d:%d' % pvec._slices.get(p, (-1, -1))) for p in pnames]
                         if len(pslice) > 1:
                             pslice = ','.join(pslice)
                         else:
@@ -885,24 +885,27 @@ class Group(System):
                     pslice = '{}[{}]'.format(plabel, pslice)
 
                     connstr = '%s -> %s' % (v, pnames)
-                    out_stream.write("{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n".format(connstr,
-                                                                    uslice,
-                                                                    pslice,
-                                                                    repr(uvec[v]),
-                                                                    nwid=nwid))
+                    template = "{0:<{nwid}} {1:<10} {2:<10} {3:>10}\n"
+                    out_stream.write(template.format(connstr,
+                                                     uslice,
+                                                     pslice,
+                                                     repr(uvec[v]),
+                                                     nwid=nwid))
                 else:
-                    out_stream.write("{0:<{nwid}} {1:<21} {2:>10}\n".format(v,
-                                                                  uslice,
-                                                                  repr(uvec[v]),
-                                                                  nwid=nwid))
+                    template = "{0:<{nwid}} {1:<21} {2:>10}\n"
+                    out_stream.write(template.format(v,
+                                                     uslice,
+                                                     repr(uvec[v]),
+                                                     nwid=nwid))
 
         if not dvecs:
             for dest, src in byobj_conns.items():
                 out_stream.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
-                out_stream.write("{0:<{nwid}} (by_obj)  ({1})\n".format(connstr,
-                                                                  repr(uvec[src]),
-                                                                  nwid=nwid))
+                template = "{0:<{nwid}} (by_obj)  ({1})\n"
+                out_stream.write(template.format(connstr,
+                                                 repr(uvec[src]),
+                                                 nwid=nwid))
 
         nest += 3
         for sub in self.subsystems(local=True):
@@ -1071,14 +1074,13 @@ class Group(System):
             if param in my_params:
                 # remove our system pathname from the abs pathname of the param and
                 # get the subsystem name from that
-                start = len(self.pathname)+1 if self.pathname else 0
 
                 tgt_sys = name_relative_to(self.pathname, param)
                 src_sys = name_relative_to(self.pathname, unknown)
 
                 for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                        xfer_dict.setdefault((sname, mode), ([],[],[],[]))
+                        xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
                     urelname = self.unknowns.get_promoted_varname(unknown)
                     prelname = self.params.get_promoted_varname(param)
@@ -1195,8 +1197,8 @@ class Group(System):
         """
         ranks = {}
 
-        local_vars = [k for k,m in self.unknowns.items() if not m.get('remote')]
-        local_vars.extend([k for k,m in self.params.items() if not m.get('remote')])
+        local_vars = [k for k, m in self.unknowns.items() if not m.get('remote')]
+        local_vars.extend([k for k, m in self.params.items() if not m.get('remote')])
 
         if MPI:
             all_locals = self.comm.allgather(local_vars)
@@ -1230,7 +1232,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         variable dictionary that map to the given promoted name.
     """
 
-    pnames = [n for n,m in var_dict.items() if m['promoted_name']==var_name]
+    pnames = [n for n, m in var_dict.items() if m['promoted_name'] == var_name]
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 
