@@ -16,8 +16,7 @@ class TestIndices(unittest.TestCase):
     def test_indices(self):
         size = 10
 
-        prob = Problem(root=Group())
-        root = prob.root
+        root = Group()
 
         root.add('P1', ParamComp('x', np.zeros(size)))
         root.add('C1', ExecComp('y = x * 2.', y=np.zeros(size//2), x=np.zeros(size//2)))
@@ -26,7 +25,8 @@ class TestIndices(unittest.TestCase):
         root.connect('P1.x', "C1.x", src_indices=list(range(size//2)))
         root.connect('P1.x', "C2.x", src_indices=list(range(size//2, size)))
 
-        prob.setup()
+        prob = Problem(root)
+        prob.setup(check=False)
 
         root.P1.unknowns['x'][0:size//2] += 1.0
         root.P1.unknowns['x'][size//2:size] -= 1.0

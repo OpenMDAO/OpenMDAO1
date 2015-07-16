@@ -28,75 +28,75 @@ class MatMatTestCase(MPITestCase):
 
     def test_fan_in_serial_sets(self):
 
-        top = Problem(impl=impl)
-        top.root = FanInGrouped()
-        top.root.ln_solver = LinearGaussSeidel()
-        top.root.sub.ln_solver = LinearGaussSeidel()
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver.add_param('p1.x1')
-        top.driver.add_param('p2.x2')
-        top.driver.add_objective('comp3.y')
+        prob.driver.add_param('p1.x1')
+        prob.driver.add_param('p2.x2')
+        prob.driver.add_objective('comp3.y')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         param_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
     def test_fan_out_serial_sets(self):
 
-        top = Problem(impl=impl)
-        top.root = FanOutGrouped()
-        top.root.ln_solver = LinearGaussSeidel()
-        top.root.sub.ln_solver = LinearGaussSeidel()
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
 
         # Parallel Groups
-        top.driver.add_param('p.x')
-        top.driver.add_constraint('c2.y')
-        top.driver.add_constraint('c3.y')
+        prob.driver.add_param('p.x')
+        prob.driver.add_constraint('c2.y')
+        prob.driver.add_constraint('c3.y')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         unknown_list = ['c2.y', 'c3.y']
         param_list = ['p.x']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
     def test_fan_in_parallel_sets(self):
 
-        top = Problem(impl=impl)
-        top.root = FanInGrouped()
-        top.root.ln_solver = LinearGaussSeidel()
-        top.root.sub.ln_solver = LinearGaussSeidel()
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
 
         # auto calculated mode is fwd, so we don't have to set it explicitly
         # in the ln_solvers in order to have our voi subvecs allocated
         # properly.
 
         # Parallel Groups
-        top.driver.add_param('p1.x1')
-        top.driver.add_param('p2.x2')
-        top.driver.add_objective('comp3.y')
+        prob.driver.add_param('p1.x1')
+        prob.driver.add_param('p2.x2')
+        prob.driver.add_objective('comp3.y')
 
         # make sure we can't mix inputs and outputs in parallel sets
         try:
-            top.driver.parallel_derivs(['p1.x1','comp3.y'])
+            prob.driver.parallel_derivs(['p1.x1','comp3.y'])
         except Exception as err:
             self.assertEqual(str(err),
                "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
@@ -104,14 +104,14 @@ class MatMatTestCase(MPITestCase):
         else:
             self.fail("Exception expected")
 
-        top.driver.parallel_derivs(['p1.x1','p2.x2'])
+        prob.driver.parallel_derivs(['p1.x1','p2.x2'])
 
-        self.assertEqual(top.driver.params_of_interest(),
+        self.assertEqual(prob.driver.params_of_interest(),
                          [('p1.x1','p2.x2')])
 
         # make sure we can't add a VOI to multiple groups
         try:
-            top.driver.parallel_derivs(['p1.x1','p3.x3'])
+            prob.driver.parallel_derivs(['p1.x1','p3.x3'])
         except Exception as err:
             self.assertEqual(str(err),
                "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
@@ -119,51 +119,51 @@ class MatMatTestCase(MPITestCase):
         else:
             self.fail("Exception expected")
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         param_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
     def test_fan_out_parallel_sets(self):
 
-        top = Problem(impl=impl)
-        top.root = FanOutGrouped()
-        top.root.ln_solver = LinearGaussSeidel()
-        top.root.sub.ln_solver = LinearGaussSeidel()
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
 
         # need to set mode to rev before setup. Otherwise the sub-vectors
         # for the parallel set vars won't get allocated.
-        top.root.ln_solver.options['mode'] = 'rev'
-        top.root.sub.ln_solver.options['mode'] = 'rev'
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.sub.ln_solver.options['mode'] = 'rev'
 
         # Parallel Groups
-        top.driver.add_param('p.x')
-        top.driver.add_constraint('c2.y')
-        top.driver.add_constraint('c3.y')
-        top.driver.parallel_derivs(['c2.y','c3.y'])
+        prob.driver.add_param('p.x')
+        prob.driver.add_constraint('c2.y')
+        prob.driver.add_constraint('c3.y')
+        prob.driver.parallel_derivs(['c2.y','c3.y'])
 
-        self.assertEqual(top.driver.outputs_of_interest(),
+        self.assertEqual(prob.driver.outputs_of_interest(),
                          [('c2.y','c3.y')])
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         unknown_list = ['c2.y', 'c3.y']
         param_list = ['p.x']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
@@ -174,8 +174,8 @@ class MatMatIndicesTestCase(MPITestCase):
 
     def test_indices(self):
         asize = 3
-        top = Problem(root=Group(), impl=impl)
-        root = top.root
+        prob = Problem(root=Group(), impl=impl)
+        root = prob.root
         root.ln_solver = LinearGaussSeidel()
         root.ln_solver.options['mode'] = 'rev'
 
@@ -193,27 +193,27 @@ class MatMatIndicesTestCase(MPITestCase):
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
-        top.driver.add_param('p.x', indices=[1,2])
-        top.driver.add_constraint('c4.y', indices=[1])
-        top.driver.add_constraint('c5.y', indices=[2])
-        top.driver.parallel_derivs(['c4.y','c5.y'])
+        prob.driver.add_param('p.x', indices=[1,2])
+        prob.driver.add_constraint('c4.y', indices=[1])
+        prob.driver.add_constraint('c5.y', indices=[2])
+        prob.driver.parallel_derivs(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')
         root.connect('G1.c2.y','c4.x')
         root.connect('G1.c3.y','c5.x')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['p.x'],
+        J = prob.calc_gradient(['p.x'],
                               ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
 
-        J = top.calc_gradient(['p.x'],
+        J = prob.calc_gradient(['p.x'],
                               ['c4.y','c5.y'],
                               mode='rev', return_format='dict')
 

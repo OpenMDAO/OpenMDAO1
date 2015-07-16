@@ -32,122 +32,122 @@ class TestPyoptSparse(unittest.TestCase):
 
     def test_simple_paraboloid(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', 50.0), promotes=['*'])
         root.add('p2', ParamComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('x', low=-50.0, high=50.0)
-        top.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_param('y', low=-50.0, high=50.0)
 
-        top.driver.add_objective('f_xy')
-        top.driver.add_constraint('c')
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, top['x'], 7.16667, 1e-6)
-        assert_rel_error(self, top['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
     def test_simple_paraboloid_equality(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', 50.0), promotes=['*'])
         root.add('p2', ParamComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('x', low=-50.0, high=50.0)
-        top.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_param('y', low=-50.0, high=50.0)
 
-        top.driver.add_objective('f_xy')
-        top.driver.add_constraint('c', ctype='ineq')
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', ctype='ineq')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, top['x'], 7.16667, 1e-6)
-        assert_rel_error(self, top['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
     def test_simple_array_comp(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
         root.add('comp', SimpleArrayComp(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
         root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0, high=50.0)
 
-        top.driver.add_objective('o')
-        top.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', ctype='eq')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        obj = top['o']
+        obj = prob['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
 
     def test_simple_array_comp2D(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
         root.add('comp', ArrayComp2D(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0, high=50.0)
 
-        top.driver.add_objective('o')
-        top.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', ctype='eq')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        obj = top['o']
+        obj = prob['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
 
     def test_simple_array_comp2D_array_lo_hi(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
         root.add('comp', ArrayComp2D(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
 
-        top.driver.add_objective('o')
-        top.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', ctype='eq')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        obj = top['o']
+        obj = prob['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
 
     def test_fan_out(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('x', 1.0))
         root.add('p2', ParamComp('x', 1.0))
@@ -167,23 +167,23 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp1.y', 'con1.x')
         root.connect('comp2.y', 'con2.x')
 
-        top.driver = pyOptSparseDriver()
-        top.driver.add_param('p1.x', low=-50.0, high=50.0)
-        top.driver.add_param('p2.x', low=-50.0, high=50.0)
-        top.driver.add_objective('obj.o')
-        top.driver.add_constraint('con1.c', ctype='eq')
-        top.driver.add_constraint('con2.c', ctype='eq')
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('p2.x', low=-50.0, high=50.0)
+        prob.driver.add_objective('obj.o')
+        prob.driver.add_constraint('con1.c', ctype='eq')
+        prob.driver.add_constraint('con2.c', ctype='eq')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        obj = top['obj.o']
+        obj = prob['obj.o']
         assert_rel_error(self, obj, 30.0, 1e-6)
 
         # Verify that pyOpt has the correct wrt names
-        con1 = top.driver.pyopt_solution.constraints['con1.c']
+        con1 = prob.driver.pyopt_solution.constraints['con1.c']
         self.assertEqual(con1.wrt, ['p1.x'])
-        con2 = top.driver.pyopt_solution.constraints['con2.c']
+        con2 = prob.driver.pyopt_solution.constraints['con2.c']
         self.assertEqual(con2.wrt, ['p2.x'])
 
 if __name__ == "__main__":

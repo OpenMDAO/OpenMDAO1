@@ -131,7 +131,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.connect('src.x2', 'tgtC.x2')
         prob.root.connect('src.x2', 'tgtK.x2')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
@@ -173,7 +173,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.connect('tgtC.x2', 'tgtF.x2')
         prob.root.connect('tgtC.x2', 'tgtK.x2')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
@@ -211,7 +211,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('tgtK', TgtCompK(), promotes=['x2'])
         prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['x2'], 100.0, 1e-6)
@@ -255,7 +255,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.connect('sub1.src.x2', 'sub2.tgtC.x2')
         prob.root.connect('sub1.src.x2', 'sub2.tgtK.x2')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['sub1.src.x2'], 100.0, 1e-6)
@@ -298,7 +298,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.connect('x2', 'tgtC.x2')
         prob.root.connect('x2', 'tgtK.x2')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['x2'], 100.0, 1e-6)
@@ -338,7 +338,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('dest', BadComp())
         prob.root.connect('src.x2', 'dest.x2')
         with self.assertRaises(TypeError) as cm:
-            prob.setup()
+            prob.setup(check=False)
 
         expected_msg = "Unit 'degC' in source 'src.x2' is incompatible with unit 'm' in target 'dest.x2'."
 
@@ -350,7 +350,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('src', SrcComp(), promotes=['x2'])
         prob.root.add('dest', BadComp(),promotes=['x2'])
         with self.assertRaises(TypeError) as cm:
-            prob.setup()
+            prob.setup(check=False)
 
         expected_msg = "Unit 'degC' in source 'x2' is incompatible with unit 'm' in target 'x2'."
 

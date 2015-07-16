@@ -41,7 +41,7 @@ class CompFDTestCase(unittest.TestCase):
 
     def setUp(self):
         self.p = TestProb()
-        self.p.setup()
+        self.p.setup(check=False)
 
     def test_correct_keys_in_jac(self):
 
@@ -227,21 +227,21 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
     def test_no_derivatives(self):
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', ExecComp('y=x*2.0'))
-        top.root.add('p1', ParamComp('x', 2.0))
-        top.root.connect('p1.x', 'comp.x')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', ExecComp('y=x*2.0'))
+        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp.y']['p1.x'][0][0], 2.0, 1e-6)
 
-        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['comp.y']['p1.x'][0][0], 2.0, 1e-6)
 
     def test_overrides(self):
@@ -259,7 +259,6 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ Doesn't do much. """
-
                 unknowns['y'] = 7.0*params['x']
 
             def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
@@ -267,97 +266,95 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 """Never Call."""
                 raise RuntimeError("This should have been overridden by force_fd.")
 
-
             def jacobian(self, params, unknowns, resids):
                 """Never Call."""
                 raise RuntimeError("This should have been overridden by force_fd.")
 
-
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', OverrideComp())
-        top.root.add('p1', ParamComp('x', 2.0))
-        top.root.connect('p1.x', 'comp.x')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', OverrideComp())
+        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp.y']['p1.x'][0][0], 7.0, 1e-6)
 
     def test_fd_options_step_size(self):
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', Paraboloid())
-        top.root.add('p1', ParamComp('x', 15.0))
-        top.root.add('p2', ParamComp('y', 15.0))
-        top.root.connect('p1.x', 'comp.x')
-        top.root.connect('p2.y', 'comp.y')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', Paraboloid())
+        prob.root.add('p1', ParamComp('x', 15.0))
+        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure step_size is used
         # Derivative should be way high with this.
         comp.fd_options['step_size'] = 1e5
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 1000.0)
 
     def test_fd_options_form(self):
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', Paraboloid())
-        top.root.add('p1', ParamComp('x', 15.0))
-        top.root.add('p2', ParamComp('y', 15.0))
-        top.root.connect('p1.x', 'comp.x')
-        top.root.connect('p2.y', 'comp.y')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', Paraboloid())
+        prob.root.add('p1', ParamComp('x', 15.0))
+        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
         comp.fd_options['form'] = 'forward'
 
         param_list = ['p1.x']
         unknowns_list = ['comp.f_xy']
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(param_list, unknowns_list, return_format='dict')
+        J = prob.calc_gradient(param_list, unknowns_list, return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'backward'
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'central'
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Now, Make sure we really are going foward and backward
         comp.fd_options['form'] = 'forward'
         comp.fd_options['step_size'] = 1e3
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 0.0)
 
         comp.fd_options['form'] = 'backward'
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         self.assertLess(J['comp.f_xy']['p1.x'][0][0], 0.0)
 
         # Central should get pretty close even for the bad stepsize
         comp.fd_options['form'] = 'central'
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-1)
 
     def test_fd_options_step_type(self):
@@ -400,24 +397,24 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
                 return J
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', ScaledParaboloid())
-        top.root.add('p1', ParamComp('x', 8.0*comp.scale))
-        top.root.add('p2', ParamComp('y', 8.0*comp.scale))
-        top.root.connect('p1.x', 'comp.x')
-        top.root.connect('p2.y', 'comp.y')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', ScaledParaboloid())
+        prob.root.add('p1', ParamComp('x', 8.0*comp.scale))
+        prob.root.add('p2', ParamComp('y', 8.0*comp.scale))
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
         comp.fd_options['step_type'] = 'absolute'
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J1 = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J1 = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
         comp.fd_options['step_type'] = 'relative'
-        J2 = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J2 = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
         # Couldnt put together a case where one is much worse, so just make sure they
         # are not equal.
@@ -462,23 +459,23 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
                 return J
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', MetaParaboloid())
-        top.root.add('p1', ParamComp('x', 15.0))
-        top.root.add('p2', ParamComp('y', 15.0))
-        top.root.connect('p1.x', 'comp.x')
-        top.root.connect('p2.y', 'comp.y')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', MetaParaboloid())
+        prob.root.add('p1', ParamComp('x', 15.0))
+        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         # Make sure bad meta step_size is used
         # Derivative should be way high with this.
 
-        J = top.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
+        J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 1000.0)
 
     def test_fd_options_meta_form(self):
@@ -523,15 +520,15 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
                 return J
 
-        top = Problem()
-        top.root = Group()
-        comp = top.root.add('comp', MetaParaboloid())
-        top.root.add('p11', ParamComp('x1', 15.0))
-        top.root.add('p12', ParamComp('x2', 15.0))
-        top.root.add('p2', ParamComp('y', 15.0))
-        top.root.connect('p11.x1', 'comp.x1')
-        top.root.connect('p12.x2', 'comp.x2')
-        top.root.connect('p2.y', 'comp.y')
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', MetaParaboloid())
+        prob.root.add('p11', ParamComp('x1', 15.0))
+        prob.root.add('p12', ParamComp('x2', 15.0))
+        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.connect('p11.x1', 'comp.x1')
+        prob.root.connect('p12.x2', 'comp.x2')
+        prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
         comp.fd_options['step_size'] = 1e3
@@ -539,13 +536,13 @@ class CompFDinSystemTestCase(unittest.TestCase):
         params_list = ['p11.x1']
         unknowns_list = ['comp.f_xy']
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(params_list, unknowns_list, return_format='dict')
+        J = prob.calc_gradient(params_list, unknowns_list, return_format='dict')
         self.assertGreater(J['comp.f_xy']['p11.x1'][0][0], 0.0)
 
-        J = top.calc_gradient(['p12.x2'], unknowns_list, return_format='dict')
+        J = prob.calc_gradient(['p12.x2'], unknowns_list, return_format='dict')
         self.assertLess(J['comp.f_xy']['p12.x2'][0][0], 0.0)
 
 

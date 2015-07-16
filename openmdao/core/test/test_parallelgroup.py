@@ -11,8 +11,8 @@ class TestGroup(unittest.TestCase):
 
     def test_run(self):
 
-        prob = Problem(root=ParallelGroup())
-        root = prob.root
+        root = ParallelGroup()
+
         root.nl_solver = NLGaussSeidel()
 
         root.add('C1', ParamComp('x', 5.))
@@ -24,7 +24,8 @@ class TestGroup(unittest.TestCase):
         root.connect("C2.y", "C3.x")
         root.connect("C3.y", "C4.x")
 
-        prob.setup()
+        prob = Problem(root)
+        prob.setup(check=False)
         prob.run()
 
         self.assertEqual(root.nl_solver.iter_count, 3)

@@ -75,7 +75,7 @@ class MPITests1(MPITestCase):
         # prob.root.connect('C1.out_string', 'C2.in_string')
         # prob.root.connect('C1.out_list',   'C2.in_list')
 
-        prob.setup()
+        prob.setup(check=False)
 
         prob['A1.a'] = np.ones(size, float) * 3.0
         prob['B1.b'] = np.ones(size, float) * 7.0
@@ -107,7 +107,7 @@ class MPITests1(MPITestCase):
         prob.root.connect('G1.P1.x', 'C1.a')
         prob.root.connect('G1.P2.x', 'C1.b')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         if not MPI or self.comm.rank == 0:
@@ -132,7 +132,7 @@ class MPITests1(MPITestCase):
         root.connect('G1.C1.c', 'C3.a')
         root.connect('G1.C2.d', 'C3.b')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         if not MPI or self.comm.rank == 0:

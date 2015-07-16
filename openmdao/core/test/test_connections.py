@@ -27,7 +27,7 @@ class TestConnections(unittest.TestCase):
         self.C4 = self.G4.add("C4", ExecComp('y=x*2.0'))
 
     def test_no_conns(self):
-        self.p.setup()
+        self.p.setup(check=False)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(self.p._dangling['G3.G4.C3.x'], set(['G3.G4.C3.x']))
         self.assertEqual(self.p._dangling['G3.G4.C4.x'], set(['G3.G4.C4.x']))
@@ -43,7 +43,9 @@ class TestConnections(unittest.TestCase):
 
     def test_inp_inp_conn_no_src(self):
         self.p.root.connect('G3.G4.C3.x', 'G3.G4.C4.x')
-        self.p.setup()
+
+        stream = cStringIO()
+        self.p.setup(out_stream=stream)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(self.p._dangling['G3.G4.C3.x'], set(['G3.G4.C3.x', 'G3.G4.C4.x']))
         self.assertEqual(self.p._dangling['G3.G4.C4.x'], set(['G3.G4.C4.x', 'G3.G4.C3.x']))
@@ -53,8 +55,6 @@ class TestConnections(unittest.TestCase):
         self.assertEqual(self.p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(self.p.root.G3.G4.C4.params['x'], 999.)
 
-        stream = cStringIO()
-        self.p.check_setup(out_stream=stream)
         content = stream.getvalue()
         self.assertTrue("The following parameters have no associated unknowns:\nG1.G2.C1.x\nG3.G4.C3.x\nG3.G4.C4.x" in content)
         self.assertTrue("The following components have no connections:\nG1.G2.C1\nG1.G2.C2\nG3.G4.C3\nG3.G4.C4\n" in content)
@@ -63,7 +63,7 @@ class TestConnections(unittest.TestCase):
     def test_inp_inp_conn_w_src(self):
         self.p.root.connect('G3.G4.C3.x', 'G3.G4.C4.x')
         self.p.root.connect('G1.G2.C2.x', 'G3.G4.C3.x')
-        self.p.setup()
+        self.p.setup(check=False)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(len(self.p._dangling), 1)
 
@@ -78,7 +78,7 @@ class TestConnections(unittest.TestCase):
     def test_inp_inp_conn_w_src2(self):
         self.p.root.connect('G3.G4.C3.x', 'G3.G4.C4.x')
         self.p.root.connect('G1.G2.C2.x', 'G3.G4.C4.x')
-        self.p.setup()
+        self.p.setup(check=False)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(len(self.p._dangling), 1)
 
@@ -107,7 +107,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         C3 = G4.add("C3", ExecComp('y=x*2.0'), promotes=['x'])
         C4 = G4.add("C4", ExecComp('y=x*2.0'), promotes=['x'])
 
-        p.setup()
+        p.setup(check=False)
 
         self.assertEqual(p._dangling['G3.G4.x'], set(['G3.G4.C3.x','G3.G4.C4.x']))
 
@@ -131,7 +131,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         C3 = G4.add("C3", ExecComp('y=x*2.0'), promotes=['x'])
         C4 = G4.add("C4", ExecComp('y=x*2.0'), promotes=['x'])
 
-        p.setup()
+        p.setup(check=False)
 
         self.assertEqual(p._dangling['G3.x'], set(['G3.G4.C3.x','G3.G4.C4.x']))
 
@@ -154,7 +154,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         C3 = G4.add("C3", ExecComp('y=x*2.0'), promotes=['x'])
         C4 = G4.add("C4", ExecComp('y=x*2.0'), promotes=['x'])
 
-        p.setup()
+        p.setup(check=False)
 
         self.assertEqual(p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(len(p._dangling), 1)
@@ -184,7 +184,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         C4 = G4.add("C4", ExecComp('y=x*2.0'), promotes=['x'])
 
         p.root.connect('G1.x', 'G3.x')
-        p.setup()
+        p.setup(check=False)
 
         self.assertEqual(p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
         self.assertEqual(len(p._dangling), 1)
