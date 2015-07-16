@@ -1,9 +1,7 @@
-
-from six.moves import zip
+""" Class definition for the DataXfer object."""
 
 import numpy as np
 
-#from openmdao.util.arrayutil import to_slice
 
 class DataXfer(object):
     """
@@ -59,10 +57,10 @@ class DataXfer(object):
             they are connected to.
 
         mode : 'fwd' or 'rev', optional
-            Direction of the data transfer, source to target ('fwd', the default)
-            or target to source ('rev').
+            Direction of the data transfer, source to target ('fwd', the
+            default) or target to source ('rev').
 
-        deriv : bool
+        deriv : bool, optional
             If True, this is a derivative scatter, so byobjs should not be
             transferred.
         """
