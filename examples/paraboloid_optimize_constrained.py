@@ -1,7 +1,8 @@
-""" Unconstrained optimization of the paraboloid component."""
+""" Constrained optimization of the paraboloid component."""
 
 from __future__ import print_function
 
+from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
@@ -49,8 +50,13 @@ if __name__ == "__main__":
     root.add('p2', ParamComp('y', -4.0))
     root.add('p', Paraboloid())
 
+    # Constraint Equation
+    root.add('con', ExecComp('c = 15.0 - x + y'))
+
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
+    root.connect('p.x', 'con.x')
+    root.connect('p.y', 'con.y')
 
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
@@ -58,6 +64,7 @@ if __name__ == "__main__":
     top.driver.add_param('p1.x', low=-50, high=50)
     top.driver.add_param('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
+    top.driver.add_constraint('con.c')
 
     top.setup()
     top.run()
