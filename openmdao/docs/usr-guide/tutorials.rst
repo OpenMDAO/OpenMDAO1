@@ -9,4 +9,4 @@ Tutorials
    :maxdepth: 1
 
    tutorials/paraboloid-tutorial.rst
-   sellar.rst
+   tutorials/sellar.rst
