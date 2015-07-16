@@ -56,10 +56,9 @@ save the data generated for future use. Consider the code below:
 
         root = top.root = Group()
 
-        paraboloid = root.add('p', Paraboloid(), promotes=['*'])
-
         root.add('p1', ParamComp('x', 3.0), promotes=['*'])
         root.add('p2', ParamComp('y', -4.0), promotes=['*'])
+        paraboloid = root.add('p', Paraboloid(), promotes=['*'])
 
         top.driver = driver = ScipyOptimizer()
 
@@ -99,4 +98,93 @@ of Python, the actual file generated may have a different name (e.g.
 paraboloid.db), but `shelve` will be able to open the correct file.
 
 We then attach the recorder to the driver using `driver.add_recorder`.
-Depending on your needs, you
+Depending on your needs, you are able to attach more recorders by using
+additional `driver.add_recorder` calls. Solver also have an `add_recorder`
+method that is invoked the same way. This allows you to record the evolution
+of variables at lower levels.
+
+
+Includes and Excludes
+=====================
+
+Over the course of an analysis or optimization, the model may generate a very
+large amount of data. Since you may not be interested in the value of every
+variable at every step, OpenMDAO allows you to filter what variables are
+recorded through the use of includes and excludes. The recorder will store
+anything that matches the includes filter and that does not match the exclude
+filter. By default, the includes are set to `['*']` and the excludes are set to
+`[]`, i.e. include everything and exclude nothing.
+
+The includes and excludes filters are set via the `options` structure in the
+recorder. If we were only interested in the variable `x` from our Paraboloid
+model, we could record that by setting the includes as follows:
+
+::
+
+    recorder = ShelveRecorder('paraboloid')
+    recorder.options['includes'] = ['x']
+
+    driver.add_recorder(recorder)
+
+Similarly, if we were interested in everything except the value of `f_xy`, we
+could exclude that by doing the following:
+::
+
+    recorder = ShelveRecorder('paraboloid')
+    recorder.options['excludes'] = ['f_xy']
+
+    driver.add_recorder(recorder)
+
+The includes and excludes filters will accept glob arguments. For example,
+`recorder.options['excludes'] = ['comp1.*']` would exclude any variable
+that starts with "comp1.".
+
+Accessing Recorded Data
+=======================
+
+While each recorder stores data slightly differently in order to match the
+file format, the common theme for accessing data is the iteration coordinate.
+The iteration coordinate describes where and when in the execution hierarchy
+the data was collected. Iteration coordinates are strings formatted as pairs
+of names and iteration numbers separated by '/'. For example,
+'SLSQP/1/root/2/G1/3' would describe the third iteration of 'G1' during the
+second iteration of 'root' during the first iteration of 'SLSQP'. Some solvers
+and drivers may have sub-steps that are recorded. In those cases, the
+iteration number may be of the form '1-3', indicating the third sub-step of the
+first iteration.
+
+Since our Paraboloid only has a recorder attached to the driver, our
+'paraboloid' shelve file will contain keys of the form 'SLSQP/1', 'SLSQP/2',
+etc. To access the data from our run, we can use the following code:
+
+::
+
+    import shelve
+    f = shelve.open('paraboloid')
+
+Now, we can access the data using an iteration coordinate.
+
+::
+
+    data = f['SLSQP/1']
+
+This `data` variable has three keys, 'Parameters', 'Unknowns', and 'Residuals'.
+Using any of these keys will yield a dictionary containing variable names
+mapped to values. For example,
+
+::
+
+    p = data['Parameters']
+    print(p)
+
+will print out the dictionary {'p.x': 3.0, 'p.y': -4.0}. Generally, the
+variables of interest will be contained in the 'Unknowns' key since that will
+contain the objective function values and the values controlled by the
+optimizer. For example,
+
+::
+
+    u = data['Unknowns']
+    print(u)
+
+will print out the dictionary {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}.
