@@ -21,80 +21,79 @@ class TestNewton(unittest.TestCase):
 
     def test_sellar_grouped(self):
 
-        top = Problem()
-        top.root = SellarDerivativesGrouped()
-        top.root.mda.nl_solver = Newton()
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+        prob.root.mda.nl_solver = Newton()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(top.root.nl_solver.iter_count, 8)
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
     def test_sellar(self):
 
-        top = Problem()
-        top.root = SellarNoDerivatives()
-        top.root.nl_solver = Newton()
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = Newton()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(top.root.nl_solver.iter_count, 8)
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
     def test_sellar_derivs(self):
 
-        top = Problem()
-        top.root = SellarDerivatives()
-        top.root.nl_solver = Newton()
+        prob = Problem()
+        prob.root = SellarDerivatives()
+        prob.root.nl_solver = Newton()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(top.root.nl_solver.iter_count, 8)
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
     def test_sellar_derivs_with_Lin_GS(self):
 
-        top = Problem()
-        top.root = SellarDerivatives()
-        top.root.nl_solver = Newton()
-        top.root.ln_solver = LinearGaussSeidel()
+        prob = Problem()
+        prob.root = SellarDerivatives()
+        prob.root.nl_solver = Newton()
+        prob.root.ln_solver = LinearGaussSeidel()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(top.root.nl_solver.iter_count, 8)
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
     def test_sellar_state_connection(self):
 
-        top = Problem()
-        top.root = SellarStateConnection()
-        top.root.nl_solver = Newton()
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.root.nl_solver = Newton()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['state_eq.y2_command'], 12.05848819, .00001)
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(top.root.nl_solver.iter_count, 8)
-
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
 
 if __name__ == "__main__":

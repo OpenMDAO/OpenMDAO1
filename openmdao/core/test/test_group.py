@@ -75,7 +75,7 @@ class TestGroup(unittest.TestCase):
         root = ExampleGroup()
         prob = Problem(root=root)
 
-        prob.setup()
+        prob.setup(check=False)
 
         #root._setup_paths('')
 
@@ -201,7 +201,7 @@ class TestGroup(unittest.TestCase):
         root = ExampleGroupWithPromotes()
         prob = Problem(root=root)
 
-        prob.setup()
+        prob.setup(check=False)
 
         self.assertEqual(root.pathname, '')
         self.assertEqual(root.G3.pathname, 'G3')
@@ -318,7 +318,7 @@ class TestGroup(unittest.TestCase):
         else:
             self.fail('Exception expected')
 
-        prob.setup()
+        prob.setup(check=False)
 
         # check that we can access values from unknowns (default) and params
         self.assertEqual(prob.root['G2.C1.x'], 5.)             # default output from ParamComp
@@ -328,7 +328,7 @@ class TestGroup(unittest.TestCase):
 
         # now try same thing in a Group with promotes
         prob = Problem(root=ExampleGroupWithPromotes())
-        prob.setup()
+        prob.setup(check=False)
 
         prob.root.G2.unknowns['x'] = 99.
 
@@ -374,13 +374,13 @@ class TestGroup(unittest.TestCase):
         C1 = G2.add('C1', ParamComp('x', 5.))
         C2 = G2.add('C2', ExecComp('y=x*2.0'))
         G2.connect('C1.x', 'C2.x')
-        prob.setup()
+        prob.setup(check=False)
 
     def test_fd_params(self):
         # tests retrieval of a list of any internal params whose source is either
         # a ParamComp or is outside of the Group
         prob = Problem(root=ExampleGroup())
-        prob.setup()
+        prob.setup(check=False)
         root = prob.root
 
         self.assertEqual(root._get_fd_params(), ['G2.G1.C2.x'])
@@ -395,7 +395,7 @@ class TestGroup(unittest.TestCase):
         # tests retrieval of a list of any internal unknowns with ParamComp
         # variables filtered out.
         prob = Problem(root=ExampleGroup())
-        prob.setup()
+        prob.setup(check=False)
         root = prob.root
 
         self.assertEqual(root._get_fd_unknowns(), ['G2.G1.C2.y', 'G3.C3.y', 'G3.C4.y'])
@@ -408,7 +408,7 @@ class TestGroup(unittest.TestCase):
 
     def test_dump(self):
         prob = Problem(root=ExampleGroup())
-        prob.setup()
+        prob.setup(check=False)
         save = StringIO()
         prob.root.dump(out_stream=save)
 
@@ -417,7 +417,7 @@ class TestGroup(unittest.TestCase):
 
     def test_data_xfer(self):
         prob = Problem(root=ExampleGroupWithPromotes())
-        prob.setup()
+        prob.setup(check=False)
 
         prob.root.unknowns['G2.G1.C2.y'] = 99.
         self.assertEqual(prob.root['G2.G1.C2.y'], 99.)

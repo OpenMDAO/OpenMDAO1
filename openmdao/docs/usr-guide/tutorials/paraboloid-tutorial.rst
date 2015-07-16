@@ -251,6 +251,7 @@ The output should look like this:
 .. testoutput:: parab
    :options: +ELLIPSIS
 
+   ...
    -15.0
 
 Future tutorials will show more complex `Problems`.

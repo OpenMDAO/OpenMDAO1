@@ -262,10 +262,9 @@ determines how the `Problem` will execute your model.
 The `Driver` is invoked by calling the *run* method on the `Problem`. Prior
 to doing that, however, you must perform *setup*.  This function does all
 the necessary initialization of the data vectors and configuration for the
-data transfers that must occur during execution. An optional but highly
-recommended additional step is to call the *check_setup* method after calling
-*setup*. This will look for and report any potential issues with the `Problem`
-configuration, including unconnected parameters, conflicting units, etc.
+data transfers that must occur during execution. It will also look for and
+report any potential issues with the `Problem` configuration, including
+unconnected parameters, conflicting units, etc.
 
 Summary
 -------
@@ -275,7 +274,6 @@ The general procedure for defining and solving a `Problem` in OpenMDAO is:
     - assembling `Components` into Groups and making connections (explicitly or implicitly)
     - instantiating a `Problem` with the *root* `Group`
     - perform *setup* on the `Problem` to initialize all vectors and data transfers
-    - perform *check_setup* on the `Problem` to identify any issues
     - perform *run* on the Problem
 
 A very basic example of defining and running a `Problem` as discussed here is shown below.
@@ -296,7 +294,6 @@ parameter (`ParamComp`) and to quickly define a `Component` for an equation (`Ex
 
     prob = Problem(root)
     prob.setup()
-    prob.check_setup()
     prob.run()
 
     result = root.unknowns['mycomp.y']

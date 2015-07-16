@@ -38,7 +38,6 @@ class Problem(System):
 
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
-        self._setup_complete = False
         self.root = root
         if impl is None:
             self._impl = BasicImpl
@@ -154,12 +153,19 @@ class Problem(System):
 
         return connections
 
-    def setup(self):
+    def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.
-        """
-        self._setup_complete = False
 
+        Args
+        ----
+        check : bool, optional
+            Check for potential issues after setup is complete (the default
+            is True)
+
+        out_stream : a file-like object, optional
+            Stream where report will be written if check is performed.
+        """
         # if we modify the system tree, we'll need to call _setup_variables
         # and _setup_connections again
         tree_changed = False
@@ -236,7 +242,7 @@ class Problem(System):
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
-        param_owners = assign_parameters(connections)
+        param_owners = _assign_parameters(connections)
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -258,7 +264,9 @@ class Problem(System):
         # Prepare Driver
         self.driver._setup(self.root)
 
-        self._setup_complete = True
+        # check for any potential issues
+        if check:
+            self._check_setup(out_stream)
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         # check for parameters that are not connected to a source/unknown.
@@ -396,19 +404,15 @@ class Problem(System):
                       (grp.pathname, sorted([name_relative_to(grp.pathname, n)
                                                 for n in out_of_order])), file=out_stream)
 
-    def check_setup(self, out_stream=sys.stdout):
+    def _check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
         with the current configuration.
 
         Args
         ----
-        out_stream : a file-like object
+        out_stream : a file-like object, optional
             Stream where report will be written.
         """
-        # make sure that setup() has been called before check_setup()
-        if not self._setup_complete:
-            raise RuntimeError("setup() must be called before check_setup()")
-
         self._check_dangling_params(out_stream)
         self._check_mode(out_stream)
         self._list_unit_conversions(out_stream)
@@ -425,7 +429,7 @@ class Problem(System):
         # loop over subsystems and let them add any specific checks to the stream
         for s in self.root.subsystems(recurse=True, local=True, include_self=True):
             stream = cStringIO()
-            s.check_setup(out_stream=stream)
+            s._check_setup(out_stream=stream)
             content = stream.getvalue()
             if content:
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
@@ -1011,9 +1015,9 @@ class Problem(System):
         Jfd = self.calc_gradient(param_list, unknown_list, mode='fd',
                                  return_format='dict')
 
-        Jfor = jac_to_flat_dict(Jfor)
-        Jrev = jac_to_flat_dict(Jrev)
-        Jfd = jac_to_flat_dict(Jfd)
+        Jfor = _jac_to_flat_dict(Jfor)
+        Jrev = _jac_to_flat_dict(Jrev)
+        Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
         data = {}
@@ -1133,7 +1137,7 @@ class Problem(System):
                                                       tmeta.get('units'))
 
 
-def assign_parameters(connections):
+def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
@@ -1145,7 +1149,7 @@ def assign_parameters(connections):
     return param_owners
 
 
-def jac_to_flat_dict(jac):
+def _jac_to_flat_dict(jac):
     """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go
     from [out][in] to [out,in].
 

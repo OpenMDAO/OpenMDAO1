@@ -35,7 +35,7 @@ class TestGroupDerivatves(unittest.TestCase):
         top.root.connect('x_param.x', "sub.mycomp.x")
 
         sub.fd_options['force_fd'] = True
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         J = top.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='fwd',
@@ -55,7 +55,7 @@ class TestGroupDerivatves(unittest.TestCase):
         param_list = ['sub.p.x']
         unknown_list = ['sub.comp7.y1']
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
@@ -114,7 +114,7 @@ class TestGroupDerivatves(unittest.TestCase):
         top = Problem()
         top.root = Model()
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         J = top.calc_gradient(['px.x'], ['comp4.y'])

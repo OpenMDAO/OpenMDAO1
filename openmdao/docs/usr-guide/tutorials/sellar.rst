@@ -284,6 +284,8 @@ optimizer.
    :hide:
    :options: +ELLIPSIS
 
+   ...
+
    Optimization Complete
    -----------------------------------
    ...
@@ -502,6 +504,7 @@ which one, since they should only differ by the solver tolerance at most.
    Optimization Complete
    -----------------------------------
    ...
+
    Minimum found at (1.977..., 0.000000, 0.000000)
    Coupling vars: 3.160..., 3.755...
    Minimum objective:  3.18339...
