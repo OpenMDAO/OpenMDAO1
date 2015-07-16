@@ -1,16 +1,17 @@
-""" OpenMDAO Problem class defintion."""
+""" Relevance object for systems. Manages the data connectivity graph."""
+
 from __future__ import print_function
 
-from itertools import chain
 from collections import OrderedDict
 import json
 from six import string_types
 
 import networkx as nx
 
-from openmdao.core.group import get_absvarpathnames
 
 class Relevance(object):
+    """ Object that manages the data connectivity graph for systems."""
+
     def __init__(self, params_dict, unknowns_dict, connections,
                  inputs, outputs, mode):
 
@@ -62,11 +63,38 @@ class Relevance(object):
         return self.relevant.get(name, [])
 
     def is_relevant(self, var_of_interest, varname):
+        """ Returns True if a variable is relevant to a particular variable
+        of interest.
+
+        Args
+        ----
+        var_of_interest : str
+            Name of a variable of interest (either a parameter or a constraint
+            or objective output, depending on mode.)
+
+        varname : str
+            Name of some other variable in the model.
+
+        Returns
+        -------
+        bool: True if varname is in the relevant path of var_of_interest
+        """
         if var_of_interest is None:
             return True
         return varname in self.relevant[var_of_interest]
 
     def vars_of_interest(self, mode=None):
+        """ Determines our list of var_of_interest depending on mode.
+
+        Args
+        ----
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
+
+        Returns
+        -------
+        list : Our inputs, or output, or both, depending on mode.
+        """
         if mode is None:
             mode = self.mode
         if mode == 'fwd':
@@ -99,23 +127,23 @@ class Relevance(object):
 
         for meta in params_dict.values():
             param = meta['pathname']
-            tcomp = param.rsplit('.',1)[0]
+            tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            cgraph.add_node(param.rsplit('.',1)[0])
+            cgraph.add_node(param.rsplit('.', 1)[0])
             if param in connections and meta['promoted_name'] != param:
                 promote_map[param] = meta['promoted_name']
 
         for meta in unknowns_dict.values():
             unknown = meta['pathname']
-            scomp = unknown.rsplit('.',1)[0]
+            scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            cgraph.add_node(unknown.rsplit('.',1)[0])
+            cgraph.add_node(unknown.rsplit('.', 1)[0])
             if meta['promoted_name'] != unknown:
                 promote_map[unknown] = meta['promoted_name']
 
         for target, source in connections.items():
             vgraph.add_edge(source, target)
-            cgraph.add_edge(source.rsplit('.',1)[0], target.rsplit('.',1)[0])
+            cgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -128,7 +156,7 @@ class Relevance(object):
         nx.relabel_nodes(vgraph, promote_map, copy=False)
 
         # remove any self edges created by the relabeling
-        for u,v in vgraph.edges():
+        for u, v in vgraph.edges():
             if u == v:
                 vgraph.remove_edge(u, v)
 
@@ -144,13 +172,13 @@ class Relevance(object):
         Returns
         -------
         dict
-            Dictionary that maps a variable name to all other variables in the graph that
-            are relevant to it.
+            Dictionary that maps a variable name to all other variables in the
+            graph that are relevant to it.
         """
         succs = {}
         for nodes in self.inputs:
             for node in nodes:
-                succs[node] = set([v for u,v in nx.dfs_edges(g, node)])
+                succs[node] = set([v for u, v in nx.dfs_edges(g, node)])
                 succs[node].add(node)
 
         relevant = {}
@@ -158,7 +186,7 @@ class Relevance(object):
         for nodes in self.outputs:
             for node in nodes:
                 relevant[node] = set()
-                preds = set([v for u,v in nx.dfs_edges(grev, node)])
+                preds = set([v for u, v in nx.dfs_edges(grev, node)])
                 preds.add(node)
                 for inps in self.inputs:
                     for inp in inps:
@@ -169,7 +197,8 @@ class Relevance(object):
         return relevant
 
     def json_dependencies(self):
-        """
+        """ Returns a json representation of a model's data dependency graph.
+
         Returns
         -------
         A json string with a dependency matrix and a list of variable

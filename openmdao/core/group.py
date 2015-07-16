@@ -13,12 +13,12 @@ import numpy as np
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.component import Component
+from openmdao.core.mpiwrap import MPI
 from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 from openmdao.util.strutil import name_relative_to
-from openmdao.core.mpiwrap import MPI
 #from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
@@ -63,8 +63,9 @@ class Group(System):
                     subname, vname = name.rsplit('.', 1)
                     self._subsystem(subname).params[vname] = val
                 except:
-                    raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
-                                   (name, self.pathname))
+                    msg = "Can't find variable '%s' in unknowns or params " + \
+                           "vectors in system '%s'"
+                    raise KeyError( msg % (name, self.pathname))
 
     def __getitem__(self, name):
         """
@@ -102,8 +103,9 @@ class Group(System):
                     subname, vname = name.rsplit('.', 1)
                     return self._subsystem(subname).params[vname]
                 except:
-                    raise KeyError("Can't find variable '%s' in unknowns or params vectors in system '%s'" %
-                                   (name, self.pathname))
+                    msg = "Can't find variable '%s' in unknowns or params " + \
+                           "vectors in system '%s'"
+                    raise KeyError(msg % (name, self.pathname))
 
     def _subsystem(self, name):
         """
@@ -756,7 +758,7 @@ class Group(System):
         vois: list of strings
             List of all quantities of interest to key into the mats.
 
-        mode : string
+        mode : string, optional
             Derivative mode, can be 'fwd' or 'rev', but generally should be
             called without mode so that the user can set the mode in this
             system's ln_solver.options.

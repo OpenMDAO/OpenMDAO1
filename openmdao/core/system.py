@@ -58,6 +58,9 @@ class System(object):
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
 
+        self._relevance = None
+        self._impl_factory = None
+
     def __getitem__(self, name):
         """
         Return the variable of the given name from this system.
@@ -72,7 +75,8 @@ class System(object):
         value
             The unflattened value of the given variable.
         """
-        raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
+        msg = "Variable '%s' must be accessed from a containing Group"
+        raise RuntimeError(msg % name)
 
     def promoted(self, name):
         """Determine if the given variable name is being promoted from this
@@ -100,7 +104,8 @@ class System(object):
 
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(self._params_dict.values(), self._unknowns_dict.values()):
+                for meta in chain(self._params_dict.values(),
+                                  self._unknowns_dict.values()):
                     if name == meta.get('promoted_name'):
                         return True
 

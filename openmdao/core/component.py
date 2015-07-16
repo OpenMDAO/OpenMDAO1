@@ -2,22 +2,17 @@
 
 import sys
 import re
-from pprint import pformat
 from collections import OrderedDict
-import functools
 from six import iteritems
-from six.moves import range
 
 # pylint: disable=E0611, F0401
 import numpy as np
 
-from openmdao.core.system import System
 from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.system import System
 from openmdao.util.types import is_differentiable
 
-'''
-Object to represent default value for `add_output`.
-'''
+# Object to represent default value for `add_output`.
 _NotSet = object()
 
 # regex to check for valid variable names.
@@ -36,6 +31,7 @@ class Component(System):
         self._jacobian_cache = {}
 
     def _get_initial_val(self, val, shape):
+        """ Determines initial value based on starting val and shape."""
         if val is _NotSet:
             # Interpret a shape of 1 to mean scalar.
             if shape == 1:
@@ -44,6 +40,8 @@ class Component(System):
         return val
 
     def _check_val(self, name, var_type, val, shape):
+        """ Raises and exception if the user doesn't specify the right info
+        in val and shape."""
         if val is _NotSet and shape is None:
             msg = ("Shape of {var_type} '{name}' must be specified because "
                    "'val' is not set")
@@ -51,6 +49,7 @@ class Component(System):
             raise ValueError(msg)
 
     def _add_variable(self, name, val, var_type, **kwargs):
+        """ Code common to all add functions goes here."""
         shape = kwargs.get('shape')
         self._check_val(name, var_type, val, shape)
         self._check_name(name)
@@ -76,17 +75,52 @@ class Component(System):
         return args
 
     def add_param(self, name, val=_NotSet, **kwargs):
-        self._params_dict[name] = self._add_variable(name, val, 'param', **kwargs)
+        """ Add a `param` input to this component.
+
+        Args
+        ----
+        name : string
+            Name of the input.
+
+        val : float or ndarray or object
+            Initial value for the input.
+        """
+        self._params_dict[name] = self._add_variable(name, val, 'param',
+                                                     **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
-        self._unknowns_dict[name] = self._add_variable(name, val, 'output', **kwargs)
+        """ Add an output to this component.
+
+        Args
+        ----
+        name : string
+            Name of the variable output.
+
+        val : float or ndarray
+            Initial value for the output. While the value is overwritten during
+            execution, it is useful for infering size.
+        """
+        self._unknowns_dict[name] = self._add_variable(name, val, 'output',
+                                                       **kwargs)
 
     def add_state(self, name, val=_NotSet, **kwargs):
+        """ Add an implicit state to this component.
+
+        Args
+        ----
+        name : string
+            Name of the state.
+
+        val : float or ndarray
+            Initial value for the state.
+        """
         args = self._add_variable(name, val, 'state', **kwargs)
         args['state'] = True
         self._unknowns_dict[name] = args
 
     def _check_name(self, name):
+        """ Verifies that a system name is valid. Also checks for
+        duplicates."""
         if self._post_setup:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
                                (self.pathname, name))
@@ -97,7 +131,7 @@ class Component(System):
         match = namecheck_rgx.match(name)
         if match is None or match.group() != name:
             raise NameError("%s: '%s' is not a valid variable name." %
-                               (self.pathname, name))
+                            (self.pathname, name))
 
     def setup_param_indices(self):
         """
@@ -118,7 +152,7 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return [k for k,m in self.params.items() if not m.get('pass_by_obj')]
+        return [k for k, m in self.params.items() if not m.get('pass_by_obj')]
 
     def _get_fd_unknowns(self):
         """
@@ -130,7 +164,7 @@ class Component(System):
         list of str
             List of names of unknowns for this `Component`.
         """
-        return [k for k,m in self.unknowns.items() if not m.get('pass_by_obj')]
+        return [k for k, m in self.unknowns.items() if not m.get('pass_by_obj')]
 
     def _setup_variables(self):
         """
@@ -169,8 +203,8 @@ class Component(System):
         Args
         ----
         param_owners : dict
-            a dictionary mapping `System` pathnames to the pathnames of parameters
-            they are reponsible for propagating. (ignored)
+            a dictionary mapping `System` pathnames to the pathnames of
+            parameters they are reponsible for propagating. (ignored)
 
         parent : `Group`
             The parent `Group`.
@@ -193,11 +227,13 @@ class Component(System):
         self._relevance = relevance
         self._impl_factory = impl
 
-        # create storage for the relevant vecwrappers, keyed by variable_of_interest
+        # create storage for the relevant vecwrappers, keyed by
+        # variable_of_interest
         for group, vois in relevance.groups.items():
             if group is not None:
                 for voi in vois:
-                    self._create_views(top_unknowns, parent, [], relevance, voi)
+                    self._create_views(top_unknowns, parent, [], relevance,
+                                       voi)
 
         # we don't get non-deriv vecs (u, p, r) unless we have a None group,
         # so force their creation here
@@ -221,10 +257,10 @@ class Component(System):
         Args
         ----
         params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
@@ -242,13 +278,28 @@ class Component(System):
         unknowns.vec[:] -= resids.vec[:]
 
     def solve_nonlinear(self, params, unknowns, resids):
+        """
+        Runs the component. The user is required to define this function in
+        all components.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper`  containing residuals. (r)
+        """
         raise NotImplementedError("solve_nonlinear")
 
     def jacobian(self, params, unknowns, resids):
         """
-        Returns Jacobian. Returns None unless component overides and
-        returns something. J should be a dictionary whose keys are tuples of
-        the form ('unknown', 'param') and whose values are ndarrays.
+        Returns Jacobian. Returns None unless component overides this method
+        and returns something. J should be a dictionary whose keys are tuples
+        of the form ('unknown', 'param') and whose values are ndarrays.
 
         Args
         ----
@@ -273,7 +324,7 @@ class Component(System):
         """
         Multiplies incoming vector by the Jacobian (fwd mode) or the
         transpose Jacobian (rev mode). If the user doesn't provide this
-        method, then we just multiply by self._jacobian_cache.
+        method, then we just multiply by the cached jacobian.
 
         Args
         ----
@@ -300,7 +351,7 @@ class Component(System):
             Derivative mode, can be 'fwd' or 'rev'.
         """
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
-                              mode)
+                               mode)
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -320,7 +371,7 @@ class Component(System):
             or the incoming vector in reverse mode. There is one vector per
             quantity of interest for this problem. (dr)
 
-        vois: list of strings
+        vois : list of strings
             List of all quantities of interest to key into the mats.
 
         mode : string
@@ -329,7 +380,7 @@ class Component(System):
             system's ln_solver.options.
         """
 
-        if mode=='fwd':
+        if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
@@ -371,29 +422,27 @@ class Component(System):
 
         commsz = self.comm.size if hasattr(self.comm, 'size') else 0
 
-        out_stream.write("%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n" %
-                   (" "*nest,
-                    klass,
-                    self.name,
-                    self.get_req_procs(),
-                    uvec.vec.size,
-                    pvec.vec.size,
-                    commsz))
+        template = "%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n"
+        out_stream.write(template %(" "*nest,
+                                    klass,
+                                    self.name,
+                                    self.get_req_procs(),
+                                    uvec.vec.size,
+                                    pvec.vec.size,
+                                    commsz))
 
-        for v, meta in uvec.items():
+        for v in uvec:
             if verbose:
                 if v in uvec._slices:
-                    uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                    out_stream.write("{0}{1:<{nwid}} {2:<21} {3:>10}\n".format(" "*(nest+8),
-                                                                         v,
-                                                                         uslice,
-                                                                         repr(uvec[v]),
-                                                                         nwid=nwid))
+                    uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel,
+                                                         uvec._slices[v])
+                    tem = "{0}{1:<{nwid}} {2:<21} {3:>10}\n"
+                    out_stream.write(tem.format(" "*(nest+8), v, uslice,
+                                                repr(uvec[v]), nwid=nwid))
                 elif not dvecs: # deriv vecs don't have passing by obj
-                    out_stream.write("{0}{1:<{nwid}}  (by_obj) ({2})\n".format(" "*(nest+8),
-                                                                         v,
-                                                                         repr(uvec[v]),
-                                                                         nwid=nwid))
+                    tem = "{0}{1:<{nwid}}  (by_obj) ({2})\n"
+                    out_stream.write(tem.format(" "*(nest+8), v, repr(uvec[v]),
+                                                nwid=nwid))
 
         out_stream.flush()
 
@@ -404,7 +453,7 @@ class Component(System):
         Returns
         -------
         docstring : str
-                string that contains a basicnumpydocstring
+                string that contains a basic numpy docstring.
 
         """
         #start the docstring off
@@ -424,9 +473,10 @@ class Component(System):
                 docstring += " : "
                 typ = type(value).__name__
 
-                if typ=='dict':
+                if typ == 'dict':
                     docstring += " unknown \n"
-                else: docstring += typ + "\n"
+                else:
+                    docstring += typ + "\n"
                 docstring += "\n\t\t\t<Insert description here.>\n\n"
 
 
