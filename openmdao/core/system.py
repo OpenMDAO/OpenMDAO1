@@ -6,15 +6,17 @@ from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
 
+# pylint: disable=E0611, F0401
 import numpy as np
 
-from openmdao.core.vecwrapper import PlaceholderVecWrapper
 from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
+from openmdao.core.vecwrapper import PlaceholderVecWrapper
 
 
 class System(object):
-    """ Base class for systems in OpenMDAO."""
+    """ Base class for systems in OpenMDAO. When building models, user should
+    inherit from `Group` or `Component`"""
 
     def __init__(self):
         self.name = ''
@@ -30,31 +32,34 @@ class System(object):
         self.comm = None
 
         # create placeholders for all of the vectors
-        self.unknowns  = PlaceholderVecWrapper('unknowns')
-        self.resids    = PlaceholderVecWrapper('resids')
-        self.params    = PlaceholderVecWrapper('params')
+        self.unknowns = PlaceholderVecWrapper('unknowns')
+        self.resids = PlaceholderVecWrapper('resids')
+        self.params = PlaceholderVecWrapper('params')
         self.dunknowns = PlaceholderVecWrapper('dunknowns')
-        self.dresids   = PlaceholderVecWrapper('dresids')
-        self.dparams   = PlaceholderVecWrapper('dparams')
+        self.dresids = PlaceholderVecWrapper('dresids')
+        self.dparams = PlaceholderVecWrapper('dparams')
 
         # dicts of vectors used for parallel solution of multiple RHS
         self.dumat = {}
         self.dpmat = {}
         self.drmat = {}
 
-        self.fd_options = OptionsDictionary()
-        self.fd_options.add_option('force_fd', False,
-                                   desc="Set to True to finite difference this system.")
-        self.fd_options.add_option('form', 'forward',
-                                   values=['forward', 'backward', 'central', 'complex_step'],
-                                   desc="Finite difference mode. (forward, backward, central) "
-                                   "You can also set to 'complex_step' to peform the complex "
-                                   "step method if your components support it.")
-        self.fd_options.add_option("step_size", 1.0e-6,
-                                    desc = "Default finite difference stepsize")
-        self.fd_options.add_option("step_type", 'absolute',
-                                   values=['absolute', 'relative'],
-                                   desc='Set to absolute, relative')
+        opt = self.fd_options = OptionsDictionary()
+        opt.add_option('force_fd', False,
+                       desc="Set to True to finite difference this system.")
+        opt.add_option('form', 'forward',
+                       values=['forward', 'backward', 'central', 'complex_step'],
+                       desc="Finite difference mode. (forward, backward, central) "
+                       "You can also set to 'complex_step' to peform the complex "
+                       "step method if your components support it.")
+        opt.add_option("step_size", 1.0e-6,
+                       desc = "Default finite difference stepsize")
+        opt.add_option("step_type", 'absolute',
+                       values=['absolute', 'relative'],
+                       desc='Set to absolute, relative')
+
+        self._relevance = None
+        self._impl_factory = None
 
     def __getitem__(self, name):
         """
@@ -70,7 +75,8 @@ class System(object):
         value
             The unflattened value of the given variable.
         """
-        raise RuntimeError("Variable '%s' must be accessed from a containing Group" % name)
+        msg = "Variable '%s' must be accessed from a containing Group"
+        raise RuntimeError(msg % name)
 
     def promoted(self, name):
         """Determine if the given variable name is being promoted from this
@@ -98,7 +104,8 @@ class System(object):
 
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(self._params_dict.values(), self._unknowns_dict.values()):
+                for meta in chain(self._params_dict.values(),
+                                  self._unknowns_dict.values()):
                     if name == meta.get('promoted_name'):
                         return True
 
@@ -136,6 +143,28 @@ class System(object):
 
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
+
+        Args
+        ----
+        local : bool, optional
+            If True, only return those `Components` that are local. Default is False.
+
+        recurse : bool, optional
+            If True, return all `Components` in the system tree, subject to
+            the value of the local arg. Default is False.
+
+        typ : type, optional
+            If a class is specified here, only those subsystems that are instances
+            of that type will be returned.  Default type is `System`.
+
+        include_self : bool, optional
+            If True, yield self before iterating over subsystems, assuming type
+            of self is appropriate. Default is False.
+
+        Returns
+        -------
+        iterator
+            Iterator over subsystems.
         """
         if include_self:
             yield self
@@ -168,22 +197,32 @@ class System(object):
         for system in self.subsystems(local=True):
             system.clear_dparams()
 
-    def preconditioner(self):
-        pass
+    def solve_linear(self, dumat, drmat, vois, mode=None):
+        """
+        Single linear solution applied to whatever input is sitting in
+        the rhs vector.
 
-    def jacobian(self, params, unknowns, resids):
-        pass
+        Args
+        ----
+        dumat : dict of `VecWrappers`
+            In forward mode, each `VecWrapper` contains the incoming vector
+            for the states. There is one vector per quantity of interest for
+            this problem. In reverse mode, it contains the outgoing vector for
+            the states. (du)
 
-    def solve_nonlinear(self, params, unknowns, resids):
-        raise NotImplementedError("solve_nonlinear")
+        drmat : `dict of VecWrappers`
+            `VecWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. There is one vector per
+            quantity of interest for this problem. (dr)
 
-    def apply_nonlinear(self, params, unknowns, resids):
-        pass
+        vois : list of strings
+            List of all quantities of interest to key into the mats.
 
-    def solve_linear(self, params, unknowns, vois, mode="fwd"):
-        pass
-
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode="fwd"):
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev', but generally should be
+            called without mode so that the user can set the mode in this
+            system's ln_solver.options.
+        """
         pass
 
     def is_active(self):
@@ -230,7 +269,7 @@ class System(object):
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
                     step_type=None, total_derivs=False):
         """Finite difference across all unknowns in this system w.r.t. all
-        params.
+        incoming params.
 
         Args
         ----
@@ -254,7 +293,7 @@ class System(object):
             Override all other specifications of step_type. Can be absolute
             or relative.
 
-        total_derivs : bool
+        total_derivs : bool, optional
             Set to true to calculate total derivatives. Otherwise, partial
             derivatives are returned.
 
@@ -262,7 +301,8 @@ class System(object):
         -------
         dict
             Dictionary whose keys are tuples of the form ('unknown', 'param')
-            and whose values are ndarrays.
+            and whose values are ndarrays containing the derivative for that
+            tuple pair.
         """
 
         # Params and Unknowns that we provide at this level.
@@ -426,6 +466,7 @@ class System(object):
                 arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
 
     def _create_vecs(self, my_params, relevance, var_of_interest, impl):
+        """ This creates our vecs and mats."""
         comm = self.comm
         sys_pathname = self.pathname
         params_dict = self._params_dict
@@ -435,9 +476,9 @@ class System(object):
 
         # create implementation specific VecWrappers
         if var_of_interest is None:
-            self.unknowns  = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.resids    = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.params    = impl.create_tgt_vecwrapper(sys_pathname, comm)
+            self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict, store_byobjs=True)
@@ -446,19 +487,21 @@ class System(object):
                               my_params, self.connections, store_byobjs=True)
 
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
-        dresids   = impl.create_src_vecwrapper(sys_pathname, comm)
-        dparams   = impl.create_tgt_vecwrapper(sys_pathname, comm)
+        dresids = impl.create_src_vecwrapper(sys_pathname, comm)
+        dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
         dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
         dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
-        dparams.setup(None, params_dict, self.unknowns, my_params, self.connections,
+        dparams.setup(None, params_dict, self.unknowns, my_params,
+                      self.connections,
                       relevant_vars=relevance[var_of_interest])
 
         self.dumat[var_of_interest] = dunknowns
         self.drmat[var_of_interest] = dresids
         self.dpmat[var_of_interest] = dparams
 
-    def _create_views(self, top_unknowns, parent, my_params, relevance, var_of_interest=None):
+    def _create_views(self, top_unknowns, parent, my_params, relevance,
+                      var_of_interest=None):
         """
         A manager of the data transfer of a possibly distributed collection of
         variables.  The variables are based on views into an existing
@@ -492,84 +535,95 @@ class System(object):
         comm = self.comm
         unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
+        voi = var_of_interest
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = _get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
 
-        if var_of_interest is None:
-            self.unknowns  = parent.unknowns.get_view(self.pathname, comm, umap, relevance,
-                                                      var_of_interest)
-            self.resids    = parent.resids.get_view(self.pathname, comm, umap, relevance,
-                                                    var_of_interest)
-            self.params    = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+        if voi is None:
+            self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap, relevance,
+                                                     voi)
+            self.resids = parent.resids.get_view(self.pathname, comm, umap, relevance,
+                                                 voi)
+            self.params = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, store_byobjs=True)
 
-        self.dumat[var_of_interest] = parent.dumat[var_of_interest].get_view(self.pathname, comm, umap,
-                                                                             relevance, var_of_interest)
-        self.drmat[var_of_interest] = parent.drmat[var_of_interest].get_view(self.pathname, comm, umap,
-                                                                             relevance, var_of_interest)
-        self.dpmat[var_of_interest] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
-        self.dpmat[var_of_interest].setup(parent.dpmat[var_of_interest], params_dict, top_unknowns,
-                                          my_params, self.connections,
-                                          relevant_vars=relevance[var_of_interest])
+        self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap,
+                                                     relevance, voi)
+        self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap,
+                                                     relevance, voi)
+        self.dpmat[voi] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+        self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
+                              my_params, self.connections,
+                              relevant_vars=relevance[voi])
 
-    # def get_combined_J(self, J):
-    #     """
-    #     Take a J dict that's distributed, i.e., has different values
-    #     across different MPI processes, and return a dict that
-    #     contains all of the values from all of the processes.  If
-    #     values are duplicated, use the value from the lowest rank
-    #     process.  Note that J has a nested dict structure.
-    #     """
-    #
-    #     comm = self.comm
-    #     if not self.is_active():
-    #         return J
-    #
-    #     myrank = comm.rank
-    #
-    #     tups = []
-    #
-    #     # Gather a list of local tuples for J.
-    #     for output, dct in J.items():
-    #         for param, value in dct.items():
-    #
-    #             # Params are already only on this process. We need to add
-    #             # only outputs of components that are on this process.
-    #             sys = getattr(self, output.partition('.')[0])
-    #             if sys.is_active() and value is not None and value.size > 0:
-    #                 tups.append((output, param))
-    #
-    #     dist_tups = comm.gather(tups, root=0)
-    #
-    #     tupdict = {}
-    #     if myrank == 0:
-    #         for rank, tups in enumerate(dist_tups):
-    #             for tup in tups:
-    #                 if not tup in tupdict:
-    #                     tupdict[tup] = rank
-    #
-    #         #get rid of tups from the root proc before bcast
-    #         for tup, rank in tupdict.items():
-    #             if rank == 0:
-    #                 del tupdict[tup]
-    #
-    #     tupdict = comm.bcast(tupdict, root=0)
-    #
-    #     if myrank == 0:
-    #         for (param, output), rank in tupdict.items():
-    #             J[param][output] = comm.recv(source=rank, tag=0)
-    #     else:
-    #         for (param, output), rank in tupdict.items():
-    #             if rank == myrank:
-    #                 comm.send(J[param][output], dest=0, tag=0)
-    #
-    #     # FIXME: rework some of this using knowledge of local_var_sizes in order
-    #     # to avoid any unnecessary data passing
-    #
-    #     # return the combined dict
-    #     return comm.bcast(J, root=0)
+    #def get_combined_jac(self, J):
+        #"""
+        #Take a J dict that's distributed, i.e., has different values across
+        #different MPI processes, and return a dict that contains all of the
+        #values from all of the processes. If values are duplicated, use the
+        #value from the lowest rank process. Note that J has a nested dict
+        #structure.
+
+        #Args
+        #----
+        #J : `dict`
+            #Distributed Jacobian
+
+        #Returns
+        #-------
+        #`dict`
+            #Local gathered Jacobian
+        #"""
+
+        #comm = self.comm
+        #if not self.is_active():
+            #return J
+
+        #myrank = comm.rank
+
+        #tups = []
+
+        ## Gather a list of local tuples for J.
+        #for output, dct in J.items():
+            #for param, value in dct.items():
+
+                ## Params are already only on this process. We need to add
+                ## only outputs of components that are on this process.
+                #sub = getattr(self, output.partition('.')[0])
+                #if sub.is_active() and value is not None and value.size > 0:
+                    #tups.append((output, param))
+
+        #dist_tups = comm.gather(tups, root=0)
+
+        #tupdict = {}
+        #if myrank == 0:
+            #for rank, tups in enumerate(dist_tups):
+                #for tup in tups:
+                    #if not tup in tupdict:
+                        #tupdict[tup] = rank
+
+            ##get rid of tups from the root proc before bcast
+            #for tup, rank in tupdict.items():
+                #if rank == 0:
+                    #del tupdict[tup]
+
+        #tupdict = comm.bcast(tupdict, root=0)
+
+        #if myrank == 0:
+            #for (param, output), rank in tupdict.items():
+                #J[param][output] = comm.recv(source=rank, tag=0)
+        #else:
+            #for (param, output), rank in tupdict.items():
+                #if rank == myrank:
+                    #comm.send(J[param][output], dest=0, tag=0)
+
+        ## FIXME: rework some of this using knowledge of local_var_sizes in order
+        ## to avoid any unnecessary data passing
+
+        ## return the combined dict
+        #return comm.bcast(J, root=0)
 
     def _get_var_pathname(self, name):
         if self.pathname:

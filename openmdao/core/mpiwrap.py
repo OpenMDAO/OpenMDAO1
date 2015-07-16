@@ -1,9 +1,10 @@
+""" A bunch of MPI utilities."""
+
 import os
 import sys
-import numpy
 from contextlib import contextmanager
 
-from six import reraise, PY3
+from six import PY3
 
 
 def _redirect_streams(to_fd):
@@ -60,36 +61,14 @@ else:
     MPI = None
 
 class FakeComm(object):
+    """ Who needs a real Comm when you have a fake one."""
     def __init__(self):
         self.rank = 0
         self.size = 1
 
-
-def evenly_distrib_idxs(num_divisions, arr_size):
-    """
-    Given a number of divisions and the size of an array, chop the array up
-    into pieces according to number of divisions, keeping the distribution
-    of entries as even as possible. Returns a tuple of
-    (sizes, offsets), where sizes and offsets contain values for all
-    divisions.
-    """
-    base = arr_size / num_divisions
-    leftover = arr_size % num_divisions
-    sizes = numpy.ones(num_divisions, dtype="int") * base
-
-    # evenly distribute the remainder across size-leftover procs,
-    # instead of giving the whole remainder to one proc
-    sizes[:leftover] += 1
-
-    offsets = numpy.zeros(num_divisions, dtype="int")
-    offsets[1:] = numpy.cumsum(sizes)[:-1]
-
-    return sizes, offsets
-
-
 @contextmanager
 def MultiProcFailCheck():
-    """Wrap this around code that you want to globally fail if it fails
+    """ Wrap this around code that you want to globally fail if it fails
     on any MPI process in MPI_WORLD.  If not running under MPI, don't
     handle any exceptions.
     """
@@ -110,7 +89,7 @@ def MultiProcFailCheck():
             if fail or not any(fails):
                 six.reraise(exc_type, exc_val, exc_tb)
             else:
-                for i,f in enumerate(fails):
+                for i, f in enumerate(fails):
                     if f:
                         raise RuntimeError("a test failed in (at least) rank %d" % i)
 
