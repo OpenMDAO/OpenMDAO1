@@ -150,7 +150,7 @@ Exhibit,* Reno, NV, January 1996.
 
 
 Setting up the Optimization Problem
-===================================
+-----------------------------------
 
 Next we will set up the Sellar `Problem` and optimize it. First we will take
 the `Components` that we just created and assemble them into a `Group`. We
@@ -346,7 +346,7 @@ where the ellipses are. This is the expected minimum for the Sellar problem.
 
 
 Sellar with an Implicit Component
-=================================
+---------------------------------
 
 We have just built an implementation of the Sellar problem where the two
 disciplines are connected with a cycle. We could also sever the direct
