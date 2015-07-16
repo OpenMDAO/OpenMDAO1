@@ -1,9 +1,11 @@
 """ Simple example with the paraboloid component."""
 
+from __future__ import print_function
+
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
-from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -50,14 +52,7 @@ if __name__ == "__main__":
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
 
-    top.driver = ScipyOptimizer()
-    top.driver.options['optimizer'] = 'SLSQP'
-
-    top.driver.add_param('p1.x', low=-50, high=50)
-    top.driver.add_param('p2.x', low=-50, high=50)
-    top.driver.add_objective('p.f_xy')
-
     top.setup()
     top.run()
 
-    print root.p.unknowns['f_xy']
+    print(root.p.unknowns['f_xy'])

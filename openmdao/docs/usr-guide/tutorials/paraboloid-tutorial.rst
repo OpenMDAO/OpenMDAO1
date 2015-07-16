@@ -8,6 +8,8 @@ Here is the code that defines this Component and then runs it.
 
 .. testcode:: parab
 
+    from __future__ import print_function
+
     from openmdao.components.paramcomp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.problem import Problem, Group
@@ -60,18 +62,22 @@ Here is the code that defines this Component and then runs it.
         top.setup()
         top.run()
 
-        print root.p.unknowns['f_xy']
+        print(root.p.unknowns['f_xy'])
 
 
 Now we will go through each section and explain how this code works.
 
 ::
 
+    from __future__ import print_function
+
     from openmdao.components.paramcomp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.problem import Problem, Group
 
-We need to import some OpenMDAO classes.
+We need to import some OpenMDAO classes. We also import the print_function to
+insure compatibility between python 2.x and 3.x. You don't need the import if
+you are running in 3.
 
 ::
 
@@ -217,10 +223,11 @@ Now we can run the model using the `run` method of `Problem`.
 
 ::
 
-    print root.p.unknowns['f_xy']
+    print(root.p.unknowns['f_xy'])
 
 Finally, we print the output of the `Paraboloid` Component using the
-dictionary-style method of accessing the outputs. Putting it all together:
+dictionary-style method of accessing the outputs from a `Component` instance.
+Putting it all together:
 
 .. testcode:: parab
 
@@ -237,7 +244,7 @@ dictionary-style method of accessing the outputs. Putting it all together:
     top.setup()
     top.run()
 
-    print root.p.unknowns['f_xy']
+    print(root.p.unknowns['f_xy'])
 
 The output should look like this:
 
@@ -252,4 +259,53 @@ Future tutorials will show more complex `Problems`.
 Optimization with the Paraboloid
 ================================
 
-Now that we have the paraboloid model set up, let's do a simple unconstrained optimization.
+Now that we have the paraboloid model set up, let's do a simple unconstrained
+optimization. Let's find the minimum point on the Paraboloid over the
+variables x and y. This requires the addition of just a few more lines.
+
+First, we need to import the optimizer.
+
+.. testcode:: parab
+
+    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+
+The main optimizer built into OpenMDAO is a wrapper around Scipy's `minimize`
+function. OpenMDAO supports 9 of the optimizers built into `minimize`. The
+ones that will most frequently used are SLSQP and COBYLA, since they are the
+only two in the `minimize` package that support constraints. We will use
+SLSQP because it supports OpenMDAO-supplied gradients.
+
+.. testcode:: parab
+
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('p1', ParamComp('x', 3.0))
+        root.add('p2', ParamComp('y', -4.0))
+        root.add('p', Paraboloid())
+
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+
+        top.driver.add_param('p1.x', low=-50, high=50)
+        top.driver.add_param('p2.y', low=-50, high=50)
+        top.driver.add_objective('p.f_xy')
+
+        top.setup()
+        top.run()
+
+        print('\n')
+        print('Minimum of %f found at (%f, %f)' % (root['p.f_xy'], root['p.x'], root['p.y']))
+
+So we have set our driver to be the `ScipyOptimizer`. Every driver has an
+`options` dictionary which contains important settings for the driver. The "optimizer" setting
+
+.. testoutput:: parab
+   :options: +ELLIPSIS
+
+   ...
+   Minimum of -27.333333 found at (6.666667, -7.333333)
