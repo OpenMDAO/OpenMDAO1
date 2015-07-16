@@ -168,7 +168,7 @@ This code instantiates a `Problem` object, sets the root to be an empty `Group`.
     root.add('p2', ParamComp('y', -4.0))
 
 Now it is time to add components to the empty group. At present, they must be
-aded in execution order, so we need to start with the parameters. `ParamComp`
+added in execution order, so we need to start with the parameters. `ParamComp`
 is a `Component` that provides the source for a variable which we can assign
 as a parameter for a driver.
 
@@ -256,8 +256,8 @@ The output should look like this:
 Future tutorials will show more complex `Problems`.
 
 
-Optimization with the Paraboloid
-================================
+Optimization of the Paraboloid
+==============================
 
 Now that we have the paraboloid model set up, let's do a simple unconstrained
 optimization. Let's find the minimum point on the Paraboloid over the
@@ -299,13 +299,116 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         top.run()
 
         print('\n')
-        print('Minimum of %f found at (%f, %f)' % (root['p.f_xy'], root['p.x'], root['p.y']))
+        print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
 So we have set our driver to be the `ScipyOptimizer`. Every driver has an
-`options` dictionary which contains important settings for the driver. The "optimizer" setting
+`options` dictionary which contains important settings for the driver. The
+"optimizer" setting tells `ScipyOptimizer` which optimizer to use, so here we
+select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
+'tol' and a maximum number of iterations 'maxiter.'
+
+Next, we select the parameters the optimizer will drive by calling
+`add_param` and giving it the `ParamComp` unknowns that we have created. We
+also set a high and low bounds for this problem. It is not required to set
+these (they will default to 1e99 and 1e99 respectively), but it is generally
+a good idea.
+
+Finally, we add the objective. You can use any `unknown` in your model as the
+objective.
+
+Since SLSQP is a gradient optimizer, OpenMDAO will call the `jacobian` method
+on the `Paraboloid` while calculating the total gradient of the objective
+with respect to the two design variables. This is done automatically.
+
+Finally, we made a change to the print statement so that we can print the
+objective and the parameters. This time, we get the value by keying into the
+problem instance ('top') with the full variable path to the quantities we
+want to see. This is equivalent to what was shown in the first tutorial.
+
+Putting this all together, when we run the model, we get output that looks
+like this (note, the optimizer may print some things before this depending on
+settings):
 
 .. testoutput:: parab
    :options: +ELLIPSIS
 
    ...
    Minimum of -27.333333 found at (6.666667, -7.333333)
+
+
+Optimization of the Paraboloid with a Constraint
+================================================
+
+Finally, let's take this optimization problem and add a constraint to it. Our
+constraint takes the form of an inequality we want to satisfy: x - y > 15.
+
+First, we need to add one more import to the beginning of our model.
+
+.. testcode:: parab
+
+    from openmdao.components.execcomp import ExecComp
+
+In OpenMDAO, we cannot implement and inequality, so we need to turn the
+constraint equation into an equality. With a little rearrangement, x - y > 15
+becomes c = 15 - x + y. When c is less than 0, the original inequality is
+satisfied. Likewise, when c is greater than zero, the inequality is violated.
+Optimizers in OpenMDAO use this convention to evaluate an inequality
+constraint that points to an `unknown` in your model.
+
+.. testcode:: parab
+
+    top = Problem()
+
+    root = top.root = Group()
+
+    root.add('p1', ParamComp('x', 3.0))
+    root.add('p2', ParamComp('y', -4.0))
+    root.add('p', Paraboloid())
+
+    # Constraint Equation
+    root.add('con', ExecComp('c = 15.0 - x + y'))
+
+    root.connect('p1.x', 'p.x')
+    root.connect('p2.y', 'p.y')
+    root.connect('p.x', 'con.x')
+    root.connect('p.y', 'con.y')
+
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+
+    top.driver.add_param('p1.x', low=-50, high=50)
+    top.driver.add_param('p2.y', low=-50, high=50)
+    top.driver.add_objective('p.f_xy')
+    top.driver.add_constraint('con.c')
+
+    top.setup()
+    top.run()
+
+    print('\n')
+    print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
+
+Here, we added a component named 'con' to represent our constraint equation.
+We use a new component called `ExecComp`. This component takes an equation
+string expression as input, and parses that string to create a component with
+the specified inputs and outputs. So for our expression here, 'con' is
+created with inputs 'x' and 'y' and output 'c'. The `solve_nonlinear` and
+`jacobian` functions are implemented based on the equation.
+
+We also need to connect our 'con' expression to 'x' and 'y' on the
+paraboloid. Finally, we call add_constraint on the driver, giving it the
+output from the constraint component, which is 'con.c'. The default mode
+behavior for `add_constraint` is to add a nonlinear constraint like the one
+in our problem. You can also add a linear constraint, provided that your
+optimizer supports it (SLSQP does), by setting the ctype call attribute to
+'lin'. There will be further examples that show this.
+
+So now, putting it all together, we can run the model and get this:
+
+.. testoutput:: parab
+   :options: +ELLIPSIS
+
+   ...
+   Minimum of -27.083333 found at (7.166667, -7.833333)
+
+A new optimum is found because the original one was unfeasible (i.e., that
+design point violated the constraint equation.)
