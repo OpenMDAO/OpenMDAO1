@@ -14,6 +14,11 @@ two disciplines as follows:
    :align: center
    :alt: Equations showing the two disciplines for the Sellar problem
 
+
+
+.. [SELLAR] Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
+
+
 Variables *z1, z2,* and *x1* are the design variables.
 Both disciplines are functions of *z1* and *z2,* so they are called the
 *global* design variables, while only the first discipline is a function of *x1,* so it
@@ -121,41 +126,34 @@ values to all of the `params` and `unknowns` so that OpenMDAO can allocate
 the correct size in the vectors. The global design variables `z1` and `z1`
 were combined into a 2-element `ndarray`.
 
-``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
-of *y1,* the result would be imaginary, so the absolute value is taken before the square root
-is applied. This component is clearly not valid for ``y1 < 0``, but some solvers could
-occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
-of the absolute value solves the problem without impacting the final converged solution.
-
 .. note::
 
-  We have written two (very simple) analysis components. If you were working on a real problem, these would
-  your components could be more complex, or could potentially be wrappers for external analysis components.
-  But keep in mind that from an optimization point of view, whether they are simple tools or wrappers for
-  real analyses, OpenMDAO still views them as components with `params`, `unknowns`, a `solve_nonlinear` function,
-  and optionally a `jacobian` function.
-
-We have talked about the problem formulation and specified that certain variables will be
-design variables, while others are coupling variables. But none of the code we have written has told
-OpenMDAO about those details. That's what we'll get to next!
-
-**Reference:**
-
-Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
-Concurrent Subspace Optimization for Multidisciplinary System Design,"
-*Proceedings References 79 of the 34th AIAA Aerospace Sciences Meeting and
-Exhibit,* Reno, NV, January 1996.
+  ``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
+  of *y1,* the result would be imaginary, so the absolute value is taken before the square root
+  is applied. This component is clearly not valid for ``y1 < 0``, but some solvers could
+  occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
+  of the absolute value solves the problem without impacting the final converged solution.
 
 
+We have written two (very simple) analysis components. If you were working on a real problem, these would
+your components could be more complex, or could potentially be wrappers for external analysis components.
+But keep in mind that from an optimization point of view, whether they are simple tools or wrappers for
+real analyses, OpenMDAO still views them as components with `params`, `unknowns`, `resids` and a `solve_nonlinear` function,
+and optionally a `jacobian` function.
 
-Setting up the Optimization Problem
+
+At this point we've written the components, but we haven't combined them
+together into any kind of model. That's what we'll get to next!
+
+
+Building the Sellar Model
 -----------------------------------
 
 Next we will set up the Sellar `Problem` and optimize it. First we will take
 the `Components` that we just created and assemble them into a `Group`. We
 will also add the objective and the multivariable constraints to the problem
-using a shorthand `Component` that can be used for equations that are
-functions of OpenMDAO variables.
+using a utility `Component` that can be used when you have simple equations
+for things like objectives and constraints.
 
 .. testcode:: Disciplines
 
@@ -187,12 +185,10 @@ functions of OpenMDAO variables.
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
 
-As in our previous tutorial, we use `add` to add `Components` or `Systems`
+We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
-execute by default. We intend to add a method to change the order before
-execution, but for now, it is important to be careful to add them in the
-correct order. Here, this means starting with the ParamComps, then adding our
-disciplines, and finishing with the objective and constraints.
+execute, so it to add them in the correct order. Here, this means starting
+with the ParamComps, then adding our disciplines, and finishing with the objective and constraints.
 
 We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
@@ -204,12 +200,9 @@ would address it with the string `y1` instead of `dis1.y1`. The following is als
 
     self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
 
-You may also notice the lack of connect statements. One benefit of variable
-promotion is that those variables are automatically connected. So in this
-case, our two disciplines both promote `y1` and `y2.` Discipline 1 provides
+In this case, our two disciplines both promote `y1` and `y2.` Discipline 1 provides
 `y1` as a source and discipline 2 needs it as a `param`, so when both of them
-promote `y1`, the connection is made for you. This is called an implicit
-connection.
+promote `y1`, the connection is made for you, implicitly.
 
 Due to the implicit connections, we now have a cycle between the two
 disciplines. This is fine because a nonlinear solver can converge the cycle
@@ -219,12 +212,11 @@ iteration), which will converge the model in our `Group`. We also specify a
 tighter tolerance in the solver's `options` dictionary, overriding the 1e-6
 default.
 
-We have declared the initial conditions for our design variables in the `Paramcomps`.
-
-We have introduced a new component class -- the `ExecComp`, which is really a
+The objective and constraints are defined with the `ExecComp`, which is really a
 shortcut for creating a `Component` that is a simple function of other
-variables in the model. We use it to create a `Component` for our objective
-goal, which is to minimize a function of `x`, `z`, `y1`, and `y2`.
+variables in the model. `ExecComp` is just there as a convenience for users. You
+don't have to use it, if for example you wrote your own component that already
+outputs objective and constraint variables.
 
 ::
 
@@ -233,8 +225,7 @@ goal, which is to minimize a function of `x`, `z`, `y1`, and `y2`.
                  promotes=['*'])
 
 This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
-'y2', and with output 'obj'. The first argument is a string expression (or a
-list of expressions if you have multiple outputs) that contains the function.
+'y2', and with output 'obj'. The first argument is a string expression that contains the function.
 OpenMDAO can parse this expression so that the `solve_nonlinear` and
 `jacobian` methods are taken care of for you. Notice that standard math
 functions like `exp` are available to use. Because we promote every variable
@@ -244,10 +235,26 @@ remaining arguments for the ExecComp. You are not required to do this for
 scalars, but you must always allocate the array inputs ('z' in this case).
 The output of the objective equation is stored in the promoted output 'obj'.
 
-We have also created two more ExecComps, one for each constraint equations,
-with the outputs being the promoted variables 'con1' and 'con2'. Now, that we
-are done creating the `Group` for the Sellar problem, let's hook it up to an
-optimizer.
+So that's three `ExecComp` instances, one each for the objective and two
+constraints. Now, that we are done creating the `Group` for the Sellar
+problem, let's hook it up to an optimizer.
+
+Setting up the Optimization Problem
+-------------------------------------
+
+Any analysis or optimization in OpenMDAO always happens in a `Problem` instance,
+with a Group at the root. Here we set our Sellar group as root.
+Then we set the driver to be the ScipyOptimizer,
+which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.optimize.minimize.html>`_.
+
+.. note::
+
+  Scipy offers a number of different optimizers, but COBYLA and SLSQP are
+  the only two choices that support constrained optimization. SLSQP is the only
+  gradient based method of the two. If you want a broader selection of optimizers,
+  you can install the `pyopt_sparse <https://bitbucket.org/mdolab/pyoptsparse>`_
+  library, which we also have a wrapper for.
+
 
 .. testcode:: Disciplines
 
@@ -290,20 +297,17 @@ optimizer.
    Coupling vars: 3.160..., 3.755...
    Minimum objective:  3.18339...
 
-Just as in the previous tutorial, we create a clean `Problem` and set our
-Sellar group as its root. Then we set the driver to be the ScipyOptimizer,
-which wraps scipy's `minimize` function which itself is a wrapper around 9
-different multivariable optimizers. These include COBYLA and SLSQP, which are
-the only two choices that support constrained optimization. Additionally,
-SLSQP can make use of the OpenMDAO-supplied gradient, so we will use SLSQP.
+
 
 Next we add the parameter for 'z'. Recall that the first argument for
 `add_param` is a string containing the name of a variable declared in a
 `ParamComp`. Since we are promoting the output of this pcomp, we use the
 promoted name, which is 'z' (and likewise we use 'x' for the other
 parameter.) Variable 'z' is an 2-element array, and each element has a
-different set of bounds defined in the problem, so we must specify the `low`
-and `high` attributes as numpy arrays.
+different set of bounds defined in the problem, so we  specify the `low`
+and `high` attributes as numpy arrays. If you are ok with the same `low` or `high`
+for all elements of your design variable array, you could also give a scalar for
+those arguments.
 
 Next, we add the objective by calling `add_objective` on the `driver` giving
 it the promoted path of the quantity we wish to minimize. All optimizers in
@@ -312,7 +316,7 @@ variable, you will have to place a minus sign in the expression you give to
 the objective `ExecComp`.
 
 Finally we add the constraints using the `add_constraint` method, which takes
-any valid `unknown` in the root model as the first argument. Constraints in
+any valid `unknown` in the model as the first argument. Constraints in
 OpenMDAO are defined so that a negative value means the constraint is
 satisfied, and a positive value means it is violated. When a constraint is
 equal to zero, it is called an 'active' constraint.
@@ -353,9 +357,7 @@ connection and close the gap with an implicit component. The purpose of this
 component is to express as a residual the difference between the output side
 and the input side of the connection that we are replacing.
 
-At the moment, we don't have a shortcut for closing a connection with an
-implicit component, but it is not difficult to create the `Component`. In
-Sellar, we will leave the `y1` connection and replace the `y2` connection.
+In Sellar, we will leave the `y1` connection and replace the `y2` connection.
 First we need to write the component to replace the connection:
 
 .. testcode:: Disciplines
@@ -395,11 +397,9 @@ First we need to write the component to replace the connection:
 
             return J
 
-So this `Component` has one `state` and one `param`. The `StateConnection`
+So this `Component` has one `state` and one `param`. The `StateConnection` component
 will bridge the gap between the output of `y2` from Discipline2 and the input
-for `y2` in Discipline1. Now this may look like we just replaced one cycle
-with another larger cycle, and that is true in the data graph. However, this
-component breaks the loop by not passing along the value of 'y2'. The solver
+for `y2` in Discipline1. The solver
 sets the new value of y2 based on the models residuals, which now include the
 difference between 'y2' leaving Discipline2 and the 'y2' entering
 Discipline1. So the `solve_nonlinear` method does nothing, but we need to
@@ -414,7 +414,7 @@ We also define the `Jacobian` method, and the derivatives are trivial to
 compute.
 
 Next, we need to modify the model that we defined in `SellarDerivatives` to
-break the connection and use the `StateConnection`.
+break the connection and use the `StateConnection` component.
 
 .. testcode:: Disciplines
 
@@ -433,7 +433,6 @@ break the connection and use the `StateConnection`.
             self.add('state_eq', StateConnection())
             self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
             self.add('d2', SellarDis2(), promotes=['z', 'y1'])
-
             self.connect('state_eq.y2_command', 'd1.y2')
             self.connect('d2.y2', 'state_eq.y2_actual')
 
@@ -450,9 +449,9 @@ break the connection and use the `StateConnection`.
 
 The first thing to notice is that we no longer promote the variable `y2` up
 to the group level. We need to add the connections manually because we really
-have two different variables named 'y2': they are 'd1.y2' and 'd2.y2'. In
+have two different variables: 'd1.y2' and 'd2.y2'. In
 addition to the two connections to the 'state_eq' component, we also need to
-manually connect y2 to the objective and one of the constraints.
+manually connect `y2` to the objective and one of the constraints.
 
 We have also switched the solver to the Newton solver, since we no longer are
 iterating around a loop. Don't forget to change your import. The default
@@ -461,7 +460,7 @@ settings should be fine for Sellar.
 Otherwise, there are no other differences in the model, and the
 remaining optimization set up is the same as before. However, a small change
 in printing our results is required because 'y2' no longer exists in the
-group. We must print either 'd1.y2' or 'd2.y2' instead. It doesn't matter
+group. We must print either 'state_eq.y2_command' or 'd2.y2' instead. It doesn't matter
 which one, since they should only differ by the solver tolerance at most.
 
 .. testcode:: Disciplines
