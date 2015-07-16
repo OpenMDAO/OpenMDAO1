@@ -1,12 +1,18 @@
+""" Defines the base class for a ParallelGroup in OpenMDAO. ParallelGroup is
+used for systems of `Components` or `Groups` that can be run in parallel."""
 
 from collections import OrderedDict
 
+from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.mpiwrap import MPI
-from openmdao.core.component import Component
+
 
 class ParallelGroup(Group):
-    def apply_nonlinear(self, params, unknowns, resids):
+    """ParallelGroup is used for systems of `Components` or `Groups` that can
+    be run in parallel."""
+
+    def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """ Evaluates the residuals of our children systems.
 
         Args
@@ -19,13 +25,21 @@ class ParallelGroup(Group):
 
         resids : `VecWrapper`
             `VecWrapper`  containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration
+            coordinate).
         """
 
         # full scatter
         self._transfer_data()
 
         for sub in self.subsystems(local=True):
-            sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+            if isinstance(sub, Component):
+                sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+            else:
+                sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids,
+                                    metadata)
 
     def children_solve_nonlinear(self, metadata):
         """Loops over our children systems and asks them to solve."""
@@ -37,15 +51,16 @@ class ParallelGroup(Group):
             if isinstance(sub, Component):
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
-                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids,
+                                    metadata)
 
     def get_req_procs(self):
         """
         Returns
         -------
         tuple
-            A tuple of the form (min_procs, max_procs), indicating the min and max
-            processors usable by this `ParallelGroup`.
+            A tuple of the form (min_procs, max_procs), indicating the min and
+            max processors usable by this `ParallelGroup`.
         """
         min_procs = 0
         max_procs = 0
@@ -103,7 +118,7 @@ class ParallelGroup(Group):
 
         requested = sum(requested_procs)
 
-        mn, mx = self.get_req_procs()
+        _, mx = self.get_req_procs()
         if mx is None:
             limit = size
             max_requested = size
@@ -123,7 +138,7 @@ class ParallelGroup(Group):
                         if assigned == limit:
                             break
 
-        for i,sub in enumerate(subsystems):
+        for i, sub in enumerate(subsystems):
             if requested_procs[i] > assigned_procs[i]:
                 raise RuntimeError("subsystem group %s requested %d processors but got %s" %
                                    (sub.name, requested_procs[i], assigned_procs[i]))

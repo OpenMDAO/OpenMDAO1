@@ -1,37 +1,38 @@
+""" Everything here pertains to connection errors."""
 
 from six.moves import zip
 
 class ConnectError(Exception):
     @classmethod
-    def type_mismatch_error(cls, src, target):
+    def _type_mismatch_error(cls, src, target):
         msg = "Type '{src[type]}' of source '{src[promoted_name]}' must be the same as type '{target[type]}' of target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
-    def shape_mismatch_error(cls, src, target):
+    def _shape_mismatch_error(cls, src, target):
         msg  = "Shape '{src[shape]}' of the source '{src[promoted_name]}' must match the shape '{target[shape]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
-    def size_mismatch_error(cls, src, target):
+    def _size_mismatch_error(cls, src, target):
         msg  = "Size {len(target[src_indices])} of the indexed sub-part of source '{src[promoted_name]}' must match the size '{target[size]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
-    def indices_too_large(cls, src, target):
+    def _indices_too_large(cls, src, target):
         msg  = "Size {len(target[src_indices])} of target indices is larger than size {src[size]} of source '{src[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
-    def val_and_shape_mismatch_error(cls, src, target):
+    def _val_and_shape_mismatch_error(cls, src, target):
         msg = "Shape of the initial value '{src[val].shape}' of source '{src[promoted_name]}' must match the shape '{target[shape]}' of the target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
@@ -65,15 +66,6 @@ class ConnectError(Exception):
         return cls(msg)
 
 
-    @classmethod
-    def invalid_src_error(cls, src, target):
-        msg = ("Source '{src}' cannot be connected to target '{target}': "
-               "Source must be an unknown but '{src}' is a parameter.")
-
-        msg = msg.format(src=src, target=target)
-
-        return cls(msg)
-
 def __make_metadata(metadata):
     '''
     Add type field to metadata dict.
@@ -96,7 +88,7 @@ def __get_metadata(paths, metadata_dict):
 
 def check_types_match(src, target):
     if src['type'] != target['type']:
-        raise ConnectError.type_mismatch_error(src, target)
+        raise ConnectError._type_mismatch_error(src, target)
 
 def check_connections(connections, params, unknowns):
     # Get metadata for all sources
@@ -120,15 +112,15 @@ def __check_shapes_match(src, target):
     if src['shape'] != target['shape']:
         if 'src_indices' in target:
             if len(target['src_indices']) != target['size']:
-                raise ConnectError.size_mismatch_error(src, target)
+                raise ConnectError._size_mismatch_error(src, target)
             elif len(target['src_indices']) > src['size']:
-                raise ConnectError.indices_too_large(src, target)
+                raise ConnectError._indices_too_large(src, target)
         else:
-            raise ConnectError.shape_mismatch_error(src, target)
+            raise ConnectError._shape_mismatch_error(src, target)
 
 def __check_val_and_shape_match(src, target):
     if src['val'].shape != target['shape']:
-        raise ConnectError.val_and_shape_mismatch_error(src, target)
+        raise ConnectError._val_and_shape_mismatch_error(src, target)
 
 __shape_checks = {
     (tuple, tuple) : __check_shapes_match,
