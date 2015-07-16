@@ -31,9 +31,11 @@ class SphinxDocsTestCase(unittest.TestCase):
         if retcode:
             self.fail('problem doc testing sphinx docs:\\n'+output)
 
-        output, retcode = _run_subproc_test('linkcheck')
-        if retcode:
-            self.fail('problem link checking sphinx docs:\\n'+output)
+        ## linkcheck seems too unreliable to run all of the time, so
+        ## commenting it out for now
+        # output, retcode = _run_subproc_test('linkcheck')
+        # if retcode:
+        #     self.fail('problem link checking sphinx docs:\\n'+output)
 
 
 if __name__ == '__main__':
