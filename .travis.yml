@@ -3,6 +3,10 @@ language: python
 python:
   - 2.7
   - 3.4
+env:
+  - HDF5=h5py
+  - HFF5=
+
 notifications:
   email: false
 
@@ -16,7 +20,7 @@ before_install:
 
 # Install packages
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy nose
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy nose $HDF5
   - pip install .
 
 # Run test
