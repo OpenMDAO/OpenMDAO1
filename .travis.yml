@@ -13,9 +13,11 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda/bin:$PATH
   - conda update --yes conda
+
 # Install packages
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy
+  - which pip
   - pip install .
 
 # Run test
