@@ -1,5 +1,8 @@
+"""Basic vector and data transfer implementation factory."""
+
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
+
 
 class BasicImpl(object):
     """Basic vector and data transfer implementation factory."""

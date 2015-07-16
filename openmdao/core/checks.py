@@ -42,6 +42,20 @@ class ConnectError(Exception):
 
     @classmethod
     def nonexistent_src_error(cls, src, target):
+        """ Formats an error message for non-existant source in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{src}' does not exist.")
 
@@ -51,6 +65,20 @@ class ConnectError(Exception):
 
     @classmethod
     def nonexistent_target_error(cls, src, target):
+        """ Formats an error message for non-existant target in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{target}' does not exist.")
 
@@ -60,6 +88,20 @@ class ConnectError(Exception):
 
     @classmethod
     def invalid_target_error(cls, src, target):
+        """ Formats an error message for invalid target in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "Target must be a parameter but '{target}' is an unknown.")
 
