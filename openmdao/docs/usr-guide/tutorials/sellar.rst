@@ -293,7 +293,7 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
    Optimization Complete
    -----------------------------------
    ...
-   Minimum found at (1.977..., ...0.000000, 0.000000)
+   Minimum found at (1.977..., ...0.000000, ...0.000000)
    Coupling vars: 3.160..., 3.755...
    Minimum objective:  3.18339...
 
@@ -340,7 +340,7 @@ look something like:
     .
     .
     .
-    Minimum found at (1.977639, -0.000000, 0.000000)
+    Minimum found at (1.977639, ...0.000000, ...0.000000)
     Coupling vars: 3.160000, 3.755278
     Minimum objective:  3.18339395045
 
@@ -500,8 +500,7 @@ which one, since they should only differ by the solver tolerance at most.
    Optimization Complete
    -----------------------------------
    ...
-
-   Minimum found at (1.977..., 0.000000, 0.000000)
+   Minimum found at (1.977..., ...0.000000, ...0.000000)
    Coupling vars: 3.160..., 3.755...
    Minimum objective:  3.18339...
 
