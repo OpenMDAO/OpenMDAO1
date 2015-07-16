@@ -3,9 +3,9 @@ Paraboloid Tutorial
 
 This tutorial will take you through code needed to create a Component class based on the equation of a paraboloid and run it.
 
-Here is the code that defines this Component and then runs it. 
+Here is the code that defines this Component and then runs it.
 
-::
+.. testcode:: parab
 
     """ Paraboloid class written in OpenMDAO 1.0 """
     """ paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
@@ -139,7 +139,7 @@ The definition of the Paraboloid Component class is now complete. We will now ma
 
         paraboloid = root.add('p', Paraboloid())
 
-An instance of an OpenMDAO `Problem` is always the top object for running an model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a `System` that contains other `Systems`. 
+An instance of an OpenMDAO `Problem` is always the top object for running an model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a `System` that contains other `Systems`.
 
 This code instantiates a `Problem` object, sets the root `Group` and adds our `Paraboloid` Component as a subsystem of the root `Group`.
 
@@ -153,7 +153,7 @@ This code instantiates a `Problem` object, sets the root `Group` and adds our `P
 
 We need some way to set the values for the parameters of the `Paraboloid`. For this tutorial, we will make use of OpenMDAO's `ParamComp`. `ParamComp` is a `Component` that provides an output which we can connect to a parameter.
 
-First we need to create the `ParamComps`, give them names and add them to the root `Group`. 
+First we need to create the `ParamComps`, give them names and add them to the root `Group`.
 
 Then we connect up the outputs of the `ParamComps` to the parameters of the `Paraboloid`. Notice the dotted naming convention used to refer to variables. So, for example, `p1` represents the first `ParamComp` that we created to set the value of `x` and so we connect that to parameter `x` of the `Paraboloid`, which is named `x`. Since the `Paraboloid` is named `p` and has a parameter `x`, it is referred to as `p.x` in the call to the `connect` method.
 
@@ -163,7 +163,7 @@ Every problem has a `Driver` and for most situations, we would want to set a `Dr
 
     top.driver = SomeDriver()
 
-For this very simple tutorial, we will just use the default which is `Driver`. ( `Driver` also serves as the base class for all `Drivers`. ) `Driver` is the simplest driver possible, running a `Problem` once. 
+For this very simple tutorial, we will just use the default which is `Driver`. ( `Driver` also serves as the base class for all `Drivers`. ) `Driver` is the simplest driver possible, running a `Problem` once.
 
 ::
 
