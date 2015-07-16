@@ -28,40 +28,40 @@ class TestGroupDerivatves(unittest.TestCase):
         sub = Group()
         sub.add('mycomp', VerificationComp())
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('sub', sub)
-        top.root.add('x_param', ParamComp('x', 1.0))
-        top.root.connect('x_param.x', "sub.mycomp.x")
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('sub', sub)
+        prob.root.add('x_param', ParamComp('x', 1.0))
+        prob.root.connect('x_param.x', "sub.mycomp.x")
 
         sub.fd_options['force_fd'] = True
-        top.setup(check=False)
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='fwd',
+        J = prob.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='fwd',
                               return_format='dict')
         assert_rel_error(self, J['sub.mycomp.y']['x_param.x'][0][0], 2.0, 1e-6)
 
-        J = top.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='rev',
+        J = prob.calc_gradient(['x_param.x'], ['sub.mycomp.y'], mode='rev',
                               return_format='dict')
         assert_rel_error(self, J['sub.mycomp.y']['x_param.x'][0][0], 2.0, 1e-6)
 
     def test_converge_diverge_groups(self):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('sub', ConvergeDivergeGroups())
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('sub', ConvergeDivergeGroups())
 
         param_list = ['sub.p.x']
         unknown_list = ['sub.comp7.y1']
 
-        top.setup(check=False)
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
     def test_group_fd(self):
@@ -89,7 +89,6 @@ class TestGroupDerivatves(unittest.TestCase):
                 J[('y', 'x')] = 3.0
                 return J
 
-
         class Model(Group):
             """ Simple model to experiment with finite difference."""
 
@@ -111,14 +110,15 @@ class TestGroupDerivatves(unittest.TestCase):
 
                 self.sub.fd_options['force_fd'] = True
 
-        top = Problem()
-        top.root = Model()
+        prob = Problem()
+        prob.root = Model()
 
-        top.setup(check=False)
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        J = top.calc_gradient(['px.x'], ['comp4.y'])
+        J = prob.calc_gradient(['px.x'], ['comp4.y'])
         assert_rel_error(self, J[0][0], 81.0, 1e-6)
+
 
 if __name__ == "__main__":
     unittest.main()
