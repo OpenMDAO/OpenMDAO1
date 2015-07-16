@@ -7,4 +7,4 @@ Examples
 .. toctree::
    :maxdepth: 1
 
-   example_fd.rst
+   examples/example_fd.rst
