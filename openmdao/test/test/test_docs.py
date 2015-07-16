@@ -15,8 +15,9 @@ def _run_subproc_test(tname):
 
 class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
-        # can't put these in separate test methods because they won't work
-        # when run concurrently
+        # we can't split these up into separate tests because the html
+        # build must be complete before the others and if we split them
+        # up they could be run concurrently and give erroneous results.
         output, retcode = _run_subproc_test('html')
         if retcode:
             self.fail('problem building html sphinx docs:\\n'+output)
