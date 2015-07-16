@@ -37,7 +37,7 @@ explicit system may contain only a single equation, such as:
 
 ::
 
-    y = x + 2
+    y = x**2 + 2
 
 For this system, *x* is the parameter (input variable) and *y* is the unknown
 (output variable). Implicit equations, where you vary a state value to drive
@@ -46,7 +46,7 @@ implicitly as:
 
 ::
 
-    R(y) = x + 2 - y = 0
+    R(y) = x**2 + 2 - y = 0
 
 There is now a corresponding residual value for *y* as well.
 The `System` class has *parameters*, *unknowns*, and *residuals* attributes
@@ -257,7 +257,7 @@ the `Problem`. The base `Driver` class in OpenMDAO is the simplest driver
 possible, which just calls *solve_nonlinear* on the *root* `Group`. This
 simple driver may be replaced with more interesting types like optimization,
 case iteration, and design of experiment drivers. Essentially, the `Driver`
-determines how the `Problem` will execute your model. 
+determines how the `Problem` will execute your model.
 
 The `Driver` is invoked by calling the *run* method on the `Problem`. Prior
 to doing that, however, you must perform *setup*.  This function does all
