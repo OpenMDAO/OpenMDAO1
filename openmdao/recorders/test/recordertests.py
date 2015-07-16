@@ -16,11 +16,11 @@ class RecorderTests(object):
             self.recorder.close()
 
         def test_basic(self):
-            top = Problem()
-            top.root = ConvergeDiverge()
-            top.driver.add_recorder(self.recorder)
-            top.setup()
-            top.run()
+            prob = Problem()
+            prob.root = ConvergeDiverge()
+            prob.driver.add_recorder(self.recorder)
+            prob.setup(check=False)
+            prob.run()
 
             expected_params = [
                 ("comp1.x1", 2.0),
@@ -66,12 +66,12 @@ class RecorderTests(object):
             )
 
         def test_includes(self):
-            top = Problem()
-            top.root = ConvergeDiverge()
-            top.driver.add_recorder(self.recorder)
+            prob = Problem()
+            prob.root = ConvergeDiverge()
+            prob.driver.add_recorder(self.recorder)
             self.recorder.options['includes'] = ['comp1.*']
-            top.setup()
-            top.run()
+            prob.setup(check=False)
+            prob.run()
 
             expected_params = [
                 ("comp1.x1", 2.0)
@@ -93,13 +93,13 @@ class RecorderTests(object):
             )
 
         def test_includes_and_excludes(self):
-            top = Problem()
-            top.root = ConvergeDiverge()
-            top.driver.add_recorder(self.recorder)
+            prob = Problem()
+            prob.root = ConvergeDiverge()
+            prob.driver.add_recorder(self.recorder)
             self.recorder.options['includes'] = ['comp1.*']
             self.recorder.options['excludes'] = ["*.y2"]
-            top.setup()
-            top.run()
+            prob.setup(check=False)
+            prob.run()
 
             expected_params = [
                 ("comp1.x1", 2.0)
@@ -119,11 +119,11 @@ class RecorderTests(object):
             )
 
         def test_solver_record(self):
-            top = Problem()
-            top.root = ConvergeDiverge()
-            top.root.nl_solver.add_recorder(self.recorder)
-            top.setup()
-            top.run()
+            prob = Problem()
+            prob.root = ConvergeDiverge()
+            prob.root.nl_solver.add_recorder(self.recorder)
+            prob.setup(check=False)
+            prob.run()
 
             expected_params = [
                 ("comp1.x1", 2.0),
@@ -170,11 +170,11 @@ class RecorderTests(object):
 
         def test_sublevel_record(self):
 
-            top = Problem()
-            top.root = ExampleGroup()
-            top.root.G2.G1.nl_solver.add_recorder(self.recorder)
-            top.setup()
-            top.run()
+            prob = Problem()
+            prob.root = ExampleGroup()
+            prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+            prob.setup(check=False)
+            prob.run()
 
             expected_params = [
                 ("C2.x", 5.0)
@@ -194,12 +194,12 @@ class RecorderTests(object):
             )
 
         def test_multilevel_record(self):
-            top = Problem()
-            top.root = ExampleGroup()
-            top.root.G2.G1.nl_solver.add_recorder(self.recorder)
-            top.driver.add_recorder(self.recorder)
-            top.setup()
-            top.run()
+            prob = Problem()
+            prob.root = ExampleGroup()
+            prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+            prob.driver.add_recorder(self.recorder)
+            prob.setup(check=False)
+            prob.run()
 
             g1_expected_params = [
                 ("C2.x", 5.0)

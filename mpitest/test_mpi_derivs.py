@@ -31,130 +31,130 @@ class TestScipyGMRES(MPITestCase):
 
     #def test_fan_out_grouped(self):
 
-        #top = Problem()
-        #top.root = FanOutGrouped()
-        #top.root.ln_solver = ScipyGMRES()
-        #top.setup()
-        #top.run()
+        #prob = Problem()
+        #prob.root = FanOutGrouped()
+        #prob.root.ln_solver = ScipyGMRES()
+        #prob.setup(check=False)
+        #prob.run()
 
         #param_list = ['p.x']
         #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
     def test_simple_deriv_xfer(self):
 
-        top = Problem(impl=impl)
-        top.root = FanInGrouped()
-        top.setup()
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+        prob.setup(check=False)
 
-        top.root.comp3.dpmat[None]['x1'] = 7.
-        top.root.comp3.dpmat[None]['x2'] = 11.
-        top.root._transfer_data(mode='rev', deriv=True)
+        prob.root.comp3.dpmat[None]['x1'] = 7.
+        prob.root.comp3.dpmat[None]['x2'] = 11.
+        prob.root._transfer_data(mode='rev', deriv=True)
 
         if not MPI or self.comm.rank == 0:
-            self.assertEqual(top.root.sub.comp1.dumat[None]['y'], 7.)
+            self.assertEqual(prob.root.sub.comp1.dumat[None]['y'], 7.)
 
         if not MPI or self.comm.rank == 1:
-            self.assertEqual(top.root.sub.comp2.dumat[None]['y'], 11.)
+            self.assertEqual(prob.root.sub.comp2.dumat[None]['y'], 11.)
 
-        top.root.comp3.dpmat[None]['x1'] = 0.
-        top.root.comp3.dpmat[None]['x2'] = 0.
-        self.assertEqual(top.root.comp3.dpmat[None]['x1'], 0.)
-        self.assertEqual(top.root.comp3.dpmat[None]['x2'], 0.)
+        prob.root.comp3.dpmat[None]['x1'] = 0.
+        prob.root.comp3.dpmat[None]['x2'] = 0.
+        self.assertEqual(prob.root.comp3.dpmat[None]['x1'], 0.)
+        self.assertEqual(prob.root.comp3.dpmat[None]['x2'], 0.)
 
-        top.root._transfer_data(mode='fwd', deriv=True)
+        prob.root._transfer_data(mode='fwd', deriv=True)
 
-        self.assertEqual(top.root.comp3.dpmat[None]['x1'], 7.)
-        self.assertEqual(top.root.comp3.dpmat[None]['x2'], 11.)
+        self.assertEqual(prob.root.comp3.dpmat[None]['x1'], 7.)
+        self.assertEqual(prob.root.comp3.dpmat[None]['x2'], 11.)
 
     #def test_fan_in(self):
 
-        #top = Problem(impl=impl)
-        #top.root = FanInGrouped()
-        #top.setup()
+        #prob = Problem(impl=impl)
+        #prob.root = FanInGrouped()
+        #prob.setup(check=False)
 
         #param_list = ['p1.x1', 'p2.x2']
         #unknown_list = ['comp3.y']
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #if not MPI or self.comm.rank == 0:
             #assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
             #assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #if not MPI or self.comm.rank == 0:
             #assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
             #assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
     #def test_converge_diverge_groups(self):
 
-        #top = Problem()
-        #top.root = ConvergeDivergeGroups()
-        #top.root.ln_solver = ScipyGMRES()
-        #top.setup()
-        #top.run()
+        #prob = Problem()
+        #prob.root = ConvergeDivergeGroups()
+        #prob.root.ln_solver = ScipyGMRES()
+        #prob.setup(check=False)
+        #prob.run()
 
         ## Make sure value is fine.
-        #assert_rel_error(self, top['comp7.y1'], -102.7, 1e-6)
+        #assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
 
         #param_list = ['p.x']
         #unknown_list = ['comp7.y1']
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
     #def test_single_diamond(self):
 
-        #top = Problem()
-        #top.root = SingleDiamond()
-        #top.root.ln_solver = ScipyGMRES()
-        #top.setup()
-        #top.run()
+        #prob = Problem()
+        #prob.root = SingleDiamond()
+        #prob.root.ln_solver = ScipyGMRES()
+        #prob.setup(check=False)
+        #prob.run()
 
         #param_list = ['p.x']
         #unknown_list = ['comp4.y1', 'comp4.y2']
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
     #def test_single_diamond_grouped(self):
 
-        #top = Problem()
-        #top.root = SingleDiamondGrouped()
-        #top.root.ln_solver = ScipyGMRES()
-        #top.setup()
-        #top.run()
+        #prob = Problem()
+        #prob.root = SingleDiamondGrouped()
+        #prob.root.ln_solver = ScipyGMRES()
+        #prob.setup(check=False)
+        #prob.run()
 
         #param_list = ['p.x']
         #unknown_list = ['comp4.y1', 'comp4.y2']
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        #J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        #J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 

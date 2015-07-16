@@ -9,12 +9,12 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.testutil import assert_rel_error
 
+
 class TestLinearSystem(unittest.TestCase):
 
     def test_linear_system(self):
+        root = Group()
 
-        top = Problem()
-        root = top.root = Group()
         root.add('lin', LinearSystem(3))
 
         x = np.array([1, 2, -3])
@@ -26,30 +26,30 @@ class TestLinearSystem(unittest.TestCase):
         root.connect('p1.A', 'lin.A')
         root.connect('p2.b', 'lin.b')
 
-        top.setup()
-        top.run()
+        prob = Problem(root)
+        prob.setup(check=False)
+        prob.run()
 
         # Make sure it gets the right answer
-        assert_rel_error(self, top['lin.x'], x, .0001)
-        assert_rel_error(self, np.linalg.norm(top.root.resids.vec), 0.0, 1e-10)
+        assert_rel_error(self, prob['lin.x'], x, .0001)
+        assert_rel_error(self, np.linalg.norm(prob.root.resids.vec), 0.0, 1e-10)
 
         # Compare against calculated derivs
         Ainv = np.linalg.inv(A)
         dx_dA = np.outer(Ainv, -x).reshape(3, 9)
         dx_db = Ainv
 
-        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fwd', return_format='dict')
+        J = prob.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fwd', return_format='dict')
         assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
         assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
-        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='rev', return_format='dict')
+        J = prob.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='rev', return_format='dict')
         assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
         assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
-        J = top.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fd', return_format='dict')
+        J = prob.calc_gradient(['p1.A', 'p2.b'], ['lin.x'], mode='fd', return_format='dict')
         assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
         assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
-
 
 
 if __name__ == "__main__":

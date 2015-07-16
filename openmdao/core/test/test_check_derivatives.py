@@ -18,14 +18,13 @@ class TestProblemCheckPartials(unittest.TestCase):
 
     def test_double_diamond_model(self):
 
-        top = Problem()
-        top.root = ConvergeDivergeGroups()
+        prob = Problem()
+        prob.root = ConvergeDivergeGroups()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_partial_derivatives(out_stream=None)
-        #print data
+        data = prob.check_partial_derivatives(out_stream=None)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -38,17 +37,17 @@ class TestProblemCheckPartials(unittest.TestCase):
 
     def test_simple_array_model(self):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', SimpleArrayComp())
-        top.root.add('p1', ParamComp('x', np.ones([2])))
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleArrayComp())
+        prob.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p1.x', 'comp.x')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_partial_derivatives(out_stream=None)
+        data = prob.check_partial_derivatives(out_stream=None)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -61,17 +60,17 @@ class TestProblemCheckPartials(unittest.TestCase):
 
     def test_simple_implicit(self):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', SimpleImplicitComp())
-        top.root.add('p1', ParamComp('x', 0.5))
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', ParamComp('x', 0.5))
 
-        top.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p1.x', 'comp.x')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_partial_derivatives(out_stream=None)
+        data = prob.check_partial_derivatives(out_stream=None)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -92,18 +91,18 @@ class TestProblemCheckPartials(unittest.TestCase):
                 return J
 
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', BadComp())
-        top.root.add('p1', ParamComp('x', np.ones([2])))
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', BadComp())
+        prob.root.add('p1', ParamComp('x', np.ones([2])))
 
-        top.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p1.x', 'comp.x')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         try:
-            data = top.check_partial_derivatives(out_stream=None)
+            data = prob.check_partial_derivatives(out_stream=None)
         except Exception as err:
             msg = "Jacobian in component 'comp' between the" + \
                 " variables 'x' and 'y' is the wrong size. " + \
@@ -117,61 +116,61 @@ class TestProblemFullFD(unittest.TestCase):
 
     def test_full_model_fd_simple_comp(self):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', SimpleCompDerivMatVec())
-        top.root.add('p1', ParamComp('x', 1.0))
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleCompDerivMatVec())
+        prob.root.add('p1', ParamComp('x', 1.0))
 
-        top.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p1.x', 'comp.x')
 
-        top.root.fd_options['force_fd'] = True
+        prob.root.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         param_list = ['comp.x']
         unknown_list = ['comp.y']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
 
 
     def test_full_model_fd_simple_comp_promoted(self):
 
-        top = Problem()
-        top.root = Group()
-        sub = top.root.add('sub', Group(), promotes=['*'])
+        prob = Problem()
+        prob.root = Group()
+        sub = prob.root.add('sub', Group(), promotes=['*'])
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
-        top.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+        prob.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
 
-        top.root.fd_options['force_fd'] = True
+        prob.root.fd_options['force_fd'] = True
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         param_list = ['x']
         unknown_list = ['y']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
     def test_full_model_fd_double_diamond_grouped(self):
 
-        top = Problem()
-        top.root = ConvergeDivergeGroups()
-        top.setup()
-        top.run()
+        prob = Problem()
+        prob.root = ConvergeDivergeGroups()
+        prob.setup(check=False)
+        prob.run()
 
-        top.root.fd_options['force_fd'] = True
+        prob.root.fd_options['force_fd'] = True
 
         param_list = ['sub1.comp1.x1']
         unknown_list = ['comp7.y1']
 
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
-        top.root.fd_options['form'] = 'central'
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        prob.root.fd_options['form'] = 'central'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
 
@@ -179,14 +178,13 @@ class TestProblemCheckTotals(unittest.TestCase):
 
     def test_double_diamond_model(self):
 
-        top = Problem()
-        top.root = ConvergeDivergeGroups()
+        prob = Problem()
+        prob.root = ConvergeDivergeGroups()
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_total_derivatives(out_stream=None)
-        #print data
+        data = prob.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
             assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
@@ -198,17 +196,17 @@ class TestProblemCheckTotals(unittest.TestCase):
 
     def test_simple_implicit(self):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', SimpleImplicitComp())
-        top.root.add('p1', ParamComp('x', 0.5))
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', ParamComp('x', 0.5))
 
-        top.root.connect('p1.x', 'comp.x')
+        prob.root.connect('p1.x', 'comp.x')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_total_derivatives(out_stream=None)
+        data = prob.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
             assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
@@ -220,16 +218,16 @@ class TestProblemCheckTotals(unittest.TestCase):
 
     def test_full_model_fd_simple_comp_promoted(self):
 
-        top = Problem()
-        top.root = Group()
-        sub = top.root.add('sub', Group(), promotes=['*'])
+        prob = Problem()
+        prob.root = Group()
+        sub = prob.root.add('sub', Group(), promotes=['*'])
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
-        top.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+        prob.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        data = top.check_total_derivatives(out_stream=None)
+        data = prob.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
             assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
