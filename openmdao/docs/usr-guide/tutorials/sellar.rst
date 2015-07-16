@@ -14,14 +14,14 @@ two disciplines as follows:
    :align: center
    :alt: Equations showing the two disciplines for the Sellar problem
 
-Variables *z1, z2,* and *x1* are the design variables over which we'd like to minimize
-the objective. Both disciplines are functions of *z1* and *z2,* so they are called the
+Variables *z1, z2,* and *x1* are the design variables.
+Both disciplines are functions of *z1* and *z2,* so they are called the
 *global* design variables, while only the first discipline is a function of *x1,* so it
 is called the *local* design variable. The two disciplines are coupled by the
 coupling variables *y1* and *y2.* Discipline 1 takes *y2* as an input, and computes *y1* as
-an output, while Discipline 2 takes *y1* as an input and computes *y2* as an output. As
-such, the two disciplines depend on each other's output, so iteration is required to
-find a set of coupling variables that satisfies both equations.
+an output, while Discipline 2 takes *y1* as an input and computes *y2* as an output.
+This coupling creates a non-linear system of equations which must be satisfied for valid
+solutions.
 
 First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
@@ -127,12 +127,13 @@ is applied. This component is clearly not valid for ``y1 < 0``, but some solvers
 occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
 of the absolute value solves the problem without impacting the final converged solution.
 
-Now that you have defined the components for the Sellar Problem for yourself, let's take a moment to
-consider what we have really accomplished. Firstly, we have written two (very simple) analysis components.
-If you were working on a real problem, these would likely come in the form of some much more complex tools
-that you wrapped in the framework. But keep in mind that from an optimization point of view, whether they
-are simple tools or wrappers for real analyses, OpenMDAO still views them as components with `params`, `unknowns`,
-a `solve_nonlinear` function, and optionally a `jacobian` function.
+.. note::
+
+  We have written two (very simple) analysis components. If you were working on a real problem, these would
+  your components could be more complex, or could potentially be wrappers for external analysis components.
+  But keep in mind that from an optimization point of view, whether they are simple tools or wrappers for
+  real analyses, OpenMDAO still views them as components with `params`, `unknowns`, a `solve_nonlinear` function,
+  and optionally a `jacobian` function.
 
 We have talked about the problem formulation and specified that certain variables will be
 design variables, while others are coupling variables. But none of the code we have written has told
