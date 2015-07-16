@@ -6,10 +6,8 @@ The Sellar Problem
 ==================
 
 This tutorial illustrates how to set up a coupled disciplinary problem in
-OpenMDAO and prepare it for optimization. This tutorial builds on what you
-have learned in previous tutorials about defining components with analytic
-derivatives. The problem we will show you is the familiar Sellar Problem,
-which consists of two disciplines as follows:
+OpenMDAO and prepare it for optimization, using the Sellar Problem consisting of
+two disciplines as follows:
 
 
 .. figure:: SellarResized.png
