@@ -1,9 +1,27 @@
-sudo: false
+sudo: no
 language: python
 python:
-  - "2.7"
-  - "3.4"
-install:
-  - "pip install ."
-script: nosetests
+  - 2.7
+  - 3.3
+notifications:
+  email: false
 
+# Setup anaconda
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+# Install packages
+install:
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy
+  - pip install .
+
+# Run test
+script: nosetests
+  #- nosetests --with-cov --cov YOUR_PACKAGE_NAME_HERE --cov-config .coveragerc --logging-level=INFO
+
+# Calculate coverage
+#after_success:
+#  - coveralls --config_file .coveragerc
