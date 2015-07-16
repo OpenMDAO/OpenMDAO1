@@ -290,8 +290,6 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
    :hide:
    :options: +ELLIPSIS
 
-   ...
-
    Optimization Complete
    -----------------------------------
    ...
