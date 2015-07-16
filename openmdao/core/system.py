@@ -104,7 +104,7 @@ class System(object):
 
         return False
 
-    def check_setup(self, out_stream=sys.stdout):
+    def _check_setup(self, out_stream=sys.stdout):
         pass
 
     def _check_promotes(self):
@@ -494,7 +494,7 @@ class System(object):
         params_dict = self._params_dict
 
         # map promoted name in parent to corresponding promoted name in this view
-        umap = get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
+        umap = _get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
 
         if var_of_interest is None:
             self.unknowns  = parent.unknowns.get_view(self.pathname, comm, umap, relevance,
@@ -576,7 +576,7 @@ class System(object):
             return '.'.join((self.pathname, name))
         return name
 
-def get_relname_map(unknowns, unknowns_dict, child_name):
+def _get_relname_map(unknowns, unknowns_dict, child_name):
     """
     Args
     ----

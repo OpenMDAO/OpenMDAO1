@@ -49,7 +49,7 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root)
 
         try:
-            prob.setup()
+            prob.setup(check=False)
         except Exception as error:
             msg = "Target 'G3.C4.x' is connected to multiple unknowns: ['G3.C3.y', 'G2.C1.x']"
             self.assertEquals(text_type(error), msg)
@@ -66,14 +66,14 @@ class TestProblem(unittest.TestCase):
         # ignore warning about the unconnected param
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("ignore")
-            prob.setup()
+            prob.setup(check=False)
 
         # promoting a non-existent variable should throw an error
         prob = Problem(Group())
         G = prob.root.add('G', Group())
         C = G.add('C', SimpleComp(), promotes=['spoon'])        # there is no spoon
         try:
-            prob.setup()
+            prob.setup(check=False)
         except Exception as error:
             msg = "'C' promotes 'spoon' but has no variables matching that specification"
             self.assertEqual(text_type(error), msg)
@@ -85,7 +85,7 @@ class TestProblem(unittest.TestCase):
         G = prob.root.add('G', Group())
         P = G.add('P', ParamComp('x', 5.), promotes=['a*'])     # there is no match
         try:
-            prob.setup()
+            prob.setup(check=False)
         except Exception as error:
             msg = "'P' promotes 'a*' but has no variables matching that specification"
             self.assertEqual(text_type(error), msg)
@@ -112,7 +112,7 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root)
 
         try:
-            prob.setup()
+            prob.setup(check=False)
         except Exception as error:
             msg = "Promoted name 'G3.y' matches multiple unknowns: ['G3.C3.y', 'G3.C4.y']"
             self.assertEqual(text_type(error), msg)
@@ -132,7 +132,7 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root)
 
         with self.assertRaises(RuntimeError) as err:
-            prob.setup()
+            prob.setup(check=False)
 
         expected_msg = "Promoted name 'z' matches multiple unknowns: ['c1.z', 'c2.z']"
 
@@ -151,7 +151,7 @@ class TestProblem(unittest.TestCase):
         # ignore warning about the unconnected param
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("ignore")
-            prob.setup()
+            prob.setup(check=False)
 
         prob.run()
 
@@ -173,7 +173,7 @@ class TestProblem(unittest.TestCase):
         # ignore warning about the unconnected param
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("ignore")
-            prob.setup()
+            prob.setup(check=False)
 
         prob.run()
 
@@ -203,7 +203,7 @@ class TestProblem(unittest.TestCase):
         # ignore warning about the unconnected params
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("ignore")
-            prob.setup()
+            prob.setup(check=False)
 
         prob.run()
         self.assertEqual(root.connections, {})
@@ -216,7 +216,7 @@ class TestProblem(unittest.TestCase):
         root.add('c2', ExecComp('y = x*3.0'))
         root.connect('c1.x', 'c2.x')
         root.connect('p1.x', 'c2.x')
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
         self.assertEqual(root.connections['c1.x'], 'p1.x')
         self.assertEqual(root.connections['c2.x'], 'p1.x')
@@ -252,7 +252,7 @@ class TestProblem(unittest.TestCase):
         root.connect('parm.x', 'comp.x')
 
         prob = Problem(root)
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         param_list = ['parm.x']
@@ -319,39 +319,39 @@ class TestProblem(unittest.TestCase):
         ]), decimal=5)
 
     def test_calc_gradient_multiple_params(self):
-        top = Problem()
-        top.root = FanIn()
-        top.setup()
-        top.run()
+        prob = Problem()
+        prob.root = FanIn()
+        prob.setup(check=False)
+        prob.run()
 
         param_list   = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
-        J = top.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'rev'
-        J = top.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
-        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fd'
-        J = top.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
     def test_explicit_connection_errors(self):
@@ -365,50 +365,50 @@ class TestProblem(unittest.TestCase):
                 super(B, self).__init__()
                 self.add_param('x', 0)
 
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('B', B())
 
-        problem.root.connect('A.x', 'B.x')
-        problem.setup()
+        prob.root.connect('A.x', 'B.x')
+        prob.setup(check=False)
 
         expected_error_message = ("Source 'A.y' cannot be connected to target 'B.x': "
                                   "'A.y' does not exist.")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('A.y', 'B.x')
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('B', B())
+        prob.root.connect('A.y', 'B.x')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
         expected_error_message = ("Source 'A.x' cannot be connected to target 'B.y': "
                                   "'B.y' does not exist.")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('A.x', 'B.y')
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('B', B())
+        prob.root.connect('A.x', 'B.y')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
         expected_error_message = ("Source 'A.x' cannot be connected to target 'A.x': "
                                   "Target must be a parameter but 'A.x' is an unknown.")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('A.x', 'A.x')
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('B', B())
+        prob.root.connect('A.x', 'A.x')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -443,15 +443,15 @@ class TestProblem(unittest.TestCase):
                                   "'A.y' must be the same as type "
                                   "'<type 'float'>' of target "
                                   "'E.y'")
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('E', E())
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('E', E())
 
-        problem.root.connect('A.y', 'E.y')
+        prob.root.connect('A.y', 'E.y')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -461,13 +461,13 @@ class TestProblem(unittest.TestCase):
                                   "'<type 'float'>' of target "
                                   "'y'")
 
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A(), promotes=['y'])
-        problem.root.add('E', E(), promotes=['y'])
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A(), promotes=['y'])
+        prob.root.add('E', E(), promotes=['y'])
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -476,15 +476,15 @@ class TestProblem(unittest.TestCase):
         expected_error_message = ("Shape '(2,)' of the source 'A.y' "
                                   "must match the shape '(3,)' "
                                   "of the target 'B.y'")
-        problem = Problem()
-        problem.root = Group()
+        prob = Problem()
+        prob.root = Group()
 
-        problem.root.add('A', A())
-        problem.root.add('B', B())
-        problem.root.connect('A.y', 'B.y')
+        prob.root.add('A', A())
+        prob.root.add('B', B())
+        prob.root.connect('A.y', 'B.y')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -493,14 +493,14 @@ class TestProblem(unittest.TestCase):
                                   "must match the shape '(3,)' "
                                   "of the target 'y'")
 
-        problem = Problem()
-        problem.root = Group()
+        prob = Problem()
+        prob.root = Group()
 
-        problem.root.add('A', A(), promotes=['y'])
-        problem.root.add('B', B(), promotes=['y'])
+        prob.root.add('A', A(), promotes=['y'])
+        prob.root.add('B', B(), promotes=['y'])
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -508,14 +508,14 @@ class TestProblem(unittest.TestCase):
         expected_error_message = ("Shape '(2,)' of the source 'C.y' must match the shape '(3,)' "
                                   "of the target 'B.y'")
 
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('B', B())
-        problem.root.add('C', C())
-        problem.root.connect('C.y', 'B.y')
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('B', B())
+        prob.root.add('C', C())
+        prob.root.connect('C.y', 'B.y')
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
@@ -523,62 +523,58 @@ class TestProblem(unittest.TestCase):
         expected_error_message = ("Shape '(2,)' of the source 'y' must match the shape"
                                   " '(3,)' of the target 'y'")
 
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('B', B(), promotes=['y'])
-        problem.root.add('C', C(), promotes=['y'])
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('B', B(), promotes=['y'])
+        prob.root.add('C', C(), promotes=['y'])
 
         with self.assertRaises(ConnectError) as cm:
-            problem.setup()
+            prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
 
         # Explicit
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A())
-        problem.root.add('D', D())
-        problem.root.connect('A.y', 'D.y')
-        problem.setup()
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A())
+        prob.root.add('D', D())
+        prob.root.connect('A.y', 'D.y')
         stream = cStringIO()
-        problem.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         content = stream.getvalue()
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('A', A(), promotes=['y'])
-        problem.root.add('D', D(), promotes=['y'])
-        problem.setup()
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('A', A(), promotes=['y'])
+        prob.root.add('D', D(), promotes=['y'])
         stream = cStringIO()
-        problem.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         content = stream.getvalue()
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Explicit
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('C', C())
-        problem.root.add('D', D())
-        problem.root.connect('C.y', 'D.y')
-        problem.setup()
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('C', C())
+        prob.root.add('D', D())
+        prob.root.connect('C.y', 'D.y')
         stream = cStringIO()
-        problem.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         content = stream.getvalue()
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
         # Implicit
-        problem = Problem()
-        problem.root = Group()
-        problem.root.add('C', C(), promotes=['y'])
-        problem.root.add('D', D(), promotes=['y'])
-        problem.setup()
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('C', C(), promotes=['y'])
+        prob.root.add('D', D(), promotes=['y'])
         stream = cStringIO()
-        problem.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         content = stream.getvalue()
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
@@ -593,7 +589,7 @@ class TestProblem(unittest.TestCase):
 
         root.connect('x_param.x', 'mycomp.x')
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
         result = root.unknowns['mycomp.y']
         self.assertAlmostEqual(14.0, result, 3)
@@ -607,7 +603,7 @@ class TestProblem(unittest.TestCase):
         root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
         root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x'])
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
         result = root.unknowns['mycomp.y']
         self.assertAlmostEqual(14.0, result, 3)
@@ -624,7 +620,7 @@ class TestProblem(unittest.TestCase):
         else:
             self.fail('Exception expected')
 
-        prob.setup()
+        prob.setup(check=False)
 
         self.assertEqual(prob['G2.C1.x'], 5.)                 # default output from ParamComp
         self.assertEqual(prob['G2.G1.C2.y'], 5.5)             # output from ExecComp
@@ -632,7 +628,7 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)  # initial value for a parameter
 
         prob = Problem(root=ExampleGroupWithPromotes())
-        prob.setup()
+        prob.setup(check=False)
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)  # initial value for a parameter
 
         # __setitem__
@@ -661,7 +657,7 @@ class TestProblem(unittest.TestCase):
     def test_basic_run(self):
         prob = Problem(root=ExampleGroup())
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         self.assertAlmostEqual(prob['G3.C4.y'], 40.)
@@ -669,7 +665,7 @@ class TestProblem(unittest.TestCase):
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
 
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         self.assertEqual(prob['G3.C4.y'], 'fooC2C3C4')
@@ -700,7 +696,7 @@ class TestProblem(unittest.TestCase):
         root.add('A1', A(), promotes=['x'])
         root.add('A2', A())
         root.connect('A1.y', 'A2.x')
-        prob.setup()
+        prob.setup(check=False)
 
         # Array Values
         prob = Problem()
@@ -709,7 +705,7 @@ class TestProblem(unittest.TestCase):
         root.add('B1', B(), promotes=['x'])
         root.add('B2', B())
         root.connect('B1.y', 'B2.x')
-        prob.setup()
+        prob.setup(check=False)
 
         # Mismatched Array Values
         prob = Problem()
@@ -719,7 +715,7 @@ class TestProblem(unittest.TestCase):
         root.add('C1', C())
         root.connect('B1.y', 'C1.x')
         with self.assertRaises(ConnectError) as cm:
-            prob.setup()
+            prob.setup(check=False)
         expected_error_message = "Shape '(2,)' of the source "\
                                   "'B1.y' must match the shape '(3,)' "\
                                   "of the target 'C1.x'"
@@ -731,7 +727,7 @@ class TestProblem(unittest.TestCase):
         root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
         root.add('B1', B(), promotes=['x'])
         with self.assertRaises(ConnectError) as cm:
-            prob.setup()
+            prob.setup(check=False)
 
         expected_error_message = py3fix("Type '<type 'float'>' of source "
                                   "'x' must be the same as type "
@@ -740,30 +736,30 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(expected_error_message, str(cm.exception))
 
     def test_mode_auto(self):
-        # Make sure mode=auto chooses correctly for all problem sizes as well
+        # Make sure mode=auto chooses correctly for all prob sizes as well
         # as for abs/rel/etc paths
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('a', 1.0), promotes=['*'])
         root.add('p2', ParamComp('b', 1.0), promotes=['*'])
         root.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
 
         root.ln_solver.options['mode'] = 'auto'
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        mode = top._mode('auto', ['a'], ['x'])
+        mode = prob._mode('auto', ['a'], ['x'])
         self.assertEqual(mode, 'fwd')
 
-        mode = top._mode('auto', ['a', 'b'], ['x'])
+        mode = prob._mode('auto', ['a', 'b'], ['x'])
         self.assertEqual(mode, 'rev')
 
         # make sure _check function does it too
 
         #try:
-            #mode = top._check_for_matrix_matrix(['a'], ['x'])
+            #mode = prob._check_for_matrix_matrix(['a'], ['x'])
         #except Exception as err:
             #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
             #self.assertEqual(text_type(err), msg)
@@ -771,13 +767,13 @@ class TestProblem(unittest.TestCase):
             #self.fail('Exception expected')
 
         root.ln_solver.options['mode'] = 'fwd'
-        mode = top._check_for_matrix_matrix(['a', 'b'], ['x'])
+        mode = prob._check_for_matrix_matrix(['a', 'b'], ['x'])
         self.assertEqual(mode, 'fwd')
 
     def test_check_matrix_matrix(self):
 
-        top = Problem()
-        root = top.root = Group()
+        prob = Problem()
+        root = prob.root = Group()
 
         root.add('p1', ParamComp('a', 1.0), promotes=['*'])
         root.add('p2', ParamComp('b', 1.0), promotes=['*'])
@@ -785,18 +781,18 @@ class TestProblem(unittest.TestCase):
         sub2 = sub1.add('sub2', Group(), promotes=['*'])
         sub2.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         # NOTE: this call won't actually calculate mode because default ln_solver
         # is ScipyGMRES and its default mode is 'fwd', not 'auto'.
-        mode = top._check_for_matrix_matrix(['a'], ['x'])
+        mode = prob._check_for_matrix_matrix(['a'], ['x'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['a'], ['x'])
+            mode = prob._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -807,7 +803,7 @@ class TestProblem(unittest.TestCase):
         sub2.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = top._check_for_matrix_matrix(['a'], ['x'])
+            mode = prob._check_for_matrix_matrix(['a'], ['x'])
         except Exception as err:
             msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
             self.assertEqual(text_type(err), msg)
@@ -815,14 +811,14 @@ class TestProblem(unittest.TestCase):
             self.fail('Exception expected')
 
         sub1.ln_solver.options['mode'] = 'rev'
-        mode = top._check_for_matrix_matrix(['a'], ['x'])
+        mode = prob._check_for_matrix_matrix(['a'], ['x'])
 
 
 class TestCheckSetup(unittest.TestCase):
 
     def test_out_of_order(self):
-        top = Problem(root=Group())
-        root = top.root
+        prob = Problem(root=Group())
+        root = prob.root
 
         G1 = root.add("G1", Group())
         G2 = G1.add("G2", Group())
@@ -833,15 +829,14 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C1.y", "C3.x")
         G2.connect("C3.y", "C2.x")
 
-        top.setup()
         stream = cStringIO()
-        top.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
                         stream.getvalue())
 
     def test_cycle(self):
-        top = Problem(root=Group())
-        root = top.root
+        prob = Problem(root=Group())
+        root = prob.root
 
         G1 = root.add("G1", Group())
         G2 = G1.add("G2", Group())
@@ -853,30 +848,13 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C3.y", "C2.x")
         G2.connect("C2.y", "C1.x")
 
-        top.setup()
         stream = cStringIO()
-        top.check_setup(out_stream=stream)
+        prob.setup(out_stream=stream)
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
         self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
                         stream.getvalue())
 
-    def test_before_setup(self):
-        top = Problem(root=Group())
-        root = top.root
-
-        G1 = root.add("G1", Group())
-        G2 = G1.add("G2", Group())
-        C1 = G2.add("C1", ExecComp('y=x*2.0'))
-        C2 = G2.add("C2", ExecComp('y=x*2.0'))
-        C3 = G2.add("C3", ExecComp('y=x*2.0'))
-
-        try:
-            top.check_setup()
-        except Exception as err:
-            self.assertEqual(str(err), 'setup() must be called before check_setup()')
-        else:
-            self.fail("Exception expected")
 
 if __name__ == "__main__":
     unittest.main()

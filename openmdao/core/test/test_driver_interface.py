@@ -15,6 +15,7 @@ from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simplecomps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
 
+
 class MySimpleDriver(Driver):
 
     def __init__(self):
@@ -87,24 +88,23 @@ class TestDriver(unittest.TestCase):
 
     def test_mydriver(self):
 
-        top = Problem()
-        root = top.root = SellarDerivatives()
+        prob = Problem()
+        root = prob.root = SellarDerivatives()
 
-        top.driver = MySimpleDriver()
-        top.driver.add_param('z', low=-100.0, high=100.0)
+        prob.driver = MySimpleDriver()
+        prob.driver.add_param('z', low=-100.0, high=100.0)
 
-        top.driver.add_objective('obj')
-        top.driver.add_constraint('con1')
-        top.driver.add_constraint('con2')
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1')
+        prob.driver.add_constraint('con2')
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
-        obj = top['obj']
+        obj = prob['obj']
         self.assertLess(obj, 28.0)
 
     def test_scaler_adder(self):
-
 
         class ScaleAddDriver(Driver):
 
@@ -127,9 +127,9 @@ class TestDriver(unittest.TestCase):
                 self.param_high = param_meta['x']['high']
                 self.param_low = param_meta['x']['low']
 
-        top = Problem()
-        root = top.root = Group()
-        driver = top.driver = ScaleAddDriver()
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriver()
 
         root.add('p1', ParamComp('x', val=60000.0), promotes=['*'])
         root.add('p2', ParamComp('y', val=60000.0), promotes=['*'])
@@ -140,13 +140,13 @@ class TestDriver(unittest.TestCase):
         driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
         driver.add_constraint('con', adder=-10890487502.0, scaler=1.0/20)
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         self.assertEqual(driver.param_high, 1.0)
         self.assertEqual(driver.param_low, -1.0)
         self.assertEqual(driver.param, 0.0)
-        self.assertEqual(top['x'], 60500.0)
+        self.assertEqual(prob['x'], 60500.0)
         self.assertEqual(driver.obj_scaled[0], 1.0)
         self.assertEqual(driver.con_scaled[0], 1.0)
 
@@ -173,9 +173,9 @@ class TestDriver(unittest.TestCase):
                 self.con_scaled = constraint['con']
                 self.param_low = param_meta['x']['low']
 
-        top = Problem()
-        root = top.root = Group()
-        driver = top.driver = ScaleAddDriver()
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriver()
 
         root.add('p1', ParamComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
                  promotes=['*'])
@@ -194,26 +194,26 @@ class TestDriver(unittest.TestCase):
         driver.add_constraint('con', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                               scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
 
-        top.setup()
-        top.run()
+        prob.setup(check=False)
+        prob.run()
 
         self.assertEqual(driver.param[0], 11.0)
         self.assertEqual(driver.param[1], 202.0)
         self.assertEqual(driver.param[2], 3003.0)
         self.assertEqual(driver.param[3], 40004.0)
-        self.assertEqual(top['x'][0, 0], 12.0)
-        self.assertEqual(top['x'][0, 1], 102.0)
-        self.assertEqual(top['x'][1, 0], 2003.0)
-        self.assertEqual(top['x'][1, 1], 20250.0)
-        self.assertEqual(driver.obj_scaled[0], (top['y'][0, 0] + 10.0)*1.0)
-        self.assertEqual(driver.obj_scaled[1], (top['y'][0, 1] + 100.0)*2.0)
-        self.assertEqual(driver.obj_scaled[2], (top['y'][1, 0] + 1000.0)*3.0)
-        self.assertEqual(driver.obj_scaled[3], (top['y'][1, 1] + 10000.0)*4.0)
+        self.assertEqual(prob['x'][0, 0], 12.0)
+        self.assertEqual(prob['x'][0, 1], 102.0)
+        self.assertEqual(prob['x'][1, 0], 2003.0)
+        self.assertEqual(prob['x'][1, 1], 20250.0)
+        self.assertEqual(driver.obj_scaled[0], (prob['y'][0, 0] + 10.0)*1.0)
+        self.assertEqual(driver.obj_scaled[1], (prob['y'][0, 1] + 100.0)*2.0)
+        self.assertEqual(driver.obj_scaled[2], (prob['y'][1, 0] + 1000.0)*3.0)
+        self.assertEqual(driver.obj_scaled[3], (prob['y'][1, 1] + 10000.0)*4.0)
         self.assertEqual(driver.param_low[0], (-1e5 + 10.0)*1.0)
         self.assertEqual(driver.param_low[1], (-1e5 + 100.0)*2.0)
         self.assertEqual(driver.param_low[2], (-1e5 + 1000.0)*3.0)
         self.assertEqual(driver.param_low[3], (-1e5 + 10000.0)*4.0)
-        conval = top['x'] + top['y']
+        conval = prob['x'] + prob['y']
         self.assertEqual(driver.con_scaled[0], (conval[0, 0] + 10.0)*1.0)
         self.assertEqual(driver.con_scaled[1], (conval[0, 1] + 100.0)*2.0)
         self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
@@ -221,24 +221,24 @@ class TestDriver(unittest.TestCase):
 
     def test_eq_ineq_error_messages(self):
 
-        top = Problem()
-        root = top.root = SellarDerivatives()
+        prob = Problem()
+        root = prob.root = SellarDerivatives()
 
-        top.driver = MySimpleDriver()
+        prob.driver = MySimpleDriver()
 
         # Don't try this at home, kids
-        top.driver.supports['Equality Constraints'] = False
+        prob.driver.supports['Equality Constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
-            top.driver.add_constraint('con1', ctype='eq')
+            prob.driver.add_constraint('con1', ctype='eq')
 
         self.assertEquals(str(cm.exception), "Driver does not support equality constraint 'con1'.")
 
         # Don't try this at home, kids
-        top.driver.supports['Inequality Constraints'] = False
+        prob.driver.supports['Inequality Constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
-            top.driver.add_constraint('con1', ctype='ineq')
+            prob.driver.add_constraint('con1', ctype='ineq')
 
         self.assertEquals(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
 
