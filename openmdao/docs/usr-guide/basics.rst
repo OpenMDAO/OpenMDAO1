@@ -5,60 +5,85 @@
 Basics
 ======
 
-
-Overview
---------
-
-This document is a brief overview of the core concepts and constructs involved in
-defining and solving a problem using OpenMDAO.
+This document provides a brief overview of the core concepts and constructs
+involved in defining and solving a problem using OpenMDAO. We start with
+by explaining the `System`, which forms the mathematical foundation of OpenMDAO.
+Then discuss how `System` relates to `Component` and `Group`. `Component` is the
+computational class of OpenMDAO, where you build models and wrap external analysis codes.
+`Group` represents collections of `Component` instances with data passing
+and an execution sequence. Lastly we discuss `Problem`, which serves as the container
+for your whole model.
 
 
 System
 ------
 
-The base class for building complex system models in OpenMDAO is the `System`
-class. This class represents a system of equations, which is a set of equations
-that need to be solved together so that a single solution satisfies them all.
+OpenMDAO uses a unique abstraction for representing large models of coupled systems,
+based on the Modular Analysis and Unified Derivatives ([MAUD]_) mathematical architecture
+developed by Hwang and Martins. The fundamental concept in MAUD is that an entire
+system model can be represented as a hierarchical set of systems of non-linear equations.
+
+.. [MAUD] Hwang, J. T., A modular approach to large-scale design
+   optimization of aerospace systems, Ph.D. thesis, University of Michigan,
+   2015.
+
+Hence the most basic building block in OpenMDAO is the `System` class.
+This class represents a system of equations that need to be solved together
+so that a single solution satisfies them all.
 
 A system of equations is specified by one or more parameters (input values) and
-one or more unknowns (output values). For example, a really simple system may
-contain only a single equation, such as:
+one or more unknowns (output values). For example, a really simple
+explicit system may contain only a single equation, such as:
+
+::
 
     y = x + 2
 
 For this system, *x* is the parameter (input variable) and *y* is the unknown
-(output variable). The `System` class has a *parameters* attribute and an *unknowns*
-attribute that store the lists of parameters and unknowns as vectors for efficient
-processing.
+(output variable). Implicit equations, where you vary a state value to drive
+a residual to 0, can also be part of systems. The above equation could be restated
+implicitly as:
 
-The equations themselves for a simple system like this are encapsulated in a
-member function of the `System` class called *solve_nonlinear*. Calling this
-user-provided function with the parameters and unknowns vectors should compute
-the unknown values for the given parameter values and put those values into
-the unknowns vector.
+::
+
+    R(y) = x + 2 - y = 0
+
+There is now a corresponding residual value for *y* as well.
+The `System` class has *parameters*, *unknowns*, and *residuals* attributes
+that store the lists of parameters and unknowns as vectors for efficient processing.
+
+.. Note::
+
+  Unknowns come in two flavors: *outputs* are computed by explicit equations.
+  *states* are unknowns that are varied to drive residuals to 0.
+
+
+The equations themselves are encapsulated in a member function of the `System`
+class called *solve_nonlinear*. For explicit equations *solve_nonlinear* will compute
+the unknown values for the given parameter values and put them into the unknown vector.
+For implicit relationships, *solve_nonlinear* find the correct values for the state
+variables that converge the residuals. A second function, *apply_nonlinear*,
+is used to compute the residual values for a given state value (it does not
+fully converge the system of equations). *apply_nonlinear* is not used if you
+have only explicit equations.
 
 There are a few other attributes and member functions in the `System` interface,
 mostly related to calculating derivatives and supporting more complex systems,
 but this is the essential base abstraction.
 
 There are two subclasses of `System` that are used to actually build a model
-of a system of equations.  They are the `Component` class and the `Group` class.
-
+They are the `Component` class and the `Group` class.
 
 Component
 ---------
 
-The `Component` class is used to instantiate a `System` by declaring the
-parameters and unknowns and the solve_nonlinear method. The user will extend
-the `Component` class to define a system of interest. In OpenMDAO, a
-`Component` is normally used to encapsulate a specific discipline or subset
-of a problem.
+The `Component` class is lowest level system in OpenMDAO. Child classes of
+`Component` are the only classes allowed to parameter, output, and state variables.
+By sub-classing `Component` and defining a *solve_nonlinear* (and
+*apply_nonlinear* if state variables are present), users can build their own
+models or implement wrappers for existing analysis codes.
 
-When defining a `Component`, the user must declare the parameter and unknown
-variables and define a *solve_nonlinear* function that calculates the
-values of the unknowns for a given set of parameter values.
-
-Variables are added to the system in the constructor (__init__ method) via the
+Variables are added to the class in the constructor (*__init__* method) via the
 *add_parameter*, *add_output* and *add_state* functions. For example:
 
 ::
@@ -67,42 +92,85 @@ Variables are added to the system in the constructor (__init__ method) via the
         def __init__(self):
             self.add_param('x', val=0.)
 
-            self.add_output('y', val=0.)
+            self.add_output('y', shape=1)
 
             self.add_state('z', val=[0., 1.])
 
-Note that unknowns come in two flavors: *outputs* that represent the explicit
-output values for the equations, and *states* which represent an internal state
-of the system. Initial values are required when adding variables to a system
-in order to specify the type and size/shape of the variable, needed to allocate
-space in the corresponding vectors.
+.. note::
+
+    Initial values (or shape and type) are required when adding variables to a system
+    in order to allocate the needed space in the vectors for data passing. If only
+    a shape is given, the type is assumed to be *Float*.
 
 The *solve_nonlinear* function takes three arguments: the parameters vector, the
 unknowns vector, and a residuals vector. This function will be called using the
-vector attributes of the containing `System`, so those vectors will contain entries
-for the variables declared in the constructor. For example:
+vector attributes of the containing `Component` instance, so those vectors will
+contain entries for the variables declared in the constructor. For example:
 
 ::
 
         def solve_nonlinear(self, params, unknowns, resids):
-            unknowns['y'] = params['x'] + 2
+            unknowns['y'] = params['x']**2 + 2
 
-The user may optionally provide a *jacobian* method that computes the derivatives
-of the unknowns with respect to the parameters. This function is needed when
-using a solver that makes use of analytic derivatives (this is discussed elsewhere
-in the documentation).
+When implicit equations are involved, the *apply_nonlinear* method must be implemented.
+This function is written to compute the residual values for whatever values of the parameters
+and state variables are given. The user must then decide how the implicit equations should
+be converged. There are two choices:
+
+  #. Use an OpenMDAO solver
+  #. Have the component converge itself
+
+We'll talk more about solvers in later docs, but if you go this route then you can
+stop at *apply_nonlinear*. But if you would like the a component with state variables to
+converge itself, you will also define the *solve_nonlinear* method.
+
+::
+
+  def apply_nonlinear(self, params, unknowns, resids):
+      resids['y'] = params['x']**2 + 2 - unknowns['y']
+
+  def solve_nonlinear(self, params, unknowns, resids):
+      """
+      Only used if the component is able to converge its
+      own residuals
+      """
+      while abs(resids['y']) > 1e-5:
+        self.apply_nonlinear(params, unknowns, resids)
+        unknowns['y'] += resids['y']
+
+
+Component Derivatives
+----------------------
+If you want to define analytic derivatives for your components, to help make your
+optimizations faster and more accurate, then your component will also define
+a *jacobian* method, that linearizes the non-linear equations and provides the
+partial derivatives (derivatives of unknowns w.r.t parameters for a single component)
+to the framework.
+
+::
+
+  def jacobian(self, params, unknowns, resids):
+      J = {}
+      J['y','x'] = 2*params['x']
+      J['y','y'] = 1
+
+.. note::
+
+  When you're providing derivatives for implicit equations, you give derivatives
+  of the residual with respect to the params and state variables: ('y','x') and
+  ('y','y')
 
 
 Group
 ------
+`Group` is used to build a complex model smaller sub-system building blocks, which may
+be instances of either `Component` or `Group`. So a `Group` it just a `System` composed
+of the equations from its children that are coupled together via data connections.
+Because groups can contain other groups, they form a natural hierarchy tree
+that defines the organizational structure of your model.
 
-A complex system may be modeled as a number of coupled subsystems, which may
-be represented as individual `Components` or groups of `Components`.  A `Group`
-is a subclass of `System` that used to encapsulate groupings of `Systems`.
-
-A `Group` is created simply by adding one or more `Systems`. Those `Systems`
-may be either `Components` or other `Groups`. For example, we can add a `Group`
-to another `Group` along with some `Components`:
+A `Group` is created simply by adding one or more `Systems`.
+For example, we can add a `Group` to another `Group` along with some `Components`:
 
 ::
 
@@ -111,18 +179,18 @@ to another `Group` along with some `Components`:
     c3 = MyComp()
 
     g1 = Group()
-    g1.add(c1)
-    g1.add(c2)
+    g1.add('comp1', c1)
+    g1.add('comp2', c2)
 
     g2 = Group()
-    g2.add(c3)
-    g2.add(g1)
+    g2.add('comp3', c3)
+    g2.add('sub_group_1', g1)
 
 Interdependencies between `Systems` in a `Group` are represented as connections
-between the `Group`'s subsystems.  Connections can be made in two ways: explicitly
+between the variables in the `Group`'s subsystems.  Connections can be made in two ways: explicitly
 or implicitly.
 
-An explicit connection is made from the output of one `System` to the input
+An explicit connection is made from the output (or state) of one `System` to the input
 (parameter) of another using the `Group` *connect* method, as follows:
 
 ::
@@ -133,13 +201,13 @@ Alternatively, you can use the *promotion* mechanism to implicitly connect two
 or more variables.  When a `System` is added to a `Group`, you may optionally
 specify a list of variable names that are to be *promoted* from the subsystem
 to the group level. This means that you can reference the variable as if it
-were an attribute of the `Group` rather than the subsystem.  For Example:
+were an variable of the `Group` rather than the subsystem.  For Example:
 
 ::
 
     g2.add(c3, promotes=['x'])
 
-Now you can access the parameter 'x' from 'c3' as if it were an attribute of
+Now you can access the parameter 'x' from 'c3' as if it were an variable of
 the group: 'g2.x'. If you promote multiple subsystem variables with the same
 name, then those variables will be implicitly connected:
 
@@ -150,27 +218,27 @@ name, then those variables will be implicitly connected:
 Now setting a value for 'g2.x' will set the value for both 'c3.x' and 'g1.c1.x'
 and they are said to be implicitly connected.  If you promote the output from
 one subsystem and the input of another with the same name, then that will have
-the same effect to the explicit connection statement as shown above.
+the same effect as the explicit connection statement as shown above.
 
-In contrast to a `Component`, which is reponsible for defining the variables
-and equations of a system, a `Group` has the responsibility of assembling
-multiple systems of equations into matrix form and solving them together.
-Where a `Component` must define a *solve_nonlinear* method, a `Group` provides
-a solver to solve the collection of `Components` as a whole. In fact, a `Group`
+In contrast to a `Component`, which is responsible for defining the variables
+and equations that map between them, a `Group` has the responsibility of assembling
+multiple systems of equations and solving them together. A `Group` uses
+a `Solver` to solve the collection of `Components` as a whole. In fact, a `Group`
 has two associated solvers: a linear solver and a non-linear solver.  The
 default linear solver is SciPy's GMres and the default non-linear solver is a
 simple `RunOnce` solver that will just call the solve_non_linear method on each
-system in the `Group` sequentially. A number of other solvers, both linear and
-non-linear, are available that can be substituted for the defaults for
-different use cases.
+system in the `Group` sequentially. A number of other iterative solvers, both linear and
+non-linear, are available that can be substituted for the defaults.
 
 
 Problem
 -------
 
 When a model has been fully developed as a `Group` with a collection of
-`Components` and sub-`Groups` it is time to actually solve the `System`.
-This is done by definining a `Problem` that contains the `System`.
+`Components` and sub-`Groups` it is time to actually do something with it
+(e.g. run an analysis, design of experiments, or optimization).
+This is done by defining a single top level object, a `Problem` instance,
+that contains your model.
 
 A `Problem` always has a single top-level `Group` called *root*.  This can
 be passed in the constructor or set later:
@@ -187,11 +255,9 @@ be passed in the constructor or set later:
 A `Problem` also has a driver, which "drives" or controls the solution of
 the `Problem`. The base `Driver` class in OpenMDAO is the simplest driver
 possible, which just calls *solve_nonlinear* on the *root* `Group`. This
-simple driver may be replaced with a different type of driver depending on the
-problem to be solved.  Specifically, drivers are provided to support optimization
-using the SciPy *minimize* family of local optimizers and the SNOPT optimization
-software package. Examples showing how to use these optimizers can be found
-elsewhere in the documentation.
+simple driver may be replaced with more interesting types like optimization,
+case iteration, and design of experiment drivers. Essentially, the `Driver`
+determines how the `Problem` will execute your model. 
 
 The `Driver` is invoked by calling the *run* method on the `Problem`. Prior
 to doing that, however, you must perform *setup*.  This function does all
