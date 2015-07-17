@@ -9,9 +9,7 @@ platform:
 environment:
   matrix:
     - PYTHON: 2.7
-      HDF5: h5py
     - PYTHON: 3.4
-      HDF5: h5py
 
 init:
   - "ECHO %PYTHON%"
