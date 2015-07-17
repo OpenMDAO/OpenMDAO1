@@ -1,7 +1,5 @@
 """ Class definition for UnitComp, a component that explicitly converts units."""
 
-import numpy as np
-
 from openmdao.core.component import Component
 
 
@@ -48,7 +46,7 @@ class UnitComp(Component):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`, optional
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
         unknowns[self.out_name] = params[self.param_name]
 

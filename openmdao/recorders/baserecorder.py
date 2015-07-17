@@ -1,9 +1,12 @@
-from fnmatch import fnmatch
+""" Class definition for BaseRecorder, the base class for all recorders."""
 
-from openmdao.core.options import OptionsDictionary
+from fnmatch import fnmatch
+import sys
+
 from six.moves import filter
 from six import StringIO
-import sys
+
+from openmdao.core.options import OptionsDictionary
 
 
 class BaseRecorder(object):
@@ -11,8 +14,10 @@ class BaseRecorder(object):
 
     def __init__(self):
         self.options = OptionsDictionary()
-        self.options.add_option('includes', ['*'], desc='Patterns for variables to include in recording')
-        self.options.add_option('excludes', [], desc='Patterns for variables to exclude from recording '
+        self.options.add_option('includes', ['*'],
+                                desc='Patterns for variables to include in recording')
+        self.options.add_option('excludes', [],
+                                desc='Patterns for variables to exclude from recording '
                                 '(processed after includes)')
 
         self.out = None
@@ -21,7 +26,13 @@ class BaseRecorder(object):
         # TODO: System specific includes/excludes
 
     def startup(self, group):
-        """ Prepare for new run. """
+        """ Prepare for a new run.
+
+        Args
+        ----
+        group : `Group`
+            Group that owns this recorder.
+        """
 
         # Compute the inclusion lists for recording
         params = list(filter(self._check_path, group.params))
@@ -57,7 +68,22 @@ class BaseRecorder(object):
 
         Recorder subclasses should override `record`, altering this function
         should not be necessary.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
+
         # Coord will look like ['Driver', (1,), 'root', (1,), 'G1', (1,1), ...]
         # So the pathname is every other entry, starting with the fifth.
         pathname = '.'.join(metadata['coord'][4::2])
@@ -68,6 +94,23 @@ class BaseRecorder(object):
         self.record(filtered_params, filtered_unknowns, filtered_resids, metadata)
 
     def record(self, params, unknowns, resids, metadata):
+        """ Records the requested variables. This method must be defined in
+        all recorders.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
         raise NotImplementedError("record")
 
     def close(self):

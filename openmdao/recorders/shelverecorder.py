@@ -1,5 +1,8 @@
+""" Class definition for HDF5Recorder, which uses the shelve format."""
+
 import shelve
 from collections import OrderedDict
+
 from openmdao.recorders.baserecorder import BaseRecorder
 from openmdao.util.recordutil import format_iteration_coordinate
 

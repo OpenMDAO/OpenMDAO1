@@ -75,7 +75,7 @@ class ExecComp(Component):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`, optional
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
         for expr in self._codes:
             exec(expr, _expr_dict, _UPDict(unknowns, params))
@@ -93,7 +93,7 @@ class ExecComp(Component):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
 
         Returns
         -------

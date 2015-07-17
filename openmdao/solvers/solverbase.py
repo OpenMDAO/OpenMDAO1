@@ -4,13 +4,10 @@ from __future__ import print_function
 
 from openmdao.core.options import OptionsDictionary
 
-#public symbols
-__all__ = ['LinearSolver', 'NonLinearSolver']
-
 
 class SolverBase(object):
     """ Common base class for Linear and Nonlinear solver. Should not be used
-    by users. Always inherit from one of the subclasses."""
+    by users. Always inherit from `LinearSolver` or `NonlinearSolver`."""
 
     def __init__(self):
         self.iter_count = 0
@@ -47,10 +44,10 @@ class SolverBase(object):
         msg: string, optional
             Message that indicates convergence.
 
-        ident: int
+        ident: int, optional
             Additional indentation levels for subiterations.
 
-        solver: string
+        solver: string, optional
             Solver type if not LN or NL (mostly for line search operations.)
         """
         name = metadata['name']

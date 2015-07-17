@@ -25,6 +25,9 @@ from six.moves.configparser import RawConfigParser as ConfigParser
 # pylint: disable=E0611, F0401
 from math import sin, cos, tan, floor, pi
 
+#public symbols
+__all__ = ['get_conversion_tuple', 'convert_units']
+
 
 #Class definitions
 

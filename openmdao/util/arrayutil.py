@@ -1,6 +1,7 @@
+""" Some useful array utilities. """
 
 from six.moves import range
-from numpy import ndarray, ones, zeros, cumsum
+#from numpy import ndarray, ones, zeros, cumsum
 from itertools import product
 
 #def to_slice(idxs):

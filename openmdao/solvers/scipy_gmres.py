@@ -2,12 +2,9 @@
 
 from __future__ import print_function
 
-# pylint: disable=E0611, F0401
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.devtools.debug import debug
 from openmdao.solvers.solverbase import LinearSolver
-#from openmdao.devtools.debug import debug
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
@@ -75,7 +72,6 @@ class ScipyGMRES(LinearSolver):
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
 
-            # TODO: Talk about warn/error logging
             if info > 0:
                 msg = "ERROR in solve in '%s': gmres failed to converge " \
                       "after %d iterations"
@@ -95,7 +91,17 @@ class ScipyGMRES(LinearSolver):
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
-        system."""
+        system.
+
+        Args
+        ----
+        arg : ndarray
+            Incoming vector
+
+        Returns
+        -------
+        ndarray : Matrix vector product of arg with jacobian
+        """
 
         system = self.system
         mode = self.mode

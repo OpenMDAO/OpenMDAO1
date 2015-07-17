@@ -1,8 +1,20 @@
+""" Sting utilities. """
 
 import ast
 
+#public symbols
+__all__ = ['get_common_ancestor', 'name_relative_to', 'parse_for_vars']
+
 def get_common_ancestor(name1, name2):
     """
+    Args
+    ----
+    name1 : str
+        Name of first system.
+
+    name2 : str
+        Name of second system.
+
     Returns
     -------
     str
@@ -22,7 +34,17 @@ def get_common_ancestor(name1, name2):
         return ''
 
 def name_relative_to(parent_abspath, child_abspath):
-    """
+    """ Determine the relative name of a child path with respect to a parent
+    system.
+
+    Args
+    ----
+    parent_abspath : str
+        Asbolute path of the parent.
+
+    child_abspath : str
+        Absolute path of the child.
+
     Returns
     -------
     str

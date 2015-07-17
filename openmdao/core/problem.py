@@ -10,7 +10,6 @@ from six import iteritems
 from six.moves import cStringIO
 import networkx as nx
 
-# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
@@ -318,16 +317,17 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.',1)[0] for t in self.root.connections.keys()])
-        conn_comps.update([s.rsplit('.',1)[0] for s in self.root.connections.values()])
+        conn_comps = set([t.rsplit('.', 1)[0] for t in self.root.connections.keys()])
+        conn_comps.update([s.rsplit('.', 1)[0] for s in self.root.connections.values()])
         noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
-                          if c.pathname not in conn_comps])
+                               if c.pathname not in conn_comps])
         if noconn_comps:
             print("\nThe following components have no connections:", file=out_stream)
             for comp in noconn_comps:
                 print(comp, file=out_stream)
 
     def _check_mpi(self, out_stream=sys.stdout):
+        """ Some simple MPI checks. """
         if under_mpirun():
             # Indicate that there are no parallel systems if user is running under MPI
             if MPI.COMM_WORLD.rank == 0:
@@ -350,7 +350,7 @@ class Problem(System):
                           grp.pathname, file=out_stream)
 
     def _check_graph(self, out_stream=sys.stdout):
-        # Cycles in group w/o solver
+        """ Check for cycles in group w/o solver. """
         cgraph = self.root._relevance._cgraph
         for grp in self.root.subgroups(recurse=True, include_self=True):
             path = [] if not grp.pathname else grp.pathname.split('.')
@@ -365,11 +365,11 @@ class Problem(System):
             nx.relabel_nodes(graph, renames, copy=False)
 
             # remove self loops created by renaming
-            graph.remove_edges_from([(u,v) for u,v in graph.edges()
-                                         if u==v])
+            graph.remove_edges_from([(u, v) for u, v in graph.edges()
+                                     if u == v])
 
             strong = [s for s in nx.strongly_connected_components(graph)
-                        if len(s)>1]
+                      if len(s) > 1]
 
             if strong and isinstance(grp.nl_solver, RunOnce): # no solver, cycles BAD
                 relstrong = []
@@ -379,7 +379,7 @@ class Problem(System):
                         relstrong[-1].append(name_relative_to(grp.pathname, s))
                         relstrong[-1] = sorted(relstrong[-1])
                 print("Group '%s' has the following cycles: %s" %
-                     (grp.pathname, relstrong), file=out_stream)
+                      (grp.pathname, relstrong), file=out_stream)
 
             # Components/Systems/Groups are not in the right execution order
             subnames = [s.pathname for s in grp.subsystems()]
@@ -390,20 +390,20 @@ class Problem(System):
                     if p in lsys:
                         graph.remove_edge(p, lsys[0])
                 strong = [s for s in nx.strongly_connected_components(graph)
-                            if len(s)>1]
+                          if len(s) > 1]
 
             visited = set()
             out_of_order = set()
             for sub in grp.subsystems():
                 visited.add(sub.pathname)
-                for u,v in nx.dfs_edges(graph, sub.pathname):
+                for u, v in nx.dfs_edges(graph, sub.pathname):
                     if v in visited:
                         out_of_order.add(v)
 
             if out_of_order:
                 print("In group '%s', the following subsystems are out-of-order: %s" %
                       (grp.pathname, sorted([name_relative_to(grp.pathname, n)
-                                                for n in out_of_order])), file=out_stream)
+                                             for n in out_of_order])), file=out_stream)
 
     def _check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
@@ -563,9 +563,9 @@ class Problem(System):
         ndarray or dict
             Jacobian of unknowns with respect to params.
         """
-        root     = self.root
+        root = self.root
         unknowns = root.unknowns
-        params   = root.params
+        params = root.params
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
 
@@ -621,8 +621,8 @@ class Problem(System):
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
-                    pi+=1
-                ui+=1
+                    pi += 1
+                ui += 1
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
@@ -752,7 +752,7 @@ class Problem(System):
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
-                in_size, in_idxs = duvec.get_local_idxs(voi, poi_indices)
+                _, in_idxs = duvec.get_local_idxs(voi, poi_indices)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -783,8 +783,8 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        out_size, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
-                                                                                  qoi_indices)
+                        _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
+                                                                           qoi_indices)
                         nk = len(out_idxs)
 
                         if return_format == 'dict':
@@ -872,7 +872,7 @@ class Problem(System):
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Figure out implicit states for this comp
-            states = [n for n,m in comp.unknowns.items() if m.get('state')]
+            states = [n for n, m in comp.unknowns.items() if m.get('state')]
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
@@ -1046,7 +1046,7 @@ class Problem(System):
 
             # Modes must match root for all subs
             if sub_mode not in (mode, 'auto'):
-                msg  = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
                         " Modes must match to use Matrix Matrix."
                 msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
                 raise RuntimeError(msg)
@@ -1183,7 +1183,7 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, skip_keys=[None], c_name='root'):
+                         out_stream, skip_keys=(None, ), c_name='root'):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""

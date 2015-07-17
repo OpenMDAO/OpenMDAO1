@@ -5,7 +5,6 @@ import re
 from collections import OrderedDict
 from six import iteritems
 
-# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.core.basicimpl import BasicImpl
@@ -263,7 +262,7 @@ class Component(System):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
 
         # Since explicit comps don't put anything in resids, we can use it to
@@ -291,7 +290,7 @@ class Component(System):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`, optional
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
         """
         raise NotImplementedError("solve_nonlinear")
 
@@ -310,7 +309,7 @@ class Component(System):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
 
         Returns
         -------

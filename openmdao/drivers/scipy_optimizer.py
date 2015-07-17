@@ -4,7 +4,6 @@ OpenMDAO Wrapper for the scipy.optimize.minimize family of local optimizers.
 
 from __future__ import print_function
 
-# pylint: disable=E0611,F0401
 import numpy as np
 from scipy.optimize import minimize
 
@@ -65,7 +64,7 @@ class ScipyOptimizer(Driver):
         self.objs = None
 
     def run(self, problem):
-        """Optimize the problem using our choice of Scipy optimizer.
+        """Optimize the problem using your choice of Scipy optimizer.
 
         Args
         ----
@@ -221,10 +220,10 @@ class ScipyOptimizer(Driver):
         x_new : ndarray
             Array containing parameter values at new design point.
 
-        name: string
+        name : string
             Name of the constraint to be evaluated.
 
-        idx: float
+        idx : float
             Contains index into the constraint array.
 
         Returns
@@ -279,10 +278,10 @@ class ScipyOptimizer(Driver):
         x_new : ndarray
             Array containing parameter values at new design point.
 
-        name: string
+        name : string
             Name of the constraint to be evaluated.
 
-        idx: float
+        idx : float
             Contains index into the constraint array.
 
         Returns
