@@ -32,6 +32,7 @@ class TestNLGaussSeidel(unittest.TestCase):
         prob.root.nl_solver = NLGaussSeidel()
         prob.root.nl_solver.options['atol'] = 1e-9
         prob.root.mda.nl_solver.options['atol'] = 1e-3
+        prob.root.nl_solver.options['iprint'] = 1 # so that print_norm is in coverage
 
         prob.setup(check=False)
         prob.run()

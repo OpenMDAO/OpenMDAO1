@@ -131,8 +131,8 @@ class TestDriver(unittest.TestCase):
         root = prob.root = Group()
         driver = prob.driver = ScaleAddDriver()
 
-        root.add('p1', ParamComp('x', val=60000.0), promotes=['*'])
-        root.add('p2', ParamComp('y', val=60000.0), promotes=['*'])
+        root.add('p1', ParamComp([('x',60000.0,{'desc':'my x'}),
+                                  ('y',60000.0,{'desc':'my y'})]), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
 

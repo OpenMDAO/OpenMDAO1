@@ -53,7 +53,7 @@ def build_directory(dct, force=False, topdir='.'):
 
 
 def find_files(start, match=None, exclude=None,
-               showdirs=False, dirmatch=None, direxclude=None):
+               dirmatch=None, direxclude=None):
     """Return filenames (using a generator).
 
     Walks all subdirectories below each specified starting directory,
@@ -74,9 +74,6 @@ def find_files(start, match=None, exclude=None,
         or a predicate function that returns True to exclude.
         This is used to exclude files only.
 
-    showdirs : bool
-        If True, return names of files AND directories.
-
     dirmatch : str or predicate funct
         Either a string containing a glob pattern to match
         or a predicate function that returns True on a match.
@@ -92,7 +89,7 @@ def find_files(start, match=None, exclude=None,
     if len(startdirs) == 0:
         return iter([])
 
-    gen = _file_dir_gen if showdirs else _file_gen
+    gen = _file_gen
     if match is None:
         matcher = bool
     elif isinstance(match, string_types):
@@ -156,26 +153,6 @@ def find_up(name, path=None):
                 return None
     return None
 
-
-def onerror(func, path, exc_info):
-    """
-    Error handler for ``shutil.rmtree``.
-
-    If the error is due to an access error (read only file),
-    it attempts to add write permission and then retries.
-
-    If the error is for another reason, it re-raises the error.
-
-    Usage : ``shutil.rmtree(path, onerror=onerror)``
-    """
-    if not os.access(path, os.W_OK):
-        # Is the error an access error ?
-        os.chmod(path, stat.S_IWUSR)
-        func(path)
-    else:
-        raise
-
-
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
     file and directory filtering.
@@ -200,34 +177,4 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
                 dirlist[:] = newdl # replace contents of dirlist to cause pruning
 
         for name in [f for f in filelist if fmatch(f)]:
-            yield join(path, name)
-
-
-def _file_dir_gen(dname, fmatch=bool, dmatch=None):
-    """A generator returning files and directories under
-    the given directory, with optional file and directory filtering.
-
-    Args
-    ----
-    fmatch : predicate funct
-        A predicate function that returns True on a match.
-        This is used to match files only.
-
-    dmatch : predicate funct
-        A predicate function that returns True on a match.
-        This is used to match directories only.
-    """
-    if dmatch is not None and not dmatch(dname):
-        return
-
-    for path, dirlist, filelist in os.walk(dname):
-        if dmatch is not None: # prune directories to search
-            newdl = [d for d in dirlist if dmatch(d)]
-            if len(newdl) != len(dirlist):
-                dirlist[:] = newdl # replace contents of dirlist to cause pruning
-
-        for name in [f for f in filelist if fmatch(f)]:
-            yield join(path, name)
-
-        for name in dirlist:
             yield join(path, name)

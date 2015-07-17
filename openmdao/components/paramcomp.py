@@ -1,6 +1,7 @@
 """ OpenMDAO class definition for ParamComp"""
 
 import collections
+from six import string_types
 
 from openmdao.core.component import Component
 
@@ -11,17 +12,35 @@ class ParamComp(Component):
     def __init__(self, name, val=None, **kwargs):
         super(ParamComp, self).__init__()
 
-        if isinstance(name, str):
+        if isinstance(name, string_types):
             if val is None:
-                raise ValueError('a value must be provided as the second argument to init')
+                raise ValueError('ParamComp init: a value must be provided as the second arg.')
             self.add_output(name, val, **kwargs)
 
         elif isinstance(name, collections.Iterable):
-            for n, v, kw in name:
+            for tup in name:
+                badtup = None
+                if isinstance(tup, tuple):
+                    if len(tup) == 3:
+                        n, v, kw = tup
+                    elif len(tup) == 2:
+                        n, v = tup
+                        kw = {}
+                    else:
+                        badtup = tup
+                else:
+                    badtup = tup
+                if badtup:
+                    if isinstance(badtup, string_types):
+                        badtup = name
+                    raise ValueError("ParamComp init: arg %s must be a tuple of the form "
+                                     "(name, value) or (name, value, keyword_dict)." %
+                                     str(badtup))
                 self.add_output(n, v, **kw)
         else:
-            msg = "first argument to the init must be either of type `str` or an iterable"
-            raise ValueError(msg)
+            raise ValueError("first argument to ParamComp init must be either of type "
+                             "`str` or an iterable of tuples of the form (name, value) or "
+                             "(name, value, keyword_dict).")
 
     def apply_linear(self, mode, ls_inputs=None, vois=(None, )):
         """For `ParamComp`, just pass on the incoming values.
