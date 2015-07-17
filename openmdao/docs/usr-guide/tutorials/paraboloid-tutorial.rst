@@ -109,8 +109,9 @@ using explicit outputs.
 This code defines the input parameters of the Component, `x` and `y`, and
 initializes them to 0.0. These will be design variables which could used to
 minimize the output when doing optimization. It also defines the explicit
-output, `f_xy`, but only gives it a shape. Shape can be scalar (e.g. 1, 2, 3)
-indicating the length of the 1-D array, or it can be a tuple for n-d arrays.
+output, `f_xy`, but only gives it a shape. If shape is 1, the value is
+initialized to *0.0*, a scalar.  If shape is any other value, the value
+of the variable is initialized to *numpy.zeros(shape, dtype=float)*.
 
 ::
 
