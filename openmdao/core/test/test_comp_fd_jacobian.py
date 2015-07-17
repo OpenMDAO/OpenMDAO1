@@ -16,8 +16,8 @@ from openmdao.core.vecwrapper import SrcVecWrapper
 from openmdao.components.paramcomp import ParamComp
 from openmdao.components.execcomp import ExecComp
 from openmdao.test.simplecomps import SimpleArrayComp, \
-                                      SimpleImplicitComp, \
-                                      Paraboloid
+                                      SimpleImplicitComp
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.testutil import assert_equal_jacobian, assert_rel_error
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.constraint import ConstraintComp
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
@@ -20,9 +20,7 @@ class Paraboloid(Component):
         self.add_output('f_xy', val=0.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-        Optimal solution (minimum): x = 6.6667; y = -7.3333
-        """
+        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3"""
 
         x = params['x']
         y = params['y']
@@ -51,7 +49,7 @@ if __name__ == "__main__":
     root.add('p', Paraboloid())
 
     # Constraint Equation
-    root.add('con', ExecComp('c = 15.0 - x + y'))
+    root.add('con', ConstraintComp('x-y > 15.0', out='c'))
 
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
@@ -74,3 +72,4 @@ if __name__ == "__main__":
 
     # Expected Output
     # Minimum of -27.083333 found at (7.166667, -7.833333)
+
