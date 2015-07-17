@@ -158,6 +158,100 @@ Aside from the name change, the other big difference here is that the
 variables are no longer attributes of our component.  Our inputs now live
 in the *params* object and our outputs are found in the *unknowns* object.
 
+--------------------
+Defining Derivatives
+--------------------
+
+In old OpenMDAO, we specified a Jacobian as a monolithic dense ndarray in the
+*linearize* method.
+
+::
+
+    def linearize(self):
+        J = numpy.array([2.0])
+        return J
+
+In new OpenMDAO, the jacobian is instead stored in a dictionary whose keys
+are (output, input) tuples.
+
+::
+
+    def jacobian(self, params, unknowns, resids):
+        J = {}
+        J[('y', 'x')] = numpy.array([2.0])
+        return J
+
+This is a much more convenient manner for specifying the derivatives,
+especially for large numbers of variables.
+
+Also, there is no longer any need for the *list_deriv_vars* function.
+
+If your component does not have derivatives, you *must* set it up to be
+finite-differenced. Old OpenMDAO handled this automatically, but you need to
+manually force the finite difference by:
+
+::
+
+    self.fd_options['force_fd'] = True
+
+Here, self is the component instance. You can set any `Component` or `Group`
+to be finite differenced by setting this option to True.
+
+--------------
+Variable Trees
+--------------
+
+Vartrees are supported in new OpenMDAO, but they are much simpler now.
+However, they currently lack some of the features that will make them much
+more useful once they have been implemented. For now, we will show you the
+differences in how they are declared.
+
+For Old OpenMDAO:
+
+::
+
+    from openmdao.main.api import Component, VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
+
+    class FlightCondition(VariableTree):
+        """Container of variables"""
+
+        airspeed = Float(120.0, units='nmi/h')
+        angle_of_attack = Float(0.0, units='deg')
+        sideslip_angle = Float(0.0, units='deg')
+
+
+    class AircraftSim(Component):
+        """This component contains variables in a VariableTree"""
+
+        # create VarTrees to handle updates to our FlightCondition attributes
+        fcc1 = VarTree(FlightCondition(), iotype='in')
+        fcc2 = VarTree(FlightCondition(), iotype='out')
+
+
+And for new OpenMDAO:
+
+::
+
+    from openmdao.core.component import Component
+
+    class AircraftSim(Component):
+        def __init__(self):
+
+            self.add_param('fcc1:airspeed', 120.0, units='nmi/h')
+            self.add_param('fcc1:angle_of_attack', 0.0, units='deg')
+            self.add_param('fcc1:sideslip_angle', 0.0, units='deg')
+
+            self.add_output('fcc2:airspeed', 120.0, units='nmi/h')
+            self.add_output('fcc2:angle_of_attack', 0.0, units='deg')
+            self.add_output('fcc2:sideslip_angle', 0.0, units='deg')
+
+the main difference here is that a ":" is used to signify a hierarchyical
+tree-like data structure in the variables. Each individual leaf behaves like
+any other variable. We will soon implement some methods that let you operate
+on branches or trees, but for now, there is no difference.
+
+
 -------------------------
 Full Component Definition
 -------------------------
@@ -177,6 +271,12 @@ component definition for old OpenMDAO:
         def execute(self):
             self.y = self.x * 2.0
 
+        def list_deriv_vars(self):
+            return ('x', ), ('y',
+            )
+        def linearize(self):
+            J = numpy.array([2.0])
+            return J
 
 And for new OpenMDAO:
 
@@ -192,6 +292,10 @@ And for new OpenMDAO:
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y'] = params['x'] * 2.0
 
+        def jacobian(self, params, unknowns, resids):
+            J = {}
+            J[('y', 'x')] = numpy.array([2.0])
+            return J
 
 To summarize the differences in Component definition:
 
@@ -333,10 +437,12 @@ Drivers and Solvers
 
 In old OpenMDAO, every Assembly has a Driver, and a Driver can be an optimizer
 **or** a Solver, as well as some other iterative executive like a DOEDriver, etc.
-In new OpenMDAO, a Solver is **not** a Driver, and only the Problem object can
-have a Driver.  Every Group has a nonlinear solver and a linear solver.  The
-default nonlinear solver is RunOnce, which just runs solve_nonlinear once
-on each of its children.  The default linear solver is ScipyGMRES.
+
+In new OpenMDAO, a Solver is **not** a Driver, and only the Problem object
+can have a Driver. Every Group has a nonlinear solver and a linear solver.
+The default nonlinear solver is RunOnce, which just runs solve_nonlinear once
+on each of its children. The default linear solver is ScipyGMRES, just as it
+was in old OpenMDAO.
 
 ---------------
 Execution Order
