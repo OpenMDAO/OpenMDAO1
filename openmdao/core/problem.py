@@ -413,6 +413,9 @@ class Problem(System):
         out_stream : a file-like object, optional
             Stream where report will be written.
         """
+        print("##############################################", file=out_stream)
+        print("Setup: Checking for potential issues...", file=out_stream)
+
         self._check_dangling_params(out_stream)
         self._check_mode(out_stream)
         self._list_unit_conversions(out_stream)
@@ -433,6 +436,9 @@ class Problem(System):
             content = stream.getvalue()
             if content:
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
+
+        print("\nSetup: Check complete.", file=out_stream)
+        print("##############################################\n", file=out_stream)
 
     def run(self):
         """ Runs the Driver in self.driver. """

@@ -232,7 +232,7 @@ class TestDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             prob.driver.add_constraint('con1', ctype='eq')
 
-        self.assertEquals(str(cm.exception), "Driver does not support equality constraint 'con1'.")
+        self.assertEqual(str(cm.exception), "Driver does not support equality constraint 'con1'.")
 
         # Don't try this at home, kids
         prob.driver.supports['Inequality Constraints'] = False
@@ -240,7 +240,7 @@ class TestDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             prob.driver.add_constraint('con1', ctype='ineq')
 
-        self.assertEquals(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
+        self.assertEqual(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
 
 if __name__ == "__main__":
     unittest.main()

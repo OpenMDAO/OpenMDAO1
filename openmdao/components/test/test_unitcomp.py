@@ -14,8 +14,8 @@ class TestUnitComp(unittest.TestCase):
 
         params, unknowns = u_comp._setup_variables()
 
-        self.assertEquals(['x'], list(params.keys()))
-        self.assertEquals(['x_out'], list(unknowns.keys()))
+        self.assertEqual(['x'], list(params.keys()))
+        self.assertEqual(['x_out'], list(unknowns.keys()))
 
     def test_invalid_unit(self):
         prob = Problem()
