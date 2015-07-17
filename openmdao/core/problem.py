@@ -2,13 +2,11 @@
 
 from __future__ import print_function
 
-import os
 import sys
-import warnings
 import json
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, string_types
+from six import iteritems
 from six.moves import cStringIO
 import networkx as nx
 
@@ -17,18 +15,17 @@ import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
-from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.group import Group
 from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.checks import check_connections
-from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.mpiwrap import MPI, FakeComm, under_mpirun
 from openmdao.core.relevance import Relevance
 from openmdao.solvers.run_once import RunOnce
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor, name_relative_to
-from openmdao.devtools.debug import debug
+#from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -109,8 +106,8 @@ class Problem(System):
         for tgt, srcs in connections.items():
             for src in srcs:
                 if src in params_dict:
-                    input_sets.setdefault(src, set()).update((tgt,src))
-                    input_sets.setdefault(tgt, set()).update((tgt,src))
+                    input_sets.setdefault(src, set()).update((tgt, src))
+                    input_sets.setdefault(tgt, set()).update((tgt, src))
 
         # find any promoted but not connected inputs
         for p, meta in params_dict.items():
@@ -123,7 +120,7 @@ class Problem(System):
                 for s in srcs:
                     if s in unknowns_dict:
                         for t in input_sets[tgt]:
-                            if s not in connections.get(t,()):
+                            if s not in connections.get(t, ()):
                                 connections.setdefault(t, []).append(s)
 
         newconns = {}
@@ -139,7 +136,7 @@ class Problem(System):
         connections = newconns
 
         self._dangling = {}
-        prom_unknowns = { m['promoted_name'] for m in unknowns_dict.values() }
+        prom_unknowns = {m['promoted_name'] for m in unknowns_dict.values()}
         for p, meta in params_dict.items():
             if meta['pathname'] not in connections:
                 if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
@@ -269,10 +266,11 @@ class Problem(System):
             self._check_setup(out_stream)
 
     def _check_dangling_params(self, out_stream=sys.stdout):
-        # check for parameters that are not connected to a source/unknown.
-        # this includes ALL dangling params, both promoted and unpromoted.
-        dangling_params = [p for p in self.root._params_dict
-                              if p not in self.root.connections]
+        """ Check for parameters that are not connected to a source/unknown.
+        this includes ALL dangling params, both promoted and unpromoted.
+        """
+        dangling_params = [p for p in self.root._params_dict \
+                           if p not in self.root.connections]
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
                   file=out_stream)
@@ -280,7 +278,7 @@ class Problem(System):
                 print(d, file=out_stream)
 
     def _check_mode(self, out_stream=sys.stdout):
-        # Adjoint vs Forward mode appropriateness
+        """ Adjoint vs Forward mode appropriateness """
         if self._calculated_mode != self.root._relevance.mode:
             print("\nSpecified derivative mode is '%s', but calculated mode is '%s'\n(based "
                   "on param size of %d and unknown size of %d)" % (self.root._relevance.mode,
@@ -290,25 +288,29 @@ class Problem(System):
                   file=out_stream)
 
     def _list_unit_conversions(self, out_stream=sys.stdout):
-        # list all unit conversions being made (including only units on one side)
+        """ List all unit conversions being made (including only units on one
+        side)"""
         if self._unit_diffs:
             print("\nUnit Conversions")
-            for (src,tgt), (sunit,tunit) in sorted(self._unit_diffs.items()):
-                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit), file=out_stream)
+            for (src, tgt), (sunit, tunit) in sorted(self._unit_diffs.items()):
+                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
+                      file=out_stream)
 
     def _check_no_unknown_comps(self, out_stream=sys.stdout):
-        # Components without unknowns
-        nocomps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
-                     if len(c.unknowns) == 0])
+        """ Check for components without unknowns. """
+        nocomps = sorted([c.pathname for c in self.root.components(recurse=True,
+                                                                   local=True) \
+                          if len(c.unknowns) == 0])
         if nocomps:
             print("\nThe following components have no unknowns:", file=out_stream)
             for n in nocomps:
                 print(n, file=out_stream)
 
     def _check_no_recorders(self, out_stream=sys.stdout):
-        # No case recorder
+        """ Check for no case recorder. """
         if not self.driver.recorders:
-            for grp in self.root.subgroups(recurse=True, local=True, include_self=True):
+            for grp in self.root.subgroups(recurse=True, local=True,
+                                           include_self=True):
                 if grp.nl_solver.recorders or grp.ln_solver.recorders:
                     break
             else:
@@ -316,7 +318,7 @@ class Problem(System):
                       file=out_stream)
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
-        # Unconnected components
+        """ Check for unconnected components. """
         conn_comps = set([t.rsplit('.',1)[0] for t in self.root.connections.keys()])
         conn_comps.update([s.rsplit('.',1)[0] for s in self.root.connections.values()])
         noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
@@ -496,11 +498,11 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings, optional
+        param_list : list of strings
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings, optional
+        unknown_list : list of strings
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
@@ -540,15 +542,15 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings, optional
+        param_list : list of strings
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings, optional
+        unknown_list : list of strings
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string, optional
+        return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
 
         Returns
@@ -624,18 +626,18 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings, optional
+        param_list : list of strings
             List of parameter name strings with respect to which derivatives
             are desired. All params must have a paramcomp.
 
-        unknown_list : list of strings, optional
+        unknown_list : list of strings
             List of output or state name strings for derivatives to be
             calculated. All must be valid unknowns in OpenMDAO.
 
-        return_format : string, optional
+        return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
 
-        mode : string, optional
+        mode : string
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
             Default is 'auto', which uses mode specified on the linear solver
             in root.
@@ -1015,6 +1017,7 @@ class Problem(System):
         return data
 
     def _start_recorders(self):
+        """ Prepare recorders for recording."""
         for recorder in self.driver.recorders:
             recorder.startup(self.root)
 
@@ -1048,6 +1051,13 @@ class Problem(System):
         return mode
 
     def json_system_tree(self):
+        """ Returns a json representation of the system hierarchy for the
+        model in root.
+
+        Returns
+        -------
+        json string
+        """
 
         def _tree_dict(system):
             dct = OrderedDict()
@@ -1068,6 +1078,14 @@ class Problem(System):
         return json.dumps(tree)
 
     def json_dependencies(self):
+        """ Returns a json representation of the data dependency graph for
+        the model in root..
+
+        Returns
+        -------
+        A json string with a dependency matrix and a list of variable
+        name labels.
+        """
         return self.root._relevance.json_dependencies()
 
 

@@ -6,7 +6,8 @@ from itertools import chain
 import numpy as np
 
 from openmdao.core.options import OptionsDictionary
-from openmdao.util.recordutil import create_local_meta, update_local_meta
+from openmdao.util.recordutil import create_local_meta, \
+                                     update_local_meta
 
 
 class Driver(object):
@@ -91,7 +92,7 @@ class Driver(object):
                     break
                 if v in voi_set:
                     vois.append(tuple([x for x in voi_set
-                                         if x in voi_list]))
+                                       if x in voi_list]))
                     done_sets.add(voi_set)
                     break
             else:
@@ -131,18 +132,25 @@ class Driver(object):
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
-                    raise RuntimeError("'%s' cannot be added to VOI set "
-                                       "%s because it already "
-                                       "exists in VOI set: %s" %
-                                         (vname, tuple(vnames), grp))
+                    msg = "'%s' cannot be added to VOI set %s because it " + \
+                          "already exists in VOI set: %s"
+                    raise RuntimeError(msg % (vname, tuple(vnames), grp))
         param_intsect = set(vnames).intersection(self._params.keys())
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
-                                 (vnames, list(param_intsect),
-                                 list(set(vnames).difference(param_intsect))))
+                               (vnames, list(param_intsect),
+                                list(set(vnames).difference(param_intsect))))
         self._voi_sets.append(tuple(vnames))
 
     def add_recorder(self, recorder):
+        """
+        Adds a recorder to the driver.
+
+        Args
+        ----
+        recorder : BaseRecorder
+           A recorder instance.
+        """
         self.recorders.append(recorder)
 
     def add_param(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
@@ -164,11 +172,11 @@ class Driver(object):
             If a param is an array, these indicate which entries are of
             interest for derivatives.
 
-        adder: float or ndarray, optional
+        adder : float or ndarray, optional
             Value to add to the model value to get the scaled value. Adder
             is first in precedence.
 
-        scaler: float or ndarray, optional
+        scaler : float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
@@ -270,11 +278,11 @@ class Driver(object):
             If an objective is an array, these indicate which entries are of
             interest for derivatives.
 
-        adder: float or ndarray, optional
+        adder : float or ndarray, optional
             Value to add to the model value to get the scaled value. Adder
             is first in precedence.
 
-        scaler: float or ndarray, optional
+        scaler : float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
@@ -352,25 +360,26 @@ class Driver(object):
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the params of
             this driver, as indicated by the dictionary keys. Default is None
-            to let OpenMDAO calculate all derivatives.
+            to let OpenMDAO calculate all derivatives. Note, this is currently
+            unsupported
 
         indices : iter of int, optional
             If a constraint is an array, these indicate which entries are of
             interest for derivatives.
 
-        adder: float or ndarray, optional
+        adder : float or ndarray, optional
             Value to add to the model value to get the scaled value. Adder
             is first in precedence.
 
-        scaler: float or ndarray, optional
+        scaler : float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
 
-        if ctype=='eq' and self.supports['Equality Constraints'] is False:
+        if ctype == 'eq' and self.supports['Equality Constraints'] is False:
             msg = "Driver does not support equality constraint '{}'."
             raise RuntimeError(msg.format(name))
-        if ctype=='ineq' and self.supports['Inequality Constraints'] is False:
+        if ctype == 'ineq' and self.supports['Inequality Constraints'] is False:
             msg = "Driver does not support inequality constraint '{}'."
             raise RuntimeError(msg.format(name))
 
@@ -384,11 +393,12 @@ class Driver(object):
         con['ctype'] = ctype
         con['adder'] = adder
         con['scaler'] = scaler
+        con['jacs'] = jacs
         if indices:
             con['indices'] = indices
         self._cons[name] = con
 
-    def get_constraints(self, ctype='all', lintype='all', return_type='dict'):
+    def get_constraints(self, ctype='all', lintype='all'):
         """ Gets all constraints for this driver.
 
         Args
@@ -401,33 +411,26 @@ class Driver(object):
             Default is 'all'. Optionally return just the linear constraints
             with 'linear' or the nonlinear constraints with 'nonlinear'.
 
-        return_type : string
-            Set to 'dict' to return a dictionary, or set to 'array' to return a
-            flat ndarray.
-
         Returns
         -------
-        dict (for return_type 'dict')
+        dict
             Key is the constraint name string, value is an ndarray with the values.
-
-        ndarray (for return_type 'array')
-            Array containing all constraint values in the order they were added.
         """
         uvec = self.root.unknowns
         cons = OrderedDict()
 
         for key, meta in self._cons.items():
 
-            if lintype=='linear' and meta['linear']==False:
+            if lintype == 'linear' and meta['linear'] == False:
                 continue
 
-            if lintype=='nonlinear' and meta['linear']==True:
+            if lintype == 'nonlinear' and meta['linear'] == True:
                 continue
 
-            if ctype=='eq' and meta['ctype']=='ineq':
+            if ctype == 'eq' and meta['ctype'] == 'ineq':
                 continue
 
-            if ctype=='ineq' and meta['ctype']=='eq':
+            if ctype == 'ineq' and meta['ctype'] == 'eq':
                 continue
 
             scaler = meta['scaler']
