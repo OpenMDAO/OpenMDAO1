@@ -1,10 +1,12 @@
 Paraboloid Tutorial
 -------------------
 
-This tutorial will take you through code needed to create a Component class
-based on the equation of a paraboloid and run it.
+This tutorial will show you how to set up a simple optimization of a paraboloid.
+You'll create a paraboloid `Component` (with analytic derivatives), then put it
+into a `Problem` and setup an optimizer `Driver` to minimize an objective function.
 
-Here is the code that defines this Component and then runs it.
+Here is the code that defines this the paraboloid and then runs it. You can copy
+this code into a file, and run it directly.
 
 .. testcode:: parab
 
@@ -67,6 +69,9 @@ Here is the code that defines this Component and then runs it.
 
 Now we will go through each section and explain how this code works.
 
+Building the component
+=========================
+
 ::
 
     from __future__ import print_function
@@ -83,9 +88,10 @@ you are running in 3.
 
     class Paraboloid(Component):
 
-OpenMDAO provides a base class `Component` system. We will use that to create
-the `Paraboloid` component. `Components` can declare variables and they
-operate on their parameters to produce unknowns, which can be explicit
+OpenMDAO provides a base class `Component` which you should inherit from to build
+your own components and wrappers for analysis codes. `Components` can declare
+three kinds of variables, *parameters*, *outputs* and *states*. A `Component`
+operates on its parameters to compute unknowns, which can be explicit
 outputs or implicit states. For the `Paraboloid` Component, we will only be
 using explicit outputs.
 
@@ -97,14 +103,14 @@ using explicit outputs.
             self.add_param('x', val=0.0)
             self.add_param('y', val=0.0)
 
-            self.add_output('f_xy', val=0.0)
+            self.add_output('f_xy', shape=1)
 
 
 This code defines the input parameters of the Component, `x` and `y`, and
-initializes them to 0.0. These could be design variables which could used to
-minimize the output when doing optimization, for example.
-
-It also defines the explicit output, `f_xy` and initializes it to 0.0.
+initializes them to 0.0. These will be design variables which could used to
+minimize the output when doing optimization. It also defines the explicit
+output, `f_xy`, but only gives it a shape. Shape can be scalar (e.g. 1, 2, 3)
+indicating the length of the 1-D array, or it can be a tuple for n-d arrays.
 
 ::
 
@@ -119,13 +125,9 @@ It also defines the explicit output, `f_xy` and initializes it to 0.0.
             unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
 The `solve_nonlinear` method is responsible for calculating outputs for a
-given set of parameters. The parameters are given in the `params` variable
-that is passed in to this method. You can access the values of the parameters
-in this variable as if it was a Python dictionary.
-
-Similarly, the outputs are assigned values using the `unknowns` variable that
-is passed in. The output variables are accessed as if `unknowns` was a
-dictionary.
+given set of parameters. The parameters are given in the `params` dictionary
+that is passed in to this method. Similarly, the outputs are assigned values
+using the `unknowns` dictionary that is passed in.
 
 ::
 
@@ -140,14 +142,18 @@ dictionary.
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-The `jacobian` method is used to compute analytic values for Jacobian of this
-Component. The returned value, in this case `J`, should be a dictionary whose
-keys are tuples of the form (‘unknown’, ‘param’) and whose values are
-ndarrays or scalars. Just like for `solve_nonlinear`, the values for the
-parameters are accessed using dictionary style addressing.
+The `jacobian` method is used to compute analytic partial derivatives of this
+unknowns with respect to params (partial derivatives in OpenMDAO context refer to
+derivatives for a single component by itself). The returned value, in this case `J`,
+should be a dictionary whose keys are tuples of the form (‘unknown’, ‘param’) and
+whose values are n-d arrays or scalars. Just like for `solve_nonlinear`, the values for the
+parameters are accessed using dictionary arguments to the function.
 
 The definition of the Paraboloid Component class is now complete. We will now
 make use of this class to run a model.
+
+Setting up the model
+=========================
 
 ::
 
@@ -160,20 +166,20 @@ An instance of an OpenMDAO `Problem` is always the top object for running an
 model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a
 `System` that contains other `Components` or `Groups`.
 
-This code instantiates a `Problem` object, sets the root to be an empty `Group`.
+This code instantiates a `Problem` object and sets the root to be an empty `Group`.
 
 ::
 
     root.add('p1', ParamComp('x', 3.0))
     root.add('p2', ParamComp('y', -4.0))
 
-Now it is time to add components to the empty group. At present, they must be
+Now it is time to add components to the empty group. They must be
 added in execution order, so we need to start with the parameters. `ParamComp`
-is a `Component` that provides the source for a variable which we can assign
-as a parameter for a driver.
+is a `Component` that provides the source for a variable which we can later give
+to a `Driver` as a design variable to control.
 
-So here, we created two `ParamComps`, one for each param on the `Paraboloid`
-component, and gave them names and added them to the root `Group`. The `add`
+We created two `ParamComps` (one for each param on the `Paraboloid`
+component), gave them names, and added them to the root `Group`. The `add`
 method takes a name as the first argument, and a `Component` instance as the
 second argument.
 
@@ -301,9 +307,8 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         print('\n')
         print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
-So we have set our driver to be the `ScipyOptimizer`. Every driver has an
-`options` dictionary which contains important settings for the driver. The
-"optimizer" setting tells `ScipyOptimizer` which optimizer to use, so here we
+Every driver has an `options` dictionary which contains important settings for the driver.
+These settings tells `ScipyOptimizer` which optimization method to use, so here we
 select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 'tol' and a maximum number of iterations 'maxiter.'
 
@@ -348,7 +353,7 @@ First, we need to add one more import to the beginning of our model.
 
     from openmdao.components.execcomp import ExecComp
 
-In OpenMDAO, we cannot implement and inequality, so we need to turn the
+In OpenMDAO, we cannot (yet) implement an inequality, so we need to turn the
 constraint equation into an equality. With a little rearrangement, x - y > 15
 becomes c = 15 - x + y. When c is less than 0, the original inequality is
 satisfied. Likewise, when c is greater than zero, the inequality is violated.
@@ -388,7 +393,7 @@ constraint that points to an `unknown` in your model.
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
 Here, we added a component named 'con' to represent our constraint equation.
-We use a new component called `ExecComp`. This component takes an equation
+We use a new component called `ExecComp`. This utility component takes an equation
 string expression as input, and parses that string to create a component with
 the specified inputs and outputs. So for our expression here, 'con' is
 created with inputs 'x' and 'y' and output 'c'. The `solve_nonlinear` and
@@ -400,7 +405,8 @@ output from the constraint component, which is 'con.c'. The default mode
 behavior for `add_constraint` is to add a nonlinear constraint like the one
 in our problem. You can also add a linear constraint, provided that your
 optimizer supports it (SLSQP does), by setting the ctype call attribute to
-'lin'. There will be further examples that show this.
+'lin'.
+
 
 So now, putting it all together, we can run the model and get this:
 
