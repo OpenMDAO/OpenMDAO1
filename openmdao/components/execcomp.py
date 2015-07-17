@@ -1,9 +1,10 @@
+""" Class definition for ExecComp, a component that evaluates an expression."""
+
 import math
 import cmath
-import ast
 
 import numpy
-from numpy import zeros, ndarray, complex, imag
+from numpy import ndarray, complex, imag
 
 from six import string_types
 
@@ -48,7 +49,7 @@ class ExecComp(Component):
 
         # find all of the variables and which ones are outputs
         for expr in exprs:
-            lhs, rhs = expr.split('=', 1)
+            lhs, _ = expr.split('=', 1)
             outs.update(parse_for_vars(lhs))
             allvars.update(parse_for_vars(expr, kwargs.keys()))
 
@@ -63,19 +64,42 @@ class ExecComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
-        Executes this component's assignment statements
+        Executes this component's assignment statemens.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper`  containing residuals. (r)
         """
         for expr in self._codes:
-            exec(expr, _expr_dict, _UPDict(unknowns, params) )
+            exec(expr, _expr_dict, _UPDict(unknowns, params))
 
     def jacobian(self, params, unknowns, resids):
         """
         Uses complex step method to calculate a Jacobian dict.
 
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper`  containing residuals. (r)
+
         Returns
         -------
         dict
-            A jacobian dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays.
         """
 
         # our complex step
@@ -83,7 +107,7 @@ class ExecComp(Component):
 
         J = {}
 
-        for param, pmeta in params.items():
+        for param in params:
 
             pwrap = TmpDict(params)
 
@@ -98,7 +122,7 @@ class ExecComp(Component):
                 idx_iter = (None,)
                 psize = 1
 
-            for i,idx in enumerate(idx_iter):
+            for i, idx in enumerate(idx_iter):
                 # set a complex param value
                 if idx is None:
                     pwrap[param] += step
@@ -112,11 +136,11 @@ class ExecComp(Component):
 
                 for u in unknowns:
                     jval = imag(uwrap[u] / self.complex_stepsize)
-                    if (u,param) not in J: # create the dict entry
-                        J[(u,param)] = numpy.zeros((jval.size, psize))
+                    if (u, param) not in J: # create the dict entry
+                        J[(u, param)] = numpy.zeros((jval.size, psize))
 
                     # set the column in the Jacobian entry
-                    J[(u,param)][:,i] = jval.flat
+                    J[(u, param)][:, i] = jval.flat
 
                 # restore old param value
                 if idx is None:
@@ -243,14 +267,14 @@ _import_functs(numpy, _expr_dict,
                       'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
                       'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
                       'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p',
-                      ('arcsin','asin'), ('arcsinh','asinh'), ('arctanh','atanh'),
-                      ('arctan','atan'), ('arctan2','atan2'),
-                      ('arccosh','acosh'), ('arccos','acos'),
+                      ('arcsin', 'asin'), ('arcsinh', 'asinh'), ('arctanh', 'atanh'),
+                      ('arctan', 'atan'), ('arctan2', 'atan2'),
+                      ('arccosh', 'acosh'), ('arccos', 'acos'),
                       ('power', 'pow')])
 
-# Note: adding cmath here in case someone wants to have an ExecComp that performs some complex
-#       operation during solve_nonlinear.  cmath functions generally return complex numbers even if the
-#       args are floats.
+# Note: adding cmath here in case someone wants to have an ExecComp that
+# performs some complex operation during solve_nonlinear. cmath functions
+# generally return complex numbers even if the args are floats.
 _expr_dict['cmath'] = cmath
 
 _expr_dict['numpy'] = numpy
