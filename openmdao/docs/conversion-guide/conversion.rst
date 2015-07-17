@@ -1,10 +1,6 @@
 
 .. _Conversion-Guide:
 
-_____________________________
-Introduction
-_____________________________
-
 ========================
 Purpose of This Document
 ========================
@@ -14,15 +10,15 @@ versions of OpenMDAO (versions up to and including 0.13.0) to change their model
 over to the new OpenMDAO 1.0.0 design.  This will require some re-thinking and
 re-structuring.  If you are new to OpenMDAO, you should be able to start writing
 new models, and this guide should not pertain to you.  You should check out our
-OpenMDAO User Guide_.
+`OpenMDAO User Guide`_.
 
-.. _Guide: ../usr-guide/index.html
+.. _OpenMDAO User Guide: ../usr-guide/basics.html
 
-If you do not have OpenMDAO v 1.0 installed, you should first view our Getting
-Started_ Guide.  Then we would recommend becoming familiar with the new building
+If you do not have OpenMDAO v 1.0 installed, you should first view our `Getting
+Started Guide`_.  Then we would recommend becoming familiar with the new building
 blocks of OpenMDAO in the User Guide's 'Basics_' section
 
-.. _Started: ../getting-started/index.html
+.. _Getting Started Guide: ../getting-started/install.html
 .. _Basics: ../usr-guide/basics.html
 
 
@@ -491,5 +487,7 @@ Support
 
 Moving your previous models to OpenMDAO 1.0 may be an arduous process, but one
 that we feel will be worth the effort.  If things get confusing or
-difficult, we're here to help.  [Link to forums?  Link to the openmdao tag on
-Stack Overflow?  support@openmdao.org email address?]
+difficult, we're here to help.  Ask conversion questions at `the old forum`_,
+or email us at support@openmdao.org .
+
+.. _the old forum: http://openmdao.org/forum

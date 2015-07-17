@@ -93,13 +93,13 @@ These two lines are all it takes to record the state of the problem as the
 optimizer progresses. We initialize a `ShelveRecorder` by passing it a
 `filename` argument. This recorder uses Python's `shelve` module to store the
 data generated. In this case, `shelve` will open a file named 'paraboloid'
-to use as a backend. Note that depending on your operating system and version
+to use as a back-end. Note that depending on your operating system and version
 of Python, the actual file generated may have a different name (e.g.
 paraboloid.db), but `shelve` will be able to open the correct file.
 
 We then attach the recorder to the driver using `driver.add_recorder`.
 Depending on your needs, you are able to attach more recorders by using
-additional `driver.add_recorder` calls. Solver also have an `add_recorder`
+additional `driver.add_recorder` calls. Solvers also have an `add_recorder`
 method that is invoked the same way. This allows you to record the evolution
 of variables at lower levels.
 
@@ -109,7 +109,7 @@ Includes and Excludes
 
 Over the course of an analysis or optimization, the model may generate a very
 large amount of data. Since you may not be interested in the value of every
-variable at every step, OpenMDAO allows you to filter what variables are
+variable at every step, OpenMDAO allows you to filter which variables are
 recorded through the use of includes and excludes. The recorder will store
 anything that matches the includes filter and that does not match the exclude
 filter. By default, the includes are set to `['*']` and the excludes are set to

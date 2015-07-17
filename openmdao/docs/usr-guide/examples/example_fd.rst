@@ -230,7 +230,7 @@ OpenMDAO to do this by setting force_fd in the parent `Group`.
             self.connect('comp2.y', 'comp3.x')
             self.connect('comp3.y', 'comp4.x')
 
-            # Tell these whole model to finite difference
+            # Tell the whole model to finite difference
             self.fd_options['force_fd'] = True
 
 Nothing else changes in the original model. When we run it, we get:
