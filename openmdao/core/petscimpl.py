@@ -1,9 +1,9 @@
+"""PETSc vector and data transfer implementation factory."""
+
 from __future__ import print_function
 
 import os
-import sys
 from collections import OrderedDict
-import numpy
 
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
@@ -99,7 +99,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Names of variables that are relevant a particular variable of
             interest.
 
-        store_byobjs : bool
+        store_byobjs : bool, optional
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
@@ -212,8 +212,9 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         psizes = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
 
         if trace:
-            debug("'%s': allgathering param sizes.  local param sizes = %s" % (self.pathname,
-                                                                              psizes))
+            msg = "'%s': allgathering param sizes.  local param sizes = %s"
+            debug(msg % (self.pathname, psizes))
+
         return self.comm.allgather(psizes)
 
 
@@ -265,7 +266,7 @@ class PetscDataXfer(DataXfer):
                 self.src_idxs = src_idxs
                 self.tgt_idxs = tgt_idxs
                 debug("'%s': creating scatter %s --> %s %s --> %s" %
-                      (name, [v for u,v in vec_conns], [u for u,v in vec_conns],
+                      (name, [v for u, v in vec_conns], [u for u, v in vec_conns],
                        src_idx_set.indices, tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
@@ -293,7 +294,7 @@ class PetscDataXfer(DataXfer):
             Direction of the data transfer, source to target ('fwd', the default)
             or target to source ('rev').
 
-        deriv : bool
+        deriv : bool, optional
             If True, this is a derivative data transfer, so no pass_by_obj
             variables will be transferred.
         """
@@ -302,9 +303,9 @@ class PetscDataXfer(DataXfer):
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
             if trace:
-                conns = ['%s <-- %s' % (u,v) for u,v in self.vec_conns]
+                conns = ['%s <-- %s' % (u, v) for u, v in self.vec_conns]
                 debug("'%s': rev scatter %s  %s <-- %s" %
-                            (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
+                      (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
                 debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
                                                         srcvec.petsc_vec.array,
                                                         tgtvec.petsc_vec.array))
@@ -312,18 +313,18 @@ class PetscDataXfer(DataXfer):
         else:
             # forward mode, source to target including pass_by_object
             if trace:
-                conns = ['%s --> %s' % (u,v) for u,v in self.vec_conns]
+                conns = ['%s --> %s' % (u, v) for u, v in self.vec_conns]
                 debug("'%s': fwd scatter %s  %s --> %s" %
-                            (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
+                      (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
                 debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
                                                             srcvec.petsc_vec.array,
                                                             srcvec.pathname,
                                                             tgtvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
-            if trace: debug("scatter done")
+            if trace:
+                debug("scatter done")
 
             if not deriv:
                 for tgt, src in self.byobj_conns:
-                    debug('NotImplemented!!!')
                     raise NotImplementedError("can't transfer '%s' to '%s'" %
-                                               (src, tgt))
+                                              (src, tgt))

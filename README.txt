@@ -9,7 +9,7 @@ so you can easily pull down the latest updates.
 
 To install OpenMDAO 1.0 Alpha:
 Install Python, Pip, Numpy, and Scipy. (Anaconda Python, comes bundled
-with everything you need:  (http://continuum.io)).
+with everything you need:  ( http://continuum.io )).
 
 Next, clone this repository:
 

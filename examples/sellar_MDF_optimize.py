@@ -138,8 +138,8 @@ if __name__ == '__main__':
     top.run()
 
     print("\n")
-    print( "Minimum found at (%f, %f, %f)" % (top['z'][0], \
-                                             top['z'][1], \
+    print( "Minimum found at (%f, %f, %f)" % (top['z'][0],
+                                             top['z'][1],
                                              top['x']))
     print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
     print("Minimum objective: ", top['obj'])

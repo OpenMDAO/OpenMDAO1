@@ -1,8 +1,8 @@
 
 .. warning::
 
-        OpenMDAO 1.0 is in an ALPHA state.  The version that you are downloading
-        and installing is under active development, and as such may be broken from time to time.
+        OpenMDAO 1.0 is in an ALPHA state.  The version that you are installing
+        is under active development, and as such may be broken from time to time.
         Therefore, OpenMDAO 1.0 Alpha should be used at your own risk!
 
 =====
@@ -13,10 +13,10 @@ Purpose
 -------
 
 This document exists to explain what OpenMDAO is, how to get it, and how to install it
-on OS X, Windows or Linux.  For a guide of examples of how to use OpenMDAO,
-see the `OpenMDAO User Guide`_.
+on OS X, Windows or Linux.  For a guide of basics, tutorials and examples of how
+to use OpenMDAO, see the `OpenMDAO User Guide`_.
 
-.. _OpenMDAO User Guide: ../usr-guide/design.html
+.. _OpenMDAO User Guide: ../usr-guide/basics.html
 
 
 `TL;DR`_
@@ -138,7 +138,7 @@ Linux
 While we have seen successful installations using RHEL and Mint, the distribution
 that we use is Ubuntu_.  The versions of Ubuntu that we will support are:
 
-.. _Ubuntu: http://ubuntu.com
+.. _Ubuntu: http://www.ubuntu.com/download
 
  * Trusty Tahr (14.04.2 LTS)
 
@@ -246,7 +246,7 @@ changes without re-installing.
 
 ::
 
-    git clone http://github.com/OpenMDAO/OpenMDAO-Framework
+    git clone http://github.com/OpenMDAO/OpenMDAO.git
 
 
 Then you're going to use pip to install in development mode. Change directories to

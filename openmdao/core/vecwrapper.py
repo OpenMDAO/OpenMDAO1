@@ -10,7 +10,7 @@ from six.moves import cStringIO
 from openmdao.util.types import is_differentiable, int_types
 from openmdao.util.strutil import get_common_ancestor
 
-from openmdao.devtools.debug import *
+#from openmdao.devtools.debug import *
 
 class _flat_dict(object):
     """This is here to allow the user to use vec.flat['foo'] syntax instead
@@ -102,7 +102,7 @@ class VecWrapper(object):
         try:
             return self._vardict[name]
         except KeyError as error:
-            msg  = "Variable '{name}' does not exist".format(name=name)
+            msg = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
 
     def __getitem__(self, name):
@@ -268,7 +268,7 @@ class VecWrapper(object):
         Returns
         -------
         size
-            The size of the named variable
+            The size of the named variable.
 
         ndarray
             Index array containing all local indices for the named variable.
@@ -311,7 +311,7 @@ class VecWrapper(object):
         Args
         ----
         sys_pathname : str
-            pathname of the system for which the view is being created
+            pathname of the system for which the view is being created.
 
         comm : an MPI communicator (real or fake)
             A communicator that is used in the creation of the view.
@@ -418,14 +418,14 @@ class VecWrapper(object):
         tgt_idxs = [i for i in tgt_idxs if len(i)]
 
         if len(src_idxs) == 0:
-            return self.make_idx_array(0, 0), self.make_idx_array(0,0)
+            return self.make_idx_array(0, 0), self.make_idx_array(0, 0)
 
         src_tups = list(enumerate(src_idxs))
 
         src_sorted = sorted(src_tups, key=lambda x: x[1].min())
 
         new_src = [idxs for i, idxs in src_sorted]
-        new_tgt = [tgt_idxs[i] for i,_ in src_sorted]
+        new_tgt = [tgt_idxs[i] for i, _ in src_sorted]
 
         return idx_merge(new_src), idx_merge(new_tgt)
 
@@ -456,7 +456,7 @@ class VecWrapper(object):
         list
             A list of names of state variables.
         """
-        return [n for n,meta in self.items() if meta.get('state')]
+        return [n for n, meta in self.items() if meta.get('state')]
 
     def get_vecvars(self):
         """
@@ -464,7 +464,7 @@ class VecWrapper(object):
         -------
             A list of names of variables found in our 'vec' array.
         """
-        return [(n,meta) for n,meta in self.items() if not meta.get('pass_by_obj')]
+        return [(n, meta) for n, meta in self.items() if not meta.get('pass_by_obj')]
 
     def get_byobjs(self):
         """
@@ -474,7 +474,7 @@ class VecWrapper(object):
             A list of names of variables that are passed by object rather than
             through scattering entries from one array to another.
         """
-        return [(n,meta) for n,meta  in self.items() if meta.get('pass_by_obj')]
+        return [(n, meta) for n, meta  in self.items() if meta.get('pass_by_obj')]
 
     def _scoped_abs_name(self, name):
         """
@@ -529,19 +529,21 @@ class VecWrapper(object):
                 uslice = '[{0[0]}:{0[1]}]'.format(self._slices[v])
             else:
                 uslice = ''
-            out_stream.write("{0:<{nwid}} {1:<{swid}} {2:>{vwid}}\n".format(v,
-                                                                       uslice,
-                                                                       repr(self[v]),
-                                                                       nwid=nwid,
-                                                                       swid=swid,
-                                                                       vwid=vwid))
+            template = "{0:<{nwid}} {1:<{swid}} {2:>{vwid}}\n"
+            out_stream.write(template.format(v,
+                                             uslice,
+                                             repr(self[v]),
+                                             nwid=nwid,
+                                             swid=swid,
+                                             vwid=vwid))
 
         for v, meta in self.items():
             if meta.get('pass_by_obj') and not meta.get('remote'):
-                out_stream.write("{0:<{nwid}} {1:<{swid}} {2}\n".format(v, '(by obj)',
-                                                                        repr(self[v]),
-                                                                        nwid=nwid,
-                                                                        swid=swid))
+                template = "{0:<{nwid}} {1:<{swid}} {2}\n"
+                out_stream.write(template.format(v, '(by obj)',
+                                                 repr(self[v]),
+                                                 nwid=nwid,
+                                                 swid=swid))
         if return_str:
             return out_stream.getvalue()
 
@@ -552,6 +554,8 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
+    """ VecWrapper for params and dparams. """
+
     def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
@@ -596,7 +600,8 @@ class SrcVecWrapper(VecWrapper):
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
             for meta in unknowns_dict.values():
-                if (relevant_vars is None or meta['pathname'] in relevant_vars) and not meta.get('remote'):
+                if (relevant_vars is None or meta['pathname'] in relevant_vars) \
+                   and not meta.get('remote'):
                     self[meta['promoted_name']] = meta['val']
 
     def _setup_var_meta(self, name, meta):
@@ -630,12 +635,14 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing an `OrderedDict` mapping var name to
             local size for 'pass by vector' variables.
         """
-        sizes = OrderedDict([(n,m['size']) for n,m in self.items()
+        sizes = OrderedDict([(n, m['size']) for n, m in self.items()
                  if not m.get('pass_by_obj') and not m.get('remote')])
         return [sizes]
 
 
 class TgtVecWrapper(VecWrapper):
+    """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
+
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevant_vars=None, store_byobjs=False):
         """
@@ -777,6 +784,7 @@ class TgtVecWrapper(VecWrapper):
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:
+            shape = meta['shape']
             val = numpy.zeros(shape)
         else:
             raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
@@ -868,7 +876,7 @@ def idx_merge(idxs):
     """
     if len(idxs) > 0:
         idxs = [i for i in idxs if isinstance(i, int_types) or
-                len(i)>0]
+                len(i) > 0]
         if len(idxs) > 0:
             if isinstance(idxs[0], int_types):
                 return idxs

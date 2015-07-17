@@ -56,7 +56,7 @@ class OptionsDictionary(object):
             'desc' : desc,
         }
 
-        self.check(name, value)
+        self._check(name, value)
 
     def __getitem__(self, name):
         try:
@@ -68,7 +68,7 @@ class OptionsDictionary(object):
         if name not in self._options:
             raise KeyError("Option '{}' has not been added".format(name))
 
-        self.check(name, value)
+        self._check(name, value)
         self._options[name]['val'] = value
 
     def get(self, name, default=None):
@@ -92,11 +92,12 @@ class OptionsDictionary(object):
         """
         return iteritems({name: opt['val'] for (name, opt) in self._options.items()})
 
-    def check(self, name, value):
-        low    = self._options[name]['low']
-        high   = self._options[name]['high']
+    def _check(self, name, value):
+        """ Type checking happens here. """
+        low = self._options[name]['low']
+        high = self._options[name]['high']
         values = self._options[name]['values']
-        _type  = type(self._options[name]['val'])
+        _type = type(self._options[name]['val'])
 
         self._check_type(name, value, _type)
 
@@ -110,21 +111,25 @@ class OptionsDictionary(object):
             self._check_values(name, value, values)
 
     def _check_type(self, name, value, _type):
+        """ Check for type. """
         if type(value) != _type:
             msg = "'{}' should be a '{}'"
             raise ValueError(msg.format(name, _type))
 
     def _check_low(self, name, value, low):
+        """ Check for violation of lowe bounds. """
         if value < low:
             msg = "minimum allowed value for '{}' is '{}'"
             raise ValueError(msg.format(name, low))
 
     def _check_high(self, name, value, high):
+        """ Check for violation of upper bounds. """
         if value > high:
             msg = "maximum allowed value for '{}' is '{}'"
             raise ValueError(msg.format(name, high))
 
     def _check_values(self, name, value, values):
+        """ Check for value not in enumeration. """
         if value not in values:
             msg = "'{}' must be one of the following values: '{}'"
             raise ValueError(msg.format(name, values))

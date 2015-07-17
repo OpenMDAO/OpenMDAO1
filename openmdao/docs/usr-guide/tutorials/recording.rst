@@ -1,4 +1,4 @@
-.. _OpenMDAO-Examples:
+.. _OpenMDAO-Recording:
 
 =========
 Recording
