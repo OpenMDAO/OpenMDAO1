@@ -50,7 +50,7 @@ Float.
     from openmdao.main.datatypes.api import Float
 
 
-In new OpenMDAO, we just need the defition of Component, but it now lives
+In new OpenMDAO, we just need the definition of Component, but it now lives
 in a different location.
 
 ::
@@ -95,8 +95,8 @@ so you could do the following, for example:
         self.add_param('z', 1.0, units='ft', weird_meta='foo')
 
 
-The example above also specifies *units*.  They use the same unit names
-and work in the same way as in old OpenMDAO.
+The example above also specifies *units*.  New OpenMDAO uses the same unit names
+that work in the same way as in old OpenMDAO.
 
 
 -----------------------------
@@ -126,7 +126,7 @@ In new OpenMDAO, you would set the *pass_by_obj* metadata to *True*, e.g.,
 
     When you force a variable to be *pass_by_obj*, you are excluding
     it from all derivative calculations, which could result in incorrect answers,
-    so use with caution.
+    so use *pass_by_obj* with caution.
 
 
 ---------------------
@@ -183,7 +183,7 @@ especially for large numbers of variables.
 Also, there is no longer any need for the *list_deriv_vars* function.
 
 If your component does not have derivatives, you *must* set it up to be
-finite-differenced. Old OpenMDAO handled this automatically, but you need to
+finite-differenced. Old OpenMDAO handled this automatically, but you now need to
 manually force the finite difference by:
 
 ::
@@ -373,7 +373,7 @@ by calling the *connect* method on the Assembly.
 
 
 In new OpenMDAO, *explicitly* linking two variables within a Group
-is done is done by calling the *connect* method on the Group.
+is done by calling the *connect* method on the Group.
 
 ::
 
@@ -381,8 +381,10 @@ is done is done by calling the *connect* method on the Group.
 
 Linking in new OpenMDAO can also be done *implicitly*, by using the
 *promotes* arg in the *add* call that we saw earlier. See
-[ref to Group section in Basics] for details of linking using
+`Basics, Group`_ for details of linking using
 promotion.
+
+.. _Basics, Group: ../usr-guide/basics.html#Group
 
 -----------------------------------
 Connecting Parts of Array variables
