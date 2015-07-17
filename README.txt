@@ -17,7 +17,7 @@ Next, clone OpenMDAO repository:
 
 Lastly, install it in development mode:
 
-    pip install -e openmdao
+    pip install -e OpenMDAO
 
 For more information, visit our website at:
 http://openmdao.org
