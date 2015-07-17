@@ -1,32 +1,29 @@
-sudo: no
+sudo: false
+
 language: python
+
 python:
-  - 2.7
-  - 3.4
+- 2.7
+- 3.4
+
 env:
-  - HDF5=h5py
-  - HFF5=
+- HDF5=h5py
+- HFF5=
 
 notifications:
   email: false
+  slack:
+    secure: x//UNPGTOV6UOcNpyzZv/nGeZ2v6qP9KQ7fbyvdP5V+Lyj6AH/PDRo9kvVm87l9dcjNPJvswlX7CdKwa+iBtUJ9rdW63qn3SaL64RnJH060PqH0LiDuQF3GYjO6LtjjFfaS/cdbZBMFMh9fd8yVfQzgpkCwZ06KMzgeL5T09fTTbk9KarGFxzzBTemXur20XYJqJAZeCp5j1Ve2a7WhftqisOtGL8sMyjyiwXE+9PB5Jp2M+6nFx9YQN+sJ1vN1ff2zVdB/SlpKsFlQje2DsqnDToYC2PTJv8fO2XupA7SqU3MCIr512rrcsfn9P8flflYUYywk1z+CQV+aRfJu3OPeiNjgAbj8sRWRGWQmZXnZvGYzveWSLx5nEnWbqwyw5Gv/k73686j0VxV4jzUTW6D5um4aR/bJrCP3YTwIahS21i5j5IsDIzeOhAUejgGwxgs20Q1jVehGoPr4sS3E3aXgKkNGEPCaz9usfMvjUGE2j/bV8G3neg85+JWSWi3P5Z0GM6BbJEKc51dghJvHOHJeXrq7ya7Wl525kMqBH7aLc8fnNrpxVeD0RsMp01Pl9iHWi9IKdH8Gzg+0l/QFnPqpTqOZREh2hsEasW2kAJjePn9urowtLq9sWo12i1ACC04yLIxdmUAqhU1vkhztyiKt7aKhVkUtUQfc7deIAd/U=
 
-# Setup anaconda
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - conda update --yes conda
+- wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+- chmod +x miniconda.sh
+- ./miniconda.sh -b
+- export PATH=/home/travis/miniconda/bin:$PATH
+- conda update --yes conda
 
-# Install packages
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy nose $HDF5
-  - pip install .
+- conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy nose $HDF5
+- pip install .
 
-# Run test
 script: nosetests
-  #- nosetests --with-cov --cov YOUR_PACKAGE_NAME_HERE --cov-config .coveragerc --logging-level=INFO
-
-# Calculate coverage
-#after_success:
-#  - coveralls --config_file .coveragerc
