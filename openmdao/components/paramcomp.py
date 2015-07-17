@@ -1,8 +1,10 @@
 """ OpenMDAO class definition for ParamComp"""
+
 import collections
 from six import string_types
 
 from openmdao.core.component import Component
+
 
 class ParamComp(Component):
     """A Component that provides an output to connect to a parameter."""
@@ -40,7 +42,7 @@ class ParamComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
+    def apply_linear(self, mode, ls_inputs=None, vois=(None, )):
         """For `ParamComp`, just pass on the incoming values.
 
         Args
@@ -55,7 +57,7 @@ class ParamComp(Component):
         vois: list of strings
             List of all quantities of interest to key into the mats.
         """
-        if mode=='fwd':
+        if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
@@ -64,4 +66,5 @@ class ParamComp(Component):
             rhs_vec[voi].vec[:] += sol_vec[voi].vec[:]
 
     def solve_nonlinear(self, params, unknowns, resids):
+        """ Performs no operation. """
         pass

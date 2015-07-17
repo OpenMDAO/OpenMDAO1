@@ -1,3 +1,5 @@
+""" Defines our differentiable data types. """
+
 import numbers
 import array
 import numpy
@@ -23,6 +25,17 @@ iterable_types = tuple(iterable_types)
 
 
 def is_differentiable(val):
+    """ Determines if a quantity is differentiable based on its data type.
+
+    Args
+    ----
+    val : object
+        Some quantity from an OpenMDAO variable. Can be anything.
+
+    Returns
+    -------
+    bool : Returns True if val is differentiable.
+    """
     if isinstance(val, int_types):
         return False
     elif isinstance(val, real_types):

@@ -1,3 +1,6 @@
+""" Class definition for DumpCaseRecorder, a recorder that prints
+human-readable text output to a stream."""
+
 import sys
 
 from six import string_types
@@ -26,16 +29,39 @@ class DumpCaseRecorder(BaseRecorder):
         self.out = out
 
     def startup(self, group):
-        """ Write out info that applies to the entire run"""
+        """ Write out info that applies to the entire run.
+
+        Args
+        ----
+        group : `Group`
+            Group that owns this recorder.
+        """
         super(DumpCaseRecorder, self).startup(group)
 
     def record(self, params, unknowns, resids, metadata):
-        """Dump the given run data in a "pretty" form."""
+        """Dump the given run data in a "pretty" form.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+
         if not self.out:  # if self.out is None, just do nothing
             return
 
         write = self.out.write
-        write("Iteration Coordinate: {0:s}\n".format(format_iteration_coordinate(metadata['coord'])))
+        fmat = "Iteration Coordinate: {0:s}\n"
+        write(fmat.format(format_iteration_coordinate(metadata['coord'])))
 
         write("Params:\n")
         for param, val in sorted(params.items()):

@@ -1,5 +1,7 @@
+""" Class definition for UnitComp, a component that explicitly converts units."""
+
 from openmdao.core.component import Component
-import numpy as np
+
 
 class UnitComp(Component):
     """
@@ -38,26 +40,13 @@ class UnitComp(Component):
         Args
         ----
         params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
-
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
         """
         unknowns[self.out_name] = params[self.param_name]
 
@@ -70,10 +59,10 @@ class UnitComp(Component):
         Args
         ----
         params : `VecWrapper`
-            `VecWrapper` containing parameters (p)
+            `VecWrapper` containing parameters. (p)
 
         unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states (u)
+            `VecWrapper` containing outputs and states. (u)
 
         dparams : `VecWrapper`
             `VecWrapper` containing either the incoming vector in forward mode
@@ -89,7 +78,7 @@ class UnitComp(Component):
             or the incoming vector in reverse mode. (dr)
 
         mode : string
-            Derivative mode, can be 'fwd' or 'rev'
+            Derivative mode, can be 'fwd' or 'rev'.
         """
 
         if mode == 'fwd':

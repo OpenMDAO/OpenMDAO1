@@ -24,7 +24,7 @@ class ParallelGroup(Group):
             `VecWrapper`  containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
 
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration

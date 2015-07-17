@@ -1,7 +1,11 @@
+""" Class definition for HDF5Recorder, which uses the HDF5 format."""
+
+from numbers import Number
+
 import numpy as np
 
 from h5py import File
-from numbers import Number
+
 from openmdao.recorders.baserecorder import BaseRecorder
 from openmdao.util.recordutil import format_iteration_coordinate
 
@@ -57,8 +61,7 @@ class HDF5Recorder(BaseRecorder):
 
         pairings = ((p_group, params),
                     (u_group, unknowns),
-                    (r_group, resids)
-                    )
+                    (r_group, resids))
 
         for grp, data in pairings:
             for key, val in data.items():

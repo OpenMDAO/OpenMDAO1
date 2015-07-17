@@ -7,7 +7,6 @@ import sys
 from six import iteritems
 from itertools import chain
 
-# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.paramcomp import ParamComp
@@ -498,7 +497,7 @@ class Group(System):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`, optional
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
 
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration coordinate).

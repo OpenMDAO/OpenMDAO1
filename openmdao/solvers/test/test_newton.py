@@ -2,7 +2,6 @@
 
 import unittest
 
-# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.components.execcomp import ExecComp

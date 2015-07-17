@@ -1,8 +1,7 @@
-"""
-Utility functions related to recording or execution metadata.
-"""
+""" Utility functions related to recording or execution metadata. """
 
 from six.moves import map, zip
+
 
 def create_local_meta(metadata, name):
     """
@@ -55,7 +54,8 @@ def update_local_meta(local_meta, iteration):
     child_iteration = {}
     iter_coord = local_meta['coord']
 
-    # Last entry in the iteration coordinate should be the iteration number for this level.
+    # Last entry in the iteration coordinate should be the iteration number
+    # for this level.
     iter_coord[-1] = iteration
 
     # Update local metadata with the given information
@@ -68,7 +68,7 @@ def format_iteration_coordinate(coord):
     Args
     ----
     coord : list
-        List containing the iteration coordinate
+        List containing the iteration coordinate.
     """
 
     separator = '/'

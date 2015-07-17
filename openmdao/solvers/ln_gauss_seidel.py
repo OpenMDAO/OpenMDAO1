@@ -5,6 +5,7 @@ from __future__ import print_function
 from openmdao.core.component import Component
 from openmdao.solvers.solverbase import LinearSolver
 
+
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
     """
@@ -48,7 +49,6 @@ class LinearGaussSeidel(LinearSolver):
 
         dumat = system.dumat
         drmat = system.drmat
-        dpmat = system.dpmat
 
         system.clear_dparams()
         for names in system._relevance.vars_of_interest():

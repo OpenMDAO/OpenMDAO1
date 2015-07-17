@@ -19,7 +19,8 @@ class LinearSystem(Component):
         self.add_state("x", val=np.zeros(size))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Use numpy to solve Ax=b for x."""
+        """ Use numpy to solve Ax=b for x.
+        """
 
         unknowns['x'] = np.linalg.solve(params['A'], params['b'])
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']

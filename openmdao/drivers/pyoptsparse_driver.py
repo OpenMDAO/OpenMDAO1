@@ -8,7 +8,6 @@ additional MPI capability. Note: only SNOPT is supported right now.
 
 from __future__ import print_function
 
-# pylint: disable=E0611,F0401
 import numpy as np
 
 from pyoptsparse import Optimization
@@ -217,15 +216,17 @@ class pyOptSparseDriver(Driver):
         constraints. This function is passed to pyOpt's Optimization object
         and is called from its optimizers.
 
-        dv_dict: dict
-            Dictionary of design variable values
+        Args
+        ----
+        dv_dict : dict
+            Dictionary of design variable values.
 
         Returns
+        -------
+        func_dict : dict
+            Dictionary of all functional variables evaluated at design point.
 
-        func_dict: dict
-            Dictionary of all functional variables evaluated at design point
-
-        fail: int
+        fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
         """
@@ -236,7 +237,7 @@ class pyOptSparseDriver(Driver):
         system = self.root
         try:
 
-            for name, param in self.get_params().items():
+            for name in self.get_params():
                 self.set_param(name, dv_dict[name])
 
             # Execute the model
@@ -283,18 +284,20 @@ class pyOptSparseDriver(Driver):
         function and constraints. This function is passed to pyOpt's
         Optimization object and is called from its optimizers.
 
-        dv_dict: dict
-            Dictionary of design variable values
+        Args
+        ----
+        dv_dict : dict
+            Dictionary of design variable values.
 
-        func_dict: dict
-            Dictionary of all functional variables evaluated at design point
+        func_dict : dict
+            Dictionary of all functional variables evaluated at design point.
 
         Returns
-
-        sens_dict: dict
+        -------
+        sens_dict : dict
             Dictionary of dictionaries for gradient of each dv/func pair
 
-        fail: int
+        fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
         """

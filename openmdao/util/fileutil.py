@@ -1,10 +1,7 @@
-"""
-Misc. file utility routines.
-"""
+""" Misc. file utility routines. """
 
 import itertools
 import os
-import stat
 import warnings
 from six import string_types
 
@@ -23,6 +20,15 @@ def build_directory(dct, force=False, topdir='.'):
     dict, then that key is used to create a directory. Otherwise, the key is
     used to create a file, and the value stored at that key is written to the
     file. All keys must be relative names or a RuntimeError will be raised.
+
+    Args
+    ----
+    dct : dict
+        Dictionary containing nested folder structure.
+    force : bool, optional
+        Set to True to overwrite existing files
+    topdir : string, optional
+        Specify a top directory.
     """
     #TODO: if a value stored in the dict is a callable, then call it and store
     #      its return value as the contents of the file

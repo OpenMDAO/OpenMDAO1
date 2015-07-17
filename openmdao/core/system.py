@@ -6,7 +6,6 @@ from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
 
-# pylint: disable=E0611, F0401
 import numpy as np
 
 from openmdao.core.mpiwrap import MPI
@@ -53,7 +52,7 @@ class System(object):
                        "You can also set to 'complex_step' to peform the complex "
                        "step method if your components support it.")
         opt.add_option("step_size", 1.0e-6,
-                       desc = "Default finite difference stepsize")
+                       desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
@@ -112,6 +111,13 @@ class System(object):
         return False
 
     def _check_setup(self, out_stream=sys.stdout):
+        """Base class does nothing.
+
+        Args
+        ----
+        out_stream : a file-like object, optional
+            Stream where report will be written.
+        """
         pass
 
     def _check_promotes(self):
@@ -280,7 +286,7 @@ class System(object):
             `VecWrapper` containing outputs and states. (u)
 
         resids : `VecWrapper`
-            `VecWrapper`  containing residuals. (r)
+            `VecWrapper` containing residuals. (r)
 
         step_size : float, optional
             Override all other specifications of finite difference step size.
