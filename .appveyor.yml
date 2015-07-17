@@ -1,3 +1,5 @@
+build: false
+
 version: 1.0.{build}
 
 platform:
@@ -6,9 +8,6 @@ platform:
 
 matrix:
   fast_finish: true
-
-# No need for msbuild
-build: false
 
 environment:
   matrix:
