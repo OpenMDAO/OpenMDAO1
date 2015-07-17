@@ -326,6 +326,5 @@ class PetscDataXfer(DataXfer):
 
             if not deriv:
                 for tgt, src in self.byobj_conns:
-                    debug('NotImplemented!!!')
                     raise NotImplementedError("can't transfer '%s' to '%s'" %
                                               (src, tgt))

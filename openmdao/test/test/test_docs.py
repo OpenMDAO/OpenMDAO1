@@ -22,10 +22,10 @@ class SphinxDocsTestCase(unittest.TestCase):
         if retcode:
             self.fail('problem building html sphinx docs:\\n'+output)
 
+        output = str(output) # fix py3 issue
         # check for build warnings
-        for line in output.split('\n'):
-            if 'build succeeded,' in line:
-                self.fail('warning while building html sphinx docs:\\n'+output)
+        if 'build succeeded,' in output:  # trailing comma means warnings
+            self.fail('warning while building html sphinx docs:\\n'+output)
 
         output, retcode = _run_subproc_test('doctest')
         if retcode:

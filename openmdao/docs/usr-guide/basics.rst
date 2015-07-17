@@ -6,11 +6,11 @@ Basics
 ======
 
 This document provides a brief overview of the core concepts and constructs
-involved in defining and solving a problem using OpenMDAO. We start with
-by explaining the `System`, which forms the mathematical foundation of OpenMDAO.
-Then discuss how `System` relates to `Component` and `Group`. `Component` is the
+involved in defining and solving a problem using OpenMDAO. We start
+by explaining the `System`, which forms the mathematical foundation of OpenMDAO,
+then discuss how `System` relates to `Component` and `Group`. `Component` is the
 computational class of OpenMDAO, where you build models and wrap external analysis codes.
-`Group` represents collections of `Component` instances with data passing
+`Group` represents collections of `Components` and other `Groups` with data passing
 and an execution sequence. Lastly we discuss `Problem`, which serves as the container
 for your whole model.
 
@@ -41,7 +41,7 @@ explicit system may contain only a single equation, such as:
 
 For this system, *x* is the parameter (input variable) and *y* is the unknown
 (output variable). Implicit equations, where you vary a state value to drive
-a residual to 0, can also be part of systems. The above equation could be restated
+a residual to 0, can also be part of a system. The above equation could be restated
 implicitly as:
 
 ::
@@ -49,7 +49,7 @@ implicitly as:
     R(y) = x**2 + 2 - y = 0
 
 There is now a corresponding residual value for *y* as well.
-The `System` class has *parameters*, *unknowns*, and *residuals* attributes
+The `System` class has *params*, *unknowns*, and *resids* attributes
 that store the lists of parameters and unknowns as vectors for efficient processing.
 
 .. Note::
@@ -61,7 +61,7 @@ that store the lists of parameters and unknowns as vectors for efficient process
 The equations themselves are encapsulated in a member function of the `System`
 class called *solve_nonlinear*. For explicit equations *solve_nonlinear* will compute
 the unknown values for the given parameter values and put them into the unknown vector.
-For implicit relationships, *solve_nonlinear* find the correct values for the state
+For implicit relationships, *solve_nonlinear* will find the correct values for the state
 variables that converge the residuals. A second function, *apply_nonlinear*,
 is used to compute the residual values for a given state value (it does not
 fully converge the system of equations). *apply_nonlinear* is not used if you
@@ -78,8 +78,8 @@ Component
 ---------
 
 The `Component` class is lowest level system in OpenMDAO. Child classes of
-`Component` are the only classes allowed to parameter, output, and state variables.
-By sub-classing `Component` and defining a *solve_nonlinear* (and
+`Component` are the only classes allowed to create parameter, output, and state
+variables. By sub-classing `Component` and defining a *solve_nonlinear* (and
 *apply_nonlinear* if state variables are present), users can build their own
 models or implement wrappers for existing analysis codes.
 
@@ -98,13 +98,14 @@ Variables are added to the class in the constructor (*__init__* method) via the
 
 .. note::
 
-    Initial values (or shape and type) are required when adding variables to a system
-    in order to allocate the needed space in the vectors for data passing. If only
-    a shape is given, the type is assumed to be *Float*.
+    Initial values (or shape and type) are required when adding variables to a
+    component in order to allocate the needed space in the vectors for data
+    passing. If only a shape is given, the type is assumed to be *float* if
+    shape is 1 and a numpy float array if shape has any other value.
 
 The *solve_nonlinear* function takes three arguments: the parameters vector, the
 unknowns vector, and a residuals vector. This function will be called using the
-vector attributes of the containing `Component` instance, so those vectors will
+vector attributes of the `Component` instance, so those vectors will
 contain entries for the variables declared in the constructor. For example:
 
 ::
@@ -121,7 +122,7 @@ be converged. There are two choices:
   #. Have the component converge itself
 
 We'll talk more about solvers in later docs, but if you go this route then you can
-stop at *apply_nonlinear*. But if you would like the a component with state variables to
+stop at *apply_nonlinear*. But if you would like a component with state variables to
 converge itself, you will also define the *solve_nonlinear* method.
 
 ::
@@ -163,11 +164,11 @@ to the framework.
 
 Group
 ------
-`Group` is used to build a complex model smaller sub-system building blocks, which may
-be instances of either `Component` or `Group`. So a `Group` it just a `System` composed
-of the equations from its children that are coupled together via data connections.
-Because groups can contain other groups, they form a natural hierarchy tree
-that defines the organizational structure of your model.
+`Group` is used to build a complex model out of smaller sub-system building
+blocks, which may be instances of either `Component` or `Group`. So a `Group`
+is just a `System` composed of the equations from its children that are coupled
+together via data connections. Because groups can contain other groups, they
+form a hierarchy that defines the organizational structure of your model.
 
 A `Group` is created simply by adding one or more `Systems`.
 For example, we can add a `Group` to another `Group` along with some `Components`:
@@ -187,8 +188,8 @@ For example, we can add a `Group` to another `Group` along with some `Components
     g2.add('sub_group_1', g1)
 
 Interdependencies between `Systems` in a `Group` are represented as connections
-between the variables in the `Group`'s subsystems.  Connections can be made in two ways: explicitly
-or implicitly.
+between the variables in the `Group`'s subsystems.  Connections can be made
+either explicitly or implicitly.
 
 An explicit connection is made from the output (or state) of one `System` to the input
 (parameter) of another using the `Group` *connect* method, as follows:
@@ -201,13 +202,13 @@ Alternatively, you can use the *promotion* mechanism to implicitly connect two
 or more variables.  When a `System` is added to a `Group`, you may optionally
 specify a list of variable names that are to be *promoted* from the subsystem
 to the group level. This means that you can reference the variable as if it
-were an variable of the `Group` rather than the subsystem.  For Example:
+were a variable of the `Group` rather than the subsystem.  For Example:
 
 ::
 
     g2.add(c3, promotes=['x'])
 
-Now you can access the parameter 'x' from 'c3' as if it were an variable of
+Now you can access the parameter 'x' from 'c3' as if it were a variable of
 the group: 'g2.x'. If you promote multiple subsystem variables with the same
 name, then those variables will be implicitly connected:
 
@@ -270,9 +271,9 @@ Summary
 -------
 
 The general procedure for defining and solving a `Problem` in OpenMDAO is:
-    - define `Components` (including their *solve_nonlinear*  and optional *jacobian* functions)
-    - assembling `Components` into Groups and making connections (explicitly or implicitly)
-    - instantiating a `Problem` with the *root* `Group`
+    - define `Components` (including their *solve_nonlinear* and optional *jacobian* functions)
+    - assemble `Components` into Groups and make connections (explicitly or implicitly)
+    - instantiate a `Problem` with the *root* `Group`
     - perform *setup* on the `Problem` to initialize all vectors and data transfers
     - perform *run* on the Problem
 

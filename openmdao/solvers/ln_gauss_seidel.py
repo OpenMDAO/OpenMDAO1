@@ -4,7 +4,6 @@ from __future__ import print_function
 
 from openmdao.core.component import Component
 from openmdao.solvers.solverbase import LinearSolver
-from openmdao.devtools.debug import debug
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.

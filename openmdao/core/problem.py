@@ -25,7 +25,6 @@ from openmdao.core.relevance import Relevance
 from openmdao.solvers.run_once import RunOnce
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor, name_relative_to
-#from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -269,7 +268,7 @@ class Problem(System):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
-        dangling_params = [p for p in self.root._params_dict \
+        dangling_params = [p for p in self.root._params_dict
                            if p not in self.root.connections]
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
@@ -299,7 +298,7 @@ class Problem(System):
     def _check_no_unknown_comps(self, out_stream=sys.stdout):
         """ Check for components without unknowns. """
         nocomps = sorted([c.pathname for c in self.root.components(recurse=True,
-                                                                   local=True) \
+                                                                   local=True)
                           if len(c.unknowns) == 0])
         if nocomps:
             print("\nThe following components have no unknowns:", file=out_stream)

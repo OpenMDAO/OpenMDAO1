@@ -518,7 +518,7 @@ class VecWrapper(object):
             defwid = 8
         else:
             defwid = 1
-        slens = [len('[{0[0]}:{0[1]}]'.format(self._slices[v])) for v in self.keys() \
+        slens = [len('[{0[0]}:{0[1]}]'.format(self._slices[v])) for v in self.keys()
                        if v in self._slices]+[defwid]
         swid = max(slens)
 
@@ -635,7 +635,7 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing an `OrderedDict` mapping var name to
             local size for 'pass by vector' variables.
         """
-        sizes = OrderedDict([(n, m['size']) for n, m in self.items() \
+        sizes = OrderedDict([(n, m['size']) for n, m in self.items()
                  if not m.get('pass_by_obj') and not m.get('remote')])
         return [sizes]
 
