@@ -3,9 +3,9 @@ Paraboloid Tutorial
 
 This tutorial will show you how to set up a simple optimization of a paraboloid.
 You'll create a paraboloid `Component` (with analytic derivatives), then put it
-into a `Problem` and setup an optimizer `Driver` to minimize an objective function.
+into a `Problem` and set up an optimizer `Driver` to minimize an objective function.
 
-Here is the code that defines this the paraboloid and then runs it. You can copy
+Here is the code that defines the paraboloid and then runs it. You can copy
 this code into a file, and run it directly.
 
 .. testcode:: parab
@@ -81,18 +81,18 @@ Building the component
     from openmdao.core.problem import Problem, Group
 
 We need to import some OpenMDAO classes. We also import the print_function to
-insure compatibility between python 2.x and 3.x. You don't need the import if
-you are running in 3.
+ensure compatibility between Python 2.x and 3.x. You don't need the import if
+you are running in Python 3.x.
 
 ::
 
     class Paraboloid(Component):
 
-OpenMDAO provides a base class `Component` which you should inherit from to build
+OpenMDAO provides a base class, `Component`, which you should inherit from to build
 your own components and wrappers for analysis codes. `Components` can declare
 three kinds of variables, *parameters*, *outputs* and *states*. A `Component`
 operates on its parameters to compute unknowns, which can be explicit
-outputs or implicit states. For the `Paraboloid` Component, we will only be
+outputs or implicit states. For the `Paraboloid` `Component`, we will only be
 using explicit outputs.
 
 ::
@@ -106,8 +106,8 @@ using explicit outputs.
             self.add_output('f_xy', shape=1)
 
 
-This code defines the input parameters of the Component, `x` and `y`, and
-initializes them to 0.0. These will be design variables which could used to
+This code defines the input parameters of the `Component`, `x` and `y`, and
+initializes them to 0.0. These will be design variables which could be used to
 minimize the output when doing optimization. It also defines the explicit
 output, `f_xy`, but only gives it a shape. If shape is 1, the value is
 initialized to *0.0*, a scalar.  If shape is any other value, the value
@@ -143,8 +143,8 @@ using the `unknowns` dictionary that is passed in.
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-The `jacobian` method is used to compute analytic partial derivatives of this
-unknowns with respect to params (partial derivatives in OpenMDAO context refer to
+The `jacobian` method is used to compute analytic partial derivatives of the
+`unknowns` with respect to `params` (partial derivatives in OpenMDAO context refer to
 derivatives for a single component by itself). The returned value, in this case `J`,
 should be a dictionary whose keys are tuples of the form (‘unknown’, ‘param’) and
 whose values are n-d arrays or scalars. Just like for `solve_nonlinear`, the values for the
@@ -163,7 +163,7 @@ Setting up the model
         top = Problem()
         root = top.root = Group()
 
-An instance of an OpenMDAO `Problem` is always the top object for running an
+An instance of an OpenMDAO `Problem` is always the top object for running a
 model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a
 `System` that contains other `Components` or `Groups`.
 
@@ -198,8 +198,8 @@ Then we add the paraboloid using the same syntax as before, giving it the name '
 Then we connect up the outputs of the `ParamComps` to the parameters of the
 `Paraboloid`. Notice the dotted naming convention used to refer to variables.
 So, for example, `p1` represents the first `ParamComp` that we created to set
-the value of `x` and so we connect that to parameter `x` of the `Paraboloid`,
-which is named `x`. Since the `Paraboloid` is named `p` and has a parameter
+the value of `x` and so we connect that to parameter `x` of the `Paraboloid`.
+Since the `Paraboloid` is named `p` and has a parameter
 `x`, it is referred to as `p.x` in the call to the `connect` method.
 
 Every problem has a `Driver` and for most situations, we would want to set a
@@ -209,7 +209,8 @@ Every problem has a `Driver` and for most situations, we would want to set a
 
     top.driver = SomeDriver()
 
-For this very simple tutorial, we will just use the default which is
+For this very simple tutorial, we do not need to set a `Driver`, we will just
+use the default, built-in driver, which is
 `Driver`. ( `Driver` also serves as the base class for all `Drivers`. )
 `Driver` is the simplest driver possible, running a `Problem` once.
 
@@ -278,7 +279,7 @@ First, we need to import the optimizer.
 
 The main optimizer built into OpenMDAO is a wrapper around Scipy's `minimize`
 function. OpenMDAO supports 9 of the optimizers built into `minimize`. The
-ones that will most frequently used are SLSQP and COBYLA, since they are the
+ones that will be most frequently used are SLSQP and COBYLA, since they are the
 only two in the `minimize` package that support constraints. We will use
 SLSQP because it supports OpenMDAO-supplied gradients.
 
@@ -309,7 +310,7 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
 Every driver has an `options` dictionary which contains important settings for the driver.
-These settings tells `ScipyOptimizer` which optimization method to use, so here we
+These settings tell `ScipyOptimizer` which optimization method to use, so here we
 select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 'tol' and a maximum number of iterations 'maxiter.'
 
@@ -332,7 +333,7 @@ problem instance ('top') with the full variable path to the quantities we
 want to see. This is equivalent to what was shown in the first tutorial.
 
 Putting this all together, when we run the model, we get output that looks
-like this (note, the optimizer may print some things before this depending on
+like this (note, the optimizer may print some things before this, depending on
 settings):
 
 .. testoutput:: parab
@@ -402,7 +403,7 @@ created with inputs 'x' and 'y' and output 'c'. The `solve_nonlinear` and
 
 We also need to connect our 'con' expression to 'x' and 'y' on the
 paraboloid. Finally, we call add_constraint on the driver, giving it the
-output from the constraint component, which is 'con.c'. The default mode
+output from the constraint component, which is 'con.c'. The default
 behavior for `add_constraint` is to add a nonlinear constraint like the one
 in our problem. You can also add a linear constraint, provided that your
 optimizer supports it (SLSQP does), by setting the ctype call attribute to
@@ -417,5 +418,5 @@ So now, putting it all together, we can run the model and get this:
    ...
    Minimum of -27.083333 found at (7.166667, -7.833333)
 
-A new optimum is found because the original one was unfeasible (i.e., that
+A new optimum is found because the original one was infeasible (i.e., that
 design point violated the constraint equation.)
