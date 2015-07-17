@@ -1,8 +1,10 @@
-""" Everything here pertains to connection errors."""
+""" Set of utilities for detecting and reporting connection errors."""
 
 from six.moves import zip
 
 class ConnectError(Exception):
+    """ Custom error that is raised when a connection is invalid."""
+
     @classmethod
     def _type_mismatch_error(cls, src, target):
         msg = "Type '{src[type]}' of source '{src[promoted_name]}' must be the same as type '{target[type]}' of target '{target[promoted_name]}'"
@@ -40,6 +42,20 @@ class ConnectError(Exception):
 
     @classmethod
     def nonexistent_src_error(cls, src, target):
+        """ Formats an error message for non-existant source in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{src}' does not exist.")
 
@@ -49,6 +65,20 @@ class ConnectError(Exception):
 
     @classmethod
     def nonexistent_target_error(cls, src, target):
+        """ Formats an error message for non-existant target in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "'{target}' does not exist.")
 
@@ -58,6 +88,20 @@ class ConnectError(Exception):
 
     @classmethod
     def invalid_target_error(cls, src, target):
+        """ Formats an error message for invalid target in a connection.
+
+        Args
+        ----
+        src : str
+            Name of source
+
+        target : str
+            Name of target
+
+        Returns
+        -------
+        str : error message
+        """
         msg = ("Source '{src}' cannot be connected to target '{target}': "
                "Target must be a parameter but '{target}' is an unknown.")
 
@@ -86,11 +130,28 @@ def __get_metadata(paths, metadata_dict):
     return metadata
 
 
-def check_types_match(src, target):
+def _check_types_match(src, target):
     if src['type'] != target['type']:
         raise ConnectError._type_mismatch_error(src, target)
 
 def check_connections(connections, params, unknowns):
+    """Checks the specified connections to make sure they are valid in
+    OpenMDAO.
+
+    Args
+    ----
+    params : list of strings
+        Connection source names. Each param has a corresponding unknown.
+
+    unknowns : list of strings
+        Connection target names. Each unknown has a corresponding param.
+
+    Raises
+    ------
+    ConnectError
+        Any invalidity in the connection raises an error.
+    """
+
     # Get metadata for all sources
     sources = __get_metadata(connections.values(), unknowns)
 
@@ -98,10 +159,10 @@ def check_connections(connections, params, unknowns):
     targets = __get_metadata(connections.keys(), params)
 
     for source, target in zip(sources, targets):
-        check_types_match(source, target)
-        check_shapes_match(source, target)
+        _check_types_match(source, target)
+        _check_shapes_match(source, target)
 
-def check_shapes_match(source, target):
+def _check_shapes_match(source, target):
     #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
 
     check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
