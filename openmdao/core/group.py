@@ -19,7 +19,6 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 from openmdao.util.strutil import name_relative_to
-#from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
