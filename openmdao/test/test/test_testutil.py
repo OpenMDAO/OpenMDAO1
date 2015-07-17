@@ -51,7 +51,7 @@ class TestCase(unittest.TestCase):
             self.fail("Expected Assertion Error")
 
         err = assert_rel_error(self, 1e-2*np.ones(3), 1e-2*np.ones(3), 1e-10)
-        self.assertEquals(err, 0.0)
+        self.assertEqual(err, 0.0)
 
         err = assert_rel_error(self, 1e-2*np.ones(3), 1.00001e-2*np.ones(3), 1e-3)
         self.assertLessEqual(err, 1e-5)

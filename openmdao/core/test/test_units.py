@@ -342,7 +342,7 @@ class TestUnitConversion(unittest.TestCase):
 
         expected_msg = "Unit 'degC' in source 'src.x2' is incompatible with unit 'm' in target 'dest.x2'."
 
-        self.assertEquals(str(cm.exception), expected_msg)
+        self.assertEqual(str(cm.exception), expected_msg)
 
         # Implicit Connection
         prob = Problem()
@@ -354,7 +354,7 @@ class TestUnitConversion(unittest.TestCase):
 
         expected_msg = "Unit 'degC' in source 'x2' is incompatible with unit 'm' in target 'x2'."
 
-        self.assertEquals(str(cm.exception), expected_msg)
+        self.assertEqual(str(cm.exception), expected_msg)
 
 if __name__ == "__main__":
     unittest.main()

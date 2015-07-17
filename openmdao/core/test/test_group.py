@@ -314,7 +314,7 @@ class TestGroup(unittest.TestCase):
             prob.root['G2.C1.x']
         except Exception as err:
             msg = 'setup() must be called before variables can be accessed'
-            self.assertEquals(text_type(err), msg)
+            self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 

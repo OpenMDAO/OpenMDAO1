@@ -52,7 +52,7 @@ class TestProblem(unittest.TestCase):
             prob.setup(check=False)
         except Exception as error:
             msg = "Target 'G3.C4.x' is connected to multiple unknowns: ['G3.C3.y', 'G2.C1.x']"
-            self.assertEquals(text_type(error), msg)
+            self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
 

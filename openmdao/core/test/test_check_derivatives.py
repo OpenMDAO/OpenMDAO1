@@ -107,7 +107,7 @@ class TestProblemCheckPartials(unittest.TestCase):
             msg = "Jacobian in component 'comp' between the" + \
                 " variables 'x' and 'y' is the wrong size. " + \
                 "It should be 2 by 2"
-            self.assertEquals(str(err), msg)
+            self.assertEqual(str(err), msg)
         else:
             self.fail("Error expected")
 
