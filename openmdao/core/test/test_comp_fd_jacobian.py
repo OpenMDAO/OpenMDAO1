@@ -289,10 +289,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', Paraboloid())
-        prob.root.add('p1', ParamComp('x', 15.0))
-        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.add('p1', ParamComp([('x', 15.0), ('y', 15.0)]))
         prob.root.connect('p1.x', 'comp.x')
-        prob.root.connect('p2.y', 'comp.y')
+        prob.root.connect('p1.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
 
