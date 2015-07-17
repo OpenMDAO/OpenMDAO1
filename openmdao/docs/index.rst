@@ -32,14 +32,12 @@ Documentation for OpenMDAO version: |release|
 `Pre-1.0 Conversion Guide`_
 ===========================
 
-.. _Pre-1.0 Conversion Guide: conversion-guide/intro.html
+.. _Pre-1.0 Conversion Guide: conversion-guide/conversion.html
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   conversion-guide/intro.rst
-   conversion-guide/paraboloid.rst
-   conversion-guide/sellar.rst
+   conversion-guide/conversion.rst
 
 ============================
 `OpenMDAO Reference Sheets`_

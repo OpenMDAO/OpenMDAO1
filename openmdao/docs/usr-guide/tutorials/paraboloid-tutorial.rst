@@ -3,9 +3,9 @@ Paraboloid Tutorial
 
 This tutorial will show you how to set up a simple optimization of a paraboloid.
 You'll create a paraboloid `Component` (with analytic derivatives), then put it
-into a `Problem` and setup an optimizer `Driver` to minimize an objective function.
+into a `Problem` and set up an optimizer `Driver` to minimize an objective function.
 
-Here is the code that defines this the paraboloid and then runs it. You can copy
+Here is the code that defines the paraboloid and then runs it. You can copy
 this code into a file, and run it directly.
 
 .. testcode:: parab
@@ -81,18 +81,18 @@ Building the component
     from openmdao.core.problem import Problem, Group
 
 We need to import some OpenMDAO classes. We also import the print_function to
-insure compatibility between python 2.x and 3.x. You don't need the import if
-you are running in 3.
+ensure compatibility between Python 2.x and 3.x. You don't need the import if
+you are running in Python 3.x.
 
 ::
 
     class Paraboloid(Component):
 
-OpenMDAO provides a base class `Component` which you should inherit from to build
+OpenMDAO provides a base class, `Component`, which you should inherit from to build
 your own components and wrappers for analysis codes. `Components` can declare
 three kinds of variables, *parameters*, *outputs* and *states*. A `Component`
 operates on its parameters to compute unknowns, which can be explicit
-outputs or implicit states. For the `Paraboloid` Component, we will only be
+outputs or implicit states. For the `Paraboloid` `Component`, we will only be
 using explicit outputs.
 
 ::
@@ -106,8 +106,8 @@ using explicit outputs.
             self.add_output('f_xy', shape=1)
 
 
-This code defines the input parameters of the Component, `x` and `y`, and
-initializes them to 0.0. These will be design variables which could used to
+This code defines the input parameters of the `Component`, `x` and `y`, and
+initializes them to 0.0. These will be design variables which could be used to
 minimize the output when doing optimization. It also defines the explicit
 output, `f_xy`, but only gives it a shape. If shape is 1, the value is
 initialized to *0.0*, a scalar.  If shape is any other value, the value
