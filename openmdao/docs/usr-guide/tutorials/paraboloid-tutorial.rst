@@ -143,8 +143,8 @@ using the `unknowns` dictionary that is passed in.
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-The `jacobian` method is used to compute analytic partial derivatives of this
-unknowns with respect to params (partial derivatives in OpenMDAO context refer to
+The `jacobian` method is used to compute analytic partial derivatives of the
+`unknowns` with respect to `params` (partial derivatives in OpenMDAO context refer to
 derivatives for a single component by itself). The returned value, in this case `J`,
 should be a dictionary whose keys are tuples of the form (‘unknown’, ‘param’) and
 whose values are n-d arrays or scalars. Just like for `solve_nonlinear`, the values for the
@@ -163,7 +163,7 @@ Setting up the model
         top = Problem()
         root = top.root = Group()
 
-An instance of an OpenMDAO `Problem` is always the top object for running an
+An instance of an OpenMDAO `Problem` is always the top object for running a
 model. Each `Problem` in OpenMDAO must contain a root `Group`. A `Group` is a
 `System` that contains other `Components` or `Groups`.
 
@@ -198,8 +198,8 @@ Then we add the paraboloid using the same syntax as before, giving it the name '
 Then we connect up the outputs of the `ParamComps` to the parameters of the
 `Paraboloid`. Notice the dotted naming convention used to refer to variables.
 So, for example, `p1` represents the first `ParamComp` that we created to set
-the value of `x` and so we connect that to parameter `x` of the `Paraboloid`,
-which is named `x`. Since the `Paraboloid` is named `p` and has a parameter
+the value of `x` and so we connect that to parameter `x` of the `Paraboloid`.
+Since the `Paraboloid` is named `p` and has a parameter
 `x`, it is referred to as `p.x` in the call to the `connect` method.
 
 Every problem has a `Driver` and for most situations, we would want to set a
@@ -209,7 +209,8 @@ Every problem has a `Driver` and for most situations, we would want to set a
 
     top.driver = SomeDriver()
 
-For this very simple tutorial, we will just use the default which is
+For this very simple tutorial, we do not need to set a `Driver`, we will just
+use the default, built-in driver, which is
 `Driver`. ( `Driver` also serves as the base class for all `Drivers`. )
 `Driver` is the simplest driver possible, running a `Problem` once.
 
@@ -278,7 +279,7 @@ First, we need to import the optimizer.
 
 The main optimizer built into OpenMDAO is a wrapper around Scipy's `minimize`
 function. OpenMDAO supports 9 of the optimizers built into `minimize`. The
-ones that will most frequently used are SLSQP and COBYLA, since they are the
+ones that will be most frequently used are SLSQP and COBYLA, since they are the
 only two in the `minimize` package that support constraints. We will use
 SLSQP because it supports OpenMDAO-supplied gradients.
 
@@ -309,7 +310,7 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
 Every driver has an `options` dictionary which contains important settings for the driver.
-These settings tells `ScipyOptimizer` which optimization method to use, so here we
+These settings tell `ScipyOptimizer` which optimization method to use, so here we
 select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 'tol' and a maximum number of iterations 'maxiter.'
 
@@ -332,7 +333,7 @@ problem instance ('top') with the full variable path to the quantities we
 want to see. This is equivalent to what was shown in the first tutorial.
 
 Putting this all together, when we run the model, we get output that looks
-like this (note, the optimizer may print some things before this depending on
+like this (note, the optimizer may print some things before this, depending on
 settings):
 
 .. testoutput:: parab
@@ -402,7 +403,7 @@ created with inputs 'x' and 'y' and output 'c'. The `solve_nonlinear` and
 
 We also need to connect our 'con' expression to 'x' and 'y' on the
 paraboloid. Finally, we call add_constraint on the driver, giving it the
-output from the constraint component, which is 'con.c'. The default mode
+output from the constraint component, which is 'con.c'. The default
 behavior for `add_constraint` is to add a nonlinear constraint like the one
 in our problem. You can also add a linear constraint, provided that your
 optimizer supports it (SLSQP does), by setting the ctype call attribute to
@@ -417,5 +418,5 @@ So now, putting it all together, we can run the model and get this:
    ...
    Minimum of -27.083333 found at (7.166667, -7.833333)
 
-A new optimum is found because the original one was unfeasible (i.e., that
+A new optimum is found because the original one was infeasible (i.e., that
 design point violated the constraint equation.)

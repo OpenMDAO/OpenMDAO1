@@ -487,5 +487,5 @@ Support
 
 Moving your previous models to OpenMDAO 1.0 may be an arduous process, but one
 that we feel will be worth the effort.  If things get confusing or
-difficult, we're here to help.  [Link to forums?  Link to the openmdao tag on
-Stack Overflow?  support@openmdao.org email address?]
+difficult, we're here to help.  Ask conversion questions at the old forum,
+or  support@openmdao.org .
