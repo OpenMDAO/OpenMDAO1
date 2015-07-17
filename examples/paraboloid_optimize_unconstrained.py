@@ -64,3 +64,6 @@ if __name__ == "__main__":
 
     print('\n')
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
+
+    # Expected Output
+    # Minimum of -27.333333 found at (6.666667, -7.333333)
