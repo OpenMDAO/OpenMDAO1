@@ -9,7 +9,7 @@ import unittest
 import tempfile
 from fnmatch import fnmatch
 
-from openmdao.util.fileutil import build_directory, find_files, onerror
+from openmdao.util.fileutil import build_directory, find_files
 
 STRUCTURE = {
     'd1': {
@@ -45,7 +45,10 @@ class FileUtilTestCase(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.startdir)
-        shutil.rmtree(self.tempdir, onerror=onerror)
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
 
     def test_find_files(self):
         # find all files
