@@ -353,14 +353,11 @@ First, we need to add one more import to the beginning of our model.
 
 .. testcode:: parab
 
-    from openmdao.components.execcomp import ExecComp
+    from openmdao.components.constraint import ConstraintComp
 
-In OpenMDAO, we cannot (yet) implement an inequality, so we need to turn the
-constraint equation into an equality. With a little rearrangement, x - y > 15
-becomes c = 15 - x + y. When c is less than 0, the original inequality is
-satisfied. Likewise, when c is greater than zero, the inequality is violated.
-Optimizers in OpenMDAO use this convention to evaluate an inequality
-constraint that points to an `unknown` in your model.
+
+We'll use a ConstraintComp to represent our constraint in the model.
+
 
 .. testcode:: parab
 
@@ -373,7 +370,7 @@ constraint that points to an `unknown` in your model.
     root.add('p', Paraboloid())
 
     # Constraint Equation
-    root.add('con', ExecComp('c = 15.0 - x + y'))
+    root.add('con', ConstraintComp('x - y > 15.', out='c'))
 
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
@@ -394,12 +391,13 @@ constraint that points to an `unknown` in your model.
     print('\n')
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
-Here, we added a component named 'con' to represent our constraint equation.
-We use a new component called `ExecComp`. This utility component takes an equation
-string expression as input, and parses that string to create a component with
-the specified inputs and outputs. So for our expression here, 'con' is
-created with inputs 'x' and 'y' and output 'c'. The `solve_nonlinear` and
-`jacobian` functions are implemented based on the equation.
+Here, we added a ConstraintComp named 'con' to represent our constraint equation.
+For our expression, x - y > 15, 'con' is created with inputs 'x' and 'y', and
+we specified that the output name was 'c'. The `solve_nonlinear` and `jacobian`
+functions are implemented based on the equation.  The ConstraintComp
+automatically rearranges our constraint equation into the proper form such that
+its unknown 'c' will have a value less than zero if the constraint is satisfied
+and greater than 0 if it is violated.
 
 We also need to connect our 'con' expression to 'x' and 'y' on the
 paraboloid. Finally, we call add_constraint on the driver, giving it the
