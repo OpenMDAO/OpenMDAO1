@@ -34,7 +34,7 @@ init:
   - C:\Miniconda\Scripts\conda install numpy scipy nose %HDF5% --quiet
 
 install:
-  - pip install .
+  - C:\Miniconda\Scripts\pip install .
 
 test_script:
   - C:\Miniconda\Scripts\nosetests
