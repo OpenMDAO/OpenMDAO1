@@ -1,5 +1,8 @@
 .. index:: Finite Difference Tutorial
 
+Finite Difference
+-----------------------
+
 OpenMDAO allows you to specify analytic derivatives for your models, but it
 is not a requirement. You can choose instead to allow any part or all of your
 model to be finite differenced to your specifications. Any `System` (i.e.,

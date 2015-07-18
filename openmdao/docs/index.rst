@@ -22,7 +22,7 @@ Documentation for OpenMDAO version: |release|
 .. _User Guide: usr-guide/basics.html
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    usr-guide/basics.rst
    usr-guide/tutorials.rst
@@ -35,7 +35,7 @@ Documentation for OpenMDAO version: |release|
 .. _Pre-1.0 Conversion Guide: conversion-guide/conversion.html
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    conversion-guide/conversion.rst
 
