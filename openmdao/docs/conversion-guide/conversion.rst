@@ -418,25 +418,29 @@ In new OpenMDAO, you would do it like this:
 
     group.connect('mycomp1.y', 'mycomp2.x', src_indices=range(2,10))
 
-Support for setting *src_indices* to a slice object or tuple is likely
-in the future, but for now, you must specify *all* of the indices.
+.. note::
 
-Old OpenMDAO also supported specifying array entries on the destination
-variable, e.g.,
+  Support for setting *src_indices* to a slice object or tuple is likely
+  in the future, but for now, you must specify *all* of the indices.
 
-::
+.. caution::
 
-    asm.connect('mycomp1.y', 'mycomp2.x[5]')
+  Old OpenMDAO also supported specifying array entries on the destination
+  variable, e.g.,
 
-New OpenMDAO does not support that functionality.
+  ::
+
+      asm.connect('mycomp1.y', 'mycomp2.x[5]')
+
+  New OpenMDAO does not support that functionality.
 
 ----------
 Model Tree
 ----------
 
 In both old and new OpenMDAO, the model has a tree structure.  In old OpenMDAO,
-the tree has an Assembly at the root, and that Assembly contains Components
-and/or other Assemblies. In new OpenMDAO, the root of the tree is a
+the tree has an Assembly at the top, and that Assembly contains Components
+and/or other Assemblies. In new OpenMDAO, the top of the tree is a
 Problem object, and that Problem contains a single Group called *root* that
 contains the rest of the model. A Group cannot be executed unless it is
 contained within a Problem object and that Problem's *setup* method has been
@@ -500,7 +504,7 @@ The corresponding model in new OpenMDAO looks like this:
 Support
 =======
 
-Moving your previous models to OpenMDAO 1.0 may be an arduous process, but one
+Moving your previous models to OpenMDAO 1.0 may be a bit of work, but one
 that we feel will be worth the effort.  If things get confusing or
 difficult, we're here to help.  Ask conversion questions at `the old forum`_,
 or email us at support@openmdao.org .
