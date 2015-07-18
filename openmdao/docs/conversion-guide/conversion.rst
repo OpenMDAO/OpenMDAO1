@@ -24,7 +24,7 @@ blocks of OpenMDAO in the User Guide's 'Basics_' section
 
 Conceptually, the core building blocks of OpenMDAO 1.0 are similar to those
 found in previous versions, but the syntax you use to define those building blocks
-is quite different.  This guide will start by describing the differences you'll
+is different.  This guide will start by describing the differences you'll
 see when defining a Component.  Then we'll move on to the process of connecting
 your Components and building your model.
 
@@ -86,7 +86,7 @@ component, it would look like this:
 
 The various *add_\** methods in new OpenMDAO allow arbitrary metadata to
 be specified as keyword arguments in the same manner that they were
-specified in *Float* and the other trait constructors in old OpenMDAO,
+specified in *Float* and the other trait constructors in older versions,
 so you could do the following, for example:
 
 ::
@@ -106,7 +106,7 @@ Specifying how Data is Passed
 In both old and new versions of OpenMDAO, data can be passed between
 components in two different ways. By default, variables that are
 differentiable are passed as part of a flattened numpy *float* array.
-Other variables are just passed by value.  To force a variable to
+Other variables are just passed by reference.  To force a variable to
 be passed by value in old OpenMDAO, you would set the *noflat* metadata
 to *True* when creating the variable, for example:
 
@@ -152,7 +152,13 @@ In new OpenMDAO, we do the same thing by defining a *solve_nonlinear* method.
 
 Aside from the name change, the other big difference here is that the
 variables are no longer attributes of our component.  Our inputs now live
-in the *params* object and our outputs are found in the *unknowns* object.
+in the *params* dict-like-object and our outputs are found in the
+*unknowns* dict-like-object.
+
+One really nice feature of this new syntax is a very clear separation between
+framework variables and regular python attributes. Anything that OpenMDAO knows
+about, and should be passed around by its data passing system, will live in *params*,
+*unknowns*, or *resids*.
 
 --------------------
 Defining Derivatives
@@ -168,7 +174,10 @@ In old OpenMDAO, we specified a Jacobian as a monolithic dense ndarray in the
         return J
 
 In new OpenMDAO, the jacobian is instead stored in a dictionary whose keys
-are (output, input) tuples.
+are (output, input) tuples. This is a much more convenient manner for
+specifying the derivatives, especially for large numbers of variables.
+Also, there is no longer any need for the *list_deriv_vars* function from
+older versions.
 
 ::
 
@@ -177,10 +186,6 @@ are (output, input) tuples.
         J[('y', 'x')] = numpy.array([2.0])
         return J
 
-This is a much more convenient manner for specifying the derivatives,
-especially for large numbers of variables.
-
-Also, there is no longer any need for the *list_deriv_vars* function.
 
 If your component does not have derivatives, you *must* set it up to be
 finite-differenced. Old OpenMDAO handled this automatically, but you now need to
@@ -191,16 +196,24 @@ manually force the finite difference by:
     self.fd_options['force_fd'] = True
 
 Here, self is the component instance. You can set any `Component` or `Group`
-to be finite differenced by setting this option to True.
+to be finite differenced by setting this option to True. If you force finite
+difference around a group, then you are taking the FD across that group as a
+single block.
 
 --------------
 Variable Trees
 --------------
 
 Vartrees are supported in new OpenMDAO, but they are much simpler now.
-However, they currently lack some of the features that will make them much
-more useful once they have been implemented. For now, we will show you the
-differences in how they are declared.
+We will show you the differences in how they are declared.
+
+.. note::
+
+  Vartrees don't have full functionality in 1.0 yet. The most notable missing
+  feature is a convenience method to connect whole vartrees between two components.
+  Currently, you have to connect it one variable at a time, or write your own
+  convinence method. We'll be working to get better support for vartrees in the
+  near future.
 
 For Old OpenMDAO:
 
@@ -242,11 +255,10 @@ And for new OpenMDAO:
             self.add_output('fcc2:angle_of_attack', 0.0, units='deg')
             self.add_output('fcc2:sideslip_angle', 0.0, units='deg')
 
-the main difference here is that a ":" is used to signify a hierarchyical
-tree-like data structure in the variables. Each individual leaf behaves like
-any other variable. We will soon implement some methods that let you operate
-on branches or trees, but for now, there is no difference.
-
+The main difference here is that you don't actually create a new class to hold
+the hierarchical data structure. Instead, you just create variables with a
+ hierarchical naming pattern; a ":" is used to delineate different levels of the
+data structure. Each individual leaf behaves like any other variable.
 
 -------------------------
 Full Component Definition
@@ -302,7 +314,8 @@ To summarize the differences in Component definition:
   *solve_nonlinear*.
 - In Variable metadata, *noflat* is now *pass_by_obj*.
 - The `Component` class definition is imported from a different place.
-- Trait imports, e.g., *Float* are no longer needed.
+- OpenMDAO no longer uses the strong typing of Traits, so the associated
+  imports (e.g. *Float*) are no longer needed.
 
 ================
 Building a Model
@@ -405,25 +418,29 @@ In new OpenMDAO, you would do it like this:
 
     group.connect('mycomp1.y', 'mycomp2.x', src_indices=range(2,10))
 
-Support for setting *src_indices* to a slice object or tuple is likely
-in the future, but for now, you must specify *all* of the indices.
+.. note::
 
-Old OpenMDAO also supported specifying array entries on the destination
-variable, e.g.,
+  Support for setting *src_indices* to a slice object or tuple is likely
+  in the future, but for now, you must specify *all* of the indices.
 
-::
+.. caution::
 
-    asm.connect('mycomp1.y', 'mycomp2.x[5]')
+  Old OpenMDAO also supported specifying array entries on the destination
+  variable, e.g.,
 
-New OpenMDAO does not support that functionality.
+  ::
+
+      asm.connect('mycomp1.y', 'mycomp2.x[5]')
+
+  New OpenMDAO does not support that functionality.
 
 ----------
 Model Tree
 ----------
 
 In both old and new OpenMDAO, the model has a tree structure.  In old OpenMDAO,
-the tree has an Assembly at the root, and that Assembly contains Components
-and/or other Assemblies. In new OpenMDAO, the root of the tree is a
+the tree has an Assembly at the top, and that Assembly contains Components
+and/or other Assemblies. In new OpenMDAO, the top of the tree is a
 Problem object, and that Problem contains a single Group called *root* that
 contains the rest of the model. A Group cannot be executed unless it is
 contained within a Problem object and that Problem's *setup* method has been
@@ -487,7 +504,7 @@ The corresponding model in new OpenMDAO looks like this:
 Support
 =======
 
-Moving your previous models to OpenMDAO 1.0 may be an arduous process, but one
+Moving your previous models to OpenMDAO 1.0 may be a bit of work, but one
 that we feel will be worth the effort.  If things get confusing or
 difficult, we're here to help.  Ask conversion questions at `the old forum`_,
 or email us at support@openmdao.org .
