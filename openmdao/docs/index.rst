@@ -27,6 +27,7 @@ Documentation for OpenMDAO version: |release|
    usr-guide/basics.rst
    usr-guide/tutorials.rst
    usr-guide/examples.rst
+   usr-guide/units.rst
 
 ===========================
 `Pre-1.0 Conversion Guide`_
