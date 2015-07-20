@@ -257,6 +257,21 @@ class Problem(System):
 
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
+
+        # make sure pois and oois all refer to existing vars.
+        # NOTE: all variables of interest (includeing POIs) must exist in the unknowns dict
+        promoted_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
+
+        for vnames in pois:
+            for v in vnames:
+                if v not in promoted_unknowns:
+                    raise NameError("Can't find param of interest '%s'." % v)
+
+        for vnames in oois:
+            for v in vnames:
+                if v not in promoted_unknowns:
+                    raise NameError("Can't find quantity of interest '%s'." % v)
+
         mode = self._check_for_matrix_matrix(pois, oois)
 
         relevance = Relevance(params_dict, unknowns_dict, connections,
@@ -411,7 +426,7 @@ class Problem(System):
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
 
-            if strong and isinstance(grp.nl_solver, RunOnce): # no solver, cycles BAD
+            if strong:
                 relstrong = []
                 for slist in strong:
                     relstrong.append([])
