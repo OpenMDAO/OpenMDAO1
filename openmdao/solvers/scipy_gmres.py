@@ -73,13 +73,13 @@ class ScipyGMRES(LinearSolver):
                                      maxiter=options['maxiter'])
 
             if info > 0:
-                msg = "ERROR in solve in '%s': gmres failed to converge " \
-                      "after %d iterations"
-                print(msg)
+                msg = "ERROR in solve in '{}': gmres failed to converge " \
+                      "after {} iterations"
+                print(msg.format(system.name, options['maxiter']))
                 #logger.error(msg, system.name, info)
             elif info < 0:
-                msg = "ERROR in solve in '%s': gmres failed"
-                print(msg)
+                msg = "ERROR in solve in '{}': gmres failed"
+                print(msg.format(system.name))
                 #logger.error(msg, system.name)
 
             unknowns_mat[voi] = d_unknowns
