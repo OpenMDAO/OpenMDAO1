@@ -226,7 +226,7 @@ class Group(System):
         str
             The promoted name of the given variable.
         """
-        if subsystem.promoted(name):
+        if subsystem._promoted(name):
             return name
         if len(subsystem.name) > 0:
             return '.'.join((subsystem.name, name))

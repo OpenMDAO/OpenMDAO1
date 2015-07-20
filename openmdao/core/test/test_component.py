@@ -20,39 +20,39 @@ class TestComponent(unittest.TestCase):
 
         self.comp._promotes = ('*',)
         for name in self.comp._params_dict:
-            self.assertTrue(self.comp.promoted(name))
+            self.assertTrue(self.comp._promoted(name))
         for name in self.comp._unknowns_dict:
-            self.assertTrue(self.comp.promoted(name))
+            self.assertTrue(self.comp._promoted(name))
 
-        self.assertFalse(self.comp.promoted('blah'))
+        self.assertFalse(self.comp._promoted('blah'))
 
         self.comp._promotes = ('x*',)
         for name in self.comp._params_dict:
             if name.startswith('x'):
-                self.assertTrue(self.comp.promoted(name))
+                self.assertTrue(self.comp._promoted(name))
             else:
-                self.assertFalse(self.comp.promoted(name))
+                self.assertFalse(self.comp._promoted(name))
         for name in self.comp._unknowns_dict:
             if name.startswith('x'):
-                self.assertTrue(self.comp.promoted(name))
+                self.assertTrue(self.comp._promoted(name))
             else:
-                self.assertFalse(self.comp.promoted(name))
+                self.assertFalse(self.comp._promoted(name))
 
         self.comp._promotes = ('*:efg',)
         for name in self.comp._params_dict:
             if name.endswith(':efg'):
-                self.assertTrue(self.comp.promoted(name))
+                self.assertTrue(self.comp._promoted(name))
             else:
-                self.assertFalse(self.comp.promoted(name))
+                self.assertFalse(self.comp._promoted(name))
         for name in self.comp._unknowns_dict:
             if name.endswith(':efg'):
-                self.assertTrue(self.comp.promoted(name))
+                self.assertTrue(self.comp._promoted(name))
             else:
-                self.assertFalse(self.comp.promoted(name))
+                self.assertFalse(self.comp._promoted(name))
         # catch bad type on _promotes
         try:
             self.comp._promotes = ('*')
-            self.comp.promoted('xxyyzz')
+            self.comp._promoted('xxyyzz')
         except Exception as err:
             self.assertEqual(text_type(err),
                              "'' promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
