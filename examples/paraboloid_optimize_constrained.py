@@ -63,6 +63,7 @@ if __name__ == "__main__":
     top.driver.add_param('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
     top.driver.add_constraint('con.c')
+
     top.setup()
     top.run()
 
