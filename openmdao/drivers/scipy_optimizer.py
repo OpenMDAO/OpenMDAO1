@@ -48,9 +48,9 @@ class ScipyOptimizer(Driver):
                                 'control, use solver-specific options.')
         self.options.add_option('maxiter', 200,
                                 desc='Maximum number of iterations.')
-        self.options.add_option('disp', False,
-                                desc='Set to True to print Scipy convergence '
-                                'messages')
+        self.options.add_option('disp', True,
+                                desc='Set to False to prevent printing of Scipy '
+                                'convergence messages')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
@@ -163,8 +163,6 @@ class ScipyOptimizer(Driver):
 
         print('Optimization Complete')
         print('-'*35)
-        for key, val in result.items():
-            print(key, ':', val)
 
     def objfunc(self, x_new):
         """ Function that evaluates and returns the objective function. Model

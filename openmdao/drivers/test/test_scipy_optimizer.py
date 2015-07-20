@@ -31,6 +31,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'TNC'
         prob.driver.add_param('x', low=-50.0, high=50.0)
         prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.options['disp'] = False
 
         prob.driver.add_objective('f_xy')
 
@@ -56,6 +57,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -79,6 +81,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -102,6 +105,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -127,6 +131,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('obj')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -152,6 +157,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -178,6 +184,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -204,6 +211,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', ctype='ineq')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -228,6 +236,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -251,6 +260,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -288,6 +298,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_objective('obj.o')
         prob.driver.add_constraint('con1.c', ctype='eq')
         prob.driver.add_constraint('con2.c', ctype='eq')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -311,6 +322,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1')
         prob.driver.add_constraint('con2')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()
@@ -335,6 +347,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1')
         prob.driver.add_constraint('con2')
+        prob.driver.options['disp'] = False
 
         prob.setup(check=False)
         prob.run()

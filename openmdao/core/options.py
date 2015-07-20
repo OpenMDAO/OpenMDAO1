@@ -71,6 +71,13 @@ class OptionsDictionary(object):
         self._check(name, value)
         self._options[name]['val'] = value
 
+    def __setattr__(self, name, value):
+        """ To prevent user error, disallow direct setting."""
+        if name in ['_options', 'read_only']:
+            super(OptionsDictionary, self).__setattr__(name, value)
+        else:
+            raise ValueError("Use dict-like access for option '{}'".format(name))
+
     def get(self, name, default=None):
         """
         Returns

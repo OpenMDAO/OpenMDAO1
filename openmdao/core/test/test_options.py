@@ -70,6 +70,12 @@ class TestOptions(unittest.TestCase):
 
         self.assertEqual("minimum allowed value for 'maxiter' is '0'", str(cm.exception))
 
+        # Make sure we can't do this
+        with self.assertRaises(ValueError) as cm:
+            self.options.maxiter = -1
+
+        self.assertEqual("Use dict-like access for option 'maxiter'", str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
