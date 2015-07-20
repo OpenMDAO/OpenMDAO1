@@ -426,7 +426,7 @@ class Problem(System):
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
 
-            if strong and isinstance(grp.nl_solver, RunOnce): # no solver, cycles BAD
+            if strong:
                 relstrong = []
                 for slist in strong:
                     relstrong.append([])
