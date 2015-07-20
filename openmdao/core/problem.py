@@ -434,19 +434,24 @@ class Problem(System):
                           if len(s) > 1]
 
             visited = set()
-            out_of_order = set()
+            out_of_order = {}
             for sub in grp.subsystems():
                 visited.add(sub.pathname)
                 for u, v in nx.dfs_edges(graph, sub.pathname):
                     if v in visited:
-                        out_of_order.add(v)
+                        out_of_order.setdefault(name_relative_to(grp.pathname, v),
+                                                set()).add(sub.pathname)
 
             if out_of_order:
-                sooo = sorted([name_relative_to(grp.pathname, n)
-                                       for n in out_of_order])
-                print("In group '%s', the following subsystems are out-of-order: %s" %
-                      (grp.pathname, sooo), file=out_stream)
-                ooo.append((grp.pathname, sooo))
+                # scope ooo names to group
+                for name in out_of_order:
+                    out_of_order[name] = sorted([name_relative_to(grp.pathname, n)
+                                                   for n in out_of_order[name]])
+                print("Group '%s' has the following out-of-order subsystems:" %
+                        grp.pathname, file=out_stream)
+                for n, subs in out_of_order.items():
+                    print("   %s should run after %s" % (n, subs), file=out_stream)
+                ooo.append((grp.pathname, list(out_of_order.items())))
 
         return (cycles, sorted(ooo))
 
