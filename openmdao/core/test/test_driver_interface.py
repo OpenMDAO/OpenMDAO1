@@ -263,13 +263,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('params.x', 'rosen.x')
+            prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('params.x', indices=[0, 3, 4])
+            prob.driver.add_param('myparams.x', indices=[0, 3, 4])
             prob.driver.add_objective('rosen.f')
 
             prob.setup(check=False)
@@ -278,7 +278,7 @@ class TestDriver(unittest.TestCase):
             with self.assertRaises(IndexError) as cm:
                 prob.run()
 
-            msg = "Index for parameter 'params.x' is out of bounds. "
+            msg = "Index for parameter 'myparams.x' is out of bounds. "
             msg += "Requested index: [0 3 4], "
             msg += "Parameter shape: (4,)."
             self.assertEqual(msg, str(cm.exception))
@@ -290,13 +290,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('params.x', 'rosen.x')
+            prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('params.x')
+            prob.driver.add_param('myparams.x')
             prob.driver.add_objective('rosen.xxx', indices=[4])
 
             prob.setup(check=False)
@@ -317,13 +317,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('params.x', 'rosen.x')
+            prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('params.x')
+            prob.driver.add_param('myparams.x')
             prob.driver.add_constraint('rosen.xxx', indices=[4])
 
             prob.setup(check=False)
