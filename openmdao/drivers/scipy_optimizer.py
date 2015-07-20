@@ -120,6 +120,9 @@ class ScipyOptimizer(Driver):
                         p_high = meta_high
 
                     bounds.append((p_low, p_high))
+            elif opt is 'COBYLA':
+                # COBYLA will throw a Warning if bounds is not None
+                bounds = None
 
         # Constraints
         constraints = []
