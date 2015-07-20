@@ -7,6 +7,7 @@ import numpy as np
 
 from openmdao.components.execcomp import ExecComp
 from openmdao.components.paramcomp import ParamComp
+from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import Group
 from openmdao.core.options import OptionsDictionary
@@ -82,6 +83,19 @@ class MySimpleDriver(Driver):
                     self.violated.append(name)
 
             itercount += 1
+
+
+class Rosenbrock(Component):
+    def __init__(self, size=2):
+        super(Rosenbrock, self).__init__()
+        # self.force_fd = True
+        self.add_param('x', val=np.zeros(size))
+        self.add_output('f', val=0.0)
+        self.add_output('xxx', val=np.zeros(size))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+
+        unknowns['f'] = rosen(params['x'])
 
 
 class TestDriver(unittest.TestCase):
@@ -241,6 +255,87 @@ class TestDriver(unittest.TestCase):
             prob.driver.add_constraint('con1', ctype='ineq')
 
         self.assertEqual(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
+
+    def test_index_error_messages_param(self):
+
+            prob = Problem()
+            prob.root = Group()
+            prob.root.fd_options['force_fd'] = True
+            prob.root.ln_solver.options['mode'] = 'auto'
+
+            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('rosen', Rosenbrock(4))
+
+            prob.root.connect('params.x', 'rosen.x')
+
+            prob.driver = MySimpleDriver()
+            prob.driver.add_param('params.x', indices=[0, 3, 4])
+            prob.driver.add_objective('rosen.f')
+
+            prob.setup(check=False)
+
+            # Make sure we can't do this
+            with self.assertRaises(IndexError) as cm:
+                prob.run()
+
+            msg = "Index for parameter 'params.x' is out of bounds. "
+            msg += "Requested index: [0 3 4], "
+            msg += "Parameter shape: (4,)."
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_index_error_messages_obj(self):
+
+            prob = Problem()
+            prob.root = Group()
+            prob.root.fd_options['force_fd'] = True
+            prob.root.ln_solver.options['mode'] = 'auto'
+
+            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('rosen', Rosenbrock(4))
+
+            prob.root.connect('params.x', 'rosen.x')
+
+            prob.driver = MySimpleDriver()
+            prob.driver.add_param('params.x')
+            prob.driver.add_objective('rosen.xxx', indices=[4])
+
+            prob.setup(check=False)
+
+            # Make sure we can't do this
+            with self.assertRaises(IndexError) as cm:
+                prob.run()
+
+            msg = "Index for objective 'rosen.xxx' is out of bounds. "
+            msg += "Requested index: [4], "
+            msg += "Parameter shape: (4,)."
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_index_error_messages_con(self):
+
+            prob = Problem()
+            prob.root = Group()
+            prob.root.fd_options['force_fd'] = True
+            prob.root.ln_solver.options['mode'] = 'auto'
+
+            prob.root.add('params', ParamComp('x', np.zeros(4)))
+            prob.root.add('rosen', Rosenbrock(4))
+
+            prob.root.connect('params.x', 'rosen.x')
+
+            prob.driver = MySimpleDriver()
+            prob.driver.add_param('params.x')
+            prob.driver.add_constraint('rosen.xxx', indices=[4])
+
+            prob.setup(check=False)
+
+            # Make sure we can't do this
+            with self.assertRaises(IndexError) as cm:
+                prob.run()
+
+            msg = "Index for constraint 'rosen.xxx' is out of bounds. "
+            msg += "Requested index: [4], "
+            msg += "Parameter shape: (4,)."
+            self.assertEqual(msg, str(cm.exception))
 
 if __name__ == "__main__":
     unittest.main()

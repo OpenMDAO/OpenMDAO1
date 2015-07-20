@@ -227,7 +227,17 @@ class Driver(object):
             adder = meta['adder']
             flatval = uvec.flat[key]
             if 'indices' in meta:
-                flatval = flatval[meta['indices']]
+
+                # Make sure our indices are valid
+                try:
+                    flatval = flatval[meta['indices']]
+                except IndexError:
+                    msg = "Index for parameter '{}' is out of bounds. "
+                    msg += "Requested index: {}, "
+                    msg += "Parameter shape: {}."
+                    raise IndexError(msg.format(key, meta['indices'],
+                                                uvec.metadata(key)['shape']))
+
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
                or scaler != 1.0 or adder != 0.0:
                 params[key] = (flatval + adder)*scaler
@@ -328,8 +338,18 @@ class Driver(object):
             scaler = meta['scaler']
             adder = meta['adder']
             flatval = uvec.flat[key]
+
             if 'indices' in meta:
-                flatval = flatval[meta['indices']]
+                # Make sure our indices are valid
+                try:
+                    flatval = flatval[meta['indices']]
+                except IndexError:
+                    msg = "Index for objective '{}' is out of bounds. "
+                    msg += "Requested index: {}, "
+                    msg += "Parameter shape: {}."
+                    raise IndexError(msg.format(key, meta['indices'],
+                                                uvec.metadata(key)['shape']))
+
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
                or adder != 0.0 or scaler != 1.0:
                 objs[key] = (flatval + adder)*scaler
@@ -436,8 +456,18 @@ class Driver(object):
             scaler = meta['scaler']
             adder = meta['adder']
             flatval = uvec.flat[key]
+
             if 'indices' in meta:
-                flatval = flatval[meta['indices']]
+                # Make sure our indices are valid
+                try:
+                    flatval = flatval[meta['indices']]
+                except IndexError:
+                    msg = "Index for constraint '{}' is out of bounds. "
+                    msg += "Requested index: {}, "
+                    msg += "Parameter shape: {}."
+                    raise IndexError(msg.format(key, meta['indices'],
+                                                uvec.metadata(key)['shape']))
+
             if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
                or adder != 0.0 or scaler != 1.0:
                 cons[key] = (flatval + adder)*scaler
