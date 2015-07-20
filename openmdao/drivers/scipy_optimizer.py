@@ -97,14 +97,19 @@ class ScipyOptimizer(Driver):
 
         # Initial Parameters
         i = 0
-        bounds = []
+        use_bounds = (opt in _bounds_optimizers)
+        if use_bounds:
+            bounds = []
+        else:
+            bounds = None
+
         for name, val in self.get_params().items():
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size
 
             # Bounds if our optimizer supports them
-            if opt in _bounds_optimizers:
+            if use_bounds:
                 meta_low = pmeta[name]['low']
                 meta_high = pmeta[name]['high']
                 for j in range(0, size):
@@ -120,9 +125,6 @@ class ScipyOptimizer(Driver):
                         p_high = meta_high
 
                     bounds.append((p_low, p_high))
-            elif opt is 'COBYLA':
-                # COBYLA will throw a Warning if bounds is not None
-                bounds = None
 
         # Constraints
         constraints = []
