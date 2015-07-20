@@ -77,7 +77,7 @@ class System(object):
         msg = "Variable '%s' must be accessed from a containing Group"
         raise RuntimeError(msg % name)
 
-    def promoted(self, name):
+    def _promoted(self, name):
         """Determine if the given variable name is being promoted from this
         `System`.
 
@@ -110,8 +110,9 @@ class System(object):
 
         return False
 
-    def _check_setup(self, out_stream=sys.stdout):
-        """Base class does nothing.
+    def check_setup(self, out_stream=sys.stdout):
+        """Write a report to the given stream indicating any potential problems found
+        with the current configuration of this ``System``.
 
         Args
         ----

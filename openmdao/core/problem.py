@@ -274,7 +274,7 @@ class Problem(System):
 
         # check for any potential issues
         if check:
-            return self._check_setup(out_stream)
+            return self.check_setup(out_stream)
         return {}
 
     def _check_dangling_params(self, out_stream=sys.stdout):
@@ -455,9 +455,9 @@ class Problem(System):
 
         return (cycles, sorted(ooo))
 
-    def _check_setup(self, out_stream=sys.stdout):
+    def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
-        with the current configuration.
+        with the current configuration of this ``Problem``.
 
         Args
         ----
@@ -484,7 +484,7 @@ class Problem(System):
         # loop over subsystems and let them add any specific checks to the stream
         for s in self.root.subsystems(recurse=True, local=True, include_self=True):
             stream = cStringIO()
-            s._check_setup(out_stream=stream)
+            s.check_setup(out_stream=stream)
             content = stream.getvalue()
             if content:
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
@@ -1109,7 +1109,7 @@ class Problem(System):
 
         return mode
 
-    def json_system_tree(self):
+    def _json_system_tree(self):
         """ Returns a json representation of the system hierarchy for the
         model in root.
 
@@ -1136,7 +1136,7 @@ class Problem(System):
         tree['root'] = _tree_dict(self.root)
         return json.dumps(tree)
 
-    def json_dependencies(self):
+    def _json_dependencies(self):
         """ Returns a json representation of the data dependency graph for
         the model in root..
 
