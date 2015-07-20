@@ -257,7 +257,7 @@ And for new OpenMDAO:
 
 The main difference here is that you don't actually create a new class to hold
 the hierarchical data structure. Instead, you just create variables with a
- hierarchical naming pattern; a ":" is used to delineate different levels of the
+hierarchical naming pattern; a ":" is used to delineate different levels of the
 data structure. Each individual leaf behaves like any other variable.
 
 -------------------------
