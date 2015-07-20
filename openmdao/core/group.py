@@ -44,67 +44,6 @@ class Group(System):
     def __getattr__(self, name):
         return self._subsystems[name]
 
-    def __setitem__(self, name, val):
-        """Sets the given value into the appropriate `VecWrapper`.
-
-        Args
-        ----
-        name : str
-             The name of the variable to set into the unknowns vector.
-        """
-        if self.is_active():
-            try:
-                self.unknowns[name] = val
-            except KeyError:
-                # look in params
-                try:
-                    subname, vname = name.rsplit('.', 1)
-                    self._subsystem(subname).params[vname] = val
-                except:
-                    msg = "Can't find variable '%s' in unknowns or params " + \
-                           "vectors in system '%s'"
-                    raise KeyError(msg % (name, self.pathname))
-
-    def __getitem__(self, name):
-        """
-        Retrieve unflattened value of named unknown or unconnected
-        param variable.
-
-        Args
-        ----
-        name : str
-             The name of the variable to retrieve from the unknowns vector.
-
-        Returns
-        -------
-        The unflattened value of the given variable.
-        """
-
-        # if setup has not been called, then there is no variable information to access
-        if not self._local_unknown_sizes:
-            raise RuntimeError('setup() must be called before variables can be accessed')
-
-        # if system is not active, then it's not valid to access it's variables
-        if not self.is_active():
-            raise AttributeError("System '%s' is inactive, so can't access variable '%s'" %
-                                 (self.pathname, name))
-
-        try:
-            return self.unknowns[name]
-        except KeyError:
-            subsys, subname = name.split('.', 1)
-            try:
-                return self._subsystems[subsys][subname]
-            except:
-                # look in params
-                try:
-                    subname, vname = name.rsplit('.', 1)
-                    return self._subsystem(subname).params[vname]
-                except:
-                    msg = "Can't find variable '%s' in unknowns or params " + \
-                           "vectors in system '%s'"
-                    raise KeyError(msg % (name, self.pathname))
-
     def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect

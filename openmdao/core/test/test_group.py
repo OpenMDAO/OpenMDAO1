@@ -311,9 +311,9 @@ class TestGroup(unittest.TestCase):
 
         # try accessing variable value before setup()
         try:
-            prob.root['G2.C1.x']
+            prob['G2.C1.x']
         except Exception as err:
-            msg = 'setup() must be called before variables can be accessed'
+            msg = "'unknowns' has not been initialized, setup() must be called before 'G2.C1.x' can be accessed"
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -321,8 +321,8 @@ class TestGroup(unittest.TestCase):
         prob.setup(check=False)
 
         # check that we can access values from unknowns (default) and params
-        self.assertEqual(prob.root['G2.C1.x'], 5.)             # default output from ParamComp
-        self.assertEqual(prob.root['G2.G1.C2.y'], 5.5)         # output from ExecComp
+        self.assertEqual(prob['G2.C1.x'], 5.)             # default output from ParamComp
+        self.assertEqual(prob['G2.G1.C2.y'], 5.5)         # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
@@ -332,7 +332,7 @@ class TestGroup(unittest.TestCase):
 
         prob.root.G2.unknowns['x'] = 99.
 
-        self.assertEqual(prob.root['G2.x'],   99.)
+        self.assertEqual(prob['G2.x'],   99.)
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
 
         # and make sure we get the correct value after a transfer
@@ -420,12 +420,12 @@ class TestGroup(unittest.TestCase):
         prob.setup(check=False)
 
         prob.root.unknowns['G2.G1.C2.y'] = 99.
-        self.assertEqual(prob.root['G2.G1.C2.y'], 99.)
+        self.assertEqual(prob['G2.G1.C2.y'], 99.)
 
         prob.root._transfer_data('G3')
         self.assertEqual(prob.root.params['G3.C3.x'], 99.)
 
-        self.assertEqual(prob.root['G3.C3.x'], 99.)
+        self.assertEqual(prob['G3.C3.x'], 99.)
 
 if __name__ == "__main__":
     unittest.main()

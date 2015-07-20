@@ -180,11 +180,11 @@ class TestProblem(unittest.TestCase):
         # still must use absolute naming to find params even if they're
         # promoted.  Promoted names for params can refer to more than one param.
         C1.params['x'] = 2.
-        self.assertEqual(prob['G1.G2.C1.x'], 2.0)
-        self.assertEqual(prob.root['G1.G2.C1.x'], 2.0)
+        self.assertEqual(prob['G1.x'], 2.0)
+        self.assertEqual(prob.root.G1.G2.C1.params['x'], 2.0)
         prob['G1.x'] = 99.
         self.assertEqual(C1.params['x'], 99.)
-        prob.root.G1['G2.C1.x'] = 12.
+        prob['G1.x'] = 12.
         self.assertEqual(C1.params['x'], 12.)
 
         prob['G1.x'] = 17.
@@ -615,7 +615,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob['G2.C1.x']
         except Exception as err:
-            msg = 'setup() must be called before variables can be accessed'
+            msg = "'unknowns' has not been initialized, setup() must be called before 'G2.C1.x' can be accessed"
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
