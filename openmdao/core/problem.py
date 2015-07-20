@@ -56,7 +56,20 @@ class Problem(System):
         -------
         The unflattened value of the given variable.
         """
-        return self.root[name]
+        if name in self.root.unknowns:
+            return self.root.unknowns[name]
+        elif name in self.root.params:
+            return self.root.params[name]
+        elif name in self._dangling:
+            for p in self._dangling[name]:
+                parts = p.rsplit('.', 1)
+                if len(parts) == 1:
+                    return self.root.params[p]
+                else:
+                    grp = self.root._subsystem(parts[0])
+                    return grp.params[parts[1]]
+        else:
+            raise KeyError("Variable '%s' not found." % name)
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
