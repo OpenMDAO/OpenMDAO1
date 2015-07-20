@@ -838,9 +838,8 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C3.y", "C2.x")
 
         stream = cStringIO()
-        prob.setup(out_stream=stream)
-        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
-                        stream.getvalue())
+        checks = prob.setup(out_stream=stream)
+        self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
 
     def test_cycle(self):
         prob = Problem(root=Group())
@@ -857,11 +856,10 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C2.y", "C1.x")
 
         stream = cStringIO()
-        prob.setup(out_stream=stream)
+        checks = prob.setup(out_stream=stream)
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
-        self.assertTrue("In group 'G1.G2', the following subsystems are out-of-order: ['C2']" in
-                        stream.getvalue())
+        self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
 
 
 if __name__ == "__main__":
