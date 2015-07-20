@@ -274,19 +274,23 @@ class Problem(System):
 
         # check for any potential issues
         if check:
-            self._check_setup(out_stream)
+            return self._check_setup(out_stream)
+        return {}
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
-        dangling_params = [p for p in self.root._params_dict
-                           if p not in self.root.connections]
+        dangling_params = sorted(set([m['promoted_name']
+                             for p, m in self.root._params_dict.items()
+                               if p not in self.root.connections]))
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
                   file=out_stream)
-            for d in sorted(dangling_params):
+            for d in dangling_params:
                 print(d, file=out_stream)
+
+        return dangling_params
 
     def _check_mode(self, out_stream=sys.stdout):
         """ Adjoint vs Forward mode appropriateness """
@@ -298,14 +302,20 @@ class Problem(System):
                                                                    self._u_length),
                   file=out_stream)
 
+        return (self.root._relevance.mode, self._calculated_mode)
+
     def _list_unit_conversions(self, out_stream=sys.stdout):
         """ List all unit conversions being made (including only units on one
         side)"""
         if self._unit_diffs:
+            tuples = sorted(self._unit_diffs.items())
             print("\nUnit Conversions")
-            for (src, tgt), (sunit, tunit) in sorted(self._unit_diffs.items()):
+            for (src, tgt), (sunit, tunit) in tuples:
                 print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
-                      file=out_stream)
+                        file=out_stream)
+
+            return tuples
+        return []
 
     def _check_no_unknown_comps(self, out_stream=sys.stdout):
         """ Check for components without unknowns. """
@@ -317,16 +327,22 @@ class Problem(System):
             for n in nocomps:
                 print(n, file=out_stream)
 
+        return nocomps
+
     def _check_no_recorders(self, out_stream=sys.stdout):
         """ Check for no case recorder. """
-        if not self.driver.recorders:
-            for grp in self.root.subgroups(recurse=True, local=True,
-                                           include_self=True):
-                if grp.nl_solver.recorders or grp.ln_solver.recorders:
-                    break
-            else:
-                print("\nNo recorders have been specified, so no data will be saved.",
-                      file=out_stream)
+        recorders = []
+        recorders.extend(self.driver.recorders)
+        for grp in self.root.subgroups(recurse=True, local=True,
+                                       include_self=True):
+            recorders.extend(grp.nl_solver.recorders)
+            recorders.extend(grp.ln_solver.recorders)
+
+        if not recorders:
+            print("\nNo recorders have been specified, so no data will be saved.",
+                  file=out_stream)
+
+        return recorders
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
@@ -339,15 +355,19 @@ class Problem(System):
             for comp in noconn_comps:
                 print(comp, file=out_stream)
 
+        return noconn_comps
+
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
         if under_mpirun():
+            parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if MPI.COMM_WORLD.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if isinstance(grp, ParallelGroup):
                         break
                 else:
+                    parr = False
                     print("\nRunning under MPI, but no ParallelGroups were found.",
                           file=out_stream)
 
@@ -355,15 +375,22 @@ class Problem(System):
                 if maxcpu is not None and MPI.COMM_WORLD.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
                           (MPI.COMM_WORLD.size, maxcpu))
+
+                return (MPI.COMM_WORLD.size, maxcpu, parr)
         # or any ParalleGroups found when not running under MPI
         else:
+            pargrps = []
             for grp in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(grp, ParallelGroup):
                     print("\nFound ParallelGroup '%s', but not running under MPI." %
                           grp.pathname, file=out_stream)
+                    pargrps.append(grp.pathname)
+            return sorted(pargrps)
 
     def _check_graph(self, out_stream=sys.stdout):
         """ Check for cycles in group w/o solver. """
+        cycles = []
+        ooo = []
         cgraph = self.root._relevance._cgraph
         for grp in self.root.subgroups(recurse=True, include_self=True):
             path = [] if not grp.pathname else grp.pathname.split('.')
@@ -393,6 +420,7 @@ class Problem(System):
                         relstrong[-1] = sorted(relstrong[-1])
                 print("Group '%s' has the following cycles: %s" %
                       (grp.pathname, relstrong), file=out_stream)
+                cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
             subnames = [s.pathname for s in grp.subsystems()]
@@ -414,9 +442,13 @@ class Problem(System):
                         out_of_order.add(v)
 
             if out_of_order:
+                sooo = sorted([name_relative_to(grp.pathname, n)
+                                       for n in out_of_order])
                 print("In group '%s', the following subsystems are out-of-order: %s" %
-                      (grp.pathname, sorted([name_relative_to(grp.pathname, n)
-                                             for n in out_of_order])), file=out_stream)
+                      (grp.pathname, sooo), file=out_stream)
+                ooo.append((grp.pathname, sooo))
+
+        return (cycles, sorted(ooo))
 
     def _check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
@@ -430,14 +462,15 @@ class Problem(System):
         print("##############################################", file=out_stream)
         print("Setup: Checking for potential issues...", file=out_stream)
 
-        self._check_dangling_params(out_stream)
-        self._check_mode(out_stream)
-        self._list_unit_conversions(out_stream)
-        self._check_no_unknown_comps(out_stream)
-        self._check_no_connect_comps(out_stream)
-        self._check_no_recorders(out_stream)
-        self._check_mpi(out_stream)
-        self._check_graph(out_stream)
+        results = {} # dict of results for easier testing
+        results['dangling_params'] = self._check_dangling_params(out_stream)
+        results['mode'] = self._check_mode(out_stream)
+        results['unit_diffs'] = self._list_unit_conversions(out_stream)
+        results['no_unknown_comps'] = self._check_no_unknown_comps(out_stream)
+        results['no_connect_comps'] = self._check_no_connect_comps(out_stream)
+        results['recorders'] = self._check_no_recorders(out_stream)
+        results['mpi'] = self._check_mpi(out_stream)
+        results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
@@ -450,9 +483,12 @@ class Problem(System):
             content = stream.getvalue()
             if content:
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
+                results["@%s" % s.pathname] = content
 
         print("\nSetup: Check complete.", file=out_stream)
         print("##############################################\n", file=out_stream)
+
+        return results
 
     def run(self):
         """ Runs the Driver in self.driver. """
