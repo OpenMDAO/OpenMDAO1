@@ -107,8 +107,12 @@ class TestConnectionsPromoted(unittest.TestCase):
         C3 = G4.add("C3", ExecComp('y=x*2.0'), promotes=['x'])
         C4 = G4.add("C4", ExecComp('y=x*2.0'), promotes=['x'])
 
-        p.setup(check=False)
-
+        stream = cStringIO()
+        checks = p.setup(out_stream=stream)
+        self.assertEqual(checks['dangling_params'],
+                         ['G1.G2.C1.x', 'G1.G2.C2.x', 'G3.G4.x'])
+        self.assertEqual(checks['no_connect_comps'],
+                         ['G1.G2.C1', 'G1.G2.C2', 'G3.G4.C3', 'G3.G4.C4'])
         self.assertEqual(p._dangling['G3.G4.x'], set(['G3.G4.C3.x','G3.G4.C4.x']))
 
         # setting promoted name should set both params mapped to that name since the
