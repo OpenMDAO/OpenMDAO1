@@ -41,9 +41,6 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
-    def __getattr__(self, name):
-        return self._subsystems[name]
-
     def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
@@ -88,7 +85,11 @@ class Group(System):
             msg = "Group '{gname}' already contains a subsystem with name"\
                             " '{cname}'.".format(gname=self.name, cname=name)
             raise RuntimeError(msg)
+        elif hasattr(self, name):
+            raise RuntimeError("Group '%s' already has a '%s' attribute." %
+                                 (self.name, name))
         self._subsystems[name] = system
+        setattr(self, name, system)
         system.name = name
         return system
 
