@@ -462,12 +462,7 @@ class Group(System):
                     src_pathnames = get_absvarpathnames(src, self._unknowns_dict, 'unknowns')
                 except KeyError as error:
                     try:
-                        # if src is a param, it must use scoped absolute naming, so convert to top
-                        # level absolute name for lookup in params_dict
-                        s = self._get_var_pathname(src)
-                        # verify that src is actually in self._params_dict
-                        self._params_dict[s]
-                        src_pathnames = [s]
+                        src_pathnames = get_absvarpathnames(src, self._params_dict, 'params')
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
