@@ -259,7 +259,8 @@ class Problem(System):
         oois = self.driver.outputs_of_interest()
 
         # make sure pois and oois all refer to existing vars.
-        # NOTE: all variables of interest (includeing POIs) must exist in the unknowns dict
+        # NOTE: all variables of interest (includeing POIs) must exist in
+        #      the unknowns dict
         promoted_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
 
         for vnames in pois:
@@ -277,9 +278,17 @@ class Problem(System):
         relevance = Relevance(params_dict, unknowns_dict, connections,
                               pois, oois, mode)
 
+        # pass relevance object down to all systems and perform
+        # auto ordering
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s._relevance = relevance
+            if isinstance(s, Group):
+                # set auto order if order not already set
+                if not s._order_set:
+                    s.set_order(s.list_auto_order())
+
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, relevance=relevance,
-                                 impl=self._impl)
+        self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prep for case recording
         self._start_recorders()

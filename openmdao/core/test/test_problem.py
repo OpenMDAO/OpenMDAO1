@@ -837,6 +837,9 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C1.y", "C3.x")
         G2.connect("C3.y", "C2.x")
 
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
         self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
@@ -854,6 +857,9 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C1.y", "C3.x")
         G2.connect("C3.y", "C2.x")
         G2.connect("C2.y", "C1.x")
+
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
 
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)

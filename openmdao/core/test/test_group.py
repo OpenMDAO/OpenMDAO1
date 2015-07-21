@@ -485,5 +485,30 @@ class TestGroup(unittest.TestCase):
         msg = 'You cannot call add after specifying an order.'
         self.assertEqual(str(cm.exception), msg)
 
+    def test_auto_order(self):
+        p = Problem(root=Group())
+        root = p.root
+        C5 = root.add("C5", ExecComp('y=x*2.0'))
+        C6 = root.add("C6", ExecComp('y=x*2.0'))
+        C1 = root.add("C1", ExecComp('y=x*2.0'))
+        C2 = root.add("C2", ExecComp('y=x*2.0'))
+        C3 = root.add("C3", ExecComp(['y=x*2.0','y2=x2+1.0']))
+        C4 = root.add("C4", ExecComp(['y=x*2.0','y2=x2+1.0']))
+        P1 = root.add("P1", ParamComp('x', 1.0))
+
+        root.connect('P1.x', 'C1.x')
+        root.connect('C1.y', 'C2.x')
+        root.connect('C2.y', 'C4.x')
+        root.connect('C4.y', 'C5.x')
+        root.connect('C5.y', 'C6.x')
+        root.connect('C5.y', 'C3.x2')
+        root.connect('C6.y', 'C3.x')
+        root.connect('C3.y', 'C4.x2')
+
+        p.setup(check=False)
+
+        self.assertEqual(p.root.list_auto_order(), ['P1','C1','C2','C4','C5','C6','C3'])
+
+
 if __name__ == "__main__":
     unittest.main()
