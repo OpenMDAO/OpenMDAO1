@@ -486,7 +486,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Implicit
         expected_error_message = ("Shape '(2,)' of the source 'y' "
@@ -502,7 +505,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Explicit
         expected_error_message = ("Shape '(2,)' of the source 'C.y' must match the shape '(3,)' "
@@ -517,7 +523,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Implicit
         expected_error_message = ("Shape '(2,)' of the source 'y' must match the shape"
@@ -531,7 +540,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Explicit
         prob = Problem()
