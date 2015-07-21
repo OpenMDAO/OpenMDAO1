@@ -281,7 +281,9 @@ class TestDriver(unittest.TestCase):
             msg = "Index for parameter 'myparams.x' is out of bounds. "
             msg += "Requested index: [0 3 4], "
             msg += "Parameter shape: (4,)."
-            self.assertEqual(msg, str(cm.exception))
+            raised_error = str(cm.exception)
+            raised_error.replace('(4L,', '(4,')
+            self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_obj(self):
 
@@ -308,7 +310,9 @@ class TestDriver(unittest.TestCase):
             msg = "Index for objective 'rosen.xxx' is out of bounds. "
             msg += "Requested index: [4], "
             msg += "Parameter shape: (4,)."
-            self.assertEqual(msg, str(cm.exception))
+            raised_error = str(cm.exception)
+            raised_error.replace('(4L,', '(4,')
+            self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_con(self):
 
@@ -335,7 +339,9 @@ class TestDriver(unittest.TestCase):
             msg = "Index for constraint 'rosen.xxx' is out of bounds. "
             msg += "Requested index: [4], "
             msg += "Parameter shape: (4,)."
-            self.assertEqual(msg, str(cm.exception))
+            raised_error = str(cm.exception)
+            raised_error.replace('(4L,', '(4,')
+            self.assertEqual(msg, raised_error)
 
 if __name__ == "__main__":
     unittest.main()
