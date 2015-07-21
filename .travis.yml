@@ -4,15 +4,13 @@ os:
 
 sudo: false
 
-language: python
-
-python:
-- 2.7
-- 3.4
+language: generic
 
 env:
-- HDF5=h5py
-- HFF5=
+- HDF5=h5py PY=2.7
+- HDF5=h5py PY=3.4
+- HFF5= PY=2.7
+- HFF5= PY=3.4
 
 notifications:
   email: false
@@ -28,7 +26,7 @@ before_install:
 - conda update --yes conda
 
 install:
-- conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy nose $HDF5
+- conda install --yes python=$PY numpy scipy nose $HDF5
 - pip install .
 
 script: nosetests
