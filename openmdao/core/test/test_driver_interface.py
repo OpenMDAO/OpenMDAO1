@@ -282,7 +282,7 @@ class TestDriver(unittest.TestCase):
             msg += "Requested index: [0 3 4], "
             msg += "Parameter shape: (4,)."
             raised_error = str(cm.exception)
-            raised_error.replace('(4L,', '(4,')
+            raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_obj(self):
@@ -311,7 +311,7 @@ class TestDriver(unittest.TestCase):
             msg += "Requested index: [4], "
             msg += "Parameter shape: (4,)."
             raised_error = str(cm.exception)
-            raised_error.replace('(4L,', '(4,')
+            raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_con(self):
@@ -340,7 +340,7 @@ class TestDriver(unittest.TestCase):
             msg += "Requested index: [4], "
             msg += "Parameter shape: (4,)."
             raised_error = str(cm.exception)
-            raised_error.replace('(4L,', '(4,')
+            raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
 
 if __name__ == "__main__":
