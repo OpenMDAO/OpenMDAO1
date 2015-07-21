@@ -8,6 +8,7 @@ from six import iteritems
 from itertools import chain
 
 import numpy as np
+import networkx as nx
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
@@ -41,8 +42,8 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
-        # Flag for manual order specification
-        self._user_order = False
+        # Flag is true after order is set
+        self._order_set = False
 
     def _subsystem(self, name):
         """
@@ -83,7 +84,7 @@ class Group(System):
         """
 
         # Can't call set after specifying an order
-        if self._user_order == True:
+        if self._order_set:
             msg = 'You cannot call add after specifying an order.'
             raise RuntimeError(msg)
 
@@ -261,7 +262,7 @@ class Group(System):
                 self._local_subsystems[sub.name] = sub
 
     def _setup_vectors(self, param_owners, parent=None,
-                       relevance=None, top_unknowns=None, impl=BasicImpl):
+                       top_unknowns=None, impl=BasicImpl):
         """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
@@ -273,9 +274,6 @@ class Group(System):
 
         parent : `Group`, optional
             The `Group` that contains this `Group`, if any.
-
-        relevance : `Relevance`
-            An object that stores relevance information for each variable of interest.
 
         top_unknowns : `VecWrapper`, optional
             The `Problem` level unknowns `VecWrapper`.
@@ -294,22 +292,20 @@ class Group(System):
             return
 
         self._impl_factory = impl
-        self._relevance = relevance
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
-            self._create_vecs(my_params, relevance, var_of_interest=None,
-                              impl=impl)
+            self._create_vecs(my_params, var_of_interest=None, impl=impl)
             top_unknowns = self.unknowns
         else:
-            self._create_views(top_unknowns, parent, my_params, relevance,
+            self._create_views(top_unknowns, parent, my_params,
                                var_of_interest=None)
 
         self._local_unknown_sizes = self.unknowns._get_flattened_sizes()
         self._local_param_sizes = self.params._get_flattened_sizes()
         self._owning_ranks = self._get_owning_ranks()
 
-        self._setup_data_transfer(my_params, relevance, None)
+        self._setup_data_transfer(my_params, None)
 
         # TODO: determine the size of the largest grouping of parallel subvecs, allocate
         #       an array of that size, and sub-allocate from that for all relevant subvecs
@@ -322,12 +318,12 @@ class Group(System):
             if group is not None:
                 for voi in vois:
                     if parent is None:
-                        self._create_vecs(my_params, relevance, voi, impl)
+                        self._create_vecs(my_params, voi, impl)
                     else:
                         self._create_views(top_unknowns, parent, my_params,
-                                           relevance, voi)
+                                           voi)
 
-                    self._setup_data_transfer(my_params, relevance, voi)
+                    self._setup_data_transfer(my_params, voi)
 
         # convert any src_indices to index arrays
         for meta in self._params_dict.values():
@@ -336,7 +332,7 @@ class Group(System):
 
         for sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
-                               relevance=relevance, top_unknowns=top_unknowns)
+                               top_unknowns=top_unknowns)
 
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
@@ -729,15 +725,6 @@ class Group(System):
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 
-    def list_order(self):
-        """ Lists execution order for systems in this Group.
-
-        Returns
-        -------
-        list of str : List of system names in execution order.
-        """
-        return list(self._subsystems.keys())
-
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only
         be called after all subsystems have been added.
@@ -775,7 +762,62 @@ class Group(System):
             new_subs[sub] = self._subsystems[sub]
 
         self._subsystems = new_subs
-        self._user_order = True
+        self._order_set = True
+
+    def list_order(self):
+        """ Lists execution order for systems in this Group.
+
+        Returns
+        -------
+        list of str : List of system names in execution order.
+        """
+        return list(self._subsystems.keys())
+
+    def list_auto_order(self):
+        """
+        Returns
+        -------
+        list of str
+            Names of subsystems listed in the order that they
+            would be executed if a manual order was not set.
+        """
+        order = nx.topological_sort(self._break_cycles(self._get_sys_graph()))
+        sz = len(self.pathname)+1 if self.pathname else 0
+        return [n[sz:] for n in order]
+
+    def _get_sys_graph(self):
+        """Return the subsystem graph for this Group."""
+
+        cgraph = self._relevance._cgraph
+        path = [] if not self.pathname else self.pathname.split('.')
+        graph = cgraph.subgraph([n for n in cgraph
+                                  if n.startswith(self.pathname)])
+        renames = {}
+        for node in graph.nodes_iter():
+            renames[node] = '.'.join(node.split('.')[:len(path)+1])
+            if renames[node] == node:
+                del renames[node]
+
+        # get the graph of direct children of current group
+        nx.relabel_nodes(graph, renames, copy=False)
+
+        # remove self loops created by renaming
+        graph.remove_edges_from([(u, v) for u, v in graph.edges()
+                                 if u == v])
+        return graph
+
+    def _break_cycles(self, graph):
+        """Keep breaking cycles until the graph is a DAG."""
+        strong = [s for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+        while strong:
+            # break cycles
+            for p in graph.predecessors(strong[0][0]):
+                if p in strong[0]:
+                    graph.remove_edge(p, strong[0][0])
+            strong = [s for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+        return graph
 
     def _all_params(self, voi=None):
         """ Returns the set of all parameters in this system and all subsystems.
@@ -1033,7 +1075,7 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
-    def _setup_data_transfer(self, my_params, relevance, var_of_interest):
+    def _setup_data_transfer(self, my_params, var_of_interest):
         """
         Create `DataXfer` objects to handle data transfer for all of the
         connections that involve parameters for which this `Group`
@@ -1046,15 +1088,11 @@ class Group(System):
             List of pathnames for parameters that the `Group` is
             responsible for propagating.
 
-        relevance : `Relevance`
-            An object containing info about what variables are relevant
-            to a variable of interest.
-
         var_of_interest : str or None
             The name of a variable of interest.
 
         """
-
+        relevance = self._relevance
         xfer_dict = {}
         for param, unknown in self.connections.items():
             if not (relevance.is_relevant(var_of_interest, param) or
@@ -1149,35 +1187,6 @@ class Group(System):
             else:
                 x.transfer(self.unknowns, self.params, mode)
 
-    def _get_owning_rank(self, name, sizes_table):
-        """
-        Args
-        ----
-        name : str
-            Name of the variable to find the owning rank for
-
-        sizes_table : list of ordered dicts mapping name to size
-            Size info for all vars in all ranks.
-
-        Returns
-        -------
-        int
-            The current rank if it has a local copy of the named variable, else
-            the rank of the lowest ranked process that has a local copy.
-        """
-        if self.comm is None:
-            return 0
-
-        if sizes_table[self.comm.rank][name]:
-            return self.comm.rank
-        else:
-            for i in range(self.comm.size):
-                if sizes_table[i][name]:
-                    return i
-            else:
-                raise RuntimeError("Can't find a source for '%s' with a non-zero size" %
-                                   name)
-
     def _get_owning_ranks(self):
         """
         Determine the 'owning' rank of each variable and return a dict
@@ -1222,7 +1231,8 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         variable dictionary that map to the given promoted name.
     """
 
-    pnames = [n for n, m in var_dict.items() if m['promoted_name'] == var_name]
+    pnames = [n for n, m in var_dict.items()
+                   if m['promoted_name'] == var_name]
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 

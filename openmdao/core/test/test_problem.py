@@ -849,6 +849,9 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C1.y", "C3.x")
         G2.connect("C3.y", "C2.x")
 
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
         self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
@@ -867,8 +870,15 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C3.y", "C2.x")
         G2.connect("C2.y", "C1.x")
 
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        auto = G2.list_auto_order()
+        self.assertTrue(auto==['C1', 'C3', 'C2'] or
+                        auto==['C3', 'C2', 'C1'] or
+                        auto==['C2', 'C1', 'C3'])
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
         self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])

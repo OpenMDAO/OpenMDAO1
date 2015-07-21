@@ -195,7 +195,7 @@ class Component(System):
         return _new_params, _new_unknowns
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, relevance=None, impl=BasicImpl):
+                       top_unknowns=None, impl=BasicImpl):
         """
         Set up local `VecWrappers` to store this component's variables.
 
@@ -211,19 +211,16 @@ class Component(System):
         top_unknowns : `VecWrapper`, optional
             the `Problem` level unknowns `VecWrapper`
 
-        relevance : `Relevance`
-            An object containing relevance info for each variable of interest.
-
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
+        relevance = self._relevance
 
         if not self.is_active():
             return
 
-        self._relevance = relevance
         self._impl_factory = impl
 
         # create storage for the relevant vecwrappers, keyed by
@@ -231,12 +228,12 @@ class Component(System):
         for group, vois in relevance.groups.items():
             if group is not None:
                 for voi in vois:
-                    self._create_views(top_unknowns, parent, [], relevance,
+                    self._create_views(top_unknowns, parent, [],
                                        voi)
 
         # we don't get non-deriv vecs (u, p, r) unless we have a None group,
         # so force their creation here
-        self._create_views(top_unknowns, parent, [], relevance, None)
+        self._create_views(top_unknowns, parent, [], None)
 
         # create params vec entries for any unconnected params
         for meta in self._params_dict.values():
