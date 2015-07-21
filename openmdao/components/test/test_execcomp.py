@@ -136,3 +136,7 @@ class TestExecComp(unittest.TestCase):
 
         J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['comp.y']['p1.x'], np.array([6.0]), 0.00001)
+
+
+if __name__ == "__main__":
+    unittest.main()

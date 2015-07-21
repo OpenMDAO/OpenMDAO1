@@ -82,12 +82,14 @@ class Group(System):
             system._promotes = promotes
 
         if name in self._subsystems.keys():
-            msg = "Group '{gname}' already contains a subsystem with name"\
-                            " '{cname}'.".format(gname=self.name, cname=name)
+            msg = "Group '%s' already contains a subsystem with name '%s'." % \
+                  (self.name, name)
             raise RuntimeError(msg)
         elif hasattr(self, name):
-            raise RuntimeError("Group '%s' already has a '%s' attribute." %
-                                 (self.name, name))
+            msg = "Group '%s' already contains an attribute with name '%s'." % \
+                  (self.name, name)
+            raise RuntimeError(msg)
+
         self._subsystems[name] = system
         setattr(self, name, system)
         system.name = name
