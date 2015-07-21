@@ -488,7 +488,6 @@ class TestProblem(unittest.TestCase):
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
-        raised_error = str(cm.exception)
         raised_error = raised_error.replace('(3L,', '(3,')
         self.assertEqual(raised_error, expected_error_message)
 
@@ -508,7 +507,6 @@ class TestProblem(unittest.TestCase):
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
-        raised_error = str(cm.exception)
         raised_error = raised_error.replace('(3L,', '(3,')
         self.assertEqual(raised_error, expected_error_message)
 
@@ -527,7 +525,6 @@ class TestProblem(unittest.TestCase):
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
-        raised_error = str(cm.exception)
         raised_error = raised_error.replace('(3L,', '(3,')
         self.assertEqual(raised_error, expected_error_message)
 
@@ -545,7 +542,6 @@ class TestProblem(unittest.TestCase):
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
-        raised_error = str(cm.exception)
         raised_error = raised_error.replace('(3L,', '(3,')
         self.assertEqual(raised_error, expected_error_message)
 
