@@ -1,6 +1,19 @@
-OpenMDAO Release Notes
+Release Notes
 
-Version 1.0.0 / July 20, 2015
-*
-*
-*
+---------------------------------------------------------------------------------------------------
+OpenMDAO Version 1.0 Alpha Release Notes
+July 20, 2015
+
+Initial Release
+
+Differences from previous code base:
+* 10x smaller code base (~5000 lines of code compared to ~50,000 before)
+* Compatible with both Python 2.7+ and Python 3.4+
+* Install using pip, just like any other Python package
+* No more Traits dependency, and no more weird class-like variable definitions anymore!
+* Ability to manually group components to be finite-differenced together
+* No more dataflow/workflow duality. Now you just define a single model hierarchy
+* No more Assembly overhead. Grouping components no longer introduces any inefficiencies
+* Parallel execution (and parallel adjoint derivatives) with an MPI distributed-memory data passing system
+
+Install: http://openmdao.org/docs/getting-started/install.html
