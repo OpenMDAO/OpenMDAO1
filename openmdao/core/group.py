@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 import sys
 from six import iteritems
 from itertools import chain
@@ -41,6 +41,9 @@ class Group(System):
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
 
+        # Flag for manual order specification
+        self._user_order = False
+
     def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
@@ -78,6 +81,12 @@ class Group(System):
         promotes : tuple, optional
             The names of variables in the subsystem which are to be promoted.
         """
+
+        # Can't call set after specifying an order
+        if self._user_order == True:
+            msg = 'You cannot call add after specifying an order.'
+            raise RuntimeError(msg)
+
         if promotes is not None:
             system._promotes = promotes
 
@@ -719,6 +728,54 @@ class Group(System):
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
+
+    def list_order(self):
+        """ Lists execution order for systems in this Group.
+
+        Returns
+        -------
+        list of str : List of system names in execution order.
+        """
+        return list(self._subsystems.keys())
+
+    def set_order(self, new_order):
+        """ Specifies a new execution order for this system. This should only
+        be called after all subsystems have been added.
+
+        Args
+        ----
+        new_order : list of str
+            List of system names in desired new execution order.
+        """
+
+        # Make sure the new_order is valid. It must contain all susbsystems
+        # in this model.
+        newset = set(new_order)
+        oldset = set(self._subsystems.keys())
+        if oldset != newset:
+            missing = oldset - newset
+            extra = newset - oldset
+
+            msg = "Unexpected new order. "
+            if len(missing) > 0:
+                msg += "The following are missing: %s. " % list(missing)
+            if len(extra) > 0:
+                msg += "The following are extra: %s. " % list(extra)
+
+            raise ValueError(msg)
+
+        # Don't allow duplicates either.
+        if len(newset) < len(new_order):
+            dupes = [key for key, val in Counter(new_order).items() if val>1]
+            msg = "Duplicate name found in order list: %s" % dupes
+            raise ValueError(msg)
+
+        new_subs = OrderedDict()
+        for sub in new_order:
+            new_subs[sub] = self._subsystems[sub]
+
+        self._subsystems = new_subs
+        self._user_order = True
 
     def _all_params(self, voi=None):
         """ Returns the set of all parameters in this system and all subsystems.

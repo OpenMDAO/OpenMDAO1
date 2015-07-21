@@ -427,5 +427,63 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(prob['G3.C3.x'], 99.)
 
+    def test_list_and_set_order(self):
+
+        prob = Problem(root=ExampleGroupWithPromotes())
+
+        order1 = prob.root.list_order()
+        self.assertEqual(order1, ['G2', 'G3'])
+
+        # Big boy rules
+        order2 = ['G3', 'G2']
+
+        prob.root.set_order(order2)
+
+        order1 = prob.root.list_order()
+        self.assertEqual(order1, ['G3', 'G2'])
+
+        # Extra
+        order2 = ['G3', 'G2', 'junk']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are extra: ['junk']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Missing
+        order2 = ['G3']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are missing: ['G2']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Extra and Missing
+        order2 = ['G3', 'junk']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are missing: ['G2']. "
+        msg += "The following are extra: ['junk']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Dupes
+        order2 = ['G3', 'G2', 'G3']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Duplicate name found in order list: ['G3']"
+        self.assertEqual(str(cm.exception), msg)
+
+        # Don't let user call add.
+        with self.assertRaises(RuntimeError) as cm:
+            prob.root.add('C5', Group())
+
+        msg = 'You cannot call add after specifying an order.'
+        self.assertEqual(str(cm.exception), msg)
+
 if __name__ == "__main__":
     unittest.main()
