@@ -736,7 +736,7 @@ class Group(System):
         -------
         list of str : List of system names in execution order.
         """
-        return self._subsystems.keys()
+        return list(self._subsystems.keys())
 
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only
