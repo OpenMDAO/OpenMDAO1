@@ -748,8 +748,6 @@ class Group(System):
             List of system names in desired new execution order.
         """
 
-        new_subs = OrderedDict()
-
         # Make sure the new_order is valid. It must contain all susbsystems
         # in this model.
         newset = set(new_order)
@@ -772,6 +770,7 @@ class Group(System):
             msg = "Duplicate name found in order list: %s" % dupes
             raise ValueError(msg)
 
+        new_subs = OrderedDict()
         for sub in new_order:
             new_subs[sub] = self._subsystems[sub]
 
