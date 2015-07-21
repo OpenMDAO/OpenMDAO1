@@ -8,6 +8,7 @@ from six import iteritems
 from itertools import chain
 
 import numpy as np
+import networkx as nx
 
 from openmdao.components.paramcomp import ParamComp
 from openmdao.core.basicimpl import BasicImpl
@@ -1145,6 +1146,52 @@ class Group(System):
 
         return ranks
 
+    def list_auto_order(self):
+        """
+        Returns
+        -------
+        list of str
+            Names of subsystems listed in the order that they
+            would be executed if a manual order was not set.
+        """
+        order = nx.topological_sort(self._break_cycles(self._get_sys_graph()))
+        sz = len(self.pathname)+1 if self.pathname else 0
+        return [n[sz:] for n in order]
+
+    def _get_sys_graph(self):
+        """Return the subsystem graph for this Group."""
+
+        cgraph = self._relevance._cgraph
+        path = [] if not self.pathname else self.pathname.split('.')
+        graph = cgraph.subgraph([n for n in cgraph
+                                  if n.startswith(self.pathname)])
+        renames = {}
+        for node in graph.nodes_iter():
+            renames[node] = '.'.join(node.split('.')[:len(path)+1])
+            if renames[node] == node:
+                del renames[node]
+
+        # get the graph of direct children of current group
+        nx.relabel_nodes(graph, renames, copy=False)
+
+        # remove self loops created by renaming
+        graph.remove_edges_from([(u, v) for u, v in graph.edges()
+                                 if u == v])
+        return graph
+
+    def _break_cycles(self, graph):
+        """Keep breaking cycles until the graph is a DAG."""
+        strong = [s for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+        while strong:
+            # break cycles
+            for p in graph.predecessors(strong[0][0]):
+                if p in strong[0]:
+                    graph.remove_edge(p, strong[0][0])
+            strong = [s for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+        return graph
+
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
     Args
@@ -1165,7 +1212,8 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         variable dictionary that map to the given promoted name.
     """
 
-    pnames = [n for n, m in var_dict.items() if m['promoted_name'] == var_name]
+    pnames = [n for n, m in var_dict.items()
+                   if m['promoted_name'] == var_name]
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 

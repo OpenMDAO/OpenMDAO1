@@ -857,6 +857,8 @@ class TestCheckSetup(unittest.TestCase):
 
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        g = G2._get_sys_graph()
+        self.assertEqual(G2.list_auto_order(), ['C1', 'C3', 'C2'])
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
         self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])

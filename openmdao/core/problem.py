@@ -406,22 +406,8 @@ class Problem(System):
         """ Check for cycles in group w/o solver. """
         cycles = []
         ooo = []
-        cgraph = self.root._relevance._cgraph
         for grp in self.root.subgroups(recurse=True, include_self=True):
-            path = [] if not grp.pathname else grp.pathname.split('.')
-            graph = cgraph.subgraph([n for n in cgraph if n.startswith(grp.pathname)])
-            renames = {}
-            for node in graph.nodes_iter():
-                renames[node] = '.'.join(node.split('.')[:len(path)+1])
-                if renames[node] == node:
-                    del renames[node]
-
-            # get the graph of direct children of current group
-            nx.relabel_nodes(graph, renames, copy=False)
-
-            # remove self loops created by renaming
-            graph.remove_edges_from([(u, v) for u, v in graph.edges()
-                                     if u == v])
+            graph = grp._get_sys_graph()
 
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
@@ -438,15 +424,7 @@ class Problem(System):
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
-            subnames = [s.pathname for s in grp.subsystems()]
-            while strong:
-                # break cycles to check order
-                lsys = [s for s in subnames if s in strong[0]]
-                for p in graph.predecessors(lsys[0]):
-                    if p in lsys:
-                        graph.remove_edge(p, lsys[0])
-                strong = [s for s in nx.strongly_connected_components(graph)
-                          if len(s) > 1]
+            graph = grp._break_cycles(graph)
 
             visited = set()
             out_of_order = {}
