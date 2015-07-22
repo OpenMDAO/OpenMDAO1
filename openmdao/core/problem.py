@@ -677,8 +677,8 @@ class Problem(System):
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
-                    pi += 1
-                ui += 1
+                    pi += cols
+                ui += rows
         return J
 
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):

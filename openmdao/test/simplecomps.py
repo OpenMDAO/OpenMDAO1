@@ -77,6 +77,44 @@ class SimpleArrayComp(Component):
         return J
 
 
+class DoubleArrayComp(Component):
+    """A fairly simple array component."""
+
+    def __init__(self):
+        super(DoubleArrayComp, self).__init__()
+
+        # Params
+        self.add_param('x1', np.zeros([2]))
+        self.add_param('x2', np.zeros([2]))
+
+        # Unknowns
+        self.add_output('y1', np.zeros([2]))
+        self.add_output('y2', np.zeros([2]))
+
+        self.JJ = np.array([[1.0, 3.0, -2.0, 7.0],
+                            [6.0, 2.5, 2.0, 4.0],
+                            [-1.0, 0.0, 8.0, 1.0],
+                            [1.0, 4.0, -5.0, 6.0]])
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+
+        unknowns['y1'] = self.JJ[0:2, 0:2].dot(params['x1']) + self.JJ[0:2, 2:4].dot(params['x2'])
+        unknowns['y2'] = self.JJ[2:4, 0:2].dot(params['x1']) + self.JJ[2:4, 2:4].dot(params['x2'])
+
+    def jacobian(self, params, unknowns, resids):
+        """Analytical derivatives."""
+
+
+        J = {}
+        J[('y1', 'x1')] = self.JJ[0:2, 0:2]
+        J[('y1', 'x2')] = self.JJ[0:2, 2:4]
+        J[('y2', 'x1')] = self.JJ[2:4, 0:2]
+        J[('y2', 'x2')] = self.JJ[2:4, 2:4]
+
+        return J
+
+
 class ArrayComp2D(Component):
     """2D Array component."""
 
