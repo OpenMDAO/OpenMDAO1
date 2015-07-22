@@ -10,8 +10,24 @@ from openmdao.core.group import Group
 from openmdao.util.strutil import name_relative_to
 
 def plot_sys_tree(system, outfile=None, fmt='pdf'):
+    """
+    Generate a plot of the system tree and bring it up in a browser.
+    (requires graphviz).
+
+    Args
+    ----
+    system : `System`
+        Starting node of the System tree to be plotted.
+
+    outfile : str, optional
+        Name of the output file.  Default is 'system_tree.<fmt>'
+
+    fmt : str, optional
+        Format for the plot file. Any format accepted by dot should work.
+        Default is 'pdf'.
+    """
     if outfile is None:
-        outfile = 'system_graph.'+fmt
+        outfile = 'system_tree.'+fmt
 
     dotfile = os.path.splitext(outfile)[0]+'.dot'
 
@@ -30,9 +46,46 @@ def plot_sys_tree(system, outfile=None, fmt='pdf'):
         pass
 
 def plot_vgraph(group, outfile=None, fmt='pdf'):
+    """
+    Generate a plot of the variable graph and bring it up in a browser.
+    (requires graphviz).
+
+    Args
+    ----
+    group : `Group`
+        Only the part of the overall variable graph belonging to this group
+        will be plotted.
+
+    outfile : str, optional
+        Name of the output file.  Default is 'graph.<fmt>'
+
+    fmt : str, optional
+        Format for the plot file. Any format accepted by dot should work.
+        Default is 'pdf'.
+
+    """
     _plot_graph(group._relevance._vgraph, outfile=outfile, fmt=fmt)
 
 def plot_sgraph(group, outfile=None, fmt='pdf'):
+    """
+    Generate a plot of the system graph at a particular group level
+    and bring it up in a browser.
+    (requires graphviz).
+
+    Args
+    ----
+    group : `Group`
+        Only the part of the overall system graph belonging to this group
+        will be plotted.
+
+    outfile : str, optional
+        Name of the output file.  Default is 'graph.<fmt>'
+
+    fmt : str, optional
+        Format for the plot file. Any format accepted by dot should work.
+        Default is 'pdf'.
+
+    """
     _plot_graph(group._get_sys_graph(), outfile=outfile, fmt=fmt)
 
 
