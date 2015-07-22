@@ -781,17 +781,23 @@ class Group(System):
             Names of subsystems listed in the order that they
             would be executed if a manual order was not set.
         """
-        order = nx.topological_sort(self._break_cycles(self._get_sys_graph()))
+        order = nx.topological_sort(self._break_cycles(self.list_order(),
+                                                       self._get_sys_graph()))
         sz = len(self.pathname)+1 if self.pathname else 0
         return [n[sz:] for n in order]
 
     def _get_sys_graph(self):
         """Return the subsystem graph for this Group."""
 
-        cgraph = self._relevance._cgraph
-        path = [] if not self.pathname else self.pathname.split('.')
-        graph = cgraph.subgraph([n for n in cgraph
-                                  if n.startswith(self.pathname)])
+        sgraph = self._relevance._sgraph
+        if self.pathname:
+            path = self.pathname.split('.')
+            start = self.pathname + '.'
+        else:
+            path = []
+            start = ''
+        graph = sgraph.subgraph([n for n in sgraph
+                                  if n.startswith(start)])
         renames = {}
         for node in graph.nodes_iter():
             renames[node] = '.'.join(node.split('.')[:len(path)+1])
@@ -806,15 +812,39 @@ class Group(System):
                                  if u == v])
         return graph
 
-    def _break_cycles(self, graph):
-        """Keep breaking cycles until the graph is a DAG."""
+    def _break_cycles(self, order, graph):
+        """Keep breaking cycles until the graph is a DAG.
+        """
         strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
         while strong:
+            # First of all, see if the cycle has in edges
+            in_edges = []
+            start = None
+            if len(strong[0]) < len(graph):
+                for s in strong[0]:
+                    count = len([u for u,v in graph.in_edges(s)
+                                      if u not in strong[0]])
+                    in_edges.append((count, s))
+                in_edges = sorted(in_edges)
+                if in_edges[-1][0] > 0:
+                    start = in_edges[-1][1]  # take the node with the most in edges
+
+            if start is None:
+                # take the first system in the existing order that is found
+                # in the SCC and disconnect it from its predecessors that are
+                # also found in the SCC
+                for node in order:
+                    if self.pathname:
+                        node = '.'.join((self.pathname, node))
+                    if node in strong[0]:
+                        start = node
+                        break
+
             # break cycles
-            for p in graph.predecessors(strong[0][0]):
+            for p in graph.predecessors(start):
                 if p in strong[0]:
-                    graph.remove_edge(p, strong[0][0])
+                    graph.remove_edge(p, start)
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
         return graph

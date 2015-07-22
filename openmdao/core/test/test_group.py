@@ -486,6 +486,8 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(str(cm.exception), msg)
 
     def test_auto_order(self):
+        # this tests the auto ordering when we have a cycle that is smaller
+        # than the full graph.
         p = Problem(root=Group())
         root = p.root
         C5 = root.add("C5", ExecComp('y=x*2.0'))
@@ -508,6 +510,22 @@ class TestGroup(unittest.TestCase):
         p.setup(check=False)
 
         self.assertEqual(p.root.list_auto_order(), ['P1','C1','C2','C4','C5','C6','C3'])
+
+    def test_auto_order2(self):
+        # this tests the auto ordering when we have a cycle that is the full graph.
+        p = Problem(root=Group())
+        root = p.root
+        C1 = root.add("C1", ExecComp('y=x*2.0'))
+        C2 = root.add("C2", ExecComp('y=x*2.0'))
+        C3 = root.add("C3", ExecComp('y=x*2.0'))
+
+        root.connect('C1.y', 'C3.x')
+        root.connect('C3.y', 'C2.x')
+        root.connect('C2.y', 'C1.x')
+
+        p.setup(check=False)
+
+        self.assertEqual(p.root.list_auto_order(), ['C1', 'C3', 'C2'])
 
 
 if __name__ == "__main__":
