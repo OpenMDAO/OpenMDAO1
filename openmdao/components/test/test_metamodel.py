@@ -2,6 +2,7 @@
 import unittest
 import math
 from six import iteritems
+from six.moves import cStringIO
 
 import numpy as np
 from math import sin
@@ -26,80 +27,100 @@ class TestMetaModel(unittest.TestCase):
             def solve_nonlinear(self, params, unknowns, resids):
                 unknowns['f_x'] = .5*sin(params['x'])
 
-        class Simulation(Group):
-            """ Top level assembly for MetaModel of a sine component using a
-            Kriging surrogate."""
+        # Create meta_model for f_x as the response
+        sin_mm = MetaModel()
 
-            def __init__(self):
-                super(Simulation, self).__init__()
+        # the following will cause sin_mm to have
+        # a paramter `train:x`, and an output `train:f_x` for training data
+        # and an `x` and `f_x` variables for prediction
+        sin_mm.add_param('x', 0.)
+        sin_mm.add_output('f_x', 0.)
+        #sin_mm.add_output('f_x', 0., surrogate=FloatKrigingSurrogate())
 
-                # Create meta_model for f_x as the response
-                sin_mm = self.add("sin_mm", MetaModel(params = ('x', ),
-                                                      responses = ('f_x', )))
+        # Use Kriging for the f_x output
+        #sin_mm.default_surrogate = FloatKrigingSurrogate()
+        #sin_mm.surrogates = {'f_x': FloatKrigingSurrogate} (allowable to set one surrogate per response)
 
-                # this should force sin_mm to have a paramter `train:x`, and an output `train:f_x`
-                # for training data, and an `x` and `f_x` variales for prediction
+        prob = Problem(Group())
+        prob.root.add('sin_mm', sin_mm)
 
-                # Use Kriging for the f_x output
-                sin_mm.default_surrogate = FloatKrigingSurrogate()
-                #sin_mm.surrogates = {'f_x': FloatKrigingSurrogate} (allowable to set one surrogate per response)
+        # check that missing surrogate is detected in check_setup
+        stream = cStringIO()
+        prob.setup(out_stream=stream)
+        msg = ("No default surrogate model is defined and the "
+               "following outputs do not have a surrogate model:\n"
+               "['f_x']\n"
+               "Either specify a default_surrogate, or specify a "
+               "surrogate model for all outputs.")
+        self.assertTrue(msg in stream.getvalue())
 
-        prob = Problem(Simulation())
+        sin_mm.default_surrogate = FloatKrigingSurrogate()
         prob.setup(check=False)
 
         prob['sin_mm.train:x'] = np.linspace(0,10,200)
-        print(np.sin(prob['sin_mm.train:x']))
-        prob['sin_mm.train:f_x'] = np.sin(prob['sin_mm.train:x'])
+        print('\nTraining Inputs:')
+        print(prob['sin_mm.train:x'])
 
-        prob['sin_mm.x'] = 2.1 #prediction should happen at this point
+        prob['sin_mm.train:f_x'] = .5*np.sin(prob['sin_mm.train:x'])
+        print('\nTraining Outputs:')
+        print(prob['sin_mm.train:f_x'])
+
+        prob['sin_mm.x'] = 2.22 #prediction should happen at this point
 
         prob.run()
 
+        print('\nPredicted Values:')
         print(prob['sin_mm.f_x']) #predicted value
+        expected_value = .5*np.sin(prob['sin_mm.x'])
+        self.assertAlmostEqual(prob['sin_mm.f_x'], expected_value, places=5)
 
     def test_basics(self):
 
-        meta = MetaModel()
+        mm = MetaModel()
 
-        meta.add_param('x1', 0.)
-        meta.add_param('x2', 0.)
+        mm.add_param('x1', 0.)
+        mm.add_param('x2', 0.)
 
-        meta.add_unknown('y1', 0.)
-        meta.add_unknown('y2', 0.)
+        mm.add_unknown('y1', 0.)
+        mm.add_unknown('y2', 0.)
 
-        meta.params.x1 = [1.0, 2.0, 3.0]
-        meta.params.x2 = [1.0, 3.0, 4.0]
-        meta.responses.y1 = [3.0, 2.0, 1.0]
-        meta.responses.y2 = [1.0, 4.0, 7.0]
-
-        meta.default_surrogate = ResponseSurface()
-
-        meta.x1 = 2.0
-        meta.x2 = 3.0
+        mm.default_surrogate = ResponseSurface()
 
         prob = Problem(root=Group())
-        prob.add('meta', meta)
-        prob.meta.run()
+        prob.add('mm', mm)
+        prob.setup()
 
-        assert_rel_error(self, prob.meta.y1, 2.0, .00001)
-        assert_rel_error(self, prob.meta.y2, 4.0, .00001)
+        prob['mm.train:x1'] = [1.0, 2.0, 3.0]
+        prob['mm.train:x2'] = [1.0, 3.0, 4.0]
+        prob['mm.train:y1'] = [3.0, 2.0, 1.0]
+        prob['mm.train:y2'] = [1.0, 4.0, 7.0]
 
-        prob.meta.x1 = 2.5
-        prob.meta.x2 = 3.5
-        prob.meta.run()
+        prob['mm.x1'] = 2.0
+        prob['mm.x2'] = 3.0
 
-        assert_rel_error(self, prob.meta.y1, 1.5934, .001)
+        prob.run()
+
+        assert_rel_error(self, prob['mm.y1'], 2.0, .00001)
+        assert_rel_error(self, prob['mm.y1'], 4.0, .00001)
+
+        prob['mm.x1'] = 2.5
+        prob['mm.x2'] = 3.5
+        prob.mm.run()
+
+        assert_rel_error(self, prob['mm.y1'], 1.5934, .001)
 
         # Slot a new surrogate.
-        prob.meta.default_surrogate = FloatKrigingSurrogate()
-        self.assertTrue(prob.meta._train == True)
+        prob.mm.default_surrogate = FloatKrigingSurrogate()
+        prob.setup()
 
-        prob.meta.run()
+        self.assertTrue(prob.mm._train == True)
 
-        assert_rel_error(self, prob.meta.y1, 1.4609, .001)
+        prob.mm.run()
+
+        assert_rel_error(self, prob.mm.y1, 1.4609, .001)
 
     def test_train(self):
-        # generate training data for paraboloid
+        #generate training data for paraboloid
         data = {}
         data['x'] = []
         data['y'] = []
@@ -110,13 +131,13 @@ class TestMetaModel(unittest.TestCase):
             data['f_xy'].append((x-3.0)**2 + x*y + (y+4.0)**2 - 3.0)
 
         # crate metamodel
-        meta = MetaModel(params=('x', 'y'),
+        mm = MetaModel(params=('x', 'y'),
                          responses=('f_xy'))
-        meta.default_surrogate = FloatKrigingSurrogate()
+        mm.default_surrogate = FloatKrigingSurrogate()
 
-        meta.params.x = data['x']
-        meta.params.y = data['y']
-        meta.responses.f_xy = data['f_xy']
+        mm.params.x = data['x']
+        mm.params.y = data['y']
+        mm.responses.f_xy = data['f_xy']
 
         prob = Problem(root=Group())
         prob.add('meta', meta)
