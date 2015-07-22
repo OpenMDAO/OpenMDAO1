@@ -472,12 +472,13 @@ class System(object):
             else:
                 arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
 
-    def _create_vecs(self, my_params, relevance, var_of_interest, impl):
+    def _create_vecs(self, my_params, var_of_interest, impl):
         """ This creates our vecs and mats."""
         comm = self.comm
         sys_pathname = self.pathname
         params_dict = self._params_dict
         unknowns_dict = self._unknowns_dict
+        relevance = self._relevance
 
         self.comm = comm
 
@@ -507,7 +508,7 @@ class System(object):
         self.drmat[var_of_interest] = dresids
         self.dpmat[var_of_interest] = dparams
 
-    def _create_views(self, top_unknowns, parent, my_params, relevance,
+    def _create_views(self, top_unknowns, parent, my_params,
                       var_of_interest=None):
         """
         A manager of the data transfer of a possibly distributed collection of
@@ -543,6 +544,7 @@ class System(object):
         unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
         voi = var_of_interest
+        relevance = self._relevance
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = _get_relname_map(parent.unknowns, unknowns_dict, self.pathname)

@@ -259,7 +259,8 @@ class Problem(System):
         oois = self.driver.outputs_of_interest()
 
         # make sure pois and oois all refer to existing vars.
-        # NOTE: all variables of interest (includeing POIs) must exist in the unknowns dict
+        # NOTE: all variables of interest (includeing POIs) must exist in
+        #      the unknowns dict
         promoted_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
 
         for vnames in pois:
@@ -274,12 +275,20 @@ class Problem(System):
 
         mode = self._check_for_matrix_matrix(pois, oois)
 
-        relevance = Relevance(params_dict, unknowns_dict, connections,
+        relevance = Relevance(self.root, params_dict, unknowns_dict, connections,
                               pois, oois, mode)
 
+        # pass relevance object down to all systems and perform
+        # auto ordering
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s._relevance = relevance
+            if isinstance(s, Group):
+                # set auto order if order not already set
+                if not s._order_set:
+                    s.set_order(s.list_auto_order())
+
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, relevance=relevance,
-                                 impl=self._impl)
+        self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prep for case recording
         self._start_recorders()
@@ -406,22 +415,8 @@ class Problem(System):
         """ Check for cycles in group w/o solver. """
         cycles = []
         ooo = []
-        cgraph = self.root._relevance._cgraph
         for grp in self.root.subgroups(recurse=True, include_self=True):
-            path = [] if not grp.pathname else grp.pathname.split('.')
-            graph = cgraph.subgraph([n for n in cgraph if n.startswith(grp.pathname)])
-            renames = {}
-            for node in graph.nodes_iter():
-                renames[node] = '.'.join(node.split('.')[:len(path)+1])
-                if renames[node] == node:
-                    del renames[node]
-
-            # get the graph of direct children of current group
-            nx.relabel_nodes(graph, renames, copy=False)
-
-            # remove self loops created by renaming
-            graph.remove_edges_from([(u, v) for u, v in graph.edges()
-                                     if u == v])
+            graph = grp._get_sys_graph()
 
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
@@ -438,15 +433,7 @@ class Problem(System):
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
-            subnames = [s.pathname for s in grp.subsystems()]
-            while strong:
-                # break cycles to check order
-                lsys = [s for s in subnames if s in strong[0]]
-                for p in graph.predecessors(lsys[0]):
-                    if p in lsys:
-                        graph.remove_edge(p, lsys[0])
-                strong = [s for s in nx.strongly_connected_components(graph)
-                          if len(s) > 1]
+            graph = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
             out_of_order = {}
