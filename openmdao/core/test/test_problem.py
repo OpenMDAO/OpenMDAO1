@@ -881,8 +881,17 @@ class TestCheckSetup(unittest.TestCase):
                         auto==['C2', 'C1', 'C3'])
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
-        self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
 
+        oo = checks['out_of_order']
+        self.assertEqual(oo[0][0], 'G1.G2')
+        expected = {
+            ('C2','C3'): 'C1',
+            ('C3',): 'C2',
+            ('C2',): 'C1',
+        }
+
+        for node, afters in oo[0][1]:
+            self.assertEqual(node, expected[tuple(afters)])
 
 if __name__ == "__main__":
     unittest.main()

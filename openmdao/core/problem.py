@@ -275,7 +275,7 @@ class Problem(System):
 
         mode = self._check_for_matrix_matrix(pois, oois)
 
-        relevance = Relevance(params_dict, unknowns_dict, connections,
+        relevance = Relevance(self.root, params_dict, unknowns_dict, connections,
                               pois, oois, mode)
 
         # pass relevance object down to all systems and perform
@@ -433,7 +433,7 @@ class Problem(System):
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
-            graph = grp._break_cycles(graph)
+            graph = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
             out_of_order = {}
