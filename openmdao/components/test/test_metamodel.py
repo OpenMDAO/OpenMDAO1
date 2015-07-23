@@ -123,7 +123,7 @@ class TestMetaModel(unittest.TestCase):
         self.assertTrue(isinstance(surrogate, FloatKrigingSurrogate))
 
         self.assertTrue(mm.train)  # training will occur after re-setup
-        mm.warm_restart = True      # use existing training data
+        mm.warm_restart = True     # use existing training data
 
         prob['mm.x1'] = 2.5
         prob['mm.x2'] = 3.5
@@ -196,7 +196,6 @@ class TestMetaModel(unittest.TestCase):
         #]
         #prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
         #prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
-
 
         #prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
         #prob.run()

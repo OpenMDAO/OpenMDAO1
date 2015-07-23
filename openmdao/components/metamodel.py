@@ -101,7 +101,7 @@ class MetaModel(Component):
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
-        with the current configuration of this ``Problem``.
+        with the current configuration of this ``MetaModel``.
 
         Args
         ----
