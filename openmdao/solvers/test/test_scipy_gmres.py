@@ -101,6 +101,11 @@ class TestScipyGMRES(unittest.TestCase):
         diff = np.linalg.norm(J - Jbase)
         assert_rel_error(self, diff, 0.0, 1e-8)
 
+        J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='rev',
+                               return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
     def test_simple_in_group_matvec(self):
         group = Group()
         sub = group.add('sub', Group(), promotes=['x', 'y'])
