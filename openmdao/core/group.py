@@ -117,6 +117,10 @@ class Group(System):
 
         targets : str OR iterable
             The name of one or more target variables.
+
+        src_indices : index array, optional
+            If specified, connect the specified entries of the full
+            distributed source value to the target.
         """
         if isinstance(targets, str):
             targets = (targets,)
@@ -195,12 +199,18 @@ class Group(System):
         for sub in self.subsystems():
             sub._setup_paths(self.pathname)
 
-    def _setup_variables(self):
+    def _setup_variables(self, compute_indices=False):
         """
         Create dictionaries of metadata for parameters and for unknowns for
         this `Group` and stores them as attributes of the `Group`. The
         promoted name of subsystem variables with respect to this `Group`
         is included in the metadata.
+
+        Args
+        ----
+        compute_indices : bool, optional
+            If True, call setup_distrib_idxs() to set values of
+            'src_indices' metadata.
 
         Returns
         -------
@@ -213,10 +223,15 @@ class Group(System):
         self._data_xfer = {}
 
         for sub in self.subsystems():
-            subparams, subunknowns = sub._setup_variables()
+            subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in subparams.items():
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
+                # FIXME: potential problem here if the user calls connect on
+                #        a group but the vars being connected are both in a
+                #        subgroup. Result would be that 'src_indices' metadata
+                #        wouldn't exist down at the level where the data xfer
+                #        actually takes place.
                 if p in self._src_idxs:
                     meta['src_indices'] = self._src_idxs[p]
                 self._params_dict[p] = meta
@@ -341,6 +356,44 @@ class Group(System):
         self._ls_inputs = {}
         for voi, vec in self.dumat.items():
             self._ls_inputs[voi] = self._all_params(voi)
+
+    def _create_vecs(self, my_params, var_of_interest, impl):
+        """ This creates our vecs and mats. This is only called on
+        the top level Group.
+        """
+        comm = self.comm
+        sys_pathname = self.pathname
+        params_dict = self._params_dict
+        unknowns_dict = self._unknowns_dict
+        relevance = self._relevance
+
+        self.comm = comm
+
+        # create implementation specific VecWrappers
+        if var_of_interest is None:
+            self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
+
+            # populate the VecWrappers with data
+            self.unknowns.setup(unknowns_dict, store_byobjs=True)
+            self.resids.setup(unknowns_dict)
+            self.params.setup(None, params_dict, self.unknowns,
+                              my_params, self.connections, store_byobjs=True)
+
+        dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+        dresids = impl.create_src_vecwrapper(sys_pathname, comm)
+        dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
+
+        dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
+        dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
+        dparams.setup(None, params_dict, self.unknowns, my_params,
+                      self.connections,
+                      relevant_vars=relevance[var_of_interest])
+
+        self.dumat[var_of_interest] = dunknowns
+        self.drmat[var_of_interest] = dresids
+        self.dpmat[var_of_interest] = dparams
 
     def _get_fd_params(self):
         """

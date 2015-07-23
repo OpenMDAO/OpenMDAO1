@@ -468,10 +468,12 @@ determined by a combination of the order of the names in the Driver's
 *workflow* attribute and the order of the data flow, which is determined
 automatically based on connections between components.
 
-In new OpenMDAO, Components and Groups within a Group are executed in the
-order that they are added to the parent Group.  No automatic reordering
-is currently being done, but is likely in the future.  The *setup*
-method of Problem will report any out-of-order systems that it finds.
+In new OpenMDAO, subsystems within a Group are executed in an
+automatically determined order based on the direction of data flow between
+them.  You can override the automatic ordering by calling the
+*set_order* method on the Group, giving it a list of names of subsystems
+in the order that you want. The *setup* method of Problem will report any
+out-of-order systems that it finds.
 
 -----------------
 Running the Model

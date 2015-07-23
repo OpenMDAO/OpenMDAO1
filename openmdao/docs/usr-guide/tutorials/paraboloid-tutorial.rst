@@ -174,8 +174,7 @@ This code instantiates a `Problem` object and sets the root to be an empty `Grou
     root.add('p1', ParamComp('x', 3.0))
     root.add('p2', ParamComp('y', -4.0))
 
-Now it is time to add components to the empty group. They must be
-added in execution order, so we need to start with the parameters. `ParamComp`
+Now it is time to add components to the empty group. `ParamComp`
 is a `Component` that provides the source for a variable which we can later give
 to a `Driver` as a design variable to control.
 

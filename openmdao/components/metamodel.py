@@ -79,12 +79,19 @@ class MetaModel(Component):
         else:
             self._unknowns_dict[name]['default_surrogate'] = True
 
-    def _setup_variables(self):
+    def _setup_variables(self, compute_indices=False):
         """Returns our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
 
         Also instantiates surrogates for the output variables
         that use the default surrogate.
+
+        Args
+        ----
+
+        compute_indices : bool, optional
+            If True, call setup_distrib_idxs() to set values of
+            'src_indices' metadata.
         """
         # create an instance of the default surrogate for outputs that
         # did not have a surrogate specified
