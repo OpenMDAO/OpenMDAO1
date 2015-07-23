@@ -87,7 +87,7 @@ class MetaModel(Component):
         that use the default surrogate.
         """
         # create an instance of the default surrogate for outputs that
-        # did not haa surrogate specified
+        # did not have a surrogate specified
         if self.default_surrogate is not None:
             for name in self._surrogate_output_names:
                 if self._unknowns_dict[name].get('default_surrogate'):
