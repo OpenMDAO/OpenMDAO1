@@ -86,8 +86,8 @@ class MetaModel(Component):
         Also instantiates surrogates for the output variables
         that use the default surrogate.
         """
-        # create an instance of the default surrogate for outputs that do not
-        # already have a surrogate in their metadata
+        # create an instance of the default surrogate for outputs that
+        # did not haa surrogate specified
         if self.default_surrogate is not None:
             for name in self._surrogate_output_names:
                 if self._unknowns_dict[name].get('default_surrogate'):
