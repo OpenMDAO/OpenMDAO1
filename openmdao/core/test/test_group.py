@@ -427,5 +427,106 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(prob['G3.C3.x'], 99.)
 
+    def test_list_and_set_order(self):
+
+        prob = Problem(root=ExampleGroupWithPromotes())
+
+        order1 = prob.root.list_order()
+        self.assertEqual(order1, ['G2', 'G3'])
+
+        # Big boy rules
+        order2 = ['G3', 'G2']
+
+        prob.root.set_order(order2)
+
+        order1 = prob.root.list_order()
+        self.assertEqual(order1, ['G3', 'G2'])
+
+        # Extra
+        order2 = ['G3', 'G2', 'junk']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are extra: ['junk']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Missing
+        order2 = ['G3']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are missing: ['G2']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Extra and Missing
+        order2 = ['G3', 'junk']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Unexpected new order. "
+        msg += "The following are missing: ['G2']. "
+        msg += "The following are extra: ['junk']. "
+        self.assertEqual(str(cm.exception), msg)
+
+        # Dupes
+        order2 = ['G3', 'G2', 'G3']
+        with self.assertRaises(ValueError) as cm:
+            prob.root.set_order(order2)
+
+        msg = "Duplicate name found in order list: ['G3']"
+        self.assertEqual(str(cm.exception), msg)
+
+        # Don't let user call add.
+        with self.assertRaises(RuntimeError) as cm:
+            prob.root.add('C5', Group())
+
+        msg = 'You cannot call add after specifying an order.'
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_auto_order(self):
+        # this tests the auto ordering when we have a cycle that is smaller
+        # than the full graph.
+        p = Problem(root=Group())
+        root = p.root
+        C5 = root.add("C5", ExecComp('y=x*2.0'))
+        C6 = root.add("C6", ExecComp('y=x*2.0'))
+        C1 = root.add("C1", ExecComp('y=x*2.0'))
+        C2 = root.add("C2", ExecComp('y=x*2.0'))
+        C3 = root.add("C3", ExecComp(['y=x*2.0','y2=x2+1.0']))
+        C4 = root.add("C4", ExecComp(['y=x*2.0','y2=x2+1.0']))
+        P1 = root.add("P1", ParamComp('x', 1.0))
+
+        root.connect('P1.x', 'C1.x')
+        root.connect('C1.y', 'C2.x')
+        root.connect('C2.y', 'C4.x')
+        root.connect('C4.y', 'C5.x')
+        root.connect('C5.y', 'C6.x')
+        root.connect('C5.y', 'C3.x2')
+        root.connect('C6.y', 'C3.x')
+        root.connect('C3.y', 'C4.x2')
+
+        p.setup(check=False)
+
+        self.assertEqual(p.root.list_auto_order(), ['P1','C1','C2','C4','C5','C6','C3'])
+
+    def test_auto_order2(self):
+        # this tests the auto ordering when we have a cycle that is the full graph.
+        p = Problem(root=Group())
+        root = p.root
+        C1 = root.add("C1", ExecComp('y=x*2.0'))
+        C2 = root.add("C2", ExecComp('y=x*2.0'))
+        C3 = root.add("C3", ExecComp('y=x*2.0'))
+
+        root.connect('C1.y', 'C3.x')
+        root.connect('C3.y', 'C2.x')
+        root.connect('C2.y', 'C1.x')
+
+        p.setup(check=False)
+
+        self.assertEqual(p.root.list_auto_order(), ['C1', 'C3', 'C2'])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -486,7 +486,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Implicit
         expected_error_message = ("Shape '(2,)' of the source 'y' "
@@ -502,7 +505,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Explicit
         expected_error_message = ("Shape '(2,)' of the source 'C.y' must match the shape '(3,)' "
@@ -517,7 +523,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Implicit
         expected_error_message = ("Shape '(2,)' of the source 'y' must match the shape"
@@ -531,7 +540,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(2L,', '(2,')
+        raised_error = raised_error.replace('(3L,', '(3,')
+        self.assertEqual(raised_error, expected_error_message)
 
         # Explicit
         prob = Problem()
@@ -837,6 +849,9 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C1.y", "C3.x")
         G2.connect("C3.y", "C2.x")
 
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
         self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
@@ -855,12 +870,28 @@ class TestCheckSetup(unittest.TestCase):
         G2.connect("C3.y", "C2.x")
         G2.connect("C2.y", "C1.x")
 
+        # force wrong order
+        G2.set_order(['C1', 'C2', 'C3'])
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        auto = G2.list_auto_order()
+        self.assertTrue(auto==['C1', 'C3', 'C2'] or
+                        auto==['C3', 'C2', 'C1'] or
+                        auto==['C2', 'C1', 'C3'])
         self.assertTrue("Group 'G1.G2' has the following cycles: [['C1', 'C2', 'C3']]" in
                         stream.getvalue())
-        self.assertEqual(checks['out_of_order'], [('G1.G2',[('C2',['C3'])])])
 
+        oo = checks['out_of_order']
+        self.assertEqual(oo[0][0], 'G1.G2')
+        expected = {
+            ('C2','C3'): 'C1',
+            ('C3',): 'C2',
+            ('C2',): 'C1',
+        }
+
+        for node, afters in oo[0][1]:
+            self.assertEqual(node, expected[tuple(afters)])
 
 if __name__ == "__main__":
     unittest.main()

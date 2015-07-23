@@ -12,7 +12,7 @@ import networkx as nx
 class Relevance(object):
     """ Object that manages the data connectivity graph for systems."""
 
-    def __init__(self, params_dict, unknowns_dict, connections,
+    def __init__(self, group, params_dict, unknowns_dict, connections,
                  inputs, outputs, mode):
 
         self.params_dict = params_dict
@@ -48,7 +48,7 @@ class Relevance(object):
 
             self.outputs.append(out)
 
-        self._vgraph, self._cgraph = self._setup_graphs(connections)
+        self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
 
         if mode == 'fwd':
@@ -104,7 +104,7 @@ class Relevance(object):
         else:
             return self.inputs+self.outputs
 
-    def _setup_graphs(self, connections):
+    def _setup_graphs(self, group, connections):
         """
         Set up dependency graphs for variables and components in the Problem.
 
@@ -118,18 +118,20 @@ class Relevance(object):
         unknowns_dict = self.unknowns_dict
 
         vgraph = nx.DiGraph()  # var graph
-        cgraph = nx.DiGraph()  # component graph
+        sgraph = nx.DiGraph()  # subsystem graph
 
         compins = {}  # maps input vars to components
         compouts = {} # maps output vars to components
 
         promote_map = {}
 
+        # ensure we have system graph nodes even for unconnected subsystems
+        sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
+
         for meta in params_dict.values():
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            cgraph.add_node(param.rsplit('.', 1)[0])
             if param in connections and meta['promoted_name'] != param:
                 promote_map[param] = meta['promoted_name']
 
@@ -137,13 +139,12 @@ class Relevance(object):
             unknown = meta['pathname']
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            cgraph.add_node(unknown.rsplit('.', 1)[0])
             if meta['promoted_name'] != unknown:
                 promote_map[unknown] = meta['promoted_name']
 
         for target, source in connections.items():
             vgraph.add_edge(source, target)
-            cgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
+            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -160,7 +161,7 @@ class Relevance(object):
             if u == v:
                 vgraph.remove_edge(u, v)
 
-        return vgraph, cgraph
+        return vgraph, sgraph
 
     def _get_relevant_vars(self, g):
         """
