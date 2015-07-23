@@ -12,7 +12,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.components.metamodel import MetaModel
 from openmdao.surrogatemodels.response_surface import ResponseSurface
-from openmdao.surrogatemodels.kriging import FloatKrigingSurrogate
+from openmdao.surrogatemodels.kriging import KrigingSurrogate, FloatKrigingSurrogate
 
 from openmdao.test.testutil import assert_rel_error
 
@@ -100,7 +100,7 @@ class TestMetaModel(unittest.TestCase):
         prob['mm.x1'] = 2.0
         prob['mm.x2'] = 3.0
 
-        self.assertTrue(mm._train)   # training will occur before 1st run
+        self.assertTrue(mm.train)   # training will occur before 1st run
         prob.run()
 
         assert_rel_error(self, prob['mm.y1'], 2.0, .00001)
@@ -110,7 +110,7 @@ class TestMetaModel(unittest.TestCase):
         prob['mm.x1'] = 2.5
         prob['mm.x2'] = 3.5
 
-        self.assertFalse(mm._train)  # training will not occur before 2nd run
+        self.assertFalse(mm.train)  # training will not occur before 2nd run
         prob.run()
 
         assert_rel_error(self, prob['mm.y1'], 1.5934, .001)
@@ -122,7 +122,7 @@ class TestMetaModel(unittest.TestCase):
         surrogate = prob.root.unknowns.metadata('mm.y1').get('surrogate')
         self.assertTrue(isinstance(surrogate, FloatKrigingSurrogate))
 
-        self.assertTrue(mm._train)  # training will occur after re-setup
+        self.assertTrue(mm.train)  # training will occur after re-setup
         mm.warm_restart = True      # use existing training data
 
         prob['mm.x1'] = 2.5
@@ -131,6 +131,78 @@ class TestMetaModel(unittest.TestCase):
         prob.run()
 
         assert_rel_error(self, prob['mm.y1'], 1.4609, .001)
+
+    def test_warm_start(self):
+        # create metamodel with warm_restart = True
+        meta = MetaModel()
+        meta.add_param('x1', 0.)
+        meta.add_param('x2', 0.)
+        meta.add_output('y1', 0.)
+        meta.add_output('y2', 0.)
+        meta.default_surrogate = ResponseSurface()
+        meta.warm_restart = True
+
+        # add to problem
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        # provide initial training data
+        prob['meta.train:x1'] = [1.0, 3.0]
+        prob['meta.train:x2'] = [1.0, 4.0]
+        prob['meta.train:y1'] = [3.0, 1.0]
+        prob['meta.train:y2'] = [1.0, 7.0]
+
+        # run against a data point and check result
+        prob['meta.x1'] = 2.0
+        prob['meta.x2'] = 3.0
+        prob.run()
+
+        assert_rel_error(self, prob['meta.y1'], 1.9085, .001)
+        assert_rel_error(self, prob['meta.y2'], 3.9203, .001)
+
+        # Add 3rd training point, moves the estimate for that point
+        # back to where it should be.
+        prob['meta.train:x1'] = [2.0]
+        prob['meta.train:x2'] = [3.0]
+        prob['meta.train:y1'] = [2.0]
+        prob['meta.train:y2'] = [4.0]
+
+        meta.train = True  # currently need to tell meta to re-train
+
+        prob.run()
+        assert_rel_error(self, prob['meta.y1'], 2.0, .00001)
+        assert_rel_error(self, prob['meta.y2'], 4.0, .00001)
+
+    #def test_array_inputs(self):
+        #raise unittest.SkipTest('MetaModel does not currently support array params')
+
+        #meta = MetaModel()
+        #meta.add_param('x', np.zeros((4)))
+        #meta.add_output('y1', 0.)
+        #meta.add_output('y2', 0.)
+        #meta.default_surrogate = KrigingSurrogate()
+
+        #prob = Problem(Group())
+        #prob.root.add('meta', meta)
+        #prob.setup()
+
+        #prob['meta.train:x'] = [
+            #[1.0, 1.0, 1.0, 1.0],
+            #[2.0, 1.0, 1.0, 1.0],
+            #[1.0, 2.0, 1.0, 1.0],
+            #[1.0, 1.0, 2.0, 1.0],
+            #[1.0, 1.0, 1.0, 2.0]
+        #]
+        #prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
+        #prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
+
+
+        #prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
+        #prob.run()
+
+        #assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
+        #assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ class MetaModel(Component):
         self._surrogate_output_names = []
 
         # training will occur on first execution
-        self._train = True
+        self.train = True
         self._training_input = []
         self._training_output = {}
 
@@ -72,6 +72,7 @@ class MetaModel(Component):
         super(MetaModel, self).add_output(name, val, **kwargs)
         super(MetaModel, self).add_output('train:'+name, val=list(), pass_by_obj=True)
         self._surrogate_output_names.append(name)
+        self._training_output[name] = []
 
         if self._unknowns_dict[name].get('surrogate'):
             self._unknowns_dict[name]['default_surrogate'] = False
@@ -94,7 +95,7 @@ class MetaModel(Component):
                     self._unknowns_dict[name]['surrogate'] = surrogate
 
         # training will occur on first execution after setup
-        self._train = True
+        self.train = True
 
         return super(MetaModel, self)._setup_variables()
 
@@ -140,7 +141,7 @@ class MetaModel(Component):
             `VecWrapper` containing residuals. (r)
         """
         # Train first
-        if self._train:
+        if self.train:
             if self.warm_restart:
                 base = len(self._training_input)
             else:
@@ -167,7 +168,7 @@ class MetaModel(Component):
                 if surrogate is not None:
                     surrogate.train(self._training_input, self._training_output[name])
 
-            self._train = False
+            self.train = False
 
         # Now Predict for current inputs
         inputs = []
