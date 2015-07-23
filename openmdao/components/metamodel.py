@@ -108,8 +108,7 @@ class MetaModel(Component):
         out_stream : a file-like object, optional
         """
 
-        # Either there are no surrogates set and no default surrogate (just
-        # do passthrough ) or all outputs must have surrogates assigned
+        # All outputs must have surrogates assigned
         # either explicitly or through the default surrogate
         if self.default_surrogate is None:
             no_sur = []
