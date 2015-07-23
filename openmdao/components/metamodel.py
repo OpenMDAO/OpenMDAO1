@@ -7,10 +7,10 @@ from openmdao.core.component import Component, _NotSet
 
 
 class MetaModel(Component):
-    """ Class that creates a reduced order model for a tuple of outputs from
-    a tuple of inputs. Accepts surrogate models that adhere to ISurrogate.
-    Multiple surrogate models can be used. Training inputs and outputs should
-    be provided in the params and responses variable trees.
+    """Class that creates a reduced order model for outputs from
+    parameters. Each output may have it's own surrogate model.
+    Training inputs and outputs are automatically created with
+    'train:' prepended to the corresponding parameter/output name.
 
     For a Float variable, the training data is an array of length m.
     """
@@ -28,6 +28,8 @@ class MetaModel(Component):
 
         # training will occur on first execution
         self._train = True
+        self._training_input = []
+        self._training_output = {}
 
         # When set to False (default), the metamodel retrains with the new
         # dataset whenever the training data values are changed. When set to
@@ -68,38 +70,33 @@ class MetaModel(Component):
             execution, it is useful for infering size.
         """
         super(MetaModel, self).add_output(name, val, **kwargs)
-        super(MetaModel, self).add_output('train:'+name,  val=list(), pass_by_obj=True)
+        super(MetaModel, self).add_output('train:'+name, val=list(), pass_by_obj=True)
         self._surrogate_output_names.append(name)
 
+        if self._unknowns_dict[name].get('surrogate'):
+            self._unknowns_dict[name]['default_surrogate'] = False
+        else:
+            self._unknowns_dict[name]['default_surrogate'] = True
+
     def _setup_variables(self):
-        """ Returns our params and unknowns dictionaries,
-        re-keyed to use absolute variable names, and stores
-        them as attributes of the component.
+        """Returns our params and unknowns dictionaries,
+        re-keyed to use absolute variable names.
 
         Also instantiates surrogates for the output variables
         that use the default surrogate.
         """
-        _new_params, _new_unknowns = super(MetaModel, self)._setup_variables()
-
         # create an instance of the default surrogate for outputs that do not
         # already have a surrogate in their metadata
         if self.default_surrogate is not None:
             for name in self._surrogate_output_names:
-                surrogate = self._unknowns_dict[name].get('surrogate')
-                if surrogate is None:
+                if self._unknowns_dict[name].get('default_surrogate'):
                     surrogate = deepcopy(self.default_surrogate)
                     self._unknowns_dict[name]['surrogate'] = surrogate
 
-        return _new_params, _new_unknowns
+        # training will occur on first execution after setup
+        self._train = True
 
-    def _input_updated(self, name, fullpath=None):
-        """ Set _train if anything changes in our inputs so that training
-        occurs on the next execution."""
-
-        if fullpath is not None:
-            if fullpath.startswith('params.') or \
-               fullpath.startswith('responses.'):
-                self._train = True
+        return super(MetaModel, self)._setup_variables()
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
@@ -117,7 +114,6 @@ class MetaModel(Component):
             no_sur = []
             for name in self._surrogate_output_names:
                 surrogate = self._unknowns_dict[name].get('surrogate')
-                print('check_setup: surrogate for', name, 'is', surrogate)
                 if surrogate is None:
                     no_sur.append(name)
             if len(no_sur) > 0:
@@ -129,9 +125,8 @@ class MetaModel(Component):
                 out_stream.write(msg)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """
-        If the training flag is set, train the metamodel. Otherwise,
-        predict outputs.
+        """Predict outputs.
+        If the training flag is set, train the metamodel first.
 
         Args
         ----
@@ -146,11 +141,10 @@ class MetaModel(Component):
         """
         # Train first
         if self._train:
-            print('\n%s Training...' % self.name)
             if self.warm_restart:
-                base = len(input_data)
+                base = len(self._training_input)
             else:
-                input_data = []
+                self._training_input = []
                 base = 0
 
             # add training data for each input
@@ -159,33 +153,23 @@ class MetaModel(Component):
                 num_sample = len(val)
 
                 for j in range(base, base + num_sample):
-                    if j > len(input_data) - 1:
-                        input_data.append([])
-                    input_data[j].append(val[j-base])
-
-            # Surrogate models take an (m, n) list of lists
-            # m = number of training samples
-            # n = number of inputs
-            #
-            # TODO - Why not numpy array instead?
+                    if j > len(self._training_input) - 1:
+                        self._training_input.append([])
+                    self._training_input[j].append(val[j-base])
 
             # add training data for each output
             for name in self._surrogate_output_names:
                 if not self.warm_restart:
-                    output_data = []
+                    self._training_output[name] = []
 
-                output_data.extend(self.unknowns['train:'+name])
+                self._training_output[name].extend(self.unknowns['train:'+name])
                 surrogate = self._unknowns_dict[name].get('surrogate')
-
-                print('\ninput_data:\n', input_data)
-                print('\noutput_data:\n', output_data)
                 if surrogate is not None:
-                    surrogate.train(input_data, output_data)
+                    surrogate.train(self._training_input, self._training_output[name])
 
             self._train = False
 
         # Now Predict for current inputs
-        print('\n%s Predicting...' % self.name)
         inputs = []
         for name in self._surrogate_param_names:
             val = params[name]
@@ -193,7 +177,7 @@ class MetaModel(Component):
 
         for name in self._surrogate_output_names:
             surrogate = self._unknowns_dict[name].get('surrogate')
-            if surrogate is not None:
+            if surrogate:
                 unknowns[name] = surrogate.predict(inputs)
             else:
                 raise RuntimeError("Metamodel '%s': No surrogate specified for output '%s'"

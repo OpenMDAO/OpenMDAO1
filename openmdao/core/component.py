@@ -194,8 +194,7 @@ class Component(System):
     def _setup_variables(self):
         """
         Returns our params and unknowns dictionaries, re-keyed
-        to use absolute variable names, and stores them
-        as attributes of the component
+        to use absolute variable names
         """
 
         self.setup_param_indices()
