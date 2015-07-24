@@ -15,9 +15,9 @@ Documentation for OpenMDAO version: |release|
 
    getting-started/install.rst
 
-==============
+=============
 `User Guide`_
-==============
+=============
 
 .. _User Guide: usr-guide/basics.html
 
@@ -51,8 +51,8 @@ Documentation for OpenMDAO version: |release|
 
    srcdocs/index.rst
 
-==============================
+=====
 Index
-==============================
+=====
 
 * :ref:`genindex`

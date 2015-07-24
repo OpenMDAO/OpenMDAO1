@@ -48,30 +48,56 @@ class Component(System):
             raise ValueError(msg)
 
     def _add_variable(self, name, val, var_type, **kwargs):
-        """ Code common to all add functions goes here."""
+        """ Contruct metadata for new variable.
+
+        Args
+        ----
+        name : string
+            Name of the variable.
+
+        val : float or ndarray or object
+            Initial value for the variable.
+
+        var_type : 'param' or 'output'
+            Type of variable.
+
+        **kwargs
+            Arbitrary keyword arguments to be added to metadata.
+
+        Raises
+        ------
+        RuntimeError
+            If name is already in use or if setup has already been performed.
+
+        NameError
+            If name is not valid.
+
+        ValueError
+            If a valid value or shape is not specified.
+        """
         shape = kwargs.get('shape')
         self._check_val(name, var_type, val, shape)
         self._check_name(name)
-        args = kwargs.copy()
+        meta = kwargs.copy()
 
-        args['promoted_name'] = name
-        args['val'] = val = self._get_initial_val(val, shape)
+        meta['promoted_name'] = name
+        meta['val'] = val = self._get_initial_val(val, shape)
 
-        if is_differentiable(val) and not args.get('pass_by_obj'):
+        if is_differentiable(val) and not meta.get('pass_by_obj'):
             if isinstance(val, np.ndarray):
-                args['size'] = val.size
-                args['shape'] = val.shape
+                meta['size'] = val.size
+                meta['shape'] = val.shape
             else:
-                args['size'] = 1
-                args['shape'] = 1
+                meta['size'] = 1
+                meta['shape'] = 1
         else:
-            args['size'] = 0
-            args['pass_by_obj'] = True
+            meta['size'] = 0
+            meta['pass_by_obj'] = True
 
         if isinstance(shape, int) and shape > 1:
-            args['shape'] = (shape,)
+            meta['shape'] = (shape,)
 
-        return args
+        return meta
 
     def add_param(self, name, val=_NotSet, **kwargs):
         """ Add a `param` input to this component.
@@ -168,8 +194,7 @@ class Component(System):
     def _setup_variables(self):
         """
         Returns our params and unknowns dictionaries, re-keyed
-        to use absolute variable names, and stores them
-        as attributes of the component
+        to use absolute variable names
         """
 
         self.setup_param_indices()
