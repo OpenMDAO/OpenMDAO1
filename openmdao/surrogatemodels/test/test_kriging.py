@@ -8,7 +8,6 @@ from numpy import array, linspace, sin, cos, pi
 from scipy.optimize import minimize
 
 from openmdao.surrogatemodels.kriging import KrigingSurrogate
-from openmdao.surrogatemodels.uncertain_distributions import NormalDistribution
 
 
 class TestKrigingSurrogate(unittest.TestCase):
@@ -32,11 +31,10 @@ class TestKrigingSurrogate(unittest.TestCase):
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
         new_x = array([0.5])
-        pred = krig1.predict(new_x)
+        mu, sigma = krig1.predict(new_x)
 
-        self.assertTrue(isinstance(pred, NormalDistribution))
-        self.assertAlmostEqual(.41552, pred.sigma, places=3)
-        self.assertAlmostEqual( -1.725, pred.mu, places=3)
+        self.assertAlmostEqual(.41552, sigma, places=3)
+        self.assertAlmostEqual( -1.725, mu, places=3)
 
     def test_1d_kriging3(self):
         # Test for least squares solver utilization when ill-conditioned
@@ -45,10 +43,10 @@ class TestKrigingSurrogate(unittest.TestCase):
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
         new_x = array([0.5])
-        pred = krig1.predict(new_x)
+        mu, sigma = krig1.predict(new_x)
 
-        self.assertAlmostEqual(8.7709e-09, pred.sigma, places=7)
-        self.assertAlmostEqual(0.479425538688, pred.mu, places=7)
+        self.assertAlmostEqual(8.7709e-09, sigma, places=7)
+        self.assertAlmostEqual(0.479425538688, mu, places=7)
 
     def test_2d_kriging(self):
         def bran(x):
@@ -61,22 +59,14 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
-        pred = krig1.predict([-2., 0.])
-        self.assertAlmostEqual(bran(x[0]), pred.mu, places=5)
+        mu, sigma = krig1.predict([-2., 0.])
+        self.assertAlmostEqual(bran(x[0]), mu, places=5)
 
-        pred = krig1.predict([5., 5.])
+        mu, sigma = krig1.predict([5., 5.])
 
-        self.assertAlmostEqual(5.79, pred.sigma, places=0)
-        self.assertAlmostEqual(25.34, pred.mu, places=1)
+        self.assertAlmostEqual(5.79, sigma, places=0)
+        self.assertAlmostEqual(25.34, mu, places=1)
 
-    def test_get_uncertain_value(self):
-        x = array([[0.05], [.25], [0.61], [0.95]])
-        y = array([0.738513784857542, -0.210367746201974, -0.489015457891476, 12.3033138316612])
-        krig1 = KrigingSurrogate()
-        krig1.train(x, y)
-
-        self.assertEqual(krig1.get_uncertain_value(1).mu, NormalDistribution(1., 0.).mu)
-        self.assertEqual(krig1.get_uncertain_value(1).sigma, NormalDistribution(1., 0.).sigma)
 
     def test_no_training_data(self):
         krig1 = KrigingSurrogate()
