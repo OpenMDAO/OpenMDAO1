@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import time
 import sys
+from unittest import SkipTest
 
 import numpy as np
 
@@ -15,8 +16,6 @@ from openmdao.test.mpiunittest import MPITestCase
 
 if MPI:
     from openmdao.core.petscimpl import PetscImpl as impl
-else:
-    from openmdao.core.basicimpl import BasicImpl as impl
 
 from openmdao.test.testutil import assert_rel_error
 
@@ -244,7 +243,7 @@ class DistribGatherComp(Component):
         end = start + self.sizes[rank]
 
         #need to initialize the variable to have the correct local size
-        self.set_var_indices('invec', val=np.ones(self.sizes[comm.rank], float),
+        self.set_var_indices('invec', val=np.ones(self.sizes[rank], float),
                              src_indices=np.arange(start, end, dtype=int))
 
     def get_req_cpus(self):
@@ -266,6 +265,8 @@ class MPITests(MPITestCase):
     N_PROCS = 2
 
     def test_distrib_full_in_out(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         size = 11
 
         p = Problem(root=Group(), impl=impl)
@@ -283,6 +284,8 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec']==np.ones(size, float)*7.5))
 
     def test_distrib_idx_in_full_out(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         size = 11
 
         p = Problem(root=Group(), impl=impl)
@@ -299,8 +302,10 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
     def test_distrib_idx_in_distrb_idx_out(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         # normal comp to distrib comp to distrb gather comp
-        size = 11
+        size = 3
 
         p = Problem(root=Group(), impl=impl)
         top = p.root
@@ -315,9 +320,16 @@ class MPITests(MPITestCase):
 
         p.run()
 
+        print("C1.outvec",top.C1.unknowns['outvec'])
+        print("C2.invec",top.C2.params['invec'])
+        print("C2.outvec",top.C2.unknowns['outvec'])
+        print("C3.invec",top.C3.params['invec'])
+        print("C3.outvec",top.C3.unknowns['outvec'])
         self.assertTrue(all(top.C3.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
     def test_noncontiguous_idxs(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         # take even input indices in 0 rank and odd ones in 1 rank
         size = 11
 
@@ -343,6 +355,8 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C3.unknowns['outvec'] == np.array(full_list, 'f')*4))
 
     def test_overlapping_inputs_idxs(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         # distrib comp with distrib_idxs that overlap, i.e. the same
         # entries are distributed to multiple processes
         size = 11
@@ -365,6 +379,8 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec'][4:8]==np.array(range(size, 0, -1), float)[4:8]*8))
 
     def test_nondistrib_gather(self):
+        if not MPI:
+            raise SkipTest("MPI is not active")
         # regular comp --> distrib comp --> regular comp.  last comp should
         # automagically gather the full vector without declaring distrib_idxs
         size = 11

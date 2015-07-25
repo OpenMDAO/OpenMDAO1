@@ -104,7 +104,7 @@ class MetaModel(Component):
         # training will occur on first execution after setup
         self.train = True
 
-        return super(MetaModel, self)._setup_variables()
+        return super(MetaModel, self)._setup_variables(compute_indices)
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found

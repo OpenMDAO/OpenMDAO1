@@ -1,6 +1,8 @@
 """ Defines the base class for a Component in OpenMDAO."""
+from __future__ import print_function
 
 import sys
+import os
 import re
 from collections import OrderedDict
 from six import iteritems
@@ -18,6 +20,8 @@ _NotSet = object()
 # regex to check for valid variable names.
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
+
+trace = os.environ.get('TRACE_PETSC')
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -258,6 +262,25 @@ class Component(System):
 
         if MPI and compute_indices:
             self.setup_distrib_idxs()
+            # now update our distrib_size metadata for any distributed
+            # unknowns
+            for name, meta in self._unknowns_dict.items():
+                if 'src_indices' in meta:
+                    # have to gather all src_indices arrays unfortunately,
+                    # because we can have overlapping indices but we need
+                    # the total distributed size.
+                    if trace:
+                        print("gathering src_indices:",meta['src_indices'])
+                    idxs = self.comm.gather(meta['src_indices'], root=0)
+                    iset = set()
+                    if idxs is not None:
+                        for ilist in idxs:
+                            iset.update(ilist)
+                    if trace:
+                        print("bcasting distrib size: %d" % len(iset))
+                    meta['distrib_size'] = self.comm.bcast(len(iset), root=0)
+                    print("distrib_size =",meta['distrib_size'])
+                    del iset
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()

@@ -1092,11 +1092,12 @@ class Group(System):
             if self._relevance.is_relevant(var_of_interest, vname):
                 offset += size
 
+        print("offset:",offset,"var_rank:",var_rank," sizes_table",sizes_table)
         return offset
 
     def _get_global_idxs(self, uname, pname, var_of_interest, mode):
         """
-        Return the global indices into the distributed unknowns and params vector
+        Return the global indices into the distributed unknowns and params vectors
         for the given unknown and param.  The given unknown and param have already
         been tested for relevance.
 
@@ -1137,17 +1138,23 @@ class Group(System):
         else:
             iproc = self.comm.rank
 
-        if 'src_indices' in pmeta:
+        if 'src_indices' in pmeta and not 'src_indices' in umeta:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
         if mode == 'fwd':
-            var_rank = self._owning_ranks[uname]
+            if 'src_indices' in umeta:
+                print("src_indices found for %s in rank %d" % (uname,self.comm.rank))
+                print("rank %d setting var_rank to %d" % (self.comm.rank, iproc))
+                var_rank = iproc
+            else:
+                var_rank = self._owning_ranks[uname]
         else:
             var_rank = iproc
         offset = self._get_global_offset(uname, var_rank, self._local_unknown_sizes,
                                          var_of_interest)
+        print("rank %d global offset: %d  arg_idxs=%s" % (self.comm.rank, offset, arg_idxs))
         src_idxs = arg_idxs + offset
 
         if mode == 'fwd':
@@ -1210,6 +1217,7 @@ class Group(System):
                         dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
+            print(tgt_sys,mode,srcs," | ",tgts,vec_conns)
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \

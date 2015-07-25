@@ -8,7 +8,7 @@ from collections import OrderedDict
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
-
+import numpy
 
 from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.dataxfer import DataXfer
@@ -79,6 +79,31 @@ class PetscImpl(object):
             A `PetscDataXfer` object.
         """
         return PetscDataXfer(src_vec, tgt_vec, src_idxs, tgt_idxs, vec_conns, byobj_conns)
+
+        @staticmethod
+        def create_app_ordering(self, comm, vector_vars, local_sizes):
+            """Creates a PETSc application ordering."""
+            rank = comm.rank
+
+            start = numpy.sum(local_sizes[:rank])
+            end = numpy.sum(local_sizes[:rank+1])
+            to_idx_array = numpy.arange(start, end, dtype=PETSc.IntType)
+
+            app_idxs = []
+            for ivar, v in enumerate(vector_vars):
+                start = numpy.sum(local_sizes[:, :ivar]) + \
+                            numpy.sum(local_sizes[:rank, ivar])
+                end = start + local_sizes[rank, ivar]
+                app_idxs.append(numpy.arange(start, end, dtype=PETSc.IntType))
+
+            if app_idxs:
+                app_idxs = numpy.concatenate(app_idxs)
+
+            app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=comm)
+            petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=comm)
+
+            return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
+                                          comm=comm)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
@@ -303,7 +328,7 @@ class PetscDataXfer(DataXfer):
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
             if trace:
-                conns = ['%s <-- %s' % (u, v) for u, v in self.vec_conns]
+                conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
                 debug("'%s': rev scatter %s  %s <-- %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
                 debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
@@ -313,7 +338,7 @@ class PetscDataXfer(DataXfer):
         else:
             # forward mode, source to target including pass_by_object
             if trace:
-                conns = ['%s --> %s' % (u, v) for u, v in self.vec_conns]
+                conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
                 debug("'%s': fwd scatter %s  %s --> %s" %
                       (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
                 debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
