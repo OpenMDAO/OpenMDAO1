@@ -17,3 +17,25 @@ Differences from previous code base:
 * Parallel execution (and parallel adjoint derivatives) with an MPI distributed-memory data passing system
 
 Install: http://openmdao.org/docs/getting-started/install.html
+
+
+---------------------------------------------------------------------------------------------------
+OpenMDAO Version 1.0.1 Alpha Release Notes
+July 24, 2015
+
+* Auto-ordering of children of a Group (no longer running in instantiation order)
+* Manual ordering of children of a Group is possible via the set_order method on Group
+* MetaModel component and Kriging surrogate model were added
+* Docs hosted on read-the-docs now
+
+---------------------------------------------------------------------------------------------------
+OpenMDAO Version 1.0.2 Alpha Release Notes
+July 24, 2015
+
+* Forgot to update __version__   <:)
+
+---------------------------------------------------------------------------------------------------
+OpenMDAO Version 1.0.3 Alpha Release Notes
+July 24, 2015
+
+* Another version issue, this time with the docs.   <:)
