@@ -1,6 +1,6 @@
 """Surrogate Model based on second order response surface equations."""
 
-from numpy import matrix, linalg, power, multiply, concatenate, ones, zeros, array
+from numpy import linalg, zeros, array
 from openmdao.surrogatemodels.surrogate_model import SurrogateModel
 from six.moves import range
 
@@ -9,8 +9,8 @@ class ResponseSurface(SurrogateModel):
         # must call HasTraits init to set up Traits stuff
         super(ResponseSurface, self).__init__()
 
-        self.m = None  # number of training points
-        self.n = None  # number of independents
+        self.m = 0  # number of training points
+        self.n = 0  # number of independents
         self.betas = None  # vector of response surface equation coefficients
 
         if X is not None and Y is not None:
@@ -31,7 +31,7 @@ class ResponseSurface(SurrogateModel):
         self.m = x.shape[0]
         self.n = x.shape[1]
 
-        X = zeros((self.m, ((self.n+1)*(self.n+2))//2))
+        X = zeros((self.m, ((self.n + 1) * (self.n + 2)) // 2))
 
         # Modify X to include constant, squared terms and cross terms
 
