@@ -3,6 +3,8 @@ import random
 
 import numpy as np
 
+from numpy.linalg import norm
+
 from openmdao.surrogatemodels.response_surface import ResponseSurface
 
 
@@ -30,10 +32,10 @@ class TestResponseSurface(unittest.TestCase):
 
         lr = ResponseSurface(self.X_train, self.Y_train)
 
-        training_reconstruction = [lr.predict(x) for x in self.X_train]
-        residual = sum([ x-y for x,y in zip(training_reconstruction,self.Y_train)])
+        training_reconstruction = np.array([lr.predict(x) for x in self.X_train])
+        residual = norm(training_reconstruction - self.Y_train)
 
-        self.assertTrue(residual<1e-5)
+        self.assertTrue(residual < 1e-5)
 
 
 if __name__ == "__main__":

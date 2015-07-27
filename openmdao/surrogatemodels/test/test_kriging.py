@@ -75,7 +75,7 @@ class TestKrigingSurrogate(unittest.TestCase):
             krig1.predict([0., 1.])
         except RuntimeError as err:
             self.assertEqual(str(err),
-                "KrigingSurrogate has not been trained, so no prediction can be made")
+                "KrigingSurrogate has not been trained, so no prediction can be made.")
         else:
             self.fail("RuntimeError Expected")
 

@@ -1,6 +1,8 @@
 """ Surrogate model based on Kriging. """
 from math import log, e, sqrt
 
+from openmdao.surrogatemodels.surrogate_model import SurrogateModel
+
 # pylint: disable-msg=E0611,F0401
 from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, \
      sum, log10
@@ -8,7 +10,7 @@ from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
 
-class KrigingSurrogate(object):
+class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
     Predictions are returned as a NormalDistribution instance."""
 
@@ -25,20 +27,20 @@ class KrigingSurrogate(object):
         self.mu = None
         self.log_likelihood = None
 
-    def predict(self, new_x):
+    def predict(self, x):
         """Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
         """
-        if self.m is None:  # untrained surrogate
-            raise RuntimeError("KrigingSurrogate has not been trained, so no "
-                               "prediction can be made")
+        
+        super(KrigingSurrogate, self).predict(x)
+        
         r = zeros(self.n)
         X, Y = self.X, self.Y
         thetas = 10.**self.thetas
         XX = array(X)
-        new_x = array(new_x)
+        x = array(x)
         for i in range(self.n):
-            r[i] = sum(thetas*(XX[i] - new_x)**2.)
+            r[i] = sum(thetas*(XX[i] - x)**2.)
         r = exp(-r)
 
         one = ones(self.n)
@@ -78,9 +80,11 @@ class KrigingSurrogate(object):
 
         return (f, RMSE)
 
-    def train(self, X, Y):
+    def train(self, x, y):
         """Train the surrogate model with the given set of inputs and outputs."""
-
+        
+        super(KrigingSurrogate, self).train(x, y)
+        
         #TODO: Check if one training point will work... if not raise error
         """self.X = []
         self.Y = []
@@ -90,10 +94,10 @@ class KrigingSurrogate(object):
                 self.Y.append(out)
             else: "duplicate training point" """
 
-        self.X = X
-        self.Y = Y
-        self.m = len(X[0])
-        self.n = len(X)
+        self.X = x
+        self.Y = y
+        self.m = len(x[0])
+        self.n = len(x)
 
         thetas = zeros(self.m)
         #print "initial guess", thetas
@@ -169,6 +173,6 @@ class FloatKrigingSurrogate(KrigingSurrogate):
     """Surrogate model based on the simple Kriging interpolation. Predictions are returned as floats,
     which are the mean of the NormalDistribution predicted by the model."""
 
-    def predict(self, new_x):
-        dist = super(FloatKrigingSurrogate, self).predict(new_x)
+    def predict(self, x):
+        dist = super(FloatKrigingSurrogate, self).predict(x)
         return dist[0] # mean value
