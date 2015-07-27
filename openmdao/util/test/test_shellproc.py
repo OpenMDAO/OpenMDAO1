@@ -64,7 +64,7 @@ class TestCase(unittest.TestCase):
             check_call('no-such-command', stdout='stdout', stderr='stderr')
             self.assertEqual(os.path.exists('stdout'), True)
             self.assertEqual(os.path.exists('stderr'), True)
-        except CalledProcessError, exc:
+        except CalledProcessError as exc:
             msg = "Command 'no-such-command' returned non-zero exit status"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:

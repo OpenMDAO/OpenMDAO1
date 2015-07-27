@@ -1,20 +1,31 @@
 import os
-import sys
 import time
-
+import argparse
 
 def main():
     """ Just an external program for testing ExternalCode. """
 
-    if len(sys.argv) >= 2:
-        delay = float(sys.argv[1])
-        if delay < 0:
-            raise ValueError('delay must be >= 0')
-        time.sleep(delay)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output_filename")
+    parser.add_argument("-e", "--write_test_env_var", help="Write the value of TEST_ENV_VAR to the file",
+                    action="store_true", default=False)
+    parser.add_argument("-d", "--delay", type=float,
+                    help="time in seconds to delay")
 
-    out = open('external_code_output.txt', 'w')
+    args = parser.parse_args()
+
+    if args.delay:
+        if args.delay < 0:
+            raise ValueError('delay must be >= 0')
+        time.sleep(args.delay)
+
+    out = open(args.output_filename, 'w')
     out.write("test data\n")
+    if args.write_test_env_var:
+        out.write("%s\n" % os.environ['TEST_ENV_VAR'])
     out.close()
+
+    return 0
 
 if __name__ == '__main__': # pragma no cover
     main()

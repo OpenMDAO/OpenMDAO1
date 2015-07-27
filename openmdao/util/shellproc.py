@@ -26,7 +26,7 @@ class ShellProc(subprocess.Popen):
     A slight modification to :class:`subprocess.Popen`.
     If `args` is a string, then the ``shell`` argument is set True.
     Updates a copy of ``os.environ`` with `env` and opens files for any
-    stream which is a :class:`basestring`.
+    stream which is a :class:`str`.
 
     args: string or list
         If a string, then this is the command line to execute and the
@@ -53,22 +53,22 @@ class ShellProc(subprocess.Popen):
         self._stdout_arg = stdout
         self._stderr_arg = stderr
 
-        if isinstance(stdin, basestring):
+        if isinstance(stdin, str):
             self._inp = open(stdin, 'r')
         else:
             self._inp = stdin
     
-        if isinstance(stdout, basestring):
+        if isinstance(stdout, str):
             self._out = open(stdout, 'w')
         else:
             self._out = stdout
 
-        if isinstance(stderr, basestring):
+        if isinstance(stderr, str):
             self._err = open(stderr, 'w')
         else:
             self._err = stderr
 
-        shell = isinstance(args, basestring)
+        shell = isinstance(args, str)
 
         try:
             subprocess.Popen.__init__(self, args, stdin=self._inp,
@@ -81,11 +81,11 @@ class ShellProc(subprocess.Popen):
 
     def close_files(self):
         """ Closes files that were implicitly opened. """
-        if isinstance(self._stdin_arg, basestring):
+        if isinstance(self._stdin_arg, str):
             self._inp.close()
-        if isinstance(self._stdout_arg, basestring):
+        if isinstance(self._stdout_arg, str):
             self._out.close()
-        if isinstance(self._stderr_arg, basestring):
+        if isinstance(self._stderr_arg, str):
             self._err.close()
 
     def terminate(self, timeout=None):

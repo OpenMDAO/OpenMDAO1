@@ -4,10 +4,12 @@ import itertools
 import os
 import sys
 import warnings
+import pprint
 from six import string_types
 
 from fnmatch import fnmatch
 from os.path import join, dirname, exists, abspath
+
 
 
 def build_directory(dct, force=False, topdir='.'):
@@ -234,7 +236,7 @@ class FileMetadata(object):
 
     def __init__(self, path, **metadata):
         super(FileMetadata, self).__init__()
-        assert isinstance(path, basestring) and path
+        assert isinstance(path, str) and path
         self.__dict__.update(_FILEMETA)
         self.__dict__.update(metadata)
         self.path = path
