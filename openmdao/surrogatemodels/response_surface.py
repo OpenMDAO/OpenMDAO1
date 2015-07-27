@@ -31,7 +31,7 @@ class ResponseSurface(SurrogateModel):
         self.m = x.shape[0]
         self.n = x.shape[1]
 
-        X = zeros((self.m, ((self.n+1)*(self.n+2))/2))
+        X = zeros((self.m, ((self.n+1)*(self.n+2))//2))
 
         # Modify X to include constant, squared terms and cross terms
 
@@ -63,7 +63,7 @@ class ResponseSurface(SurrogateModel):
         m = x.shape[0]
         n = x.shape[1]
 
-        X = zeros((m, ((self.n + 1) * (self.n + 2)) / 2))
+        X = zeros((m, ((self.n + 1) * (self.n + 2)) // 2))
 
         # Modify X to include constant, squared terms and cross terms
 
