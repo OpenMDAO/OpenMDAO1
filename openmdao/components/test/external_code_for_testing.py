@@ -19,11 +19,10 @@ def main():
             raise ValueError('delay must be >= 0')
         time.sleep(args.delay)
 
-    out = open(args.output_filename, 'w')
-    out.write("test data\n")
-    if args.write_test_env_var:
-        out.write("%s\n" % os.environ['TEST_ENV_VAR'])
-    out.close()
+    with open(args.output_filename, 'w') as out:
+        out.write("test data\n")
+        if args.write_test_env_var:
+            out.write("%s\n" % os.environ['TEST_ENV_VAR'])
 
     return 0
 

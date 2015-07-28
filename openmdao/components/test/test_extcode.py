@@ -113,9 +113,8 @@ class TestExternalCode(unittest.TestCase):
         self.top.run()
 
         # Check to see if output file contains the env var value
-        out = open(os.path.join(self.tempdir, 'external_code_output.txt'), 'r')
-        file_contents = out.read()
-        out.close()
+        with open(os.path.join(self.tempdir, 'external_code_output.txt'), 'r') as out:
+            file_contents = out.read()
         self.assertTrue('SOME_ENV_VAR_VALUE' in file_contents)
 
     def test_check_external_outputs(self):
