@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import sys
 import os
-from collections import OrderedDict, Counter
+from collections import Counter
 from six import iteritems
 from itertools import chain
 
@@ -20,6 +20,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.util.types import real_types
 from openmdao.util.strutil import name_relative_to
+from openmdao.util.ordereddict import OrderedDict
 
 from openmdao.core.checks import ConnectError
 
@@ -1367,7 +1368,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         variable dictionary that map to the given promoted name.
     """
 
-    pnames = [n for n, m in var_dict.items()
+    pnames = [n for n, m in iteritems(var_dict)
                    if m['promoted_name'] == var_name]
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))

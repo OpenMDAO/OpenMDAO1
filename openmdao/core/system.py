@@ -1,7 +1,6 @@
 """ Base class for all systems in OpenMDAO."""
 
 import sys
-from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
@@ -11,6 +10,7 @@ import numpy as np
 from openmdao.core.mpiwrap import MPI
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.vecwrapper import PlaceholderVecWrapper
+from openmdao.util.ordereddict import OrderedDict
 
 
 class System(object):

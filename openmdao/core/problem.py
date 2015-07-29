@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import sys
 import json
-from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 from six.moves import cStringIO
@@ -25,6 +24,7 @@ from openmdao.core.relevance import Relevance
 from openmdao.solvers.run_once import RunOnce
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.strutil import get_common_ancestor, name_relative_to
+from openmdao.util.ordereddict import OrderedDict
 
 
 class Problem(System):

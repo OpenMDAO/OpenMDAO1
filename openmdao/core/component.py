@@ -4,7 +4,6 @@ from __future__ import print_function
 import sys
 import os
 import re
-from collections import OrderedDict
 from six import iteritems
 
 import numpy as np
@@ -13,6 +12,7 @@ from openmdao.core.basicimpl import BasicImpl
 from openmdao.core.system import System
 from openmdao.core.mpiwrap import MPI
 from openmdao.util.types import is_differentiable
+from openmdao.util.ordereddict import OrderedDict
 
 # Object to represent default value for `add_output`.
 _NotSet = object()

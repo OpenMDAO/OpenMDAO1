@@ -59,7 +59,7 @@ class Relevance(object):
     def __getitem__(self, name):
         # if name is None, everything is relevant
         if name is None:
-            return set(self._vgraph.nodes())
+            return set(self._vgraph.nodes_iter())
         return self.relevant.get(name, [])
 
     def is_relevant(self, var_of_interest, varname):
@@ -211,7 +211,7 @@ class Relevance(object):
         """
         idxs = OrderedDict()
         matrix = []
-        size = len(self._vgraph.nodes())
+        size = len(self._vgraph)
 
         for i, node in enumerate(self._vgraph.nodes_iter()):
             idxs[node] = i
