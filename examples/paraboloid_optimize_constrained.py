@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 from openmdao.components.constraint import ConstraintComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
