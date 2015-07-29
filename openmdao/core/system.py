@@ -374,7 +374,7 @@ class System(object):
             # Size our Outputs
             for u_name in fd_unknowns:
                 u_size = np.size(unknowns[u_name])
-                jac[u_name, p_name] = np.ones((u_size, p_size))
+                jac[u_name, p_name] = np.zeros((u_size, p_size))
 
             # Finite Difference each index in array
             for idx in range(p_size):
