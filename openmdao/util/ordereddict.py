@@ -3,6 +3,11 @@ from _abcoll import MutableMapping
 from itertools import izip
 from six.moves import range
 
+try:
+    from thread import get_ident as _get_ident
+except ImportError:
+    from dummy_thread import get_ident as _get_ident
+
 
 class OrderedDict(dict):
     """
