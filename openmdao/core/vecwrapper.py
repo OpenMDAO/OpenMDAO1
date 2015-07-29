@@ -762,11 +762,8 @@ class TgtVecWrapper(VecWrapper):
             we're building.
         """
         vmeta = meta.copy()
-        if 'src_indices' not in vmeta:
-            if 'distrib_size' in src_meta:
-                vmeta['size'] = src_meta['distrib_size']
-            else:
-                vmeta['size'] = src_meta['size']
+        if 'src_indices' not in vmeta and 'src_indices' not in src_meta:
+            vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:

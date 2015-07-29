@@ -266,21 +266,10 @@ class Component(System):
             # unknowns
             for name, meta in self._unknowns_dict.items():
                 if 'src_indices' in meta:
-                    # have to gather all src_indices arrays unfortunately,
-                    # because we can have overlapping indices but we need
-                    # the total distributed size.
                     if trace:
-                        print("gathering src_indices:",meta['src_indices'])
-                    idxs = self.comm.gather(meta['src_indices'], root=0)
-                    iset = set()
-                    if idxs is not None:
-                        for ilist in idxs:
-                            iset.update(ilist)
-                    if trace:
-                        print("bcasting distrib size: %d" % len(iset))
-                    meta['distrib_size'] = self.comm.bcast(len(iset), root=0)
-                    print("distrib_size =",meta['distrib_size'])
-                    del iset
+                        print("allgathering src index sizes:")
+                    sizes = self.comm.allgather(len(meta['src_indices']))
+                    meta['distrib_size'] = sum(sizes)
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()

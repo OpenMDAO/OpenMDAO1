@@ -111,21 +111,17 @@ class DistribOverlappingInputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribOverlappingInputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.ones(1, float))
-        self.add_output('outvec', np.ones(arr_size, float))
+        self.add_param('invec', np.zeros(1, float))
+        self.add_output('outvec', np.zeros(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        self.local_outvec = params['invec']*2.0
+        local_outvec = params['invec']*2.0
 
-        outs = self.comm.allgather(self.local_outvec)
+        outs = self.comm.allgather(local_outvec)
 
-        self.outvec = np.zeros(self.arr_size, float)
-        tmpout = np.zeros(self.arr_size, float)
-
-        self.outvec[:8] = outs[0]
-        tmpout[4:11] = outs[1]
-
-        self.outvec += tmpout
+        self.unknowns['outvec'][:] = 0
+        self.unknowns['outvec'][:8] = outs[0]
+        self.unknowns['outvec'][4:11] += outs[1]
 
     def setup_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
@@ -146,7 +142,6 @@ class DistribOverlappingInputComp(Component):
 
         self.set_var_indices('invec', val=np.ones(size, float),
                              src_indices=np.arange(start, end, dtype=int))
-        self.local_outvec = np.empty(size, dtype=float)
 
     def get_req_cpus(self):
         return (2, 2)
@@ -251,14 +246,13 @@ class DistribGatherComp(Component):
 
 class NonDistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""
-    def __init__(self):
+    def __init__(self, size):
         super(NonDistribGatherComp, self).__init__()
-        self.add_param('invec', np.ones(0, float))
-        self.add_output('outvec', np.ones(0, float))
+        self.add_param('invec', np.ones(size, float))
+        self.add_output('outvec', np.ones(size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['outvec'] = params['invec']
-
 
 class MPITests(MPITestCase):
 
@@ -320,11 +314,6 @@ class MPITests(MPITestCase):
 
         p.run()
 
-        print("C1.outvec",top.C1.unknowns['outvec'])
-        print("C2.invec",top.C2.params['invec'])
-        print("C2.outvec",top.C2.unknowns['outvec'])
-        print("C3.invec",top.C3.params['invec'])
-        print("C3.outvec",top.C3.unknowns['outvec'])
         self.assertTrue(all(top.C3.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
     def test_noncontiguous_idxs(self):
@@ -389,7 +378,7 @@ class MPITests(MPITestCase):
         top = p.root
         top.add("C1", InOutArrayComp(size))
         top.add("C2", DistribInputDistribOutputComp(size))
-        top.add("C3", NonDistribGatherComp())
+        top.add("C3", NonDistribGatherComp(size))
         top.connect('C1.outvec', 'C2.invec')
         top.connect('C2.outvec', 'C3.invec')
         p.setup(check=False)
