@@ -1143,7 +1143,7 @@ class Group(System):
 
         iproc = 0 if self.comm is None else self.comm.rank
 
-        if 'src_indices' in pmeta:# and not 'src_indices' in umeta:
+        if 'src_indices' in pmeta:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
