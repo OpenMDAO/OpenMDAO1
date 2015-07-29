@@ -1,33 +1,17 @@
-
-import unittest
-import math
-from six import iteritems
-from six.moves import cStringIO
-
 import numpy as np
-from math import sin
+import unittest
 
-from openmdao.core.component import Component
+from openmdao.components.metamodel import MetaModel
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.metamodel import MetaModel
 from openmdao.surrogatemodels.response_surface import ResponseSurface
-from openmdao.surrogatemodels.kriging import KrigingSurrogate, FloatKrigingSurrogate
-
+from openmdao.surrogatemodels.kriging import FloatKrigingSurrogate
 from openmdao.test.testutil import assert_rel_error
-
+from six.moves import cStringIO
 
 class TestMetaModel(unittest.TestCase):
 
     def test_sin_metamodel(self):
-        class Sin(Component):
-            """ Simple sine calculation. """
-            def __init__(self):
-                self.add_param('x', 0., units="rad")
-                self.add_output('f_x', 0.)
-
-            def solve_nonlinear(self, params, unknowns, resids):
-                unknowns['f_x'] = .5*sin(params['x'])
 
         # create a MetaModel for Sin and add it to a Problem
         sin_mm = MetaModel()
