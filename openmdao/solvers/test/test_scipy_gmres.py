@@ -80,6 +80,9 @@ class TestScipyGMRES(unittest.TestCase):
         J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='array')
+        assert_rel_error(self, J[0][0], 2.0, 1e-6)
+
     def test_array2D(self):
         group = Group()
         group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])

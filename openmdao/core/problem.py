@@ -658,10 +658,13 @@ class Problem(System):
                 J[okey] = {}
                 for ikey in param_list:
                     fd_ikey = get_fd_ikey(ikey)
+
+                    # Support for paramcomps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
                         fd_ikey = get_absvarpathnames(fd_ikey,
                                                       self.root._params_dict,
                                                       {})[0]
+
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
             usize = 0
@@ -676,7 +679,15 @@ class Problem(System):
             for u in unknown_list:
                 pi = 0
                 for p in param_list:
-                    pd = Jfd[u, get_fd_ikey(p)]
+                    fd_ikey = get_fd_ikey(p)
+
+                    # Support for paramcomps that are buried in sub-Groups
+                    if (u, fd_ikey) not in Jfd:
+                        fd_ikey = get_absvarpathnames(fd_ikey,
+                                                      self.root._params_dict,
+                                                      {})[0]
+
+                    pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
                     for row in range(0, rows):
                         for col in range(0, cols):
