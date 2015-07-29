@@ -185,7 +185,7 @@ class TestMetaModel(unittest.TestCase):
 
         #prob = Problem(Group())
         #prob.root.add('meta', meta)
-        #prob.setup()
+        #prob.setup(check=False)
 
         #prob['meta.train:x'] = [
             #[1.0, 1.0, 1.0, 1.0],

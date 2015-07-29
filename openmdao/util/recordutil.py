@@ -3,6 +3,25 @@
 from six.moves import map, zip
 
 
+class _ExecutionMetadata(object):
+    def __init__(self, name='', coord=None):
+        self.name = name
+        self.coord = coord
+
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            msg = "KeyError: '{0}'.".format(key)
+            raise KeyError(msg)
+
+    def __setitem__(self, key, value):
+        if not hasattr(self, key):
+            msg = "KeyError: '{0}'.".format(key)
+            raise KeyError(msg)
+        setattr(self, key, value)
+
+
 def create_local_meta(metadata, name):
     """
     Creates the metadata dictionary for this level of execution.
@@ -18,22 +37,17 @@ def create_local_meta(metadata, name):
     # Create new metadata if parent's isn't available
     if metadata is None:
         parent_coordinate = []
-        parent_meta = {}
     else:
         parent_coordinate = metadata['coord']
-        iteration = parent_coordinate[-1]
-        parent_meta = metadata[iteration]
 
     # The root group has no name, but we want the iteration coordinate to have one.
     if len(parent_coordinate) == 2 and name == '':
         name = 'root'
 
-    local_meta = {'name': name, 'coord': parent_coordinate + [name, (0,)]}
-
-    # Update entry in parent metadata
-    parent_meta[name] = local_meta
+    local_meta = _ExecutionMetadata(name, parent_coordinate + [name, (0,)])
 
     return local_meta
+
 
 def update_local_meta(local_meta, iteration):
     """
@@ -51,15 +65,15 @@ def update_local_meta(local_meta, iteration):
         Tuple of integers representing the current iteration and any sub-iterations.
     """
     # Construct needed structures
-    child_iteration = {}
     iter_coord = local_meta['coord']
 
     # Last entry in the iteration coordinate should be the iteration number
     # for this level.
+    if isinstance(iteration, int):
+        iteration = (iteration,)
+
     iter_coord[-1] = iteration
 
-    # Update local metadata with the given information
-    local_meta[iteration] = child_iteration
 
 def format_iteration_coordinate(coord):
     """

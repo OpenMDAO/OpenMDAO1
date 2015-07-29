@@ -24,7 +24,7 @@ to use OpenMDAO, see the `OpenMDAO User Guide`_.
 
 .. _TL;DR: https://en.wikipedia.org/wiki/TL;DR
 
-Install Python, Pip, Numpy, and Scipy. (`Anaconda Python <http://continuum.io/downloads>`_, comes
+Install Git, Python, Pip, Numpy, and Scipy. (`Anaconda Python <http://continuum.io/downloads>`_, comes
 bundled with everything you need). Next, install OpenMDAO with pip:
 
 ::
@@ -103,12 +103,12 @@ kinds of objects you have to interact with.
 .. _Pre-1.0 Conversion Guide: ../conversion-guide/intro.html
 
 Since this is still an Alpha release, there is a lot of missing functionality
-compared to the older versions. For example, we're not yet automatically computing
-execution order for you, and we don't have full support for file-wrapped components
-yet. We'll be working on adding the missing features as we go, but the Alpha is
-already very capable, especially for gradient-based optimization with analytic derivatives.
-We're putting it out specifically for our users to try the new API so that they can start to
-play around with it. If you have any feedback, we'd love to hear it.
+compared to the older versions. For example, we don't have full support for
+file-wrapped components yet. We'll be working on adding the missing features as
+we go, but the Alpha is already very capable, especially for gradient-based
+optimization with analytic derivatives. We're putting it out specifically for
+our users to try the new API so that they can start to play around with it.
+If you have any feedback, we'd love to hear it.
 
 ===================
 Installation
