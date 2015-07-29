@@ -28,6 +28,8 @@ class TestResponseSurface(unittest.TestCase):
             self.X_train[i, :] = np.random.random(d) + means[y, :]
             self.Y_train[i] = 4*y-2
 
+
+
     def test_training(self):
 
         lr = ResponseSurface(self.X_train, self.Y_train)
@@ -35,7 +37,16 @@ class TestResponseSurface(unittest.TestCase):
         training_reconstruction = np.array([lr.predict(x) for x in self.X_train])
         residual = norm(training_reconstruction - self.Y_train)
 
-        self.assertTrue(residual < 1e-5)
+        self.assertTrue(residual < 1e-9)
+
+    def test_training(self):
+
+        lr = ResponseSurface(self.X_train, self.Y_train)
+
+        training_reconstruction = np.array([lr.predict(x) for x in self.X_train])
+        residual = norm(training_reconstruction - self.Y_train)
+
+        self.assertTrue(residual < 1e-9)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """ Surrogate model based on Kriging. """
-from math import log, e, sqrt
+from math import log, sqrt
 
 from openmdao.surrogatemodels.surrogate_model import SurrogateModel
 
@@ -14,7 +14,7 @@ from six.moves import range
 
 class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
-    Predictions are returned as a NormalDistribution instance."""
+    Predictions are returned as a tuple of mean and std. dev."""
 
     def __init__(self):
         super(KrigingSurrogate, self).__init__()
@@ -26,6 +26,7 @@ class KrigingSurrogate(SurrogateModel):
 
         self.R = None
         self.R_fact = None
+        self.R_solve_ymu = None
         self.mu = None
         self.log_likelihood = None
 
@@ -65,6 +66,11 @@ class KrigingSurrogate(SurrogateModel):
         self._calculate_log_likelihood()
 
     def _calculate_log_likelihood(self):
+        """
+        Calculates the log-likelihood (up to a constant) for a given
+        self.theta.
+        :return:
+        """
         #if self.m == None:
         #    Give error message
         R = zeros((self.n, self.n))
@@ -73,7 +79,7 @@ class KrigingSurrogate(SurrogateModel):
 
         #weighted distance formula
         for i in range(self.n):
-            R[i, i+1:self.n] = exp(-sum(thetas*(X[i] - X[i+1:self.n])**2., 1))
+            R[i, i+1:self.n] = exp(-thetas.dot(power(X[i] - X[i+1:self.n], 2.).T))
 
         R *= (1.0 - self.nugget)
         R += R.T + eye(self.n)
@@ -87,9 +93,10 @@ class KrigingSurrogate(SurrogateModel):
             cho = cho_solve(R_fact, rhs).T
 
             self.mu = dot(one, cho[0])/dot(one, cho[1])
-            ymdotone = Y - dot(one, self.mu)
-            self.sig2 = dot(ymdotone, cho_solve(self.R_fact,
-                                                (ymdotone)))/self.n
+            y_minus_mu = Y - self.mu
+            self.R_solve_ymu = cho_solve(self.R_fact, y_minus_mu)
+
+            self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
 
             det_factor = abs(prod(diagonal(R_fact[0]))**2) + 1.e-16
 
@@ -103,11 +110,11 @@ class KrigingSurrogate(SurrogateModel):
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T, rhs)[0].T
             self.mu = dot(one, lsq[0])/dot(one, lsq[1])
-            ymdotone = Y - dot(one, self.mu)
-            self.sig2 = dot(ymdotone, lstsq(self.R, ymdotone)[0])/self.n
+            y_minus_mu = Y - self.mu
+            self.R_solve_ymu = lstsq(self.R, y_minus_mu)[0]
+            self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2) - \
                 1./2.*(slogdet(self.R)[1])
-            #print self.log_likelihood
 
     def predict(self, x):
         """Calculates a predicted value of the response based on the current
@@ -124,35 +131,24 @@ class KrigingSurrogate(SurrogateModel):
         one = ones(self.n)
         if self.R_fact is not None:
             # ---CHOLESKY DECOMPOSTION ---
-            # f = self.mu+dot(r,cho_solve(self.R_fact,Y-dot(one,self.mu)))
-            # term1 = dot(r,cho_solve(self.R_fact,r))
-            # term2 = (1.0-dot(one,cho_solve(self.R_fact,r)))**2./dot(one,cho_solve(self.R_fact,one))
 
-            rhs = vstack([(Y - dot(one, self.mu)), r, one]).T
+            rhs = vstack([r, one]).T
             R_fact = (self.R_fact[0].T, not self.R_fact[1])
             cho = cho_solve(R_fact, rhs).T
 
-            f = self.mu + dot(r, cho[0])
-            term1 = dot(r, cho[1])
-            term2 = (1.0 - dot(one, cho[1])) ** 2. / dot(one, cho[2])
+            f = self.mu + dot(r, self.R_solve_ymu)
+            term1 = dot(r, cho[0])
+            term2 = (1.0 - dot(one, cho[0])) ** 2. / dot(one, cho[1])
 
         else:
             # -----LSTSQ-------
-            rhs = vstack([(Y - dot(one, self.mu)), r, one]).T
+            rhs = vstack([r, one]).T
             lsq = lstsq(self.R.T, rhs)[0].T
 
-            f = self.mu + dot(r, lsq[0])
-            term1 = dot(r, lsq[1])
-            term2 = (1.0 - dot(one, lsq[1])) ** 2. / dot(one, lsq[2])
-            """
-      #-----LSTSQ-------
-      rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
-      lsq = lstsq(self.R.T, rhs)[0].T
+            f = self.mu + dot(r, self.R_solve_ymu)
+            term1 = dot(r, lsq[0])
+            term2 = (1.0 - dot(one, lsq[0])) ** 2. / dot(one, lsq[1])
 
-      f = self.mu + dot(r, lsq[0])
-      term1 = dot(r, lsq[1])
-      term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
-      """
         MSE = self.sig2 * (1.0 - term1 + term2)
         RMSE = sqrt(abs(MSE))
 
