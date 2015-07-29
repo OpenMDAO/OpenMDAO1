@@ -47,6 +47,10 @@ class RecordUtilTest(unittest.TestCase):
         meta1 = create_local_meta(None, 'Driver')
         meta2 = create_local_meta(meta1, '')
 
-        s = format_iteration_coordinate(meta2['coord'])
+        self.assertEqual(meta2['coord'], ['Driver', (0,), 'root', (0,)])
 
-        self.assertEqual(s, 'Driver/0/root/0')
+    def test_integer_coord(self):
+
+        update_local_meta(self.meta, 2)
+
+        self.assertEqual(self.meta['coord'], ['', (2,)])
