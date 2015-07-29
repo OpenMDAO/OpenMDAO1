@@ -627,7 +627,21 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
-        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
+        abs_params = []
+        for name in param_list:
+
+            if name in unknowns:
+                name = unknowns.metadata(name)['pathname']
+
+            for target, src in root.connections.items():
+                if name == src:
+                    name = target
+                    break
+
+            abs_params.append(name)
+
+        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
+                               fd_params=abs_params, fd_unknowns=unknown_list)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -660,13 +674,14 @@ class Problem(System):
             J = {}
             for okey in unknown_list:
                 J[okey] = {}
-                for ikey in param_list:
-                    fd_ikey = get_fd_ikey(ikey)
+                for j, ikey in enumerate(param_list):
+                    abs_ikey = abs_params[j]
+                    fd_ikey = get_fd_ikey(abs_ikey)
 
                     # Support for paramcomps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
                         fd_ikey = get_absvarpathnames(fd_ikey,
-                                                      self.root._params_dict,
+                                                      root._params_dict,
                                                       {})[0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
@@ -682,13 +697,14 @@ class Problem(System):
             ui = 0
             for u in unknown_list:
                 pi = 0
-                for p in param_list:
-                    fd_ikey = get_fd_ikey(p)
+                for j, p in enumerate(param_list):
+                    abs_ikey = abs_params[j]
+                    fd_ikey = get_fd_ikey(abs_ikey)
 
                     # Support for paramcomps that are buried in sub-Groups
                     if (u, fd_ikey) not in Jfd:
                         fd_ikey = get_absvarpathnames(fd_ikey,
-                                                      self.root._params_dict,
+                                                      root._params_dict,
                                                       {})[0]
 
                     pd = Jfd[u, fd_ikey]
