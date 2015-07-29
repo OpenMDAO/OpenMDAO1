@@ -7,17 +7,17 @@ from unittest import SkipTest
 import numpy as np
 
 from openmdao.core.problem import Problem
-from openmdao.core.mpiwrap import MPI
+from openmdao.core.mpi_wrap import MPI
 from openmdao.core.component import Component
 from openmdao.core.group import Group
-from openmdao.components.execcomp import ExecComp
-from openmdao.util.arrayutil import evenly_distrib_idxs
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.components.exec_comp import ExecComp
+from openmdao.util.array_util import evenly_distrib_idxs
+from openmdao.test.mpi_test_util import MPITestCase
 
 if MPI:
-    from openmdao.core.petscimpl import PetscImpl as impl
+    from openmdao.core.petsc_impl import PetscImpl as impl
 
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.test_util import assert_rel_error
 
 def take_nth(rank, size, seq):
     """Return an iterator over the sequence that returns every
@@ -392,5 +392,5 @@ class MPITests(MPITestCase):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpiunittest import mpirun_tests
+    from openmdao.test.mpi_test_util import mpirun_tests
     mpirun_tests()

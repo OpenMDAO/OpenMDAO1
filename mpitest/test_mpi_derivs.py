@@ -3,27 +3,29 @@
 import unittest
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
+
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
+
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      FanOutGrouped, \
-                                      FanInGrouped, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, FanInGrouped, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
-from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.test.mpi_test_util import MPITestCase
 from openmdao.devtools.debug import debug
 
 if MPI:
-    from openmdao.core.petscimpl import PetscImpl as impl
+    from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core.basicimpl import BasicImpl as impl
+    from openmdao.core.basic_impl import BasicImpl as impl
 
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.test.mpi_test_util import MPITestCase
+
 
 class TestScipyGMRES(MPITestCase):
 
@@ -160,5 +162,5 @@ class TestScipyGMRES(MPITestCase):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpiunittest import mpirun_tests
+    from openmdao.test.mpi_test_util import mpirun_tests
     mpirun_tests()

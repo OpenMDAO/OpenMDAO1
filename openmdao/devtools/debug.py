@@ -3,7 +3,7 @@
 import sys
 from pprint import pformat
 
-from openmdao.core.mpiwrap import MPI, under_mpirun
+from openmdao.core.mpi_wrap import MPI, under_mpirun
 
 
 if under_mpirun():

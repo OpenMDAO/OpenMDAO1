@@ -11,21 +11,23 @@ import networkx as nx
 
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
 from openmdao.core.group import Group, get_absvarpathnames
 from openmdao.core.component import Component
-from openmdao.core.parallelgroup import ParallelGroup
-from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm, under_mpirun
+from openmdao.core.mpi_wrap import MPI, FakeComm, under_mpirun
 from openmdao.core.relevance import Relevance
-from openmdao.solvers.run_once import RunOnce
-from openmdao.units.units import get_conversion_tuple
-from openmdao.util.strutil import get_common_ancestor, name_relative_to
-from openmdao.util.ordereddict import OrderedDict
 
+from openmdao.components.param_comp import ParamComp
+
+from openmdao.solvers.run_once import RunOnce
+
+from openmdao.units.units import get_conversion_tuple
+from openmdao.util.ordered_dict import OrderedDict
+from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO

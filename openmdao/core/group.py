@@ -11,16 +11,16 @@ from itertools import chain
 import numpy as np
 import networkx as nx
 
-from openmdao.components.paramcomp import ParamComp
-from openmdao.core.basicimpl import BasicImpl
+from openmdao.components.param_comp import ParamComp
+from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
-from openmdao.core.mpiwrap import MPI
+from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.util.types import real_types
-from openmdao.util.strutil import name_relative_to
-from openmdao.util.ordereddict import OrderedDict
+from openmdao.util.ordered_dict import OrderedDict
+from openmdao.util.type_util import real_types
+from openmdao.util.string_util import name_relative_to
 
 from openmdao.core.checks import ConnectError
 
@@ -302,7 +302,7 @@ class Group(System):
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
-            `DataXfer` objects.
+            `DataTransfer` objects.
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
@@ -1216,7 +1216,7 @@ class Group(System):
 
     def _setup_data_transfer(self, my_params, var_of_interest):
         """
-        Create `DataXfer` objects to handle data transfer for all of the
+        Create `DataTransfer` objects to handle data transfer for all of the
         connections that involve parameters for which this `Group`
         is responsible.
 
@@ -1293,9 +1293,9 @@ class Group(System):
                                                         src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns)
 
-        # create a DataXfer object that combines all of the
+        # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
-        # scatter to all subsystems can be done at the same time.  Store that DataXfer
+        # scatter to all subsystems can be done at the same time.  Store that DataTransfer
         # object under the name ''.
 
         for mode in ('fwd', 'rev'):

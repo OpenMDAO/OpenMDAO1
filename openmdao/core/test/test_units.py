@@ -4,11 +4,11 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.test_util import assert_rel_error
 
 class SrcComp(Component):
 

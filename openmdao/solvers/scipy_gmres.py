@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.solvers.solverbase import LinearSolver
+from openmdao.solvers.solver_base import LinearSolver
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so

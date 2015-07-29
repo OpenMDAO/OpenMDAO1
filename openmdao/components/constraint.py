@@ -1,5 +1,5 @@
 
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.exec_comp import ExecComp
 
 
 class ConstraintComp(ExecComp):

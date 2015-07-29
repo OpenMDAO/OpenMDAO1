@@ -8,11 +8,11 @@ from six import iteritems
 
 import numpy as np
 
-from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
-from openmdao.core.mpiwrap import MPI
-from openmdao.util.types import is_differentiable
-from openmdao.util.ordereddict import OrderedDict
+from openmdao.core.mpi_wrap import MPI
+from openmdao.util.ordered_dict import OrderedDict
+from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
