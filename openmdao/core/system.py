@@ -339,13 +339,6 @@ class System(object):
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
-            if p_name in states:
-                inputs = unknowns
-            else:
-                inputs = params
-
-            target_input = inputs.flat[p_name]
-
             # If our input is connected to a Paramcomp, then we need to twiddle
             # the unknowns vector instead of the params vector.
             param_src = self.connections.get(p_name)
@@ -356,6 +349,15 @@ class System(object):
                     param_src = self.unknowns.get_promoted_varname(param_src)
 
                 target_input = unknowns.flat[param_src]
+
+            else:
+                # Cases where the paramcomp is somewhere above us.
+                if p_name in states:
+                    inputs = unknowns
+                else:
+                    inputs = params
+
+                target_input = inputs.flat[p_name]
 
             mydict = {}
             for val in self._params_dict.values():
@@ -369,10 +371,11 @@ class System(object):
             fdform = mydict.get('fd_form', form)
 
             # Size our Inputs
-            p_size = np.size(inputs[p_name])
+            p_size = np.size(target_input)
 
             # Size our Outputs
             for u_name in fd_unknowns:
+                print p_name, u_name
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
 
@@ -381,7 +384,7 @@ class System(object):
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
-                    step = inputs.flat[p_name][idx] * fdstep
+                    step = target_input[idx] * fdstep
                     if step < fdstep:
                         step = fdstep
                 else:
