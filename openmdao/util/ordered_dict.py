@@ -1,12 +1,10 @@
-from _abcoll import MutableMapping
 
-from itertools import izip
-from six.moves import range
+from six.moves import range, zip, _dummy_thread
 
 try:
     from thread import get_ident as _get_ident
 except ImportError:
-    from dummy_thread import get_ident as _get_ident
+    from _dummy_thread import get_ident as _get_ident
 
 
 class OrderedDict(dict):
@@ -28,11 +26,20 @@ class OrderedDict(dict):
         self._vallist = []    # list of values
         self._keylist = []    # list of keys
 
-        self.__update(*args, **kwargs)
+        self.update(*args, **kwargs)
 
-    update = MutableMapping.update
-
-    __update = update # let subclasses override update without breaking __init__
+    def update(self, *args, **kwargs):
+        if len(args) == 1:
+            if hasattr(args[0], 'keys'):
+                for k in args[0]:
+                    self[k] = args[0][k]
+            else:
+                for k, v in args[0]:
+                    self[k] = v
+            for k,v in kwargs.items():
+                self[k] = v
+        elif len(args) > 1:
+            raise TypeError('expected at most 1 arguments, got %d' % len(args))
 
     def __len__(self):
         return len(self._keylist)
@@ -83,7 +90,7 @@ class OrderedDict(dict):
         return self._vallist
 
     def items(self):
-        return list(izip(self._keylist, self._vallist))
+        return list(zip(self._keylist, self._vallist))
 
     def iterkeys(self):
         return iter(self._keylist)
@@ -92,7 +99,7 @@ class OrderedDict(dict):
         return iter(self._vallist)
 
     def iteritems(self):
-        return izip(self._keylist, self._vallist)
+        return zip(self._keylist, self._vallist)
 
     __marker = object()
 
