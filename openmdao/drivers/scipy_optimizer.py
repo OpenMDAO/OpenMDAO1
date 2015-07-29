@@ -36,9 +36,9 @@ class ScipyOptimizer(Driver):
         super(ScipyOptimizer, self).__init__()
 
         # What we support
-        self.supports['Inequality Constraints'] = True
-        self.supports['Equality Constraints'] = True
-        self.supports['Multiple Objectives'] = False
+        self.supports['inequality_constraints'] = True
+        self.supports['equality_constraints'] = True
+        self.supports['multiple_objectives'] = False
 
         # User Options
         self.options.add_option('optimizer', 'SLSQP', values=_optimizers,

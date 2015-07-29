@@ -21,12 +21,12 @@ class Driver(object):
 
         # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
-        self.supports.add_option('Inequality Constraints', True)
-        self.supports.add_option('Equality Constraints', True)
-        self.supports.add_option('Linear Constraints', False)
-        self.supports.add_option('Multiple Objectives', False)
-        self.supports.add_option('2-Sided Constraints', False)
-        self.supports.add_option('Integer Parameters', False)
+        self.supports.add_option('inequality_constraints', True)
+        self.supports.add_option('equality_constraints', True)
+        self.supports.add_option('linear_constraints', False)
+        self.supports.add_option('multiple_objectives', False)
+        self.supports.add_option('two_sided_constraints', False)
+        self.supports.add_option('integer_parameters', False)
 
         # This driver's options
         self.options = OptionsDictionary()
@@ -306,7 +306,7 @@ class Driver(object):
         obj['scaler'] = scaler
         if indices:
             obj['indices'] = indices
-            if len(indices) > 1 and not self.supports['Multiple Objectives']:
+            if len(indices) > 1 and not self.supports['multiple_objectives']:
                 raise RuntimeError("Multiple objective indices specified for "
                                    "variable '%s', but driver '%s' doesn't "
                                    "support multiple objectives." %
@@ -395,10 +395,10 @@ class Driver(object):
             is second in precedence.
         """
 
-        if ctype == 'eq' and self.supports['Equality Constraints'] is False:
+        if ctype == 'eq' and self.supports['equality_constraints'] is False:
             msg = "Driver does not support equality constraint '{}'."
             raise RuntimeError(msg.format(name))
-        if ctype == 'ineq' and self.supports['Inequality Constraints'] is False:
+        if ctype == 'ineq' and self.supports['inequality_constraints'] is False:
             msg = "Driver does not support inequality constraint '{}'."
             raise RuntimeError(msg.format(name))
 
