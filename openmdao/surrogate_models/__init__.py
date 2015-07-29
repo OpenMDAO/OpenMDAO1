@@ -1,0 +1,2 @@
+from openmdao.surrogate_models.kriging import KrigingSurrogate
+from openmdao.surrogate_models.response_surface import ResponseSurface
