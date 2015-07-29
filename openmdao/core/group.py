@@ -702,18 +702,18 @@ class Group(System):
                         # Var might be irrelevant.
                         except KeyError:
                             continue
-                        if any(value != 0):
-                            nonzero = True
-                            break
-                    states = [name for name, meta in system.unknowns.items() \
-                              if meta.get('state')]
-                    for key in states:
-                        value = dunknowns.flat[key]
-                        if any(value != 0):
+                        if np.any(value):
                             nonzero = True
                             break
 
-                    if nonzero is True:
+                    if not nonzero:
+                        # check for all zero states
+                        for key, meta in system.unknowns.items():
+                            if meta.get('state') and np.any(dunknowns.flat[key]):
+                                nonzero = True
+                                break
+
+                    if nonzero:
                         if system.fd_options['force_fd'] == True:
                             system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                      dunknowns, dresids, mode)
@@ -743,14 +743,7 @@ class Group(System):
 
                     # Speedhack, don't call component's derivatives if
                     # incoming vector is zero.
-                    nonzero = False
-                    for key in dresids.keys():
-                        value = dresids.flat[key]
-                        if any(value != 0):
-                            nonzero = True
-                            break
-
-                    if nonzero is True:
+                    if np.any(dresids.vec):
                         try:
                             dparams._set_adjoint_mode(True)
                             if system.fd_options['force_fd'] == True:
