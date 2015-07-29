@@ -274,7 +274,8 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None, total_derivs=False):
+                    step_type=None, total_derivs=False, fd_params=None,
+                    fd_unknowns=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -304,6 +305,16 @@ class System(object):
             Set to true to calculate total derivatives. Otherwise, partial
             derivatives are returned.
 
+        fd_params : list of strings, optional
+            List of parameter name strings with respect to which derivatives
+            are desired. This is used by problem to limit the derivatives that
+            are taken.
+
+        fd_unknowns : list of strings, optional
+            List of output or state name strings for derivatives to be
+            calculated. This is used by problem to limit the derivatives that
+            are taken.
+
         Returns
         -------
         dict
@@ -313,8 +324,10 @@ class System(object):
         """
 
         # Params and Unknowns that we provide at this level.
-        fd_params = self._get_fd_params()
-        fd_unknowns = self._get_fd_unknowns()
+        if fd_params is None:
+            fd_params = self._get_fd_params()
+        if fd_unknowns is None:
+            fd_unknowns = self._get_fd_unknowns()
 
         # Function call arguments have precedence over the system dict.
         step_size = self.fd_options.get('step_size', step_size)
