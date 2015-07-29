@@ -1,12 +1,12 @@
 """ Class definition for VecWrapper"""
 
-from collections import OrderedDict
 import sys
 import numpy
 from numpy.linalg import norm
 from six import iteritems
 from six.moves import cStringIO
 
+from openmdao.util.ordered_dict import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
 
@@ -104,6 +104,14 @@ class VecWrapper(object):
         except KeyError as error:
             msg = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
+
+    def _setup_prom_map(self):
+        """
+        Sets up the internal dict that maps absolute name to promoted name.
+        """
+        self._to_prom_name = {}
+        for prom_name, meta in self.items():
+            self._to_prom_name[meta['pathname']] = prom_name
 
     def __getitem__(self, name):
         """
@@ -350,6 +358,8 @@ class VecWrapper(object):
         else:
             view.vec = self.vec[start:end]
 
+        view._setup_prom_map()
+
         return view
 
     def make_idx_array(self, start, end):
@@ -444,10 +454,10 @@ class VecWrapper(object):
         rel_name : str
             Relative name mapped to the given absolute pathname.
         """
-        for rel_name, meta in self._vardict.items():
-            if meta['pathname'] == abs_name:
-                return rel_name
-        raise RuntimeError("Relative name not found for variable '%s'" % abs_name)
+        try:
+            return self._to_prom_name[abs_name]
+        except KeyError:
+            raise KeyError("Relative name not found for variable '%s'" % abs_name)
 
     def get_states(self):
         """
@@ -604,6 +614,8 @@ class SrcVecWrapper(VecWrapper):
                    and not meta.get('remote'):
                     self[meta['promoted_name']] = meta['val']
 
+        self._setup_prom_map()
+
     def _setup_var_meta(self, name, meta):
         """
         Populate the metadata dict for the named variable.
@@ -711,7 +723,7 @@ class TgtVecWrapper(VecWrapper):
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in self._vardict.items():
+        for name, meta in self.items():
             if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
@@ -736,6 +748,8 @@ class TgtVecWrapper(VecWrapper):
                     if self.deriv_units:
                         offset = 0.0
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
+
+        self._setup_prom_map()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -762,7 +776,7 @@ class TgtVecWrapper(VecWrapper):
             we're building.
         """
         vmeta = meta.copy()
-        if 'src_indices' not in vmeta:
+        if 'src_indices' not in vmeta and 'src_indices' not in src_meta:
             vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):

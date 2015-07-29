@@ -1,14 +1,17 @@
 """ Defines the base class for a Component in OpenMDAO."""
+from __future__ import print_function
 
 import sys
+import os
 import re
-from collections import OrderedDict
 from six import iteritems
 
 import numpy as np
 
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
+from openmdao.core.mpi_wrap import MPI
+from openmdao.util.ordered_dict import OrderedDict
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -17,6 +20,8 @@ _NotSet = object()
 # regex to check for valid variable names.
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
+
+trace = os.environ.get('TRACE_PETSC')
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -121,7 +126,7 @@ class Component(System):
         name : string
             Name of the variable output.
 
-        val : float or ndarray
+        val : float or ndarray or object
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
@@ -143,6 +148,56 @@ class Component(System):
         args['state'] = True
         self._unknowns_dict[name] = args
 
+    def set_var_indices(self, name, val=_NotSet, shape=None,
+                        src_indices=None):
+        """ Sets the 'src_indices' metadata of an existing variable
+        on this component, as well as its value, size, and shape.
+        This only works for numpy array variables.
+
+        Args
+        ----
+        name : string
+            Name of the variable.
+
+        val : ndarray, optional
+            Initial value for the variable.
+
+        shape : tuple, optional
+            Specifies the shape of the ndarray value
+
+        src_indices : array of indices
+            An index array indicating which entries in the distributed
+            version of this variable are present in this process.
+        """
+        meta = self._params_dict.get(name)
+        if meta is None:
+            meta = self._unknowns_dict[name]
+
+        if src_indices is None:
+            raise ValueError("You must provide src_indices for variable '%s'" %
+                             name)
+
+        if not isinstance(meta['val'], np.ndarray):
+            raise ValueError("resize_var() can only be called for numpy "
+                             "array variables, but '%s' is of type %s" %
+                             (name, type(meta['val'])))
+
+        if val is _NotSet:
+            if shape:
+                val = numpy.zeros(shape, dtype=meta['val'].dtype)
+            else:
+                # assume value is a 1-D array
+                val = numpy.zeros((len(src_indices),), dtype=meta['val'].dtype)
+
+        if val.size != len(src_indices):
+            raise ValueError("The size (%d) of the array '%s' doesn't match the "
+                             "size (%d) of the specified indices." %
+                             (val.size, name, len(src_indices)))
+        meta['val'] = val
+        meta['shape'] = val.shape
+        meta['size'] = val.size
+        meta['src_indices'] = src_indices
+
     def _check_name(self, name):
         """ Verifies that a system name is valid. Also checks for
         duplicates."""
@@ -158,12 +213,12 @@ class Component(System):
             raise NameError("%s: '%s' is not a valid variable name." %
                             (self.pathname, name))
 
-    def setup_param_indices(self):
+    def setup_distrib_idxs(self):
         """
         Override this in your Component to set specific indices that will be
         pulled from source variables to fill your parameters.  This method
-        should set the 'src_indices' metadata for any parameters that require
-        it.
+        should set the 'src_indices' metadata for any parameters or
+        unknowns that require it.
         """
         pass
 
@@ -191,13 +246,37 @@ class Component(System):
         """
         return [k for k, m in self.unknowns.items() if not m.get('pass_by_obj')]
 
-    def _setup_variables(self):
+    def _setup_variables(self, compute_indices=False):
         """
-        Returns our params and unknowns dictionaries, re-keyed
-        to use absolute variable names
+        Returns copies of our params and unknowns dictionaries,
+        re-keyed to use absolute variable names.
+
+        Args
+        ----
+
+        compute_indices : bool, optional
+            If True, call setup_distrib_idxs() to set values of
+            'src_indices' metadata.
+
         """
 
-        self.setup_param_indices()
+        if MPI and compute_indices:
+            self.setup_distrib_idxs()
+            # now update our distrib_size metadata for any distributed
+            # unknowns
+            sizes = []
+            names = []
+            for name, meta in self._unknowns_dict.items():
+                if 'src_indices' in meta:
+                    sizes.append(len(meta['src_indices']))
+                    names.append(name)
+            if sizes:
+                if trace:
+                    print("allgathering src index sizes:")
+                allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
+                self.comm.Allgather(np.array(sizes, dtype=int), allsizes)
+                for i, name in enumerate(names):
+                    self._unknowns_dict[name]['distrib_size'] = np.sum(allsizes[:, i])
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
@@ -215,7 +294,8 @@ class Component(System):
             meta['pathname'] = pathname
             meta['promoted_name'] = name
 
-        self._post_setup = True
+        if compute_indices:
+            self._post_setup = True
 
         return _new_params, _new_unknowns
 

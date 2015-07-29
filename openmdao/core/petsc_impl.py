@@ -8,7 +8,7 @@ from collections import OrderedDict
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
 from petsc4py import PETSc
-
+import numpy
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.data_transfer import DataTransfer
@@ -19,6 +19,8 @@ if trace:
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
+
+    idx_arr_type = PETSc.IntType
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
@@ -83,7 +85,7 @@ class PetscImpl(object):
 
 class PetscSrcVecWrapper(SrcVecWrapper):
 
-    idx_arr_type = PETSc.IntType
+    idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
         """
@@ -106,8 +108,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevant_vars=relevant_vars,
                                               store_byobjs=store_byobjs)
         if trace:
-            debug("'%s': creating src petsc_vec: %s vec=%s" %
-                  (self.pathname, self.keys(), self.vec))
+            debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
+                  (self.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -154,14 +156,14 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap,
                                                         relevance, var_of_interest)
         if trace:
-            debug("'%s': creating src petsc_vec (view): %s: voi=%s, vec=%s" %
-                  (sys_pathname, view.keys(), var_of_interest, view.vec))
+            debug("'%s': creating src petsc_vec (view): (size %d )%s: voi=%s, vec=%s" %
+                  (sys_pathname, len(view.vec), view.keys(), var_of_interest, view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
 
 
 class PetscTgtVecWrapper(TgtVecWrapper):
-    idx_arr_type = PETSc.IntType
+    idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevant_vars=None, store_byobjs=False):
@@ -196,8 +198,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                                               connections, relevant_vars=relevant_vars,
                                               store_byobjs=store_byobjs)
         if trace:
-            debug("'%s': creating tgt petsc_vec: %s: vec=%s" %
-                  (self.pathname, self.keys(), self.vec))
+            debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
+                  (self.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -265,11 +267,14 @@ class PetscDataTransfer(DataTransfer):
             if trace:
                 self.src_idxs = src_idxs
                 self.tgt_idxs = tgt_idxs
-                debug("'%s': creating scatter %s --> %s %s --> %s" %
-                      (name, [v for u, v in vec_conns], [u for u, v in vec_conns],
+                debug("'%s': creating scatter (sizes: %d, %d) %s --> %s %s --> %s" %
+                      (name, len(src_idx_set.indices), len(tgt_idx_set.indices),
+                       [u for u, v in vec_conns], [v for u, v in vec_conns],
                        src_idx_set.indices, tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
+            if trace:
+                debug("scatter done")
         except Exception as err:
             raise RuntimeError("ERROR in %s (src_idxs=%s, tgt_idxs=%s, usize=%d, psize=%d): %s" %
                                (name, src_idxs, tgt_idxs,
@@ -303,7 +308,7 @@ class PetscDataTransfer(DataTransfer):
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
             if trace:
-                conns = ['%s <-- %s' % (u, v) for u, v in self.vec_conns]
+                conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
                 debug("'%s': rev scatter %s  %s <-- %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
                 debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
@@ -313,9 +318,9 @@ class PetscDataTransfer(DataTransfer):
         else:
             # forward mode, source to target including pass_by_object
             if trace:
-                conns = ['%s --> %s' % (u, v) for u, v in self.vec_conns]
+                conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
                 debug("'%s': fwd scatter %s  %s --> %s" %
-                      (srcvec.pathname, conns, self.tgt_idxs, self.src_idxs))
+                      (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
                 debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
                                                             srcvec.petsc_vec.array,
                                                             srcvec.pathname,
