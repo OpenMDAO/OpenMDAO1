@@ -8,10 +8,6 @@ from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
 
-
-from openmdao.surrogatemodels.uncertain_distributions import NormalDistribution
-
-
 class KrigingSurrogate(object):
     """Surrogate Modeling method based on the simple Kriging interpolation.
     Predictions are returned as a NormalDistribution instance."""
@@ -28,11 +24,6 @@ class KrigingSurrogate(object):
         self.R_fact = None
         self.mu = None
         self.log_likelihood = None
-
-    def get_uncertain_value(self, value):
-        """Returns a NormalDistribution centered around the value, with a
-        standard deviation of 0."""
-        return NormalDistribution(value, 0.)
 
     def predict(self, new_x):
         """Calculates a predicted value of the response based on the current
@@ -85,8 +76,7 @@ class KrigingSurrogate(object):
         MSE = self.sig2*(1.0 - term1 + term2)
         RMSE = sqrt(abs(MSE))
 
-        dist = NormalDistribution(f, RMSE)
-        return dist
+        return (f, RMSE)
 
     def train(self, X, Y):
         """Train the surrogate model with the given set of inputs and outputs."""
@@ -181,9 +171,4 @@ class FloatKrigingSurrogate(KrigingSurrogate):
 
     def predict(self, new_x):
         dist = super(FloatKrigingSurrogate, self).predict(new_x)
-        return dist.mu
-
-    def get_uncertain_value(self, value):
-        """Returns a float"""
-        return float(value)
-
+        return dist[0] # mean value
