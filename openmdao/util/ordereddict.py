@@ -8,8 +8,7 @@ class OrderedDict(dict):
     """
     An alternative to built-in OrderedDict.  This one uses a list to keep
     the value order and a map of keys to index into the list.  It will be much
-    slower to delete entries, but should be faster for normal lookups and
-    iteration.
+    slower to delete entries, but should be faster for iteration.
     """
     def __init__(*args, **kwargs):
         if not args:
