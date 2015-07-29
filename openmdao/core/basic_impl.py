@@ -7,6 +7,8 @@ from openmdao.core.data_transfer import DataTransfer
 class BasicImpl(object):
     """Basic vector and data transfer implementation factory."""
 
+    idx_arr_type = int
+    
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
         """
