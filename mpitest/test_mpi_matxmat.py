@@ -4,22 +4,22 @@ from __future__ import print_function
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.core.group import Group
-from openmdao.core.parallelgroup import ParallelGroup
+from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.problem import Problem
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
-from openmdao.test.mpiunittest import MPITestCase
-from openmdao.test.simplecomps import FanOutGrouped, FanInGrouped
-from openmdao.test.execcomp4test import ExecComp4Test
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.mpi_test_util import MPITestCase
+from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
+from openmdao.test.exec_comp_for_test import ExecComp4Test
+from openmdao.test.test_util import assert_rel_error
 from openmdao.devtools.debug import debug
 
 if MPI:
-    from openmdao.core.petscimpl import PetscImpl as impl
+    from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core.basicimpl import BasicImpl as impl
+    from openmdao.core.basic_impl import BasicImpl as impl
 
 
 class MatMatTestCase(MPITestCase):
@@ -221,5 +221,5 @@ class MatMatIndicesTestCase(MPITestCase):
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
 
 if __name__ == '__main__':
-    from openmdao.test.mpiunittest import mpirun_tests
+    from openmdao.test.mpi_test_util import mpirun_tests
     mpirun_tests()

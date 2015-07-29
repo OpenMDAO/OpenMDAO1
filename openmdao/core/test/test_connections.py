@@ -6,8 +6,8 @@ import warnings
 
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 
 
 class TestConnections(unittest.TestCase):

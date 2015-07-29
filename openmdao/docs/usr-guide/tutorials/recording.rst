@@ -10,12 +10,12 @@ save the data generated for future use. Consider the code below:
 
 ::
 
-    from openmdao.components.paramcomp import ParamComp
+    from openmdao.components.param_comp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.group import Group
     from openmdao.core.problem import Problem
     from openmdao.drivers.scipy_optimizer import ScipyOptimizer
-    from openmdao.recorders.shelverecorder import ShelveRecorder
+    from openmdao.recorders.shelve_recorder import ShelveRecorder
 
 
     class Paraboloid(Component):

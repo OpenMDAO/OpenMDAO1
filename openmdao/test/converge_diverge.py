@@ -1,7 +1,7 @@
 """ Formerly the one-two-one-two-one test. A model that diverges, converges,
 diverges, then converges again. """
 
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 

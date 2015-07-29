@@ -10,7 +10,7 @@ from six.moves.configparser import ConfigParser
 from six import text_type
 from optparse import OptionParser
 
-from openmdao.util.fileutil import find_files, find_up
+from openmdao.util.file_util import find_files, find_up
 
 def _modify_wpr_file(template, outfile, version):
     config = ConfigParser()

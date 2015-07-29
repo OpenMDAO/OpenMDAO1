@@ -8,9 +8,9 @@ from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI
+from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
-from openmdao.core.vecwrapper import PlaceholderVecWrapper
+from openmdao.core.vec_wrapper import PlaceholderVecWrapper
 
 
 class System(object):

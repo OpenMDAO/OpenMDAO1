@@ -1,7 +1,7 @@
 """ Non-linear solver that implements a Newton's method."""
 
-from openmdao.solvers.solverbase import NonLinearSolver
-from openmdao.util.recordutil import update_local_meta, create_local_meta
+from openmdao.solvers.solver_base import NonLinearSolver
+from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
 class Newton(NonLinearSolver):

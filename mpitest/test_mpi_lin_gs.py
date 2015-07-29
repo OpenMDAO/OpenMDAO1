@@ -2,19 +2,19 @@
 
 from __future__ import print_function
 
-from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
-from openmdao.core.parallelgroup import ParallelGroup
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
-from openmdao.test.mpiunittest import MPITestCase
-from openmdao.test.simplecomps import FanOutGrouped, FanInGrouped
-from openmdao.core.mpiwrap import MPI, MultiProcFailCheck
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.mpi_test_util import MPITestCase
+from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.test.test_util import assert_rel_error
 
 if MPI:
-    from openmdao.core.petscimpl import PetscImpl as impl
+    from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core.basicimpl import BasicImpl as impl
+    from openmdao.core.basic_impl import BasicImpl as impl
 
 
 class MPITests1(MPITestCase):
@@ -67,5 +67,5 @@ class MPITests1(MPITestCase):
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
 if __name__ == '__main__':
-    from openmdao.test.mpiunittest import mpirun_tests
+    from openmdao.test.mpi_test_util import mpirun_tests
     mpirun_tests()
