@@ -375,7 +375,6 @@ class System(object):
 
             # Size our Outputs
             for u_name in fd_unknowns:
-                print p_name, u_name
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
 
