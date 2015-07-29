@@ -692,12 +692,34 @@ class Group(System):
                 dresids.vec[:] = 0.0
 
                 if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
-                    if system.fd_options['force_fd'] == True:
-                        system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns, dparams,
-                                            dunknowns, dresids, mode)
+
+                    # Speedhack, don't call component's derivatives if
+                    # incoming vector is zero.
+                    nonzero = False
+                    for key in system._get_fd_params():
+                        try:
+                            value = dparams.flat[key]
+                        # Var might be irrelevant.
+                        except KeyError:
+                            continue
+                        if any(value != 0):
+                            nonzero = True
+                            break
+                    states = [name for name, meta in system.unknowns.items() \
+                              if meta.get('state')]
+                    for key in states:
+                        value = dunknowns.flat[key]
+                        if any(value != 0):
+                            nonzero = True
+                            break
+
+                    if nonzero is True:
+                        if system.fd_options['force_fd'] == True:
+                            system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                     dunknowns, dresids, mode)
+                        else:
+                            system.apply_linear(system.params, system.unknowns, dparams,
+                                                dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
                 for var, meta in dunknowns.items():
@@ -719,18 +741,28 @@ class Group(System):
 
                 if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
 
-                    try:
-                        dparams._set_adjoint_mode(True)
-                        if system.fd_options['force_fd'] == True:
-                            system._apply_linear_jac(system.params,
-                                                     system.unknowns, dparams,
-                                                     dunknowns, dresids, mode)
-                        else:
-                            system.apply_linear(system.params, system.unknowns,
-                                                dparams, dunknowns, dresids, mode)
+                    # Speedhack, don't call component's derivatives if
+                    # incoming vector is zero.
+                    nonzero = False
+                    for key in dresids.keys():
+                        value = dresids.flat[key]
+                        if any(value != 0):
+                            nonzero = True
+                            break
 
-                    finally:
-                        dparams._set_adjoint_mode(False)
+                    if nonzero is True:
+                        try:
+                            dparams._set_adjoint_mode(True)
+                            if system.fd_options['force_fd'] == True:
+                                system._apply_linear_jac(system.params,
+                                                         system.unknowns, dparams,
+                                                         dunknowns, dresids, mode)
+                            else:
+                                system.apply_linear(system.params, system.unknowns,
+                                                    dparams, dunknowns, dresids, mode)
+
+                        finally:
+                            dparams._set_adjoint_mode(False)
 
                 dresids.vec *= -1.0
 
