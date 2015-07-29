@@ -264,12 +264,19 @@ class Component(System):
             self.setup_distrib_idxs()
             # now update our distrib_size metadata for any distributed
             # unknowns
+            sizes = []
+            names = []
             for name, meta in self._unknowns_dict.items():
                 if 'src_indices' in meta:
-                    if trace:
-                        print("allgathering src index sizes:")
-                    sizes = self.comm.allgather(len(meta['src_indices']))
-                    meta['distrib_size'] = sum(sizes)
+                    sizes.append(len(meta['src_indices']))
+                    names.append(name)
+            if sizes:
+                if trace:
+                    print("allgathering src index sizes:")
+                allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
+                self.comm.Allgather(np.array(sizes, dtype=int), allsizes)
+                for i, name in enumerate(names):
+                    self._unknowns_dict[name]['distrib_size'] = np.sum(allsizes[:, i])
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
