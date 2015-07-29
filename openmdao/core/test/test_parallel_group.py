@@ -1,9 +1,9 @@
 import unittest
 
 from openmdao.core.problem import Problem
-from openmdao.core.parallelgroup import ParallelGroup
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.core.parallel_group import ParallelGroup
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
 
 

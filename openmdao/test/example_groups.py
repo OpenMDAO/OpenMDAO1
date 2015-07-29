@@ -3,9 +3,9 @@
 import numpy as np
 
 from openmdao.core.group import Group
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
-from openmdao.test.simplecomps import SimplePassByObjComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.test.simple_comps import SimplePassByObjComp
 
 class ExampleGroup(Group):
     """A nested `Group` for testing"""

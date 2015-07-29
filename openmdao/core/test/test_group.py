@@ -5,9 +5,9 @@ from six import text_type, StringIO
 from openmdao.core.problem import Problem, _get_implicit_connections
 from openmdao.core.group import Group
 from openmdao.core.problem import Relevance
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
-from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 
 class TestGroup(unittest.TestCase):
 

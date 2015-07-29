@@ -9,7 +9,8 @@ import unittest
 import tempfile
 from fnmatch import fnmatch
 
-from openmdao.util.fileutil import build_directory, find_files
+from openmdao.util.file_util import build_directory, find_files
+
 
 STRUCTURE = {
     'd1': {

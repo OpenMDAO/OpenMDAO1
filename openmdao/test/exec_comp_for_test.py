@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import time
 
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.exec_comp import ExecComp
 
 class ExecComp4Test(ExecComp):
     """

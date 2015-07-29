@@ -1,5 +1,5 @@
 import unittest
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.param_comp import ParamComp
 
 
 class TestUnitComp(unittest.TestCase):

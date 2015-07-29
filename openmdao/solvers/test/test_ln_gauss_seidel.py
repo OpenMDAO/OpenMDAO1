@@ -3,18 +3,17 @@
 import unittest
 import numpy as np
 
-from openmdao.components.execcomp import ExecComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      FanOutGrouped, \
-                                      FanInGrouped, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, FanInGrouped, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
 
 class TestLinearGaussSeidel(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from collections import OrderedDict
 
-from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 
 class TestVecWrapper(unittest.TestCase):
 

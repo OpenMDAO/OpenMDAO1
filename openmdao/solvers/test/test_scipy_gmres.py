@@ -5,16 +5,16 @@ import numpy as np
 
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      FanOutGrouped, DoubleArrayComp, \
-                                      FanInGrouped, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, DoubleArrayComp, \
+                                       FanInGrouped, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
 
 class TestScipyGMRES(unittest.TestCase):

@@ -24,7 +24,7 @@ if PY3:
         return isfunction(obj) or inspect.ismethod(obj)
 
 
-from openmdao.core.mpiwrap import under_mpirun
+from openmdao.core.mpi_wrap import under_mpirun
 
 
 try:

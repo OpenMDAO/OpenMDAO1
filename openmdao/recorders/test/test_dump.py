@@ -1,15 +1,15 @@
-""" Unit test for the DumpCaseRecorder. """
+""" Unit test for the DumpRecorder. """
 
 import unittest
 
 from six import StringIO
-from openmdao.recorders.dumpcase import DumpCaseRecorder
-from openmdao.recorders.test.recordertests import RecorderTests
-from openmdao.util.recordutil import format_iteration_coordinate
+from openmdao.recorders.dump_recorder import DumpRecorder
+from openmdao.recorders.test.recorder_tests import RecorderTests
+from openmdao.util.record_util import format_iteration_coordinate
 
-class TestDumpCaseRecorder(RecorderTests.Tests):
+class TestDumpRecorder(RecorderTests.Tests):
     def setUp(self):
-        self.recorder = DumpCaseRecorder(StringIO())
+        self.recorder = DumpRecorder(StringIO())
 
     def assertDatasetEquals(self, expected, tolerance):
         sout = self.recorder.out

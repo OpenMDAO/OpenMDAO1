@@ -5,13 +5,13 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simplecomps import SimpleArrayComp, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
 SKIP = False
 try:

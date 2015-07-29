@@ -7,8 +7,8 @@ from numpy.linalg import norm
 from six import iteritems
 from six.moves import cStringIO
 
-from openmdao.util.types import is_differentiable, int_types
-from openmdao.util.strutil import get_common_ancestor
+from openmdao.util.type_util import is_differentiable, int_types
+from openmdao.util.string_util import get_common_ancestor
 
 #from openmdao.devtools.debug import *
 

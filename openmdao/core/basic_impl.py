@@ -1,7 +1,7 @@
 """Basic vector and data transfer implementation factory."""
 
-from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
-from openmdao.core.dataxfer import DataXfer
+from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.data_transfer import DataTransfer
 
 
 class BasicImpl(object):
@@ -72,7 +72,7 @@ class BasicImpl(object):
 
         Returns
         -------
-        `DataXfer`
-            A `DataXfer` object.
+        `DataTransfer`
+            A `DataTransfer` object.
         """
-        return DataXfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
+        return DataTransfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)

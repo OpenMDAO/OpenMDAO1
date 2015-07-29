@@ -10,8 +10,8 @@ import petsc4py
 from petsc4py import PETSc
 
 
-from openmdao.core.vecwrapper import SrcVecWrapper, TgtVecWrapper
-from openmdao.core.dataxfer import DataXfer
+from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.data_transfer import DataTransfer
 
 trace = os.environ.get('TRACE_PETSC')
 if trace:
@@ -75,10 +75,10 @@ class PetscImpl(object):
 
         Returns
         -------
-        `PetscDataXfer`
-            A `PetscDataXfer` object.
+        `PetscDataTransfer`
+            A `PetscDataTransfer` object.
         """
-        return PetscDataXfer(src_vec, tgt_vec, src_idxs, tgt_idxs, vec_conns, byobj_conns)
+        return PetscDataTransfer(src_vec, tgt_vec, src_idxs, tgt_idxs, vec_conns, byobj_conns)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
@@ -218,7 +218,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         return self.comm.allgather(psizes)
 
 
-class PetscDataXfer(DataXfer):
+class PetscDataTransfer(DataTransfer):
     """
     Args
     ----
@@ -246,7 +246,7 @@ class PetscDataXfer(DataXfer):
     """
     def __init__(self, src_vec, tgt_vec,
                  src_idxs, tgt_idxs, vec_conns, byobj_conns):
-        super(PetscDataXfer, self).__init__(src_idxs, tgt_idxs,
+        super(PetscDataTransfer, self).__init__(src_idxs, tgt_idxs,
                                             vec_conns, byobj_conns)
 
         self.comm = comm = src_vec.comm
@@ -256,7 +256,7 @@ class PetscDataXfer(DataXfer):
         name = src_vec.pathname
 
         if trace:
-            debug("'%s': creating index sets for '%s' DataXfer: %s %s" %
+            debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %
                   (name, src_vec.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)

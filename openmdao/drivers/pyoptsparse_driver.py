@@ -13,7 +13,7 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
-from openmdao.util.recordutil import create_local_meta, update_local_meta
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
 class pyOptSparseDriver(Driver):

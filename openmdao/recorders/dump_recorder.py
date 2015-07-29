@@ -1,15 +1,15 @@
-""" Class definition for DumpCaseRecorder, a recorder that prints
+""" Class definition for DumpRecorder, a recorder that prints
 human-readable text output to a stream."""
 
 import sys
 
 from six import string_types
 
-from openmdao.recorders.baserecorder import BaseRecorder
-from openmdao.util.recordutil import format_iteration_coordinate
+from openmdao.recorders.base_recorder import BaseRecorder
+from openmdao.util.record_util import format_iteration_coordinate
 
 
-class DumpCaseRecorder(BaseRecorder):
+class DumpRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
     ``stderr``, then that standard stream is used. Otherwise, if `out` is a
@@ -18,7 +18,7 @@ class DumpCaseRecorder(BaseRecorder):
     """
 
     def __init__(self, out='stdout'):
-        super(DumpCaseRecorder, self).__init__()
+        super(DumpRecorder, self).__init__()
         if isinstance(out, string_types):
             if out == 'stdout':
                 out = sys.stdout
@@ -36,7 +36,7 @@ class DumpCaseRecorder(BaseRecorder):
         group : `Group`
             Group that owns this recorder.
         """
-        super(DumpCaseRecorder, self).startup(group)
+        super(DumpRecorder, self).startup(group)
 
     def record(self, params, unknowns, resids, metadata):
         """Dump the given run data in a "pretty" form.

@@ -1,8 +1,8 @@
 """ The RunOnce solver just performs solve_nonlinear on the system hierarchy
 with no iteration."""
 
-from openmdao.solvers.solverbase import NonLinearSolver
-from openmdao.util.recordutil import create_local_meta, update_local_meta
+from openmdao.solvers.solver_base import NonLinearSolver
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
 class RunOnce(NonLinearSolver):

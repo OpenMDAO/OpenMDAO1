@@ -7,7 +7,7 @@ import random
 from numpy import array, linspace, sin, cos, pi
 from scipy.optimize import minimize
 
-from openmdao.surrogatemodels.kriging import KrigingSurrogate
+from openmdao.surrogate_models.kriging import KrigingSurrogate
 
 
 class TestKrigingSurrogate(unittest.TestCase):

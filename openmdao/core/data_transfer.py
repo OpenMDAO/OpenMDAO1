@@ -1,9 +1,9 @@
-""" Class definition for the DataXfer object."""
+""" Class definition for the DataTransfer object."""
 
 import numpy as np
 
 
-class DataXfer(object):
+class DataTransfer(object):
     """
     An object that performs data transfer between a source vector and a
     target vector.

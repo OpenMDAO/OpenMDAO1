@@ -9,8 +9,8 @@ from numpy import ndarray, complex, imag
 from six import string_types
 
 from openmdao.core.component import Component
-from openmdao.util.strutil import parse_for_vars
-from openmdao.util.arrayutil import array_idx_iter
+from openmdao.util.string_util import parse_for_vars
+from openmdao.util.array_util import array_idx_iter
 
 
 class ExecComp(Component):

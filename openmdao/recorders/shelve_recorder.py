@@ -3,8 +3,8 @@
 import shelve
 from collections import OrderedDict
 
-from openmdao.recorders.baserecorder import BaseRecorder
-from openmdao.util.recordutil import format_iteration_coordinate
+from openmdao.recorders.base_recorder import BaseRecorder
+from openmdao.util.record_util import format_iteration_coordinate
 
 
 class ShelveRecorder(BaseRecorder):

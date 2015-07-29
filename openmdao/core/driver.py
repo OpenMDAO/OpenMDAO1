@@ -6,8 +6,7 @@ from itertools import chain
 import numpy as np
 
 from openmdao.core.options import OptionsDictionary
-from openmdao.util.recordutil import create_local_meta, \
-                                     update_local_meta
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
 class Driver(object):

@@ -7,7 +7,7 @@ import networkx as nx
 
 from openmdao.core.parallelgroup import ParallelGroup
 from openmdao.core.group import Group
-from openmdao.util.strutil import name_relative_to
+from openmdao.util.string_util import name_relative_to
 
 def plot_sys_tree(system, outfile=None, fmt='pdf'):
     """
@@ -92,7 +92,6 @@ def plot_sgraph(group, outfile=None, fmt='pdf'):
 def _write_node(f, meta, node, indent):
     assigns = ['%s=%s' % (k,v) for k,v in meta.items()]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
-
 
 def _write_system_dot(system, dotfile):
     # first, create a mapping of unique names to each system

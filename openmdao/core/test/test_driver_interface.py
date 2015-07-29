@@ -5,15 +5,15 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.execcomp import ExecComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import Group
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simplecomps import ArrayComp2D
+from openmdao.test.simple_comps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
 
 

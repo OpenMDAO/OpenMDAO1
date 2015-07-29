@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from openmdao.core.component import Component
 from openmdao.core.group import Group
-from openmdao.core.mpiwrap import MPI
+from openmdao.core.mpi_wrap import MPI
 
 
 class ParallelGroup(Group):

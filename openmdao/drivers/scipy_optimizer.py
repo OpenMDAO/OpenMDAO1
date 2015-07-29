@@ -8,7 +8,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from openmdao.core.driver import Driver
-from openmdao.util.recordutil import create_local_meta, update_local_meta
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 _optimizers = ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B',
                'TNC', 'COBYLA', 'SLSQP']

@@ -10,11 +10,13 @@ from math import sin
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.metamodel import MetaModel
-from openmdao.surrogatemodels.response_surface import ResponseSurface
-from openmdao.surrogatemodels.kriging import KrigingSurrogate, FloatKrigingSurrogate
 
-from openmdao.test.testutil import assert_rel_error
+from openmdao.components.meta_model import MetaModel
+
+from openmdao.surrogate_models.response_surface import ResponseSurface
+from openmdao.surrogate_models.kriging import FloatKrigingSurrogate
+
+from openmdao.test.test_util import assert_rel_error
 
 
 class TestMetaModel(unittest.TestCase):

@@ -5,10 +5,10 @@ import scipy.sparse
 
 from openmdao.core.component import Component
 from openmdao.core.group import Group
-from openmdao.core.parallelgroup import ParallelGroup
+from openmdao.core.parallel_group import ParallelGroup
 
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 
 
 class SimpleComp(Component):

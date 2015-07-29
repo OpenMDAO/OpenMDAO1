@@ -11,10 +11,10 @@ from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
-from openmdao.test.examplegroups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
-from openmdao.test.simplecomps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
+from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
 
 
 if PY3:

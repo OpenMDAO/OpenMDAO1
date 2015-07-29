@@ -7,9 +7,9 @@ from six import iteritems
 
 import numpy as np
 
-from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
-from openmdao.util.types import is_differentiable
+from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
