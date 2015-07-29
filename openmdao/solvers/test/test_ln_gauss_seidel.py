@@ -370,6 +370,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
             #for key2, val2 in val1.items():
                 #assert_rel_error(self, J[key1][key2], val2, .00001)
 
+        # Obviously this test doesn't do much right now, but I need to verify
+        # we don't get a keyerror here.
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+
     def test_sellar_derivs_grouped(self):
 
         prob = Problem()
