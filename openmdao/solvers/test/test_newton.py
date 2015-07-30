@@ -13,7 +13,7 @@ from openmdao.solvers.newton import Newton
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestNewton(unittest.TestCase):
