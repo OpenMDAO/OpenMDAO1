@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from openmdao.components.unit_comp import UnitComp
+from openmdao.components import UnitComp
 from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem

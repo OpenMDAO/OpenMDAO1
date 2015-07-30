@@ -9,7 +9,7 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+from openmdao.drivers import ScipyOptimizer
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D

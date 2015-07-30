@@ -6,8 +6,8 @@ import random
 
 from numpy import array, linspace, sin, cos, pi
 
-from openmdao.surrogate_models.kriging import KrigingSurrogate
-from openmdao.test.test_util import assert_rel_error
+from openmdao.surrogate_models import KrigingSurrogate
+from openmdao.test.util import assert_rel_error
 from six.moves import zip
 
 

@@ -3,10 +3,8 @@
 import unittest
 import numpy as np
 
-from openmdao.components.linear_system import LinearSystem
-from openmdao.components.param_comp import ParamComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.components import LinearSystem, ParamComp
+from openmdao.core import Group, Problem
 from openmdao.test.util import assert_rel_error
 
 

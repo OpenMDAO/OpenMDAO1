@@ -10,7 +10,7 @@ import numpy as np
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
 from openmdao.util.ordered_dict import OrderedDict
-from openmdao.core.vec_wrapper import PlaceholderVecWrapper
+from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 
 
 class System(object):
@@ -31,12 +31,12 @@ class System(object):
         self.comm = None
 
         # create placeholders for all of the vectors
-        self.unknowns = PlaceholderVecWrapper('unknowns')
-        self.resids = PlaceholderVecWrapper('resids')
-        self.params = PlaceholderVecWrapper('params')
-        self.dunknowns = PlaceholderVecWrapper('dunknowns')
-        self.dresids = PlaceholderVecWrapper('dresids')
-        self.dparams = PlaceholderVecWrapper('dparams')
+        self.unknowns = _PlaceholderVecWrapper('unknowns')
+        self.resids = _PlaceholderVecWrapper('resids')
+        self.params = _PlaceholderVecWrapper('params')
+        self.dunknowns = _PlaceholderVecWrapper('dunknowns')
+        self.dresids = _PlaceholderVecWrapper('dresids')
+        self.dparams = _PlaceholderVecWrapper('dparams')
 
         # dicts of vectors used for parallel solution of multiple RHS
         self.dumat = {}

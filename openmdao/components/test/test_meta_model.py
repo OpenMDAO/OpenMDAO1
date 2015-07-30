@@ -1,16 +1,14 @@
 import numpy as np
 import unittest
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.components.meta_model import MetaModel
-
-from openmdao.surrogate_models.response_surface import ResponseSurface
-from openmdao.surrogate_models.kriging import FloatKrigingSurrogate
+from openmdao.core import Component, Group, Problem
+from openmdao.components import MetaModel
+from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
 
 from openmdao.test.util import assert_rel_error
 
 from six.moves import cStringIO
+
 
 class TestMetaModel(unittest.TestCase):
 

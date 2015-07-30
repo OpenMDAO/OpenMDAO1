@@ -6,7 +6,7 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.solvers.run_once import RunOnce
+from openmdao.solvers import RunOnce
 from openmdao.test.util import assert_rel_error
 
 

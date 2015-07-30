@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.core.problem import Problem
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers import NLGaussSeidel
 from openmdao.test.sellar import SellarNoDerivatives, SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 
