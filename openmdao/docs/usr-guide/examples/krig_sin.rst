@@ -26,11 +26,9 @@ This code will set up a really simple `Group` with only a single
     import sys
     import numpy as np
 
-    from openmdao.core.group import Group
-    from openmdao.core.component import Component
-
-    from openmdao.components.metamodel import MetaModel
-    from openmdao.surrogatemodels.kriging import KrigingSurrogate, FloatKrigingSurrogate
+    from openmdao.core import Group, Component
+    from openmdao.components import MetaModel
+    from openmdao.surrogate_models import KrigingSurrogate, FloatKrigingSurrogate
 
     class TrigMM(Group):
         ''' FloatKriging gives responses as floats '''
@@ -50,7 +48,7 @@ pre generated this data and will just be importing it and using it.
 
 .. testcode:: krig_example
 
-    from openmdao.core.problem import Problem
+    from openmdao.core import Problem
 
     prob = Problem()
     prob.root = TrigMM()
