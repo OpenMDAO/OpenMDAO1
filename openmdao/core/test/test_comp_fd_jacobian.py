@@ -8,9 +8,7 @@ import unittest
 import numpy as np
 
 from openmdao.core import Component, Group, Problem, System, SrcVecWrapper
-
-from openmdao.components.param_comp import ParamComp
-from openmdao.components.exec_comp import ExecComp
+from openmdao.components import ParamComp, ExecComp
 from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
 from openmdao.test.paraboloid import Paraboloid
