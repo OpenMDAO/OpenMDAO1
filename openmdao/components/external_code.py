@@ -34,8 +34,10 @@ class ExternalCode(Component):
             completion. A value of zero implies an infinite wait''')
         self.options.add_option('check_external_outputs', True, desc='Check that all input or output external files exist')
 
-        self.options.add_option( 'external_files', [], 
-                desc='list of dicts for external files used by this component.')
+        self.options.add_option( 'external_input_files', [],
+            desc='(optional) list of input file names to check for the pressence of before solve_nonlinear')
+        self.options.add_option( 'external_output_files', [],
+            desc='(optional) list of input file names to check for the pressence of after solve_nonlinear')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
@@ -68,7 +70,7 @@ class ExternalCode(Component):
                 out_stream.write(msg)
 
         # Check for missing input files
-        missing_files = self.check_input_output_files(inputs=True)
+        missing_files = self._check_for_files(input=True)
         for iotype, path in missing_files:
             msg = "The %s file %s is missing" % ( iotype, path )
             out_stream.write(msg)
@@ -112,7 +114,7 @@ class ExternalCode(Component):
                 raise RuntimeError('return_code = %d%s' % (return_code, err_fragment))
 
             if self.options['check_external_outputs']:
-                missing_files = self.check_input_output_files(inputs=False)
+                missing_files = self._check_for_files(input=False)
                 msg = ""
                 for iotype, path in missing_files:
                     msg +=  "%s file %s is missing\n" % (iotype, path)
@@ -123,50 +125,24 @@ class ExternalCode(Component):
         finally:
             self.return_code = -999999 if return_code is None else return_code
 
-    def check_input_output_files(self, inputs):
+    def _check_for_files(self, input=True):
         """
-        Check that all 'specific' input or output external files exist.
-        If an external file path specifies a pattern, it is *not* checked.
+        Check that all 'specific' input external files exist.
 
-        inputs: bool
-            If True, check inputs; otherwise outputs.
+        input: bool
+            If True, check inputs. Else check outputs
         """
 
         missing_files = []
 
-        # External files.
-        for metadata in self.options['external_files']:
-            path = metadata['path']
-            for ch in '*?[':
-                if ch in path:
-                    break
-            else:
-                if inputs:
-                    if not metadata.get('input', False):
-                        continue
-                else:
-                    if not metadata.get('output', False):
-                        continue
-                if not os.path.exists(path):
-                    iotype = 'input' if inputs else 'output'
-                    missing_files.append((iotype, path))
-                    #raise RuntimeError('missing %s file %r' % (iotype, path))
-        # Stdin, stdout, stderr.
-        if inputs and self.stdin and self.stdin != self.DEV_NULL:
-            if not os.path.exists(self.stdin):
-                missing_files.append(('stdin',self.stdin))
-                #raise RuntimeError('missing stdin file %r' % self.stdin)
-        if not inputs and self.stdout and self.stdout != self.DEV_NULL:
-            if not os.path.exists(self.stdout):
-                missing_files.append(('stdout',self.stdout))
-                # raise RuntimeError('missing stdout file %r' % self.stdout)
+        if input:
+            files = self.options['external_input_files']
+        else:
+            files = self.options['external_output_files']
 
-        if not inputs and self.stderr \
-                      and self.stderr != self.DEV_NULL \
-                      and self.stderr != self.STDOUT :
-            if not os.path.exists(self.stderr):
-                missing_files.append(('stderr',self.stderr))
-                # raise RuntimeError('missing stderr file %r' % self.stderr)
+        for path in files:
+            if not os.path.exists(path):
+                missing_files.append(('input', path))
 
         return missing_files
 
@@ -202,6 +178,3 @@ class ExternalCode(Component):
             #self._logger.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)
-
-
-
