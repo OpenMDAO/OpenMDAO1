@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 
-from openmdao.surrogate_models.response_surface import ResponseSurface
+from openmdao.surrogate_models import ResponseSurface
 
 
 class TestResponseSurface(unittest.TestCase):

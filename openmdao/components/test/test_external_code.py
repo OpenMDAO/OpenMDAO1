@@ -6,7 +6,7 @@ import tempfile
 import shutil
 import pkg_resources
 
-from openmdao.core.problem import Problem, Group
+from openmdao.core import Problem, Group
 
 from openmdao.components.external_code import ExternalCode, STDOUT
 
