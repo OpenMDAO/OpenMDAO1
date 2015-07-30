@@ -30,12 +30,13 @@ class KrigingSurrogate(SurrogateModel):
         self.mu = None
         self.log_likelihood = None
 
+
     def train(self, x, y):
         """Train the surrogate model with the given set of inputs and outputs."""
-        
+
         super(KrigingSurrogate, self).train(x, y)
-        
-        #TODO: Check if one training point will work... if not raise error
+
+        # TODO: Check if one training point will work... if not raise error
         """self.X = []
         self.Y = []
         for ins,out in zip(X,Y):
@@ -97,7 +98,6 @@ class KrigingSurrogate(SurrogateModel):
             self.R_solve_ymu = cho_solve(self.R_fact, y_minus_mu)
 
             self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
-
             det_factor = abs(prod(diagonal(R_fact[0]))**2) + 1.e-16
 
             self.log_likelihood = -self.n/2.*log(self.sig2) - \
