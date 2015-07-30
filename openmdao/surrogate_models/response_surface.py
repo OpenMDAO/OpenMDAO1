@@ -1,8 +1,10 @@
 """Surrogate Model based on second order response surface equations."""
 
 from numpy import linalg, zeros, array
-from openmdao.surrogatemodels.surrogate_model import SurrogateModel
+
+from openmdao.surrogate_models.surrogate_model import SurrogateModel
 from six.moves import range
+
 
 class ResponseSurface(SurrogateModel):
     def __init__(self, X=None, Y=None):

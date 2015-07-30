@@ -1,10 +1,10 @@
 """ Surrogate model based on Kriging. """
 from math import log, sqrt
 
-from openmdao.surrogatemodels.surrogate_model import SurrogateModel
+from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, sum, log10,\
+from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, log10,\
     power, diagonal, prod
 from numpy.linalg import slogdet, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
