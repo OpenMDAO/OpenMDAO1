@@ -14,7 +14,7 @@ from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, DoubleArrayComp, \
                                        FanInGrouped, ArrayComp2D
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestScipyGMRES(unittest.TestCase):
