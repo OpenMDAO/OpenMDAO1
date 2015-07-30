@@ -7,13 +7,9 @@ import shutil
 import pkg_resources
 
 from openmdao.core.problem import Problem, Group
-
 from openmdao.components.external_code import ExternalCode, STDOUT
 
-from openmdao.util.file_util import FileMetadata
-
 DIRECTORY = pkg_resources.resource_filename('openmdao.components', 'test')
-
 
 class ExternalCodeForTesting(ExternalCode):
     def __init__(self):
@@ -47,8 +43,8 @@ class TestExternalCode(unittest.TestCase):
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 
         self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
-            FileMetadata(path='external_code_output.txt', output=True),
+            { 'path': 'external_code_for_testing.py', 'input': True},
+            { 'path': 'external_code_output.txt', 'output': True},
             ]
 
         self.top.setup(check=False)
@@ -61,7 +57,7 @@ class TestExternalCode(unittest.TestCase):
         self.extcode.options['timeout'] = 1.0
 
         self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
+            {'path':'external_code_for_testing.py', 'input': True},
             ]
 
         self.top.setup(check=False)
@@ -124,8 +120,8 @@ class TestExternalCode(unittest.TestCase):
         #   to False, no exception should be thrown
         self.extcode.options['check_external_outputs'] = False
         self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
-            FileMetadata(path='does_not_exist.txt', output=True),
+            { 'path': 'external_code_for_testing.py', 'input': True },
+            { 'path': 'does_not_exist.txt', 'output': True},
             ]
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 

@@ -34,8 +34,8 @@ class ExternalCode(Component):
             completion. A value of zero implies an infinite wait''')
         self.options.add_option('check_external_outputs', True, desc='Check that all input or output external files exist')
 
-        self.options.add_option('external_files', [],
-                desc='FileMetadata objects for external files used by this component.')
+        self.options.add_option( 'external_files', [], 
+                desc='list of dicts for external files used by this component.')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
@@ -136,7 +136,7 @@ class ExternalCode(Component):
 
         # External files.
         for metadata in self.options['external_files']:
-            path = metadata.path
+            path = metadata['path']
             for ch in '*?[':
                 if ch in path:
                     break
