@@ -7,7 +7,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.components.param_comp import ParamComp
 from openmdao.components.exec_comp import ExecComp
-from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -382,4 +382,3 @@ class TestScipyGMRES(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
