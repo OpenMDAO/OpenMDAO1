@@ -153,10 +153,10 @@ def check_connections(connections, params, unknowns):
     """
 
     # Get metadata for all sources
-    sources = __get_metadata(connections.values(), unknowns)
+    sources = __get_metadata(connections.itervalues(), unknowns)
 
     #Get metadata for all targets
-    targets = __get_metadata(connections.keys(), params)
+    targets = __get_metadata(connections.iterkeys(), params)
 
     for source, target in zip(sources, targets):
         _check_types_match(source, target)

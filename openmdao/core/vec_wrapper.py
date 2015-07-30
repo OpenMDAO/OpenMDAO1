@@ -3,7 +3,7 @@
 import sys
 import numpy
 from numpy.linalg import norm
-from six import iteritems
+from six import iteritems, itervalues
 from six.moves import cStringIO
 
 from openmdao.util.ordered_dict import OrderedDict
@@ -245,6 +245,15 @@ class VecWrapper(object):
         """
         return self._vardict.keys()
 
+    def iterkeys(self):
+        """
+        Returns
+        -------
+        iter of str
+            the keys (variable names) in this vector.
+        """
+        return self._vardict.iterkeys()
+
     def items(self):
         """
         Returns
@@ -252,7 +261,16 @@ class VecWrapper(object):
         iterator
             Iterator returning the name and metadata dict for each variable.
         """
-        return iteritems(self._vardict)
+        return self._vardict.items()
+
+    def iteritems(self):
+        """
+        Returns
+        -------
+        iterator
+            Iterator returning the name and metadata dict for each variable.
+        """
+        return self._vardict.iteritems()
 
     def values(self):
         """
@@ -261,8 +279,16 @@ class VecWrapper(object):
         iterator
             Iterator returning a metadata dict for each variable.
         """
-        for meta in self._vardict.values():
-            yield meta
+        return self._vardict.values()
+
+    def itervalues(self):
+        """
+        Returns
+        -------
+        iterator
+            Iterator returning a metadata dict for each variable.
+        """
+        return self._vardict.itervalues()
 
     def get_local_idxs(self, name, idx_dict):
         """
@@ -312,7 +338,7 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, sys_pathname, comm, varmap, relevance, var_of_interest):
+    def get_view(self, sys_pathname, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one.
 
@@ -337,7 +363,7 @@ class VecWrapper(object):
         view_size = 0
 
         start = -1
-        for name, meta in self.items():
+        for name, meta in self._vardict.items():
             if name in varmap:
                 view._vardict[varmap[name]] = self._vardict[name]
                 if not meta.get('pass_by_obj') and not meta.get('remote'):
@@ -566,7 +592,8 @@ class VecWrapper(object):
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
 
-    def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
+    def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
+              store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -578,9 +605,11 @@ class SrcVecWrapper(VecWrapper):
             Dictionary of metadata for unknown variables collected from
             components.
 
-        relevant_vars : iter of str
-            Names of variables that are relevant a particular variable of
-            interest.
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
 
         store_byobjs : bool, optional
             If True, then store 'pass by object' variables.
@@ -588,9 +617,10 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vec_size = 0
-        for meta in unknowns_dict.values():
+        for meta in unknowns_dict.itervalues():
             promname = meta['promoted_name']
-            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
+            if relevance is None or relevance.is_relevant(var_of_interest,
+                                                          meta['top_promoted_name']):
                 vmeta = self._setup_var_meta(meta['pathname'], meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[promname] = (vec_size, vec_size + vmeta['size'])
@@ -609,9 +639,10 @@ class SrcVecWrapper(VecWrapper):
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
-            for meta in unknowns_dict.values():
-                if (relevant_vars is None or meta['pathname'] in relevant_vars) \
-                   and not meta.get('remote'):
+            for meta in unknowns_dict.itervalues():
+                if 'remote' not in meta and (relevance is None or
+                                             relevance.is_relevant(var_of_interest,
+                                                                  meta['pathname'])):
                     self[meta['promoted_name']] = meta['val']
 
         self._setup_prom_map()
@@ -656,7 +687,7 @@ class TgtVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevant_vars=None, store_byobjs=False):
+              connections, relevance=None, var_of_interest=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -680,9 +711,11 @@ class TgtVecWrapper(VecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
-        relevant_vars : iter of str
-            Names of variables that are relevant a particular variable of
-            interest.
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
@@ -694,9 +727,10 @@ class TgtVecWrapper(VecWrapper):
 
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
-        for meta in params_dict.values():
+        for meta in params_dict.itervalues():
             pathname = meta['pathname']
-            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
+            if relevance is None or relevance.is_relevant(var_of_interest,
+                                                          meta['top_promoted_name']):
                 if pathname in my_params:
                     # if connected, get metadata from the source
                     src_pathname = connections.get(pathname)
@@ -739,9 +773,11 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
-        for meta in params_dict.values():
+        for meta in params_dict.itervalues():
             pathname = meta['pathname']
-            if pathname in my_params and (relevant_vars is None or pathname in relevant_vars):
+            if pathname in my_params and (relevance is None or
+                                          relevance.is_relevant(var_of_interest,
+                                                                pathname)):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
                     scale, offset = unitconv

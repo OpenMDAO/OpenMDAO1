@@ -90,7 +90,7 @@ class OrderedDict(dict):
         return self._vallist
 
     def items(self):
-        return list(zip(self._keylist, self._vallist))
+        return zip(self._keylist, self._vallist)
 
     def iterkeys(self):
         return iter(self._keylist)

@@ -60,7 +60,9 @@ class Relevance(object):
         # if name is None, everything is relevant
         if name is None:
             return set(self._vgraph.nodes_iter())
-        return self.relevant.get(name, [])
+        elif name in self.relevant:
+            return self.relevant[name]
+        return ()
 
     def is_relevant(self, var_of_interest, varname):
         """ Returns True if a variable is relevant to a particular variable
@@ -128,11 +130,11 @@ class Relevance(object):
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
 
-        for target, source in connections.items():
+        for target, source in connections.iteritems():
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
-        for meta in params_dict.values():
+        for meta in params_dict.itervalues():
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
@@ -141,7 +143,7 @@ class Relevance(object):
                 if param not in vgraph:
                     vgraph.add_node(param)
 
-        for meta in unknowns_dict.values():
+        for meta in unknowns_dict.itervalues():
             unknown = meta['pathname']
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
@@ -152,7 +154,7 @@ class Relevance(object):
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
-        for comp, inputs in compins.items():
+        for comp, inputs in compins.iteritems():
             for inp in inputs:
                 for out in compouts.get(comp, ()):
                     vgraph.add_edge(inp, out)

@@ -259,6 +259,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
+        self._to_abs_unames = {}
+        self._to_abs_pnames = {}
 
         if MPI and compute_indices:
             self.setup_distrib_idxs()
@@ -266,7 +268,7 @@ class Component(System):
             # unknowns
             sizes = []
             names = []
-            for name, meta in self._unknowns_dict.items():
+            for name, meta in self._unknowns_dict.iteritems():
                 if 'src_indices' in meta:
                     sizes.append(len(meta['src_indices']))
                     names.append(name)
@@ -280,19 +282,21 @@ class Component(System):
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
-        for name, meta in self._params_dict.items():
+        for name, meta in self._params_dict.iteritems():
             pathname = self._get_var_pathname(name)
             _new_params[pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
             self._params_dict[name]['promoted_name'] = name
+            self._to_abs_pnames[name] = (pathname,)
 
         _new_unknowns = OrderedDict()
-        for name, meta in self._unknowns_dict.items():
+        for name, meta in self._unknowns_dict.iteritems():
             pathname = self._get_var_pathname(name)
             _new_unknowns[pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
+            self._to_abs_unames[name] = (pathname,)
 
         if compute_indices:
             self._post_setup = True
@@ -328,6 +332,9 @@ class Component(System):
 
         self._impl_factory = impl
 
+        # create map of relative name in parent to relative name in child
+        self._relname_map = self._get_relname_map(parent.unknowns)
+
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
         for group, vois in relevance.groups.items():
@@ -341,7 +348,7 @@ class Component(System):
         self._create_views(top_unknowns, parent, [], None)
 
         # create params vec entries for any unconnected params
-        for meta in self._params_dict.values():
+        for meta in self._params_dict.itervalues():
             pathname = meta['pathname']
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
@@ -586,3 +593,26 @@ class Component(System):
         #finish up docstring
         docstring += '\n\t\"\"\"\n'
         return docstring
+
+    def _get_relname_map(self, parent_unknowns):
+        """
+        Args
+        ----
+        parent_unknowns : `VecWrapper`
+            A dict-like object containing variables keyed using promoted names.
+
+        Returns
+        -------
+        dict
+            Maps promoted name in parent (owner of unknowns) to
+            the corresponding promoted name in the child.
+        """
+        # parent_unknowns is keyed on promoted name relative to the parent system
+        # unknowns_dict is keyed on absolute pathname
+        umap = {}
+
+        for key, meta in self._unknowns_dict.items():
+            # at comp level, promoted and unknowns_dict key are same
+            umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
+
+        return umap

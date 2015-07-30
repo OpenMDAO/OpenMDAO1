@@ -109,27 +109,27 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns, prom_noconns = _get_implicit_connections(params_dict, unknowns_dict)
+        implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict, unknowns_dict)
 
         # combine implicit and explicit connections
-        for tgt, srcs in implicit_conns.items():
+        for tgt, srcs in implicit_conns.iteritems():
             connections.setdefault(tgt, []).extend(srcs)
 
         # resolve any input to input explicit connections
         input_sets = {}
-        for tgt, srcs in connections.items():
+        for tgt, srcs in connections.iteritems():
             for src in srcs:
                 if src in params_dict:
                     input_sets.setdefault(src, set()).update((tgt, src))
                     input_sets.setdefault(tgt, set()).update((tgt, src))
 
         # find any promoted but not connected inputs
-        for p, meta in params_dict.items():
+        for p, meta in params_dict.iteritems():
             prom = meta['promoted_name']
             if prom in prom_noconns:
                 input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
 
-        for tgt, srcs in list(connections.items()):
+        for tgt, srcs in list(connections.iteritems()):
             if tgt in input_sets:
                 for s in srcs:
                     if s in unknowns_dict:
@@ -138,7 +138,7 @@ class Problem(System):
                                 connections.setdefault(t, []).append(s)
 
         newconns = {}
-        for tgt, srcs in connections.items():
+        for tgt, srcs in connections.iteritems():
             unknown_srcs = [s for s in srcs if s in unknowns_dict]
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
@@ -150,8 +150,8 @@ class Problem(System):
         connections = newconns
 
         self._dangling = {}
-        prom_unknowns = {m['promoted_name'] for m in unknowns_dict.values()}
-        for p, meta in params_dict.items():
+        prom_unknowns = self.root._to_abs_unames
+        for p, meta in params_dict.iteritems():
             if meta['pathname'] not in connections:
                 if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
                     self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
@@ -251,8 +251,8 @@ class Problem(System):
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 
-            for meta in chain(sub._params_dict.values(),
-                              sub._unknowns_dict.values()):
+            for meta in chain(sub._params_dict.itervalues(),
+                              sub._unknowns_dict.itervalues()):
                 path = meta['pathname']
                 if path in unknowns_dict:
                     meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
@@ -275,7 +275,7 @@ class Problem(System):
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
-        promoted_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
+        promoted_unknowns = self.root._to_abs_unames
 
         for vnames in pois:
             for v in vnames:
@@ -320,7 +320,7 @@ class Problem(System):
         this includes ALL dangling params, both promoted and unpromoted.
         """
         dangling_params = sorted(set([m['promoted_name']
-                             for p, m in self.root._params_dict.items()
+                             for p, m in self.root._params_dict.iteritems()
                                if p not in self.root.connections]))
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
@@ -384,8 +384,8 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.', 1)[0] for t in self.root.connections.keys()])
-        conn_comps.update([s.rsplit('.', 1)[0] for s in self.root.connections.values()])
+        conn_comps = set([t.rsplit('.', 1)[0] for t in self.root.connections.iterkeys()])
+        conn_comps.update([s.rsplit('.', 1)[0] for s in self.root.connections.itervalues()])
         noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
                                if c.pathname not in conn_comps])
         if noconn_comps:
@@ -539,8 +539,8 @@ class Problem(System):
             else:
                 pset.add(pnames)
 
-        for meta in chain(self.root._unknowns_dict.values(),
-                          self.root._params_dict.values()):
+        for meta in chain(self.root._unknowns_dict.itervalues(),
+                          self.root._params_dict.itervalues()):
             prom_name = meta['promoted_name']
             if prom_name in uset:
                 self._u_length += meta['size']
@@ -645,7 +645,7 @@ class Problem(System):
             if name in unknowns:
                 name = unknowns.metadata(name)['pathname']
 
-            for target, src in root.connections.items():
+            for target, src in root.connections.iteritems():
                 if name == src:
                     name = target
                     break
@@ -692,9 +692,7 @@ class Problem(System):
 
                     # Support for paramcomps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
-                        fd_ikey = get_absvarpathnames(fd_ikey,
-                                                      root._params_dict,
-                                                      {})[0]
+                        fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
@@ -715,9 +713,7 @@ class Problem(System):
 
                     # Support for paramcomps that are buried in sub-Groups
                     if (u, fd_ikey) not in Jfd:
-                        fd_ikey = get_absvarpathnames(fd_ikey,
-                                                      root._params_dict,
-                                                      {})[0]
+                        fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
@@ -1216,7 +1212,7 @@ class Problem(System):
         """
 
         self._unit_diffs = {}
-        for target, source in connections.items():
+        for target, source in connections.iteritems():
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
 
@@ -1361,7 +1357,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n\n')
 
-def _get_implicit_connections(params_dict, unknowns_dict):
+def _get_implicit_connections(root, params_dict, unknowns_dict):
     """
     Finds all matches between promoted names of parameters and
     unknowns.  Any matches imply an implicit connection.  All
@@ -1390,32 +1386,21 @@ def _get_implicit_connections(params_dict, unknowns_dict):
         if a a promoted variable name matches multiple unknowns
     """
 
-    # collect all absolute names that map to each promoted name
-    abs_unknowns = {}
-    for u in unknowns_dict.values():
-        abs_unknowns.setdefault(u['promoted_name'], []).append(u['pathname'])
-
-    abs_params = {}
-    for p in params_dict.values():
-        abs_params.setdefault(p['promoted_name'], []).append(p['pathname'])
-
     # check if any promoted names correspond to mutiple unknowns
-    for name, lst in abs_unknowns.items():
+    for name, lst in iteritems(root._to_abs_unames):
         if len(lst) > 1:
             raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
                                (name, lst))
 
-    prom_unknowns = [m['promoted_name'] for m in unknowns_dict.values()]
-
     connections = {}
     dangling = {}
 
-    for prom_name, pabs_list in abs_params.items():
-        uabs = abs_unknowns.get(prom_name, ())
-        if uabs:  # param has a src in unknowns
+    for prom_name, pabs_list in iteritems(root._to_abs_pnames):
+        if prom_name in root._to_abs_unames:  # param has a src in unknowns
+            uprom = root._to_abs_unames[prom_name]
             for pabs in pabs_list:
-                connections[pabs] = uabs
-        elif prom_name not in prom_unknowns:
+                connections[pabs] = uprom
+        else:
             dangling.setdefault(prom_name, set()).update(pabs_list)
 
     return connections, dangling

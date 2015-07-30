@@ -103,8 +103,8 @@ class System(object):
 
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(self._params_dict.values(),
-                                  self._unknowns_dict.values()):
+                for meta in chain(self._params_dict.itervalues(),
+                                  self._unknowns_dict.itervalues()):
                     if name == meta.get('promoted_name'):
                         return True
 
@@ -140,7 +140,7 @@ class System(object):
 
         for prom in self._promotes:
             found = False
-            for name, meta in chain(self._params_dict.items(), self._unknowns_dict.items()):
+            for name, meta in chain(self._params_dict.iteritems(), self._unknowns_dict.iteritems()):
                 if fnmatch(meta.get('promoted_name', name), prom):
                     found = True
             if not found:
@@ -267,10 +267,10 @@ class System(object):
         """
         Set 'remote' attribute in metadata of all variables for this subsystem.
         """
-        for meta in self._params_dict.values():
+        for meta in self._params_dict.itervalues():
             meta['remote'] = True
 
-        for meta in self._unknowns_dict.values():
+        for meta in self._unknowns_dict.itervalues():
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
@@ -373,10 +373,11 @@ class System(object):
                 target_input = inputs.flat[p_name]
 
             mydict = {}
-            for val in self._params_dict.values():
-                if val['promoted_name'] == p_name:
-                    mydict = val
-                    break
+            if p_name in self._to_abs_pnames:
+                for val in self._params_dict.values():
+                    if val['promoted_name'] == p_name:
+                        mydict = val
+                        break
 
             # Local settings for this var trump all
             fdstep = mydict.get('fd_step_size', step_size)
@@ -526,25 +527,22 @@ class System(object):
         relevance = self._relevance
 
         # map promoted name in parent to corresponding promoted name in this view
-        umap = _get_relname_map(parent.unknowns, unknowns_dict, self.pathname)
+        umap = self._relname_map
 
         if voi is None:
-            self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap, relevance,
-                                                     voi)
-            self.resids = parent.resids.get_view(self.pathname, comm, umap, relevance,
-                                                 voi)
+            self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
+            self.resids = parent.resids.get_view(self.pathname, comm, umap)
             self.params = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
-                              my_params, self.connections, store_byobjs=True)
+                              my_params, self.connections, relevance=relevance,
+                              store_byobjs=True)
 
-        self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap,
-                                                     relevance, voi)
-        self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap,
-                                                     relevance, voi)
+        self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
+        self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
         self.dpmat[voi] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                               my_params, self.connections,
-                              relevant_vars=relevance[voi])
+                              relevance=relevance, var_of_interest=voi)
 
     #def get_combined_jac(self, J):
         #"""
@@ -617,38 +615,3 @@ class System(object):
         if self.pathname:
             return '.'.join((self.pathname, name))
         return name
-
-def _get_relname_map(unknowns, unknowns_dict, child_name):
-    """
-    Args
-    ----
-    unknowns : `VecWrapper`
-        A dict-like object containing variables keyed using promoted names.
-
-    unknowns_dict : `OrderedDict`
-        An ordered mapping of absolute variable name to its metadata.
-
-    child_name : str
-        The pathname of the child for which to get promoted name.
-
-    Returns
-    -------
-    dict
-        Maps promoted name in parent (owner of unknowns and unknowns_dict) to
-        the corresponding promoted name in the child.
-    """
-    # unknowns is keyed on promoted name relative to the parent system
-    # unknowns_dict is keyed on absolute pathname
-    umap = {}
-    for rel, meta in unknowns.items():
-        abspath = meta['pathname']
-        if abspath.startswith(child_name+'.'):
-            for m in unknowns_dict.values():
-                if abspath == m['pathname']:
-                    newrel = m['promoted_name']
-                    break
-            else:
-                newrel = rel
-            umap[rel] = newrel
-
-    return umap
