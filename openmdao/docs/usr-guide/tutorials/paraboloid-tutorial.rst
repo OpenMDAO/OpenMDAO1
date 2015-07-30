@@ -12,7 +12,7 @@ this code into a file, and run it directly.
 
     from __future__ import print_function
 
-    from openmdao.components.paramcomp import ParamComp
+    from openmdao.components.param_comp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.problem import Problem, Group
 
@@ -76,7 +76,7 @@ Building the component
 
     from __future__ import print_function
 
-    from openmdao.components.paramcomp import ParamComp
+    from openmdao.components.param_comp import ParamComp
     from openmdao.core.component import Component
     from openmdao.core.problem import Problem, Group
 

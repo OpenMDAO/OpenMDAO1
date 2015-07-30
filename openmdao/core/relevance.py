@@ -59,7 +59,7 @@ class Relevance(object):
     def __getitem__(self, name):
         # if name is None, everything is relevant
         if name is None:
-            return set(self._vgraph.nodes())
+            return set(self._vgraph.nodes_iter())
         return self.relevant.get(name, [])
 
     def is_relevant(self, var_of_interest, varname):
@@ -128,12 +128,18 @@ class Relevance(object):
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
 
+        for target, source in connections.items():
+            vgraph.add_edge(source, target)
+            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
+
         for meta in params_dict.values():
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            if param in connections and meta['promoted_name'] != param:
+            if meta['promoted_name'] != param:# and param in connections:
                 promote_map[param] = meta['promoted_name']
+                if param not in vgraph:
+                    vgraph.add_node(param)
 
         for meta in unknowns_dict.values():
             unknown = meta['pathname']
@@ -141,10 +147,8 @@ class Relevance(object):
             compouts.setdefault(scomp, []).append(unknown)
             if meta['promoted_name'] != unknown:
                 promote_map[unknown] = meta['promoted_name']
-
-        for target, source in connections.items():
-            vgraph.add_edge(source, target)
-            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
+                if unknown not in vgraph:
+                    vgraph.add_node(unknown)
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -207,7 +211,7 @@ class Relevance(object):
         """
         idxs = OrderedDict()
         matrix = []
-        size = len(self._vgraph.nodes())
+        size = len(self._vgraph)
 
         for i, node in enumerate(self._vgraph.nodes_iter()):
             idxs[node] = i

@@ -1,18 +1,18 @@
 """ Unit test for the HDF5Recorder. """
 
 import unittest
-from openmdao.test.testutil import assert_rel_error
-from openmdao.recorders.test.recordertests import RecorderTests
-from openmdao.util.recordutil import format_iteration_coordinate
+from openmdao.test.test_util import assert_rel_error
+from openmdao.recorders.test.recorder_tests import RecorderTests
+from openmdao.util.record_util import format_iteration_coordinate
 from six.moves import zip
 
 SKIP = False
 
 try:
-    from openmdao.recorders.hdf5recorder import HDF5Recorder
+    from openmdao.recorders.hdf5_recorder import HDF5Recorder
 except ImportError:
     # Necessary for the file to parse
-    from openmdao.recorders.baserecorder import BaseRecorder
+    from openmdao.recorders.base_recorder import BaseRecorder
     HDF5Recorder = BaseRecorder
     SKIP = True
 

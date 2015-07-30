@@ -7,9 +7,9 @@ import unittest
 import numpy as np
 
 from openmdao.core.component import Component
-from openmdao.components.execcomp import ExecComp
-from openmdao.test.simplecomps import SimpleArrayComp, \
-                                      SimpleImplicitComp, SimpleSparseArrayComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.test.simple_comps import SimpleArrayComp, \
+                                       SimpleImplicitComp, SimpleSparseArrayComp
 
 
 class TestComponentDerivatives(unittest.TestCase):

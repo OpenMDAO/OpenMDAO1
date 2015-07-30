@@ -5,15 +5,15 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.execcomp import ExecComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import Group
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simplecomps import ArrayComp2D
+from openmdao.test.simple_comps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
 
 
@@ -23,10 +23,10 @@ class MySimpleDriver(Driver):
         super(MySimpleDriver, self).__init__()
 
         # What we support
-        self.supports['Inequality Constraints'] = True
-        self.supports['Equality Constraints'] = False
-        self.supports['Linear Constraints'] = False
-        self.supports['Multiple Objectives'] = False
+        self.supports['inequality_constraints'] = True
+        self.supports['equality_constraints'] = False
+        self.supports['linear_constraints'] = False
+        self.supports['multiple_objectives'] = False
 
         # My driver options
         self.options = OptionsDictionary()
@@ -241,7 +241,7 @@ class TestDriver(unittest.TestCase):
         prob.driver = MySimpleDriver()
 
         # Don't try this at home, kids
-        prob.driver.supports['Equality Constraints'] = False
+        prob.driver.supports['equality_constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
             prob.driver.add_constraint('con1', ctype='eq')
@@ -249,7 +249,7 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(str(cm.exception), "Driver does not support equality constraint 'con1'.")
 
         # Don't try this at home, kids
-        prob.driver.supports['Inequality Constraints'] = False
+        prob.driver.supports['inequality_constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
             prob.driver.add_constraint('con1', ctype='ineq')

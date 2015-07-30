@@ -3,18 +3,17 @@
 import unittest
 import numpy as np
 
-from openmdao.components.execcomp import ExecComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      FanOutGrouped, \
-                                      FanInGrouped, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, FanInGrouped, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
 
 class TestLinearGaussSeidel(unittest.TestCase):
@@ -369,6 +368,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         #for key1, val1 in Jbase.items():
             #for key2, val2 in val1.items():
                 #assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        # Obviously this test doesn't do much right now, but I need to verify
+        # we don't get a keyerror here.
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
 
     def test_sellar_derivs_grouped(self):
 
