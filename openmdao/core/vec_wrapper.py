@@ -21,7 +21,7 @@ class _flat_dict(object):
 
     def __getitem__(self, name):
         meta = self._dict[name]
-        if meta.get('pass_by_obj'):
+        if 'pass_by_obj' in meta and meta['pass_by_obj']:
             raise ValueError("'%s' is a 'pass by object' variable. Flat value not found." % name)
         return self._dict[name]['val']
 
