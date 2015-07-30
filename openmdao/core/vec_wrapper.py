@@ -70,7 +70,7 @@ class VecWrapper(object):
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
-        self._slices = OrderedDict()
+        self._slices = {}
 
         # add a flat attribute that will have access method consistent
         # with non-flat access  (__getitem__)
@@ -362,10 +362,14 @@ class VecWrapper(object):
         view = self.__class__(sys_pathname, comm)
         view_size = 0
 
+        vardict = self._vardict
         start = -1
-        for name, meta in self._vardict.items():
-            if name in varmap:
-                view._vardict[varmap[name]] = self._vardict[name]
+
+        # varmap is ordered, in the same order as vardict
+        for name, pname in varmap.iteritems():
+            if name in vardict:
+                meta = vardict[name]
+                view._vardict[pname] = meta
                 if not meta.get('pass_by_obj') and not meta.get('remote'):
                     pstart, pend = self._slices[name]
                     if start == -1:
@@ -376,7 +380,7 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._slices[varmap[name]] = (view_size, view_size + meta['size'])
+                    view._slices[pname] = (view_size, view_size + meta['size'])
                     view_size += meta['size']
 
         if start == -1: # no items found

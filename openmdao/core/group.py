@@ -842,7 +842,7 @@ class Group(System):
         # Make sure the new_order is valid. It must contain all susbsystems
         # in this model.
         newset = set(new_order)
-        oldset = set(self._subsystems.keys())
+        oldset = set(self._subsystems.iterkeys())
         if oldset != newset:
             missing = oldset - newset
             extra = newset - oldset
@@ -1415,7 +1415,9 @@ class Group(System):
         """
         # unknowns is keyed on promoted name relative to the parent system
         # unknowns_dict is keyed on absolute pathname
-        umap = {}
+
+        # use an ordered dict here so we can use this smaller dict to loop over in get_view
+        umap = OrderedDict()
 
         for abspath, meta in self._unknowns_dict.items():
             umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']

@@ -609,7 +609,10 @@ class Component(System):
         """
         # parent_unknowns is keyed on promoted name relative to the parent system
         # unknowns_dict is keyed on absolute pathname
-        umap = {}
+        
+        # use an ordered dict here so we can use this smaller dict when looping during get_view.
+        #   (the order of this one matches the order in the parent)
+        umap = OrderedDict()
 
         for key, meta in self._unknowns_dict.items():
             # at comp level, promoted and unknowns_dict key are same
