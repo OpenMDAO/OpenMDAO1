@@ -5,16 +5,16 @@ import numpy as np
 
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.paramcomp import ParamComp
-from openmdao.components.execcomp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.components.exec_comp import ExecComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
-from openmdao.test.simplecomps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                      FanOutGrouped, DoubleArrayComp, \
-                                      FanInGrouped, ArrayComp2D
-from openmdao.test.testutil import assert_rel_error
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, DoubleArrayComp, \
+                                       FanInGrouped, ArrayComp2D
+from openmdao.test.test_util import assert_rel_error
 
 
 class TestScipyGMRES(unittest.TestCase):
@@ -54,6 +54,34 @@ class TestScipyGMRES(unittest.TestCase):
 
         J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_simple_matvec_subbed_like_multipoint(self):
+        group = Group()
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('sub', group, promotes=['*'])
+        prob.root.sub.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+
+        prob.root.ln_solver = ScipyGMRES()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='array')
+        assert_rel_error(self, J[0][0], 2.0, 1e-6)
 
     def test_array2D(self):
         group = Group()
@@ -97,6 +125,11 @@ class TestScipyGMRES(unittest.TestCase):
         assert_rel_error(self, diff, 0.0, 1e-8)
 
         J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='fd',
+                               return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='rev',
                                return_format='array')
         diff = np.linalg.norm(J - Jbase)
         assert_rel_error(self, diff, 0.0, 1e-8)

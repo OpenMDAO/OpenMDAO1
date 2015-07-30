@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import sys
 import json
-from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 from six.moves import cStringIO
@@ -12,19 +11,23 @@ import networkx as nx
 
 import numpy as np
 
-from openmdao.components.paramcomp import ParamComp
 from openmdao.core.system import System
-from openmdao.core.group import Group
-from openmdao.core.parallelgroup import ParallelGroup
-from openmdao.core.basicimpl import BasicImpl
+from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.component import Component
+from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpiwrap import MPI, FakeComm, under_mpirun
+from openmdao.core.mpi_wrap import MPI, FakeComm, under_mpirun
 from openmdao.core.relevance import Relevance
-from openmdao.solvers.run_once import RunOnce
-from openmdao.units.units import get_conversion_tuple
-from openmdao.util.strutil import get_common_ancestor, name_relative_to
 
+from openmdao.components.param_comp import ParamComp
+
+from openmdao.solvers.run_once import RunOnce
+
+from openmdao.units.units import get_conversion_tuple
+from openmdao.util.ordered_dict import OrderedDict
+from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -155,10 +158,6 @@ class Problem(System):
                 else:
                     self._dangling[meta['promoted_name']] = set([meta['pathname']])
 
-
-        # perform additional checks on connections (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict)
-
         return connections
 
     def setup(self, check=True, out_stream=sys.stdout):
@@ -174,8 +173,8 @@ class Problem(System):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
-        # if we modify the system tree, we'll need to call _setup_variables
-        # and _setup_connections again
+        # if we modify the system tree, we'll need to call _setup_paths,
+        # _setup_variables and _setup_connections again
         tree_changed = False
 
         # call _setup_variables again if we change metadata
@@ -219,15 +218,30 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
+        if MPI:
+            for s in self.root.components(recurse=True):
+                if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
+                    # component defines its own setup_distrib_idxs, so
+                    # the metadata will change
+                    meta_changed = True
+
         # All changes to the system tree or variable metadata
         # must be complete at this point.
 
+        # if the system tree has changed, we need to recompute pathnames,
+        # variable metadata, and connections
         if tree_changed:
             self.root._setup_paths(self.pathname)
-            params_dict, unknowns_dict = self.root._setup_variables()
+            params_dict, unknowns_dict = \
+                    self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict)
         elif meta_changed:
-            params_dict, unknowns_dict = self.root._setup_variables()
+            params_dict, unknowns_dict = \
+                    self.root._setup_variables(compute_indices=True)
+
+        # perform additional checks on connections
+        # (e.g. for compatible types and shapes)
+        check_connections(connections, params_dict, unknowns_dict)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -454,6 +468,8 @@ class Problem(System):
                 for n, subs in out_of_order.items():
                     print("   %s should run after %s" % (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(out_of_order.items())))
+                print("Auto ordering would be: %s" % grp.list_auto_order(),
+                      file=out_stream)
 
         return (cycles, sorted(ooo))
 
@@ -623,7 +639,21 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
-        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True)
+        abs_params = []
+        for name in param_list:
+
+            if name in unknowns:
+                name = unknowns.metadata(name)['pathname']
+
+            for target, src in root.connections.items():
+                if name == src:
+                    name = target
+                    break
+
+            abs_params.append(name)
+
+        Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
+                               fd_params=abs_params, fd_unknowns=unknown_list)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -656,8 +686,16 @@ class Problem(System):
             J = {}
             for okey in unknown_list:
                 J[okey] = {}
-                for ikey in param_list:
-                    fd_ikey = get_fd_ikey(ikey)
+                for j, ikey in enumerate(param_list):
+                    abs_ikey = abs_params[j]
+                    fd_ikey = get_fd_ikey(abs_ikey)
+
+                    # Support for paramcomps that are buried in sub-Groups
+                    if (okey, fd_ikey) not in Jfd:
+                        fd_ikey = get_absvarpathnames(fd_ikey,
+                                                      root._params_dict,
+                                                      {})[0]
+
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
             usize = 0
@@ -671,8 +709,17 @@ class Problem(System):
             ui = 0
             for u in unknown_list:
                 pi = 0
-                for p in param_list:
-                    pd = Jfd[u, get_fd_ikey(p)]
+                for j, p in enumerate(param_list):
+                    abs_ikey = abs_params[j]
+                    fd_ikey = get_fd_ikey(abs_ikey)
+
+                    # Support for paramcomps that are buried in sub-Groups
+                    if (u, fd_ikey) not in Jfd:
+                        fd_ikey = get_absvarpathnames(fd_ikey,
+                                                      root._params_dict,
+                                                      {})[0]
+
+                    pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
                     for row in range(0, rows):
                         for col in range(0, cols):

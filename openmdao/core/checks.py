@@ -176,6 +176,13 @@ def __check_shapes_match(src, target):
                 raise ConnectError._size_mismatch_error(src, target)
             elif len(target['src_indices']) > src['size']:
                 raise ConnectError._indices_too_large(src, target)
+        elif 'src_indices' in src:
+            if target['size'] != src['distrib_size']:
+                msg  = ("Total size {src[distrib_size]} of the distributed source "
+                        "'{src[promoted_name]}' must match the size "
+                        "'{target[size]}' of the target '{target[promoted_name]}'")
+                msg = msg.format(src=src, target=target)
+                raise RuntimeError(msg)
         else:
             raise ConnectError._shape_mismatch_error(src, target)
 

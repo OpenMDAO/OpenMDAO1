@@ -8,8 +8,8 @@ From Sellar's analytic problem.
 
 import numpy as np
 
-from openmdao.components.execcomp import ExecComp
-from openmdao.components.paramcomp import ParamComp
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel

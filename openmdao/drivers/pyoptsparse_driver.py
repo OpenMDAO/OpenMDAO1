@@ -13,7 +13,7 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
-from openmdao.util.recordutil import create_local_meta, update_local_meta
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
 class pyOptSparseDriver(Driver):
@@ -29,14 +29,14 @@ class pyOptSparseDriver(Driver):
         super(pyOptSparseDriver, self).__init__()
 
         # What we support
-        self.supports['Inequality Constraints'] = True
-        self.supports['Equality Constraints'] = True
-        self.supports['Multiple Objectives'] = False
+        self.supports['inequality_constraints'] = True
+        self.supports['equality_constraints'] = True
+        self.supports['multiple_objectives'] = False
 
         # TODO: Support these
-        self.supports['Linear Constraints'] = False
-        self.supports['2-Sided Constraints'] = False
-        self.supports['Integer Parameters'] = False
+        self.supports['linear_constraints'] = False
+        self.supports['two_sided_constraints'] = False
+        self.supports['integer_parameters'] = False
 
         # User Options
         self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],

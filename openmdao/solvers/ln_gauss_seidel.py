@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 from openmdao.core.component import Component
-from openmdao.solvers.solverbase import LinearSolver
+from openmdao.solvers.solver_base import LinearSolver
 
 
 class LinearGaussSeidel(LinearSolver):

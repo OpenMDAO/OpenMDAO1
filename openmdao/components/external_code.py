@@ -8,7 +8,7 @@ from distutils.spawn import find_executable
 
 from openmdao.core.component import Component
 from openmdao.core.options import OptionsDictionary
-from openmdao.util import shellproc
+from openmdao.util.shell_proc import STDOUT, DEV_NULL, ShellProc
 
 
 class ExternalCode(Component):
@@ -18,22 +18,19 @@ class ExternalCode(Component):
     default stderr is ``error.out``.
     """
 
-    STDOUT   = shellproc.STDOUT
-    DEV_NULL = shellproc.DEV_NULL
-
     def __init__(self):
         super(ExternalCode, self).__init__()
 
-        self.STDOUT   = shellproc.STDOUT
-        self.DEV_NULL = shellproc.DEV_NULL
+        self.STDOUT   = STDOUT
+        self.DEV_NULL = DEV_NULL
 
         # Input options for this Component
         self.options = OptionsDictionary()
         self.options.add_option('command', [], desc='command to be executed')
         self.options.add_option('env_vars', {}, desc='Environment variables required by the command')
-        self.options.add_option('poll_delay', 0.0, desc='''Delay between polling for command completion. 
+        self.options.add_option('poll_delay', 0.0, desc='''Delay between polling for command completion.
             A value of zero will use an internally computed default''')
-        self.options.add_option('timeout', 0.0, desc='''Maximum time to wait for command 
+        self.options.add_option('timeout', 0.0, desc='''Maximum time to wait for command
             completion. A value of zero implies an infinite wait''')
         self.options.add_option('check_external_outputs', True, desc='Check that all input or output external files exist')
 
@@ -111,7 +108,7 @@ class ExternalCode(Component):
                         err_fragment = "\n[stderr %r missing]" % self.stderr
                 else:
                     err_fragment = error_msg
-                    
+
                 raise RuntimeError('return_code = %d%s' % (return_code, err_fragment))
 
             if self.options['check_external_outputs']:
@@ -187,10 +184,10 @@ class ExternalCode(Component):
 
         if not command_full_path:
             raise ValueError("The command to be executed, '%s', cannot be found" % program_to_execute)
-            
+
         self._process = \
-            shellproc.ShellProc(self.options['command'], self.stdin,
-                                self.stdout, self.stderr, self.options['env_vars'])
+            ShellProc(self.options['command'], self.stdin,
+                      self.stdout, self.stderr, self.options['env_vars'])
         #self._logger.debug('PID = %d', self._process.pid)
 
         try:

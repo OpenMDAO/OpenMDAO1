@@ -1,16 +1,16 @@
 """ Base class for all systems in OpenMDAO."""
 
 import sys
-from collections import OrderedDict
 from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems
 
 import numpy as np
 
-from openmdao.core.mpiwrap import MPI
+from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
-from openmdao.core.vecwrapper import PlaceholderVecWrapper
+from openmdao.util.ordered_dict import OrderedDict
+from openmdao.core.vec_wrapper import PlaceholderVecWrapper
 
 
 class System(object):
@@ -274,7 +274,8 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None, total_derivs=False):
+                    step_type=None, total_derivs=False, fd_params=None,
+                    fd_unknowns=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -304,6 +305,16 @@ class System(object):
             Set to true to calculate total derivatives. Otherwise, partial
             derivatives are returned.
 
+        fd_params : list of strings, optional
+            List of parameter name strings with respect to which derivatives
+            are desired. This is used by problem to limit the derivatives that
+            are taken.
+
+        fd_unknowns : list of strings, optional
+            List of output or state name strings for derivatives to be
+            calculated. This is used by problem to limit the derivatives that
+            are taken.
+
         Returns
         -------
         dict
@@ -313,8 +324,10 @@ class System(object):
         """
 
         # Params and Unknowns that we provide at this level.
-        fd_params = self._get_fd_params()
-        fd_unknowns = self._get_fd_unknowns()
+        if fd_params is None:
+            fd_params = self._get_fd_params()
+        if fd_unknowns is None:
+            fd_unknowns = self._get_fd_unknowns()
 
         # Function call arguments have precedence over the system dict.
         step_size = self.fd_options.get('step_size', step_size)
@@ -339,13 +352,6 @@ class System(object):
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
-            if p_name in states:
-                inputs = unknowns
-            else:
-                inputs = params
-
-            target_input = inputs.flat[p_name]
-
             # If our input is connected to a Paramcomp, then we need to twiddle
             # the unknowns vector instead of the params vector.
             param_src = self.connections.get(p_name)
@@ -356,6 +362,15 @@ class System(object):
                     param_src = self.unknowns.get_promoted_varname(param_src)
 
                 target_input = unknowns.flat[param_src]
+
+            else:
+                # Cases where the paramcomp is somewhere above us.
+                if p_name in states:
+                    inputs = unknowns
+                else:
+                    inputs = params
+
+                target_input = inputs.flat[p_name]
 
             mydict = {}
             for val in self._params_dict.values():
@@ -369,19 +384,19 @@ class System(object):
             fdform = mydict.get('fd_form', form)
 
             # Size our Inputs
-            p_size = np.size(inputs[p_name])
+            p_size = np.size(target_input)
 
             # Size our Outputs
             for u_name in fd_unknowns:
                 u_size = np.size(unknowns[u_name])
-                jac[u_name, p_name] = np.ones((u_size, p_size))
+                jac[u_name, p_name] = np.zeros((u_size, p_size))
 
             # Finite Difference each index in array
             for idx in range(p_size):
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
-                    step = inputs.flat[p_name][idx] * fdstep
+                    step = target_input[idx] * fdstep
                     if step < fdstep:
                         step = fdstep
                 else:
@@ -471,42 +486,6 @@ class System(object):
                 dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
             else:
                 arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
-
-    def _create_vecs(self, my_params, var_of_interest, impl):
-        """ This creates our vecs and mats."""
-        comm = self.comm
-        sys_pathname = self.pathname
-        params_dict = self._params_dict
-        unknowns_dict = self._unknowns_dict
-        relevance = self._relevance
-
-        self.comm = comm
-
-        # create implementation specific VecWrappers
-        if var_of_interest is None:
-            self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
-
-            # populate the VecWrappers with data
-            self.unknowns.setup(unknowns_dict, store_byobjs=True)
-            self.resids.setup(unknowns_dict)
-            self.params.setup(None, params_dict, self.unknowns,
-                              my_params, self.connections, store_byobjs=True)
-
-        dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
-        dresids = impl.create_src_vecwrapper(sys_pathname, comm)
-        dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
-
-        dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
-        dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
-        dparams.setup(None, params_dict, self.unknowns, my_params,
-                      self.connections,
-                      relevant_vars=relevance[var_of_interest])
-
-        self.dumat[var_of_interest] = dunknowns
-        self.drmat[var_of_interest] = dresids
-        self.dpmat[var_of_interest] = dparams
 
     def _create_views(self, top_unknowns, parent, my_params,
                       var_of_interest=None):

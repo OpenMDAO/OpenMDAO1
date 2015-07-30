@@ -15,8 +15,7 @@ from mock import Mock
 import sys
 import os
 
-MOCK_MODULES = ['scipy.sparse.linalg', 'scipy.sparse', 'networkx', 'h5py',
-                'petsc4py', 'mpi4py', 'pyoptsparse']
+MOCK_MODULES = ['h5py', 'petsc4py', 'mpi4py', 'pyoptsparse']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 #------------------------begin monkeypatch-----------------------
