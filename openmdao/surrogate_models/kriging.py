@@ -5,7 +5,7 @@ from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, log10,\
-    power, diagonal, prod
+    power, diagonal, prod, square
 from numpy.linalg import slogdet, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
@@ -14,7 +14,7 @@ from six.moves import range
 
 class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
-    Predictions are returned as a tuple of mean and std. dev."""
+    Predictions are returned as a tuple of mean and RMSE"""
 
     def __init__(self):
         super(KrigingSurrogate, self).__init__()
@@ -32,23 +32,31 @@ class KrigingSurrogate(SurrogateModel):
 
 
     def train(self, x, y):
-        """Train the surrogate model with the given set of inputs and outputs."""
+        """
+        Train the surrogate model with the given set of inputs and outputs.
+
+        Args
+        ----
+        x : array-like
+            Training input locations
+
+        y : array-like
+            Model responses at given inputs.
+        """
 
         super(KrigingSurrogate, self).train(x, y)
 
-        # TODO: Check if one training point will work... if not raise error
-        """self.X = []
-        self.Y = []
-        for ins,out in zip(X,Y):
-            if ins not in self.X:
-                self.X.append(ins)
-                self.Y.append(out)
-            else: "duplicate training point" """
+        self.m = len(x[0])
+        self.n = len(x)
+
+        if self.n <= 1:
+            raise ValueError(
+                'KrigingSurrogates require at least 2 training points.'
+            )
 
         self.X = array(x)
         self.Y = array(y)
-        self.m = len(x[0])
-        self.n = len(x)
+
 
         thetas = zeros(self.m)
 
@@ -70,17 +78,15 @@ class KrigingSurrogate(SurrogateModel):
         """
         Calculates the log-likelihood (up to a constant) for a given
         self.theta.
-        :return:
+
         """
-        #if self.m == None:
-        #    Give error message
         R = zeros((self.n, self.n))
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
 
         #weighted distance formula
         for i in range(self.n):
-            R[i, i+1:self.n] = exp(-thetas.dot(power(X[i] - X[i+1:self.n], 2.).T))
+            R[i, i+1:self.n] = exp(-thetas.dot(square(X[i] - X[i+1:self.n]).T))
 
         R *= (1.0 - self.nugget)
         R += R.T + eye(self.n)
@@ -90,15 +96,14 @@ class KrigingSurrogate(SurrogateModel):
         try:
             self.R_fact = cho_factor(R)
             rhs = vstack([Y, one]).T
-            R_fact = (self.R_fact[0].T, not self.R_fact[1])
-            cho = cho_solve(R_fact, rhs).T
+            cho = cho_solve(self.R_fact, rhs).T
 
             self.mu = dot(one, cho[0])/dot(one, cho[1])
             y_minus_mu = Y - self.mu
             self.R_solve_ymu = cho_solve(self.R_fact, y_minus_mu)
 
             self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
-            det_factor = abs(prod(diagonal(R_fact[0]))**2) + 1.e-16
+            det_factor = abs(prod(diagonal(self.R_fact[0]))**2) + 1.e-16
 
             self.log_likelihood = -self.n/2.*log(self.sig2) - \
                 1./2.*log(det_factor)
@@ -117,8 +122,14 @@ class KrigingSurrogate(SurrogateModel):
                 1./2.*(slogdet(self.R)[1])
 
     def predict(self, x):
-        """Calculates a predicted value of the response based on the current
+        """
+        Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
+
+        Args
+        ----
+        x : array-like
+            Point at which the surrogate is evaluated.
         """
 
         super(KrigingSurrogate, self).predict(x)
@@ -126,15 +137,14 @@ class KrigingSurrogate(SurrogateModel):
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
         x = array(x)
-        r = exp(-thetas.dot(power((X - x).T, 2)))
+        r = exp(-thetas.dot(square((X - x).T)))
 
         one = ones(self.n)
         if self.R_fact is not None:
             # ---CHOLESKY DECOMPOSTION ---
 
             rhs = vstack([r, one]).T
-            R_fact = (self.R_fact[0].T, not self.R_fact[1])
-            cho = cho_solve(R_fact, rhs).T
+            cho = cho_solve(self.R_fact, rhs).T
 
             f = self.mu + dot(r, self.R_solve_ymu)
             term1 = dot(r, cho[0])
@@ -157,7 +167,7 @@ class KrigingSurrogate(SurrogateModel):
 
 class FloatKrigingSurrogate(KrigingSurrogate):
     """Surrogate model based on the simple Kriging interpolation. Predictions are returned as floats,
-    which are the mean of the NormalDistribution predicted by the model."""
+    which are the mean of the model's prediction."""
 
     def predict(self, x):
         dist = super(FloatKrigingSurrogate, self).predict(x)

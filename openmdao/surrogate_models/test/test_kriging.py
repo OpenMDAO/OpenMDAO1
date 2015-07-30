@@ -49,7 +49,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         mu, sigma = krig1.predict(new_x)
 
         assert_rel_error(self, mu, 0.397887, 1e-1)
-        # assert_rel_error(self, sigma, 0.0294172, 1e-2)
+        assert_rel_error(self, sigma, 0.0294172, 1e-2)
 
     def test_1d_kriging_ill_conditioned(self):
         # Test for least squares solver utilization when ill-conditioned
@@ -80,8 +80,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         mu, sigma = krig1.predict([5., 5.])
 
         assert_rel_error(self, mu, branin([5., 5.]), 1e-1)
-        # assert_rel_error(self, sigma, 5.79, 1e-2)
-
+        assert_rel_error(self, sigma, 5.79, 1e-2)
 
     def test_no_training_data(self):
         krig1 = KrigingSurrogate()
@@ -93,6 +92,17 @@ class TestKrigingSurrogate(unittest.TestCase):
                 "KrigingSurrogate has not been trained, so no prediction can be made.")
         else:
             self.fail("RuntimeError Expected")
+
+    def test_one_pt(self):
+        krig1 = KrigingSurrogate()
+        x = [[0.]]
+        y = [[1.]]
+
+        with self.assertRaises(ValueError) as cm:
+            krig1.train(x,y)
+
+        self.assertEqual(str(cm.exception), 'KrigingSurrogates require at least 2 training points.')
+
 
 
 if __name__ == "__main__":
