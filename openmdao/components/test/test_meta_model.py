@@ -8,7 +8,7 @@ from openmdao.components.meta_model import MetaModel
 from openmdao.surrogate_models.response_surface import ResponseSurface
 from openmdao.surrogate_models.kriging import FloatKrigingSurrogate
 
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 from six.moves import cStringIO
 

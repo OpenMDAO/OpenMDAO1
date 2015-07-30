@@ -18,7 +18,7 @@ from openmdao.components.exec_comp import ExecComp
 from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.test_util import assert_equal_jacobian, assert_rel_error
+from openmdao.test.util import assert_equal_jacobian, assert_rel_error
 
 
 class TestProb(Problem):
