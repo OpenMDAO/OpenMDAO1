@@ -11,8 +11,8 @@ and you can also use a different surrogate model for each output.
 
 .. note::
 
-    Whats the difference between a `MetaModel` and a surrogate model? In
-    OpenMDAO surrogate model refers to the model for a single response, and
+    What's the difference between a `MetaModel` and a surrogate model? In
+    OpenMDAO, "surrogate model" refers to the model for a single response, and
     `MetaModel` represents a collection of surrogate models trained at the
     same locations in the design space.
 
