@@ -7,7 +7,6 @@ from openmdao.components import LinearSystem, ParamComp
 from openmdao.core import Group, Problem
 from openmdao.test.test_util import assert_rel_error
 
-
 class TestLinearSystem(unittest.TestCase):
 
     def test_linear_system(self):

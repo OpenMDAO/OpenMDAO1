@@ -1,7 +1,7 @@
 """ Unit test for the HDF5Recorder. """
 
 import unittest
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.util.record_util import format_iteration_coordinate
 from six.moves import zip

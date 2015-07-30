@@ -11,7 +11,7 @@ from openmdao.core import Component, Group, Problem
 from openmdao.components import MetaModel
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
 
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestMetaModel(unittest.TestCase):

@@ -7,7 +7,7 @@ from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.run_once import RunOnce
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestNLGaussSeidel(unittest.TestCase):

@@ -167,7 +167,7 @@ else:
                         retcode = run_in_sub(getattr(mod, tcase), test, options)
                         continue
                 else:
-                    raise NotImplentedError("module test functions not supported yet")
+                    raise NotImplementedError("module test functions not supported yet")
                     #parent = mod
                     #method = tcase
 

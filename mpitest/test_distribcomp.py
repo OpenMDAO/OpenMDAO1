@@ -12,12 +12,13 @@ from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.components.exec_comp import ExecComp
 from openmdao.util.array_util import evenly_distrib_idxs
-from openmdao.test.mpi_test_util import MPITestCase
+from openmdao.test.mpi_util import MPITestCase
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
+
 
 def take_nth(rank, size, seq):
     """Return an iterator over the sequence that returns every
@@ -33,6 +34,7 @@ def take_nth(rank, size, seq):
                 yield it.next()
             else:
                 it.next()
+
 
 class InOutArrayComp(Component):
 
@@ -146,6 +148,7 @@ class DistribOverlappingInputComp(Component):
     def get_req_cpus(self):
         return (2, 2)
 
+
 class DistribInputDistribOutputComp(Component):
     """Uses 2 procs and takes input var slices and has output var slices as well"""
     def __init__(self, arr_size=11):
@@ -178,6 +181,7 @@ class DistribInputDistribOutputComp(Component):
     def get_req_cpus(self):
         return (2, 2)
 
+
 class DistribNoncontiguousComp(Component):
     """Uses 2 procs and takes non-contiguous input var slices and has output
     var slices as well
@@ -209,6 +213,7 @@ class DistribNoncontiguousComp(Component):
 
     def get_req_cpus(self):
         return (2, 2)
+
 
 class DistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""
@@ -244,6 +249,7 @@ class DistribGatherComp(Component):
     def get_req_cpus(self):
         return (2, 2)
 
+
 class NonDistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""
     def __init__(self, size):
@@ -253,6 +259,7 @@ class NonDistribGatherComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['outvec'] = params['invec']
+
 
 class MPITests(MPITestCase):
 
@@ -392,5 +399,5 @@ class MPITests(MPITestCase):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpi_test_util import mpirun_tests
+    from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()

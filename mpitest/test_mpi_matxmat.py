@@ -10,10 +10,10 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.problem import Problem
 from openmdao.components.param_comp import ParamComp
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
-from openmdao.test.mpi_test_util import MPITestCase
+from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
 from openmdao.test.exec_comp_for_test import ExecComp4Test
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 from openmdao.devtools.debug import debug
 
 if MPI:
@@ -221,5 +221,5 @@ class MatMatIndicesTestCase(MPITestCase):
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
 
 if __name__ == '__main__':
-    from openmdao.test.mpi_test_util import mpirun_tests
+    from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()
