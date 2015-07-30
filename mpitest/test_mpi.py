@@ -17,7 +17,7 @@ from openmdao.test.mpi_util import MPITestCase
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core.basic_impl import BasicImpl as impl
+    from openmdao.core import BasicImpl as impl
 
 from openmdao.test.util import assert_rel_error
 

@@ -6,8 +6,10 @@ import tempfile
 import shutil
 import pkg_resources
 
-from openmdao.core.problem import Problem, Group
-from openmdao.components.external_code import ExternalCode, STDOUT
+from openmdao.core import Problem, Group
+from openmdao.components.external_code import STDOUT
+from openmdao.components import ExternalCode
+
 
 DIRECTORY = pkg_resources.resource_filename('openmdao.components', 'test')
 
