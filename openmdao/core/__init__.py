@@ -6,4 +6,4 @@ from openmdao.core.system import System
 from openmdao.core.driver import Driver
 from openmdao.core.options import OptionsDictionary
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.vec_wrapper import VecWrapper
+from openmdao.core.vec_wrapper import VecWrapper, SrcVecWrapper, PlaceholderVecWrapper
