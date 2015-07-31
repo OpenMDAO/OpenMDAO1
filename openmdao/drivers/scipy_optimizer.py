@@ -4,6 +4,9 @@ OpenMDAO Wrapper for the scipy.optimize.minimize family of local optimizers.
 
 from __future__ import print_function
 
+from six import iterkeys, itervalues, iteritems
+from six.moves import range
+
 import numpy as np
 from scipy.optimize import minimize
 
@@ -82,16 +85,17 @@ class ScipyOptimizer(Driver):
         problem.root.solve_nonlinear(metadata=self.metadata)
 
         pmeta = self.get_param_metadata()
-        self.objs = list(self.get_objectives().keys())
+        self.params = list(iterkeys(pmeta))
+        self.objs = list(iterkeys(self.get_objectives()))
         con_meta = self.get_constraint_metadata()
-        self.cons = list(con_meta.keys())
+        self.cons = list(iterkeys(con_meta))
 
         self.opt_settings['maxiter'] = self.options['maxiter']
         self.opt_settings['disp'] = self.options['disp']
 
         # Size Problem
         nparam = 0
-        for param in pmeta.values():
+        for param in itervalues(pmeta):
             nparam += param['size']
         x_init = np.zeros(nparam)
 
@@ -103,7 +107,7 @@ class ScipyOptimizer(Driver):
         else:
             bounds = None
 
-        for name, val in self.get_params().items():
+        for name, val in iteritems(self.get_params()):
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size
@@ -260,8 +264,7 @@ class ScipyOptimizer(Driver):
             Gradient of objective with respect to parameter array.
         """
 
-        params = self.get_param_metadata().keys()
-        grad = self._problem.calc_gradient(params, self.objs+self.cons,
+        grad = self._problem.calc_gradient(self.params, self.objs+self.cons,
                                            return_format='array')
         self.grad_cache = grad
 
@@ -303,4 +306,3 @@ class ScipyOptimizer(Driver):
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
         return -grad[grad_idx, :]
-

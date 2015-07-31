@@ -1,6 +1,7 @@
 """ Set of utilities for detecting and reporting connection errors."""
 
 from six.moves import zip
+from six import iterkeys, itervalues
 
 class ConnectError(Exception):
     """ Custom error that is raised when a connection is invalid."""
@@ -161,10 +162,10 @@ def check_connections(connections, params, unknowns):
     """
 
     # Get metadata for all sources
-    sources = __get_metadata(connections.values(), unknowns)
+    sources = __get_metadata(itervalues(connections), unknowns)
 
     #Get metadata for all targets
-    targets = __get_metadata(connections.keys(), params)
+    targets = __get_metadata(iterkeys(connections), params)
 
     for source, target in zip(sources, targets):
         _check_types_match(source, target)

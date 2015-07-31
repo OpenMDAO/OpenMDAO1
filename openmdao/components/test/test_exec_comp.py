@@ -1,6 +1,5 @@
 import unittest
 import math
-from six import iteritems
 
 import numpy as np
 

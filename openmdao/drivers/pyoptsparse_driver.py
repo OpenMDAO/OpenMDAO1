@@ -8,6 +8,7 @@ additional MPI capability. Note: only SNOPT is supported right now.
 
 from __future__ import print_function
 
+from six import iterkeys, iteritems
 import numpy as np
 
 from pyoptsparse import Optimization
@@ -86,16 +87,16 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = list(param_meta.keys())
+        param_list = list(iterkeys(param_meta))
         param_vals = self.get_params()
-        for name, meta in param_meta.items():
+        for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
                                  value=param_vals[name],
                                  lower=meta['low'], upper=meta['high'])
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = list(objs.keys())
+        self.quantities = list(iterkeys(objs))
         for name in objs:
             opt_prob.addObj(name)
 
@@ -110,7 +111,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += list(econs.keys())
+        self.quantities += list(iterkeys(econs))
         for name in econs:
             size = con_meta[name]['size']
             lower = np.zeros((size))
@@ -129,7 +130,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += list(incons.keys())
+        self.quantities += list(iterkeys(incons))
         for name in incons:
             size = con_meta[name]['size']
             upper = np.zeros((size))
@@ -145,7 +146,7 @@ class pyOptSparseDriver(Driver):
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
-        #for name, con in self.get_2sided_constraints().items():
+        #for name, con in iteritems(self.get_2sided_constraints()):
             #size = con_meta[name]['size']
             #upper = con.high * np.ones((size))
             #lower = con.low * np.ones((size))
@@ -249,18 +250,19 @@ class pyOptSparseDriver(Driver):
 
             system.solve_nonlinear(metadata=metadata)
             for recorder in self.recorders:
-                recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+                recorder.raw_record(system.params, system.unknowns,
+                                    system.resids, metadata)
 
             # Get the objective function evaluations
-            for name, obj in self.get_objectives().items():
+            for name, obj in iteritems(self.get_objectives()):
                 func_dict[name] = obj
 
             # Get the constraint evaluations
-            for name, con in self.get_constraints().items():
+            for name, con in iteritems(self.get_constraints()):
                 func_dict[name] = con
 
             # Get the double-sided constraint evaluations
-            #for key, con in self.get_2sided_constraints().items():
+            #for key, con in iteritems(self.get_2sided_constraints()):
             #    func_dict[name] = np.array(con.evaluate(self.parent))
 
             fail = 0
@@ -306,9 +308,10 @@ class pyOptSparseDriver(Driver):
         sens_dict = {}
 
         try:
-            sens_dict = self._problem.calc_gradient(dv_dict.keys(), self.quantities,
+            sens_dict = self._problem.calc_gradient(dv_dict.keys(),
+                                                    self.quantities,
                                                     return_format='dict')
-            #for key, value in self.lin_jacs.items():
+            #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 
             fail = 0

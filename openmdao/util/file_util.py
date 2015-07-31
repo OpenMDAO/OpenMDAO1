@@ -3,11 +3,11 @@
 import itertools
 import os
 import warnings
-from six import string_types
+import pprint
+from six import string_types, iteritems
 
 from fnmatch import fnmatch
 from os.path import join, dirname, exists, abspath
-
 
 
 def build_directory(dct, force=False, topdir='.'):
@@ -36,7 +36,7 @@ def build_directory(dct, force=False, topdir='.'):
     startdir = os.getcwd()
     topdir = os.path.abspath(topdir)
     try:
-        for key, val in dct.items():
+        for key, val in iteritems(dct):
             os.chdir(topdir)
             if os.path.isabs(key):
                 raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
@@ -185,5 +185,3 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
 
         for name in [f for f in filelist if fmatch(f)]:
             yield join(path, name)
-
-

@@ -87,7 +87,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
     idx_arr_type = PetscImpl.idx_arr_type
 
-    def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
+    def setup(self, unknowns_dict, relevance, var_of_interest=None,
+              store_byobjs=False):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -105,7 +106,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
         """
-        super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevant_vars=relevant_vars,
+        super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
+                                              var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs)
         if trace:
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
@@ -152,12 +154,11 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
-    def get_view(self, sys_pathname, comm, varmap, relevance, var_of_interest):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap,
-                                                        relevance, var_of_interest)
+    def get_view(self, sys_pathname, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
         if trace:
-            debug("'%s': creating src petsc_vec (view): (size %d )%s: voi=%s, vec=%s" %
-                  (sys_pathname, len(view.vec), view.keys(), var_of_interest, view.vec))
+            debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
+                  (sys_pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
 
@@ -166,7 +167,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevant_vars=None, store_byobjs=False):
+              connections, relevance, var_of_interest=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -195,7 +196,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
-                                              connections, relevant_vars=relevant_vars,
+                                              connections, relevance=relevance,
+                                              var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs)
         if trace:
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
