@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import re
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -232,7 +232,7 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return [k for k, m in self.params.items() if not m.get('pass_by_obj')]
+        return [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
 
     def _get_fd_unknowns(self):
         """
@@ -244,7 +244,7 @@ class Component(System):
         list of str
             List of names of unknowns for this `Component`.
         """
-        return [k for k, m in self.unknowns.items() if not m.get('pass_by_obj')]
+        return [k for k, m in iteritems(self.unknowns) if not m.get('pass_by_obj')]
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -337,7 +337,7 @@ class Component(System):
 
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
-        for group, vois in relevance.groups.items():
+        for group, vois in iteritems(relevance.groups):
             if group is not None:
                 for voi in vois:
                     self._create_views(top_unknowns, parent, [],
@@ -525,7 +525,7 @@ class Component(System):
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        lens = [len(n) for n in uvec.keys()]
+        lens = [len(n) for n in iterkeys(uvec)]
         nwid = max(lens) if lens else 12
 
         commsz = self.comm.size if hasattr(self.comm, 'size') else 0
@@ -614,7 +614,7 @@ class Component(System):
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
-        for key, meta in self._unknowns_dict.items():
+        for key, meta in iteritems(self._unknowns_dict):
             # at comp level, promoted and unknowns_dict key are same
             umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
 

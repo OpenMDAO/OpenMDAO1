@@ -554,7 +554,7 @@ class VecWrapper(object):
         nwid = max(lens) if lens else 10
         vlens = [len(repr(self[v])) for v in self.keys()]
         vwid = max(vlens) if vlens else 1
-        if len(self.get_vecvars()) != len(self.keys()): # we have some pass by obj
+        if len(self.get_vecvars()) != len(self): # we have some pass by obj
             defwid = 8
         else:
             defwid = 1

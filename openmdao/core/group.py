@@ -94,7 +94,7 @@ class Group(System):
         if promotes is not None:
             system._promotes = promotes
 
-        if name in self._subsystems.keys():
+        if name in self._subsystems:
             msg = "Group '%s' already contains a subsystem with name '%s'." % \
                   (self.name, name)
             raise RuntimeError(msg)
@@ -875,7 +875,7 @@ class Group(System):
         -------
         list of str : List of system names in execution order.
         """
-        return list(self._subsystems.keys())
+        return list(iterkeys(self._subsystems))
 
     def list_auto_order(self):
         """
@@ -1029,7 +1029,7 @@ class Group(System):
         if lens:
             nwid = max(lens) + 9
         else:
-            lens = [len(n) for n in uvec.keys()]
+            lens = [len(n) for n in iterkeys(uvec)]
             nwid = max(lens) if lens else 12
 
         for v, meta in uvec.items():

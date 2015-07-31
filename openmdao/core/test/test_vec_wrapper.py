@@ -101,11 +101,11 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
 
-        varmap = {
-            'C1.y1':'y1',
-            'C1.y2':'y2',
-            'C1.y3':'y3',
-        }
+        varmap = OrderedDict([
+            ('C1.y1','y1'),
+            ('C1.y2','y2'),
+            ('C1.y3','y3'),
+        ])
 
         uview = u.get_view('noname', None, varmap)
 

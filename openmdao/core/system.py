@@ -374,7 +374,7 @@ class System(object):
 
             mydict = {}
             if p_name in self._to_abs_pnames:
-                for val in self._params_dict.values():
+                for val in itervalues(self._params_dict):
                     if val['promoted_name'] == p_name:
                         mydict = val
                         break
