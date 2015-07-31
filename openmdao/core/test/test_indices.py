@@ -6,11 +6,10 @@ import numpy as np
 
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.param_comp import ParamComp
-from openmdao.components.exec_comp import ExecComp
+from openmdao.components import ParamComp, ExecComp
 
 from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestIndices(unittest.TestCase):

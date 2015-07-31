@@ -13,18 +13,16 @@ from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, FanInGrouped, ArrayComp2D
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
-from openmdao.test.mpi_test_util import MPITestCase
+from openmdao.test.mpi_util import MPITestCase
 from openmdao.devtools.debug import debug
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
-
-from openmdao.test.mpi_test_util import MPITestCase
 
 
 class TestScipyGMRES(MPITestCase):
@@ -162,5 +160,5 @@ class TestScipyGMRES(MPITestCase):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpi_test_util import mpirun_tests
+    from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()

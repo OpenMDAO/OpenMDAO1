@@ -4,11 +4,9 @@ from six import iteritems
 
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.components.exec_comp import ExecComp
-from openmdao.test.test_util import assert_rel_error
+from openmdao.components import ParamComp, ExecComp
+from openmdao.core import Group, Problem
+from openmdao.test.util import assert_rel_error
 
 
 class TestExecComp(unittest.TestCase):

@@ -6,14 +6,12 @@ import tempfile
 import shutil
 import pkg_resources
 
-from openmdao.core.problem import Problem, Group
+from openmdao.core import Problem, Group
+from openmdao.components.external_code import STDOUT
+from openmdao.components import ExternalCode
 
-from openmdao.components.external_code import ExternalCode, STDOUT
-
-from openmdao.util.file_util import FileMetadata
 
 DIRECTORY = pkg_resources.resource_filename('openmdao.components', 'test')
-
 
 class ExternalCodeForTesting(ExternalCode):
     def __init__(self):
@@ -46,10 +44,8 @@ class TestExternalCode(unittest.TestCase):
     def test_normal(self):
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 
-        self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
-            FileMetadata(path='external_code_output.txt', output=True),
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py',]
+        self.extcode.options['external_output_files'] = ['external_code_output.txt',]
 
         self.top.setup(check=False)
         self.top.run()
@@ -60,9 +56,7 @@ class TestExternalCode(unittest.TestCase):
              'external_code_output.txt', '--delay', '5']
         self.extcode.options['timeout'] = 1.0
 
-        self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
 
         self.top.setup(check=False)
         try:
@@ -123,10 +117,8 @@ class TestExternalCode(unittest.TestCase):
         # If check_external_outputs is True, there will be an exception, but since we set it
         #   to False, no exception should be thrown
         self.extcode.options['check_external_outputs'] = False
-        self.extcode.options['external_files'] = [
-            FileMetadata(path='external_code_for_testing.py', input=True, constant=True),
-            FileMetadata(path='does_not_exist.txt', output=True),
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py',]
+        self.extcode.options['external_output_files'] = ['does_not_exist.txt',]
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 
         self.top.setup(check=False)

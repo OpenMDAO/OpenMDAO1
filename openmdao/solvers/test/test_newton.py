@@ -9,11 +9,11 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
-from openmdao.solvers.newton import Newton
+from openmdao.solvers import Newton
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestNewton(unittest.TestCase):

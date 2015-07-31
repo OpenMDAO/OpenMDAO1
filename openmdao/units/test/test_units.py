@@ -5,10 +5,9 @@ import math
 import os
 import unittest
 
-from openmdao.test.test_util import assert_rel_error
-from openmdao.units.units import import_library, NumberDict, convert_units, \
-                                  PhysicalQuantity, PhysicalUnit, add_unit, \
-                                  add_offset_unit, get_conversion_tuple
+from openmdao.test.util import assert_rel_error
+from openmdao.units import PhysicalQuantity, NumberDict, UnitsOnlyPQ, PhysicalUnit, convert_units, get_conversion_tuple
+from openmdao.units.units import import_library, add_unit, add_offset_unit 
 
 
 class test_NumberDict(unittest.TestCase):

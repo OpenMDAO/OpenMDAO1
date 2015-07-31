@@ -3,16 +3,14 @@
 import unittest
 import numpy as np
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.components.param_comp import ParamComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.solvers.ln_explicit import ExplicitSolver
+from openmdao.core import Group, Problem
+from openmdao.components import ParamComp, ExecComp
+from openmdao.solvers import ExplicitSolver
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped,  FanInGrouped, ArrayComp2D
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestExplicitSolver(unittest.TestCase):

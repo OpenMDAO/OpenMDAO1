@@ -8,7 +8,7 @@ import sys
 import unittest
 import numpy as np
 
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 class TestCase(unittest.TestCase):
     """ Test Test functions. """

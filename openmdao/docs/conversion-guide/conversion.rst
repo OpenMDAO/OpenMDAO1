@@ -55,7 +55,7 @@ in a different location.
 
 ::
 
-    from openmdao.core.component import Component
+    from openmdao.core import Component
 
 -------------------
 Declaring Variables
@@ -242,7 +242,7 @@ And for new OpenMDAO:
 
 ::
 
-    from openmdao.core.component import Component
+    from openmdao.core import Component
 
     class AircraftSim(Component):
         def __init__(self):
@@ -290,7 +290,7 @@ And for new OpenMDAO:
 
 ::
 
-    from openmdao.core.component import Component
+    from openmdao.core import Component
 
     class Times2(Component):
         def __init__(self):

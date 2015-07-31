@@ -2,7 +2,7 @@
 
 import unittest
 from six import PY2
-from openmdao.core.options import OptionsDictionary
+from openmdao.core import OptionsDictionary
 
 
 class TestOptions(unittest.TestCase):
