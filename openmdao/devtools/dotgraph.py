@@ -5,7 +5,7 @@ import webbrowser
 
 import networkx as nx
 
-from openmdao.core.parallelgroup import ParallelGroup
+from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.group import Group
 from openmdao.util.string_util import name_relative_to
 
