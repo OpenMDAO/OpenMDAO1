@@ -5,7 +5,7 @@ import os
 import sys
 import warnings
 import pprint
-from six import string_types
+from six import string_types, iteritems
 
 from fnmatch import fnmatch
 from os.path import join, dirname, exists, abspath
@@ -38,7 +38,7 @@ def build_directory(dct, force=False, topdir='.'):
     startdir = os.getcwd()
     topdir = os.path.abspath(topdir)
     try:
-        for key, val in dct.items():
+        for key, val in iteritems(dct):
             os.chdir(topdir)
             if os.path.isabs(key):
                 raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
@@ -261,6 +261,3 @@ class FileMetadata(object):
             return getattr(self, attr)
         except AttributeError:
             return default
-
-
-

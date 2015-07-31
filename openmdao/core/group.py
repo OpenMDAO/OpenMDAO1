@@ -234,7 +234,7 @@ class Group(System):
                 comp_pdict = comp._params_dict
                 cpname = comp.pathname + '.'
                 cplen = len(cpname)
-                for p, idxs in self._src_idxs.items():
+                for p, idxs in iteritems(self._src_idxs):
                     if p[:cplen] == cpname:
                         comp_pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
 
@@ -345,7 +345,7 @@ class Group(System):
 
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
-        for group, vois in self._relevance.groups.items():
+        for group, vois in iteritems(self._relevance.groups):
             if group is not None:
                 for voi in vois:
                     if parent is None:
@@ -368,7 +368,7 @@ class Group(System):
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
         self._ls_inputs = {}
-        for voi, vec in self.dumat.items():
+        for voi, vec in iteritems(self.dumat):
             self._ls_inputs[voi] = self._all_params(voi)
 
         self._relname_map = None # reclaim some memory
@@ -460,7 +460,7 @@ class Group(System):
         """
         mypath = self.pathname + '.' if self.pathname else ''
         fd_unknowns = []
-        for name, meta in self.unknowns.items():
+        for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
             sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
@@ -480,7 +480,7 @@ class Group(System):
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
-        for tgt, srcs in self._src.items():
+        for tgt, srcs in iteritems(self._src):
             for src in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
@@ -723,7 +723,7 @@ class Group(System):
 
                     if not nonzero:
                         # check for all zero states
-                        for key, meta in system.unknowns.items():
+                        for key, meta in iteritems(system.unknowns):
                             if meta.get('state') and np.any(dunknowns.flat[key]):
                                 nonzero = True
                                 break
@@ -737,7 +737,7 @@ class Group(System):
                                                 dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
-                for var, meta in dunknowns.items():
+                for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
                         dresids[var] += dunknowns[var]
@@ -774,7 +774,7 @@ class Group(System):
 
                 dresids.vec *= -1.0
 
-                for var, meta in dunknowns.items():
+                for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
                         dunknowns[var] += dresids[var]
@@ -857,7 +857,7 @@ class Group(System):
 
         # Don't allow duplicates either.
         if len(newset) < len(new_order):
-            dupes = [key for key, val in Counter(new_order).items() if val>1]
+            dupes = [key for key, val in iteritems(Counter(new_order)) if val>1]
             msg = "Duplicate name found in order list: %s" % dupes
             raise ValueError(msg)
 
@@ -1025,20 +1025,20 @@ class Group(System):
 
         # collect width info
         lens = [len(u)+sum(map(len, v)) for u, v in
-                chain(vec_conns.items(), byobj_conns.items())]
+                chain(iteritems(vec_conns), iteritems(byobj_conns))]
         if lens:
             nwid = max(lens) + 9
         else:
             lens = [len(n) for n in iterkeys(uvec)]
             nwid = max(lens) if lens else 12
 
-        for v, meta in uvec.items():
+        for v, meta in iteritems(uvec):
             if verbose:
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                pnames = [p for p, u in vec_conns.items() if u == v]
+                pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
                     if len(pnames) == 1:
@@ -1069,7 +1069,7 @@ class Group(System):
                                                      nwid=nwid))
 
         if not dvecs:
-            for dest, src in byobj_conns.items():
+            for dest, src in iteritems(byobj_conns):
                 out_stream.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
                 template = "{0:<{nwid}} (by_obj)  ({1})\n"
@@ -1383,8 +1383,8 @@ class Group(System):
         """
         ranks = {}
 
-        local_vars = [k for k, m in self.unknowns.items() if not m.get('remote')]
-        local_vars.extend([k for k, m in self.params.items() if not m.get('remote')])
+        local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
+        local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
         if MPI:
             if trace:
@@ -1419,7 +1419,7 @@ class Group(System):
         # use an ordered dict here so we can use this smaller dict to loop over in get_view
         umap = OrderedDict()
 
-        for abspath, meta in self._unknowns_dict.items():
+        for abspath, meta in iteritems(self._unknowns_dict):
             umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']
 
         return umap

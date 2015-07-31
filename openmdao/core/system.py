@@ -342,7 +342,8 @@ class System(object):
             run_model = self.apply_nonlinear
             cache1 = resids.vec.copy()
             resultvec = resids
-            states = [name for name, meta in self.unknowns.items() if meta.get('state')]
+            states = [name for name, meta in iteritems(self.unknowns)
+                           if meta.get('state')]
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
@@ -572,8 +573,8 @@ class System(object):
         #tups = []
 
         ## Gather a list of local tuples for J.
-        #for output, dct in J.items():
-            #for param, value in dct.items():
+        #for output, dct in iteritems(J):
+            #for param, value in iteritems(dct):
 
                 ## Params are already only on this process. We need to add
                 ## only outputs of components that are on this process.
@@ -591,17 +592,17 @@ class System(object):
                         #tupdict[tup] = rank
 
             ##get rid of tups from the root proc before bcast
-            #for tup, rank in tupdict.items():
+            #for tup, rank in iteritems(tupdict):
                 #if rank == 0:
                     #del tupdict[tup]
 
         #tupdict = comm.bcast(tupdict, root=0)
 
         #if myrank == 0:
-            #for (param, output), rank in tupdict.items():
+            #for (param, output), rank in iteritems(tupdict):
                 #J[param][output] = comm.recv(source=rank, tag=0)
         #else:
-            #for (param, output), rank in tupdict.items():
+            #for (param, output), rank in iteritems(tupdict):
                 #if rank == myrank:
                     #comm.send(J[param][output], dest=0, tag=0)
 

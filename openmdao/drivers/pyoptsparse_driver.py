@@ -89,7 +89,7 @@ class pyOptSparseDriver(Driver):
         param_meta = self.get_param_metadata()
         param_list = list(iterkeys(param_meta))
         param_vals = self.get_params()
-        for name, meta in param_meta.items():
+        for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
                                  value=param_vals[name],
                                  lower=meta['low'], upper=meta['high'])
@@ -146,7 +146,7 @@ class pyOptSparseDriver(Driver):
 
         # TODO: Support double-sided constraints in openMDAO
         # Add all double_sided constraints
-        #for name, con in self.get_2sided_constraints().items():
+        #for name, con in iteritems(self.get_2sided_constraints()):
             #size = con_meta[name]['size']
             #upper = con.high * np.ones((size))
             #lower = con.low * np.ones((size))
@@ -262,7 +262,7 @@ class pyOptSparseDriver(Driver):
                 func_dict[name] = con
 
             # Get the double-sided constraint evaluations
-            #for key, con in self.get_2sided_constraints().items():
+            #for key, con in iteritems(self.get_2sided_constraints()):
             #    func_dict[name] = np.array(con.evaluate(self.parent))
 
             fail = 0
@@ -311,7 +311,7 @@ class pyOptSparseDriver(Driver):
             sens_dict = self._problem.calc_gradient(dv_dict.keys(),
                                                     self.quantities,
                                                     return_format='dict')
-            #for key, value in self.lin_jacs.items():
+            #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 
             fail = 0

@@ -350,7 +350,7 @@ class Problem(System):
         """ List all unit conversions being made (including only units on one
         side)"""
         if self._unit_diffs:
-            tuples = sorted(self._unit_diffs.items())
+            tuples = sorted(iteritems(self._unit_diffs))
             print("\nUnit Conversions")
             for (src, tgt), (sunit, tunit) in tuples:
                 print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
@@ -469,9 +469,9 @@ class Problem(System):
                                                    for n in out_of_order[name]])
                 print("Group '%s' has the following out-of-order subsystems:" %
                         grp.pathname, file=out_stream)
-                for n, subs in out_of_order.items():
+                for n, subs in iteritems(out_of_order):
                     print("   %s should run after %s" % (n, subs), file=out_stream)
-                ooo.append((grp.pathname, list(out_of_order.items())))
+                ooo.append((grp.pathname, list(iteritems(out_of_order))))
                 print("Auto ordering would be: %s" % grp.list_auto_order(),
                       file=out_stream)
 
@@ -876,7 +876,7 @@ class Problem(System):
                 for voi in rhs:
                     rhs[voi][voi_idxs[voi][i]] = 0.0
 
-                for param, dx in dx_mat.items():
+                for param, dx in iteritems(dx_mat):
                     if len(params) == 1:
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
@@ -975,7 +975,7 @@ class Problem(System):
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Figure out implicit states for this comp
-            states = [n for n, m in comp.unknowns.items() if m.get('state')]
+            states = [n for n, m in iteritems(comp.unknowns) if m.get('state')]
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
@@ -1174,7 +1174,7 @@ class Problem(System):
                     dct[s.name] = _tree_dict(s)
                 else:
                     dct[s.name] = OrderedDict()
-                    for vname, meta in s.unknowns.items():
+                    for vname, meta in iteritems(s.unknowns):
                         dct[s.name][vname] = m = meta.copy()
                         for mname in m:
                             if isinstance(m[mname], np.ndarray):
@@ -1257,7 +1257,7 @@ def _assign_parameters(connections):
     """
     param_owners = {}
 
-    for par, unk in connections.items():
+    for par, unk in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
@@ -1279,8 +1279,8 @@ def _jac_to_flat_dict(jac):
     dict of ndarrays"""
 
     new_jac = {}
-    for key1, val1 in jac.items():
-        for key2, val2 in val1.items():
+    for key1, val1 in iteritems(jac):
+        for key2, val2 in iteritems(val1):
             new_jac[(key1, key2)] = val2
 
     return new_jac

@@ -1,5 +1,6 @@
 
 from six.moves import range, zip, _dummy_thread
+from six import iteritems
 
 try:
     from thread import get_ident as _get_ident
@@ -65,7 +66,7 @@ class OrderedDict(dict):
         self._vallist.pop(idx)
         self._keylist.pop(idx)
         del self._map[key]
-        for k, i in self._map.items():
+        for k, i in iteritems(self._map):
             if i > idx:
                 self._map[k] -= 1
 
@@ -199,3 +200,5 @@ class OrderedDict(dict):
     def viewitems(self):
         "od.viewitems() -> a set-like object providing a view on od's items"
         return ItemsView(self)
+
+from collections import OrderedDict
