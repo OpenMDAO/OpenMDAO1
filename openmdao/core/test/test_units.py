@@ -8,7 +8,8 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
+
 
 class SrcComp(Component):
 
@@ -28,6 +29,7 @@ class SrcComp(Component):
         J[('x2', 'x1')] = np.array([1.0])
         return J
 
+
 class TgtCompF(Component):
 
     def __init__(self):
@@ -45,6 +47,7 @@ class TgtCompF(Component):
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
         return J
+
 
 class TgtCompFMulti(Component):
     # Some extra inputs that might trip things up.
@@ -77,6 +80,7 @@ class TgtCompFMulti(Component):
         J[('x3_', 'x2_')] = 0.0
         return J
 
+
 class TgtCompC(Component):
 
     def __init__(self):
@@ -94,6 +98,7 @@ class TgtCompC(Component):
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
         return J
+
 
 class TgtCompK(Component):
 

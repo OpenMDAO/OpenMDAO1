@@ -860,7 +860,7 @@ class TgtVecWrapper(VecWrapper):
         return [psizes]
 
 
-class PlaceholderVecWrapper(object):
+class _PlaceholderVecWrapper(object):
     """
     A placeholder for a dict-like container of a collection of variables.
 

@@ -3,7 +3,7 @@
 import unittest
 
 from six import StringIO
-from openmdao.recorders.dump_recorder import DumpRecorder
+from openmdao.recorders import DumpRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.util.record_util import format_iteration_coordinate
 

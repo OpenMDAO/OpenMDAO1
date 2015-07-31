@@ -11,7 +11,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 SKIP = False
 try:

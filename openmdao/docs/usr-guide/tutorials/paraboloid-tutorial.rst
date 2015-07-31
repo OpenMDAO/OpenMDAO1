@@ -12,9 +12,8 @@ this code into a file, and run it directly.
 
     from __future__ import print_function
 
-    from openmdao.components.param_comp import ParamComp
-    from openmdao.core.component import Component
-    from openmdao.core.problem import Problem, Group
+    from openmdao.components import ParamComp
+    from openmdao.core import Component, Problem, Group
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -76,9 +75,8 @@ Building the component
 
     from __future__ import print_function
 
-    from openmdao.components.param_comp import ParamComp
-    from openmdao.core.component import Component
-    from openmdao.core.problem import Problem, Group
+    from openmdao.components import ParamComp
+    from openmdao.core import Component, Problem, Group
 
 We need to import some OpenMDAO classes. We also import the print_function to
 ensure compatibility between Python 2.x and 3.x. You don't need the import if
@@ -274,7 +272,7 @@ First, we need to import the optimizer.
 
 .. testcode:: parab
 
-    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+    from openmdao.drivers import ScipyOptimizer
 
 The main optimizer built into OpenMDAO is a wrapper around Scipy's `minimize`
 function. OpenMDAO supports 9 of the optimizers built into `minimize`. The
@@ -352,7 +350,7 @@ First, we need to add one more import to the beginning of our model.
 
 .. testcode:: parab
 
-    from openmdao.components.constraint import ConstraintComp
+    from openmdao.components import ConstraintComp
 
 
 We'll use a ConstraintComp to represent our constraint in the model.

@@ -1,10 +1,10 @@
 import unittest
 import numpy as np
-from openmdao.components.unit_comp import UnitComp
+from openmdao.components import UnitComp
 from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 
 
 class TestUnitComp(unittest.TestCase):

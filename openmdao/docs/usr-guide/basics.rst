@@ -283,10 +283,8 @@ parameter (`ParamComp`) and to quickly define a `Component` for an equation (`Ex
 
 ::
 
-    from openmdao.core.group import Group
-    from openmdao.core.problem import Problem
-    from openmdao.components.param_comp import ParamComp
-    from openmdao.components.exec_comp import ExecComp
+    from openmdao.core import Group, Problem
+    from openmdao.components import ParamComp, ExecComp
 
     root = Group()
     root.add('x_param', ParamComp('x', 7.0))

@@ -5,9 +5,9 @@ import os
 import shelve
 import unittest
 
-from openmdao.recorders.shelve_recorder import ShelveRecorder
+from openmdao.recorders import ShelveRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
-from openmdao.test.test_util import assert_rel_error
+from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
 
 from pickle import HIGHEST_PROTOCOL
