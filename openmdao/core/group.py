@@ -596,7 +596,7 @@ class Group(System):
         for sub in self.subsystems(local=True):
 
             # Instigate finite difference on child if user requests.
-            if sub.fd_options['force_fd'] == True:
+            if sub.fd_options['force_fd']:
                 # Groups need total derivatives
                 if isinstance(sub, Group):
                     total_derivs = True
@@ -612,7 +612,7 @@ class Group(System):
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
             if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd'] == True) and \
+                                   sub.fd_options['force_fd']) and \
                                    not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
@@ -657,7 +657,7 @@ class Group(System):
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
             if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd'] == True) and \
+                             sub.fd_options['force_fd']) and \
                              not isinstance(sub, ParamComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
 
@@ -729,7 +729,7 @@ class Group(System):
                                 break
 
                     if nonzero:
-                        if system.fd_options['force_fd'] == True:
+                        if system.fd_options['force_fd']:
                             system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                      dunknowns, dresids, mode)
                         else:
@@ -760,17 +760,16 @@ class Group(System):
                     # incoming vector is zero.
                     if np.any(dresids.vec):
                         try:
-                            dparams._set_adjoint_mode(True)
-                            if system.fd_options['force_fd'] == True:
+                            dparams.adj_accumulate_mode = True
+                            if system.fd_options['force_fd']:
                                 system._apply_linear_jac(system.params,
                                                          system.unknowns, dparams,
                                                          dunknowns, dresids, mode)
                             else:
                                 system.apply_linear(system.params, system.unknowns,
                                                     dparams, dunknowns, dresids, mode)
-
                         finally:
-                            dparams._set_adjoint_mode(False)
+                            dparams.adj_accumulate_mode = False
 
                 dresids.vec *= -1.0
 

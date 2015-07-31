@@ -585,11 +585,6 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _set_adjoint_mode(self, mode=False):
-        """ Turn on or off adjoint accumlate mode."""
-        self.adj_accumulate_mode = mode
-
-
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """

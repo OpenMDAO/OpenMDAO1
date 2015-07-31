@@ -135,7 +135,7 @@ class Problem(System):
                 for s in srcs:
                     if s in unknowns_dict:
                         for t in input_sets[tgt]:
-                            if s not in connections.get(t, ()):
+                            if not (t in connections and s in connections[t]):
                                 to_add.append((t, s))
 
         for t, s in to_add:
@@ -610,7 +610,7 @@ class Problem(System):
             raise ValueError(msg)
 
         # Either analytic or finite difference
-        if mode == 'fd' or self.root.fd_options['force_fd'] == True:
+        if mode == 'fd' or self.root.fd_options['force_fd']:
             return self._calc_gradient_fd(param_list, unknown_list,
                                           return_format)
         else:
@@ -950,7 +950,7 @@ class Problem(System):
             cname = comp.pathname
 
             # No need to check comps that don't have any derivs.
-            if comp.fd_options['force_fd'] == True:
+            if comp.fd_options['force_fd']:
                 continue
 
             # Paramcomps are just clutter too.
@@ -1023,11 +1023,11 @@ class Problem(System):
 
                     dresids.flat[u_name][idx] = 1.0
                     try:
-                        dparams._set_adjoint_mode(True)
+                        dparams.adj_accumulate_mode = True
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
                     finally:
-                        dparams._set_adjoint_mode(False)
+                        dparams.adj_accumulate_mode = False
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:

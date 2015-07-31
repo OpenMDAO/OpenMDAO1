@@ -139,11 +139,15 @@ class System(object):
                             (self.name, self._promotes))
 
         for prom in self._promotes:
-            found = False
-            for name, meta in chain(iteritems(self._params_dict), iteritems(self._unknowns_dict)):
-                if fnmatch(meta.get('promoted_name', name), prom):
-                    found = True
-            if not found:
+            for name, meta in chain(iteritems(self._params_dict),
+                                    iteritems(self._unknowns_dict)):
+                if 'promoted_name' in meta:
+                    pname = meta['promoted_name']
+                else:
+                    pname = name
+                if fnmatch(pname, prom):
+                    break
+            else:
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
                 raise RuntimeError(msg % (self.name, prom))
 

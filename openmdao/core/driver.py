@@ -444,7 +444,7 @@ class Driver(object):
             if lintype == 'linear' and meta['linear'] == False:
                 continue
 
-            if lintype == 'nonlinear' and meta['linear'] == True:
+            if lintype == 'nonlinear' and meta['linear']:
                 continue
 
             if ctype == 'eq' and meta['ctype'] == 'ineq':
