@@ -3,7 +3,7 @@
 import sys
 from fnmatch import fnmatch
 from itertools import chain
-from six import string_types, iteritems
+from six import string_types, iteritems, itervalues
 
 import numpy as np
 
@@ -103,8 +103,8 @@ class System(object):
 
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(self._params_dict.itervalues(),
-                                  self._unknowns_dict.itervalues()):
+                for meta in chain(itervalues(self._params_dict),
+                                  itervalues(self._unknowns_dict)):
                     if name == meta.get('promoted_name'):
                         return True
 
@@ -140,7 +140,7 @@ class System(object):
 
         for prom in self._promotes:
             found = False
-            for name, meta in chain(self._params_dict.iteritems(), self._unknowns_dict.iteritems()):
+            for name, meta in chain(iteritems(self._params_dict), iteritems(self._unknowns_dict)):
                 if fnmatch(meta.get('promoted_name', name), prom):
                     found = True
             if not found:
@@ -267,10 +267,10 @@ class System(object):
         """
         Set 'remote' attribute in metadata of all variables for this subsystem.
         """
-        for meta in self._params_dict.itervalues():
+        for meta in itervalues(self._params_dict):
             meta['remote'] = True
 
-        for meta in self._unknowns_dict.itervalues():
+        for meta in itervalues(self._unknowns_dict):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,

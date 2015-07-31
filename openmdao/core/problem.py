@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import json
 from itertools import chain
-from six import iteritems
+from six import iteritems, iterkeys, itervalues
 from six.moves import cStringIO
 import networkx as nx
 
@@ -112,33 +112,37 @@ class Problem(System):
         implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict, unknowns_dict)
 
         # combine implicit and explicit connections
-        for tgt, srcs in implicit_conns.iteritems():
+        for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
         # resolve any input to input explicit connections
         input_sets = {}
-        for tgt, srcs in connections.iteritems():
+        for tgt, srcs in iteritems(connections):
             for src in srcs:
                 if src in params_dict:
                     input_sets.setdefault(src, set()).update((tgt, src))
                     input_sets.setdefault(tgt, set()).update((tgt, src))
 
         # find any promoted but not connected inputs
-        for p, meta in params_dict.iteritems():
+        for p, meta in iteritems(params_dict):
             prom = meta['promoted_name']
             if prom in prom_noconns:
                 input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
 
-        for tgt, srcs in list(connections.iteritems()):
+        to_add = []
+        for tgt, srcs in iteritems(connections):
             if tgt in input_sets:
                 for s in srcs:
                     if s in unknowns_dict:
                         for t in input_sets[tgt]:
                             if s not in connections.get(t, ()):
-                                connections.setdefault(t, []).append(s)
+                                to_add.append((t, s))
+
+        for t, s in to_add:
+            connections.setdefault(t, []).append(s)
 
         newconns = {}
-        for tgt, srcs in connections.iteritems():
+        for tgt, srcs in iteritems(connections):
             unknown_srcs = [s for s in srcs if s in unknowns_dict]
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
@@ -151,7 +155,7 @@ class Problem(System):
 
         self._dangling = {}
         prom_unknowns = self.root._to_abs_unames
-        for p, meta in params_dict.iteritems():
+        for p, meta in iteritems(params_dict):
             if meta['pathname'] not in connections:
                 if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
                     self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
@@ -251,8 +255,8 @@ class Problem(System):
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 
-            for meta in chain(sub._params_dict.itervalues(),
-                              sub._unknowns_dict.itervalues()):
+            for meta in chain(itervalues(sub._params_dict),
+                              itervalues(sub._unknowns_dict)):
                 path = meta['pathname']
                 if path in unknowns_dict:
                     meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
@@ -320,7 +324,7 @@ class Problem(System):
         this includes ALL dangling params, both promoted and unpromoted.
         """
         dangling_params = sorted(set([m['promoted_name']
-                             for p, m in self.root._params_dict.iteritems()
+                             for p, m in iteritems(self.root._params_dict)
                                if p not in self.root.connections]))
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
@@ -384,8 +388,8 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.', 1)[0] for t in self.root.connections.iterkeys()])
-        conn_comps.update([s.rsplit('.', 1)[0] for s in self.root.connections.itervalues()])
+        conn_comps = set([t.rsplit('.', 1)[0] for t in iterkeys(self.root.connections)])
+        conn_comps.update([s.rsplit('.', 1)[0] for s in itervalues(self.root.connections)])
         noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
                                if c.pathname not in conn_comps])
         if noconn_comps:
@@ -539,8 +543,8 @@ class Problem(System):
             else:
                 pset.add(pnames)
 
-        for meta in chain(self.root._unknowns_dict.itervalues(),
-                          self.root._params_dict.itervalues()):
+        for meta in chain(itervalues(self.root._unknowns_dict),
+                          itervalues(self.root._params_dict)):
             prom_name = meta['promoted_name']
             if prom_name in uset:
                 self._u_length += meta['size']
@@ -645,7 +649,7 @@ class Problem(System):
             if name in unknowns:
                 name = unknowns.metadata(name)['pathname']
 
-            for target, src in root.connections.iteritems():
+            for target, src in iteritems(root.connections):
                 if name == src:
                     name = target
                     break
@@ -1212,7 +1216,7 @@ class Problem(System):
         """
 
         self._unit_diffs = {}
-        for target, source in connections.iteritems():
+        for target, source in iteritems(connections):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
 

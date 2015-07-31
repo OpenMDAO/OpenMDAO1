@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from collections import OrderedDict
 import json
-from six import string_types
+from six import string_types, itervalues, iteritems
 
 import networkx as nx
 
@@ -130,11 +130,11 @@ class Relevance(object):
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
 
-        for target, source in connections.iteritems():
+        for target, source in iteritems(connections):
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
-        for meta in params_dict.itervalues():
+        for meta in itervalues(params_dict):
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
@@ -143,7 +143,7 @@ class Relevance(object):
                 if param not in vgraph:
                     vgraph.add_node(param)
 
-        for meta in unknowns_dict.itervalues():
+        for meta in itervalues(unknowns_dict):
             unknown = meta['pathname']
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
@@ -154,7 +154,7 @@ class Relevance(object):
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
-        for comp, inputs in compins.iteritems():
+        for comp, inputs in iteritems(compins):
             for inp in inputs:
                 for out in compouts.get(comp, ()):
                     vgraph.add_edge(inp, out)

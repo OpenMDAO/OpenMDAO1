@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import re
-from six import iteritems
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -268,7 +268,7 @@ class Component(System):
             # unknowns
             sizes = []
             names = []
-            for name, meta in self._unknowns_dict.iteritems():
+            for name, meta in iteritems(self._unknowns_dict):
                 if 'src_indices' in meta:
                     sizes.append(len(meta['src_indices']))
                     names.append(name)
@@ -282,7 +282,7 @@ class Component(System):
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
-        for name, meta in self._params_dict.iteritems():
+        for name, meta in iteritems(self._params_dict):
             pathname = self._get_var_pathname(name)
             _new_params[pathname] = meta
             meta['pathname'] = pathname
@@ -291,7 +291,7 @@ class Component(System):
             self._to_abs_pnames[name] = (pathname,)
 
         _new_unknowns = OrderedDict()
-        for name, meta in self._unknowns_dict.iteritems():
+        for name, meta in iteritems(self._unknowns_dict):
             pathname = self._get_var_pathname(name)
             _new_unknowns[pathname] = meta
             meta['pathname'] = pathname
@@ -348,7 +348,7 @@ class Component(System):
         self._create_views(top_unknowns, parent, [], None)
 
         # create params vec entries for any unconnected params
-        for meta in self._params_dict.itervalues():
+        for meta in itervalues(self._params_dict):
             pathname = meta['pathname']
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
@@ -609,7 +609,7 @@ class Component(System):
         """
         # parent_unknowns is keyed on promoted name relative to the parent system
         # unknowns_dict is keyed on absolute pathname
-        
+
         # use an ordered dict here so we can use this smaller dict when looping during get_view.
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()

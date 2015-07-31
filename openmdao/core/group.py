@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 from collections import Counter
-from six import iteritems
+from six import iteritems, iterkeys, itervalues
 from itertools import chain
 
 import numpy as np
@@ -240,13 +240,13 @@ class Group(System):
 
         for sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables(compute_indices)
-            for p, meta in subparams.iteritems():
+            for p, meta in iteritems(subparams):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._params_dict[p] = meta
                 self._to_abs_pnames.setdefault(meta['promoted_name'], []).append(p)
 
-            for u, meta in subunknowns.iteritems():
+            for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
@@ -357,7 +357,7 @@ class Group(System):
                     self._setup_data_transfer(my_params, voi)
 
         # convert any src_indices to index arrays
-        for meta in self._params_dict.itervalues():
+        for meta in itervalues(self._params_dict):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
@@ -434,7 +434,7 @@ class Group(System):
         mplen = len(mypath)
 
         params = []
-        for tgt, src in conns.iteritems():
+        for tgt, src in iteritems(conns):
             if mypath == tgt[:mplen]:
                 # look up the Component that contains the source variable
                 scname = src.rsplit('.', 1)[0]
@@ -699,7 +699,7 @@ class Group(System):
             dparams = system.dpmat[voi]
 
             # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = {meta['pathname'] for meta in dparams.itervalues()}
+            abs_inputs = {meta['pathname'] for meta in itervalues(dparams)}
 
             # Forward Mode
             if mode == 'fwd':
@@ -842,7 +842,7 @@ class Group(System):
         # Make sure the new_order is valid. It must contain all susbsystems
         # in this model.
         newset = set(new_order)
-        oldset = set(self._subsystems.iterkeys())
+        oldset = set(iterkeys(self._subsystems))
         if oldset != newset:
             missing = oldset - newset
             extra = newset - oldset
@@ -967,11 +967,11 @@ class Group(System):
         """
 
         # TODO: clean this up
-        ls_inputs = set(self.dpmat[voi].iterkeys())
-        abs_uvec = {meta['pathname'] for meta in self.dumat[voi].itervalues()}
+        ls_inputs = set(iterkeys(self.dpmat[voi]))
+        abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
 
         for comp in self.components(local=True, recurse=True):
-            for intinp_rel, meta in comp.dpmat[voi].iteritems():
+            for intinp_rel, meta in iteritems(comp.dpmat[voi]):
                 intinp_abs = meta['pathname']
                 src = self.connections.get(intinp_abs)
 
@@ -1255,10 +1255,10 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        vec_unames = (n for n in self._u_size_dicts[0].iterkeys()
+        vec_unames = (n for n in iterkeys(self._u_size_dicts[0])
                            if relevance.is_relevant(var_of_interest, n))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
-        vec_pnames = (n for n in self._p_size_dicts[0].iterkeys()
+        vec_pnames = (n for n in iterkeys(self._p_size_dicts[0])
                         if relevance.is_relevant(var_of_interest, n))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
@@ -1266,9 +1266,9 @@ class Group(System):
         param_sizes = []
         for iproc in range(self.comm.size):
             #print("iproc",iproc,"comm sz",self.comm.size,"udicts",self._u_size_dicts)
-            unknown_sizes.append([sz for n, sz in self._u_size_dicts[iproc].iteritems()
+            unknown_sizes.append([sz for n, sz in iteritems(self._u_size_dicts[iproc])
                                                if n in vec_unames])
-            param_sizes.append([sz for n, sz in self._p_size_dicts[iproc].iteritems()
+            param_sizes.append([sz for n, sz in iteritems(self._p_size_dicts[iproc])
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
@@ -1277,7 +1277,7 @@ class Group(System):
                                dtype=self._impl_factory.idx_arr_type)
 
         xfer_dict = {}
-        for param, unknown in self.connections.iteritems():
+        for param, unknown in iteritems(self.connections):
             if param in my_params:
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)

@@ -3,7 +3,7 @@
 import sys
 import numpy
 from numpy.linalg import norm
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
 from openmdao.util.ordered_dict import OrderedDict
@@ -252,7 +252,7 @@ class VecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return self._vardict.iterkeys()
+        return iterkeys(self._vardict)
 
     def items(self):
         """
@@ -270,7 +270,7 @@ class VecWrapper(object):
         iterator
             Iterator returning the name and metadata dict for each variable.
         """
-        return self._vardict.iteritems()
+        return iteritems(self._vardict)
 
     def values(self):
         """
@@ -288,7 +288,7 @@ class VecWrapper(object):
         iterator
             Iterator returning a metadata dict for each variable.
         """
-        return self._vardict.itervalues()
+        return itervalues(self._vardict)
 
     def get_local_idxs(self, name, idx_dict):
         """
@@ -366,7 +366,7 @@ class VecWrapper(object):
         start = -1
 
         # varmap is ordered, in the same order as vardict
-        for name, pname in varmap.iteritems():
+        for name, pname in iteritems(varmap):
             if name in vardict:
                 meta = vardict[name]
                 view._vardict[pname] = meta
@@ -621,7 +621,7 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vec_size = 0
-        for meta in unknowns_dict.itervalues():
+        for meta in itervalues(unknowns_dict):
             promname = meta['promoted_name']
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
@@ -643,7 +643,7 @@ class SrcVecWrapper(VecWrapper):
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
-            for meta in unknowns_dict.itervalues():
+            for meta in itervalues(unknowns_dict):
                 if 'remote' not in meta and (relevance is None or
                                              relevance.is_relevant(var_of_interest,
                                                                   meta['pathname'])):
@@ -731,7 +731,7 @@ class TgtVecWrapper(VecWrapper):
 
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
-        for meta in params_dict.itervalues():
+        for meta in itervalues(params_dict):
             pathname = meta['pathname']
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
@@ -777,7 +777,7 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
-        for meta in params_dict.itervalues():
+        for meta in itervalues(params_dict):
             pathname = meta['pathname']
             if pathname in my_params and (relevance is None or
                                           relevance.is_relevant(var_of_interest,
