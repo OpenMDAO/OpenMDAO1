@@ -11,8 +11,8 @@ and you can also use a different surrogate model for each output.
 
 .. note::
 
-    Whats the difference between a `MetaModel` and a surrogate model? In
-    OpenMDAO surrogate model refers to the model for a single response, and
+    What's the difference between a `MetaModel` and a surrogate model? In
+    OpenMDAO, "surrogate model" refers to the model for a single response, and
     `MetaModel` represents a collection of surrogate models trained at the
     same locations in the design space.
 
@@ -26,11 +26,9 @@ This code will set up a really simple `Group` with only a single
     import sys
     import numpy as np
 
-    from openmdao.core.group import Group
-    from openmdao.core.component import Component
-
-    from openmdao.components.metamodel import MetaModel
-    from openmdao.surrogatemodels.kriging import KrigingSurrogate, FloatKrigingSurrogate
+    from openmdao.core import Group, Component
+    from openmdao.components import MetaModel
+    from openmdao.surrogate_models import KrigingSurrogate, FloatKrigingSurrogate
 
     class TrigMM(Group):
         ''' FloatKriging gives responses as floats '''
@@ -45,12 +43,12 @@ This code will set up a really simple `Group` with only a single
             sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
 
 Now we'll setup the problem and set some training data. Here
-we just generate the data on the fly, but in general you would have
-pre generated this data and will just be importing it and using it.
+we just generate the data on the fly, but normally you would have
+pre-generated this data and then would just import it and use it.
 
 .. testcode:: krig_example
 
-    from openmdao.core.problem import Problem
+    from openmdao.core import Problem
 
     prob = Problem()
     prob.root = TrigMM()
@@ -80,5 +78,5 @@ You should get some output that looks like this:
    norm_dist actual:  -0.5048
 
 Notice that one of the outputs is non-float data. Some surrogate models
-(like kriging), can return non-float data like integers, strings, or
+(like Kriging), can return non-float data like integers, strings, or
 probability distributions.
