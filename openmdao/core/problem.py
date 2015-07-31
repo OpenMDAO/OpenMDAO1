@@ -26,7 +26,7 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.solvers.run_once import RunOnce
 
 from openmdao.units.units import get_conversion_tuple
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
 class Problem(System):

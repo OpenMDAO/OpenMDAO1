@@ -11,7 +11,7 @@ import numpy as np
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -31,7 +31,7 @@ class Component(System):
 
     def __init__(self):
         super(Component, self).__init__()
-        self._post_setup = False
+        self._post_setup_vars = False
         self._jacobian_cache = {}
 
     def _get_initial_val(self, val, shape):
@@ -201,7 +201,7 @@ class Component(System):
     def _check_name(self, name):
         """ Verifies that a system name is valid. Also checks for
         duplicates."""
-        if self._post_setup:
+        if self._post_setup_vars:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
                                (self.pathname, name))
         if name in self._params_dict or name in self._unknowns_dict:
@@ -298,8 +298,7 @@ class Component(System):
             meta['promoted_name'] = name
             self._to_abs_unames[name] = (pathname,)
 
-        if compute_indices:
-            self._post_setup = True
+        self._post_setup_vars = True
 
         return _new_params, _new_unknowns
 

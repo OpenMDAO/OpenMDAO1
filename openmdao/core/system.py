@@ -9,7 +9,7 @@ import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.core.vec_wrapper import PlaceholderVecWrapper
 
 

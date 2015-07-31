@@ -18,7 +18,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 

@@ -6,7 +6,7 @@ from numpy.linalg import norm
 from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
 
