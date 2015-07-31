@@ -4,8 +4,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.core import Group, Problem
 from openmdao.components import ParamComp, ExecComp
 
 from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp
