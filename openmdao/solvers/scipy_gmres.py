@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from six import iteritems
+
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.solvers.solver_base import LinearSolver
@@ -53,7 +55,7 @@ class ScipyGMRES(LinearSolver):
         """
 
         unknowns_mat = {}
-        for voi, rhs in rhs_mat.items():
+        for voi, rhs in iteritems(rhs_mat):
 
             # Scipy can only handle one right-hand-side at a time.
             self.voi = voi

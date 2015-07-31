@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 from collections import Counter
-from six import iteritems
+from six import iteritems, iterkeys, itervalues
 from itertools import chain
 
 import numpy as np
@@ -18,7 +18,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
 from openmdao.solvers.run_once import RunOnce
 from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 
@@ -94,7 +94,7 @@ class Group(System):
         if promotes is not None:
             system._promotes = promotes
 
-        if name in self._subsystems.keys():
+        if name in self._subsystems:
             msg = "Group '%s' already contains a subsystem with name '%s'." % \
                   (self.name, name)
             raise RuntimeError(msg)
@@ -162,7 +162,7 @@ class Group(System):
 
         subs = self._local_subsystems if local else self._subsystems
 
-        for name, sub in subs.items():
+        for name, sub in iteritems(subs):
             if isinstance(sub, typ):
                 yield sub
             if recurse and isinstance(sub, Group):
@@ -224,27 +224,33 @@ class Group(System):
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
         self._data_xfer = {}
+        self._to_abs_unames = {}
+        self._to_abs_pnames = {}
 
         # set any src_indices metadata down at Component level so it will
         # percolate up to all levels above
         if self._src_idxs:
             for comp in self.components(recurse=True):
                 comp_pdict = comp._params_dict
-                for p, idxs in self._src_idxs.items():
-                    if p.startswith(comp.pathname):
+                cpname = comp.pathname + '.'
+                cplen = len(cpname)
+                for p, idxs in iteritems(self._src_idxs):
+                    if p[:cplen] == cpname:
                         comp_pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
 
         for sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables(compute_indices)
-            for p, meta in subparams.items():
+            for p, meta in iteritems(subparams):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._params_dict[p] = meta
+                self._to_abs_pnames.setdefault(meta['promoted_name'], []).append(p)
 
-            for u, meta in subunknowns.items():
+            for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 self._unknowns_dict[u] = meta
+                self._to_abs_unames.setdefault(meta['promoted_name'], []).append(u)
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
@@ -320,6 +326,8 @@ class Group(System):
             self._create_vecs(my_params, var_of_interest=None, impl=impl)
             top_unknowns = self.unknowns
         else:
+            # map promoted name in parent to corresponding promoted name in this view
+            self._relname_map = self._get_relname_map(parent.unknowns)
             self._create_views(top_unknowns, parent, my_params,
                                var_of_interest=None)
 
@@ -337,7 +345,7 @@ class Group(System):
 
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
-        for group, vois in self._relevance.groups.items():
+        for group, vois in iteritems(self._relevance.groups):
             if group is not None:
                 for voi in vois:
                     if parent is None:
@@ -349,7 +357,7 @@ class Group(System):
                     self._setup_data_transfer(my_params, voi)
 
         # convert any src_indices to index arrays
-        for meta in self._params_dict.values():
+        for meta in itervalues(self._params_dict):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
@@ -360,8 +368,10 @@ class Group(System):
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
         self._ls_inputs = {}
-        for voi, vec in self.dumat.items():
+        for voi, vec in iteritems(self.dumat):
             self._ls_inputs[voi] = self._all_params(voi)
+
+        self._relname_map = None # reclaim some memory
 
     def _create_vecs(self, my_params, var_of_interest, impl):
         """ This creates our vecs and mats. This is only called on
@@ -371,7 +381,6 @@ class Group(System):
         sys_pathname = self.pathname
         params_dict = self._params_dict
         unknowns_dict = self._unknowns_dict
-        relevance = self._relevance
 
         self.comm = comm
 
@@ -382,20 +391,28 @@ class Group(System):
             self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
             # populate the VecWrappers with data
-            self.unknowns.setup(unknowns_dict, store_byobjs=True)
-            self.resids.setup(unknowns_dict)
+            self.unknowns.setup(unknowns_dict,
+                                relevance=self._relevance,
+                                var_of_interest=None, store_byobjs=True)
+            self.resids.setup(unknowns_dict,
+                              relevance=self._relevance,
+                              var_of_interest=None)
             self.params.setup(None, params_dict, self.unknowns,
-                              my_params, self.connections, store_byobjs=True)
+                              my_params, self.connections,
+                              relevance=self._relevance,
+                              var_of_interest=None, store_byobjs=True)
 
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
         dresids = impl.create_src_vecwrapper(sys_pathname, comm)
         dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
-        dunknowns.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
-        dresids.setup(unknowns_dict, relevant_vars=relevance[var_of_interest])
+        dunknowns.setup(unknowns_dict, relevance=self._relevance,
+                        var_of_interest=var_of_interest)
+        dresids.setup(unknowns_dict, relevance=self._relevance,
+                      var_of_interest=var_of_interest)
         dparams.setup(None, params_dict, self.unknowns, my_params,
-                      self.connections,
-                      relevant_vars=relevance[var_of_interest])
+                      self.connections, relevance=self._relevance,
+                      var_of_interest=var_of_interest)
 
         self.dumat[var_of_interest] = dunknowns
         self.drmat[var_of_interest] = dresids
@@ -414,18 +431,19 @@ class Group(System):
         """
         conns = self.connections
         mypath = self.pathname + '.' if self.pathname else ''
+        mplen = len(mypath)
 
         params = []
-        for tgt, src in conns.items():
-            if tgt.startswith(mypath):
+        for tgt, src in iteritems(conns):
+            if mypath == tgt[:mplen]:
                 # look up the Component that contains the source variable
                 scname = src.rsplit('.', 1)[0]
-                if scname.startswith(mypath):
-                    src_comp = self._subsystem(scname[len(mypath):])
+                if mypath == scname[:mplen]:
+                    src_comp = self._subsystem(scname[mplen:])
                     if isinstance(src_comp, ParamComp):
-                        params.append(tgt[len(mypath):])
+                        params.append(tgt[mplen:])
                 else:
-                    params.append(tgt[len(mypath):])
+                    params.append(tgt[mplen:])
 
         return params
 
@@ -442,7 +460,7 @@ class Group(System):
         """
         mypath = self.pathname + '.' if self.pathname else ''
         fd_unknowns = []
-        for name, meta in self.unknowns.items():
+        for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
             sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, ParamComp):
@@ -462,25 +480,22 @@ class Group(System):
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
-        for tgt, srcs in self._src.items():
+        for tgt, srcs in iteritems(self._src):
             for src in srcs:
                 try:
-                    src_pathnames = get_absvarpathnames(src, self._unknowns_dict,
-                                                        'unknowns')
+                    src_pathnames = self._to_abs_unames[src]
                 except KeyError as error:
                     try:
-                        src_pathnames = get_absvarpathnames(src, self._params_dict,
-                                                            'params')
+                        src_pathnames = self._to_abs_pnames[src]
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
                 try:
-                    for tgt_pathname in get_absvarpathnames(tgt, self._params_dict,
-                                                            'params'):
+                    for tgt_pathname in self._to_abs_pnames[tgt]:
                         connections.setdefault(tgt_pathname, []).extend(src_pathnames)
                 except KeyError as error:
                     try:
-                        get_absvarpathnames(tgt, self._unknowns_dict, 'unknowns')
+                        self._to_abs_unames[tgt]
                     except KeyError as error:
                         raise ConnectError.nonexistent_target_error(src, tgt)
                     else:
@@ -581,7 +596,7 @@ class Group(System):
         for sub in self.subsystems(local=True):
 
             # Instigate finite difference on child if user requests.
-            if sub.fd_options['force_fd'] == True:
+            if sub.fd_options['force_fd']:
                 # Groups need total derivatives
                 if isinstance(sub, Group):
                     total_derivs = True
@@ -597,7 +612,7 @@ class Group(System):
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
             if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd'] == True) and \
+                                   sub.fd_options['force_fd']) and \
                                    not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
@@ -642,7 +657,7 @@ class Group(System):
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
             if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd'] == True) and \
+                             sub.fd_options['force_fd']) and \
                              not isinstance(sub, ParamComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
 
@@ -684,7 +699,7 @@ class Group(System):
             dparams = system.dpmat[voi]
 
             # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = {meta['pathname'] for meta in dparams.values()}
+            abs_inputs = {meta['pathname'] for meta in itervalues(dparams)}
 
             # Forward Mode
             if mode == 'fwd':
@@ -708,13 +723,13 @@ class Group(System):
 
                     if not nonzero:
                         # check for all zero states
-                        for key, meta in system.unknowns.items():
+                        for key, meta in iteritems(system.unknowns):
                             if meta.get('state') and np.any(dunknowns.flat[key]):
                                 nonzero = True
                                 break
 
                     if nonzero:
-                        if system.fd_options['force_fd'] == True:
+                        if system.fd_options['force_fd']:
                             system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                      dunknowns, dresids, mode)
                         else:
@@ -722,7 +737,7 @@ class Group(System):
                                                 dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
-                for var, meta in dunknowns.items():
+                for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
                         dresids[var] += dunknowns[var]
@@ -745,21 +760,20 @@ class Group(System):
                     # incoming vector is zero.
                     if np.any(dresids.vec):
                         try:
-                            dparams._set_adjoint_mode(True)
-                            if system.fd_options['force_fd'] == True:
+                            dparams.adj_accumulate_mode = True
+                            if system.fd_options['force_fd']:
                                 system._apply_linear_jac(system.params,
                                                          system.unknowns, dparams,
                                                          dunknowns, dresids, mode)
                             else:
                                 system.apply_linear(system.params, system.unknowns,
                                                     dparams, dunknowns, dresids, mode)
-
                         finally:
-                            dparams._set_adjoint_mode(False)
+                            dparams.adj_accumulate_mode = False
 
                 dresids.vec *= -1.0
 
-                for var, meta in dunknowns.items():
+                for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
                         dunknowns[var] += dresids[var]
@@ -827,7 +841,7 @@ class Group(System):
         # Make sure the new_order is valid. It must contain all susbsystems
         # in this model.
         newset = set(new_order)
-        oldset = set(self._subsystems.keys())
+        oldset = set(iterkeys(self._subsystems))
         if oldset != newset:
             missing = oldset - newset
             extra = newset - oldset
@@ -842,7 +856,7 @@ class Group(System):
 
         # Don't allow duplicates either.
         if len(newset) < len(new_order):
-            dupes = [key for key, val in Counter(new_order).items() if val>1]
+            dupes = [key for key, val in iteritems(Counter(new_order)) if val>1]
             msg = "Duplicate name found in order list: %s" % dupes
             raise ValueError(msg)
 
@@ -860,7 +874,7 @@ class Group(System):
         -------
         list of str : List of system names in execution order.
         """
-        return list(self._subsystems.keys())
+        return list(iterkeys(self._subsystems))
 
     def list_auto_order(self):
         """
@@ -882,22 +896,26 @@ class Group(System):
         if self.pathname:
             path = self.pathname.split('.')
             start = self.pathname + '.'
+            slen = len(start)
+            graph = sgraph.subgraph((n for n in sgraph
+                                      if start==n[:slen]))
         else:
             path = []
-            start = ''
-        graph = sgraph.subgraph([n for n in sgraph
-                                  if n.startswith(start)])
+            graph = sgraph.subgraph(sgraph.nodes_iter())
+
+        plen = len(path)+1
+
         renames = {}
         for node in graph.nodes_iter():
-            renames[node] = '.'.join(node.split('.')[:len(path)+1])
-            if renames[node] == node:
-                del renames[node]
+            newnode = '.'.join(node.split('.')[:plen])
+            if newnode != node:
+                renames[node] = newnode
 
         # get the graph of direct children of current group
         nx.relabel_nodes(graph, renames, copy=False)
 
         # remove self loops created by renaming
-        graph.remove_edges_from([(u, v) for u, v in graph.edges()
+        graph.remove_edges_from([(u, v) for u, v in graph.edges_iter()
                                  if u == v])
         return graph
 
@@ -948,11 +966,11 @@ class Group(System):
         """
 
         # TODO: clean this up
-        ls_inputs = set(self.dpmat[voi].keys())
-        abs_uvec = {meta['pathname'] for meta in self.dumat[voi].values()}
+        ls_inputs = set(iterkeys(self.dpmat[voi]))
+        abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
 
         for comp in self.components(local=True, recurse=True):
-            for intinp_rel, meta in comp.dpmat[voi].items():
+            for intinp_rel, meta in iteritems(comp.dpmat[voi]):
                 intinp_abs = meta['pathname']
                 src = self.connections.get(intinp_abs)
 
@@ -1006,20 +1024,20 @@ class Group(System):
 
         # collect width info
         lens = [len(u)+sum(map(len, v)) for u, v in
-                chain(vec_conns.items(), byobj_conns.items())]
+                chain(iteritems(vec_conns), iteritems(byobj_conns))]
         if lens:
             nwid = max(lens) + 9
         else:
-            lens = [len(n) for n in uvec.keys()]
+            lens = [len(n) for n in iterkeys(uvec)]
             nwid = max(lens) if lens else 12
 
-        for v, meta in uvec.items():
+        for v, meta in iteritems(uvec):
             if verbose:
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
-                pnames = [p for p, u in vec_conns.items() if u == v]
+                pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
                     if len(pnames) == 1:
@@ -1050,7 +1068,7 @@ class Group(System):
                                                      nwid=nwid))
 
         if not dvecs:
-            for dest, src in byobj_conns.items():
+            for dest, src in iteritems(byobj_conns):
                 out_stream.write(" "*(nest+8))
                 connstr = '%s -> %s:' % (src, dest)
                 template = "{0:<{nwid}} (by_obj)  ({1})\n"
@@ -1086,7 +1104,7 @@ class Group(System):
 
         return (min_procs, max_procs)
 
-    def _get_global_offset(self, name, var_rank, vec_names, sizes_table,
+    def _get_global_offset(self, name, var_rank, var_idx, sizes_table,
                            var_of_interest):
         """
         Args
@@ -1097,8 +1115,8 @@ class Group(System):
         var_rank : int
             The rank the the offset is requested for.
 
-        vec_names : list of str
-            Names of variables found in the sizes_table.
+        var_idx : int
+            Index of the variable into the sizes table.
 
         sizes_table : list of OrderDicts mappping var name to size.
             Size information for all vars in all ranks.
@@ -1113,8 +1131,7 @@ class Group(System):
             The offset into the distributed vector for the named variable
             in the specified rank (process).
         """
-        ivar = vec_names.index(name)
-        return np.sum(sizes_table[:var_rank]) + np.sum(sizes_table[var_rank, :ivar])
+        return np.sum(sizes_table[:var_rank]) + np.sum(sizes_table[var_rank, :var_idx])
 
     def _get_global_idxs(self, uname, pname, u_vecnames, u_sizes,
                          p_vecnames, p_sizes, var_of_interest, mode):
@@ -1131,14 +1148,16 @@ class Group(System):
         pname : str
             Name of the variable in the params vector.
 
-        u_vecnames : list of str
-            Names of relevant vars in the unknowns vector.
+        u_vecnames : OrderedDict of (name : idx)
+            Names of relevant vars in the unknowns vector and their index
+            into the sizes table.
 
         u_sizes : ndarray
             (rank x var) array of unknown sizes.
 
-        p_vecnames : list of str
-            Names of relevant vars in the params vector.
+        p_vecnames : OrderedDict of (name : idx)
+            Names of relevant vars in the params vector and their index
+            into the sizes table.
 
         p_sizes : ndarray
             (rank x var) array of parameter sizes.
@@ -1174,8 +1193,8 @@ class Group(System):
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
+        ivar = u_vecnames[uname]
         if 'src_indices' in umeta or 'src_indices' in pmeta:
-            ivar = u_vecnames.index(uname)
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
@@ -1196,7 +1215,7 @@ class Group(System):
                 var_rank = iproc
 
             offset = self._get_global_offset(uname, var_rank,
-                                             u_vecnames,
+                                             ivar,
                                              u_sizes,
                                              var_of_interest)
             src_idxs = arg_idxs + offset
@@ -1207,7 +1226,7 @@ class Group(System):
             var_rank = self._owning_ranks[pname]
 
         tgt_start = self._get_global_offset(pname, var_rank,
-                                            p_vecnames,
+                                            p_vecnames[pname],
                                             p_sizes,
                                             var_of_interest)
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
@@ -1233,17 +1252,22 @@ class Group(System):
         """
         relevance = self._relevance
 
-        vec_unames = [n for n in self._u_size_dicts[0].keys()
-                           if relevance.is_relevant(var_of_interest, n)]
-        vec_pnames = [n for n in self._p_size_dicts[0].keys()
-                        if relevance.is_relevant(var_of_interest, n)]
+        # create ordered dicts that map relevant vars to their index into
+        # the sizes table.
+        vec_unames = (n for n in iterkeys(self._u_size_dicts[0])
+                           if relevance.is_relevant(var_of_interest, n))
+        vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
+        vec_pnames = (n for n in iterkeys(self._p_size_dicts[0])
+                        if relevance.is_relevant(var_of_interest, n))
+        vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
         param_sizes = []
         for iproc in range(self.comm.size):
-            unknown_sizes.append([sz for n, sz in self._u_size_dicts[iproc].items()
+            #print("iproc",iproc,"comm sz",self.comm.size,"udicts",self._u_size_dicts)
+            unknown_sizes.append([sz for n, sz in iteritems(self._u_size_dicts[iproc])
                                                if n in vec_unames])
-            param_sizes.append([sz for n, sz in self._p_size_dicts[iproc].items()
+            param_sizes.append([sz for n, sz in iteritems(self._p_size_dicts[iproc])
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
@@ -1252,12 +1276,17 @@ class Group(System):
                                dtype=self._impl_factory.idx_arr_type)
 
         xfer_dict = {}
-        for param, unknown in self.connections.items():
-            if not (relevance.is_relevant(var_of_interest, param) or
-                    relevance.is_relevant(var_of_interest, unknown)):
-                continue
-
+        for param, unknown in iteritems(self.connections):
             if param in my_params:
+                urelname = self.unknowns.get_promoted_varname(unknown)
+                prelname = self.params.get_promoted_varname(param)
+
+                if not (relevance.is_relevant(var_of_interest, prelname) or
+                        relevance.is_relevant(var_of_interest, urelname)):
+                    continue
+
+                umeta = self.unknowns.metadata(urelname)
+
                 # remove our system pathname from the abs pathname of the param and
                 # get the subsystem name from that
 
@@ -1268,10 +1297,7 @@ class Group(System):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                         xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
-                    urelname = self.unknowns.get_promoted_varname(unknown)
-                    prelname = self.params.get_promoted_varname(param)
-
-                    if self.unknowns.metadata(urelname).get('pass_by_obj'):
+                    if 'pass_by_obj' in umeta and umeta['pass_by_obj']:
                         # rev is for derivs only, so no by_obj passing needed
                         if mode == 'fwd':
                             byobj_conns.append((prelname, urelname))
@@ -1284,7 +1310,7 @@ class Group(System):
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
-        for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in xfer_dict.items():
+        for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
@@ -1303,7 +1329,7 @@ class Group(System):
             full_tgts = []
             full_flats = []
             full_byobjs = []
-            for (tgt_sys, direction), (srcs, tgts, flats, byobjs) in xfer_dict.items():
+            for (tgt_sys, direction), (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):
                 if mode == direction:
                     full_srcs.extend(srcs)
                     full_tgts.extend(tgts)
@@ -1356,8 +1382,8 @@ class Group(System):
         """
         ranks = {}
 
-        local_vars = [k for k, m in self.unknowns.items() if not m.get('remote')]
-        local_vars.extend([k for k, m in self.params.items() if not m.get('remote')])
+        local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
+        local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
         if MPI:
             if trace:
@@ -1372,6 +1398,30 @@ class Group(System):
                     ranks[v] = rank
 
         return ranks
+
+    def _get_relname_map(self, unknowns):
+        """
+        Args
+        ----
+        unknowns : `VecWrapper`
+            A dict-like object containing variables keyed using promoted names.
+
+        Returns
+        -------
+        dict
+            Maps promoted name in parent (owner of unknowns and unknowns_dict) to
+            the corresponding promoted name in the child.
+        """
+        # unknowns is keyed on promoted name relative to the parent system
+        # unknowns_dict is keyed on absolute pathname
+
+        # use an ordered dict here so we can use this smaller dict to loop over in get_view
+        umap = OrderedDict()
+
+        for abspath, meta in iteritems(self._unknowns_dict):
+            umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']
+
+        return umap
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
