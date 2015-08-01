@@ -121,6 +121,7 @@ def __make_metadata(metadata):
 
     return metadata
 
+
 def __get_metadata(paths, metadata_dict):
     metadata = []
 
@@ -131,9 +132,16 @@ def __get_metadata(paths, metadata_dict):
     return metadata
 
 
-def _check_types_match(src, target):
-    if src['type'] != target['type']:
-        raise ConnectError._type_mismatch_error(src, target)
+def _check_types_match(src, tgt):
+    if src['type'] == tgt['type']:
+        return
+
+    src_indices = tgt.get('src_indices')
+    if src_indices and len(src_indices) == 1 and tgt['type'] == float:
+        return
+
+    raise ConnectError._type_mismatch_error(src, tgt)
+
 
 def check_connections(connections, params, unknowns):
     """Checks the specified connections to make sure they are valid in
@@ -163,12 +171,13 @@ def check_connections(connections, params, unknowns):
         _check_types_match(source, target)
         _check_shapes_match(source, target)
 
+
 def _check_shapes_match(source, target):
-    #Use the type of the shape of source and target to determine which the #correct function to use for shape checking
-
+    # Use the type of the shape of source and target to determine the
+    # correct function to use for shape checking
     check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
-
     check_shape_function(source, target)
+
 
 def __check_shapes_match(src, target):
     if src['shape'] != target['shape']:
@@ -187,9 +196,11 @@ def __check_shapes_match(src, target):
         else:
             raise ConnectError._shape_mismatch_error(src, target)
 
+
 def __check_val_and_shape_match(src, target):
     if src['val'].shape != target['shape']:
         raise ConnectError._val_and_shape_mismatch_error(src, target)
+
 
 __shape_checks = {
     (tuple, tuple) : __check_shapes_match,

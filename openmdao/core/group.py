@@ -230,13 +230,18 @@ class Group(System):
         # set any src_indices metadata down at Component level so it will
         # percolate up to all levels above
         if self._src_idxs:
-            for comp in self.components(recurse=True):
-                comp_pdict = comp._params_dict
-                cpname = comp.pathname + '.'
-                cplen = len(cpname)
+            for sub in self.subsystems(recurse=True):
+                pdict = sub._params_dict
+                spname = sub.pathname + '.'
+                splen = len(spname)
                 for p, idxs in iteritems(self._src_idxs):
-                    if p[:cplen] == cpname:
-                        comp_pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
+                    if p[:splen] == spname:
+                        if isinstance(sub, Component):
+                            pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
+                        elif isinstance(sub, Group):
+                            # it's a promoted var, resolve at next level
+                            target = p.split('.',1)[1]
+                            sub._src_idxs[target] = idxs
 
         for sub in self.subsystems():
             subparams, subunknowns = sub._setup_variables(compute_indices)
@@ -254,6 +259,11 @@ class Group(System):
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
+
+        # set src_indices for promoted vars (needed to setup dicts first to find them)
+        for p, idxs in self._src_idxs.items():
+            p_abs = get_absvarpathnames(p, self._params_dict, 'params')[0]
+            self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
