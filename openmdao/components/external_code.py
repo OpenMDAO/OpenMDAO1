@@ -35,9 +35,9 @@ class ExternalCode(Component):
         self.options.add_option('check_external_outputs', True, desc='Check that all input or output external files exist')
 
         self.options.add_option( 'external_input_files', [],
-            desc='(optional) list of input file names to check for the pressence of before solve_nonlinear')
+            desc='(optional) list of input file names to check the pressence of before solve_nonlinear')
         self.options.add_option( 'external_output_files', [],
-            desc='(optional) list of input file names to check for the pressence of after solve_nonlinear')
+            desc='(optional) list of input file names to check the pressence of after solve_nonlinear')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
