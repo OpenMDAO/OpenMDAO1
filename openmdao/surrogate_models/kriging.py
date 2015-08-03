@@ -5,7 +5,7 @@ from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, log10,\
-    power, diagonal, prod, square
+    power, diagonal, prod, square, hstack
 from numpy.linalg import slogdet, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
@@ -90,17 +90,17 @@ class KrigingSurrogate(SurrogateModel):
         R += R.T + eye(self.n)
         self.R = R
 
-        one = ones(self.n)
+        one = ones((self.n, 1))
         try:
             self.R_fact = cho_factor(R)
-            rhs = vstack([Y, one]).T
-            cho = cho_solve(self.R_fact, rhs).T
+            rhs = hstack([Y, one])
+            cho = cho_solve(self.R_fact, rhs)
 
-            self.mu = dot(one, cho[0])/dot(one, cho[1])
+            self.mu = dot(one.T, cho[:, :-1]) / dot(one.T, cho[:, -1])
             y_minus_mu = Y - self.mu
             self.R_solve_ymu = cho_solve(self.R_fact, y_minus_mu)
 
-            self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
+            self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
             det_factor = abs(prod(diagonal(self.R_fact[0]))**2) + 1.e-16
 
             self.log_likelihood = -self.n/2.*log(self.sig2) - \
@@ -110,12 +110,12 @@ class KrigingSurrogate(SurrogateModel):
             #------LSTSQ---------
             self.R_fact = None  # reset this to none, so we know not to use cholesky
             # self.R = self.R+diag([10e-6]*self.n)  # improve conditioning[Booker et al., 1999]
-            rhs = vstack([Y, one]).T
-            lsq = lstsq(self.R.T, rhs)[0].T
-            self.mu = dot(one, lsq[0])/dot(one, lsq[1])
+            rhs = hstack([Y, one])
+            lsq = lstsq(self.R.T, rhs)[0]
+            self.mu = dot(one.T, lsq[:, :-1])/dot(one.T, lsq[:, -1])
             y_minus_mu = Y - self.mu
             self.R_solve_ymu = lstsq(self.R, y_minus_mu)[0]
-            self.sig2 = dot(y_minus_mu, self.R_solve_ymu)/self.n
+            self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2) - \
                 1./2.*(slogdet(self.R)[1])
 

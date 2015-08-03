@@ -1,9 +1,11 @@
 """ Metamodel provides basic Meta Modeling capability."""
 
 import sys
+import numpy as np
 from copy import deepcopy
 
 from openmdao.core.component import Component, _NotSet
+from six import iteritems
 
 
 class MetaModel(Component):
@@ -28,7 +30,7 @@ class MetaModel(Component):
 
         # training will occur on first execution
         self.train = True
-        self._training_input = []
+        self._training_input = np.zeros(0)
         self._training_output = {}
 
         # When set to False (default), the metamodel retrains with the new
@@ -39,6 +41,8 @@ class MetaModel(Component):
 
         # keeps track of which sur_<name> slots are full
         self._surrogate_overrides = set()
+
+        self._input_size = 0
 
     def add_param(self, name, val=_NotSet, **kwargs):
         """ Add a `param` input to this component and a corresponding
@@ -54,7 +58,11 @@ class MetaModel(Component):
         """
         super(MetaModel, self).add_param(name, val, **kwargs)
         super(MetaModel, self).add_param('train:'+name, val=list(), pass_by_obj=True)
-        self._surrogate_param_names.append(name)
+
+        input_size = self._params_dict[name]['size']
+
+        self._surrogate_param_names.append((name, input_size))
+        self._input_size += input_size
 
     def add_output(self, name, val=_NotSet, **kwargs):
         """ Add an output to this component and a corresponding
@@ -71,8 +79,11 @@ class MetaModel(Component):
         """
         super(MetaModel, self).add_output(name, val, **kwargs)
         super(MetaModel, self).add_output('train:'+name, val=list(), pass_by_obj=True)
-        self._surrogate_output_names.append(name)
-        self._training_output[name] = []
+
+        output_shape = self._unknowns_dict[name]['shape']
+
+        self._surrogate_output_names.append((name, output_shape))
+        self._training_output[name] = np.zeros(0)
 
         if self._unknowns_dict[name].get('surrogate'):
             self._unknowns_dict[name]['default_surrogate'] = False
@@ -96,7 +107,7 @@ class MetaModel(Component):
         # create an instance of the default surrogate for outputs that
         # did not have a surrogate specified
         if self.default_surrogate is not None:
-            for name in self._surrogate_output_names:
+            for name, shape in self._surrogate_output_names:
                 if self._unknowns_dict[name].get('default_surrogate'):
                     surrogate = deepcopy(self.default_surrogate)
                     self._unknowns_dict[name]['surrogate'] = surrogate
@@ -119,7 +130,7 @@ class MetaModel(Component):
         # either explicitly or through the default surrogate
         if self.default_surrogate is None:
             no_sur = []
-            for name in self._surrogate_output_names:
+            for name, shape in self._surrogate_output_names:
                 surrogate = self._unknowns_dict[name].get('surrogate')
                 if surrogate is None:
                     no_sur.append(name)
@@ -150,12 +161,9 @@ class MetaModel(Component):
         self._train()
 
         # Now Predict for current inputs
-        inputs = []
-        for name in self._surrogate_param_names:
-            val = params[name]
-            inputs.append(val)
+        inputs = self._params_to_inputs(params)
 
-        for name in self._surrogate_output_names:
+        for name, shape in self._surrogate_output_names:
             surrogate = self._unknowns_dict[name].get('surrogate')
             if surrogate:
                 unknowns[name] = surrogate.predict(inputs)
@@ -163,10 +171,32 @@ class MetaModel(Component):
                 raise RuntimeError("Metamodel '%s': No surrogate specified for output '%s'"
                                    % (self.pathname, name))
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    def _params_to_inputs(self, params, out=None):
         """
-        Multiplies incoming vector by the Jacobian (fwd mode) or the
-        transpose Jacobian (rev mode).
+        Converts from a dictionary of parameters to the ndarray input.
+        """
+        if out is None:
+            inputs = np.zeros(self._input_size)
+        else:
+            inputs = out
+
+        idx = 0
+        for name, sz in self._surrogate_param_names:
+            val = params[name]
+            if isinstance(val, list):
+                val = np.array(val)
+            if isinstance(val, np.ndarray):
+                inputs[idx:idx + sz] = val.flat
+                idx += sz
+            else:
+                inputs[idx] = val
+                idx += 1
+        return inputs
+
+    def jacobian(self, params, unknowns, resids):
+        """
+        Returns the Jacobian as a dictionary whose keys are tuples of the form
+         ('unknown', 'param') and whose values are ndarrays.
 
         Args
         ----
@@ -176,26 +206,22 @@ class MetaModel(Component):
         unknowns : `VecWrapper`
             `VecWrapper` containing outputs and states. (u)
 
-        dparams : `VecWrapper`
-            `VecWrapper` containing either the incoming vector in forward mode
-            or the outgoing result in reverse mode. (dp)
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
 
-        dunknowns : `VecWrapper`
-            In forward mode, this `VecWrapper` contains the incoming vector for
-            the states. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        dresids : `VecWrapper`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. (dr)
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev'.
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays.
         """
 
-        # Ensure model is trained
+        # Ensure the metamodel is trained.
         self._train()
+        jac = {}
 
+        for name in self._surrogate_output_names:
+            surrogate = self._unknowns_dict[name].get('surrogate')
 
 
 
@@ -204,30 +230,82 @@ class MetaModel(Component):
         Train the metamodel, if necessary, using the provided training data.
         """
         if self.train:
+
+            num_sample = None
+            for name, sz in self._surrogate_param_names:
+                val = self.params['train:' + name]
+                if num_sample is None:
+                    num_sample = len(val)
+                elif len(val) != num_sample:
+                    msg = "MetaModel: Each variable must have the same number"\
+                          " of training points. Expected {0} but found {1} "\
+                          "points for '{2}'."\
+                          .format(num_sample, len(val), name)
+                    raise RuntimeError(msg)
+
+            for name, shape in self._surrogate_output_names:
+                val = self.unknowns['train:' + name]
+                if len(val) != num_sample:
+                    msg = "MetaModel: Each variable must have the same number" \
+                          " of training points. Expected {0} but found {1} " \
+                          "points for '{2}'." \
+                        .format(num_sample, len(val), name)
+                    raise RuntimeError(msg)
+
             if self.warm_restart:
-                base = len(self._training_input)
+                num_old_pts = self._training_input.shape[0]
+                inputs = np.zeros((num_sample + num_old_pts, self._input_size))
+                if num_old_pts > 0:
+                    inputs[:num_old_pts, :] = self._training_input
+                new_input = inputs[num_old_pts:, :]
+
             else:
-                self._training_input = []
-                base = 0
+                inputs = np.zeros((num_sample, self._input_size))
+                new_input = inputs
+
+            self._training_input = inputs
 
             # add training data for each input
-            for name in self._surrogate_param_names:
-                val = self.params['train:' + name]
-                num_sample = len(val)
-
-                for j in range(base, base + num_sample):
-                    if j > len(self._training_input) - 1:
-                        self._training_input.append([])
-                    self._training_input[j].append(val[j - base])
+            if num_sample > 0:
+                idx = 0
+                for name, sz in self._surrogate_param_names:
+                    val = self.params['train:' + name]
+                    if isinstance(val[0], float):
+                        new_input[:, idx] = val
+                        idx += 1
+                    else:
+                        for row_idx, v in enumerate(val):
+                            if not isinstance(v, np.ndarray):
+                                v = np.array(v)
+                            new_input[row_idx, idx:idx+sz] = v.flat
 
             # add training data for each output
-            for name in self._surrogate_output_names:
-                if not self.warm_restart:
-                    self._training_output[name] = []
+            for name, shape in self._surrogate_output_names:
+                if num_sample > 0:
+                    output_size = np.prod(shape)
 
-                self._training_output[name].extend(self.unknowns['train:' + name])
+                    if self.warm_restart:
+                        outputs = np.zeros((num_sample + num_old_pts,
+                                            output_size))
+                        if num_old_pts > 0:
+                            outputs[:num_old_pts, :] = self._training_output[name]
+                        self._training_output[name] = outputs
+                        new_output = outputs[num_old_pts:, :]
+                    else:
+                        outputs = np.zeros((num_sample, output_size))
+                        self._training_output[name] = outputs
+                        new_output = outputs
+
+                    val = self.unknowns['train:' + name]
+                    if isinstance(val[0], float):
+                        new_output[:, 0] = val
+                    else:
+                        for row_idx, v in enumerate(val):
+                            if not isinstance(v, np.ndarray):
+                                v = np.array(v)
+                            new_output[row_idx, :] = v.flat
+
                 surrogate = self._unknowns_dict[name].get('surrogate')
-
                 if surrogate is not None:
                     surrogate.train(self._training_input, self._training_output[name])
 

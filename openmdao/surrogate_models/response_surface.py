@@ -24,7 +24,7 @@ class ResponseSurface(SurrogateModel):
         super(ResponseSurface, self).train(x, y)
 
         x = array(x)
-        y = array(y).T
+        y = array(y)
 
         m = self.m = x.shape[0]
         n = self.n = x.shape[1]

@@ -29,7 +29,7 @@ class TestKrigingSurrogate(unittest.TestCase):
     def test_1d_kriging_training(self):
 
         x = array([[0.0], [2.0], [3.0], [4.0], [6.0]])
-        y = array([branin_1d(case) for case in x])
+        y = array([[branin_1d(case)] for case in x])
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
 
@@ -40,7 +40,7 @@ class TestKrigingSurrogate(unittest.TestCase):
 
     def test_1d_kriging_predictor(self):
         x = array([[0.0], [2.0], [3.0], [4.0], [6.0]])
-        y = array([branin_1d(case) for case in x])
+        y = array([[branin_1d(case)] for case in x])
 
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
@@ -54,7 +54,7 @@ class TestKrigingSurrogate(unittest.TestCase):
     def test_1d_kriging_ill_conditioned(self):
         # Test for least squares solver utilization when ill-conditioned
         x = [[case] for case in linspace(0., 1., 40)]
-        y = sin(x).flatten()
+        y = sin(x)
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
         new_x = array([0.5])
@@ -67,7 +67,7 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         x = array([[-2., 0.], [-0.5, 1.5], [1., 3.], [8.5, 4.5], [-3.5, 6.], [4., 7.5], [-5., 9.], [5.5, 10.5],
                    [10., 12.], [7., 13.5], [2.5, 15.]])
-        y = array([branin(case) for case in x])
+        y = array([[branin(case)] for case in x])
 
         krig1 = KrigingSurrogate()
         krig1.train(x, y)

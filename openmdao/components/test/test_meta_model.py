@@ -159,35 +159,144 @@ class TestMetaModel(unittest.TestCase):
         assert_rel_error(self, prob['meta.y1'], 2.0, .00001)
         assert_rel_error(self, prob['meta.y2'], 4.0, .00001)
 
-    #def test_array_inputs(self):
-        #raise unittest.SkipTest('MetaModel does not currently support array params')
+    def test_vector_inputs(self):
 
-        #meta = MetaModel()
-        #meta.add_param('x', np.zeros((4)))
-        #meta.add_output('y1', 0.)
-        #meta.add_output('y2', 0.)
-        #meta.default_surrogate = KrigingSurrogate()
+        meta = MetaModel()
+        meta.add_param('x', np.zeros(4))
+        meta.add_output('y1', 0.)
+        meta.add_output('y2', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
 
-        #prob = Problem(Group())
-        #prob.root.add('meta', meta)
-        #prob.setup(check=False)
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
 
-        #prob['meta.train:x'] = [
-            #[1.0, 1.0, 1.0, 1.0],
-            #[2.0, 1.0, 1.0, 1.0],
-            #[1.0, 2.0, 1.0, 1.0],
-            #[1.0, 1.0, 2.0, 1.0],
-            #[1.0, 1.0, 1.0, 2.0]
-        #]
-        #prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
-        #prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
+        prob['meta.train:x'] = [
+            [1.0, 1.0, 1.0, 1.0],
+            [2.0, 1.0, 1.0, 1.0],
+            [1.0, 2.0, 1.0, 1.0],
+            [1.0, 1.0, 2.0, 1.0],
+            [1.0, 1.0, 1.0, 2.0]
+        ]
+        prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
+        prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
 
-        #prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
-        #prob.run()
+        prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
+        prob.run()
 
-        #assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
-        #assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
+        assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
+        assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
 
+    def test_array_inputs(self):
+        meta = MetaModel()
+        meta.add_param('x', np.zeros((2,2)))
+        meta.add_output('y1', 0.)
+        meta.add_output('y2', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [
+            [[1.0, 1.0], [1.0, 1.0]],
+            [[2.0, 1.0], [1.0, 1.0]],
+            [[1.0, 2.0], [1.0, 1.0]],
+            [[1.0, 1.0], [2.0, 1.0]],
+            [[1.0, 1.0], [1.0, 2.0]]
+        ]
+        prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
+        prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
+
+        prob['meta.x'] = [[1.0, 2.0], [1.0, 1.0]]
+        prob.run()
+
+        assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
+        assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
+
+    def test_array_outputs(self):
+        meta = MetaModel()
+        meta.add_param('x', np.zeros((2, 2)))
+        meta.add_output('y', np.zeros(2,))
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [
+            [[1.0, 1.0], [1.0, 1.0]],
+            [[2.0, 1.0], [1.0, 1.0]],
+            [[1.0, 2.0], [1.0, 1.0]],
+            [[1.0, 1.0], [2.0, 1.0]],
+            [[1.0, 1.0], [1.0, 2.0]]
+        ]
+
+        prob['meta.train:y'] = [[3.0, 1.0],
+                                [2.0, 4.0],
+                                [1.0, 7.0],
+                                [6.0, -3.0],
+                                [-2.0, 3.0]]
+
+        prob['meta.x'] = [[1.0, 2.0], [1.0, 1.0]]
+        prob.run()
+
+        assert_rel_error(self, prob['meta.y'], np.array([1.0, 7.0]), .00001)
+
+    def test_unequal_training_inputs(self):
+
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [1.0, 1.0, 1.0, 1.0]
+        prob['meta.train:y'] = [1.0, 2.0]
+        prob['meta.train:f'] = [1.0, 1.0, 1.0, 1.0]
+
+        prob['meta.x'] = 1.0
+        prob['meta.y'] = 1.0
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.run()
+
+        expected = "MetaModel: Each variable must have the same number" \
+                   " of training points. Expected 4 but found" \
+                   " 2 points for 'y'."
+
+        self.assertEqual(str(cm.exception), expected)
+
+    def test_unequal_training_outputs(self):
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [1.0, 1.0, 1.0, 1.0]
+        prob['meta.train:y'] = [1.0, 2.0, 3.0, 4.0]
+        prob['meta.train:f'] = [1.0, 1.0]
+
+        prob['meta.x'] = 1.0
+        prob['meta.y'] = 1.0
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.run()
+
+        expected = "MetaModel: Each variable must have the same number" \
+                   " of training points. Expected 4 but found" \
+                   " 2 points for 'f'."
+
+        self.assertEqual(str(cm.exception), expected)
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,8 +19,8 @@ class SurrogateModel(object):
                 .format(type(self).__name__)
             raise RuntimeError(msg)
 
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    def jacobian(self, params, unknowns, resids):
 
-        msg = "{0} has not defined an apply_linear method." \
+        msg = "{0} has not defined a jacobian method." \
             .format(type(self).__name__)
         raise RuntimeError(msg)
