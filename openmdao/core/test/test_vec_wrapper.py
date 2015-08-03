@@ -101,13 +101,13 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
 
-        varmap = {
-            'C1.y1':'y1',
-            'C1.y2':'y2',
-            'C1.y3':'y3',
-        }
+        varmap = OrderedDict([
+            ('C1.y1','y1'),
+            ('C1.y2','y2'),
+            ('C1.y3','y3'),
+        ])
 
-        uview = u.get_view('noname', None, varmap, None, None)
+        uview = u.get_view('noname', None, varmap)
 
         self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
 
@@ -121,7 +121,7 @@ class TestVecWrapper(unittest.TestCase):
         self.assertEqual(u['C1.y3'], 'bar')
 
         # now get a view that's empty
-        uview2 = u.get_view('nonname', None, {}, None, None)
+        uview2 = u.get_view('nonname', None, {})
         self.assertEqual(list(uview2.keys()), [])
 
     def test_flat(self):

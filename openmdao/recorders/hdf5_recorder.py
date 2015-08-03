@@ -2,8 +2,9 @@
 
 from numbers import Number
 
-import numpy as np
+from six import iteritems
 
+import numpy as np
 from h5py import File
 
 from openmdao.recorders.base_recorder import BaseRecorder
@@ -64,7 +65,7 @@ class HDF5Recorder(BaseRecorder):
                     (r_group, resids))
 
         for grp, data in pairings:
-            for key, val in data.items():
+            for key, val in iteritems(data):
                 if isinstance(val, (np.ndarray, Number)):
                     grp.create_dataset(key, data=val)
                     # TODO: Compression/Checksum?

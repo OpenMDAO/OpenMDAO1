@@ -247,7 +247,7 @@ def _import_functs(mod, dct, names=None):
             name, alias = name
         else:
             alias = name
-        if not name.startswith('_'):
+        if not name[0] == '_':
             dct[name] = getattr(mod, name)
             dct[alias] = dct[name]
 

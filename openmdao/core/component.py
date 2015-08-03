@@ -4,14 +4,14 @@ from __future__ import print_function
 import sys
 import os
 import re
-from six import iteritems
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -31,7 +31,7 @@ class Component(System):
 
     def __init__(self):
         super(Component, self).__init__()
-        self._post_setup = False
+        self._post_setup_vars = False
         self._jacobian_cache = {}
 
     def _get_initial_val(self, val, shape):
@@ -201,7 +201,7 @@ class Component(System):
     def _check_name(self, name):
         """ Verifies that a system name is valid. Also checks for
         duplicates."""
-        if self._post_setup:
+        if self._post_setup_vars:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
                                (self.pathname, name))
         if name in self._params_dict or name in self._unknowns_dict:
@@ -232,7 +232,7 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return [k for k, m in self.params.items() if not m.get('pass_by_obj')]
+        return [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
 
     def _get_fd_unknowns(self):
         """
@@ -244,7 +244,7 @@ class Component(System):
         list of str
             List of names of unknowns for this `Component`.
         """
-        return [k for k, m in self.unknowns.items() if not m.get('pass_by_obj')]
+        return [k for k, m in iteritems(self.unknowns) if not m.get('pass_by_obj')]
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -259,6 +259,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
+        self._to_abs_unames = {}
+        self._to_abs_pnames = {}
 
         if MPI and compute_indices:
             self.setup_distrib_idxs()
@@ -266,7 +268,7 @@ class Component(System):
             # unknowns
             sizes = []
             names = []
-            for name, meta in self._unknowns_dict.items():
+            for name, meta in iteritems(self._unknowns_dict):
                 if 'src_indices' in meta:
                     sizes.append(len(meta['src_indices']))
                     names.append(name)
@@ -280,22 +282,23 @@ class Component(System):
 
         # rekey with absolute path names and add promoted names
         _new_params = OrderedDict()
-        for name, meta in self._params_dict.items():
+        for name, meta in iteritems(self._params_dict):
             pathname = self._get_var_pathname(name)
             _new_params[pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
             self._params_dict[name]['promoted_name'] = name
+            self._to_abs_pnames[name] = (pathname,)
 
         _new_unknowns = OrderedDict()
-        for name, meta in self._unknowns_dict.items():
+        for name, meta in iteritems(self._unknowns_dict):
             pathname = self._get_var_pathname(name)
             _new_unknowns[pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
+            self._to_abs_unames[name] = (pathname,)
 
-        if compute_indices:
-            self._post_setup = True
+        self._post_setup_vars = True
 
         return _new_params, _new_unknowns
 
@@ -328,9 +331,12 @@ class Component(System):
 
         self._impl_factory = impl
 
+        # create map of relative name in parent to relative name in child
+        self._relname_map = self._get_relname_map(parent.unknowns)
+
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
-        for group, vois in relevance.groups.items():
+        for group, vois in iteritems(relevance.groups):
             if group is not None:
                 for voi in vois:
                     self._create_views(top_unknowns, parent, [],
@@ -341,7 +347,7 @@ class Component(System):
         self._create_views(top_unknowns, parent, [], None)
 
         # create params vec entries for any unconnected params
-        for meta in self._params_dict.values():
+        for meta in itervalues(self._params_dict):
             pathname = meta['pathname']
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
@@ -518,7 +524,7 @@ class Component(System):
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        lens = [len(n) for n in uvec.keys()]
+        lens = [len(n) for n in iterkeys(uvec)]
         nwid = max(lens) if lens else 12
 
         commsz = self.comm.size if hasattr(self.comm, 'size') else 0
@@ -586,3 +592,29 @@ class Component(System):
         #finish up docstring
         docstring += '\n\t\"\"\"\n'
         return docstring
+
+    def _get_relname_map(self, parent_unknowns):
+        """
+        Args
+        ----
+        parent_unknowns : `VecWrapper`
+            A dict-like object containing variables keyed using promoted names.
+
+        Returns
+        -------
+        dict
+            Maps promoted name in parent (owner of unknowns) to
+            the corresponding promoted name in the child.
+        """
+        # parent_unknowns is keyed on promoted name relative to the parent system
+        # unknowns_dict is keyed on absolute pathname
+
+        # use an ordered dict here so we can use this smaller dict when looping during get_view.
+        #   (the order of this one matches the order in the parent)
+        umap = OrderedDict()
+
+        for key, meta in iteritems(self._unknowns_dict):
+            # at comp level, promoted and unknowns_dict key are same
+            umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
+
+        return umap

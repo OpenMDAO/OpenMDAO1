@@ -97,7 +97,7 @@ class OptionsDictionary(object):
         iterator
             Iterator returning the name and option for each option.
         """
-        return iteritems({name: opt['val'] for (name, opt) in self._options.items()})
+        return ((name, opt['val']) for name, opt in iteritems(self._options))
 
     def _check(self, name, value):
         """ Type checking happens here. """
