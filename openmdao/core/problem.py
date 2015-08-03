@@ -146,7 +146,7 @@ class Problem(System):
             unknown_srcs = set([s for s in srcs if s in unknowns_dict])
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                   (tgt, list(unknown_srcs)))
+                                   (tgt, sorted(unknown_srcs)))
 
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs.pop()
