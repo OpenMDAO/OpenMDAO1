@@ -30,7 +30,6 @@ class KrigingSurrogate(SurrogateModel):
         self.mu = None
         self.log_likelihood = None
 
-
     def train(self, x, y):
         """
         Train the surrogate model with the given set of inputs and outputs.
@@ -56,7 +55,6 @@ class KrigingSurrogate(SurrogateModel):
 
         self.X = array(x)
         self.Y = array(y)
-
 
         thetas = zeros(self.m)
 
@@ -86,7 +84,7 @@ class KrigingSurrogate(SurrogateModel):
 
         #weighted distance formula
         for i in range(self.n):
-            R[i, i+1:self.n] = exp(-thetas.dot(square(X[i] - X[i+1:self.n]).T))
+            R[i, i+1:self.n] = exp(-thetas.dot(square(X[i, ...] - X[i+1:self.n, ...]).T))
 
         R *= (1.0 - self.nugget)
         R += R.T + eye(self.n)

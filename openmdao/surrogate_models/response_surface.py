@@ -18,10 +18,6 @@ class ResponseSurface(SurrogateModel):
         if X is not None and Y is not None:
             self.train(X, Y)
 
-    def get_uncertain_value(self, value):
-        """Returns the value itself. Response surface equations don't have uncertainty."""
-        return value
-
     def train(self, x, y):
         """ Calculate response surface equation coefficients using least squares regression. """
         
@@ -30,10 +26,10 @@ class ResponseSurface(SurrogateModel):
         x = array(x)
         y = array(y).T
 
-        self.m = x.shape[0]
-        self.n = x.shape[1]
+        m = self.m = x.shape[0]
+        n = self.n = x.shape[1]
 
-        X = zeros((self.m, ((self.n + 1) * (self.n + 2)) // 2))
+        X = zeros((m, ((n + 1) * (n + 2)) // 2))
 
         # Modify X to include constant, squared terms and cross terms
 
@@ -41,13 +37,13 @@ class ResponseSurface(SurrogateModel):
         X[:, 0] = 1.0
 
         # Linear Terms
-        X[:, 1:self.n+1] = x
+        X[:, 1:n+1] = x
 
         # Quadratic Terms
-        X_offset = X[:, self.n + 1:]
+        X_offset = X[:, n + 1:]
         idx = 0
-        for i in range(self.n):
-            for j in range(i, self.n):
+        for i in range(n):
+            for j in range(i, n):
                 X_offset[:, idx] = x[:, i] * x[:, j]
                 idx += 1
 

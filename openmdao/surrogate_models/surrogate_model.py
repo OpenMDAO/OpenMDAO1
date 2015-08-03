@@ -10,11 +10,6 @@ class SurrogateModel(object):
     def __init__(self):
         self.trained = False
 
-    def get_uncertain_value(self, value):
-        msg = "get_uncertain_value() not implemented for {0}."\
-            .format(type(self).__name__)
-        raise NotImplementedError(msg)
-
     def train(self, x, y):
         self.trained = True
 
@@ -23,3 +18,9 @@ class SurrogateModel(object):
             msg = "{0} has not been trained, so no prediction can be made."\
                 .format(type(self).__name__)
             raise RuntimeError(msg)
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+
+        msg = "{0} has not defined an apply_linear method." \
+            .format(type(self).__name__)
+        raise RuntimeError(msg)

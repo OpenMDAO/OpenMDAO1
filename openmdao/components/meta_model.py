@@ -147,34 +147,7 @@ class MetaModel(Component):
             `VecWrapper` containing residuals. (r)
         """
         # Train first
-        if self.train:
-            if self.warm_restart:
-                base = len(self._training_input)
-            else:
-                self._training_input = []
-                base = 0
-
-            # add training data for each input
-            for name in self._surrogate_param_names:
-                val = self.params['train:'+name]
-                num_sample = len(val)
-
-                for j in range(base, base + num_sample):
-                    if j > len(self._training_input) - 1:
-                        self._training_input.append([])
-                    self._training_input[j].append(val[j-base])
-
-            # add training data for each output
-            for name in self._surrogate_output_names:
-                if not self.warm_restart:
-                    self._training_output[name] = []
-
-                self._training_output[name].extend(self.unknowns['train:'+name])
-                surrogate = self._unknowns_dict[name].get('surrogate')
-                if surrogate is not None:
-                    surrogate.train(self._training_input, self._training_output[name])
-
-            self.train = False
+        self._train()
 
         # Now Predict for current inputs
         inputs = []
@@ -189,3 +162,73 @@ class MetaModel(Component):
             else:
                 raise RuntimeError("Metamodel '%s': No surrogate specified for output '%s'"
                                    % (self.pathname, name))
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+        """
+        Multiplies incoming vector by the Jacobian (fwd mode) or the
+        transpose Jacobian (rev mode).
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        dparams : `VecWrapper`
+            `VecWrapper` containing either the incoming vector in forward mode
+            or the outgoing result in reverse mode. (dp)
+
+        dunknowns : `VecWrapper`
+            In forward mode, this `VecWrapper` contains the incoming vector for
+            the states. In reverse mode, it contains the outgoing vector for
+            the states. (du)
+
+        dresids : `VecWrapper`
+            `VecWrapper` containing either the outgoing result in forward mode
+            or the incoming vector in reverse mode. (dr)
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
+        """
+
+        # Ensure model is trained
+        self._train()
+
+
+
+
+    def _train(self):
+        """
+        Train the metamodel, if necessary, using the provided training data.
+        """
+        if self.train:
+            if self.warm_restart:
+                base = len(self._training_input)
+            else:
+                self._training_input = []
+                base = 0
+
+            # add training data for each input
+            for name in self._surrogate_param_names:
+                val = self.params['train:' + name]
+                num_sample = len(val)
+
+                for j in range(base, base + num_sample):
+                    if j > len(self._training_input) - 1:
+                        self._training_input.append([])
+                    self._training_input[j].append(val[j - base])
+
+            # add training data for each output
+            for name in self._surrogate_output_names:
+                if not self.warm_restart:
+                    self._training_output[name] = []
+
+                self._training_output[name].extend(self.unknowns['train:' + name])
+                surrogate = self._unknowns_dict[name].get('surrogate')
+
+                if surrogate is not None:
+                    surrogate.train(self._training_input, self._training_output[name])
+
+            self.train = False
