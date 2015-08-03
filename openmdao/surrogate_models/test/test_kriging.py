@@ -26,7 +26,7 @@ class TestKrigingSurrogate(unittest.TestCase):
     def setUp(self):
         random.seed(10)
 
-    def test_1d_kriging_training(self):
+    def test_1d_training(self):
 
         x = array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = array([[branin_1d(case)] for case in x])
@@ -38,7 +38,7 @@ class TestKrigingSurrogate(unittest.TestCase):
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
 
-    def test_1d_kriging_predictor(self):
+    def test_1d_predictor(self):
         x = array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = array([[branin_1d(case)] for case in x])
 
@@ -51,9 +51,9 @@ class TestKrigingSurrogate(unittest.TestCase):
         assert_rel_error(self, mu, 0.397887, 1e-1)
         assert_rel_error(self, sigma, 0.0294172, 1e-2)
 
-    def test_1d_kriging_ill_conditioned(self):
+    def test_1d_ill_conditioned(self):
         # Test for least squares solver utilization when ill-conditioned
-        x = [[case] for case in linspace(0., 1., 40)]
+        x = array([[case] for case in linspace(0., 1., 40)])
         y = sin(x)
         krig1 = KrigingSurrogate()
         krig1.train(x, y)
@@ -63,7 +63,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         self.assertTrue( sigma < 1e-8 )
         assert_rel_error(self, mu, sin(0.5), 1e-6)
 
-    def test_2d_kriging(self):
+    def test_2d(self):
 
         x = array([[-2., 0.], [-0.5, 1.5], [1., 3.], [8.5, 4.5], [-3.5, 6.], [4., 7.5], [-5., 9.], [5.5, 10.5],
                    [10., 12.], [7., 13.5], [2.5, 15.]])
@@ -103,7 +103,31 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), 'KrigingSurrogates require at least 2 training points.')
 
+    def test_vector_input(self):
+        krig1 = KrigingSurrogate()
 
+        x = array([[0., 0., 0.], [1., 1., 1.]])
+        y = array([[0.], [3.]])
+
+        krig1.train(x, y)
+
+        for x0, y0 in zip(x, y):
+            mu, sigma = krig1.predict(x0)
+            assert_rel_error(self, mu, y0, 1e-9)
+            assert_rel_error(self, sigma, 0, 1e-6)
+
+    def test_vector_output(self):
+        krig1 = KrigingSurrogate()
+
+        y = array([[0., 0.], [1., 1.], [2., 0.]])
+        x = array([[0.], [2.], [4.]])
+
+        krig1.train(x, y)
+
+        for x0, y0 in zip(x, y):
+            mu, sigma = krig1.predict(x0)
+            assert_rel_error(self, mu, y0, 1e-9)
+            assert_rel_error(self, sigma, 0, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

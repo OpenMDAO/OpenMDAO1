@@ -1,11 +1,11 @@
 """ Surrogate model based on Kriging. """
-from math import log, sqrt
+from math import log
 
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, log10,\
-    power, diagonal, prod, square, hstack
+    power, diagonal, prod, square, hstack, ndarray, sqrt
 from numpy.linalg import slogdet, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
@@ -53,8 +53,10 @@ class KrigingSurrogate(SurrogateModel):
                 'KrigingSurrogates require at least 2 training points.'
             )
 
-        self.X = array(x)
-        self.Y = array(y)
+        # self.X = array(x)
+        # self.Y = array(y)
+        self.X = x
+        self.Y = y
 
         thetas = zeros(self.m)
 
@@ -103,8 +105,12 @@ class KrigingSurrogate(SurrogateModel):
             self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
             det_factor = abs(prod(diagonal(self.R_fact[0]))**2) + 1.e-16
 
-            self.log_likelihood = -self.n/2.*log(self.sig2) - \
-                1./2.*log(det_factor)
+            if isinstance(self.sig2, ndarray):
+                self.log_likelihood = -self.n / 2. * slogdet(self.sig2)[1] - \
+                    1. / 2. * log(det_factor)
+            else:
+                self.log_likelihood = -self.n/2.*log(self.sig2) - \
+                    1./2.*log(det_factor)
 
         except (linalg.LinAlgError, ValueError):
             #------LSTSQ---------
@@ -116,8 +122,12 @@ class KrigingSurrogate(SurrogateModel):
             y_minus_mu = Y - self.mu
             self.R_solve_ymu = lstsq(self.R, y_minus_mu)[0]
             self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
-            self.log_likelihood = -self.n/2.*log(self.sig2) - \
-                1./2.*(slogdet(self.R)[1])
+            if isinstance(self.sig2, ndarray):
+                self.log_likelihood = -self.n / 2. * slogdet(self.sig2)[1] - \
+                                      1. / 2. * slogdet(self.R)[1]
+            else:
+                self.log_likelihood = -self.n / 2. * log(self.sig2) - \
+                                      1. / 2. * slogdet(self.R)[1]
 
     def predict(self, x):
         """
@@ -134,7 +144,7 @@ class KrigingSurrogate(SurrogateModel):
 
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
-        x = array(x)
+        # x = array(x)
         r = exp(-thetas.dot(square((X - x).T)))
 
         one = ones(self.n)
