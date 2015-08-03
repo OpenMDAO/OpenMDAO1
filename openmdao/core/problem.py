@@ -63,16 +63,22 @@ class Problem(System):
             return self.root.unknowns[name]
         elif name in self.root.params:
             return self.root.params[name]
+        elif name in self.root._to_abs_pnames:
+            for p in self.root._to_abs_pnames[name]:
+                return self._rec_get_param(p)
         elif name in self._dangling:
             for p in self._dangling[name]:
-                parts = p.rsplit('.', 1)
-                if len(parts) == 1:
-                    return self.root.params[p]
-                else:
-                    grp = self.root._subsystem(parts[0])
-                    return grp.params[parts[1]]
+                return self._rec_get_param(p)
         else:
             raise KeyError("Variable '%s' not found." % name)
+
+    def _rec_get_param(self, absname):
+        parts = absname.rsplit('.', 1)
+        if len(parts) == 1:
+            return self.root.params[absname]
+        else:
+            grp = self.root._subsystem(parts[0])
+            return grp.params[parts[1]]
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
