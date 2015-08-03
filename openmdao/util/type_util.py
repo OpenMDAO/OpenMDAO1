@@ -40,7 +40,7 @@ def is_differentiable(val):
         return False
     elif isinstance(val, real_types):
         return True
-    elif isinstance(val, numpy.ndarray) and (str(val.dtype).startswith('float') or \
-                                             str(val.dtype).startswith('complex')):
+    elif isinstance(val, numpy.ndarray) and (str(val.dtype)[:5]=='float' or \
+                                             str(val.dtype)[:7]=='complex'):
         return True
     return False

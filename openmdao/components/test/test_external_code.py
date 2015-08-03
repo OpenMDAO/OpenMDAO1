@@ -44,12 +44,11 @@ class TestExternalCode(unittest.TestCase):
     def test_normal(self):
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 
-        self.extcode.options['external_files'] = [
-            { 'path': 'external_code_for_testing.py', 'input': True},
-            { 'path': 'external_code_output.txt', 'output': True},
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py',]
+        self.extcode.options['external_output_files'] = ['external_code_output.txt',]
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
 
     def test_timeout(self):
@@ -58,11 +57,10 @@ class TestExternalCode(unittest.TestCase):
              'external_code_output.txt', '--delay', '5']
         self.extcode.options['timeout'] = 1.0
 
-        self.extcode.options['external_files'] = [
-            {'path':'external_code_for_testing.py', 'input': True},
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         try:
             self.top.run()
         except RuntimeError as exc:
@@ -107,7 +105,8 @@ class TestExternalCode(unittest.TestCase):
         self.extcode.options['env_vars'] = {'TEST_ENV_VAR': 'SOME_ENV_VAR_VALUE'}
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt', '--write_test_env_var']
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
 
         # Check to see if output file contains the env var value
@@ -121,10 +120,8 @@ class TestExternalCode(unittest.TestCase):
         # If check_external_outputs is True, there will be an exception, but since we set it
         #   to False, no exception should be thrown
         self.extcode.options['check_external_outputs'] = False
-        self.extcode.options['external_files'] = [
-            { 'path': 'external_code_for_testing.py', 'input': True },
-            { 'path': 'does_not_exist.txt', 'output': True},
-            ]
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py',]
+        self.extcode.options['external_output_files'] = ['does_not_exist.txt',]
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt']
 
         self.top.setup(check=False)

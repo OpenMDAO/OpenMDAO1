@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from six import iteritems
+
 from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
 
@@ -180,7 +182,7 @@ class LinearGaussSeidel(LinearSolver):
         system.apply_linear(mode, ls_inputs=outputs, vois=rhs_mat.keys())
 
         norm = 0.0
-        for voi, rhs in rhs_mat.items():
+        for voi, rhs in iteritems(rhs_mat):
             rhs_vec[voi].vec[:] -= rhs
             norm += rhs_vec[voi].norm()**2
 

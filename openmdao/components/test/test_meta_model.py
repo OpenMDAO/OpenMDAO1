@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
 
-from openmdao.core import Component, Group, Problem
+from openmdao.core import Group, Problem
 from openmdao.components import MetaModel
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
 
