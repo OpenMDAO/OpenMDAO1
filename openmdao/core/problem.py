@@ -63,16 +63,22 @@ class Problem(System):
             return self.root.unknowns[name]
         elif name in self.root.params:
             return self.root.params[name]
+        elif name in self.root._to_abs_pnames:
+            for p in self.root._to_abs_pnames[name]:
+                return self._rec_get_param(p)
         elif name in self._dangling:
             for p in self._dangling[name]:
-                parts = p.rsplit('.', 1)
-                if len(parts) == 1:
-                    return self.root.params[p]
-                else:
-                    grp = self.root._subsystem(parts[0])
-                    return grp.params[parts[1]]
+                return self._rec_get_param(p)
         else:
             raise KeyError("Variable '%s' not found." % name)
+
+    def _rec_get_param(self, absname):
+        parts = absname.rsplit('.', 1)
+        if len(parts) == 1:
+            return self.root.params[absname]
+        else:
+            grp = self.root._subsystem(parts[0])
+            return grp.params[parts[1]]
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
@@ -143,13 +149,13 @@ class Problem(System):
 
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = [s for s in srcs if s in unknowns_dict]
+            unknown_srcs = set([s for s in srcs if s in unknowns_dict])
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                   (tgt, unknown_srcs))
+                                   (tgt, sorted(unknown_srcs)))
 
             if unknown_srcs:
-                newconns[tgt] = unknown_srcs[0]
+                newconns[tgt] = unknown_srcs.pop()
 
         connections = newconns
 
