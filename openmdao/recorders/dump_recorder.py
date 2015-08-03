@@ -74,3 +74,6 @@ class DumpRecorder(BaseRecorder):
         write("Resids:\n")
         for resid, val in sorted(iteritems(resids)):
             write("  {0}: {1}\n".format(resid, str(val)))
+
+        # Flush once per iteration to allow external scripts to process the data.
+        self.out.flush()
