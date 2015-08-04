@@ -52,24 +52,24 @@ class TestExternalCode(unittest.TestCase):
         self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
 
-    def test_ls_command(self):
-        output_filename = 'ls_output.txt'
-        if sys.platform == 'win32':
-            self.extcode.options['command'] = ['dir', ]
-        else:
-            self.extcode.options['command'] = ['ls', ]
+    # def test_ls_command(self):
+    #     output_filename = 'ls_output.txt'
+    #     if sys.platform == 'win32':
+    #         self.extcode.options['command'] = ['dir', ]
+    #     else:
+    #         self.extcode.options['command'] = ['ls', ]
 
-        self.extcode.stdout = output_filename
+    #     self.extcode.stdout = output_filename
 
-        self.extcode.options['external_output_files'] = [output_filename,]
+    #     self.extcode.options['external_output_files'] = [output_filename,]
 
-        self.top.setup()
-        self.top.run()
+    #     self.top.setup()
+    #     self.top.run()
 
-        # check the contents of the output file for 'external_code_for_testing.py'
-        with open(os.path.join(self.tempdir, output_filename), 'r') as out:
-            file_contents = out.read()
-        self.assertTrue('external_code_for_testing.py' in file_contents)
+    #     # check the contents of the output file for 'external_code_for_testing.py'
+    #     with open(os.path.join(self.tempdir, output_filename), 'r') as out:
+    #         file_contents = out.read()
+    #     self.assertTrue('external_code_for_testing.py' in file_contents)
 
     def test_timeout(self):
 
