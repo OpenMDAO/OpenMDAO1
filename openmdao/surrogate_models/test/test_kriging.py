@@ -3,8 +3,9 @@
 
 import unittest
 import random
+import itertools
 
-from numpy import array, linspace, sin, cos, pi
+from numpy import array, linspace, sin, cos, pi, meshgrid
 
 from openmdao.surrogate_models import KrigingSurrogate
 from openmdao.test.util import assert_rel_error
@@ -128,6 +129,27 @@ class TestKrigingSurrogate(unittest.TestCase):
             mu, sigma = krig1.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
+
+    def test_scalar_derivs(self):
+        krig1 = KrigingSurrogate()
+
+        x = array([[0.], [1.], [2.], [3.]])
+        y = x.copy()
+
+        krig1.train(x,y)
+        jac = krig1.jacobian(array([[0.]]))
+
+        assert_rel_error(self, jac[0][0], 1., 1e-3)
+
+    def test_vector_derivs(self):
+        krig1 = KrigingSurrogate()
+
+        X = array([[x, y] for x,y in itertools.product(linspace(0, 1, 10), repeat=2)])
+        Y = array([[a+b, a-b] for a, b in X])
+
+        krig1.train(X, Y)
+        jac = krig1.jacobian(array([[0.5, 0.5]]))
+        assert_rel_error(self, jac, array([[1, 1], [1, -1]]), 1e-5)
 
 if __name__ == "__main__":
     unittest.main()
