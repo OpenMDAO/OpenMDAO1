@@ -48,7 +48,8 @@ class TestExternalCode(unittest.TestCase):
         self.extcode.options['external_input_files'] = ['external_code_for_testing.py',]
         self.extcode.options['external_output_files'] = ['external_code_output.txt',]
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
 
     def test_ls_command(self):
@@ -78,7 +79,8 @@ class TestExternalCode(unittest.TestCase):
 
         self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         try:
             self.top.run()
         except RuntimeError as exc:
@@ -123,7 +125,8 @@ class TestExternalCode(unittest.TestCase):
         self.extcode.options['env_vars'] = {'TEST_ENV_VAR': 'SOME_ENV_VAR_VALUE'}
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py', 'external_code_output.txt', '--write_test_env_var']
 
-        self.top.setup(check=False)
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
 
         # Check to see if output file contains the env var value

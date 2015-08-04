@@ -3,7 +3,7 @@ human-readable text output to a stream."""
 
 import sys
 
-from six import string_types
+from six import string_types, iteritems
 
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
@@ -64,13 +64,16 @@ class DumpRecorder(BaseRecorder):
         write(fmat.format(format_iteration_coordinate(metadata['coord'])))
 
         write("Params:\n")
-        for param, val in sorted(params.items()):
+        for param, val in sorted(iteritems(params)):
             write("  {0}: {1}\n".format(param, str(val)))
 
         write("Unknowns:\n")
-        for unknown, val in sorted(unknowns.items()):
+        for unknown, val in sorted(iteritems(unknowns)):
             write("  {0}: {1}\n".format(unknown, str(val)))
 
         write("Resids:\n")
-        for resid, val in sorted(resids.items()):
+        for resid, val in sorted(iteritems(resids)):
             write("  {0}: {1}\n".format(resid, str(val)))
+
+        # Flush once per iteration to allow external scripts to process the data.
+        self.out.flush()

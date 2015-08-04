@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 from itertools import chain
+from six import iteritems
 
 import numpy as np
 
@@ -50,7 +51,7 @@ class Driver(object):
         items = [self._params, self._objs, self._cons]
 
         for item, item_name in zip(items, item_names):
-            for name, meta in item.items():
+            for name, meta in iteritems(item):
 
                 # Check validity of variable
                 if name not in root.unknowns:
@@ -67,12 +68,12 @@ class Driver(object):
     def _map_voi_indices(self):
         poi_indices = {}
         qoi_indices = {}
-        for name, meta in chain(self._cons.items(), self._objs.items()):
+        for name, meta in chain(iteritems(self._cons), iteritems(self._objs)):
             # set indices of interest
             if 'indices' in meta:
                 qoi_indices[name] = meta['indices']
 
-        for name, meta in self._params.items():
+        for name, meta in iteritems(self._params):
             # set indices of interest
             if 'indices' in meta:
                 poi_indices[name] = meta['indices']
@@ -221,7 +222,7 @@ class Driver(object):
         uvec = self.root.unknowns
         params = OrderedDict()
 
-        for key, meta in self._params.items():
+        for key, meta in iteritems(self._params):
             scaler = meta['scaler']
             adder = meta['adder']
             flatval = uvec.flat[key]
@@ -270,7 +271,7 @@ class Driver(object):
         scaler = self._params[name]['scaler']
         adder = self._params[name]['adder']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-           or scaler != 0.0 or adder != 1.0:
+           or scaler != 1.0 or adder != 0.0:
             self.root.unknowns[name] = value/scaler - adder
         else:
             self.root.unknowns[name] = value
@@ -333,7 +334,7 @@ class Driver(object):
         uvec = self.root.unknowns
         objs = OrderedDict()
 
-        for key, meta in self._objs.items():
+        for key, meta in iteritems(self._objs):
             scaler = meta['scaler']
             adder = meta['adder']
             flatval = uvec.flat[key]
@@ -438,12 +439,12 @@ class Driver(object):
         uvec = self.root.unknowns
         cons = OrderedDict()
 
-        for key, meta in self._cons.items():
+        for key, meta in iteritems(self._cons):
 
             if lintype == 'linear' and meta['linear'] == False:
                 continue
 
-            if lintype == 'nonlinear' and meta['linear'] == True:
+            if lintype == 'nonlinear' and meta['linear']:
                 continue
 
             if ctype == 'eq' and meta['ctype'] == 'ineq':

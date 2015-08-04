@@ -3,10 +3,10 @@
 import sys
 import numpy
 from numpy.linalg import norm
-from six import iteritems
+from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
-from openmdao.util.ordered_dict import OrderedDict
+from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
 
@@ -21,7 +21,7 @@ class _flat_dict(object):
 
     def __getitem__(self, name):
         meta = self._dict[name]
-        if meta.get('pass_by_obj'):
+        if 'pass_by_obj' in meta and meta['pass_by_obj']:
             raise ValueError("'%s' is a 'pass by object' variable. Flat value not found." % name)
         return self._dict[name]['val']
 
@@ -70,7 +70,7 @@ class VecWrapper(object):
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
-        self._slices = OrderedDict()
+        self._slices = {}
 
         # add a flat attribute that will have access method consistent
         # with non-flat access  (__getitem__)
@@ -110,7 +110,7 @@ class VecWrapper(object):
         Sets up the internal dict that maps absolute name to promoted name.
         """
         self._to_prom_name = {}
-        for prom_name, meta in self.items():
+        for prom_name, meta in iteritems(self):
             self._to_prom_name[meta['pathname']] = prom_name
 
     def __getitem__(self, name):
@@ -128,31 +128,28 @@ class VecWrapper(object):
         """
         meta = self.metadata(name)
 
-        if meta.get('pass_by_obj'):
+        if 'pass_by_obj' in meta and meta['pass_by_obj']:
             return meta['val'].val
 
-        unitconv = meta.get('unit_conv')
-        shape = meta.get('shape')
-
         # For dparam vector, getitem is disabled in adjoint mode.
-        if self.adj_accumulate_mode == True:
-            return numpy.zeros((shape))
-
-        # Convert units
-        elif unitconv:
-            scale, offset = unitconv
+        if self.adj_accumulate_mode:
+            return numpy.zeros((meta['shape']))
+        elif 'unit_conv' in meta:
+            # Convert units
+            scale, offset = meta['unit_conv']
 
             # Gradient is just the scale
             if self.deriv_units:
                 offset = 0.0
 
+            shape = meta['shape']
             # if shape is 1, it's a float
             if shape == 1:
                 return scale*(meta['val'][0] + offset)
             else:
                 return scale*(meta['val'].reshape(shape) + offset)
-
         else:
+            shape = meta['shape']
             # if shape is 1, it's a float
             if shape == 1:
                 return meta['val'][0]
@@ -173,7 +170,7 @@ class VecWrapper(object):
         """
         meta = self.metadata(name)
 
-        if meta.get('pass_by_obj'):
+        if 'pass_by_obj' in meta and meta['pass_by_obj']:
             meta['val'].val = value
             return
 
@@ -188,7 +185,6 @@ class VecWrapper(object):
                     meta['val'][:] += scale*value.flat[:]
                 else:
                     meta['val'][0] += scale*value
-
             else:
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] += value.flat[:]
@@ -204,7 +200,6 @@ class VecWrapper(object):
                     meta['val'][:] = scale*value.flat[:]
                 else:
                     meta['val'][0] = scale*value
-
             else:
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] = value.flat[:]
@@ -245,7 +240,26 @@ class VecWrapper(object):
         """
         return self._vardict.keys()
 
+    def iterkeys(self):
+        """
+        Returns
+        -------
+        iter of str
+            the keys (variable names) in this vector.
+        """
+        return iterkeys(self._vardict)
+
     def items(self):
+        """
+        Returns
+        -------
+        list of (str, dict)
+            List of tuples containing the name and metadata dict for each
+            variable.
+        """
+        return self._vardict.items()
+
+    def iteritems(self):
         """
         Returns
         -------
@@ -258,11 +272,19 @@ class VecWrapper(object):
         """
         Returns
         -------
-        iterator
-            Iterator returning a metadata dict for each variable.
+        list of dict
+            List containing metadata dict for each variable.
         """
-        for meta in self._vardict.values():
-            yield meta
+        return self._vardict.values()
+
+    def itervalues(self):
+        """
+        Returns
+        -------
+        iter of dict
+            Iterator yielding metadata dict for each variable.
+        """
+        return self._vardict.values()
 
     def get_local_idxs(self, name, idx_dict):
         """
@@ -312,7 +334,7 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, sys_pathname, comm, varmap, relevance, var_of_interest):
+    def get_view(self, sys_pathname, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one.
 
@@ -336,10 +358,14 @@ class VecWrapper(object):
         view = self.__class__(sys_pathname, comm)
         view_size = 0
 
+        vardict = self._vardict
         start = -1
-        for name, meta in self.items():
-            if name in varmap:
-                view._vardict[varmap[name]] = self._vardict[name]
+
+        # varmap is ordered, in the same order as vardict
+        for name, pname in iteritems(varmap):
+            if name in vardict:
+                meta = vardict[name]
+                view._vardict[pname] = meta
                 if not meta.get('pass_by_obj') and not meta.get('remote'):
                     pstart, pend = self._slices[name]
                     if start == -1:
@@ -350,7 +376,7 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._slices[varmap[name]] = (view_size, view_size + meta['size'])
+                    view._slices[pname] = (view_size, view_size + meta['size'])
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -466,7 +492,7 @@ class VecWrapper(object):
         list
             A list of names of state variables.
         """
-        return [n for n, meta in self.items() if meta.get('state')]
+        return [n for n, meta in iteritems(self._vardict) if meta.get('state')]
 
     def get_vecvars(self):
         """
@@ -474,7 +500,8 @@ class VecWrapper(object):
         -------
             A list of names of variables found in our 'vec' array.
         """
-        return [(n, meta) for n, meta in self.items() if not meta.get('pass_by_obj')]
+        return [(n, meta) for n, meta in iteritems(self._vardict)
+                     if not meta.get('pass_by_obj')]
 
     def get_byobjs(self):
         """
@@ -484,7 +511,8 @@ class VecWrapper(object):
             A list of names of variables that are passed by object rather than
             through scattering entries from one array to another.
         """
-        return [(n, meta) for n, meta  in self.items() if meta.get('pass_by_obj')]
+        return [(n, meta) for n, meta in iteritems(self._vardict)
+                   if meta.get('pass_by_obj')]
 
     def _scoped_abs_name(self, name):
         """
@@ -524,7 +552,7 @@ class VecWrapper(object):
         nwid = max(lens) if lens else 10
         vlens = [len(repr(self[v])) for v in self.keys()]
         vwid = max(vlens) if vlens else 1
-        if len(self.get_vecvars()) != len(self.keys()): # we have some pass by obj
+        if len(self.get_vecvars()) != len(self): # we have some pass by obj
             defwid = 8
         else:
             defwid = 1
@@ -532,7 +560,7 @@ class VecWrapper(object):
                        if v in self._slices]+[defwid]
         swid = max(slens)
 
-        for v, meta in self.items():
+        for v, meta in iteritems(self):
             if meta.get('pass_by_obj') or meta.get('remote'):
                 continue
             if v in self._slices:
@@ -547,7 +575,7 @@ class VecWrapper(object):
                                              swid=swid,
                                              vwid=vwid))
 
-        for v, meta in self.items():
+        for v, meta in iteritems(self):
             if meta.get('pass_by_obj') and not meta.get('remote'):
                 template = "{0:<{nwid}} {1:<{swid}} {2}\n"
                 out_stream.write(template.format(v, '(by obj)',
@@ -557,16 +585,12 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _set_adjoint_mode(self, mode=False):
-        """ Turn on or off adjoint accumlate mode."""
-        self.adj_accumulate_mode = mode
-
-
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
 
-    def setup(self, unknowns_dict, relevant_vars=None, store_byobjs=False):
+    def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
+              store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -578,9 +602,11 @@ class SrcVecWrapper(VecWrapper):
             Dictionary of metadata for unknown variables collected from
             components.
 
-        relevant_vars : iter of str
-            Names of variables that are relevant a particular variable of
-            interest.
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
 
         store_byobjs : bool, optional
             If True, then store 'pass by object' variables.
@@ -588,9 +614,10 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vec_size = 0
-        for meta in unknowns_dict.values():
+        for meta in itervalues(unknowns_dict):
             promname = meta['promoted_name']
-            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
+            if relevance is None or relevance.is_relevant(var_of_interest,
+                                                          meta['top_promoted_name']):
                 vmeta = self._setup_var_meta(meta['pathname'], meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[promname] = (vec_size, vec_size + vmeta['size'])
@@ -601,7 +628,7 @@ class SrcVecWrapper(VecWrapper):
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in self.items():
+        for name, meta in iteritems(self):
             if not meta.get('remote') and not meta.get('pass_by_obj'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
@@ -609,9 +636,10 @@ class SrcVecWrapper(VecWrapper):
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
-            for meta in unknowns_dict.values():
-                if (relevant_vars is None or meta['pathname'] in relevant_vars) \
-                   and not meta.get('remote'):
+            for meta in itervalues(unknowns_dict):
+                if 'remote' not in meta and (relevance is None or
+                                             relevance.is_relevant(var_of_interest,
+                                                                  meta['pathname'])):
                     self[meta['promoted_name']] = meta['val']
 
         self._setup_prom_map()
@@ -647,7 +675,7 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing an `OrderedDict` mapping var name to
             local size for 'pass by vector' variables.
         """
-        sizes = OrderedDict([(n, m['size']) for n, m in self.items()
+        sizes = OrderedDict([(n, m['size']) for n, m in iteritems(self._vardict)
                  if not m.get('pass_by_obj') and not m.get('remote')])
         return [sizes]
 
@@ -656,7 +684,7 @@ class TgtVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevant_vars=None, store_byobjs=False):
+              connections, relevance=None, var_of_interest=None, store_byobjs=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -680,9 +708,11 @@ class TgtVecWrapper(VecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
-        relevant_vars : iter of str
-            Names of variables that are relevant a particular variable of
-            interest.
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
@@ -694,9 +724,10 @@ class TgtVecWrapper(VecWrapper):
 
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
-        for meta in params_dict.values():
+        for meta in itervalues(params_dict):
             pathname = meta['pathname']
-            if relevant_vars is None or meta['top_promoted_name'] in relevant_vars:
+            if relevance is None or relevance.is_relevant(var_of_interest,
+                                                          meta['top_promoted_name']):
                 if pathname in my_params:
                     # if connected, get metadata from the source
                     src_pathname = connections.get(pathname)
@@ -723,7 +754,7 @@ class TgtVecWrapper(VecWrapper):
         self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in self.items():
+        for name, meta in iteritems(self._vardict):
             if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
@@ -739,9 +770,11 @@ class TgtVecWrapper(VecWrapper):
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 
         # Finally, set up unit conversions, if any exist.
-        for meta in params_dict.values():
+        for meta in itervalues(params_dict):
             pathname = meta['pathname']
-            if pathname in my_params and (relevant_vars is None or pathname in relevant_vars):
+            if pathname in my_params and (relevance is None or
+                                          relevance.is_relevant(var_of_interest,
+                                                                pathname)):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
                     scale, offset = unitconv
@@ -816,7 +849,7 @@ class TgtVecWrapper(VecWrapper):
             in this `VecWrapper`.
         """
         psizes = OrderedDict()
-        for name, m in self.items():
+        for name, m in iteritems(self._vardict):
             if m.get('pass_by_obj') or not m.get('owned'):
                 continue
             if m.get('remote'):

@@ -1,7 +1,6 @@
 
 import unittest
 import math
-from six import iteritems
 from six.moves import cStringIO
 
 import numpy as np

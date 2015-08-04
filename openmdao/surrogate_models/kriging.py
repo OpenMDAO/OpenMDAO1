@@ -104,7 +104,7 @@ class KrigingSurrogate(object):
             self._calculate_log_likelihood()
             return -self.log_likelihood
 
-        #if self.thetas == None:
+        #if self.thetas is None:
         #self.thetas = fmin(_calcll, thetas, disp=False, ftol=0.0001)
         def lowerBound(log10t):
             return log10t - log10(self.thetas)
@@ -122,7 +122,7 @@ class KrigingSurrogate(object):
         self._calculate_log_likelihood()
 
     def _calculate_log_likelihood(self):
-        #if self.m == None:
+        #if self.m is None:
         #    Give error message
         R = zeros((self.n, self.n))
         X, Y = array(self.X), array(self.Y)
