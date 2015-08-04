@@ -219,11 +219,18 @@ class MetaModel(Component):
         # Ensure the metamodel is trained.
         self._train()
         jac = {}
+        inputs = self._params_to_inputs(params)
 
-        for name in self._surrogate_output_names:
-            surrogate = self._unknowns_dict[name].get('surrogate')
+        for uname, _ in self._surrogate_output_names:
+            surrogate = self._unknowns_dict[uname].get('surrogate')
+            sjac = surrogate.jacobian(inputs)
 
+            idx = 0
+            for pname, sz in self._surrogate_param_names:
+                jac[(uname, pname)] = sjac[:, idx:idx+sz]
+                idx += sz
 
+        return jac
 
     def _train(self):
         """
@@ -310,3 +317,27 @@ class MetaModel(Component):
                     surrogate.train(self._training_input, self._training_output[name])
 
             self.train = False
+
+    def _get_fd_params(self):
+        """
+        Get the list of parameters that are needed to perform a
+        finite difference on this `Component`.
+
+        Returns
+        -------
+        list of str
+            List of names of params for this `Component` .
+        """
+        return [k for k, m in iteritems(self.params) if not (m.get('pass_by_obj') or k.startswith('train'))]
+
+    def _get_fd_unknowns(self):
+        """
+        Get the list of unknowns that are needed to perform a
+        finite difference on this `Component`.
+
+        Returns
+        -------
+        list of str
+            List of names of unknowns for this `Component`.
+        """
+        return [k for k, m in iteritems(self.unknowns) if not (m.get('pass_by_obj') or k.startswith('train'))]

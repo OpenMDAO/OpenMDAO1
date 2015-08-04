@@ -4,8 +4,8 @@ from math import log
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, log10,\
-    power, diagonal, prod, square, hstack, ndarray, sqrt
+from numpy import zeros, dot, ones, eye, abs, vstack, exp, log10,\
+    power, diagonal, prod, square, hstack, ndarray, sqrt, inf, einsum
 from numpy.linalg import slogdet, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
@@ -21,14 +21,18 @@ class KrigingSurrogate(SurrogateModel):
 
         self.m = 0       # number of independent
         self.n = 0       # number of training points
-        self.thetas = None
+        self.thetas = zeros(0)
         self.nugget = 0     # nugget smoothing parameter from [Sasena, 2002]
 
-        self.R = None
+        self.R = zeros(0)
         self.R_fact = None
-        self.R_solve_ymu = None
-        self.mu = None
-        self.log_likelihood = None
+        self.R_solve_ymu = zeros(0)
+        self.mu = zeros(0)
+        self.log_likelihood = inf
+
+        # Training Values
+        self.X = zeros(0)
+        self.Y = zeros(0)
 
     def train(self, x, y):
         """
@@ -171,6 +175,13 @@ class KrigingSurrogate(SurrogateModel):
         RMSE = sqrt(abs(MSE))
 
         return (f, RMSE)
+
+    def jacobian(self, x):
+        thetas = power(10., self.thetas)
+        r = exp(-thetas.dot(square((x - self.X).T)))
+        gradr = r * -2 * einsum('i,ij->ij', thetas, (x - self.X).T)
+        jac = gradr.dot(self.R_solve_ymu).T
+        return jac
 
 
 class FloatKrigingSurrogate(KrigingSurrogate):

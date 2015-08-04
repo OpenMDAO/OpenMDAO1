@@ -19,7 +19,7 @@ class SurrogateModel(object):
                 .format(type(self).__name__)
             raise RuntimeError(msg)
 
-    def jacobian(self, params, unknowns, resids):
+    def jacobian(self, x):
 
         msg = "{0} has not defined a jacobian method." \
             .format(type(self).__name__)

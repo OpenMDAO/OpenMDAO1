@@ -19,7 +19,8 @@ class ResponseSurface(SurrogateModel):
             self.train(X, Y)
 
     def train(self, x, y):
-        """ Calculate response surface equation coefficients using least squares regression. """
+        """ Calculate response surface equation coefficients using least
+        squares regression. """
         
         super(ResponseSurface, self).train(x, y)
 
@@ -51,7 +52,9 @@ class ResponseSurface(SurrogateModel):
         self.betas, rs, r, s = linalg.lstsq(X, y)
 
     def predict(self, x):
-        """Calculates a predicted value of the response based on the current response surface model for the supplied list of inputs. """
+        """
+        Calculates a predicted value of the response based on the current
+        response surface model for the supplied list of inputs. """
 
         super(ResponseSurface, self).predict(x)
 
