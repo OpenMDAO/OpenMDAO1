@@ -1,7 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
-import unittest
-import random
+import unittest, itertools
+    
 
 from numpy import array, linspace, sin, cos, pi
 
@@ -21,8 +21,6 @@ def branin_1d(x):
 
 
 class TestResponseSurfaceSurrogate(unittest.TestCase):
-    def setUp(self):
-        random.seed(10)
 
     def test_1d_training(self):
 
@@ -60,7 +58,7 @@ class TestResponseSurfaceSurrogate(unittest.TestCase):
 
     def test_2d(self):
 
-        x = array([[-2., 0.], [-0.5, 1.5], [1., 1.], [0., .25]])
+        x = array([[-2., 0.], [-0.5, 1.5], [1., 1.], [0., .25], [.25, 0.], [.66, .33]])
         y = array([[branin(case)] for case in x])
 
         surrogate = ResponseSurface()
@@ -70,7 +68,7 @@ class TestResponseSurfaceSurrogate(unittest.TestCase):
             mu = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
 
-        mu = surrogate.predict([.5, .5])
+        mu = surrogate.predict(array([.5, .5]))
 
         assert_rel_error(self, mu, branin([.5, .5]), 1e-1)
 
@@ -87,10 +85,10 @@ class TestResponseSurfaceSurrogate(unittest.TestCase):
 
     def test_one_pt(self):
         surrogate = ResponseSurface()
-        x = [[0.]]
-        y = [[1.]]
+        x = array([[0.]])
+        y = array([[1.]])
 
-        surrogate.train(x,y)
+        surrogate.train(x, y)
         assert_rel_error(self, surrogate.betas, array([[1.], [0.], [0.]]), 1e-9)
 
     def test_vector_input(self):
@@ -108,14 +106,36 @@ class TestResponseSurfaceSurrogate(unittest.TestCase):
     def test_vector_output(self):
         surrogate = ResponseSurface()
 
-        y = array([[0., 0.], [1., 1.], [2., 0.]])
         x = array([[0.], [2.], [4.]])
+        y = array([[0., 0.], [1., 1.], [2., 0.]])
 
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
             mu = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
+
+    def test_scalar_derivs(self):
+        surrogate = ResponseSurface()
+
+        x = array([[0.], [1.], [2.], [3.]])
+        y = x.copy()
+
+        surrogate.train(x, y)
+        jac = surrogate.jacobian(array([[0.]]))
+
+        assert_rel_error(self, jac[0][0], 1., 1e-3)
+
+    def test_vector_derivs(self):
+        surrogate = ResponseSurface()
+
+        x = array([[a, b] for a, b in
+                   itertools.product(linspace(0, 1, 10), repeat=2)])
+        y = array([[a + b, a - b] for a, b in x])
+
+        surrogate.train(x, y)
+        jac = surrogate.jacobian(array([[0.5, 0.5]]))
+        assert_rel_error(self, jac, array([[1, 1], [1, -1]]), 1e-5)
 
 
 if __name__ == "__main__":

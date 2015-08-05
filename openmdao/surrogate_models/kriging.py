@@ -4,9 +4,10 @@ from math import log
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, dot, ones, eye, abs, vstack, exp, log10,\
-    power, diagonal, prod, square, hstack, ndarray, sqrt, inf, einsum
-from numpy.linalg import slogdet, linalg, lstsq
+from numpy import zeros, dot, ones, eye, abs, exp, log10, diagonal,\
+    prod, square, column_stack, ndarray, sqrt, inf, einsum, sum, power
+from numpy.linalg import slogdet, linalg
+from numpy.dual import lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
 from six.moves import range
@@ -54,28 +55,25 @@ class KrigingSurrogate(SurrogateModel):
 
         if self.n <= 1:
             raise ValueError(
-                'KrigingSurrogates require at least 2 training points.'
+                'KrigingSurrogate require at least 2 training points.'
             )
 
-        # self.X = array(x)
-        # self.Y = array(y)
         self.X = x
         self.Y = y
 
-        thetas = zeros(self.m)
-
         def _calcll(thetas):
-            ''' Callback function'''
+            """ Callback function"""
             self.thetas = thetas
             self._calculate_log_likelihood()
             return -self.log_likelihood
 
         cons = []
         for i in range(self.m):
-            cons.append({'type': 'ineq', 'fun': lambda log10t: log10t[i] - log10(1e-2)})  # min
-            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(3) - log10t[i]})     # max
+            cons.append({'type': 'ineq', 'fun': lambda logt: logt[i] - log10(1e-2)})  # min
+            cons.append({'type': 'ineq', 'fun': lambda logt: log10(3) - logt[i]})     # max
 
-        self.thetas = minimize(_calcll, thetas, method='COBYLA', constraints=cons, tol=1e-8).x
+        self.thetas = minimize(_calcll, zeros(self.m), method='COBYLA',
+                               constraints=cons, tol=1e-8).x
         self._calculate_log_likelihood()
 
     def _calculate_log_likelihood(self):
@@ -88,7 +86,7 @@ class KrigingSurrogate(SurrogateModel):
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
 
-        #weighted distance formula
+        # exponentially weighted distance formula
         for i in range(self.n):
             R[i, i+1:self.n] = exp(-thetas.dot(square(X[i, ...] - X[i+1:self.n, ...]).T))
 
@@ -96,42 +94,33 @@ class KrigingSurrogate(SurrogateModel):
         R += R.T + eye(self.n)
         self.R = R
 
-        one = ones((self.n, 1))
+        one = ones(self.n)
+        rhs = column_stack([Y, one])
         try:
+            # Cholesky Decomposition
             self.R_fact = cho_factor(R)
-            rhs = hstack([Y, one])
-            cho = cho_solve(self.R_fact, rhs)
-
-            self.mu = dot(one.T, cho[:, :-1]) / dot(one.T, cho[:, -1])
-            y_minus_mu = Y - self.mu
-            self.R_solve_ymu = cho_solve(self.R_fact, y_minus_mu)
-
-            self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
-            det_factor = abs(prod(diagonal(self.R_fact[0]))**2) + 1.e-16
-
-            if isinstance(self.sig2, ndarray):
-                self.log_likelihood = -self.n / 2. * slogdet(self.sig2)[1] - \
-                    1. / 2. * log(det_factor)
-            else:
-                self.log_likelihood = -self.n/2.*log(self.sig2) - \
-                    1./2.*log(det_factor)
+            sol = cho_solve(self.R_fact, rhs)
+            solve = lambda x: cho_solve(self.R_fact, x)
+            det_factor = log(abs(prod(diagonal(self.R_fact[0])) ** 2) + 1.e-16)
 
         except (linalg.LinAlgError, ValueError):
-            #------LSTSQ---------
-            self.R_fact = None  # reset this to none, so we know not to use cholesky
-            # self.R = self.R+diag([10e-6]*self.n)  # improve conditioning[Booker et al., 1999]
-            rhs = hstack([Y, one])
-            lsq = lstsq(self.R.T, rhs)[0]
-            self.mu = dot(one.T, lsq[:, :-1])/dot(one.T, lsq[:, -1])
-            y_minus_mu = Y - self.mu
-            self.R_solve_ymu = lstsq(self.R, y_minus_mu)[0]
-            self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu)/self.n
-            if isinstance(self.sig2, ndarray):
-                self.log_likelihood = -self.n / 2. * slogdet(self.sig2)[1] - \
-                                      1. / 2. * slogdet(self.R)[1]
-            else:
-                self.log_likelihood = -self.n / 2. * log(self.sig2) - \
-                                      1. / 2. * slogdet(self.R)[1]
+            # Since Cholesky failed, try linear least squares
+            self.R_fact = None  # reset this to none, so we know not to use Cholesky
+            sol = lstsq(self.R, rhs)[0]
+            solve = lambda x: lstsq(self.R, x)[0]
+            det_factor = slogdet(self.R)[1]
+
+        self.mu = dot(one, sol[:, :-1]) / dot(one, sol[:, -1])
+        y_minus_mu = Y - self.mu
+        self.R_solve_ymu = solve(y_minus_mu)
+        self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu) / self.n
+
+        if isinstance(self.sig2, ndarray):
+            self.log_likelihood = -self.n/2. * slogdet(self.sig2)[1] \
+                                  - 1./2.*det_factor
+        else:
+            self.log_likelihood = -self.n/2. * log(self.sig2) \
+                                  - 1./2.*det_factor
 
     def predict(self, x):
         """
@@ -148,37 +137,45 @@ class KrigingSurrogate(SurrogateModel):
 
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
-        # x = array(x)
-        r = exp(-thetas.dot(square((X - x).T)))
-
+        r = exp(-thetas.dot(square((x - X).T)))
         one = ones(self.n)
+
+        rhs = column_stack([r, one])
         if self.R_fact is not None:
-            # ---CHOLESKY DECOMPOSTION ---
-
-            rhs = vstack([r, one]).T
-            cho = cho_solve(self.R_fact, rhs).T
-
-            f = self.mu + dot(r, self.R_solve_ymu)
-            term1 = dot(r, cho[0])
-            term2 = (1.0 - dot(one, cho[0])) ** 2. / dot(one, cho[1])
-
+            # Cholesky Decomposition
+            sol = cho_solve(self.R_fact, rhs).T
         else:
-            # -----LSTSQ-------
-            rhs = vstack([r, one]).T
-            lsq = lstsq(self.R.T, rhs)[0].T
+            # Linear Least Squares
+            sol = lstsq(self.R, rhs)[0].T
 
-            f = self.mu + dot(r, self.R_solve_ymu)
-            term1 = dot(r, lsq[0])
-            term2 = (1.0 - dot(one, lsq[0])) ** 2. / dot(one, lsq[1])
+        f = self.mu + dot(r, self.R_solve_ymu)
+        term1 = dot(r, sol[0])
 
-        MSE = self.sig2 * (1.0 - term1 + term2)
-        RMSE = sqrt(abs(MSE))
+        # Note: sum(sol[0]) should be 1, since Kriging is an unbiased
+        # estimator. This measures the effect of numerical instabilities.
+        bias = (1.0 - sum(sol[0])) ** 2. / sum(sol[1])
 
-        return (f, RMSE)
+        mse = self.sig2 * (1.0 - term1 + bias)
+        rmse = sqrt(abs(mse))
+
+        return f, rmse
 
     def jacobian(self, x):
+        """
+        Calculates the jacobian of the Kriging surface at the requested point.
+
+        Args
+        ----
+        x : array-like
+            Point at which the surrogate Jacobian is evaluated.
+        """
+
         thetas = power(10., self.thetas)
         r = exp(-thetas.dot(square((x - self.X).T)))
+
+        # Z = einsum('i,ij->ij', X, Y) is equivalent to, but much faster and
+        # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
+        # I.e. Z[i,j] = X[i]*Y[i,j]
         gradr = r * -2 * einsum('i,ij->ij', thetas, (x - self.X).T)
         jac = gradr.dot(self.R_solve_ymu).T
         return jac
@@ -190,4 +187,4 @@ class FloatKrigingSurrogate(KrigingSurrogate):
 
     def predict(self, x):
         dist = super(FloatKrigingSurrogate, self).predict(x)
-        return dist[0] # mean value
+        return dist[0]  # mean value

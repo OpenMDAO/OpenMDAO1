@@ -1,31 +1,24 @@
 """Surrogate Model based on second order response surface equations."""
 
-from numpy import linalg, zeros, array
-
+from numpy import zeros, einsum, squeeze
+from numpy.dual import lstsq
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 from six.moves import range
 
 
 class ResponseSurface(SurrogateModel):
-    def __init__(self, X=None, Y=None):
-        # must call HasTraits init to set up Traits stuff
+    def __init__(self):
         super(ResponseSurface, self).__init__()
 
         self.m = 0  # number of training points
         self.n = 0  # number of independents
-        self.betas = None  # vector of response surface equation coefficients
-
-        if X is not None and Y is not None:
-            self.train(X, Y)
+        self.betas = zeros(0)  # vector of response surface equation coefficients
 
     def train(self, x, y):
         """ Calculate response surface equation coefficients using least
         squares regression. """
         
         super(ResponseSurface, self).train(x, y)
-
-        x = array(x)
-        y = array(y)
 
         m = self.m = x.shape[0]
         n = self.n = x.shape[1]
@@ -42,14 +35,15 @@ class ResponseSurface(SurrogateModel):
 
         # Quadratic Terms
         X_offset = X[:, n + 1:]
-        idx = 0
         for i in range(n):
-            for j in range(i, n):
-                X_offset[:, idx] = x[:, i] * x[:, j]
-                idx += 1
+            # Z = einsum('i,ij->ij', X, Y) is equivalent to, but much faster and
+            # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
+            # I.e. Z[i,j] = X[i]*Y[i,j]
+            X_offset[:, :n - i] = einsum('i,ij->ij', x[:, i], x[:, i:])
+            X_offset = X_offset[:, n-i:]
 
         # Determine response surface equation coefficients (betas) using least squares
-        self.betas, rs, r, s = linalg.lstsq(X, y)
+        self.betas, rs, r, s = lstsq(X, y)
 
     def predict(self, x):
         """
@@ -58,30 +52,46 @@ class ResponseSurface(SurrogateModel):
 
         super(ResponseSurface, self).predict(x)
 
-        x = array(x)
-        if len(x.shape) == 1:
-            x.shape = (1, len(x))
-        m = x.shape[0]
-        n = x.shape[1]
+        n = x.size
 
-        X = zeros((m, ((self.n + 1) * (self.n + 2)) // 2))
+        X = zeros(((self.n + 1) * (self.n + 2)) // 2)
 
         # Modify X to include constant, squared terms and cross terms
 
         # Constant Terms
-        X[:, 0] = 1.0
+        X[0] = 1.0
 
         # Linear Terms
-        X[:, 1:n + 1] = x
+        X[1:n + 1] = x
 
         # Quadratic Terms
-        X_offset = X[:, self.n + 1:]
-        idx = 0
-        for i in range(self.n):
-            for j in range(i, self.n):
-                X_offset[:, idx] = x[:, i] * x[:, j]
-                idx += 1
+        X_offset = X[n + 1:]
+        for i in range(n):
+            X_offset[:n - i] = x[i] * x[i:]
+            X_offset = X_offset[n - i:]
 
-        # Predict new_y using new_x and betas
-        y = X.dot(self.betas)
-        return y[0]
+        # Predict new_y using X and betas
+        return X.dot(self.betas)
+
+    def jacobian(self, x):
+        """
+        Calculates the jacobian of the Kriging surface at the requested point.
+
+        Args
+        ----
+        x : array-like
+            Point at which the surrogate Jacobian is evaluated.
+        """
+        n = self.n
+        betas = self.betas
+
+        x = x.flat
+
+        jac = betas[1:n + 1, :].copy()
+        beta_offset = betas[n + 1:, :]
+        for i in range(n):
+            jac[i, :] += x[i:].dot(beta_offset[:n - i, :])
+            jac[i:, :] += x[i] * beta_offset[:n - i, :]
+            beta_offset = beta_offset[n - i:, :]
+
+        return jac.T
