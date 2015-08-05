@@ -502,7 +502,7 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
+                        connections.setdefault(tgt_pathname, set()).update(src_pathnames)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -1143,8 +1143,8 @@ class Group(System):
         """
         return np.sum(sizes_table[:var_rank]) + np.sum(sizes_table[var_rank, :var_idx])
 
-    def _get_global_idxs(self, uname, pname, u_vecnames, u_sizes,
-                         p_vecnames, p_sizes, var_of_interest, mode):
+    def _get_global_idxs(self, uname, pname, u_var_idxs, u_sizes,
+                         p_var_idxs, p_sizes, var_of_interest, mode):
         """
         Return the global indices into the distributed unknowns and params vectors
         for the given unknown and param.  The given unknown and param have already
@@ -1158,14 +1158,14 @@ class Group(System):
         pname : str
             Name of the variable in the params vector.
 
-        u_vecnames : OrderedDict of (name : idx)
+        u_var_idxs : OrderedDict of (name : idx)
             Names of relevant vars in the unknowns vector and their index
             into the sizes table.
 
         u_sizes : ndarray
             (rank x var) array of unknown sizes.
 
-        p_vecnames : OrderedDict of (name : idx)
+        p_var_idxs : OrderedDict of (name : idx)
             Names of relevant vars in the params vector and their index
             into the sizes table.
 
@@ -1203,7 +1203,7 @@ class Group(System):
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
-        ivar = u_vecnames[uname]
+        ivar = u_var_idxs[uname]
         if 'src_indices' in umeta or 'src_indices' in pmeta:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
             for irank in range(self.comm.size):
@@ -1215,8 +1215,10 @@ class Group(System):
                 offset = -start
                 offset += np.sum(u_sizes[:irank, :])
                 offset += np.sum(u_sizes[irank, :ivar])
+                #print(mode, uname,pname,irank, on_irank, start, end, "off",offset)
                 # Apply conversion only to relevant parts of input
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
+                #print(mode,uname,pname,"NEW INDICES:",new_indices[on_irank])
             src_idxs = new_indices
         else:
             if mode == 'fwd':
@@ -1224,10 +1226,7 @@ class Group(System):
             else:
                 var_rank = iproc
 
-            offset = self._get_global_offset(uname, var_rank,
-                                             ivar,
-                                             u_sizes,
-                                             var_of_interest)
+            offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
             src_idxs = arg_idxs + offset
 
         if mode == 'fwd':
@@ -1235,10 +1234,8 @@ class Group(System):
         else:
             var_rank = self._owning_ranks[pname]
 
-        tgt_start = self._get_global_offset(pname, var_rank,
-                                            p_vecnames[pname],
-                                            p_sizes,
-                                            var_of_interest)
+        tgt_start = (np.sum(p_sizes[:var_rank]) +
+                     np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
