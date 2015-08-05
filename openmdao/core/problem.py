@@ -115,41 +115,43 @@ class Problem(System):
         # if promoted name in unknowns matches promoted name in params
         # that indicates an implicit connection. All connections are returned
         # in absolute form.
-        implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict, unknowns_dict)
+        implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict,
+                                                                 unknowns_dict)
 
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
-            connections.setdefault(tgt, []).extend(srcs)
+            connections.setdefault(tgt, set()).update(srcs)
 
-        # resolve any input to input explicit connections
-        input_sets = {}
+        input_graph = nx.Graph()
+
+        # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
             for src in srcs:
                 if src in params_dict:
-                    input_sets.setdefault(src, set()).update((tgt, src))
-                    input_sets.setdefault(tgt, set()).update((tgt, src))
+                    input_graph.add_edge(src, tgt)
 
         # find any promoted but not connected inputs
         for p, meta in iteritems(params_dict):
             prom = meta['promoted_name']
             if prom in prom_noconns:
-                input_sets.setdefault(meta['pathname'], set()).update(prom_noconns[prom])
+                for n in prom_noconns[prom]:
+                    input_graph.add_edge(p, n)
 
         to_add = []
         for tgt, srcs in iteritems(connections):
-            if tgt in input_sets:
+            if tgt in input_graph:
+                conn_inputs = nx.node_connected_component(input_graph, tgt)
                 for s in srcs:
                     if s in unknowns_dict:
-                        for t in input_sets[tgt]:
-                            if not (t in connections and s in connections[t]):
-                                to_add.append((t, s))
+                        for t in conn_inputs:
+                            to_add.append((t, s))
 
         for t, s in to_add:
-            connections.setdefault(t, []).append(s)
+            connections.setdefault(t, set()).add(s)
 
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = set([s for s in srcs if s in unknowns_dict])
+            unknown_srcs = srcs.intersection(unknowns_dict.keys())
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(unknown_srcs)))
@@ -162,9 +164,10 @@ class Problem(System):
         self._dangling = {}
         prom_unknowns = self.root._to_abs_unames
         for p, meta in iteritems(params_dict):
-            if meta['pathname'] not in connections:
-                if meta['promoted_name'] not in prom_unknowns and meta['pathname'] in input_sets:
-                    self._dangling[meta['promoted_name']] = input_sets[meta['pathname']]
+            if p not in connections:
+                if meta['promoted_name'] not in prom_unknowns and p in input_graph:
+                    self._dangling[meta['promoted_name']] = \
+                        set(nx.node_connected_component(input_graph, p))
                 else:
                     self._dangling[meta['promoted_name']] = set([meta['pathname']])
 
@@ -1409,7 +1412,7 @@ def _get_implicit_connections(root, params_dict, unknowns_dict):
         if prom_name in root._to_abs_unames:  # param has a src in unknowns
             uprom = root._to_abs_unames[prom_name]
             for pabs in pabs_list:
-                connections[pabs] = uprom
+                connections[pabs] = set(uprom)
         else:
             dangling.setdefault(prom_name, set()).update(pabs_list)
 

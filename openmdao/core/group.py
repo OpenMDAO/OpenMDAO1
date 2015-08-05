@@ -502,7 +502,7 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
+                        connections.setdefault(tgt_pathname, set()).update(src_pathnames)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -1215,8 +1215,10 @@ class Group(System):
                 offset = -start
                 offset += np.sum(u_sizes[:irank, :])
                 offset += np.sum(u_sizes[irank, :ivar])
+                #print(mode, uname,pname,irank, on_irank, start, end, "off",offset)
                 # Apply conversion only to relevant parts of input
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
+                #print(mode,uname,pname,"NEW INDICES:",new_indices[on_irank])
             src_idxs = new_indices
         else:
             if mode == 'fwd':
@@ -1459,3 +1461,4 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 
     return pnames
+
