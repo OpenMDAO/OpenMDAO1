@@ -1,3 +1,5 @@
+.. _`paraboloid_tutorial`:
+
 Paraboloid Tutorial
 -------------------
 
@@ -28,7 +30,6 @@ this code into a file, and run it directly.
 
         def solve_nonlinear(self, params, unknowns, resids):
             """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-            Optimal solution (minimum): x = 6.6667; y = -7.3333
             """
 
             x = params['x']
