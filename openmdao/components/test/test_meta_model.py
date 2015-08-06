@@ -2,12 +2,13 @@ import numpy as np
 import unittest
 
 from openmdao.core import Group, Problem
-from openmdao.components import MetaModel
+from openmdao.components import MetaModel, ParamComp
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
 
 from openmdao.test.util import assert_rel_error
 
 from six.moves import cStringIO
+from re import findall
 
 
 class TestMetaModel(unittest.TestCase):
@@ -297,6 +298,31 @@ class TestMetaModel(unittest.TestCase):
                    " 2 points for 'f'."
 
         self.assertEqual(str(cm.exception), expected)
+
+    def test_derivatives(self):
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta, promotes=['x'])
+        prob.root.add('p', ParamComp('x', 0.), promotes=['x'])
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [0., .25, .5, .75, 1.]
+        prob['meta.train:f'] = [1., .75, .5, .25, 0.]
+        prob['x'] = 0.125
+        prob.run()
+
+        stream = cStringIO()
+        prob.check_partial_derivatives(out_stream=stream)
+
+        abs_errors = findall('Absolute Error \(.+\) : (.+)', stream.getvalue())
+        self.assertTrue(len(abs_errors) > 0)
+        for match in abs_errors:
+            abs_error = float(match)
+            self.assertTrue(abs_error < 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
