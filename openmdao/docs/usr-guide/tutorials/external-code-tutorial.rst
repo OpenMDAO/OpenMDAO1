@@ -4,7 +4,7 @@ External Code Tutorial
 
 If external programs do not have Python APIs, it is necessary to "file wrap" them.
 This tutorial will show how to make use of the `ExternalCode`, which is a utility component
-that makes file wraping easier. 
+that makes file wrapping easier. 
 
 In this tutorial we will give an example based on a common scenario of a code that takes
 its inputs from an input file, performs some computations, and then writes the results
