@@ -28,6 +28,7 @@ class KrigingSurrogate(SurrogateModel):
         self.R = zeros(0)
         self.R_fact = None
         self.R_solve_ymu = zeros(0)
+        self.R_solve_one = zeros(0)
         self.mu = zeros(0)
         self.log_likelihood = inf
 
@@ -113,6 +114,7 @@ class KrigingSurrogate(SurrogateModel):
         self.mu = dot(one, sol[:, :-1]) / dot(one, sol[:, -1])
         y_minus_mu = Y - self.mu
         self.R_solve_ymu = solve(y_minus_mu)
+        self.R_solve_one = sol[:, -1]
         self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu) / self.n
 
         if isinstance(self.sig2, ndarray):
@@ -140,20 +142,19 @@ class KrigingSurrogate(SurrogateModel):
         r = exp(-thetas.dot(square((x - X).T)))
         one = ones(self.n)
 
-        rhs = column_stack([r, one])
         if self.R_fact is not None:
             # Cholesky Decomposition
-            sol = cho_solve(self.R_fact, rhs).T
+            sol = cho_solve(self.R_fact, r).T
         else:
             # Linear Least Squares
-            sol = lstsq(self.R, rhs)[0].T
+            sol = lstsq(self.R, r)[0].T
 
         f = self.mu + dot(r, self.R_solve_ymu)
-        term1 = dot(r, sol[0])
+        term1 = dot(r, sol)
 
-        # Note: sum(sol[0]) should be 1, since Kriging is an unbiased
+        # Note: sum(sol) should be 1, since Kriging is an unbiased
         # estimator. This measures the effect of numerical instabilities.
-        bias = (1.0 - sum(sol[0])) ** 2. / sum(sol[1])
+        bias = (1.0 - sum(sol)) ** 2. / sum(self.R_solve_one)
 
         mse = self.sig2 * (1.0 - term1 + bias)
         rmse = sqrt(abs(mse))
