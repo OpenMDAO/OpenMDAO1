@@ -4,7 +4,7 @@ External Code Tutorial
 
 If external programs do not have Python APIs, it is necessary to "file wrap" them.
 This tutorial will show how to make use of the `ExternalCode`, which is a utility component
-that makes file wrapping easier. 
+that makes file wrapping easier.
 
 In this tutorial we will give an example based on a common scenario of a code that takes
 its inputs from an input file, performs some computations, and then writes the results
@@ -25,7 +25,7 @@ does the same computation as the :ref:`Paraboloid Tutorial <paraboloid_tutorial>
 `f_xy`, to an output file.
 
 
-::
+.. testcode :: ext_scirpt
 
     import sys
 
@@ -51,7 +51,7 @@ does the same computation as the :ref:`Paraboloid Tutorial <paraboloid_tutorial>
 Next we need to build the OpenMDAO component that makes use of this external code.
 
 
-.. code-block :: python
+.. testcode :: ext_code_wrapper
 
 
     from __future__ import print_function
@@ -60,44 +60,44 @@ Next we need to build the OpenMDAO component that makes use of this external cod
     from openmdao.components import ExternalCode, ParamComp
 
     class ParaboloidExternalCode(ExternalCode):
-    def __init__(self):
-        super(ParaboloidExternalCode, self).__init__()
+      def __init__(self):
+          super(ParaboloidExternalCode, self).__init__()
 
-        self.add_param('x', val=0.0)
-        self.add_param('y', val=0.0)
+          self.add_param('x', val=0.0)
+          self.add_param('y', val=0.0)
 
-        self.add_output('f_xy', val=0.0)
+          self.add_output('f_xy', val=0.0)
 
-        self.input_filepath = 'paraboloid_input.dat'
-        self.output_filepath = 'paraboloid_output.dat'
+          self.input_filepath = 'paraboloid_input.dat'
+          self.output_filepath = 'paraboloid_output.dat'
 
-        #providing these is optional, but has the component check to make sure they are there
-        self.options['external_input_files'] = [self.input_filepath,]
-        self.options['external_output_files'] = [self.output_filepath,]
+          #providing these is optional, but has the component check to make sure they are there
+          self.options['external_input_files'] = [self.input_filepath,]
+          self.options['external_output_files'] = [self.output_filepath,]
 
-        self.options['command'] = ['python', 'paraboloid_external_code.py',
-            self.input_filepath, self.output_filepath]
+          self.options['command'] = ['python', 'paraboloid_external_code.py',
+              self.input_filepath, self.output_filepath]
 
 
-    def solve_nonlinear(self, params, unknowns, resids):
-        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-        """
+      def solve_nonlinear(self, params, unknowns, resids):
+          """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+          """
 
-        x = params['x']
-        y = params['y']
+          x = params['x']
+          y = params['y']
 
-        # Generate the input file for the paraboloid external code
-        with open(self.input_filepath, 'w') as input_file:
-            input_file.write('%f\n%f\n' % (x,y))
+          # Generate the input file for the paraboloid external code
+          with open(self.input_filepath, 'w') as input_file:
+              input_file.write('%f\n%f\n' % (x,y))
 
-        #parent solve_nonlinear function actually runs the external code
-        super(ParaboloidExternalCode, self).solve_nonlinear(params, unknowns, resids)
+          #parent solve_nonlinear function actually runs the external code
+          super(ParaboloidExternalCode, self).solve_nonlinear(params, unknowns, resids)
 
-        # Parse the output file from the external code and set the value of f_xy
-        with open(self.output_filepath, 'r') as output_file:
-            f_xy = float( output_file.read() )
+          # Parse the output file from the external code and set the value of f_xy
+          with open(self.output_filepath, 'r') as output_file:
+              f_xy = float( output_file.read() )
 
-        unknowns['f_xy'] = f_xy
+          unknowns['f_xy'] = f_xy
 
 
     if __name__ == "__main__":
