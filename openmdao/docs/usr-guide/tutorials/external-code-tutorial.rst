@@ -1,9 +1,10 @@
 External Code Tutorial
 ----------------------
 
-This tutorial will show how to make use of the `ExternalCode` `Component` in OpenMDAO. MDAO problems
-frequently make use of external programs. If these codes do not have Python APIs, it is necessary
-to "file wrap". OpenMDAO special component to make this easier: `ExternalCode`.
+
+If external programs do not have Python APIs, it is necessary to "file wrap" them.
+This tutorial will show how to make use of the `ExternalCode`, which is a utility component
+that makes file wraping easier. 
 
 In this tutorial we will give an example based on a common scenario of a code that takes
 its inputs from an input file, performs some computations, and then writes the results
