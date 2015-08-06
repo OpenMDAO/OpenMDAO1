@@ -11,3 +11,4 @@ Tutorials
    tutorials/paraboloid-tutorial.rst
    tutorials/sellar.rst
    tutorials/recording.rst
+   tutorials/external-code-tutorial.rst

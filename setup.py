@@ -46,10 +46,12 @@ setup(name='openmdao',
           'openmdao.recorders',
           'openmdao.recorders.test',
           'openmdao.devtools',
+          'openmdao.surrogate_models',
+          'openmdao.surrogate_models.test'
       ],
       package_data = {'openmdao.units': ['unit_library.ini']},
       install_requires=[
-        'six', 'numpydoc', 'networkx', 'numpy', 'scipy'
+        'six', 'numpydoc', 'networkx==1.9.1', 'numpy', 'scipy'
       ],
       entry_points= """
         [console_scripts]
