@@ -109,7 +109,7 @@ class ExecComp(Component):
 
         for param in params:
 
-            pwrap = TmpDict(params)
+            pwrap = _TmpDict(params)
 
             pval = params[param]
             if isinstance(pval, ndarray):
@@ -129,7 +129,7 @@ class ExecComp(Component):
                 else:
                     pwrap[param][idx] += step
 
-                uwrap = TmpDict(unknowns, complex=True)
+                uwrap = _TmpDict(unknowns, complex=True)
 
                 # solve with complex param value
                 self.solve_nonlinear(pwrap, uwrap, resids)
@@ -151,7 +151,7 @@ class ExecComp(Component):
         return J
 
 
-class TmpDict(object):
+class _TmpDict(object):
     """
     A wrapper for a dictionary that will allow getting of values
     from its inner dict unless those values get modified via
