@@ -1,5 +1,7 @@
 """ Base class for Driver."""
 
+from __future__ import print_function
+
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
@@ -47,10 +49,17 @@ class Driver(object):
         """ Prepares some things we need."""
         self.root = root
 
-        item_names = ['Parameter', 'Objective', 'Constraint']
-        items = [self._params, self._objs, self._cons]
+        params = OrderedDict()
+        objs = OrderedDict()
+        cons = OrderedDict()
 
-        for item, item_name in zip(items, item_names):
+        item_tups = [
+            ('Parameter', self._params, params),
+            ('Objective', self._objs, objs),
+            ('Constraint', self._cons, cons)
+        ]
+
+        for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
 
                 # Check validity of variable
@@ -59,11 +68,20 @@ class Driver(object):
                     msg = msg.format(item_name, name)
                     raise ValueError(msg)
 
+                if root.unknowns.metadata(name).get('remote'):
+                    continue
+
                 # Size is useful metadata to save
                 if 'indices' in meta:
                     meta['size'] = len(meta['indices'])
                 else:
                     meta['size'] = root.unknowns.metadata(name)['size']
+
+                newitem[name] = meta
+
+        self._params = params
+        self._objs = objs
+        self._cons = cons
 
     def _map_voi_indices(self):
         poi_indices = {}

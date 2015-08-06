@@ -120,7 +120,7 @@ class Problem(System):
 
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
-            connections.setdefault(tgt, set()).update(srcs)
+            connections.setdefault(tgt, []).extend(srcs)
 
         input_graph = nx.Graph()
 
@@ -147,11 +147,11 @@ class Problem(System):
                             to_add.append((t, s))
 
         for t, s in to_add:
-            connections.setdefault(t, set()).add(s)
+            connections.setdefault(t, []).append(s)
 
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = srcs.intersection(unknowns_dict.keys())
+            unknown_srcs = set((s for s in srcs if s in unknowns_dict))
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(unknown_srcs)))

@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import os
 from collections import OrderedDict
+from six import iteritems, itervalues, iterkeys
 
 import petsc4py
 #petsc4py.init(['-start_in_debugger']) # add petsc init args here
@@ -125,12 +126,12 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Each entry is an `OrderedDict` mapping var name to local size for
             'pass by vector' variables.
         """
-        sizes = OrderedDict()
+        sizes = []
         for name, meta in self.get_vecvars():
             if meta.get('remote'):
-                sizes[name] = 0
+                sizes.append((name, 0))
             else:
-                sizes[name] = meta['size']
+                sizes.append((name, meta['size']))
 
         # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
@@ -213,7 +214,13 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             Each entry is an `OrderedDict` mapping var name to local size for
             'pass by vector' params.
         """
-        psizes = super(PetscTgtVecWrapper, self)._get_flattened_sizes()[0]
+        psizes = []
+        for name, m in iteritems(self._vardict):
+            if m.get('owned') and not m.get('pass_by_obj'):
+                if m.get('remote'):
+                    psizes.append((name, 0))
+                else:
+                    psizes.append((name, m['size']))
 
         if trace:
             msg = "'%s': allgathering param sizes.  local param sizes = %s"

@@ -94,6 +94,8 @@ class pyOptSparseDriver(Driver):
                                  value=param_vals[name],
                                  lower=meta['low'], upper=meta['high'])
 
+        opt_prob.finalizeDesignVariables()
+
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(iterkeys(objs))

@@ -174,12 +174,10 @@ class VecWrapper(object):
             meta['val'].val = value
             return
 
-        unitconv = meta.get('unit_conv')
-
         # For dparam vector in adjoint mode, assignement behaves as +=.
         if self.adj_accumulate_mode is True:
-            if self.deriv_units and unitconv:
-                scale, offset = unitconv
+            if self.deriv_units and 'unit_conv' in meta:
+                scale, offset = meta['unit_conv']
 
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] += scale*value.flat[:]
@@ -193,8 +191,8 @@ class VecWrapper(object):
 
         # Convert Units
         else:
-            if self.deriv_units and unitconv:
-                scale, offset = unitconv
+            if self.deriv_units and 'unit_conv' in meta:
+                scale, offset = meta['unit_conv']
 
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] = scale*value.flat[:]
@@ -622,9 +620,12 @@ class SrcVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in iteritems(self):
-            if not meta.get('remote') and not meta.get('pass_by_obj'):
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
+            if not meta.get('pass_by_obj'):
+                if meta.get('remote'):
+                    meta['val'] = numpy.array([], dtype=float)
+                else:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -668,9 +669,8 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing an `OrderedDict` mapping var name to
             local size for 'pass by vector' variables.
         """
-        sizes = OrderedDict([(n, m['size']) for n, m in iteritems(self._vardict)
-                 if not m.get('pass_by_obj') and not m.get('remote')])
-        return [sizes]
+        return [[(n, m['size']) for n, m in iteritems(self._vardict)
+                      if not m.get('pass_by_obj')]]
 
 
 class TgtVecWrapper(VecWrapper):
@@ -837,20 +837,12 @@ class TgtVecWrapper(VecWrapper):
         """
         Returns
         -------
-        list of `OrderedDict`
-            A one entry list of `OrderedDict` mapping names to local sizes of owned, local params
-            in this `VecWrapper`.
+        list of lists of tuples of the form (name, size)
+            A one entry list of lists with tuples pairing names to local sizes
+            of owned, local params in this `VecWrapper`.
         """
-        psizes = OrderedDict()
-        for name, m in iteritems(self._vardict):
-            if m.get('pass_by_obj') or not m.get('owned'):
-                continue
-            if m.get('remote'):
-                psizes[name] = 0
-            else:
-                psizes[name] = m['size']
-
-        return [psizes]
+        return [[(n, m['size']) for n, m in iteritems(self._vardict)
+                    if m.get('owned') and not m.get('pass_by_obj')]]
 
 
 class _PlaceholderVecWrapper(object):

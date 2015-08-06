@@ -341,8 +341,8 @@ class Group(System):
             self._create_views(top_unknowns, parent, my_params,
                                var_of_interest=None)
 
-        self._u_size_dicts = self.unknowns._get_flattened_sizes()
-        self._p_size_dicts = self.params._get_flattened_sizes()
+        self._u_size_lists = self.unknowns._get_flattened_sizes()
+        self._p_size_lists = self.params._get_flattened_sizes()
 
         self._owning_ranks = self._get_owning_ranks()
 
@@ -502,7 +502,7 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, set()).update(src_pathnames)
+                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -1261,20 +1261,19 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        vec_unames = (n for n in iterkeys(self._u_size_dicts[0])
+        vec_unames = (n for n, sz in self._u_size_lists[0]
                            if relevance.is_relevant(var_of_interest, n))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
-        vec_pnames = (n for n in iterkeys(self._p_size_dicts[0])
+        vec_pnames = (n for n, sz in self._p_size_lists[0]
                         if relevance.is_relevant(var_of_interest, n))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
         param_sizes = []
         for iproc in range(self.comm.size):
-            #print("iproc",iproc,"comm sz",self.comm.size,"udicts",self._u_size_dicts)
-            unknown_sizes.append([sz for n, sz in iteritems(self._u_size_dicts[iproc])
+            unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
                                                if n in vec_unames])
-            param_sizes.append([sz for n, sz in iteritems(self._p_size_dicts[iproc])
+            param_sizes.append([sz for n, sz in self._p_size_lists[iproc]
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
