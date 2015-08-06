@@ -447,7 +447,7 @@ class VecWrapper(object):
             Index array containing all of the merged indices.
 
         """
-        assert(len(src_idxs) == len(tgt_idxs))
+        assert len(src_idxs) == len(tgt_idxs)
 
         # filter out any zero length idx array entries
         src_idxs = [i for i in src_idxs if len(i)]

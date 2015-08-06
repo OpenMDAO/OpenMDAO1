@@ -6,7 +6,6 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.components.linear_system import LinearSystem
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from openmdao.core.checks import ConnectError

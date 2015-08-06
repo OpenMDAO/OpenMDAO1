@@ -1,6 +1,7 @@
 """ Class definition for the DataTransfer object."""
 
 import numpy as np
+from openmdao.util import to_slice
 
 
 class DataTransfer(object):
@@ -27,9 +28,8 @@ class DataTransfer(object):
 
     def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns):
 
-        # TODO: change to_slice to to_slices. (should never return an index array)
-        #self.src_idxs = to_slice(src_idxs)
-        #self.tgt_idxs = to_slice(tgt_idxs)
+        self.src_idxs = to_slice(src_idxs)
+        self.tgt_idxs = to_slice(tgt_idxs)
 
         self.src_idxs = src_idxs
         self.tgt_idxs = tgt_idxs
