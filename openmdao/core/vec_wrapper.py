@@ -23,7 +23,7 @@ class _flat_dict(object):
         meta = self._dict[name]
         if 'pass_by_obj' in meta and meta['pass_by_obj']:
             raise ValueError("'%s' is a 'pass by object' variable. Flat value not found." % name)
-        return self._dict[name]['val']
+        return meta['val']
 
 
 class _ByObjWrapper(object):
@@ -73,7 +73,7 @@ class VecWrapper(object):
         self._slices = {}
 
         # add a flat attribute that will have access method consistent
-        # with non-flat access  (__getitem__)
+        # with non-flat access but returns the flattened value
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
@@ -456,14 +456,7 @@ class VecWrapper(object):
         if len(src_idxs) == 0:
             return self.make_idx_array(0, 0), self.make_idx_array(0, 0)
 
-        src_tups = list(enumerate(src_idxs))
-
-        src_sorted = sorted(src_tups, key=lambda x: x[1].min())
-
-        new_src = [idxs for i, idxs in src_sorted]
-        new_tgt = [tgt_idxs[i] for i, _ in src_sorted]
-
-        return idx_merge(new_src), idx_merge(new_tgt)
+        return numpy.concatenate(src_idxs), numpy.concatenate(tgt_idxs)
 
     def get_promoted_varname(self, abs_name):
         """
@@ -916,17 +909,3 @@ class _PlaceholderVecWrapper(object):
         raise AttributeError("'%s' has not been initialized, "
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
-def idx_merge(idxs):
-    """
-    Combines a mixed iterator of int and iterator indices into an
-    array of int indices.
-    """
-    if len(idxs) > 0:
-        idxs = [i for i in idxs if isinstance(i, int_types) or
-                len(i) > 0]
-        if len(idxs) > 0:
-            if isinstance(idxs[0], int_types):
-                return idxs
-            else:
-                return numpy.concatenate(idxs)
-    return idxs
