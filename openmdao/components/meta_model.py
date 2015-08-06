@@ -158,7 +158,8 @@ class MetaModel(Component):
             `VecWrapper` containing residuals. (r)
         """
         # Train first
-        self._train()
+        if self.train:
+            self._train()
 
         # Now Predict for current inputs
         inputs = self._params_to_inputs(params)
@@ -216,8 +217,6 @@ class MetaModel(Component):
             and whose values are ndarrays.
         """
 
-        # Ensure the metamodel is trained.
-        self._train()
         jac = {}
         inputs = self._params_to_inputs(params)
 
@@ -236,87 +235,86 @@ class MetaModel(Component):
         """
         Train the metamodel, if necessary, using the provided training data.
         """
-        if self.train:
 
-            num_sample = None
+        num_sample = None
+        for name, sz in self._surrogate_param_names:
+            val = self.params['train:' + name]
+            if num_sample is None:
+                num_sample = len(val)
+            elif len(val) != num_sample:
+                msg = "MetaModel: Each variable must have the same number"\
+                      " of training points. Expected {0} but found {1} "\
+                      "points for '{2}'."\
+                      .format(num_sample, len(val), name)
+                raise RuntimeError(msg)
+
+        for name, shape in self._surrogate_output_names:
+            val = self.unknowns['train:' + name]
+            if len(val) != num_sample:
+                msg = "MetaModel: Each variable must have the same number" \
+                      " of training points. Expected {0} but found {1} " \
+                      "points for '{2}'." \
+                    .format(num_sample, len(val), name)
+                raise RuntimeError(msg)
+
+        if self.warm_restart:
+            num_old_pts = self._training_input.shape[0]
+            inputs = np.zeros((num_sample + num_old_pts, self._input_size))
+            if num_old_pts > 0:
+                inputs[:num_old_pts, :] = self._training_input
+            new_input = inputs[num_old_pts:, :]
+
+        else:
+            inputs = np.zeros((num_sample, self._input_size))
+            new_input = inputs
+
+        self._training_input = inputs
+
+        # add training data for each input
+        if num_sample > 0:
+            idx = 0
             for name, sz in self._surrogate_param_names:
                 val = self.params['train:' + name]
-                if num_sample is None:
-                    num_sample = len(val)
-                elif len(val) != num_sample:
-                    msg = "MetaModel: Each variable must have the same number"\
-                          " of training points. Expected {0} but found {1} "\
-                          "points for '{2}'."\
-                          .format(num_sample, len(val), name)
-                    raise RuntimeError(msg)
+                if isinstance(val[0], float):
+                    new_input[:, idx] = val
+                    idx += 1
+                else:
+                    for row_idx, v in enumerate(val):
+                        if not isinstance(v, np.ndarray):
+                            v = np.array(v)
+                        new_input[row_idx, idx:idx+sz] = v.flat
 
-            for name, shape in self._surrogate_output_names:
-                val = self.unknowns['train:' + name]
-                if len(val) != num_sample:
-                    msg = "MetaModel: Each variable must have the same number" \
-                          " of training points. Expected {0} but found {1} " \
-                          "points for '{2}'." \
-                        .format(num_sample, len(val), name)
-                    raise RuntimeError(msg)
-
-            if self.warm_restart:
-                num_old_pts = self._training_input.shape[0]
-                inputs = np.zeros((num_sample + num_old_pts, self._input_size))
-                if num_old_pts > 0:
-                    inputs[:num_old_pts, :] = self._training_input
-                new_input = inputs[num_old_pts:, :]
-
-            else:
-                inputs = np.zeros((num_sample, self._input_size))
-                new_input = inputs
-
-            self._training_input = inputs
-
-            # add training data for each input
+        # add training data for each output
+        for name, shape in self._surrogate_output_names:
             if num_sample > 0:
-                idx = 0
-                for name, sz in self._surrogate_param_names:
-                    val = self.params['train:' + name]
-                    if isinstance(val[0], float):
-                        new_input[:, idx] = val
-                        idx += 1
-                    else:
-                        for row_idx, v in enumerate(val):
-                            if not isinstance(v, np.ndarray):
-                                v = np.array(v)
-                            new_input[row_idx, idx:idx+sz] = v.flat
+                output_size = np.prod(shape)
 
-            # add training data for each output
-            for name, shape in self._surrogate_output_names:
-                if num_sample > 0:
-                    output_size = np.prod(shape)
+                if self.warm_restart:
+                    outputs = np.zeros((num_sample + num_old_pts,
+                                        output_size))
+                    if num_old_pts > 0:
+                        outputs[:num_old_pts, :] = self._training_output[name]
+                    self._training_output[name] = outputs
+                    new_output = outputs[num_old_pts:, :]
+                else:
+                    outputs = np.zeros((num_sample, output_size))
+                    self._training_output[name] = outputs
+                    new_output = outputs
 
-                    if self.warm_restart:
-                        outputs = np.zeros((num_sample + num_old_pts,
-                                            output_size))
-                        if num_old_pts > 0:
-                            outputs[:num_old_pts, :] = self._training_output[name]
-                        self._training_output[name] = outputs
-                        new_output = outputs[num_old_pts:, :]
-                    else:
-                        outputs = np.zeros((num_sample, output_size))
-                        self._training_output[name] = outputs
-                        new_output = outputs
+                val = self.unknowns['train:' + name]
+                if isinstance(val[0], float):
+                    new_output[:, 0] = val
+                else:
+                    for row_idx, v in enumerate(val):
+                        if not isinstance(v, np.ndarray):
+                            v = np.array(v)
+                        new_output[row_idx, :] = v.flat
 
-                    val = self.unknowns['train:' + name]
-                    if isinstance(val[0], float):
-                        new_output[:, 0] = val
-                    else:
-                        for row_idx, v in enumerate(val):
-                            if not isinstance(v, np.ndarray):
-                                v = np.array(v)
-                            new_output[row_idx, :] = v.flat
+            surrogate = self._unknowns_dict[name].get('surrogate')
+            if surrogate is not None:
+                surrogate.train(self._training_input, self._training_output[name])
 
-                surrogate = self._unknowns_dict[name].get('surrogate')
-                if surrogate is not None:
-                    surrogate.train(self._training_input, self._training_output[name])
-
-            self.train = False
+        self.train = False
 
     def _get_fd_params(self):
         """
