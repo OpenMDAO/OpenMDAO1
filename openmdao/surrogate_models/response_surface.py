@@ -16,7 +16,15 @@ class ResponseSurface(SurrogateModel):
 
     def train(self, x, y):
         """ Calculate response surface equation coefficients using least
-        squares regression. """
+        squares regression.
+        Args
+        ----
+        x : array-like
+            Training input locations
+
+        y : array-like
+            Model responses at given inputs.
+        """
         
         super(ResponseSurface, self).train(x, y)
 
@@ -48,7 +56,13 @@ class ResponseSurface(SurrogateModel):
     def predict(self, x):
         """
         Calculates a predicted value of the response based on the current
-        response surface model for the supplied list of inputs. """
+        response surface model for the supplied list of inputs.
+
+        Args
+        ----
+        x : array-like
+            Point at which the surrogate is evaluated.
+        """
 
         super(ResponseSurface, self).predict(x)
 
