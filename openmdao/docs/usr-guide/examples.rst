@@ -9,3 +9,4 @@ Examples
 
    examples/example_fd.rst
    examples/krig_sin.rst
+   examples/distrib_adder.rst
