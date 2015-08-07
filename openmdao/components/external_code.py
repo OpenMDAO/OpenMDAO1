@@ -10,6 +10,7 @@ from openmdao.core.component import Component
 from openmdao.core.options import OptionsDictionary
 from openmdao.util.shell_proc import STDOUT, DEV_NULL, ShellProc
 
+from six import iteritems, itervalues, iterkeys
 
 class ExternalCode(Component):
     """Run an external code as a component

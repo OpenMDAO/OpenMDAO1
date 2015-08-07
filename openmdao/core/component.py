@@ -565,7 +565,9 @@ class Component(System):
         """
         #start the docstring off
         docstring = '\t\"\"\"\n'
-        docstring += '\n\tAttributes\n\t----------\n\n'
+
+        if self._params_dict or self._unknowns_dict:
+            docstring += '\n\tAttributes\n\t----------\n\n'
 
         if self._params_dict:
             for key, value in iteritems(self._params_dict):
@@ -586,6 +588,16 @@ class Component(System):
                     docstring += typ + "\n"
                 docstring += "\n\t\t\t<Insert description here.>\n\n"
 
+        if self.options:
+            #docstring += '\t\"\"\"\n'
+            docstring += '\n\tOptions\n\t----------\n\n'
+
+            for name, option in self.options.items():
+                docstring += "\t\t"+name
+                docstring += " : "
+                docstring += str(option)
+                docstring += " \n"
+                docstring += "\n\t\t\t<Insert description here.>\n\n"
 
         docstring += '\n\tNote\n\t----\n\n'
 
