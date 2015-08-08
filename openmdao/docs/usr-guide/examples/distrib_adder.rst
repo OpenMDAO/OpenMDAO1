@@ -1,4 +1,4 @@
-.. index:: Parallel Component Example
+.. index:: Distributes Component Example
 
 Distributed Components
 ------------------------
@@ -157,7 +157,7 @@ serial you would call it just like any other python script:
 
 In that case, you'll expect to see some output that looks like this:
 
-::
+.. testoutput:: dist_adder
 
     process 0: (30000000,)
     run time: 1.76785802841

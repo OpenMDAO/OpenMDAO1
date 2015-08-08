@@ -9,4 +9,5 @@ Examples
 
    examples/example_fd.rst
    examples/krig_sin.rst
+   examples/parallel_multi_point.rst
    examples/distrib_adder.rst
