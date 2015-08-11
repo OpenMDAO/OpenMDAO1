@@ -181,6 +181,8 @@ def __str__(self, indent=0, func_role="obj"):
         out += self._str_summary()
         out += self._str_extended_summary()
         out += self._str_param_list('Args')
+        #KGM
+        out += self._str_options('Options')
         out += self._str_returns()
         for param_list in ('Other Args', 'Raises', 'Warns'):
             out += self._str_param_list(param_list)
@@ -204,6 +206,8 @@ def __init__(self, docstring, config={}):
             'Summary': [''],
             'Extended Summary': [],
             'Args': [],
+            #KGM
+            'Options': [],
             'Returns': [],
             'Raises': [],
             'Warns': [],
@@ -220,8 +224,16 @@ def __init__(self, docstring, config={}):
 
         self._parse()
 
+def _str_options(self, name):
+        out = []
+        if self["Options"]:
+            out += self._str_header('Options')
+
+        return out
+
 #Do the actual patch switchover to these local versions
 NumpyDocString.__init__ = __init__
+SphinxDocString._str_options = _str_options
 SphinxDocString._parse = _parse
 SphinxDocString.__str__ = __str__
 #--------------end monkeypatch---------------------

@@ -17,6 +17,42 @@ class ExternalCode(Component):
 
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
+    
+	Options
+	----------
+
+		external_input_files : []
+
+			<Insert description here.>
+
+		env_vars : {}
+
+			<Insert description here.>
+
+		external_output_files : []
+
+			<Insert description here.>
+
+		command : []
+
+			<Insert description here.>
+
+		timeout : 0.0
+
+			<Insert description here.>
+
+		check_external_outputs : True
+
+			<Insert description here.>
+
+		poll_delay : 0.0
+
+			<Insert description here.>
+
+
+	Note
+	----
+
     """
 
     def __init__(self):

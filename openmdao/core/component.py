@@ -589,7 +589,6 @@ class Component(System):
                 docstring += "\n\t\t\t<Insert description here.>\n\n"
 
         if self.options:
-            #docstring += '\t\"\"\"\n'
             docstring += '\n\tOptions\n\t----------\n\n'
 
             for name, option in self.options.items():
@@ -597,7 +596,7 @@ class Component(System):
                 docstring += " : "
                 docstring += str(option)
                 docstring += " \n"
-                docstring += "\n\t\t\t<Insert description here.>\n\n"
+                docstring += "\n\t\t\t"+description+"\n\n"
 
         docstring += '\n\tNote\n\t----\n\n'
 
