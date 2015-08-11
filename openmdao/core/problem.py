@@ -948,7 +948,7 @@ class Problem(System):
             out_stream.write('Partial Derivatives Check\n\n')
 
         data = {}
-        skip_keys = []
+        skip_keys = set()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1000,7 +1000,7 @@ class Problem(System):
 
                         # Go no further if we aren't defined.
                         if (u_name, p_name) not in comp._jacobian_cache:
-                            skip_keys.append((u_name, p_name))
+                            skip_keys.add((u_name, p_name))
                             continue
 
                         user = comp._jacobian_cache[(u_name, p_name)].shape
@@ -1303,17 +1303,15 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
     for p_name in params:
         for u_name in resids:
+            if (u_name, p_name) in skip_keys:
+                continue
 
             ldata = cdata[(u_name, p_name)] = {}
 
             Jsub_fd = jac_fd[(u_name, p_name)]
 
-            if (u_name, p_name) in skip_keys:
-                Jsub_for = np.zeros(Jsub_fd.shape)
-                Jsub_rev = np.zeros(Jsub_fd.shape)
-            else:
-                Jsub_for = jac_fwd[(u_name, p_name)]
-                Jsub_rev = jac_rev[(u_name, p_name)]
+            Jsub_for = jac_fwd[(u_name, p_name)]
+            Jsub_rev = jac_rev[(u_name, p_name)]
 
             ldata['J_fd'] = Jsub_fd
             ldata['J_fwd'] = Jsub_for
