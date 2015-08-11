@@ -9,3 +9,4 @@ Examples
 
    examples/example_fd.rst
    examples/krig_sin.rst
+   examples/check_partial_derivatives.rst

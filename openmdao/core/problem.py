@@ -931,12 +931,20 @@ class Problem(System):
 
         Returns
         -------
-        Dict of Dicts of Dicts of Tuples of Floats.
+        Dict of Dicts of Dicts 
 
-        First key is the component name; 2nd key is the (output, input) tuple
-        of strings; third key is one of ['rel error', 'abs error',
-        'magnitude', 'fdstep']; Tuple contains norms for forward - fd,
-        adjoint - fd, forward - adjoint using the best case fdstep.
+        First key is the component name; 
+        2nd key is the (output, input) tuple of strings; 
+        third key is one of ['rel error', 'abs error', 'magnitude', 'J_fd', 'J_fwd', 'J_rev']; 
+
+        For 'rel error', 'abs error', 'magnitude' the value is:
+
+            A tuple containing norms for forward - fd, adjoint - fd, forward - adjoint using the best case fdstep
+
+        For 'J_fd', 'J_fwd', 'J_rev' the value is:
+
+            A numpy array representing the computed Jacobian for the three different methods of computation
+
         """
 
         root = self.root
