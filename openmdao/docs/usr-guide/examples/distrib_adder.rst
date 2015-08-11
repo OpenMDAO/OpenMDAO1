@@ -5,11 +5,11 @@ Distributed Components
 OpenMDAO can work with components that are actually distributed themselves.
 This is useful for dealing with complex tools, like PDE solver (CFD or FEA).
 But it can also be used to speed up any calculations you're implementing yourself
-directly in OpenMDAO using our MPI based parallel data passing.
+directly in OpenMDAO using our MPI-based parallel data passing.
 
 Why should you use OpenMDAO to build your own distributed components? Because
-it lets you do it without writing any significant MPI code yourself.
-Here is a simple example where we break up the job of adding a scalar value
+OpenMDAO lets you build distributed components without writing any significant MPI code yourself.
+Here is a simple example where we break up the job of adding a value
 to a large float array (30,000,000 elements).
 
 
@@ -36,7 +36,7 @@ to a large float array (30,000,000 elements).
             self.add_param('x', shape=size)
             self.add_output('y', shape=size)
 
-        def get_req_cups(self):
+        def get_req_cpus(self):
             """
             min/max number of cpus that this component can use
             """
@@ -172,7 +172,7 @@ In that case, you'll expect to see some output that looks like this:
     answer:  11.0
 
 
-To run the model in parallel you need to have an MPI library (like OpenMPI),
+To run the model in parallel you need to have an MPI library (e.g. OpenMPI),
 mpi4py, PETSc, and petsc4py installed. Then you can call the script like this:
 
 ::
@@ -191,6 +191,6 @@ And you can expect to see some output as follows:
 
 With two processes running, you get a decent speed up. You can see that each process took
 half the array. Why don't we get a full 2x speedup? Two reasons. The first, and more
-significant, factor is that we don't have a fully parallel model. The `plus` component is
-distributed, but not the `summer` component. This introduces a bottleneck because we have to wait
-for the serial operation.
+significant factor is that we don't have a fully parallel model. The `plus` component is
+distributed, but the `summer` component is not. This introduces a bottleneck because we have to wait
+for the serial operation to complete.

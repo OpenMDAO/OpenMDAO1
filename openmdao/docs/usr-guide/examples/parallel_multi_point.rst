@@ -4,9 +4,9 @@ Setting Up Serial Multi-Point Problems
 ----------------------------------------
 A multi-point problem is when you want to analyze a single design at a number
 of different conditions. For example, you might model aircraft performance at
-5 different flight conditions or predict at solar power generation at 10
+five different flight conditions or predict at solar power generation at ten
 different times of the year. To capture this kind of problem structure,
-you define a `Group` that models your design then stamp out as many copies as you
+you define a `Group` that models your design, then stamp out as many copies as you
 need.
 
 .. testcode:: serial_multi_point
@@ -35,13 +35,13 @@ need.
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['f1'] = params['x'] + self.adder
 
-            #sleep to slow thigns down a bit, to show the parallelism better
+            #sleep to slow things down a bit, to show the parallelism better
             time.sleep(.1)
 
     class Times(Component):
         """
         scalar: float
-            every element of the x array parameter is multiplies by this value
+            every element of the x array parameter is multiplied by this value
         """
 
         def __init__(self, scalar):
@@ -68,7 +68,7 @@ need.
 
     class Summer(Component):
         """
-        Aggregating component that take all the multi-point values
+        Aggregating component that takes all the multi-point values
         and adds them together
         """
 
@@ -108,7 +108,7 @@ need.
                 self.connect('multi_point.%s.f2'%c_name,'aggregate.f2_%d'%i)
 
 
-    from openmdao.core.problem import Problem
+    from openmdao.core import Problem
 
 
     prob = Problem()
@@ -180,8 +180,8 @@ Running Multi-Point in Parallel
 ------------------------------------------
 
 In many multi-point problems, all of the points can be run independently of
-each other. This provides an opportunity to run things in parallel. Your serial
-multi-point problem only needs a few minor modifications in order to run in parallel.
+each other, which provides an opportunity to run things in parallel. Your serial
+multi-point problem needs only a few minor modifications in order to run in parallel.
 
 .. note::
 
@@ -200,7 +200,7 @@ lots of extra output to the screen.
 
 
     if __name__ == "__main__":
-        from openmdao.core.problem import Problem
+        from openmdao.core import Problem
 
         from openmdao.core.mpi_wrap import MPI
 
