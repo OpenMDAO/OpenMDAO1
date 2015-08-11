@@ -107,36 +107,44 @@ need.
                 pg.add(c_name, Point(a,s))
                 self.connect('multi_point.%s.f2'%c_name,'aggregate.f2_%d'%i)
 
-    if __name__ == "__main__":
-        from openmdao.core.problem import Problem
+
+    from openmdao.core.problem import Problem
 
 
-        prob = Problem()
+    prob = Problem()
 
-        size = 10 #number of points
+    size = 10 #number of points
 
-        adders = np.arange(size)/10.
-        scalars = np.arange(size, 2*size)/10.
+    adders = np.arange(size)/10.
+    scalars = np.arange(size, 2*size)/10.
 
-        prob.root = MultiPoint(adders, scalars)
+    prob.root = MultiPoint(adders, scalars)
 
-        prob.setup()
+    prob.setup()
 
-        st = time.time()
+    st = time.time()
 
-        prob['X'] = np.random.random(size)
-        st = time.time()
-        print("run started")
-        prob.run()
-        print("run finished", time.time() - st)
+    prob['X'] = np.random.random(size)
+    st = time.time()
+    print("run started")
+    prob.run()
+    print("run finished", time.time() - st)
 
-        print(prob['aggregate.total'])
+    print(prob['aggregate.total'])
 
 
 
 If you run this script, you should see output that looks like this:
 
 .. testoutput:: serial_multi_point
+    :hide:
+    :options: +ELLIPSIS
+
+    run started
+    run finished ...
+    ...
+
+::
 
     ##############################################
     Setup: Checking for potential issues...

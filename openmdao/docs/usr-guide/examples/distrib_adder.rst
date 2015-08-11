@@ -145,6 +145,14 @@ Next we'll use these components to build an actual distributed model:
         #expected answer is 11
         print("answer: ", prob['sum']/size)
 
+.. testoutput:: dist_adder
+    :hide:
+    :options: +ELLIPSIS
+
+    process 0: (30000000,)
+    run time: ...
+    answer:  11.0
+
 
 You can run this model in either serial or parallel, depending on how you call the script.
 Lets say you put the above code into a python script called *dist_adder.py*. Then to run it in
@@ -157,7 +165,7 @@ serial you would call it just like any other python script:
 
 In that case, you'll expect to see some output that looks like this:
 
-.. testoutput:: dist_adder
+::
 
     process 0: (30000000,)
     run time: 1.76785802841
