@@ -37,13 +37,6 @@ class _NNBase(object):
         self.dep_dims = TrnVals.shape[1]
         self.ntpts = TrnPts.shape[0]
 
-        '''
-        print 'Interpolation Input Values'
-        print '-KDTree Leaves:', NumLeaves
-        print '-Number of Training Points:', self.ntpts
-        print
-        '''
-
         # Make training data into a Tree
         leavesz = ceil(self.ntpts / float(NumLeaves))
         self.KData = cKDTree(self.tp, leafsize=leavesz)
@@ -109,14 +102,6 @@ class LinearInterpolator(_NNBase):
         # KData query takes (data, #ofneighbors) to determine closest
         # training points to predicted data
         ndist, nloc = self.KData.query(normPredPts.real, dims)
-        '''
-        print 'Linear Plane Nearest Neighbors (LN) KDTree Results'
-        print '-Number of Predicted Points:', nppts
-        print '-Number of Neighbors per Predicted Point:', dims
-        print '-Nearest Neighbor Distance:', np.min(ndist)
-        print '-Farthest Neighbor Distance:', np.max(ndist)
-        print
-        '''
 
         # Need to ensure there are enough dimensions to find the normal with
         if self.indep_dims > 1:
@@ -148,7 +133,7 @@ class LinearInterpolator(_NNBase):
 
         normPredPts = (PredPoints - self.tpm) / self.tpr
         nppts = normPredPts.shape[0]
-        gradient = np.zeros((self.dep_dims, self.indep_dims), dtype="float")
+        gradient = np.zeros((nppts, self.dep_dims, self.indep_dims), dtype="float")
         # Linear interp only uses as many neighbors as it has dimensions
         dims = self.indep_dims + 1
         # Find them neighbors
@@ -161,7 +146,7 @@ class LinearInterpolator(_NNBase):
             gradient[:] = (-normal[:, :-1, :] / normal[:, -1, :]).squeeze().T
 
         else:
-            gradient[0, :], b = self.main2D(normPredPts, nppts, nloc)
+            gradient[:, 0, :], b = self.main2D(normPredPts, nppts, nloc)
 
         grad = gradient * (self.tvr[:, np.newaxis] / self.tpr)
         return grad
@@ -197,4 +182,7 @@ class NearestNeighbor(SurrogateModel):
         return self.interpolant(x)
 
     def jacobian(self, x):
-        return self.interpolant.gradient(x)
+        jac = self.interpolant.gradient(x)
+        if jac.shape[0] == 1:
+            return jac[0, ...]
+        return jac
