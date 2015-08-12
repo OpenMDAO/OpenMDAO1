@@ -596,7 +596,7 @@ class Component(System):
                 docstring += " : "
                 docstring += str(option)
                 docstring += " \n"
-                docstring += "\n\t\t\t"+description+"\n\n"
+                docstring += "\n\t\t\t<Insert description here.>\n\n"
 
         docstring += '\n\tNote\n\t----\n\n'
 

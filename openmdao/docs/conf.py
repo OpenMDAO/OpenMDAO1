@@ -163,7 +163,7 @@ def _parse(self):
         for (section,content) in self._read_sections():
             if not section.startswith('..'):
                 section = ' '.join([s.capitalize() for s in section.split(' ')])
-            if section in ('Args', 'Returns', 'Raises', 'Warns',
+            if section in ('Args', 'Options', 'Returns', 'Raises', 'Warns',
                            'Other Args', 'Attributes', 'Methods'):
                 self[section] = self._parse_param_list(content)
             elif section.startswith('.. index::'):
@@ -181,7 +181,6 @@ def __str__(self, indent=0, func_role="obj"):
         out += self._str_summary()
         out += self._str_extended_summary()
         out += self._str_param_list('Args')
-        #KGM
         out += self._str_options('Options')
         out += self._str_returns()
         for param_list in ('Other Args', 'Raises', 'Warns'):
@@ -206,7 +205,6 @@ def __init__(self, docstring, config={}):
             'Summary': [''],
             'Extended Summary': [],
             'Args': [],
-            #KGM
             'Options': [],
             'Returns': [],
             'Raises': [],
@@ -226,9 +224,21 @@ def __init__(self, docstring, config={}):
 
 def _str_options(self, name):
         out = []
-        if self["Options"]:
-            out += self._str_header('Options')
-
+        # if self["Options"]:
+        #     out += self._str_header('Options')
+        if self[name]:
+            out += self._str_field_list(name)
+            out += ['']
+            for param, param_type, desc in self[name]:
+                if param_type:
+                    out += self._str_indent(['**%s** : %s' % (param.strip(),
+                                                              param_type)])
+                else:
+                    out += self._str_indent(['**%s**' % param.strip()])
+                if desc:
+                    out += ['']
+                    out += self._str_indent(desc, 8)
+                out += ['']
         return out
 
 #Do the actual patch switchover to these local versions
