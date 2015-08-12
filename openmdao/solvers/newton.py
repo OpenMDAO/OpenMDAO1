@@ -146,17 +146,3 @@ class Newton(NonLinearSolver):
         if self.options['iprint'] > 0:
             self.print_norm('NEWTON', local_meta, self.iter_count, f_norm,
                             f_norm0, msg='Converged')
-
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
-
-class GSNewtonHybrid(Newton):
-
-    def __init__(self):
-        super(GSNewtonHybrid, self).__init__()
-        self.gs_solver = NLGaussSeidel()
-        self.gs_solver.options['maxiter'] = 10
-        self.gs_solver.options['iprint'] = 2
-
-    def solve(self, params, unknowns, resids, system, metadata=None):
-        self.gs_solver.solve(params, unknowns, resids, system, metadata)
-        super(GSNewtonHybrid, self).solve(params, unknowns, resids, system, metadata)
