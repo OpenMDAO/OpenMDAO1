@@ -1,4 +1,4 @@
-OpenMDAO Version 1.0.2 Alpha Release Notes
+OpenMDAO Version 1.0.5 Alpha Release Notes
 August 12, 2015
 
 * Forgot to update __version__   <:)
