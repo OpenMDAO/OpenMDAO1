@@ -1,22 +1,36 @@
 .. index:: Check Partial Differences Example
 
-Check Partial Differences
--------------------------
+Error Checking Partial Derivatives
+------------------------------------
 
 Simple Example Using Problem.check_partial_derivatives
 ======================================================
 
-OpenMDAO provides a way for a `Component` developer to verify that their partial derivative calculations in the `jacobian` method are working correctly. 
+OpenMDAO provides a way for a `Component` developer to verify that their
+partial derivatives, for each individual component, are correct. 
 
-`Problem` has a method, `check_partial_derivatives`, that checks partial derivatives comprehensively for all `Components` in your model. Please note that `check_partial_derivatives` only does its checks for `Components` that compute derivatives by providing a `jacobian` method.
+`Problem` has a method, `check_partial_derivatives`, that checks partial
+derivatives comprehensively for all `Components` in your model (as long as
+you didn't set *fd_options['force_fd'] = True*). To do this check, the framework
+uses compares the analytic result against a finite difference result. This means
+that the `check_partial_derivatives` function can be quite computationally expensive.
+So use it to check your work, but don't leave the call in your production run scripts.
 
-It has one optional argument, `out_stream`, which lets you define where the results of the check are written to. The default is `sys.stdout`. This example explicitly sets the value of out_stream to `sys.stdout` only for testing purposes. 
 
-Here is example code for a model that consists of a single `Component`, `SimpleArrayComp`, which is provided with OpenMDAO. After setting up the model, it runs `check_partial_derivatives` on the `Problem`.
+.. note::
+
+  `check_partial_derivatives` has one optional argument, `out_stream`, which lets
+  you define where the results of the check are written to. The default is
+  `sys.stdout`. This example explicitly sets the value of out_stream to
+  `sys.stdout` to make our automated doc tests work correctly. You would only
+  set this argument if you wanted to pipe it to a file or some other stream.
+
+Here is example code for a model that consists of a single `Component`,
+`SimpleArrayComp. After setting up the model, it runs `check_partial_derivatives` on the `Problem`.
 
 .. testcode:: check_partial_derivatives_example
 
-   import numpy as np 
+   import numpy as np
    import sys
 
    from openmdao.components import ParamComp
@@ -37,7 +51,7 @@ Here is example code for a model that consists of a single `Component`, `SimpleA
 
 This code generates output that looks like this:
 
-.. testoutput:: check_partial_derivatives_example 
+.. testoutput:: check_partial_derivatives_example
    :options: +REPORT_NDIFF
 
    Partial Derivatives Check
@@ -78,7 +92,10 @@ This code generates output that looks like this:
 Return Value of check_partial_derivatives
 =================================================
 
-The method check_partial_derivatives returns a dict of dicts of dicts with comprehensive information about the check of the partial derivatives. 
+The method check_partial_derivatives returns a dict of dicts of dicts with
+comprehensive information about the check of the partial derivatives. You can use
+this data to write scripts to interact with the derivatives check information if
+you want.
 
 The keys of the nested dicts are:
 
@@ -98,5 +115,3 @@ Key of Innermost Dict                                              Type of value
 'rel error', 'abs error', 'magnitude'                              A tuple containing norms for (forward - finite differences), ( adjoint - finite differences), (forward - adjoint) using the best case fdstep
 'J_fd', 'J_fwd', 'J_rev'                                           A numpy array representing the computed Jacobian for the three different methods of computation
 =========================================================          ======================
-
-
