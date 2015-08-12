@@ -1376,7 +1376,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('\n\n')
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
-            out_stream.write('\n\n')
+            out_stream.write('\n')
 
 def _get_implicit_connections(root, params_dict, unknowns_dict):
     """
