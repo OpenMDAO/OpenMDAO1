@@ -1,29 +1,19 @@
-
-import unittest
-import math
-from six.moves import cStringIO
-
 import numpy as np
-from math import sin
+import unittest
 
-from openmdao.core import Component, Group, Problem
-from openmdao.components import MetaModel
+from openmdao.core import Group, Problem
+from openmdao.components import MetaModel, ParamComp
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
 
 from openmdao.test.util import assert_rel_error
+
+from six.moves import cStringIO
+from re import findall
 
 
 class TestMetaModel(unittest.TestCase):
 
     def test_sin_metamodel(self):
-        class Sin(Component):
-            """ Simple sine calculation. """
-            def __init__(self):
-                self.add_param('x', 0., units="rad")
-                self.add_output('f_x', 0.)
-
-            def solve_nonlinear(self, params, unknowns, resids):
-                unknowns['f_x'] = .5*sin(params['x'])
 
         # create a MetaModel for Sin and add it to a Problem
         sin_mm = MetaModel()
@@ -170,35 +160,169 @@ class TestMetaModel(unittest.TestCase):
         assert_rel_error(self, prob['meta.y1'], 2.0, .00001)
         assert_rel_error(self, prob['meta.y2'], 4.0, .00001)
 
-    #def test_array_inputs(self):
-        #raise unittest.SkipTest('MetaModel does not currently support array params')
+    def test_vector_inputs(self):
 
-        #meta = MetaModel()
-        #meta.add_param('x', np.zeros((4)))
-        #meta.add_output('y1', 0.)
-        #meta.add_output('y2', 0.)
-        #meta.default_surrogate = KrigingSurrogate()
+        meta = MetaModel()
+        meta.add_param('x', np.zeros(4))
+        meta.add_output('y1', 0.)
+        meta.add_output('y2', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
 
-        #prob = Problem(Group())
-        #prob.root.add('meta', meta)
-        #prob.setup(check=False)
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
 
-        #prob['meta.train:x'] = [
-            #[1.0, 1.0, 1.0, 1.0],
-            #[2.0, 1.0, 1.0, 1.0],
-            #[1.0, 2.0, 1.0, 1.0],
-            #[1.0, 1.0, 2.0, 1.0],
-            #[1.0, 1.0, 1.0, 2.0]
-        #]
-        #prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
-        #prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
+        prob['meta.train:x'] = [
+            [1.0, 1.0, 1.0, 1.0],
+            [2.0, 1.0, 1.0, 1.0],
+            [1.0, 2.0, 1.0, 1.0],
+            [1.0, 1.0, 2.0, 1.0],
+            [1.0, 1.0, 1.0, 2.0]
+        ]
+        prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
+        prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
 
-        #prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
-        #prob.run()
+        prob['meta.x'] = [1.0, 2.0, 1.0, 1.0]
+        prob.run()
 
-        #assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
-        #assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
+        assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
+        assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
 
+    def test_array_inputs(self):
+        meta = MetaModel()
+        meta.add_param('x', np.zeros((2,2)))
+        meta.add_output('y1', 0.)
+        meta.add_output('y2', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [
+            [[1.0, 1.0], [1.0, 1.0]],
+            [[2.0, 1.0], [1.0, 1.0]],
+            [[1.0, 2.0], [1.0, 1.0]],
+            [[1.0, 1.0], [2.0, 1.0]],
+            [[1.0, 1.0], [1.0, 2.0]]
+        ]
+        prob['meta.train:y1'] = [3.0, 2.0, 1.0, 6.0, -2.0]
+        prob['meta.train:y2'] = [1.0, 4.0, 7.0, -3.0, 3.0]
+
+        prob['meta.x'] = [[1.0, 2.0], [1.0, 1.0]]
+        prob.run()
+
+        assert_rel_error(self, prob['meta.y1'], 1.0, .00001)
+        assert_rel_error(self, prob['meta.y2'], 7.0, .00001)
+
+    def test_array_outputs(self):
+        meta = MetaModel()
+        meta.add_param('x', np.zeros((2, 2)))
+        meta.add_output('y', np.zeros(2,))
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [
+            [[1.0, 1.0], [1.0, 1.0]],
+            [[2.0, 1.0], [1.0, 1.0]],
+            [[1.0, 2.0], [1.0, 1.0]],
+            [[1.0, 1.0], [2.0, 1.0]],
+            [[1.0, 1.0], [1.0, 2.0]]
+        ]
+
+        prob['meta.train:y'] = [[3.0, 1.0],
+                                [2.0, 4.0],
+                                [1.0, 7.0],
+                                [6.0, -3.0],
+                                [-2.0, 3.0]]
+
+        prob['meta.x'] = [[1.0, 2.0], [1.0, 1.0]]
+        prob.run()
+
+        assert_rel_error(self, prob['meta.y'], np.array([1.0, 7.0]), .00001)
+
+    def test_unequal_training_inputs(self):
+
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [1.0, 1.0, 1.0, 1.0]
+        prob['meta.train:y'] = [1.0, 2.0]
+        prob['meta.train:f'] = [1.0, 1.0, 1.0, 1.0]
+
+        prob['meta.x'] = 1.0
+        prob['meta.y'] = 1.0
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.run()
+
+        expected = "MetaModel: Each variable must have the same number" \
+                   " of training points. Expected 4 but found" \
+                   " 2 points for 'y'."
+
+        self.assertEqual(str(cm.exception), expected)
+
+    def test_unequal_training_outputs(self):
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta)
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [1.0, 1.0, 1.0, 1.0]
+        prob['meta.train:y'] = [1.0, 2.0, 3.0, 4.0]
+        prob['meta.train:f'] = [1.0, 1.0]
+
+        prob['meta.x'] = 1.0
+        prob['meta.y'] = 1.0
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.run()
+
+        expected = "MetaModel: Each variable must have the same number" \
+                   " of training points. Expected 4 but found" \
+                   " 2 points for 'f'."
+
+        self.assertEqual(str(cm.exception), expected)
+
+    def test_derivatives(self):
+        meta = MetaModel()
+        meta.add_param('x', 0.)
+        meta.add_output('f', 0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
+
+        prob = Problem(Group())
+        prob.root.add('meta', meta, promotes=['x'])
+        prob.root.add('p', ParamComp('x', 0.), promotes=['x'])
+        prob.setup(check=False)
+
+        prob['meta.train:x'] = [0., .25, .5, .75, 1.]
+        prob['meta.train:f'] = [1., .75, .5, .25, 0.]
+        prob['x'] = 0.125
+        prob.run()
+
+        stream = cStringIO()
+        prob.check_partial_derivatives(out_stream=stream)
+
+        abs_errors = findall('Absolute Error \(.+\) : (.+)', stream.getvalue())
+        self.assertTrue(len(abs_errors) > 0)
+        for match in abs_errors:
+            abs_error = float(match)
+            self.assertTrue(abs_error < 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
