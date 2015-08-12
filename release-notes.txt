@@ -1,3 +1,20 @@
+OpenMDAO Version 1.0.4 Alhpa Release Notes
+August 12, 2015
+
+*Fixed bug where there was a key error when finite-differencing a Problem with 
+params buried in sub-Groups.
+* Changed filenames and option names for internal consistency
+* Some setup performance improvements
+* OpenMDAO imports made simpler, now from top-level packages (e.g. core, components, etc.)
+* ExternalCode component added, with documentation added to User Guide.
+* MetaModel Example added to User Guide.
+* Fixed a bug where connections to promoted vars with src_indices were broken.
+* User can connect a single element from a src array to a target scalar float variable.
+* pyoptsparse now works with Python3
+* MPI parallelization tutorial added to User Guide.
+* check_partial_derivatives example added to User Guide.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.0.3 Alpha Release Notes
 July 24, 2015
 
