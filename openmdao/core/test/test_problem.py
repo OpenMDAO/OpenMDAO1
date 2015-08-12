@@ -855,7 +855,7 @@ class TestProblem(unittest.TestCase):
         prob.run()
 
         try:
-            prob.check_partial_derivatives()
+            prob.check_partial_derivatives(out_stream=None)
         except KeyError as err:
             self.fail('KeyError raised: {0}'.format(str(err)))
 
