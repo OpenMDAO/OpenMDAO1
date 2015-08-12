@@ -87,8 +87,8 @@ class TestMetaModel(unittest.TestCase):
 
         prob.run()
 
-        assert_rel_error(self, prob['sin_mm.f_x'][0], 0.86323233, 1e-5) # mean
-        assert_rel_error(self, prob['sin_mm.f_x'][1], 5.95314840e-05, 1e-5) #std deviation
+        assert_rel_error(self, prob['sin_mm.f_x'][0], 0.86323233, 1e-4) # mean
+        assert_rel_error(self, prob['sin_mm.f_x'][1], 5.95314840e-05, 1e-4) #std deviation
 
     def test_basics(self):
         # create a metamodel component
