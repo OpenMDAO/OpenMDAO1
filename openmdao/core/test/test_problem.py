@@ -833,6 +833,31 @@ class TestProblem(unittest.TestCase):
         sub1.ln_solver.options['mode'] = 'rev'
         mode = prob._check_for_matrix_matrix(['a'], ['x'])
 
+    def test_fd_skip_keys(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        comp = Component()
+        comp.add_param('x', 0.)
+        comp.add_param('y', 0.)
+        comp.add_output('z', 0.)
+        comp.solve_nonlinear = lambda p, u, r: u.__setitem__('z', 1.)
+        comp._get_fd_params = lambda: ['x']
+        comp.jacobian = lambda a,b,c: {('z', 'x'): 0.}
+
+        root.add('comp', comp, promotes=['x', 'y'])
+
+        root.add('px', ParamComp('x', 0.), promotes=['*'])
+        root.add('py', ParamComp('y', 0.), promotes=['*'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        try:
+            prob.check_partial_derivatives()
+        except KeyError as err:
+            self.fail('KeyError raised: {0}'.format(str(err)))
 
 class TestCheckSetup(unittest.TestCase):
 
