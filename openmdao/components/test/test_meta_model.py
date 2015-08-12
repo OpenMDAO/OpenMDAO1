@@ -3,7 +3,7 @@ import unittest
 
 from openmdao.core import Group, Problem
 from openmdao.components import MetaModel, ParamComp
-from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate
+from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, KrigingSurrogate
 
 from openmdao.test.util import assert_rel_error
 
@@ -51,6 +51,46 @@ class TestMetaModel(unittest.TestCase):
         self.assertAlmostEqual(prob['sin_mm.f_x'],
                                .5*np.sin(prob['sin_mm.x']),
                                places=5)
+
+    def test_sin_metamodel_obj_return(self):
+
+        # create a MetaModel for Sin and add it to a Problem
+        sin_mm = MetaModel()
+        sin_mm.add_param('x', 0.)
+        sin_mm.add_output('f_x', (0.,0.))
+
+        prob = Problem(Group())
+        prob.root.add('sin_mm', sin_mm)
+
+        # check that missing surrogate is detected in check_setup
+        stream = cStringIO()
+        prob.setup(out_stream=stream)
+        msg = ("No default surrogate model is defined and the "
+               "following outputs do not have a surrogate model:\n"
+               "['f_x']\n"
+               "Either specify a default_surrogate, or specify a "
+               "surrogate model for all outputs.")
+        self.assertTrue(msg in stream.getvalue())
+
+        # check that output with no specified surrogate gets the default
+        sin_mm.default_surrogate = KrigingSurrogate()
+        prob.setup(check=False)
+        surrogate = prob.root.unknowns.metadata('sin_mm.f_x').get('surrogate')
+        self.assertTrue(isinstance(surrogate, KrigingSurrogate),
+                        'sin_mm.f_x should get the default surrogate')
+
+        # train the surrogate and check predicted value
+        prob['sin_mm.train:x'] = np.linspace(0,10,20)
+        prob['sin_mm.train:f_x'] = np.sin(prob['sin_mm.train:x'])
+
+        prob['sin_mm.x'] = 2.1
+
+        prob.run()
+
+        # norm_dist predicted: -0.5048, 6.1617e-06
+        self.assertAlmostEqual(prob['sin_mm.f_x'][0], -0.5048, places=5) # mean
+
+        self.assertTrue(prob['sin_mm.f_x'][1] <= 7e-06) #std deviation
 
     def test_basics(self):
         # create a metamodel component
