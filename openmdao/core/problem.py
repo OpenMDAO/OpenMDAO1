@@ -931,12 +931,20 @@ class Problem(System):
 
         Returns
         -------
-        Dict of Dicts of Dicts of Tuples of Floats.
+        Dict of Dicts of Dicts 
 
-        First key is the component name; 2nd key is the (output, input) tuple
-        of strings; third key is one of ['rel error', 'abs error',
-        'magnitude', 'fdstep']; Tuple contains norms for forward - fd,
-        adjoint - fd, forward - adjoint using the best case fdstep.
+        First key is the component name; 
+        2nd key is the (output, input) tuple of strings; 
+        third key is one of ['rel error', 'abs error', 'magnitude', 'J_fd', 'J_fwd', 'J_rev']; 
+
+        For 'rel error', 'abs error', 'magnitude' the value is:
+
+            A tuple containing norms for forward - fd, adjoint - fd, forward - adjoint using the best case fdstep
+
+        For 'J_fd', 'J_fwd', 'J_rev' the value is:
+
+            A numpy array representing the computed Jacobian for the three different methods of computation
+
         """
 
         root = self.root
@@ -1366,7 +1374,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('\n\n')
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
-            out_stream.write('\n\n')
+            out_stream.write('\n')
 
 def _get_implicit_connections(root, params_dict, unknowns_dict):
     """
