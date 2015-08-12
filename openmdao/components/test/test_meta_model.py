@@ -88,9 +88,8 @@ class TestMetaModel(unittest.TestCase):
         prob.run()
 
         # norm_dist predicted: -0.5048, 6.1617e-06
-        self.assertAlmostEqual(prob['sin_mm.f_x'][0], -0.5048, places=5) # mean
-
-        self.assertTrue(prob['sin_mm.f_x'][1] <= 7e-06) #std deviation
+        assert_rel_error(self, prob['sin_mm.f_x'][0], 0.86323233, 1e-5) # mean
+        assert_rel_error(self, prob['sin_mm.f_x'][1], 5.95314840e-05, 1e-5) #std deviation
 
     def test_basics(self):
         # create a metamodel component
