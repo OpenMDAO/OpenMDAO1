@@ -86,7 +86,6 @@ class TestMetaModel(unittest.TestCase):
         prob['sin_mm.x'] = 2.1
 
         prob.run()
-        print prob['sin_mm.f_x'][1]
         assert_rel_error(self, prob['sin_mm.f_x'][0], 0.86323233, 1e-4) # mean
         self.assertTrue(self, prob['sin_mm.f_x'][1] < 1e-5) #std deviation
 
