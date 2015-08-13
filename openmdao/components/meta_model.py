@@ -80,7 +80,10 @@ class MetaModel(Component):
         super(MetaModel, self).add_output(name, val, **kwargs)
         super(MetaModel, self).add_output('train:'+name, val=list(), pass_by_obj=True)
 
-        output_shape = self._unknowns_dict[name]['shape']
+        try:
+            output_shape = self._unknowns_dict[name]['shape']
+        except KeyError: #then its some kind of object, and just assume scalar training data
+            output_shape = 1
 
         self._surrogate_output_names.append((name, output_shape))
         self._training_output[name] = np.zeros(0)
@@ -302,6 +305,7 @@ class MetaModel(Component):
                     new_output = outputs
 
                 val = self.unknowns['train:' + name]
+
                 if isinstance(val[0], float):
                     new_output[:, 0] = val
                 else:

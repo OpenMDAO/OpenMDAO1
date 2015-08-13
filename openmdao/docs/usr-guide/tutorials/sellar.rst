@@ -123,7 +123,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 For the most part, construction of these `Components` builds on what you
 learned in previous tutorials. In building these disciplines, we gave default
 values to all of the `params` and `unknowns` so that OpenMDAO can allocate
-the correct size in the vectors. The global design variables `z1` and `z1`
+the correct size in the vectors. The global design variables `z1` and `z2`
 were combined into a 2-element `ndarray`.
 
 .. note::
