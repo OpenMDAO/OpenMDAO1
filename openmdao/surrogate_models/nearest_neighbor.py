@@ -7,10 +7,12 @@ from collections import OrderedDict
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 from openmdao.surrogate_models.nn_interpolators.linear_interpolator import \
     LinearInterpolator
+from openmdao.surrogate_models.nn_interpolators.weighted_interpolator import \
+    WeightedInterpolant
 
 
 _interpolators = OrderedDict([('linear', LinearInterpolator),
-                  ('weighted', None),
+                  ('weighted', WeightedInterpolant),
                   ('cosine', None),
                   ('hermite', None),
                   ('rbf', None)])
@@ -34,12 +36,12 @@ class NearestNeighbor(SurrogateModel):
         super(NearestNeighbor, self).train(x, y)
         self.interpolant = _interpolators[self.interpolant_type](x, y)
 
-    def predict(self, x):
+    def predict(self, x, **kwargs):
         super(NearestNeighbor, self).predict(x)
-        return self.interpolant(x)
+        return self.interpolant(x, **kwargs)
 
-    def jacobian(self, x):
-        jac = self.interpolant.gradient(x)
+    def jacobian(self, x, **kwargs):
+        jac = self.interpolant.gradient(x, **kwargs)
         if jac.shape[0] == 1:
             return jac[0, ...]
         return jac
