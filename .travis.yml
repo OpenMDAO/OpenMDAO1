@@ -28,7 +28,7 @@ before_install:
 - conda update --yes conda
 
 install:
-- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx
+- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock
 - pip install .
 
 script: nosetests
