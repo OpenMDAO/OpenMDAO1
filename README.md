@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/OpenMDAO/OpenMDAO.svg?branch=master)](https://travis-ci.org/OpenMDAO/OpenMDAO)   [![Build status](https://ci.appveyor.com/api/projects/status/7ou38qfgpnhqoxsr/branch/master?svg=true)](https://ci.appveyor.com/project/OpenMDAO/openmdao/branch/master)  [![Documentation Status](https://readthedocs.org/projects/openmdao/badge/?version=latest)](http://openmdao.readthedocs.org/en/latest/)
+[![Coverage Status](https://coveralls.io/repos/kmarsteller/OpenMDAO/badge.svg?branch=master&service=github)](https://coveralls.io/github/kmarsteller/OpenMDAO?branch=master)
 
 This version of OpenMDAO is completely new software.  To use the legacy version
  (versions 0.13.0 and older) of the OpenMDAO-Framework, go here:
