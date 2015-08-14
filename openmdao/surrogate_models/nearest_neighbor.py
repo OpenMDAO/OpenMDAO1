@@ -1,19 +1,19 @@
 # Based off of the N-Dimensional Interpolation library by Stephen Marone.
 # https://github.com/SMarone/NDInterp
 
+import numpy as np
+
 from collections import OrderedDict
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 from openmdao.surrogate_models.nn_interpolators.linear_interpolator import \
     LinearInterpolator
 from openmdao.surrogate_models.nn_interpolators.weighted_interpolator import \
-    WeightedInterpolator
-from openmdao.surrogate_models.nn_interpolators.cosine_interpolator import \
-    CosineInterpolator
+    WeightedInterpolant
 
 
 _interpolators = OrderedDict([('linear', LinearInterpolator),
-                  ('weighted', WeightedInterpolator),
-                  ('cosine', CosineInterpolator),
+                  ('weighted', WeightedInterpolant),
+                  ('cosine', None),
                   ('hermite', None),
                   ('rbf', None)])
 
@@ -38,19 +38,9 @@ class NearestNeighbor(SurrogateModel):
 
     def predict(self, x, **kwargs):
         super(NearestNeighbor, self).predict(x)
-
-        if len(x.shape) == 1:
-            # Reshape vector to 1 x n array
-            x.shape = (1, x.shape[0])
-
         return self.interpolant(x, **kwargs)
 
     def jacobian(self, x, **kwargs):
-
-        if len(x.shape) == 1:
-            # Reshape vector to 1 x n array
-            x.shape = (1, x.shape[0])
-
         jac = self.interpolant.gradient(x, **kwargs)
         if jac.shape[0] == 1:
             return jac[0, ...]

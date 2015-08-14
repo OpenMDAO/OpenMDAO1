@@ -52,6 +52,10 @@ class LinearInterpolator(NNBase):
         # This method uses linear interpolation by defining a plane with
         # a set number of nearest neighbors to the predicted
 
+        if len(prediction_points.shape) == 1:
+            # Reshape vector to n x 1 array
+            prediction_points.shape = (1, prediction_points.shape[0])
+
         normalized_pts = (prediction_points - self.tpm) / self.tpr
 
         # Linear interp only uses as many neighbors as it has dimensions
@@ -83,6 +87,10 @@ class LinearInterpolator(NNBase):
     def gradient(self, PredPoints):
         # Extra method to find the gradient at each location of a set of
         # supplied predicted points.
+
+        if len(PredPoints.shape) == 1:
+            # Reshape vector to n x 1 array
+            PredPoints.shape = (1, PredPoints.shape[0])
 
         normPredPts = (PredPoints - self.tpm) / self.tpr
         nppts = normPredPts.shape[0]
