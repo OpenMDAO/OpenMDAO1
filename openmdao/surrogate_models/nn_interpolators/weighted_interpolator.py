@@ -1,12 +1,13 @@
 import numpy as np
 
 from openmdao.surrogate_models.nn_interpolators.nn_base import NNBase
-from six.moves import range, zip
+
 
 class WeightedInterpolant(NNBase):
     # Weighted Neighbor Interpolation
 
-    def _get_weights(self, ndist, dist_eff):
+    @staticmethod
+    def _get_weights(ndist, dist_eff):
 
         # Find the weighted neighbors per defined formula for distance effect
         dist = np.power(ndist, dist_eff)
@@ -77,8 +78,7 @@ class WeightedInterpolant(NNBase):
             prediction_points.shape = (1, prediction_points.shape[0])
 
         normalized_pts = (prediction_points - self.tpm) / self.tpr
-        nppts = normalized_pts.shape[0]
-        # Find them neigbors
+
         # KData query takes (data, #ofneighbors) to determine closest
         # training points to predicted data
         ndist, nloc = self.KData.query(normalized_pts.real, n)
@@ -90,10 +90,8 @@ class WeightedInterpolant(NNBase):
 
         dimdiff = normalized_pts - self.tp[nloc]
 
-        inv_dist = 1. / ndist
-
-        weights = np.power(inv_dist, dist_eff)
-        dweights = -dist_eff * np.power(inv_dist[..., np.newaxis], dist_eff + 2) * dimdiff
+        weights = np.power(ndist, -dist_eff)
+        dweights = -dist_eff * np.power(ndist[..., np.newaxis], -(dist_eff + 2)) * dimdiff
 
         weight_sum = np.sum(weights, axis=1)
 

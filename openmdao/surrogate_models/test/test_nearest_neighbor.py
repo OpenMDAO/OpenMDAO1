@@ -212,7 +212,7 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                                ])
 
         for x0, y0 in zip(test_x, expected_y):
-            mu = self.surrogate.predict(x0)
+            mu = self.surrogate.predict(x0, n=5, dist_eff=3)
             assert_rel_error(self, mu, y0, 1e-6)
 
     def test_bulk_prediction(self):
