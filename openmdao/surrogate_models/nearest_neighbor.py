@@ -1,25 +1,22 @@
 # Based off of the N-Dimensional Interpolation library by Stephen Marone.
 # https://github.com/SMarone/NDInterp
 
-import numpy as np
-
 from collections import OrderedDict
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 from openmdao.surrogate_models.nn_interpolators.linear_interpolator import \
     LinearInterpolator
 from openmdao.surrogate_models.nn_interpolators.weighted_interpolator import \
-    WeightedInterpolant
-
+    WeightedInterpolator
+from openmdao.surrogate_models.nn_interpolators.rbf_interpolator import \
+    RBFInterpolator
 
 _interpolators = OrderedDict([('linear', LinearInterpolator),
-                  ('weighted', WeightedInterpolant),
-                  ('cosine', None),
-                  ('hermite', None),
-                  ('rbf', None)])
+                  ('weighted', WeightedInterpolator),
+                  ('rbf', RBFInterpolator)])
 
 
 class NearestNeighbor(SurrogateModel):
-    def __init__(self, interpolant_type='rbf'):
+    def __init__(self, interpolant_type='rbf', **kwargs):
         super(NearestNeighbor, self).__init__()
 
         if interpolant_type not in _interpolators.keys():
@@ -29,12 +26,14 @@ class NearestNeighbor(SurrogateModel):
                   )
             raise ValueError(msg)
 
+        self.interpolant_init_args = kwargs
+
         self.interpolant_type = interpolant_type
         self.interpolant = None
 
     def train(self, x, y):
         super(NearestNeighbor, self).train(x, y)
-        self.interpolant = _interpolators[self.interpolant_type](x, y)
+        self.interpolant = _interpolators[self.interpolant_type](x, y, **self.interpolant_init_args)
 
     def predict(self, x, **kwargs):
         super(NearestNeighbor, self).predict(x)
@@ -42,6 +41,6 @@ class NearestNeighbor(SurrogateModel):
 
     def jacobian(self, x, **kwargs):
         jac = self.interpolant.gradient(x, **kwargs)
-        if jac.shape[0] == 1:
+        if jac.shape[0] == 1 and len(jac.shape) > 2:
             return jac[0, ...]
         return jac

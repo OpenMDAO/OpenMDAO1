@@ -3,7 +3,7 @@ import numpy as np
 from openmdao.surrogate_models.nn_interpolators.nn_base import NNBase
 
 
-class WeightedInterpolant(NNBase):
+class WeightedInterpolator(NNBase):
     # Weighted Neighbor Interpolation
 
     @staticmethod
