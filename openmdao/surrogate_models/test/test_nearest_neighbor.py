@@ -165,7 +165,7 @@ class TestWeightedInterpolator1D(unittest.TestCase):
 
     def test_jacobian(self):
         test_x = np.array([[0.5], [1.5], [2.5]])
-        expected_deriv = np.array([[2.10526316], [-0.99722992], [-1.04155125]])
+        expected_deriv = np.array([[1.92797784], [0.06648199], [-1.92797784]])
 
         for x0, y0 in zip(test_x, expected_deriv):
             jac = self.surrogate.jacobian(x0, n=3)
@@ -196,12 +196,19 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                            [0., 1.],
                            [.5, .5]
                            ])
-        expected_y = np.array([[0.18137107,  0.81862893,  0.5, 0.18137107],
-                               [0.18137107, 0.81862893, 0.5, 0.18137107],
-                               [0.18137107, 0.81862893, 0.5, 0.18137107],
-                               [0.18137107, 0.81862893, 0.5, 0.18137107],
-                               [0.68542434, 0.31457566,  0.5, 0.68542434],
-                               [0.54872067,  0.45127933, 0.5, 0.54872067]
+        a = ((16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.))) /
+             (16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.)) + 8.))
+
+        b = 8. / (8. + 16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.)))
+        c = (2. + 2. / (5. * np.sqrt(5))) / (3. + 2. / (5. * np.sqrt(5)))
+        d = 1. / (3. + 2. / (5. * np.sqrt(5)))
+
+        expected_y = np.array([[a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [c, d, 0.5, c],
+                               [0.54872067, 0.45127933, 0.5, 0.54872067]
                                ])
 
         for x0, y0 in zip(test_x, expected_y):
@@ -217,7 +224,8 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                            [.5, .5]
                            ])
 
-        a = (16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.))) / (16./(5*np.sqrt(5.)) + 16. / (13. * np.sqrt(13.)) + 8.)
+        a = ((16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.))) /
+             (16./(5*np.sqrt(5.)) + 16. / (13. * np.sqrt(13.)) + 8.))
         b = 8. / (8. + 16. / (5 * np.sqrt(5.)) + 16. / (13. * np.sqrt(13.)))
         c = (2. + 2./(5.*np.sqrt(5))) / (3. + 2. / (5. * np.sqrt(5)))
         d = 1. / (3. + 2. / (5. * np.sqrt(5)))
@@ -239,14 +247,14 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                            [1., 1.5],
                            [1.5, 1.]
                            ])
+        a = 0.99511746
         expected_deriv = list(map(np.array, [
-            [[1.46759835, -0.26131828], [-1.46759835, 0.26131828], [0., 0.], [1.46759835, -0.26131828]],
-            [[-0.26131828, 1.46759835], [0.26131828, -1.46759835], [0., 0.], [-0.26131828, 1.46759835]],
-            [[0., 1.], [0., -1.], [0., 0.], [0., 1.]],
-            [[1., 0.], [-1., 0.], [0., 0.], [1., 0.]]
+            [[0., -a], [0., a], [0., 0.], [0., -a]],
+            [[-a, 0], [a, 0.], [0., 0.], [-a, 0]],
+            [[0., a], [0., -a], [0., 0.], [0., a]],
+            [[a, 0.], [-a, 0.], [0., 0.], [a, 0.]]
         ]))
-        import warnings
+
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
-            warnings.warn(str((x0,mu)))
             assert_rel_error(self, mu, y0, 1e-6)

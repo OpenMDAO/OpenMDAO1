@@ -93,7 +93,7 @@ class WeightedInterpolant(NNBase):
         inv_dist = 1. / ndist
 
         weights = np.power(inv_dist, dist_eff)
-        dweights = -dist_eff / np.power(inv_dist[..., np.newaxis], dist_eff + 2) * dimdiff
+        dweights = -dist_eff * np.power(inv_dist[..., np.newaxis], dist_eff + 2) * dimdiff
 
         weight_sum = np.sum(weights, axis=1)
 
