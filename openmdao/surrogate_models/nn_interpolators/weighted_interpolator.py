@@ -3,7 +3,7 @@ import numpy as np
 from openmdao.surrogate_models.nn_interpolators.nn_base import NNBase
 
 
-class WeightedInterpolant(NNBase):
+class WeightedInterpolator(NNBase):
     # Weighted Neighbor Interpolation
 
     @staticmethod
@@ -27,17 +27,13 @@ class WeightedInterpolant(NNBase):
     def __call__(self, prediction_points, n=5, dist_eff=0):
 
         if self.ntpts < n:
-            raise ValueError('WeightedInterpolant does not have sufficient '
+            raise ValueError('WeightedInterpolator does not have sufficient '
                              'training data to use n={0}, only {1} points'
                              ' available.'.format(n, self.ntpts))
 
         if dist_eff == 0:
             # If default, use #dims + 1
             dist_eff = self.indep_dims + 1
-
-        if len(prediction_points.shape) == 1:
-            # Reshape vector to n x 1 array
-            prediction_points.shape = (1, prediction_points.shape[0])
 
         normalized_pts = (prediction_points - self.tpm) / self.tpr
         nppts = normalized_pts.shape[0]
@@ -65,7 +61,7 @@ class WeightedInterpolant(NNBase):
     def gradient(self, prediction_points, n=5, dist_eff=0):
 
         if self.ntpts < n:
-            raise ValueError('WeightedInterpolant does not have sufficient '
+            raise ValueError('WeightedInterpolator does not have sufficient '
                              'training data to use n={0}, only {1} points'
                              ' available.'.format(n, self.ntpts))
 

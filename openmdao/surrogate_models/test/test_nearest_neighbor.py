@@ -137,7 +137,7 @@ class TestWeightedInterpolator1D(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             self.surrogate.predict(self.x[0], n=100)
 
-        expected_msg = ('WeightedInterpolant does not have sufficient '
+        expected_msg = ('WeightedInterpolator does not have sufficient '
             'training data to use n=100, only 4 points available.')
 
         self.assertEqual(str(cm.exception), expected_msg)
@@ -247,6 +247,19 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                            [1., 1.5],
                            [1.5, 1.]
                            ])
+
+        X = Y = np.arange(0., 2., 0.02)
+        X, Y = np.meshgrid(X, Y)
+        positions = np.column_stack([X.ravel(), Y.ravel()])
+        Z = self.surrogate.predict(positions, n=5)[..., 0].reshape(100, 100)
+
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        surf = ax.plot_surface(X, Y, Z)
+        plt.show()
+
         a = 0.99511746
         expected_deriv = list(map(np.array, [
             [[0., -a], [0., a], [0., 0.], [0., -a]],
@@ -257,4 +270,126 @@ class TestWeightedInterpolatorND(unittest.TestCase):
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
+            assert_rel_error(self, mu, y0, 1e-6)
+
+
+class TestCosineInterpolator1D(unittest.TestCase):
+    def setUp(self):
+        self.surrogate = NearestNeighbor(interpolant_type='cosine')
+        self.x = np.array([[0.], [1.], [2.], [3.]])
+        self.y = np.array([[0.], [1.], [1.], [0.]])
+        self.surrogate.train(self.x, self.y)
+
+    def test_training(self):
+        for x0, y0 in zip(self.x, self.y):
+            mu = self.surrogate.predict(x0, n=3)
+            assert_rel_error(self, mu, y0, 1e-9)
+
+    def test_prediction(self):
+        test_x = np.array([[0.5], [1.5], [2.5]])
+        expected_y = np.array([[0.5], [1.], [0.5]])
+
+        for x0, y0 in zip(test_x, expected_y):
+            mu = self.surrogate.predict(x0, n=3)
+            assert_rel_error(self, mu, y0, 1e-9)
+
+    def test_bulk_prediction(self):
+        test_x = np.array([[0.5], [1.5], [2.5]])
+        expected_y = np.array([[0.5], [1.], [0.5]])
+        mu = self.surrogate.predict(test_x, n=3)
+        assert_rel_error(self, mu, expected_y, 1e-9)
+
+    def test_jacobian(self):
+        test_x = np.array([[0.5], [1.5], [2.5]])
+        expected_deriv = np.array([[np.pi/2.], [0.], [-np.pi / 2.]])
+        import warnings
+        for x0, y0 in zip(test_x, expected_deriv):
+            jac = self.surrogate.jacobian(x0, n=3)
+            warnings.warn(str(jac))
+            assert_rel_error(self, jac, y0, 1e-9)
+
+
+class TestCosineInterpolatorND(unittest.TestCase):
+    def setUp(self):
+        self.surrogate = NearestNeighbor(interpolant_type='cosine')
+        self.x = np.array([[0., 0.], [2., 0.], [2., 2.], [0., 2.], [1., 1.]])
+        self.y = np.array([[1., 0., .5, 1.],
+                           [1., 0., .5, 1.],
+                           [1., 0., .5, 1.],
+                           [1., 0., .5, 1.],
+                           [0., 1., .5, 0.]])
+        self.surrogate.train(self.x, self.y)
+
+    def test_training(self):
+        for x0, y0 in zip(self.x, self.y):
+            mu = self.surrogate.predict(x0)
+            assert_rel_error(self, mu, y0, 1e-9)
+
+    def test_prediction(self):
+        test_x = np.array([[1., 0.5],
+                           [0.5, 1.0],
+                           [1.0, 1.5],
+                           [1.5, 1.],
+                           [0., 1.],
+                           [.5, .5]
+                           ])
+
+        a = .25
+        b = .75
+        c = d = 0.5
+
+        expected_y = np.array([[a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [c, d, 0.5, c],
+                               [c, d, 0.5, c]
+                               ])
+
+        for x0, y0 in zip(test_x, expected_y):
+            mu = self.surrogate.predict(x0, n=5)
+            assert_rel_error(self, mu, y0, 1e-6)
+
+    def test_bulk_prediction(self):
+        test_x = np.array([[1., 0.5],
+                           [0.5, 1.0],
+                           [1.0, 1.5],
+                           [1.5, 1.],
+                           [0., 1.],
+                           [.5, .5]
+                           ])
+
+        a = .25
+        b = .75
+        c = d = 0.5
+
+        expected_y = np.array([[a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [a, b, 0.5, a],
+                               [c, d, 0.5, c],
+                               [c, d, 0.5, c]
+                               ])
+
+        mu = self.surrogate.predict(test_x, n=5)
+        assert_rel_error(self, mu, expected_y, 1e-6)
+
+    def test_jacobian(self):
+        test_x = np.array([[1., 0.5],
+                           [0.5, 1.],
+                           [1., 1.5],
+                           [1.5, 1.]
+                           ])
+        a = np.pi/2.
+        expected_deriv = list(map(np.array, [
+            [[0., -a], [0., a], [0., 0.], [0., -a]],
+            [[-a, 0], [a, 0.], [0., 0.], [-a, 0]],
+            [[0., a], [0., -a], [0., 0.], [0., a]],
+            [[a, 0.], [-a, 0.], [0., 0.], [a, 0.]]
+        ]))
+
+        import warnings
+        for x0, y0 in zip(test_x, expected_deriv):
+            mu = self.surrogate.jacobian(x0)
+            warnings.warn(str((x0, mu)))
             assert_rel_error(self, mu, y0, 1e-6)
