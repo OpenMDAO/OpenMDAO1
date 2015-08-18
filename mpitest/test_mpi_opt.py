@@ -43,6 +43,16 @@ class Parab1D(Component):
         unknowns['y'] = (params['x'] - self.root)**2 + 7.0
 
 
+class MP_Point(Group):
+
+    def __init__(self, root=1.0):
+        super(MP_Point, self).__init__()
+
+        self.add('p', ParamComp('x', val=0.0))
+        self.add('c', Parab1D(root=root))
+        self.connect('p.x', 'c.x')
+
+
 class TestMPIOpt(MPITestCase):
 
     N_PROCS = 2
@@ -78,6 +88,33 @@ class TestMPIOpt(MPITestCase):
         if not MPI or self.comm.rank == 0:
             assert_rel_error(self, model['p1.x'], 2.0, 1.e-6)
             assert_rel_error(self, model['p2.x'], 3.0, 1.e-6)
+
+    def test_parab_FD_subbed_Pcomps(self):
+
+        model = Problem(impl=impl)
+        root = model.root = Group()
+        par = root.add('par', ParallelGroup())
+
+        par.add('s1', MP_Point(root=2.0))
+        par.add('s2', MP_Point(root=3.0))
+
+        root.add('sumcomp', ExecComp('sum = x1+x2'))
+        root.connect('par.s1.c.y', 'sumcomp.x1')
+        root.connect('par.s2.c.y', 'sumcomp.x2')
+
+        driver = model.driver = pyOptSparseDriver()
+        driver.add_param('par.s1.p.x', low=-100, high=100)
+        driver.add_param('par.s2.p.x', low=-100, high=100)
+        driver.add_objective('sumcomp.sum')
+
+        root.fd_options['force_fd'] = True
+
+        model.setup(check=False)
+        model.run()
+
+        if not MPI or self.comm.rank == 0:
+            assert_rel_error(self, model['par.s1.p.x'], 2.0, 1.e-6)
+            assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
