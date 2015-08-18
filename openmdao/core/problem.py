@@ -768,7 +768,10 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
-        iproc = root.comm.rank
+        comm = root.comm
+        iproc = comm.rank
+        nproc = comm.size
+        owned = root._owning_ranks
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -895,19 +898,26 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
+                        if mode=='fwd' or owned[item] == iproc:
+                            _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
                                                                            qoi_indices)
-                        nk = len(out_idxs)
+                            dxval = dx[out_idxs]
+                        else:
+                            dxval = None
+                        if nproc > 1 and mode=='rev':
+                            dxval = comm.bcast(dxval, root=owned[item])
+
+                        nk = len(dxval)
 
                         if return_format == 'dict':
                             if mode == 'fwd':
                                 if J[item][param] is None:
                                     J[item][param] = np.zeros((nk, len(in_idxs)))
-                                J[item][param][:, j-jbase] = dx[out_idxs]
+                                J[item][param][:, j-jbase] = dxval
                             else:
                                 if J[param][item] is None:
                                     J[param][item] = np.zeros((len(in_idxs), nk))
-                                J[param][item][j-jbase, :] = dx[out_idxs]
+                                J[param][item][j-jbase, :] = dxval
                         else:
                             if mode == 'fwd':
                                 J[i:i+nk, j] = dx[out_idxs]

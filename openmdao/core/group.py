@@ -1114,35 +1114,6 @@ class Group(System):
 
         return (min_procs, max_procs)
 
-    def _get_global_offset(self, name, var_rank, var_idx, sizes_table,
-                           var_of_interest):
-        """
-        Args
-        ----
-        name : str
-            The variable name.
-
-        var_rank : int
-            The rank the the offset is requested for.
-
-        var_idx : int
-            Index of the variable into the sizes table.
-
-        sizes_table : list of OrderDicts mappping var name to size.
-            Size information for all vars in all ranks.
-
-        var_of_interest : str
-            Name of the current variable of interest, the key into the
-            dumat,drmat, and dpmat dicts.
-
-        Returns
-        -------
-        int
-            The offset into the distributed vector for the named variable
-            in the specified rank (process).
-        """
-        return np.sum(sizes_table[:var_rank]) + np.sum(sizes_table[var_rank, :var_idx])
-
     def _get_global_idxs(self, uname, pname, u_var_idxs, u_sizes,
                          p_var_idxs, p_sizes, var_of_interest, mode):
         """
@@ -1184,6 +1155,7 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
+        rev = True if mode == 'rev' else False
         umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
 
@@ -1211,32 +1183,79 @@ class Group(System):
                 end = np.sum(u_sizes[:irank+1, ivar])
                 on_irank = np.logical_and(start <= arg_idxs,
                                              arg_idxs < end)
+                if rev and MPI and irank == iproc:
+                    on_my_rank = on_irank
+
                 # Compute conversion to new ordering
+
+                # arg_idxs are provided wrt the full distributed variable,
+                # so subtract off the start of the var in the current rank
+                # in order to make the overall offset relative to the
+                # beginning of the full distributed variable.
                 offset = -start
+
                 offset += np.sum(u_sizes[:irank, :])
                 offset += np.sum(u_sizes[irank, :ivar])
                 #print(mode, uname,pname,irank, on_irank, start, end, "off",offset)
                 # Apply conversion only to relevant parts of input
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
                 #print(mode,uname,pname,"NEW INDICES:",new_indices[on_irank])
-            src_idxs = new_indices
-        else:
-            if mode == 'fwd':
-                var_rank = self._owning_ranks[uname]
-            else:
-                var_rank = iproc
 
+            if rev and MPI:
+                on_other_rank = np.ones(new_indices.shape, dtype=bool)
+                on_other_rank[on_my_rank] = False
+                non_local_src_idxs = new_indices[on_other_rank]
+                local_src_idxs = new_indices[on_my_rank]
+
+                # all_non_locals = self.comm.allgather(non_local_src_idxs)
+                all_new_idxs = self.comm.allgather((local_src_idxs,
+                                                    non_local_src_idxs))
+                #local_idxs = new_indices[on_my_rank]
+
+                #print(uname,"rank:",iproc,"idxs:",all_new_idxs)
+
+                unique = np.ones(non_local_src_idxs.shape, dtype=bool)
+
+                # first, mark as nonunique any nonlocal indices from any
+                # rank below us
+                for irank in range(self.comm.size):
+                    if irank < iproc:
+                        loc, nonloc = all_new_idxs[irank]
+                        dups = np.in1d(non_local_src_idxs, nonloc)
+                        unique[dups] = False
+
+                # now, if any rank anywhere has one of our nonlocal indices
+                # as a *local* index, we mark it as nonunique
+                for irank in range(self.comm.size):
+                    if irank != iproc:
+                        loc, nonloc = all_new_idxs[irank]
+                        dups = np.in1d(non_local_src_idxs, loc)
+                        unique[dups] = False
+
+                # now see which non-local indices we keep
+                non_local_src_idxs = non_local_src_idxs[unique]
+                all_idxs = np.concatenate([non_local_src_idxs,
+                                           local_src_idxs])
+                all_idxs.sort()
+
+                keep = np.in1d(new_indices, all_idxs)
+                new_indices = new_indices[keep]
+
+            src_idxs = new_indices
+
+        else:
+            var_rank = self._owning_ranks[uname] if not rev else iproc
             offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
             src_idxs = arg_idxs + offset
 
-        if mode == 'fwd':
-            var_rank = iproc
-        else:
-            var_rank = self._owning_ranks[pname]
+        var_rank = self._owning_ranks[pname] if rev else iproc
 
         tgt_start = (np.sum(p_sizes[:var_rank]) +
                      np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
+
+        if rev and MPI and ('src_indices' in umeta or 'src_indices' in pmeta):
+            tgt_idxs = tgt_idxs[keep]
 
         return src_idxs, tgt_idxs
 
@@ -1403,8 +1422,8 @@ class Group(System):
         else:
             all_locals = [local_vars]
 
-        for rank in range(len(all_locals)):
-            for v in all_locals[rank]:
+        for rank, vnames in enumerate(all_locals):
+            for v in vnames:
                 if v not in ranks:
                     ranks[v] = rank
 

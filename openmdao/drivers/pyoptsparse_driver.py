@@ -238,8 +238,11 @@ class pyOptSparseDriver(Driver):
         func_dict = {}
         metadata = self.metadata
         system = self.root
-        try:
+        comm = system.comm
+        iproc = comm.rank
+        nproc = comm.size
 
+        try:
             for name in self.get_params():
                 self.set_param(name, dv_dict[name])
 
@@ -257,11 +260,25 @@ class pyOptSparseDriver(Driver):
 
             # Get the objective function evaluations
             for name, obj in iteritems(self.get_objectives()):
-                func_dict[name] = obj
+                if nproc > 1:
+                    owner = system._owning_ranks[name]
+                    if iproc == owner:
+                        func_dict[name] = comm.bcast(obj, root=owner)
+                    else:
+                        func_dict[name] = comm.bcast(None, root=owner)
+                else:
+                    func_dict[name] = obj
 
             # Get the constraint evaluations
             for name, con in iteritems(self.get_constraints()):
-                func_dict[name] = con
+                if nproc > 1:
+                    owner = system._owning_ranks[name]
+                    if iproc == owner:
+                        func_dict[name] = comm.bcast(con, root=owner)
+                    else:
+                        func_dict[name] = comm.bcast(None, root=owner)
+                else:
+                    func_dict[name] = con
 
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
