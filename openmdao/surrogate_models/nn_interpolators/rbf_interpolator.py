@@ -8,23 +8,29 @@ from scipy.sparse.linalg import spsolve
 
 class RBFInterpolator(NNBase):
     # Compactly Supported Radial Basis Function
-    def FindR(self, npp, T, loc):
+    def findR(self, npp, T, loc):
         R = np.zeros((npp, self.ntpts), dtype="float")
         # Choose type of CRBF R matrix
         if self.comp == -1:
             # Comp #1 - a
-            Cf = (1. - T) ** 5
-            Cb = (8. + (40. * T) + (48. * T * T) +
-                  (72. * T * T * T) + (5. * T * T * T * T))
+            Cf = np.power((1. - T), 5)
+            cb_poly = [5., 72., 48., 40., 8.]
+            # Cb = (8. + (40. * T) + (48. * T * T) +
+            #       (72. * T * T * T) + (5. * T * T * T * T))
         elif self.comp == -2:
             # Comp #2
-            Cf = (1. - T) ** 6.
-            Cb = (6. + (36. * T) + (82. * T * T) + (72. * T * T * T) +
-                  (30. * T * T * T * T) + (5. * T * T * T * T * T))
+            Cf = np.power((1. - T), 6)
+            cb_poly = [5., 30., 72., 82., 36., 6.]
+            # Cb = (6. + (36. * T) + (82. * T * T) + (72. * T * T * T) +
+            #       (30. * T * T * T * T) + (5. * T * T * T * T * T))
         elif self.comp == -3:
             # Comp #3
-            Cf = T ** 0.
-            Cb = np.sqrt((T * T) + 1.)
+            # Cf = np.ones_like(T)
+            # Cb = np.sqrt((T * T) + 1.)
+
+            # Re-arranged to fit polyval scheme below.
+            Cf = np.sqrt(np.square(T) + 1.)
+            cb_poly = [1.]
         else:
             # The above options did not specify a dimensional requirement
             # in the paper found but the rest are said to only be guaranteed
@@ -36,79 +42,101 @@ class RBFInterpolator(NNBase):
                 if self.comp == 0:
                     # This starts the dk comps, here d=1, k=0
                     Cf = 1. - T
-                    Cb = np.ones((len(T[:, 0]), len(T[0, :])), dtype="float")
+                    cb_poly = [1.]
+                    # Cb = T ** 0.
                 elif self.comp == 1:
                     Cf = (1. - T) * (1. - T) * (1. - T) / 12.
-                    Cb = 1. + (3. * T)
+                    cb_poly = [3., 1.]
+                    # Cb = 1. + (3. * T)
                 elif self.comp == 2:
                     Cf = ((1. - T) ** 5) / 840.
-                    Cb = 3. + (15. * T) + (24. * T * T)
+                    cb_poly = [24., 15., 3.]
+                    # Cb = 3. + (15. * T) + (24. * T * T)
                 elif self.comp == 3:
                     Cf = ((1. - T) ** 7) / 151200.
-                    Cb = 15. + (105. * T) + (285. * T * T) + (315. * T * T * T)
+                    cb_poly = [315., 285., 105., 15.]
+                    # Cb = 15. + (105. * T) + (285. * T * T) + (315. * T * T * T)
                 elif self.comp == 4:
                     Cf = ((1. - T) ** 9) / 51891840.
-                    Cb = (105. + (945. * T) + (3555. * T * T) + (6795. * T * T * T) +
-                          (5760. * T * T * T * T))
+                    cb_poly = [5760., 6795., 3555., 945., 105.]
+                    # Cb = (105. + (945. * T) + (3555. * T * T) + (6795. * T * T * T) +
+                    #       (5760. * T * T * T * T))
             elif dims <= 4:
                 if self.comp == 0:
                     Cf = (1. - T)
-                    Cb = (1. - T)
+                    # Cb = (1. - T)
+                    cb_poly = [-1., 1.]
                 elif self.comp == 1:
                     Cf = ((1. - T) ** 4) / 20.
-                    Cb = 1. + (4. * T)
+                    # Cb = 1. + (4. * T)
+                    cb_poly = [4., 1.]
                 elif self.comp == 2:
                     Cf = ((1. - T) ** 6) / 1680.
-                    Cb = 3. + (18. * T) + (35. * T * T)
+                    # Cb = 3. + (18. * T) + (35. * T * T)
+                    cb_poly = [35., 18., 3.]
                 elif self.comp == 3:
                     Cf = ((1. - T) ** 8) / 332640.
-                    Cb = 15. + (120. * T) + (375. * T * T) + (480. * T * T * T)
+                    cb_poly = [480., 375., 120., 15.]
+                    # Cb = 15. + (120. * T) + (375. * T * T) + (480. * T * T * T)
                 elif self.comp == 4:
                     Cf = ((1. - T) ** 10) / 121080960.
-                    Cb = (105. + (1050. * T) + (4410. * T * T) + (9450. * T * T * T) +
-                          (9009. * T * T * T * T))
+                    cb_poly = [9009., 9450., 4410., 1050., 105.]
+                    # Cb = (105. + (1050. * T) + (4410. * T * T) + (9450. * T * T * T) +
+                    #       (9009. * T * T * T * T))
             elif dims <= 6:
                 if self.comp == 0:
                     Cf = (1. - T) * (1. - T)
-                    Cb = (1. - T)
+                    cb_poly = [-1., 1.]
+                    # Cb = (1. - T)
                 elif self.comp == 1:
                     Cf = ((1. - T) ** 5) / 30.
-                    Cb = 1. + (5. * T)
+                    cb_poly = [5., 1.]
+                    # Cb = 1. + (5. * T)
                 elif self.comp == 2:
                     Cf = ((1. - T) ** 7) / 3024.
-                    Cb = 3. + (21. * T) + (48. * T * T)
+                    cb_poly = [48., 21., 3.]
+                    # Cb = 3. + (21. * T) + (48. * T * T)
                 elif self.comp == 3:
                     Cf = ((1. - T) ** 9) / 665280.
-                    Cb = 15. + (135. * T) + (477. * T * T) + (693. * T * T * T)
+                    cb_poly = [693., 477., 135., 15.]
+                    # Cb = 15. + (135. * T) + (477. * T * T) + (693. * T * T * T)
                 elif self.comp == 4:
                     Cf = ((1. - T) ** 11) / 259459200.
-                    Cb = (105. + (1155. * T) + (5355. * T * T) + (12705. * T * T * T) +
-                          (13440. * T * T * T * T))
+                    cb_poly = [13440., 12705., 5355., 1155., 105.]
+                    # Cb = (105. + (1155. * T) + (5355. * T * T) + (12705. * T * T * T) +
+                    #       (13440. * T * T * T * T))
             else:
                 # Although not listed, this is ideally for 8 dim or less
                 if self.comp == 0:
                     Cf = (1. - T) * (1. - T)
-                    Cb = (1. - T) * (1. - T)
+                    cb_poly = [1., -2., 1.]
+                    # Cb = (1. - T) * (1. - T)
                 elif self.comp == 1:
                     Cf = ((1. - T) ** 6) / 42.
-                    Cb = 1. + (6. * T)
+                    cb_poly = [6., 1.]
+                    # Cb = 1. + (6. * T)
                 elif self.comp == 2:
                     Cf = ((1. - T) ** 8) / 5040.
-                    Cb = 3. + (24. * T) + (63. * T * T)
+                    cb_poly = [63., 24., 3.]
+                    # Cb = 3. + (24. * T) + (63. * T * T)
                 elif self.comp == 3:
                     Cf = ((1. - T) ** 10) / 1235520.
-                    Cb = 15. + (150. * T) + (591. * T * T) + (960. * T * T * T)
+                    cb_poly = [960., 591., 150., 15.]
+                    # Cb = 15. + (150. * T) + (591. * T * T) + (960. * T * T * T)
                 elif self.comp == 4:
                     Cf = ((1. - T) ** 12) / 518918400.
-                    Cb = (105. + (1260. * T) + (6390. * T * T) + (16620. * T * T * T) +
-                          (19305. * T * T * T * T))
+                    cb_poly = [19305., 16620., 6390., 1260., 105.]
+                    # Cb = (105. + (1260. * T) + (6390. * T * T) + (16620. * T * T * T) +
+                    #       (19305. * T * T * T * T))
+
+        Cb = np.polyval(cb_poly, T)
 
         for i in range(npp):
             R[i, loc[i, :-1]] = Cf[i, :] * Cb[i, :]
 
         return R
 
-    def FinddR(self, PrdPts, ploc, pdist):
+    def finddR(self, PrdPts, ploc, pdist):
         T = (pdist[:, :-1] / pdist[:, -1:])
         # Solve for the gradient analytically
         # The first quantity needed is dRp/dt
@@ -130,7 +158,7 @@ class RBFInterpolator(NNBase):
             dRp = T / np.sqrt((T * T) * 1.)
         else:
             dims = self.indep_dims + 1
-            # Start dim dependent comps, review first occurance for more info
+            # Start dim dependent comps, review first occurrence for more info
             if dims <= 2:
                 if self.comp == 0:
                     # This starts the dk comps(Wendland Functs), here d=1, k=0
@@ -196,7 +224,7 @@ class RBFInterpolator(NNBase):
         dtx = (xpi - (T * T * xpm)) / \
               (pdist[:, -1:, :] * pdist[:, -1:, :] * T)
         # The gradient then is the summation across neighs of w*df/dt*dt/dx
-        grad = np.einsum('ijk,ijl...->ilk...', (dRp * dtx), self.weights[ploc[:, :-1]])
+        grad = np.einsum('ijk,ijl...->ilk...', dRp * dtx, self.weights[ploc[:, :-1]])
         return grad.reshape((PrdPts.shape[0], self.dep_dims, self.indep_dims))
 
     def __init__(self, training_points, training_values, num_leaves=2, n=5, comp=2):
@@ -214,7 +242,7 @@ class RBFInterpolator(NNBase):
         tdist, tloc = self.KData.query(self.tp, n)
         Tt = tdist[:, :-1] / tdist[:, -1:]
         # Next determine weight matrix
-        Rt = self.FindR(self.ntpts, Tt, tloc)
+        Rt = self.findR(self.ntpts, Tt, tloc)
         weights = (spsolve(csc_matrix(Rt), self.tv))[..., np.newaxis]
 
         self.N = n
@@ -240,7 +268,7 @@ class RBFInterpolator(NNBase):
         # Take farthest distance of each point
         Tp = pdist[:, :-1] / pdist[:, -1:]
 
-        Rp = self.FindR(nppts, Tp, ploc)
+        Rp = self.findR(nppts, Tp, ploc)
         predz = ((np.dot(Rp, self.weights[..., 0]) * self.tvr) + self.tvm).reshape(nppts, self.dep_dims)
         return predz
 
@@ -254,7 +282,7 @@ class RBFInterpolator(NNBase):
         # Setup prediction points and find their radial neighbors
         pdist, ploc = self.KData.query(normalized_pts, self.N)
         # Find Gradient
-        grad = self.FinddR(normalized_pts[:, np.newaxis, :], ploc,
+        grad = self.finddR(normalized_pts[:, np.newaxis, :], ploc,
                            pdist[:, :, np.newaxis]) * (self.tvr[..., np.newaxis] / self.tpr)
 
         return grad

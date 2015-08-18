@@ -114,12 +114,12 @@ class TestLinearInterpolatorND(unittest.TestCase):
                            [1., 1.5],
                            [1.5, 1.]
                            ])
-        expected_deriv = list(map(np.array, [
+        expected_deriv = np.array([
             [[0., -1.], [0., 1.], [0., 0.], [0., -1.]],
             [[-1., 0.], [1., 0.], [0., 0.], [-1., 0.]],
             [[0., 1.], [0., -1.], [0., 0.], [0., 1.]],
             [[1., 0.], [-1., 0.], [0., 0.], [1., 0.]]
-            ]))
+            ])
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
@@ -248,12 +248,12 @@ class TestWeightedInterpolatorND(unittest.TestCase):
                            [1.5, 1.]
                            ])
         a = 0.99511746
-        expected_deriv = list(map(np.array, [
+        expected_deriv = np.array([
             [[0., -a], [0., a], [0., 0.], [0., -a]],
             [[-a, 0], [a, 0.], [0., 0.], [-a, 0]],
             [[0., a], [0., -a], [0., 0.], [0., a]],
             [[a, 0.], [-a, 0.], [0., 0.], [a, 0.]]
-        ]))
+        ])
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
@@ -361,7 +361,6 @@ class TestRBFInterpolatorND(unittest.TestCase):
                                ])
 
         mu = self.surrogate.predict(test_x)
-        import warnings;warnings.warn(str((test_x,mu)))
         assert_rel_error(self, mu, expected_y, 1e-6)
 
     def test_jacobian(self):
@@ -370,15 +369,18 @@ class TestRBFInterpolatorND(unittest.TestCase):
                            [1., 1.5],
                            [1.5, 1.]
                            ])
-        a = 0.99511746
-        expected_deriv = list(map(np.array, [
-            [[0., -a], [0., a], [0., 0.], [0., -a]],
-            [[-a, 0], [a, 0.], [0., 0.], [-a, 0]],
-            [[0., a], [0., -a], [0., 0.], [0., a]],
-            [[a, 0.], [-a, 0.], [0., 0.], [a, 0.]]
-        ]))
+        a = -0.14125688
+        b = -0.39551926
+        c = -0.19255371
+        d = 1.08184367
+
+        expected_deriv = np.array([
+            [[a, b], [c, d], [0., 0.], [a, b]],
+            [[b, a], [d, c], [0., 0.], [b, a]],
+            [[a, -b], [c, -d], [0., 0.], [a, -b]],
+            [[-b, -a], [-d, -c], [0., 0.], [-b, -a]]
+        ])
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
-            import warnings;warnings.warn(str((x0,mu)))
             assert_rel_error(self, mu, y0, 1e-6)
