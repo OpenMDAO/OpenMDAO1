@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import sys
 import numpy
 
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
@@ -53,36 +54,6 @@ class DistribExecComp(ExecComp):
     def get_req_cpus(self):
         return (2, 2)
 
-class ArrayFanOutGrouped(Group):
-    """ Topology where one comp broadcasts an output to two target
-    components."""
-
-    def __init__(self, size=11):
-        super(ArrayFanOutGrouped, self).__init__()
-
-        self.add('p', ParamComp('x', numpy.ones(size, dtype=float)))
-        self.add('comp1', ExecComp(['y=3.0*x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
-        sub = self.add('sub', ParallelGroup())
-        sub.add('comp2', DistribInputDistribOutputComp(size))
-        sub.add('comp3', ExecComp(['y=5.0*x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
-
-        self.add('c2', ExecComp(['y=x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
-        self.add('c3', ExecComp(['y=x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
-        self.connect('sub.comp2.y', 'c2.x')
-        self.connect('sub.comp3.y', 'c3.x')
-
-        self.connect("comp1.y", "sub.comp2.x")
-        self.connect("comp1.y", "sub.comp3.x")
-        self.connect("p.x", "comp1.x")
-
 class MPITests1(MPITestCase):
 
     N_PROCS = 2
@@ -106,38 +77,61 @@ class MPITests1(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['P.x'], ['C2.z'], mode='rev', return_format='dict')
-        print("J:",J)
-        assert_rel_error(self, J['C2.z']['P.x'][0][0], 6.0, 1e-6)
-
         J = prob.calc_gradient(['P.x'], ['C2.z'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['C2.z']['P.x'][0][0], 6.0, 1e-6)
+        print("J:",J)
+        assert_rel_error(self, J['C2.z']['P.x'], numpy.eye(size)*6.0, 1e-6)
 
+        J = prob.calc_gradient(['P.x'], ['C2.z'], mode='rev', return_format='dict')
+        print("rev J:",J)
+        assert_rel_error(self, J['C2.z']['P.x'], numpy.eye(size)*6.0, 1e-6)
 
-    # def test_fan_out_grouped(self):
-    #
-    #     prob = Problem(impl=impl)
-    #     prob.root = ArrayFanOutGrouped()
-    #     prob.root.ln_solver = LinearGaussSeidel()
-    #     prob.root.sub.ln_solver = LinearGaussSeidel()
-    #     prob.setup(check=False)
-    #     prob.run()
-    #
-    #     param_list = ['p.x']
-    #     #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
-    #     unknown_list = ['c2.y', "c3.y"]
-    #
-    #     J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-    #     #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-    #     #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
-    #     assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
-    #     assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
-    #
-    #     J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-    #     #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-    #     #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
-    #     assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
-    #     assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
+    def test_fan_out_grouped(self):
+        size = 3
+        prob = Problem(impl=impl)
+        prob.root = root = Group()
+        root.add('P', ParamComp('x', numpy.ones(size, dtype=float)))
+        root.add('C1', DistribExecComp(['y=3.0*x'], arr_size=size,
+                                   x=numpy.zeros(size, dtype=float),
+                                   y=numpy.zeros(size, dtype=float)))
+        sub = root.add('sub', ParallelGroup())
+        sub.add('C2', ExecComp('y=1.5*x',
+                               x=numpy.zeros(size),
+                               y=numpy.zeros(size)))
+        sub.add('C3', ExecComp(['y=5.0*x'],
+                                   x=numpy.zeros(size, dtype=float),
+                                   y=numpy.zeros(size, dtype=float)))
+
+        root.add('C2', ExecComp(['y=x'],
+                                   x=numpy.zeros(size, dtype=float),
+                                   y=numpy.zeros(size, dtype=float)))
+        root.add('C3', ExecComp(['y=x'],
+                                   x=numpy.zeros(size, dtype=float),
+                                   y=numpy.zeros(size, dtype=float)))
+        root.connect('sub.C2.y', 'C2.x')
+        root.connect('sub.C3.y', 'C3.x')
+
+        root.connect("C1.y", "sub.C2.x")
+        root.connect("C1.y", "sub.C3.x")
+        root.connect("P.x", "C1.x")
+
+        root.ln_solver = LinearGaussSeidel()
+        root.sub.ln_solver = LinearGaussSeidel()
+        prob.setup(check=False)
+
+        prob.run()
+
+        param_list = ['P.x']
+        unknown_list = ['C2.y', "C3.y"]
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        print("J:",J)
+        assert_rel_error(self, J['C2.y']['P.x'], numpy.eye(size)*4.5, 1e-6)
+        assert_rel_error(self, J['C3.y']['P.x'], numpy.eye(size)*15.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        print("rev J:",J)
+        assert_rel_error(self, J['C2.y']['P.x'], numpy.eye(size)*4.5, 1e-6)
+        assert_rel_error(self, J['C3.y']['P.x'], numpy.eye(size)*15.0, 1e-6)
     #
     # def test_fan_in_grouped(self):
     #
