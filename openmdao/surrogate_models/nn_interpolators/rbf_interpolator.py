@@ -45,19 +45,19 @@ class RBFInterpolator(NNBase):
                     cb_poly = [1.]
                     # Cb = T ** 0.
                 elif self.comp == 1:
-                    Cf = (1. - T) * (1. - T) * (1. - T) / 12.
+                    Cf = np.power(1. - T, 3.) / 12.
                     cb_poly = [3., 1.]
                     # Cb = 1. + (3. * T)
                 elif self.comp == 2:
-                    Cf = ((1. - T) ** 5) / 840.
+                    Cf = np.power(1. - T, 5.) / 840.
                     cb_poly = [24., 15., 3.]
                     # Cb = 3. + (15. * T) + (24. * T * T)
                 elif self.comp == 3:
-                    Cf = ((1. - T) ** 7) / 151200.
+                    Cf = np.power(1. - T, 7.) / 151200.
                     cb_poly = [315., 285., 105., 15.]
                     # Cb = 15. + (105. * T) + (285. * T * T) + (315. * T * T * T)
                 elif self.comp == 4:
-                    Cf = ((1. - T) ** 9) / 51891840.
+                    Cf = np.power(1. - T, 9.) / 51891840.
                     cb_poly = [5760., 6795., 3555., 945., 105.]
                     # Cb = (105. + (945. * T) + (3555. * T * T) + (6795. * T * T * T) +
                     #       (5760. * T * T * T * T))
@@ -67,64 +67,64 @@ class RBFInterpolator(NNBase):
                     # Cb = (1. - T)
                     cb_poly = [-1., 1.]
                 elif self.comp == 1:
-                    Cf = ((1. - T) ** 4) / 20.
+                    Cf = np.power(1. - T, 4) / 20.
                     # Cb = 1. + (4. * T)
                     cb_poly = [4., 1.]
                 elif self.comp == 2:
-                    Cf = ((1. - T) ** 6) / 1680.
+                    Cf = np.power(1. - T, 6.) / 1680.
                     # Cb = 3. + (18. * T) + (35. * T * T)
                     cb_poly = [35., 18., 3.]
                 elif self.comp == 3:
-                    Cf = ((1. - T) ** 8) / 332640.
+                    Cf = np.power(1. - T, 8.) / 332640.
                     cb_poly = [480., 375., 120., 15.]
                     # Cb = 15. + (120. * T) + (375. * T * T) + (480. * T * T * T)
                 elif self.comp == 4:
-                    Cf = ((1. - T) ** 10) / 121080960.
+                    Cf = np.power(1. - T, 10.) / 121080960.
                     cb_poly = [9009., 9450., 4410., 1050., 105.]
                     # Cb = (105. + (1050. * T) + (4410. * T * T) + (9450. * T * T * T) +
                     #       (9009. * T * T * T * T))
             elif dims <= 6:
                 if self.comp == 0:
-                    Cf = (1. - T) * (1. - T)
+                    Cf = np.power(1. - T, 2.)
                     cb_poly = [-1., 1.]
                     # Cb = (1. - T)
                 elif self.comp == 1:
-                    Cf = ((1. - T) ** 5) / 30.
+                    Cf = np.power(1. - T, 5.) / 30.
                     cb_poly = [5., 1.]
                     # Cb = 1. + (5. * T)
                 elif self.comp == 2:
-                    Cf = ((1. - T) ** 7) / 3024.
+                    Cf = np.power(1. - T, 7.) / 3024.
                     cb_poly = [48., 21., 3.]
                     # Cb = 3. + (21. * T) + (48. * T * T)
                 elif self.comp == 3:
-                    Cf = ((1. - T) ** 9) / 665280.
+                    Cf = np.power(1. - T, 9.) / 665280.
                     cb_poly = [693., 477., 135., 15.]
                     # Cb = 15. + (135. * T) + (477. * T * T) + (693. * T * T * T)
                 elif self.comp == 4:
-                    Cf = ((1. - T) ** 11) / 259459200.
+                    Cf = np.power(1. - T, 11.) / 259459200.
                     cb_poly = [13440., 12705., 5355., 1155., 105.]
                     # Cb = (105. + (1155. * T) + (5355. * T * T) + (12705. * T * T * T) +
                     #       (13440. * T * T * T * T))
             else:
                 # Although not listed, this is ideally for 8 dim or less
                 if self.comp == 0:
-                    Cf = (1. - T) * (1. - T)
+                    Cf = np.power(1. - T, 2.)
                     cb_poly = [1., -2., 1.]
                     # Cb = (1. - T) * (1. - T)
                 elif self.comp == 1:
-                    Cf = ((1. - T) ** 6) / 42.
+                    Cf = np.power(1. - T, 6.) / 42.
                     cb_poly = [6., 1.]
                     # Cb = 1. + (6. * T)
                 elif self.comp == 2:
-                    Cf = ((1. - T) ** 8) / 5040.
+                    Cf = np.power(1. - T, 8.) / 5040.
                     cb_poly = [63., 24., 3.]
                     # Cb = 3. + (24. * T) + (63. * T * T)
                 elif self.comp == 3:
-                    Cf = ((1. - T) ** 10) / 1235520.
+                    Cf = np.power(1. - T, 10.) / 1235520.
                     cb_poly = [960., 591., 150., 15.]
                     # Cb = 15. + (150. * T) + (591. * T * T) + (960. * T * T * T)
                 elif self.comp == 4:
-                    Cf = ((1. - T) ** 12) / 518918400.
+                    Cf = np.power(1. - T, 12.) / 518918400.
                     cb_poly = [19305., 16620., 6390., 1260., 105.]
                     # Cb = (105. + (1260. * T) + (6390. * T * T) + (16620. * T * T * T) +
                     #       (19305. * T * T * T * T))
