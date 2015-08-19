@@ -40,7 +40,7 @@ class DistribExecComp(ExecComp):
         comm = self.comm
         rank = comm.rank
 
-        sizes, offsets = evenly_distrib_idxs(comm.size, self.arr_size*comm.size)
+        sizes, offsets = evenly_distrib_idxs(comm.size, self.arr_size)
         start = offsets[rank]
         end = start + sizes[rank]
 

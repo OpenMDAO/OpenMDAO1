@@ -151,7 +151,9 @@ class Component(System):
     def set_var_indices(self, name, val=_NotSet, shape=None,
                         src_indices=None):
         """ Sets the 'src_indices' metadata of an existing variable
-        on this component, as well as its value, size, and shape.
+        on this component, as well as its value, size, shape, and
+        global size.
+
         This only works for numpy array variables.
 
         Args
@@ -168,6 +170,7 @@ class Component(System):
         src_indices : array of indices
             An index array indicating which entries in the distributed
             version of this variable are present in this process.
+
         """
         meta = self._params_dict.get(name)
         if meta is None:

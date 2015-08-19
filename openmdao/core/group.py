@@ -1178,9 +1178,19 @@ class Group(System):
         ivar = u_var_idxs[uname]
         if 'src_indices' in umeta or 'src_indices' in pmeta:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
+            if rev:
+                ipvar = p_var_idxs[pname]
+                pstart = np.sum(p_sizes[:iproc, ipvar])
+                pend = pstart + p_sizes[iproc, ipvar]
+                p_unique = np.any(np.logical_and(pstart <= arg_idxs,
+                                                 arg_idxs < pend))
+                if not p_unique:
+                    return (self.params.make_idx_array(0, 0),
+                            self.params.make_idx_array(0, 0))
+
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
-                end = np.sum(u_sizes[:irank+1, ivar])
+                end = start + u_sizes[irank, ivar]
                 on_irank = np.logical_and(start <= arg_idxs,
                                              arg_idxs < end)
                 if rev and MPI and irank == iproc:
@@ -1189,57 +1199,16 @@ class Group(System):
                 # Compute conversion to new ordering
 
                 # arg_idxs are provided wrt the full distributed variable,
-                # so subtract off the start of the var in the current rank
+                # so we subtract off the start of the var in the current rank
                 # in order to make the overall offset relative to the
                 # beginning of the full distributed variable.
                 offset = -start
 
                 offset += np.sum(u_sizes[:irank, :])
                 offset += np.sum(u_sizes[irank, :ivar])
-                #print(mode, uname,pname,irank, on_irank, start, end, "off",offset)
+
                 # Apply conversion only to relevant parts of input
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
-                #print(mode,uname,pname,"NEW INDICES:",new_indices[on_irank])
-
-            if rev and MPI:
-                on_other_rank = np.ones(new_indices.shape, dtype=bool)
-                on_other_rank[on_my_rank] = False
-                non_local_src_idxs = new_indices[on_other_rank]
-                local_src_idxs = new_indices[on_my_rank]
-
-                # all_non_locals = self.comm.allgather(non_local_src_idxs)
-                all_new_idxs = self.comm.allgather((local_src_idxs,
-                                                    non_local_src_idxs))
-                #local_idxs = new_indices[on_my_rank]
-
-                #print(uname,"rank:",iproc,"idxs:",all_new_idxs)
-
-                unique = np.ones(non_local_src_idxs.shape, dtype=bool)
-
-                # first, mark as nonunique any nonlocal indices from any
-                # rank below us
-                for irank in range(self.comm.size):
-                    if irank < iproc:
-                        loc, nonloc = all_new_idxs[irank]
-                        dups = np.in1d(non_local_src_idxs, nonloc)
-                        unique[dups] = False
-
-                # now, if any rank anywhere has one of our nonlocal indices
-                # as a *local* index, we mark it as nonunique
-                for irank in range(self.comm.size):
-                    if irank != iproc:
-                        loc, nonloc = all_new_idxs[irank]
-                        dups = np.in1d(non_local_src_idxs, loc)
-                        unique[dups] = False
-
-                # now see which non-local indices we keep
-                non_local_src_idxs = non_local_src_idxs[unique]
-                all_idxs = np.concatenate([non_local_src_idxs,
-                                           local_src_idxs])
-                all_idxs.sort()
-
-                keep = np.in1d(new_indices, all_idxs)
-                new_indices = new_indices[keep]
 
             src_idxs = new_indices
 
@@ -1253,9 +1222,6 @@ class Group(System):
         tgt_start = (np.sum(p_sizes[:var_rank]) +
                      np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
-
-        if rev and MPI and ('src_indices' in umeta or 'src_indices' in pmeta):
-            tgt_idxs = tgt_idxs[keep]
 
         return src_idxs, tgt_idxs
 
