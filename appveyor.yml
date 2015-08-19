@@ -14,7 +14,7 @@ environment:
 init:
   - "ECHO %PYTHON%"
   - set CONDA=Miniconda
-  - if "%PYTHON" == "3.4" (set CONDA=%CONDA%3)
+  - if "%PYTHON%" == "3.4" (set CONDA=%CONDA%3)
   - if "%PLATFORM%" == "x64" (set CONDA=%CONDA%-x64)
   - set PATH=C:\%CONDA%;C:\%CONDA%\Scripts;%PATH%
   - conda config --set always_yes yes
