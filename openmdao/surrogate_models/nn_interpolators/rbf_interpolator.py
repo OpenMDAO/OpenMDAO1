@@ -141,82 +141,115 @@ class RBFInterpolator(NNBase):
         # Solve for the gradient analytically
         # The first quantity needed is dRp/dt
         if self.comp == -1:
-            frnt = (1. - T) ** 4
-            dRp = frnt * ((-5. * (8. + (40. * T) + (48. * T * T) +
-                                  (72. * T * T * T) + (5. * T * T * T * T))) +
-                          ((1. - T) * (40. + (96. * T) +
-                                       (216. * T * T) + (20. * T * T * T))))
+            frnt = np.power((1. - T), 4)
+            dRp_poly = [-45., -556., -120., -144., 0.]
+            # dRp = frnt * ((-5. * (8. + (40. * T) + (48. * T * T) +
+            #                       (72. * T * T * T) + (5. * T * T * T * T))) +
+            #               ((1. - T) * (40. + (96. * T) +
+            #                            (216. * T * T) + (20. * T * T * T))))
         elif self.comp == -2:
-            frnt = (1. - T) ** 5
-            dRp = frnt * ((-6. * (6. + (36. * T) +
-                                  (82. * T * T) + (72. * T * T * T) +
-                                  (30. * T * T * T * T) + (5. * T * T * T * T * T))) +
-                          ((1. - T)) * (36. + (164. * T) +
-                                        (216. * T * T) + (120. * T * T * T) +
-                                        (25. * T * T * T * T)))
+            frnt = np.power((1. - T), 5.)
+            dRp_poly = [-55., -275., -528., -440., -88., 0.]
+            # dRp = frnt * ((-6. * (6. + (36. * T) +
+            #                       (82. * T * T) + (72. * T * T * T) +
+            #                       (30. * T * T * T * T) + (5. * T * T * T * T * T))) +
+            #               ((1. - T)) * (36. + (164. * T) +
+            #                             (216. * T * T) + (120. * T * T * T) +
+            #                             (25. * T * T * T * T)))
         elif self.comp == -3:
-            dRp = T / np.sqrt((T * T) * 1.)
+            frnt = T / np.sqrt((T * T) * 1.)
+            dRp_poly = [1.]
         else:
             dims = self.indep_dims + 1
             # Start dim dependent comps, review first occurrence for more info
             if dims <= 2:
                 if self.comp == 0:
                     # This starts the dk comps(Wendland Functs), here d=1, k=0
-                    dRp = -1.
+                    frnt = 1.
+                    dRp_poly = [-1.]
+                    # dRp = -1.
                 elif self.comp == 1:
-                    dRp = -T * (1. - T) * (1. - T)
+                    frnt = 1.
+                    dRp_poly = [1., -2., 1., 0.]
+                    # dRp = -T * (1. - T) * (1. - T)
                 elif self.comp == 2:
-                    frnt = ((1. - T) ** 4) / -20.
-                    dRp = frnt * (T + (4. * T * T))
+                    frnt = np.power(1. - T, 4.) / -20.
+                    dRp_poly = [4., 1., 0.]
+                    # dRp = frnt * (T + (4. * T * T))
                 elif self.comp == 3:
-                    frnt = ((1. - T) ** 6) / -1680.
-                    dRp = frnt * ((3. * T) + (18. * T * T) + (35. * T * T * T))
+                    frnt = np.power(1. - T, 6.) / -1680.
+                    dRp_poly = [35., 18., 3., 0.]
+                    # dRp = frnt * ((3. * T) + (18. * T * T) + (35. * T * T * T))
                 elif self.comp == 4:
-                    frnt = ((1. - T) ** 8) / -22176.
-                    dRp = frnt * (T + (8. * T * T) + (25. * T * T * T) + (32. * T * T * T * T))
+                    frnt = np.power(1. - T, 8.) / -22176.
+                    dRp_poly = [32., 25., 8., 1., 0.]
+                    # dRp = frnt * (T + (8. * T * T) + (25. * T * T * T) + (32. * T * T * T * T))
             elif dims <= 4:
                 if self.comp == 0:
-                    dRp = -2. * (1 - T)
+                    frnt = 1.
+                    dRp_poly = [2., -2.]
+                    # dRp = -2. * (1 - T)
                 elif self.comp == 1:
-                    dRp = -T * (1. - T) * (1. - T) * (1. - T)
+                    frnt = 1.
+                    dRp_poly = [1., -3., 3., -1., 0.]
+                    # dRp = -T * (1. - T) * (1. - T) * (1. - T)
                 elif self.comp == 2:
-                    frnt = ((1. - T) ** 5) / -30.
-                    dRp = frnt * (T + (5. * T * T))
+                    frnt = np.power(1. - T, 5.) / -30.
+                    dRp_poly = [5., 1., 0.]
+                    # dRp = frnt * (T + (5. * T * T))
                 elif self.comp == 3:
-                    frnt = ((1. - T) ** 7) / -1008.
-                    dRp = frnt * (T + (7. * T * T) + (16. * T * T * T))
+                    frnt = np.power(1. - T,  7.) / -1008.
+                    dRp_poly = [16., 7., 1., 0.]
+                    # dRp = frnt * (T + (7. * T * T) + (16. * T * T * T))
                 elif self.comp == 4:
-                    frnt = ((1. - T) ** 9) / -221760.
-                    dRp = frnt * ((5. * T) + (45. * T * T) + (159. * T * T * T) + (231. * T * T * T * T))
+                    frnt = np.power(1. - T, 9.) / -221760.
+                    dRp_poly = [231., 159., 45., 5., 0.]
+                    # dRp = frnt * ((5. * T) + (45. * T * T) + (159. * T * T * T) + (231. * T * T * T * T))
             elif dims <= 6:
                 if self.comp == 0:
-                    dRp = -3. * (1. - T) * (1. - T)
+                    frnt = 1.
+                    dRp_poly = [-3., 6., -3.]
+                    # dRp = -3. * (1. - T) * (1. - T)
                 elif self.comp == 1:
-                    dRp = -T * ((1. - T) ** 4)
+                    frnt = 1.
+                    dRp_poly = [-1., 4., -6., 4., -1., 0.]
+                    # dRp = -T * ((1. - T) ** 4)
                 elif self.comp == 2:
-                    frnt = ((1. - T) ** 6) / -42.
-                    dRp = frnt * (T + (6. * T * T))
+                    frnt = np.power(1. - T, 6.) / -42.
+                    dRp_poly = [6., 1., 0.]
+                    # dRp = frnt * (T + (6. * T * T))
                 elif self.comp == 3:
-                    frnt = ((1. - T) ** 8) / -1680.
-                    dRp = frnt * (T + (8. * T * T) + (21. * T * T * T))
+                    frnt = np.power(1. - T, 8) / -1680.
+                    dRp_poly = [21., 8., 1., 0.]
+                    # dRp = frnt * (T + (8. * T * T) + (21. * T * T * T))
                 elif self.comp == 4:
-                    frnt = ((1. - T) ** 10) / -411840.
-                    dRp = frnt * ((5. * T) + (50. * T * T) + (197. * T * T * T) + (320. * T * T * T * T))
+                    frnt = np.power(1. - T, 10.) / -411840.
+                    dRp_poly = [320., 197., 50., 5., 0.]
+                    # dRp = frnt * ((5. * T) + (50. * T * T) + (197. * T * T * T) + (320. * T * T * T * T))
             else:
                 # Although not listed, this is ideally for 8 dim or less
                 if self.comp == 0:
-                    dRp = -4. * (1. - T) * (1. - T) * (1. - T)
+                    frnt = 1.
+                    dRp_poly = [4., -12., 12., -4.]
+                    # dRp = -4. * (1. - T) * (1. - T) * (1. - T)
                 elif self.comp == 1:
-                    dRp = -T * ((1. - T) ** 5)
+                    frnt = 1.
+                    dRp_poly = [1., -5., 10., -10., 5., -1., 0.]
+                    # dRp = -T * ((1. - T) ** 5)
                 elif self.comp == 2:
-                    frnt = ((1. - T) ** 7) / -56.
-                    dRp = frnt * (T + (7. * T * T))
+                    frnt = np.power(1. - T, 7.) / -56.
+                    dRp_poly = [7., 1., 0.]
+                    # dRp = frnt * (T + (7. * T * T))
                 elif self.comp == 3:
-                    frnt = ((1. - T) ** 9) / -7920.
-                    dRp = frnt * ((3. * T) + (27. * T * T) + (80. * T * T * T))
+                    frnt = np.power(1. - T, 9.) / -7920.
+                    dRp_poly = [80., 27., 3., 0.]
+                    # dRp = frnt * ((3. * T) + (27. * T * T) + (80. * T * T * T))
                 elif self.comp == 4:
-                    frnt = ((1. - T) ** 11) / -720720.
-                    dRp = frnt * ((5. * T) + (55. * T * T) + (239. * T * T * T) + (429. * T * T * T * T))
+                    frnt = np.power(1. - T, 11.) / -720720.
+                    dRp_poly = [429., 239., 55., 5., 0.]
+                    # dRp = frnt * ((5. * T) + (55. * T * T) + (239. * T * T * T) + (429. * T * T * T * T))
+
+        dRp = frnt * np.polyval(dRp_poly, T)
 
         # Now need dt/dx
         xpi = np.subtract(PrdPts, self.tp[ploc[:, :-1], :])
