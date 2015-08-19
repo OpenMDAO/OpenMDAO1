@@ -45,7 +45,6 @@ class DistribExecComp(ExecComp):
         start = offsets[rank]
         end = start + sizes[rank]
 
-        print(rank, 'src_indices:',start,'to',end)
         self.set_var_indices('x', val=numpy.ones(sizes[rank], float),
                              src_indices=numpy.arange(start, end, dtype=int))
         self.set_var_indices('y', val=numpy.ones(sizes[rank], float),
@@ -78,11 +77,9 @@ class MPITests1(MPITestCase):
         prob.run()
 
         J = prob.calc_gradient(['P.x'], ['C2.z'], mode='fwd', return_format='dict')
-        print("J:",J)
         assert_rel_error(self, J['C2.z']['P.x'], numpy.eye(size)*6.0, 1e-6)
 
         J = prob.calc_gradient(['P.x'], ['C2.z'], mode='rev', return_format='dict')
-        print("rev J:",J)
         assert_rel_error(self, J['C2.z']['P.x'], numpy.eye(size)*6.0, 1e-6)
 
     def test_fan_out_grouped(self):
@@ -124,12 +121,10 @@ class MPITests1(MPITestCase):
         unknown_list = ['C2.y', "C3.y"]
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print("J:",J)
         assert_rel_error(self, J['C2.y']['P.x'], numpy.eye(size)*4.5, 1e-6)
         assert_rel_error(self, J['C3.y']['P.x'], numpy.eye(size)*15.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        print("rev J:",J)
         assert_rel_error(self, J['C2.y']['P.x'], numpy.eye(size)*4.5, 1e-6)
         assert_rel_error(self, J['C3.y']['P.x'], numpy.eye(size)*15.0, 1e-6)
     #

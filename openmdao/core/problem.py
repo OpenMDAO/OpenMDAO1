@@ -868,7 +868,6 @@ class Problem(System):
 
                 voi_srcs[vkey] = voi
                 _, in_idxs = duvec.get_local_idxs(voi, poi_indices)
-                print(voi,"in_idxs=",in_idxs)
                 voi_idxs[vkey] = in_idxs
 
             # TODO: check that all vois are the same size!!!
@@ -880,19 +879,15 @@ class Problem(System):
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        #print("setting %s to 1.0 in rank %d" % (voi, iproc))
                         rhs[vkey][voi_idxs[vkey][i]] = 1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
-                print("rhs",rhs)
-
                 for voi in rhs:
                     rhs[voi][voi_idxs[voi][i]] = 0.0
 
                 for param, dx in iteritems(dx_mat):
-                    print("mode",mode,"dx",list(dx))
                     if len(params) == 1:
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
@@ -921,7 +916,6 @@ class Problem(System):
                             else:
                                 if J[param][item] is None:
                                     J[param][item] = np.zeros((len(in_idxs), nk))
-                                #print("j",j,"jbase",jbase,"dxval:",dxval)
                                 J[param][item][j-jbase, :] = dxval
                         else:
                             if mode == 'fwd':
