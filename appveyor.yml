@@ -8,8 +8,7 @@ platform:
 
 environment:
 
-  - OPENMDAO_TEST_DOCS: 1
-
+  OPENMDAO_TEST_DOCS: 1
   matrix:
     - PYTHON: 2.7
     - PYTHON: 3.4
