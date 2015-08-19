@@ -74,7 +74,7 @@ You should get some output that looks like this:
 
    float predicted: 0.8632
    float actual:  0.8632
-   norm_dist predicted: -0.5048, 6.1617e-06
+   norm_dist predicted: -0.5048, ... 
    norm_dist actual:  -0.5048
 
 Notice that one of the outputs is non-float data. Some surrogate models
