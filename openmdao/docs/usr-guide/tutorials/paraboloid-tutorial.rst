@@ -315,7 +315,7 @@ select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 Next, we select the parameters the optimizer will drive by calling
 `add_param` and giving it the `ParamComp` unknowns that we have created. We
 also set a high and low bounds for this problem. It is not required to set
-these (they will default to 1e99 and 1e99 respectively), but it is generally
+these (they will default to -1e99 and 1e99 respectively), but it is generally
 a good idea.
 
 Finally, we add the objective. You can use any `unknown` in your model as the
