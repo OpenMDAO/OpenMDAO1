@@ -376,11 +376,12 @@ class TestRBFInterpolatorND(unittest.TestCase):
 
         expected_deriv = np.array([
             [[a, b], [c, d], [0., 0.], [a, b]],
-            [[b, a], [d, c], [0., 0.], [b, a]],
+            [[b, -a], [d, -c], [0., 0.], [b, -a]],
             [[a, -b], [c, -d], [0., 0.], [a, -b]],
             [[-b, -a], [-d, -c], [0., 0.], [-b, -a]]
         ])
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
+            import warnings;warnings.warn(str((x0,mu)))
             assert_rel_error(self, mu, y0, 1e-6)
