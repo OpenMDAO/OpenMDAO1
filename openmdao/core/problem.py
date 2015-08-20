@@ -323,6 +323,11 @@ class Problem(System):
         # Prepare Driver
         self.driver._setup(self.root)
 
+        # Prepare Solvers
+        for sub in self.root.subgroups(recurse=True, include_self=True):
+            sub.nl_solver.setup(sub)
+            sub.ln_solver.setup(sub)
+
         # check for any potential issues
         if check:
             return self.check_setup(out_stream)
@@ -931,11 +936,11 @@ class Problem(System):
 
         Returns
         -------
-        Dict of Dicts of Dicts 
+        Dict of Dicts of Dicts
 
-        First key is the component name; 
-        2nd key is the (output, input) tuple of strings; 
-        third key is one of ['rel error', 'abs error', 'magnitude', 'J_fd', 'J_fwd', 'J_rev']; 
+        First key is the component name;
+        2nd key is the (output, input) tuple of strings;
+        third key is one of ['rel error', 'abs error', 'magnitude', 'J_fd', 'J_fwd', 'J_rev'];
 
         For 'rel error', 'abs error', 'magnitude' the value is:
 

@@ -6,7 +6,7 @@ from __future__ import print_function
 # TODO: Do we have to make this solver with a factory?
 import petsc4py
 from petsc4py import PETSc
-import numpy
+import numpy as np
 
 from openmdao.solvers.solver_base import LinearSolver
 
@@ -34,12 +34,12 @@ class PetscKSP(LinearSolver):
     derivatives. This solver can be used under MPI."""
 
     def __init__(self):
-        super(ScipyGMRES, self).__init__()
+        super(PetscKSP, self).__init__()
 
         opt = self.options
         opt.add_option('atol', 1e-12,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('atol', 1e-12,
+        opt.add_option('rtol', 1e-12,
                        desc='Relative convergence tolerance.')
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
@@ -55,6 +55,38 @@ class PetscKSP(LinearSolver):
         self.mode = None
 
         self.ksp = None
+
+    def setup(self, system):
+        """ Setup petsc problem just once."""
+        return
+        lsize = np.sum(system._local_unknown_sizes[system.comm.rank, :])
+        size = np.sum(system._local_unknown_sizes)
+        jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
+                                           comm=system.comm)
+        jac_mat.setPythonContext(self)
+        jac_mat.setUp()
+
+        self.ksp = PETSc.KSP().create(comm=system.mpi.comm)
+        self.ksp.setOperators(jac_mat)
+        self.ksp.setType('fgmres')
+        self.ksp.setGMRESRestart(1000)
+        self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
+        self.ksp.setMonitor(self.Monitor(self))
+
+        pc_mat = self.ksp.getPC()
+        pc_mat.setType('python')
+        pc_mat.setPythonContext(self)
+
+        system.rhs_buf = np.zeros((lsize, ))
+        system.sol_buf = np.zeros((lsize, ))
+
+        # Set these in the system
+        system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
+                                                     comm=system.mpi.comm)
+        system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
+                                                     comm=system.mpi.comm)
+
+        # Now, back to what really belongs here
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -77,7 +109,7 @@ class PetscKSP(LinearSolver):
         -------
         dict of ndarray : Solution vectors
         """
-
+        print(system._local_unknown_sizes)
         unknowns_mat = {}
         for voi, rhs in iteritems(rhs_mat):
 

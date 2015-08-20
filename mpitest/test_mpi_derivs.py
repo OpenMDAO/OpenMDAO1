@@ -8,7 +8,7 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 
-from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.petsc_ksp import PetscKSP
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
@@ -25,7 +25,7 @@ else:
     from openmdao.core.basic_impl import BasicImpl as impl
 
 
-class TestScipyGMRES(MPITestCase):
+class TestPetscKSP(MPITestCase):
 
     N_PROCS = 2
 
@@ -52,6 +52,7 @@ class TestScipyGMRES(MPITestCase):
 
         prob = Problem(impl=impl)
         prob.root = FanInGrouped()
+        prob.root.ln_solver = PetscKSP()
         prob.setup(check=False)
 
         prob.root.comp3.dpmat[None]['x1'] = 7.
