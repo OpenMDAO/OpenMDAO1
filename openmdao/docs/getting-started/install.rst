@@ -100,7 +100,7 @@ passing between them. The new API helps draw a sharper line between what is a fr
 variable and what is a regular Python attribute. The new API also reduces the number of different
 kinds of objects you have to interact with.
 
-.. _Pre-1.0 Conversion Guide: ../conversion-guide/intro.html
+.. _Pre-1.0 Conversion Guide: ../conversion-guide/conversion.html
 
 Since this is still an Alpha release, there is a lot of missing functionality
 compared to the older versions. For example, we don't have full support for
@@ -268,4 +268,4 @@ OpenMDAO repo and run:
 
 ::
 
-    nosetest .
+    nosetests .
