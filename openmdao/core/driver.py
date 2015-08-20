@@ -11,6 +11,7 @@ import numpy as np
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
 from openmdao.util.record_util import create_local_meta, update_local_meta
+from openmdao.util.array_util import SubArray
 
 
 class Driver(object):
@@ -62,11 +63,14 @@ class Driver(object):
             ('Constraint', self._cons, cons)
         ]
 
-        sizes = {}
         for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
-                if MPI and 'src_indices' in meta:
-                    sizes[name] = len(meta['src_indices'])
+                rootmeta = root.unknowns.metadata(name)
+
+                if MPI and 'src_indices' in rootmeta:
+                    raise ValueError("'%s' is a distributed variable and may "
+                                     "not be used as a parameter, objective, "
+                                     "or constraint." % name)
 
                 # Check validity of variable
                 if name not in root.unknowns:
@@ -74,22 +78,16 @@ class Driver(object):
                     msg = msg.format(item_name, name)
                     raise ValueError(msg)
 
-                if root.unknowns.metadata(name).get('remote'):
+                if rootmeta.get('remote'):
                     continue
 
                 # Size is useful metadata to save
                 if 'indices' in meta:
                     meta['size'] = len(meta['indices'])
                 else:
-                    meta['size'] = root.unknowns.metadata(name)['size']
+                    meta['size'] = rootmeta['size']
 
                 newitem[name] = meta
-
-        # make sure our sizes agree across processes
-        if MPI:
-            allsizes = np.zeros((root.comm.size, len(sizes)), dtype=int)
-            sizes = np.array(sizes.values(), dtype=int)
-
 
         self._params = params
         self._objs = objs

@@ -172,6 +172,36 @@ class MPITests1(MPITestCase):
         assert_rel_error(self, J['C4.y']['P1.x'], numpy.eye(size)*-6.0, 1e-6)
         assert_rel_error(self, J['C4.y']['P2.x'], numpy.eye(size)*35.0, 1e-6)
 
+    def test_src_indices_error(self):
+        size = 3
+        group = Group()
+        group.add('P', ParamComp('x', numpy.ones(size)))
+        group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
+                                           x=numpy.zeros(size),
+                                           y=numpy.zeros(size)))
+        group.add('C2', ExecComp(['z=3.0*y'], y=numpy.zeros(size),
+                                           z=numpy.zeros(size)))
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.connect('P.x', 'C1.x')
+        prob.root.connect('C1.y', 'C2.y')
+
+        prob.driver.add_param('P.x')
+        prob.driver.add_objective('C1.y')
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+               "'C1.y' is a distributed variable and may not be used as a "
+               "parameter, objective, or constraint.")
+        else:
+            if MPI:
+                self.fail("Exception expected")
+
+
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()

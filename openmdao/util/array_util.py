@@ -58,7 +58,8 @@ class SubArray(object):
     """
     A compact representation of indices into an array.  Rather than
     storing a full array index that contains all indices, this
-    will contain a list of tuples indicating slices into the array.
+    will contain a list of tuples indicating slices into the array
+    if possible. Otherwise it will just store the index array.
 
     Args
     ----
@@ -74,10 +75,12 @@ class SubArray(object):
                 self._idx = slc
         elif isinstance(data, slice):
             if data.step < 1:
-                raise ValueError("invalid step value for SubArray slice (%d)" % data.step)
+                raise ValueError("invalid step value for SubArray slice (%d)" %
+                                 data.step)
             self._idx = data
         else:
-            raise TypeError("Can't create a SubArray object using data of type %s" % type(data))
+            raise TypeError("Can't create SubArray object using data of type %s"
+                            % type(data))
 
     def __contains__(self, idx):
         """
