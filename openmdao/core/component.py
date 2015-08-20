@@ -184,10 +184,10 @@ class Component(System):
 
         if val is _NotSet:
             if shape:
-                val = numpy.zeros(shape, dtype=meta['val'].dtype)
+                val = np.zeros(shape, dtype=meta['val'].dtype)
             else:
                 # assume value is a 1-D array
-                val = numpy.zeros((len(src_indices),), dtype=meta['val'].dtype)
+                val = np.zeros((len(src_indices),), dtype=meta['val'].dtype)
 
         if val.size != len(src_indices):
             raise ValueError("The size (%d) of the array '%s' doesn't match the "
@@ -585,7 +585,6 @@ class Component(System):
                 else:
                     docstring += typ + "\n"
                 docstring += "\n\t\t\t<Insert description here.>\n\n"
-
 
         docstring += '\n\tNote\n\t----\n\n'
 

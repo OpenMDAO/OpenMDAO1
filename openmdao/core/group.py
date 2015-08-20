@@ -621,9 +621,8 @@ class Group(System):
 
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd']) and \
-                                   not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
@@ -666,9 +665,8 @@ class Group(System):
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd']) and \
-                             not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
 
             # Groups and all other systems just call their own apply_linear.
