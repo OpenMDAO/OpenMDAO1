@@ -33,7 +33,7 @@ class TestPetscKSP(MPITestCase):
 
         #prob = Problem()
         #prob.root = FanOutGrouped()
-        #prob.root.ln_solver = ScipyGMRES()
+        #prob.root.ln_solver = PetscKSP()
         #prob.setup(check=False)
         #prob.run()
 
@@ -52,7 +52,6 @@ class TestPetscKSP(MPITestCase):
 
         prob = Problem(impl=impl)
         prob.root = FanInGrouped()
-        prob.root.ln_solver = PetscKSP()
         prob.setup(check=False)
 
         prob.root.comp3.dpmat[None]['x1'] = 7.

@@ -2,6 +2,7 @@
 derivatives. This solver can be used under MPI."""
 
 from __future__ import print_function
+from six import iteritems
 
 # TODO: Do we have to make this solver with a factory?
 import petsc4py
@@ -58,9 +59,9 @@ class PetscKSP(LinearSolver):
 
     def setup(self, system):
         """ Setup petsc problem just once."""
-        return
-        lsize = np.sum(system._local_unknown_sizes[system.comm.rank, :])
-        size = np.sum(system._local_unknown_sizes)
+
+        lsize = np.sum(system._local_unknown_sizes[None][system.comm.rank, :])
+        size = np.sum(system._local_unknown_sizes[None])
         jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
                                            comm=system.comm)
         jac_mat.setPythonContext(self)
@@ -79,14 +80,6 @@ class PetscKSP(LinearSolver):
 
         system.rhs_buf = np.zeros((lsize, ))
         system.sol_buf = np.zeros((lsize, ))
-
-        # Set these in the system
-        system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
-                                                     comm=system.mpi.comm)
-        system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
-                                                     comm=system.mpi.comm)
-
-        # Now, back to what really belongs here
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -109,9 +102,19 @@ class PetscKSP(LinearSolver):
         -------
         dict of ndarray : Solution vectors
         """
-        print(system._local_unknown_sizes)
+        options = self.options
+        self.ksp.setTolerances(max_it=options['maxiter'],
+                               atol=options['atol'],
+                               rtol=options['rtol'])
+
         unknowns_mat = {}
         for voi, rhs in iteritems(rhs_mat):
+
+            # Set these in the system
+            system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
+                                                         comm=system.comm)
+            system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
+                                                         comm=system.comm)
 
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
