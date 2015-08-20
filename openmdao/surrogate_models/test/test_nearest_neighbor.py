@@ -52,6 +52,18 @@ class TestLinearInterpolator1D(unittest.TestCase):
             jac = self.surrogate.jacobian(x0)
             assert_rel_error(self, jac, y0, 1e-9)
 
+    def test_pt_cache(self):
+        test_x = np.array([[0.5]])
+
+        self.surrogate.predict(test_x)
+
+        # Mess with internals to ensure cache is being used.
+        self.surrogate.interpolant._KData = None
+
+        mu = self.surrogate.jacobian(test_x)
+
+        assert_rel_error(self, mu, np.array([[1.]]), 1e-6)
+
 
 class TestLinearInterpolatorND(unittest.TestCase):
     def setUp(self):
@@ -170,6 +182,18 @@ class TestWeightedInterpolator1D(unittest.TestCase):
         for x0, y0 in zip(test_x, expected_deriv):
             jac = self.surrogate.jacobian(x0, n=3)
             assert_rel_error(self, jac, y0, 1e-6)
+
+    def test_pt_cache(self):
+        test_x = np.array([[0.5]])
+
+        self.surrogate.predict(test_x, n=3)
+
+        # Mess with internals to ensure cache is being used.
+        self.surrogate.interpolant._KData = None
+
+        mu = self.surrogate.jacobian(test_x, n=3)
+
+        assert_rel_error(self, mu, np.array([[1.92797784]]), 1e-6)
 
 
 class TestWeightedInterpolatorND(unittest.TestCase):
@@ -295,6 +319,18 @@ class TestRBFInterpolator1D(unittest.TestCase):
         for x0, y0 in zip(test_x, expected_deriv):
             jac = self.surrogate.jacobian(x0)
             assert_rel_error(self, jac, y0, 1e-6)
+
+    def test_pt_cache(self):
+        test_x = np.array([[0.5]])
+
+        self.surrogate.predict(test_x)
+
+        # Mess with internals to ensure cache is being used.
+        self.surrogate.interpolant._KData = None
+
+        mu = self.surrogate.jacobian(test_x)
+
+        assert_rel_error(self, mu, np.array([[2.34609214]]), 1e-6)
 
 
 class TestRBFInterpolatorND(unittest.TestCase):

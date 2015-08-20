@@ -8,8 +8,8 @@ from scipy.sparse.linalg import spsolve
 
 class RBFInterpolator(NNBase):
     # Compactly Supported Radial Basis Function
-    def findR(self, npp, T, loc):
-        R = np.zeros((npp, self.ntpts), dtype="float")
+    def _find_R(self, npp, T, loc):
+        R = np.zeros((npp, self._ntpts), dtype="float")
         # Choose type of CRBF R matrix
         if self.comp == -1:
             # Comp #1 - a
@@ -37,7 +37,7 @@ class RBFInterpolator(NNBase):
             # as positive definite iff the dimensional requirements are.
             # Because of this, the user can select 0 through 4 to adjust to a
             # level of order trying to be attained.
-            dims = self.indep_dims + 1
+            dims = self._indep_dims + 1
             if dims <= 2:
                 if self.comp == 0:
                     # This starts the dk comps, here d=1, k=0
@@ -136,7 +136,7 @@ class RBFInterpolator(NNBase):
 
         return R
 
-    def finddR(self, PrdPts, ploc, pdist):
+    def _find_dR(self, PrdPts, ploc, pdist):
         T = (pdist[:, :-1] / pdist[:, -1:])
         # Solve for the gradient analytically
         # The first quantity needed is dRp/dt
@@ -160,7 +160,7 @@ class RBFInterpolator(NNBase):
             frnt = T / np.sqrt((T * T) * 1.)
             dRp_poly = [1.]
         else:
-            dims = self.indep_dims + 1
+            dims = self._indep_dims + 1
             # Start dim dependent comps, review first occurrence for more info
             if dims <= 2:
                 if self.comp == 0:
@@ -252,31 +252,31 @@ class RBFInterpolator(NNBase):
         dRp = frnt * np.polyval(dRp_poly, T)
 
         # Now need dt/dx
-        xpi = np.subtract(PrdPts, self.tp[ploc[:, :-1], :])
-        xpm = PrdPts - self.tp[ploc[:, -1:], :]
+        xpi = np.subtract(PrdPts, self._tp[ploc[:, :-1], :])
+        xpm = PrdPts - self._tp[ploc[:, -1:], :]
         dtx = (xpi - (T * T * xpm)) / \
               (pdist[:, -1:, :] * pdist[:, -1:, :] * T)
         # The gradient then is the summation across neighs of w*df/dt*dt/dx
         grad = np.einsum('ijk,ijl...->ilk...', dRp * dtx, self.weights[ploc[:, :-1]])
-        return grad.reshape((PrdPts.shape[0], self.dep_dims, self.indep_dims))
+        return grad.reshape((PrdPts.shape[0], self._dep_dims, self._indep_dims))
 
     def __init__(self, training_points, training_values, num_leaves=2, n=5, comp=2):
         super(RBFInterpolator, self).__init__(training_points, training_values, num_leaves)
 
-        if self.ntpts < n:
+        if self._ntpts < n:
             raise ValueError('RBFInterpolator only given {0} training points, '
                              'but requested n={1}.'
-                             .format(self.ntpts, n))
+                             .format(self._ntpts, n))
 
         # Comp is an arbitrary value that picks a function to use
         self.comp = comp
 
         # For weights, first find the training points radial neighbors
-        tdist, tloc = self.KData.query(self.tp, n)
+        tdist, tloc = self._KData.query(self._tp, n)
         Tt = tdist[:, :-1] / tdist[:, -1:]
         # Next determine weight matrix
-        Rt = self.findR(self.ntpts, Tt, tloc)
-        weights = (spsolve(csc_matrix(Rt), self.tv))[..., np.newaxis]
+        Rt = self._find_R(self._ntpts, Tt, tloc)
+        weights = (spsolve(csc_matrix(Rt), self._tv))[..., np.newaxis]
 
         self.N = n
         self.weights = weights
@@ -287,22 +287,25 @@ class RBFInterpolator(NNBase):
             # Reshape vector to n x 1 array
             prediction_points.shape = (1, prediction_points.shape[0])
 
-        normalized_pts = (prediction_points - self.tpm) / self.tpr
+        normalized_pts = (prediction_points - self._tpm) / self._tpr
         nppts = normalized_pts.shape[0]
         # Setup prediction points and find their radial neighbors
-        pdist, ploc = self.KData.query(normalized_pts, self.N)
+        ndist, nloc = self._KData.query(normalized_pts, self.N)
         # Check if complex step is being run
         if (np.any(normalized_pts[0, :].imag) > 0):
-            dimdiff = np.subtract(normalized_pts.reshape((nppts, 1, self.indep_dims)),
-                                  self.tp[ploc, :])
+            dimdiff = np.subtract(normalized_pts.reshape((nppts, 1, self._indep_dims)),
+                                  self._tp[nloc, :])
             # KD Tree ignores imaginary part, muse redo ndist if complex
-            pdist = np.sqrt(np.sum((dimdiff * dimdiff), axis=2))
+            ndist = np.sqrt(np.sum((dimdiff * dimdiff), axis=2))
 
         # Take farthest distance of each point
-        Tp = pdist[:, :-1] / pdist[:, -1:]
+        Tp = ndist[:, :-1] / ndist[:, -1:]
 
-        Rp = self.findR(nppts, Tp, ploc)
-        predz = ((np.dot(Rp, self.weights[..., 0]) * self.tvr) + self.tvm).reshape(nppts, self.dep_dims)
+        Rp = self._find_R(nppts, Tp, nloc)
+        predz = ((np.dot(Rp, self.weights[..., 0]) * self._tvr) + self._tvm).reshape(nppts, self._dep_dims)
+
+        self._pt_cache = (normalized_pts, ndist, nloc)
+
         return predz
 
     def gradient(self, prediction_points):
@@ -311,11 +314,16 @@ class RBFInterpolator(NNBase):
             # Reshape vector to n x 1 array
             prediction_points.shape = (1, prediction_points.shape[0])
 
-        normalized_pts = (prediction_points - self.tpm) / self.tpr
+        normalized_pts = (prediction_points - self._tpm) / self._tpr
         # Setup prediction points and find their radial neighbors
-        pdist, ploc = self.KData.query(normalized_pts, self.N)
+        if self._pt_cache is not None and \
+                np.allclose(self._pt_cache[0], normalized_pts):
+            pdist, ploc = self._pt_cache[1:]
+        else:
+            pdist, ploc = self._KData.query(normalized_pts, self.N)
+
         # Find Gradient
-        grad = self.finddR(normalized_pts[:, np.newaxis, :], ploc,
-                           pdist[:, :, np.newaxis]) * (self.tvr[..., np.newaxis] / self.tpr)
+        grad = self._find_dR(normalized_pts[:, np.newaxis, :], ploc,
+                           pdist[:, :, np.newaxis]) * (self._tvr[..., np.newaxis] / self._tpr)
 
         return grad

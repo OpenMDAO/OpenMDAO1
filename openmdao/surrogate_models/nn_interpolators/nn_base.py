@@ -27,24 +27,27 @@ class NNBase(object):
         # training_points and training_values are the known points and their
         # respective values which will be interpolated against.
         # Grab the mins and ranges of each dimension
-        self.tpm = np.amin(training_points, axis=0)
-        self.tpr = (np.amax(training_points, axis=0) - self.tpm)
-        self.tvm = np.amin(training_values, axis=0)
-        self.tvr = (np.amax(training_values, axis=0) - self.tvm)
+        self._tpm = np.amin(training_points, axis=0)
+        self._tpr = (np.amax(training_points, axis=0) - self._tpm)
+        self._tvm = np.amin(training_values, axis=0)
+        self._tvr = (np.amax(training_values, axis=0) - self._tvm)
 
         # This prevents against collinear data (range = 0)
-        self.tpr[self.tpr == 0] = 1
-        self.tvr[self.tvr == 0] = 1
+        self._tpr[self._tpr == 0] = 1
+        self._tvr[self._tvr == 0] = 1
 
         # Normalize all points
-        self.tp = (training_points - self.tpm) / self.tpr
-        self.tv = (training_values - self.tvm) / self.tvr
+        self._tp = (training_points - self._tpm) / self._tpr
+        self._tv = (training_values - self._tvm) / self._tvr
 
         # Record number of dimensions and points
-        self.indep_dims = training_points.shape[1]
-        self.dep_dims = training_values.shape[1]
-        self.ntpts = training_points.shape[0]
+        self._indep_dims = training_points.shape[1]
+        self._dep_dims = training_values.shape[1]
+        self._ntpts = training_points.shape[0]
 
         # Make training data into a Tree
-        leavesz = ceil(self.ntpts / float(num_leaves))
-        self.KData = cKDTree(self.tp, leafsize=leavesz)
+        leavesz = ceil(self._ntpts / float(num_leaves))
+        self._KData = cKDTree(self._tp, leafsize=leavesz)
+
+        # Cache for gradients
+        self._pt_cache = None
