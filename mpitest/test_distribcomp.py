@@ -360,7 +360,7 @@ class MPITests(MPITestCase):
             self.assertTrue(all(top.C3.unknowns['outvec']==top.C2.unknowns['outvec']))
 
     def test_overlapping_inputs_idxs(self):
-        # distrib comp with distrib_idxs that overlap, i.e. the same
+        # distrib comp with src_indices that overlap, i.e. the same
         # entries are distributed to multiple processes
         size = 11
 
@@ -383,7 +383,7 @@ class MPITests(MPITestCase):
 
     def test_nondistrib_gather(self):
         # regular comp --> distrib comp --> regular comp.  last comp should
-        # automagically gather the full vector without declaring distrib_idxs
+        # automagically gather the full vector without declaring src_indices
         size = 11
 
         p = Problem(root=Group(), impl=impl)
