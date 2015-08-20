@@ -13,6 +13,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
+from openmdao.devtools.debug import debug
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -277,7 +278,7 @@ class Component(System):
                     names.append(name)
             if sizes:
                 if trace:
-                    print("allgathering src index sizes:")
+                    debug("allgathering src index sizes:")
                 allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
                 self.comm.Allgather(np.array(sizes, dtype=int), allsizes)
                 for i, name in enumerate(names):

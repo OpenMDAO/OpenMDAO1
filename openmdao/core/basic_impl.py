@@ -8,7 +8,7 @@ class BasicImpl(object):
     """Basic vector and data transfer implementation factory."""
 
     idx_arr_type = int
-    
+
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
         """
@@ -43,7 +43,8 @@ class BasicImpl(object):
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
-                         src_idxs, tgt_idxs, vec_conns, byobj_conns):
+                         src_idxs, tgt_idxs, vec_conns, byobj_conns,
+                         mode):
         """
         Create an object for performing data transfer between source
         and target vectors.
@@ -72,9 +73,12 @@ class BasicImpl(object):
             Mapping of 'pass by object' variables to the source variables that
             they are connected to.
 
+        mode : str
+            Either 'fwd' or 'rev', indicating a forward or reverse scatter.
+
         Returns
         -------
         `DataTransfer`
             A `DataTransfer` object.
         """
-        return DataTransfer(src_idxs, tgt_idxs, vec_conns, byobj_conns)
+        return DataTransfer(src_idxs, tgt_idxs, vec_conns, byobj_conns, mode)

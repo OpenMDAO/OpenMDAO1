@@ -165,14 +165,10 @@ class MPITests1(MPITestCase):
         prob.run()
 
         J = prob.calc_gradient(['P1.x', 'P2.x'], ['C4.y'], mode='fwd', return_format='dict')
-        from pprint import pprint
-        pprint(J)
         assert_rel_error(self, J['C4.y']['P1.x'], numpy.eye(size)*-6.0, 1e-6)
         assert_rel_error(self, J['C4.y']['P2.x'], numpy.eye(size)*35.0, 1e-6)
 
         J = prob.calc_gradient(['P1.x', 'P2.x'], ['C4.y'], mode='rev', return_format='dict')
-        print("rev J:")
-        pprint(J)
         assert_rel_error(self, J['C4.y']['P1.x'], numpy.eye(size)*-6.0, 1e-6)
         assert_rel_error(self, J['C4.y']['P2.x'], numpy.eye(size)*35.0, 1e-6)
 

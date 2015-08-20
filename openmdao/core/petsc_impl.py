@@ -47,7 +47,7 @@ class PetscImpl(object):
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
-                         src_idxs, tgt_idxs, vec_conns, byobj_conns):
+                         src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
         """
         Create an object for performing data transfer between source
         and target vectors.
@@ -76,12 +76,16 @@ class PetscImpl(object):
             Mapping of 'pass by object' variables to the source variables that
             they are connected to.
 
+        mode : str
+            Either 'fwd' or 'rev', indicating a forward or reverse scatter.
+
         Returns
         -------
         `PetscDataTransfer`
             A `PetscDataTransfer` object.
         """
-        return PetscDataTransfer(src_vec, tgt_vec, src_idxs, tgt_idxs, vec_conns, byobj_conns)
+        return PetscDataTransfer(src_vec, tgt_vec, src_idxs, tgt_idxs,
+                                 vec_conns, byobj_conns, mode)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
@@ -254,11 +258,14 @@ class PetscDataTransfer(DataTransfer):
     byobj_conns : dict
         mapping of 'pass by object' variables to the source variables that
         they are connected to.
+
+    mode : str
+        Either 'fwd' or 'rev', indicating a forward or reverse scatter.
     """
     def __init__(self, src_vec, tgt_vec,
-                 src_idxs, tgt_idxs, vec_conns, byobj_conns):
+                 src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
         super(PetscDataTransfer, self).__init__(src_idxs, tgt_idxs,
-                                            vec_conns, byobj_conns)
+                                            vec_conns, byobj_conns, mode)
 
         self.comm = comm = src_vec.comm
 
@@ -276,14 +283,13 @@ class PetscDataTransfer(DataTransfer):
             if trace:
                 self.src_idxs = src_idxs
                 self.tgt_idxs = tgt_idxs
-                debug("'%s': creating scatter (sizes: %d, %d) %s --> %s %s --> %s" %
-                      (name, len(src_idx_set.indices), len(tgt_idx_set.indices),
-                       [u for u, v in vec_conns], [v for u, v in vec_conns],
-                       src_idx_set.indices, tgt_idx_set.indices))
+                arrow = '-->' if mode == 'fwd' else '<--'
+                debug("'%s': new %s scatter (sizes: %d, %d)\n%s %s %s %s %s %s" %
+                      (name, mode, len(src_idx_set.indices), len(tgt_idx_set.indices),
+                       [v for u, v in vec_conns], arrow, [u for u, v in vec_conns],
+                       src_idx_set.indices, arrow, tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
-            if trace:
-                debug("scatter done")
         except Exception as err:
             raise RuntimeError("ERROR in %s (src_idxs=%s, tgt_idxs=%s, usize=%d, psize=%d): %s" %
                                (name, src_idxs, tgt_idxs,

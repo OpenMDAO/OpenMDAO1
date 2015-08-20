@@ -21,6 +21,7 @@ from openmdao.solvers.scipy_gmres import ScipyGMRES
 from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
+from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -1160,7 +1161,8 @@ class Group(System):
         pmeta = self.params.metadata(pname)
 
         # FIXME: if we switch to push scatters, this check will flip
-        if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
+        if ((mode == 'fwd' and not 'src_indices' in umeta and pmeta.get('remote')) or
+            (mode == 'rev' and not 'src_indices' in pmeta and umeta.get('remote'))):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1316,7 +1318,8 @@ class Group(System):
                     self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
                                                         self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
-                                                        vec_conns, byobj_conns)
+                                                        vec_conns, byobj_conns,
+                                                        mode)
 
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
@@ -1340,7 +1343,8 @@ class Group(System):
                 self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
                                                     self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
-                                                    full_flats, full_byobjs)
+                                                    full_flats, full_byobjs,
+                                                    mode)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
@@ -1386,7 +1390,7 @@ class Group(System):
 
         if MPI:
             if trace:
-                print("allgathering local varnames: locals = ",local_vars)
+                debug("allgathering local varnames: locals = ",local_vars)
             all_locals = self.comm.allgather(local_vars)
         else:
             all_locals = [local_vars]

@@ -23,9 +23,12 @@ class DataTransfer(object):
     byobj_conns : dict
         Mapping of 'pass by object' variables to the source variables that
         they are connected to.
+
+    mode : str
+        Either 'fwd' or 'rev', indicating a forward or reverse scatter.
     """
 
-    def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns):
+    def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
 
         # TODO: change to_slice to to_slices. (should never return an index array)
         #self.src_idxs = to_slice(src_idxs)

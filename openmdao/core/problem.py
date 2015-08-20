@@ -878,7 +878,6 @@ class Problem(System):
                         raise RuntimeError("Indices within the same VOI group must be the same size, but"
                                            " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
-                print(voi, "in_idxs:", in_idxs)
 
             jbase = j
 
@@ -1359,9 +1358,12 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
             ldata['abs error'] = (abs1, abs2, abs3)
 
-            rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
-            rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
-            rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+            if magfd == 0.0:
+                rel1 = rel2 = rel3 = float('nan')
+            else:
+                rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
 
             ldata['rel error'] = (rel1, rel2, rel3)
 
