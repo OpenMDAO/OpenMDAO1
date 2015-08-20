@@ -11,7 +11,6 @@ import numpy as np
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
 from openmdao.util.record_util import create_local_meta, update_local_meta
-from openmdao.util.array_util import SubArray
 
 
 class Driver(object):
