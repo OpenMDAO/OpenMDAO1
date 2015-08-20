@@ -1179,6 +1179,8 @@ class Group(System):
         if 'src_indices' in umeta or 'src_indices' in pmeta:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
             if rev:
+                # if in rev mode, we need to avoid multiple scatters from
+                # duplicate params in different processes.
                 ipvar = p_var_idxs[pname]
                 pstart = np.sum(p_sizes[:iproc, ipvar])
                 pend = pstart + p_sizes[iproc, ipvar]

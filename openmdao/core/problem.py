@@ -859,6 +859,8 @@ class Problem(System):
             rhs = {}
             voi_idxs = {}
 
+            old_size = None
+
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
                 vkey = voi if len(params) > 1 else None
@@ -868,12 +870,23 @@ class Problem(System):
 
                 voi_srcs[vkey] = voi
                 _, in_idxs = duvec.get_local_idxs(voi, poi_indices)
-                voi_idxs[vkey] = in_idxs
 
-            # TODO: check that all vois are the same size!!!
+                if old_size is None:
+                    old_size = len(in_idxs)
+                else:
+                    if old_size != len(in_idxs):
+                        raise RuntimeError("Indices within the same VOI group must be the same size, but"
+                                           " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
+                voi_idxs[vkey] = in_idxs
+                print(voi, "in_idxs:", in_idxs)
 
             jbase = j
 
+            # at this point, we know that for all vars in the current
+            # group of interest, the number of indices is the same. We loop
+            # over the *size* of the indices and use the loop index to look
+            # up the actual indices for the current members of the group
+            # of interest.
             for i in range(len(in_idxs)):
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
