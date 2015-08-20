@@ -39,8 +39,8 @@ class Group(System):
         self._src_idxs = {}
         self._data_xfer = {}
 
-        self._local_unknown_sizes = None
-        self._local_param_sizes = None
+        self._local_unknown_sizes = {}
+        self._local_param_sizes = {}
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
@@ -323,8 +323,8 @@ class Group(System):
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
-        self._local_unknown_sizes = None
-        self._local_param_sizes = None
+        self._local_unknown_sizes = {}
+        self._local_param_sizes = {}
         self._owning_ranks = None
 
         if not self.is_active():
@@ -1268,8 +1268,11 @@ class Group(System):
 
         unknown_sizes = np.array(unknown_sizes,
                                  dtype=self._impl_factory.idx_arr_type)
+        self._local_unknown_sizes[var_of_interest] = unknown_sizes
+
         param_sizes = np.array(param_sizes,
                                dtype=self._impl_factory.idx_arr_type)
+        self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
         for param, unknown in iteritems(self.connections):
