@@ -46,7 +46,7 @@ class Driver(object):
         self.iter_count = 0
 
     def _setup(self, root):
-        """ Prepares some things we need."""
+        """ Updates metadata for params, constraints and objectives."""
         self.root = root
 
         params = OrderedDict()
