@@ -931,12 +931,20 @@ class Problem(System):
 
         Returns
         -------
-        Dict of Dicts of Dicts of Tuples of Floats.
+        Dict of Dicts of Dicts 
 
-        First key is the component name; 2nd key is the (output, input) tuple
-        of strings; third key is one of ['rel error', 'abs error',
-        'magnitude', 'fdstep']; Tuple contains norms for forward - fd,
-        adjoint - fd, forward - adjoint using the best case fdstep.
+        First key is the component name; 
+        2nd key is the (output, input) tuple of strings; 
+        third key is one of ['rel error', 'abs error', 'magnitude', 'J_fd', 'J_fwd', 'J_rev']; 
+
+        For 'rel error', 'abs error', 'magnitude' the value is:
+
+            A tuple containing norms for forward - fd, adjoint - fd, forward - adjoint using the best case fdstep
+
+        For 'J_fd', 'J_fwd', 'J_rev' the value is:
+
+            A numpy array representing the computed Jacobian for the three different methods of computation
+
         """
 
         root = self.root
@@ -948,7 +956,7 @@ class Problem(System):
             out_stream.write('Partial Derivatives Check\n\n')
 
         data = {}
-        skip_keys = []
+        skip_keys = set()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1000,7 +1008,7 @@ class Problem(System):
 
                         # Go no further if we aren't defined.
                         if (u_name, p_name) not in comp._jacobian_cache:
-                            skip_keys.append((u_name, p_name))
+                            skip_keys.add((u_name, p_name))
                             continue
 
                         user = comp._jacobian_cache[(u_name, p_name)].shape
@@ -1303,17 +1311,15 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
     for p_name in params:
         for u_name in resids:
+            if (u_name, p_name) in skip_keys:
+                continue
 
             ldata = cdata[(u_name, p_name)] = {}
 
             Jsub_fd = jac_fd[(u_name, p_name)]
 
-            if (u_name, p_name) in skip_keys:
-                Jsub_for = np.zeros(Jsub_fd.shape)
-                Jsub_rev = np.zeros(Jsub_fd.shape)
-            else:
-                Jsub_for = jac_fwd[(u_name, p_name)]
-                Jsub_rev = jac_rev[(u_name, p_name)]
+            Jsub_for = jac_fwd[(u_name, p_name)]
+            Jsub_rev = jac_rev[(u_name, p_name)]
 
             ldata['J_fd'] = Jsub_fd
             ldata['J_fwd'] = Jsub_for
@@ -1368,7 +1374,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('\n\n')
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
-            out_stream.write('\n\n')
+            out_stream.write('\n')
 
 def _get_implicit_connections(root, params_dict, unknowns_dict):
     """
