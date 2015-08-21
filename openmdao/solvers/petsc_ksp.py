@@ -4,6 +4,8 @@ derivatives. This solver can be used under MPI."""
 from __future__ import print_function
 from six import iteritems
 
+import os
+
 # TODO: Do we have to make this solver with a factory?
 import petsc4py
 from petsc4py import PETSc
@@ -11,6 +13,9 @@ import numpy as np
 
 from openmdao.solvers.solver_base import LinearSolver
 
+trace = os.environ.get("TRACE_PETSC")
+if trace:
+    from openmdao.devtools.debug import debug
 
 # This class object is given to KSP as a callback object for printing the residual.
 class Monitor(object):
@@ -67,6 +72,8 @@ class PetscKSP(LinearSolver):
         jac_mat.setPythonContext(self)
         jac_mat.setUp()
 
+        if trace:
+            debug("creating KSP object")
         self.ksp = PETSc.KSP().create(comm=system.comm)
         self.ksp.setOperators(jac_mat)
         self.ksp.setType('fgmres')
@@ -74,6 +81,9 @@ class PetscKSP(LinearSolver):
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
         self.ksp.setMonitor(Monitor(self))
 
+        if trace:
+            debug("ksp.getPC()")
+            debug("rhs_buf, sol_buf size: %d" % lsize)
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
@@ -114,10 +124,14 @@ class PetscKSP(LinearSolver):
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
+            if trace:
+                debug("creating sol_buf petsc vec for voi", voi)
             self.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
-                                                         comm=system.comm)
+                                                             comm=system.comm)
+            if trace:
+                debug("creating rhs_buf petsc vec for voi", voi)
             self.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
-                                                         comm=system.comm)
+                                                             comm=system.comm)
 
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
@@ -163,7 +177,7 @@ class PetscKSP(LinearSolver):
 
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
-        result[:] = rhs_vec.vec[:]
+        result.array[:] = rhs_vec.vec[:]
         #print("arg", arg.array)
         #print("result", result.array)
 
