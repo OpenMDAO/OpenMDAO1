@@ -26,7 +26,7 @@ class Monitor(object):
         if counter == 0 and norm != 0.0:
             self._norm0 = norm
 
-        if self._ksp.options.iprint > 0:
+        if self._ksp.options['iprint'] > 0:
             self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
 
 
@@ -103,6 +103,8 @@ class PetscKSP(LinearSolver):
         dict of ndarray : Solution vectors
         """
         options = self.options
+        self.mode = mode
+
         self.ksp.setTolerances(max_it=options['maxiter'],
                                atol=options['atol'],
                                rtol=options['rtol'])
@@ -112,14 +114,16 @@ class PetscKSP(LinearSolver):
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
-            system.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
+            self.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
                                                          comm=system.comm)
-            system.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
+            self.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
                                                          comm=system.comm)
 
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
+            self.system = system
             self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
+            self.system = None
 
             unknowns_mat[voi] = sol_vec
 
@@ -142,7 +146,7 @@ class PetscKSP(LinearSolver):
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
-        sol_vec.vec[:] = arg[:]
+        sol_vec.vec[:] = arg.array[:]
 
         # Start with a clean slate
         rhs_vec.vec[:] = 0.0
@@ -151,4 +155,12 @@ class PetscKSP(LinearSolver):
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
         result[:] = rhs_vec.vec[:]
+        #print("arg", arg.array)
+        #print("result", result.array)
 
+    def apply(self, mat, sol_vec, rhs_vec):
+        """ Applies preconditioner """
+
+        # TODO - Preconditioning is not supported yet, so mimic an Identity
+        # matrix.
+        rhs_vec.array[:] = sol_vec.array[:]

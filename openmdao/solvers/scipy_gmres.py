@@ -54,7 +54,6 @@ class ScipyGMRES(LinearSolver):
         dict of ndarray : Solution vectors
         """
 
-        self.system = system
         options = self.options
         self.mode = mode
 
@@ -70,9 +69,11 @@ class ScipyGMRES(LinearSolver):
                                dtype=float)
 
             # Call GMRES to solve the linear system
+            self.system = system
             d_unknowns, info = gmres(A, rhs,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
+            self.system = None
 
             if info > 0:
                 msg = "ERROR in solve in '{}': gmres failed to converge " \
@@ -87,7 +88,6 @@ class ScipyGMRES(LinearSolver):
             unknowns_mat[voi] = d_unknowns
 
             #print system.name, 'Linear solution vec', d_unknowns
-            self.system = None
 
         return unknowns_mat
 

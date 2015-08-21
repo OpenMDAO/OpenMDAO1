@@ -29,24 +29,24 @@ class TestPetscKSP(MPITestCase):
 
     N_PROCS = 2
 
-    #def test_fan_out_grouped(self):
+    def test_fan_out_grouped(self):
 
-        #prob = Problem()
-        #prob.root = FanOutGrouped()
-        #prob.root.ln_solver = PetscKSP()
-        #prob.setup(check=False)
-        #prob.run()
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
 
-        #param_list = ['p.x']
-        #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+        param_list = ['p.x']
+        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
 
     def test_simple_deriv_xfer(self):
 

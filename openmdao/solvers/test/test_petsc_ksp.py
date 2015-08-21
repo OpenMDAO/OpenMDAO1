@@ -8,7 +8,9 @@ from openmdao.core.problem import Problem
 from openmdao.components.param_comp import ParamComp
 from openmdao.solvers.petsc_ksp import PetscKSP
 from openmdao.test.simple_comps import SimpleCompDerivMatVec
+from openmdao.test.util import assert_rel_error
 
+# TODO -- do we need this?
 from openmdao.core.petsc_impl import PetscImpl as impl
 
 
