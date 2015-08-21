@@ -15,11 +15,16 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
-# TODO -- do we need this?
-from openmdao.core.petsc_impl import PetscImpl as impl
-
+try:
+    from openmdao.core.petsc_impl import PetscImpl as impl
+except ImportError:
+    impl = None
 
 class TestPetscKSPSerial(unittest.TestCase):
+
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
     def test_simple(self):
         group = Group()
