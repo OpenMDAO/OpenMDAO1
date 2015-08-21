@@ -134,7 +134,16 @@ class PetscKSP(LinearSolver):
 
     def mult(self, mat, arg, result):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
-        system."""
+        system.
+
+        Args
+        ----
+        arg : PetSC Vector
+            Incoming vector
+
+        result : PetSC Vector
+            Empty array into which we place the matrix-vector product.
+        """
 
         system = self.system
         mode = self.mode
@@ -159,7 +168,16 @@ class PetscKSP(LinearSolver):
         #print("result", result.array)
 
     def apply(self, mat, sol_vec, rhs_vec):
-        """ Applies preconditioner """
+        """ Applies preconditioner
+
+        Args
+        ----
+        sol_vec : PetSC Vector
+            Incoming vector
+
+        rhs_vec : PetSC Vector
+            Empty vector into which we return the preconditioned sol_vec
+        """
 
         # TODO - Preconditioning is not supported yet, so mimic an Identity
         # matrix.
