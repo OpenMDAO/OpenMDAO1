@@ -255,10 +255,9 @@ class RBFInterpolator(NNBase):
         # Now need dt/dx
         xpi = np.subtract(PrdPts, self._tp[ploc[:, :-1], :])
         xpm = PrdPts - self._tp[ploc[:, -1:], :]
-        dtx = (xpi - (T * T * xpm)) / \
-              (pdist[:, -1:, :] * pdist[:, -1:, :] * T)
+        dtx = (xpi - (np.square(T) * xpm)) / (np.square(pdist[:, -1:, :]) * T)
 
-        import warnings;warnings.warn(str(dtx))
+        import warnings;warnings.warn(str(((xpi - (np.square(T) * xpm)), (np.square(pdist[:, -1:, :]) * T))))
 
         # The gradient then is the summation across neighs of w*df/dt*dt/dx
         grad = np.einsum('ijk,ijl...->ilk...', dRp * dtx, self.weights[ploc[:, :-1]])
