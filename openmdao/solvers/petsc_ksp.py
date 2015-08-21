@@ -78,8 +78,8 @@ class PetscKSP(LinearSolver):
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
 
-        system.rhs_buf = np.zeros((lsize, ))
-        system.sol_buf = np.zeros((lsize, ))
+        self.rhs_buf = np.zeros((lsize, ))
+        self.sol_buf = np.zeros((lsize, ))
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -111,9 +111,9 @@ class PetscKSP(LinearSolver):
         for voi, rhs in iteritems(rhs_mat):
 
             # Set these in the system
-            system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
+            system.sol_buf_petsc = PETSc.Vec().createWithArray(self.sol_buf,
                                                          comm=system.comm)
-            system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
+            system.rhs_buf_petsc = PETSc.Vec().createWithArray(self.rhs_buf,
                                                          comm=system.comm)
 
             # Petsc can only handle one right-hand-side at a time for now
