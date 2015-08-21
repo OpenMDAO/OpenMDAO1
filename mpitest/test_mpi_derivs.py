@@ -19,15 +19,19 @@ from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.devtools.debug import debug
 
-if MPI:
+try:
+    from mpi4py import MPI
     from openmdao.core.petsc_impl import PetscImpl as impl
-else:
-    from openmdao.core.basic_impl import BasicImpl as impl
-
+except ImportError:
+    impl = None
 
 class TestPetscKSP(MPITestCase):
 
     N_PROCS = 2
+
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
     def test_fan_out_grouped(self):
 
