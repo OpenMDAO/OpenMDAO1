@@ -23,7 +23,7 @@ class _flat_dict(object):
         meta = self._dict[name]
         if 'pass_by_obj' in meta and meta['pass_by_obj']:
             raise ValueError("'%s' is a 'pass by object' variable. Flat value not found." % name)
-        return self._dict[name]['val']
+        return meta['val']
 
 
 class _ByObjWrapper(object):
@@ -73,7 +73,7 @@ class VecWrapper(object):
         self._slices = {}
 
         # add a flat attribute that will have access method consistent
-        # with non-flat access  (__getitem__)
+        # with non-flat access but returns the flattened value
         self.flat = _flat_dict(self._vardict)
 
         # Automatic unit conversion in target vectors
@@ -174,12 +174,10 @@ class VecWrapper(object):
             meta['val'].val = value
             return
 
-        unitconv = meta.get('unit_conv')
-
         # For dparam vector in adjoint mode, assignement behaves as +=.
         if self.adj_accumulate_mode is True:
-            if self.deriv_units and unitconv:
-                scale, offset = unitconv
+            if self.deriv_units and 'unit_conv' in meta:
+                scale, offset = meta['unit_conv']
 
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] += scale*value.flat[:]
@@ -193,8 +191,8 @@ class VecWrapper(object):
 
         # Convert Units
         else:
-            if self.deriv_units and unitconv:
-                scale, offset = unitconv
+            if self.deriv_units and 'unit_conv' in meta:
+                scale, offset = meta['unit_conv']
 
                 if isinstance(value, numpy.ndarray):
                     meta['val'][:] = scale*value.flat[:]
@@ -447,7 +445,7 @@ class VecWrapper(object):
             Index array containing all of the merged indices.
 
         """
-        assert(len(src_idxs) == len(tgt_idxs))
+        assert len(src_idxs) == len(tgt_idxs)
 
         # filter out any zero length idx array entries
         src_idxs = [i for i in src_idxs if len(i)]
@@ -456,14 +454,7 @@ class VecWrapper(object):
         if len(src_idxs) == 0:
             return self.make_idx_array(0, 0), self.make_idx_array(0, 0)
 
-        src_tups = list(enumerate(src_idxs))
-
-        src_sorted = sorted(src_tups, key=lambda x: x[1].min())
-
-        new_src = [idxs for i, idxs in src_sorted]
-        new_tgt = [tgt_idxs[i] for i, _ in src_sorted]
-
-        return idx_merge(new_src), idx_merge(new_tgt)
+        return numpy.concatenate(src_idxs), numpy.concatenate(tgt_idxs)
 
     def get_promoted_varname(self, abs_name):
         """
@@ -629,9 +620,12 @@ class SrcVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, meta in iteritems(self):
-            if not meta.get('remote') and not meta.get('pass_by_obj'):
-                start, end = self._slices[name]
-                meta['val'] = self.vec[start:end]
+            if not meta.get('pass_by_obj'):
+                if meta.get('remote'):
+                    meta['val'] = numpy.array([], dtype=float)
+                else:
+                    start, end = self._slices[name]
+                    meta['val'] = self.vec[start:end]
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -675,9 +669,8 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing an `OrderedDict` mapping var name to
             local size for 'pass by vector' variables.
         """
-        sizes = OrderedDict([(n, m['size']) for n, m in iteritems(self._vardict)
-                 if not m.get('pass_by_obj') and not m.get('remote')])
-        return [sizes]
+        return [[(n, m['size']) for n, m in iteritems(self._vardict)
+                      if not m.get('pass_by_obj')]]
 
 
 class TgtVecWrapper(VecWrapper):
@@ -844,20 +837,12 @@ class TgtVecWrapper(VecWrapper):
         """
         Returns
         -------
-        list of `OrderedDict`
-            A one entry list of `OrderedDict` mapping names to local sizes of owned, local params
-            in this `VecWrapper`.
+        list of lists of tuples of the form (name, size)
+            A one entry list of lists with tuples pairing names to local sizes
+            of owned, local params in this `VecWrapper`.
         """
-        psizes = OrderedDict()
-        for name, m in iteritems(self._vardict):
-            if m.get('pass_by_obj') or not m.get('owned'):
-                continue
-            if m.get('remote'):
-                psizes[name] = 0
-            else:
-                psizes[name] = m['size']
-
-        return [psizes]
+        return [[(n, m['size']) for n, m in iteritems(self._vardict)
+                    if m.get('owned') and not m.get('pass_by_obj')]]
 
 
 class _PlaceholderVecWrapper(object):
@@ -916,17 +901,3 @@ class _PlaceholderVecWrapper(object):
         raise AttributeError("'%s' has not been initialized, "
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
-def idx_merge(idxs):
-    """
-    Combines a mixed iterator of int and iterator indices into an
-    array of int indices.
-    """
-    if len(idxs) > 0:
-        idxs = [i for i in idxs if isinstance(i, int_types) or
-                len(i) > 0]
-        if len(idxs) > 0:
-            if isinstance(idxs[0], int_types):
-                return idxs
-            else:
-                return numpy.concatenate(idxs)
-    return idxs
