@@ -326,6 +326,7 @@ class RBFInterpolator(NNBase):
         grad = self._find_dR(normalized_pts[:, np.newaxis, :], ploc,
                            pdist[:, :, np.newaxis]) * (self._tvr[..., np.newaxis] / self._tpr)
 
-        import warnings;warnings.warn(str(self._tvr[..., np.newaxis] / self._tpr))
+        import warnings;warnings.warn(str(self._find_dR(normalized_pts[:, np.newaxis, :], ploc,
+                           pdist[:, :, np.newaxis])))
 
         return grad
