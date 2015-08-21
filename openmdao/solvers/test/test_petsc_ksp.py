@@ -6,7 +6,6 @@ import numpy as np
 from openmdao.core import Group, Problem
 from openmdao.components.exec_comp import ExecComp
 from openmdao.components.param_comp import ParamComp
-from openmdao.solvers.petsc_ksp import PetscKSP
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -16,6 +15,7 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
 from openmdao.test.util import assert_rel_error
 
 try:
+    from openmdao.solvers.petsc_ksp import PetscKSP
     from openmdao.core.petsc_impl import PetscImpl as impl
 except ImportError:
     impl = None
