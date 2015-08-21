@@ -54,6 +54,10 @@ class ScipyGMRES(LinearSolver):
         dict of ndarray : Solution vectors
         """
 
+        self.system = system
+        options = self.options
+        self.mode = mode
+
         unknowns_mat = {}
         for voi, rhs in iteritems(rhs_mat):
 
@@ -64,10 +68,6 @@ class ScipyGMRES(LinearSolver):
             A = LinearOperator((n_edge, n_edge),
                                matvec=self.mult,
                                dtype=float)
-
-            self.system = system
-            options = self.options
-            self.mode = mode
 
             # Call GMRES to solve the linear system
             d_unknowns, info = gmres(A, rhs,
