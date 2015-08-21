@@ -21,6 +21,7 @@ from openmdao.solvers.scipy_gmres import ScipyGMRES
 from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
+from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -38,8 +39,8 @@ class Group(System):
         self._src_idxs = {}
         self._data_xfer = {}
 
-        self._local_unknown_sizes = None
-        self._local_param_sizes = None
+        self._local_unknown_sizes = {}
+        self._local_param_sizes = {}
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
@@ -322,8 +323,8 @@ class Group(System):
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
-        self._local_unknown_sizes = None
-        self._local_param_sizes = None
+        self._local_unknown_sizes = {}
+        self._local_param_sizes = {}
         self._owning_ranks = None
 
         if not self.is_active():
@@ -341,8 +342,8 @@ class Group(System):
             self._create_views(top_unknowns, parent, my_params,
                                var_of_interest=None)
 
-        self._u_size_dicts = self.unknowns._get_flattened_sizes()
-        self._p_size_dicts = self.params._get_flattened_sizes()
+        self._u_size_lists = self.unknowns._get_flattened_sizes()
+        self._p_size_lists = self.params._get_flattened_sizes()
 
         self._owning_ranks = self._get_owning_ranks()
 
@@ -502,7 +503,7 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, set()).update(src_pathnames)
+                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -1114,35 +1115,6 @@ class Group(System):
 
         return (min_procs, max_procs)
 
-    def _get_global_offset(self, name, var_rank, var_idx, sizes_table,
-                           var_of_interest):
-        """
-        Args
-        ----
-        name : str
-            The variable name.
-
-        var_rank : int
-            The rank the the offset is requested for.
-
-        var_idx : int
-            Index of the variable into the sizes table.
-
-        sizes_table : list of OrderDicts mappping var name to size.
-            Size information for all vars in all ranks.
-
-        var_of_interest : str
-            Name of the current variable of interest, the key into the
-            dumat,drmat, and dpmat dicts.
-
-        Returns
-        -------
-        int
-            The offset into the distributed vector for the named variable
-            in the specified rank (process).
-        """
-        return np.sum(sizes_table[:var_rank]) + np.sum(sizes_table[var_rank, :var_idx])
-
     def _get_global_idxs(self, uname, pname, u_var_idxs, u_sizes,
                          p_var_idxs, p_sizes, var_of_interest, mode):
         """
@@ -1184,11 +1156,13 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
+        rev = True if mode == 'rev' else False
         umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
 
         # FIXME: if we switch to push scatters, this check will flip
-        if (mode == 'fwd' and pmeta.get('remote')) or (mode == 'rev' and umeta.get('remote')):
+        if ((mode == 'fwd' and not 'src_indices' in umeta and pmeta.get('remote')) or
+            (mode == 'rev' and not 'src_indices' in pmeta and umeta.get('remote'))):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1206,33 +1180,49 @@ class Group(System):
         ivar = u_var_idxs[uname]
         if 'src_indices' in umeta or 'src_indices' in pmeta:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
+            if rev:
+                # if in rev mode, we need to avoid multiple scatters from
+                # duplicate params in different processes.
+                ipvar = p_var_idxs[pname]
+                pstart = np.sum(p_sizes[:iproc, ipvar])
+                pend = pstart + p_sizes[iproc, ipvar]
+                p_unique = np.any(np.logical_and(pstart <= arg_idxs,
+                                                 arg_idxs < pend))
+                if not p_unique:
+                    return (self.params.make_idx_array(0, 0),
+                            self.params.make_idx_array(0, 0))
+
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
-                end = np.sum(u_sizes[:irank+1, ivar])
+                end = start + u_sizes[irank, ivar]
                 on_irank = np.logical_and(start <= arg_idxs,
                                              arg_idxs < end)
+                if rev and MPI and irank == iproc:
+                    on_my_rank = on_irank
+
                 # Compute conversion to new ordering
+
+                # arg_idxs are provided wrt the full distributed variable,
+                # so we subtract off the start of the var in the current rank
+                # in order to make the overall offset relative to the
+                # beginning of the full distributed variable.
                 offset = -start
+
                 offset += np.sum(u_sizes[:irank, :])
                 offset += np.sum(u_sizes[irank, :ivar])
-                #print(mode, uname,pname,irank, on_irank, start, end, "off",offset)
+
                 # Apply conversion only to relevant parts of input
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
-                #print(mode,uname,pname,"NEW INDICES:",new_indices[on_irank])
-            src_idxs = new_indices
-        else:
-            if mode == 'fwd':
-                var_rank = self._owning_ranks[uname]
-            else:
-                var_rank = iproc
 
+            src_idxs = new_indices
+            var_rank = iproc
+
+        else:
+            var_rank = self._owning_ranks[uname] if not rev else iproc
             offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
             src_idxs = arg_idxs + offset
 
-        if mode == 'fwd':
-            var_rank = iproc
-        else:
-            var_rank = self._owning_ranks[pname]
+            var_rank = self._owning_ranks[pname] if rev else iproc
 
         tgt_start = (np.sum(p_sizes[:var_rank]) +
                      np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
@@ -1261,26 +1251,28 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        vec_unames = (n for n in iterkeys(self._u_size_dicts[0])
+        vec_unames = (n for n, sz in self._u_size_lists[0]
                            if relevance.is_relevant(var_of_interest, n))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
-        vec_pnames = (n for n in iterkeys(self._p_size_dicts[0])
+        vec_pnames = (n for n, sz in self._p_size_lists[0]
                         if relevance.is_relevant(var_of_interest, n))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
         param_sizes = []
         for iproc in range(self.comm.size):
-            #print("iproc",iproc,"comm sz",self.comm.size,"udicts",self._u_size_dicts)
-            unknown_sizes.append([sz for n, sz in iteritems(self._u_size_dicts[iproc])
+            unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
                                                if n in vec_unames])
-            param_sizes.append([sz for n, sz in iteritems(self._p_size_dicts[iproc])
+            param_sizes.append([sz for n, sz in self._p_size_lists[iproc]
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
                                  dtype=self._impl_factory.idx_arr_type)
+        self._local_unknown_sizes[var_of_interest] = unknown_sizes
+
         param_sizes = np.array(param_sizes,
                                dtype=self._impl_factory.idx_arr_type)
+        self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
         for param, unknown in iteritems(self.connections):
@@ -1318,13 +1310,19 @@ class Group(System):
                         dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
+            if mode == 'fwd':
+                # sort based on ascending sources
+                src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
+            else:
+                # sort based on ascending targets
+                tgt_idxs, src_idxs = self.unknowns.merge_idxs(tgts, srcs)
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
                     self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
                                                         self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
-                                                        vec_conns, byobj_conns)
+                                                        vec_conns, byobj_conns,
+                                                        mode)
 
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
@@ -1348,7 +1346,8 @@ class Group(System):
                 self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
                                                     self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
-                                                    full_flats, full_byobjs)
+                                                    full_flats, full_byobjs,
+                                                    mode)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
@@ -1394,13 +1393,13 @@ class Group(System):
 
         if MPI:
             if trace:
-                print("allgathering local varnames: locals = ",local_vars)
+                debug("allgathering local varnames: locals = ",local_vars)
             all_locals = self.comm.allgather(local_vars)
         else:
             all_locals = [local_vars]
 
-        for rank in range(len(all_locals)):
-            for v in all_locals[rank]:
+        for rank, vnames in enumerate(all_locals):
+            for v in vnames:
                 if v not in ranks:
                     ranks[v] = rank
 

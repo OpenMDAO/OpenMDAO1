@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import time
 import sys
-from unittest import SkipTest
 
 import numpy as np
 
@@ -16,6 +15,10 @@ from openmdao.test.mpi_util import MPITestCase
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
+    rank = MPI.COMM_WORLD.rank
+else:
+    from openmdao.core.basic_impl import BasicImpl as impl
+    rank = 0
 
 from openmdao.test.util import assert_rel_error
 
@@ -60,10 +63,10 @@ class DistribCompSimple(Component):
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        if self.comm != MPI.COMM_NULL:
-            if self.comm.rank == 0:
+        if MPI and self.comm != MPI.COMM_NULL:
+            if rank == 0:
                 outvec = params['invec'] * 0.25
-            elif self.comm.rank == 1:
+            elif rank == 1:
                 outvec = params['invec'] * 0.5
 
             # now combine vecs from different processes
@@ -72,6 +75,8 @@ class DistribCompSimple(Component):
 
             # add both together to get our output
             unknowns['outvec'] = both[0,:] + both[1,:]
+        else:
+            unknowns['outvec'] = params['invec'] * 0.75
 
     def get_req_cpus(self):
         return (2, 2)
@@ -82,13 +87,16 @@ class DistribInputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribInputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.ones(1, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        self.comm.Allgatherv(params['invec']*2.0,
-                                [unknowns['outvec'], self.sizes,
-                                 self.offsets, MPI.DOUBLE])
+        if MPI:
+            self.comm.Allgatherv(params['invec']*2.0,
+                                    [unknowns['outvec'], self.sizes,
+                                     self.offsets, MPI.DOUBLE])
+        else:
+            unknowns['outvec'] = params['invec'] * 2.0
 
     def setup_distrib_idxs(self):
         # this is called at the beginning of _setup_variables, so we can
@@ -113,17 +121,19 @@ class DistribOverlappingInputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribOverlappingInputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.zeros(1, float))
+        self.add_param('invec', np.zeros(arr_size, float))
         self.add_output('outvec', np.zeros(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        local_outvec = params['invec']*2.0
-
-        outs = self.comm.allgather(local_outvec)
-
-        self.unknowns['outvec'][:] = 0
-        self.unknowns['outvec'][:8] = outs[0]
-        self.unknowns['outvec'][4:11] += outs[1]
+        unknowns['outvec'][:] = 0
+        if MPI:
+            outs = self.comm.allgather(params['invec'] * 2.0)
+            unknowns['outvec'][:8] = outs[0]
+            unknowns['outvec'][4:11] += outs[1]
+        else:
+            outs = params['invec'] * 2.0
+            unknowns['outvec'][:8] = outs[:8]
+            unknowns['outvec'][4:11] += outs[4:11]
 
     def setup_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
@@ -154,7 +164,7 @@ class DistribInputDistribOutputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribInputDistribOutputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.ones(1, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -189,7 +199,7 @@ class DistribNoncontiguousComp(Component):
     def __init__(self, arr_size=11):
         super(DistribNoncontiguousComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.ones(1, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -221,13 +231,16 @@ class DistribGatherComp(Component):
     def __init__(self, arr_size=11):
         super(DistribGatherComp, self).__init__()
         self.arr_size = arr_size
-        self.add_param('invec', np.ones(1, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        self.comm.Allgatherv(params['invec'],
-                             [unknowns['outvec'], self.sizes,
-                                 self.offsets, MPI.DOUBLE])
+        if MPI:
+            self.comm.Allgatherv(params['invec'],
+                                 [unknowns['outvec'], self.sizes,
+                                     self.offsets, MPI.DOUBLE])
+        else:
+            unknowns['outvec'] = params['invec']
 
     def setup_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
@@ -266,8 +279,6 @@ class MPITests(MPITestCase):
     N_PROCS = 2
 
     def test_distrib_full_in_out(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
         size = 11
 
         p = Problem(root=Group(), impl=impl)
@@ -285,8 +296,6 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec']==np.ones(size, float)*7.5))
 
     def test_distrib_idx_in_full_out(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
         size = 11
 
         p = Problem(root=Group(), impl=impl)
@@ -303,8 +312,6 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
     def test_distrib_idx_in_distrb_idx_out(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
         # normal comp to distrib comp to distrb gather comp
         size = 3
 
@@ -324,8 +331,6 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C3.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
     def test_noncontiguous_idxs(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
         # take even input indices in 0 rank and odd ones in 1 rank
         size = 11
 
@@ -342,18 +347,20 @@ class MPITests(MPITestCase):
 
         p.run()
 
-        if self.comm.rank == 0:
-            self.assertTrue(all(top.C2.unknowns['outvec'] == np.array(list(take_nth(0, 2, range(size))), 'f')*4))
-        else:
-            self.assertTrue(all(top.C2.unknowns['outvec'] == np.array(list(take_nth(1, 2, range(size))), 'f')*4))
+        if MPI:
+            if self.comm.rank == 0:
+                self.assertTrue(all(top.C2.unknowns['outvec'] == np.array(list(take_nth(0, 2, range(size))), 'f')*4))
+            else:
+                self.assertTrue(all(top.C2.unknowns['outvec'] == np.array(list(take_nth(1, 2, range(size))), 'f')*4))
 
-        full_list = list(take_nth(0, 2, range(size))) + list(take_nth(1, 2, range(size)))
-        self.assertTrue(all(top.C3.unknowns['outvec'] == np.array(full_list, 'f')*4))
+            full_list = list(take_nth(0, 2, range(size))) + list(take_nth(1, 2, range(size)))
+            self.assertTrue(all(top.C3.unknowns['outvec'] == np.array(full_list, 'f')*4))
+        else:
+            self.assertTrue(all(top.C2.unknowns['outvec']==top.C1.unknowns['outvec']*2.))
+            self.assertTrue(all(top.C3.unknowns['outvec']==top.C2.unknowns['outvec']))
 
     def test_overlapping_inputs_idxs(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
-        # distrib comp with distrib_idxs that overlap, i.e. the same
+        # distrib comp with src_indices that overlap, i.e. the same
         # entries are distributed to multiple processes
         size = 11
 
@@ -375,10 +382,8 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C2.unknowns['outvec'][4:8]==np.array(range(size, 0, -1), float)[4:8]*8))
 
     def test_nondistrib_gather(self):
-        if not MPI:
-            raise SkipTest("MPI is not active")
         # regular comp --> distrib comp --> regular comp.  last comp should
-        # automagically gather the full vector without declaring distrib_idxs
+        # automagically gather the full vector without declaring src_indices
         size = 11
 
         p = Problem(root=Group(), impl=impl)
@@ -394,7 +399,7 @@ class MPITests(MPITestCase):
 
         p.run()
 
-        if self.comm.rank == 0:
+        if rank == 0:
             self.assertTrue(all(top.C3.unknowns['outvec']==np.array(range(size, 0, -1), float)*4))
 
 
