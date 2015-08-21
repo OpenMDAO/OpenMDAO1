@@ -47,6 +47,7 @@ setup(name='openmdao',
           'openmdao.recorders.test',
           'openmdao.devtools',
           'openmdao.surrogate_models',
+	  'openmdao.surrogate_models.nn_interpolators',
           'openmdao.surrogate_models.test'
       ],
       package_data = {'openmdao.units': ['unit_library.ini']},
