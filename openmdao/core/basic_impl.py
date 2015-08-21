@@ -2,12 +2,17 @@
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.data_transfer import DataTransfer
+from openmdao.core.mpi_wrap import FakeComm
 
 
 class BasicImpl(object):
     """Basic vector and data transfer implementation factory."""
 
     idx_arr_type = int
+
+    @staticmethod
+    def world_comm():
+        return FakeComm()
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):

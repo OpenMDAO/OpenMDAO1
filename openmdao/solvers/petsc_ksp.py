@@ -67,12 +67,12 @@ class PetscKSP(LinearSolver):
         jac_mat.setPythonContext(self)
         jac_mat.setUp()
 
-        self.ksp = PETSc.KSP().create(comm=system.mpi.comm)
+        self.ksp = PETSc.KSP().create(comm=system.comm)
         self.ksp.setOperators(jac_mat)
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
-        self.ksp.setMonitor(self.Monitor(self))
+        self.ksp.setMonitor(Monitor(self))
 
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
