@@ -875,10 +875,9 @@ class Problem(System):
 
                 if old_size is None:
                     old_size = len(in_idxs)
-                else:
-                    if old_size != len(in_idxs):
-                        raise RuntimeError("Indices within the same VOI group must be the same size, but"
-                                           " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
+                elif old_size != len(in_idxs):
+                    raise RuntimeError("Indices within the same VOI group must be the same size, but"
+                                       " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
 
             jbase = j
