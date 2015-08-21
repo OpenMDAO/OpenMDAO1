@@ -419,5 +419,4 @@ class TestRBFInterpolatorND(unittest.TestCase):
 
         for x0, y0 in zip(test_x, expected_deriv):
             mu = self.surrogate.jacobian(x0)
-            import warnings;warnings.warn(str((x0,mu)))
             assert_rel_error(self, mu, y0, 1e-6)

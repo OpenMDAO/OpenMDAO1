@@ -292,7 +292,7 @@ class RBFInterpolator(NNBase):
         # Setup prediction points and find their radial neighbors
         ndist, nloc = self._KData.query(normalized_pts, self.N)
         # Check if complex step is being run
-        if (np.any(normalized_pts[0, :].imag) > 0):
+        if np.any(np.abs(normalized_pts[0, :].imag)) > 0:
             dimdiff = np.subtract(normalized_pts.reshape((nppts, 1, self._indep_dims)),
                                   self._tp[nloc, :])
             # KD Tree ignores imaginary part, muse redo ndist if complex
@@ -325,5 +325,7 @@ class RBFInterpolator(NNBase):
         # Find Gradient
         grad = self._find_dR(normalized_pts[:, np.newaxis, :], ploc,
                            pdist[:, :, np.newaxis]) * (self._tvr[..., np.newaxis] / self._tpr)
+
+        import warnings;warnings.warn(str(self._tvr[..., np.newaxis] / self._tpr))
 
         return grad
