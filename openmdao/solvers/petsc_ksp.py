@@ -110,16 +110,18 @@ class PetscKSP(LinearSolver):
         unknowns_mat = {}
         for voi, rhs in iteritems(rhs_mat):
 
+            sol_vec = np.zeros(rhs.shape)
             # Set these in the system
-            system.sol_buf_petsc = PETSc.Vec().createWithArray(self.sol_buf,
+            system.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
                                                          comm=system.comm)
-            system.rhs_buf_petsc = PETSc.Vec().createWithArray(self.rhs_buf,
+            system.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
                                                          comm=system.comm)
 
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
+            self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
 
-            unknowns_mat[voi] = d_unknowns
+            unknowns_mat[voi] = sol_vec
 
             #print system.name, 'Linear solution vec', d_unknowns
 
