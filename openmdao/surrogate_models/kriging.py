@@ -140,7 +140,6 @@ class KrigingSurrogate(SurrogateModel):
         X, Y = self.X, self.Y
         thetas = power(10., self.thetas)
         r = exp(-thetas.dot(square((x - X).T)))
-        one = ones(self.n)
 
         if self.R_fact is not None:
             # Cholesky Decomposition

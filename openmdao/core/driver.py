@@ -1,11 +1,14 @@
 """ Base class for Driver."""
 
+from __future__ import print_function
+
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 
 import numpy as np
 
+from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
@@ -44,14 +47,29 @@ class Driver(object):
         self.iter_count = 0
 
     def _setup(self, root):
-        """ Prepares some things we need."""
+        """ Updates metadata for params, constraints and objectives, and
+        check for errors.
+        """
         self.root = root
 
-        item_names = ['Parameter', 'Objective', 'Constraint']
-        items = [self._params, self._objs, self._cons]
+        params = OrderedDict()
+        objs = OrderedDict()
+        cons = OrderedDict()
 
-        for item, item_name in zip(items, item_names):
+        item_tups = [
+            ('Parameter', self._params, params),
+            ('Objective', self._objs, objs),
+            ('Constraint', self._cons, cons)
+        ]
+
+        for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
+                rootmeta = root.unknowns.metadata(name)
+
+                if MPI and 'src_indices' in rootmeta:
+                    raise ValueError("'%s' is a distributed variable and may "
+                                     "not be used as a parameter, objective, "
+                                     "or constraint." % name)
 
                 # Check validity of variable
                 if name not in root.unknowns:
@@ -59,11 +77,20 @@ class Driver(object):
                     msg = msg.format(item_name, name)
                     raise ValueError(msg)
 
+                if rootmeta.get('remote'):
+                    continue
+
                 # Size is useful metadata to save
                 if 'indices' in meta:
                     meta['size'] = len(meta['indices'])
                 else:
-                    meta['size'] = root.unknowns.metadata(name)['size']
+                    meta['size'] = rootmeta['size']
+
+                newitem[name] = meta
+
+        self._params = params
+        self._objs = objs
+        self._cons = cons
 
     def _map_voi_indices(self):
         poi_indices = {}

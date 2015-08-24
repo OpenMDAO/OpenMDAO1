@@ -1,3 +1,4 @@
 from openmdao.surrogate_models.kriging import KrigingSurrogate, FloatKrigingSurrogate
+from openmdao.surrogate_models.nearest_neighbor import NearestNeighbor
 from openmdao.surrogate_models.response_surface import ResponseSurface
 from openmdao.surrogate_models.surrogate_model import SurrogateModel

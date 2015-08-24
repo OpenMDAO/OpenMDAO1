@@ -66,8 +66,8 @@ class TestGroup(unittest.TestCase):
         # verify we get correct connection information
         connections = root._get_explicit_connections()
         expected_connections = {
-            'C2.x': set(['C1.y']),
-            'C3.x': set(['C1.y'])
+            'C2.x': ['C1.y'],
+            'C3.x': ['C1.y']
         }
         self.assertEqual(connections, expected_connections)
 
