@@ -73,7 +73,7 @@ class PetscKSP(LinearSolver):
         jac_mat.setUp()
 
         if trace:
-            debug("creating KSP object")
+            debug("creating KSP object for system",system.pathname)
         self.ksp = PETSc.KSP().create(comm=system.comm)
         self.ksp.setOperators(jac_mat)
         self.ksp.setType('fgmres')
@@ -87,6 +87,8 @@ class PetscKSP(LinearSolver):
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
+        if trace:
+            debug("ksp setup done")
 
         self.rhs_buf = np.zeros((lsize, ))
         self.sol_buf = np.zeros((lsize, ))

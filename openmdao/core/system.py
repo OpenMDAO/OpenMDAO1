@@ -549,72 +549,79 @@ class System(object):
                               my_params, self.connections,
                               relevance=relevance, var_of_interest=voi)
 
-    #def get_combined_jac(self, J):
-        #"""
-        #Take a J dict that's distributed, i.e., has different values across
-        #different MPI processes, and return a dict that contains all of the
-        #values from all of the processes. If values are duplicated, use the
-        #value from the lowest rank process. Note that J has a nested dict
-        #structure.
+    def get_combined_jac(self, J):
+        """
+        Take a J dict that's distributed, i.e., has different values across
+        different MPI processes, and return a dict that contains all of the
+        values from all of the processes. If values are duplicated, use the
+        value from the lowest rank process. Note that J has a nested dict
+        structure.
 
-        #Args
-        #----
-        #J : `dict`
-            #Distributed Jacobian
+        Args
+        ----
+        J : `dict`
+            Distributed Jacobian
 
-        #Returns
-        #-------
-        #`dict`
-            #Local gathered Jacobian
-        #"""
+        Returns
+        -------
+        `dict`
+            Local gathered Jacobian
+        """
 
-        #comm = self.comm
-        #if not self.is_active():
-            #return J
+        comm = self.comm
+        if not self.is_active():
+            return J
 
-        #myrank = comm.rank
+        myrank = comm.rank
 
-        #tups = []
+        tups = []
+        need_tups = []
 
-        ## Gather a list of local tuples for J.
-        #for output, dct in iteritems(J):
-            #for param, value in iteritems(dct):
+        # Gather a list of local tuples for J.
+        for output, dct in iteritems(J):
+            # Params are already only on this process. We need to add
+            # only outputs of components that are on this process.
+            for param, value in iteritems(dct):
+                if value is None or value.size == 0:
+                    if myrank != 0:
+                        need_tups.append((output, param))
+                else:
+                    tups.append((output, param))
 
-                ## Params are already only on this process. We need to add
-                ## only outputs of components that are on this process.
-                #sub = getattr(self, output.partition('.')[0])
-                #if sub.is_active() and value is not None and value.size > 0:
-                    #tups.append((output, param))
+        dist_tups = comm.gather(tups, root=0)
+        dist_need_tups = comm.gather(need_tups, root=0)
 
-        #dist_tups = comm.gather(tups, root=0)
+        tupdict = {}
+        if myrank == 0:
+            for rank, tups in enumerate(dist_tups):
+                for tup in tups:
+                    if not tup in tupdict:
+                        tupdict[tup] = rank
 
-        #tupdict = {}
-        #if myrank == 0:
-            #for rank, tups in enumerate(dist_tups):
-                #for tup in tups:
-                    #if not tup in tupdict:
-                        #tupdict[tup] = rank
+            #get rid of tups from the root proc before bcast
+            for tup, rank in iteritems(tupdict):
+                if rank == 0:
+                    del tupdict[tup]
 
-            ##get rid of tups from the root proc before bcast
-            #for tup, rank in iteritems(tupdict):
-                #if rank == 0:
-                    #del tupdict[tup]
+        tupdict = comm.bcast(tupdict, root=0)
 
-        #tupdict = comm.bcast(tupdict, root=0)
+        if myrank == 0:
+            for (output, param), rank in iteritems(tupdict):
+                J[output][param] = comm.recv(source=rank, tag=0)
 
-        #if myrank == 0:
-            #for (param, output), rank in iteritems(tupdict):
-                #J[param][output] = comm.recv(source=rank, tag=0)
-        #else:
-            #for (param, output), rank in iteritems(tupdict):
-                #if rank == myrank:
-                    #comm.send(J[param][output], dest=0, tag=0)
+            # now send out missing stuff to procs that need it
+            for rank, need_tups in enumerate(dist_need_tups):
+                for output, param in need_tups:
+                    comm.send(J[output][param], dest=rank, tag=0)
+        else:
+            for (output, param), rank in iteritems(tupdict):
+                if rank == myrank:
+                    comm.send(J[output][param], dest=0, tag=0)
 
-        ## FIXME: rework some of this using knowledge of local_var_sizes in order
-        ## to avoid any unnecessary data passing
 
-        ## return the combined dict
+        # return the combined dict
         #return comm.bcast(J, root=0)
+        return J
 
     def _get_var_pathname(self, name):
         if self.pathname:

@@ -28,6 +28,7 @@ from openmdao.solvers.run_once import RunOnce
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
+from openmdao.devtools.debug import debug
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -805,6 +806,10 @@ class Problem(System):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
                             J[okey][ikey] = None
+                            # print("adding",(okey,ikey),"to J")
+                            # if (root._unknowns_dict[okey].get('remote') or
+                            #          root._unknowns_dict[ikey].get('remote')):
+                            #     print("MISSING:",(okey,ikey))
         else:
             usize = 0
             psize = 0
@@ -854,6 +859,8 @@ class Problem(System):
 
         voi_srcs = {}
 
+        print("VOI sets:",voi_sets)
+
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         j = 0
@@ -882,6 +889,19 @@ class Problem(System):
 
             jbase = j
 
+            print ("IDXS:",in_idxs, type(in_idxs))
+
+            if MPI:
+                all_idxs_sizes = self.root.comm.allgather(len(in_idxs))
+                if len(in_idxs) < max(all_idxs_sizes):
+                    print(len(in_idxs),"<",max(all_idxs_sizes))
+                    # pad our idxs so we do the same number of linear sub-solves
+                    pad = np.zeros(max(all_idxs_sizes), in_idxs.dtype)
+                    if in_idxs.size > 0:
+                        in_idxs = np.concatenate(in_idxs, pad)
+                    else:
+                        in_idxs = pad
+
             # at this point, we know that for all vars in the current
             # group of interest, the number of indices is the same. We loop
             # over the *size* of the indices and use the loop index to look
@@ -896,9 +916,13 @@ class Problem(System):
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
+                debug("linear solve done")
 
                 for voi in rhs:
-                    rhs[voi][voi_idxs[voi][i]] = 0.0
+                    try:
+                        rhs[voi][voi_idxs[voi][i]] = 0.0
+                    except IndexError:
+                        pass
 
                 for param, dx in iteritems(dx_mat):
                     if len(params) == 1:
@@ -914,11 +938,15 @@ class Problem(System):
                             _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
                                                                            qoi_indices)
                             dxval = dx[out_idxs]
+                            print(self.root.comm.rank, mode, "own dxval:",dxval)
+                            if dxval.size == 0:
+                                dxval = None
                         else:
                             dxval = None
-                        if nproc > 1 and mode=='rev':
+                        if nproc > 1:# and mode=='rev':
                             dxval = comm.bcast(dxval, root=owned[item])
 
+                            print(mode, "after bcast, dxval:",dxval)
                         nk = len(dxval)
 
                         if return_format == 'dict':
@@ -938,6 +966,7 @@ class Problem(System):
                             i += nk
                 j += 1
 
+        print("returning J",J)
         return J
 
     def check_partial_derivatives(self, out_stream=sys.stdout):

@@ -307,7 +307,7 @@ class Component(System):
         return _new_params, _new_unknowns
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, impl=BasicImpl):
+                       top_unknowns=None, impl=None):
         """
         Set up local `VecWrappers` to store this component's variables.
 

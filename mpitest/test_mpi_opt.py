@@ -149,6 +149,8 @@ class TestMPIOpt(MPITestCase):
 
         if not MPI or self.comm.rank == 0:
             assert_rel_error(self, model['par.s1.p.x'], 2.0, 1.e-6)
+
+        if not MPI or self.comm.rank == 1:
             assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
 
 if __name__ == '__main__':
