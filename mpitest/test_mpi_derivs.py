@@ -152,6 +152,7 @@ class TestPetscKSP(MPITestCase):
 
         # fd comp2 and comp5. each is under a par group
         prob.root.par1.comp2.fd_options['force_fd'] = True
+        prob.root.par2.comp5.fd_options['force_fd'] = True
 
         prob.setup(check=False)
         prob.run()
