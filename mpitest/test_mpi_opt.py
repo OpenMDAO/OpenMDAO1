@@ -11,8 +11,10 @@ from openmdao.test.util import assert_rel_error
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
+    from openmdao.solvers.petsc_ksp import PetscKSP as lin_solver
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
+    from openmdao.solvers.scipy_gmres import ScipyGMRES as lin_solver
 
 SKIP = False
 try:
@@ -41,6 +43,12 @@ class Parab1D(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
         unknowns['y'] = (params['x'] - self.root)**2 + 7.0
+
+    def jacobian(self, params, unknowns, resids):
+        """ derivs """
+        J = {}
+        J['y', 'x'] = 2.0*params['x'] - 2.0*self.root
+        return J
 
 
 class MP_Point(Group):
@@ -108,6 +116,33 @@ class TestMPIOpt(MPITestCase):
         driver.add_objective('sumcomp.sum')
 
         root.fd_options['force_fd'] = True
+
+        model.setup(check=False)
+        model.run()
+
+        if not MPI or self.comm.rank == 0:
+            assert_rel_error(self, model['par.s1.p.x'], 2.0, 1.e-6)
+            assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
+
+    def test_parab_subbed_Pcomps(self):
+
+        model = Problem(impl=impl)
+        root = model.root = Group()
+        root.ln_solver = lin_solver()
+
+        par = root.add('par', ParallelGroup())
+
+        par.add('s1', MP_Point(root=2.0))
+        par.add('s2', MP_Point(root=3.0))
+
+        root.add('sumcomp', ExecComp('sum = x1+x2'))
+        root.connect('par.s1.c.y', 'sumcomp.x1')
+        root.connect('par.s2.c.y', 'sumcomp.x2')
+
+        driver = model.driver = pyOptSparseDriver()
+        driver.add_param('par.s1.p.x', low=-100, high=100)
+        driver.add_param('par.s2.p.x', low=-100, high=100)
+        driver.add_objective('sumcomp.sum')
 
         model.setup(check=False)
         model.run()
