@@ -16,6 +16,7 @@ from openmdao.core.group import Group, get_absvarpathnames
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
+from openmdao.core.petsc_impl import PetscImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
@@ -29,6 +30,7 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
+
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
@@ -37,6 +39,10 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+
+        if MPI and impl != PetscImpl:
+            raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+
         if impl is None:
             self._impl = BasicImpl
         else:
