@@ -202,12 +202,10 @@ class TestPetscKSP3(MPITestCase):
 
         J = prob.calc_gradient([param], unknown_list, mode='fwd', return_format='dict')
 
-        print("J",J)
         assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
         assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
 
         J = prob.calc_gradient([param], unknown_list, mode='rev', return_format='dict')
-        print("J",J)
         assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
         assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
 
