@@ -16,7 +16,6 @@ from openmdao.core.group import Group, get_absvarpathnames
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.petsc_impl import PetscImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
@@ -40,8 +39,10 @@ class Problem(System):
         super(Problem, self).__init__()
         self.root = root
 
-        if MPI and impl != PetscImpl:
-            raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+        if MPI:
+            from openmdao.core.petsc_impl import PetscImpl
+            if impl != PetscImpl:
+                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
 
         if impl is None:
             self._impl = BasicImpl
