@@ -13,6 +13,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
+from openmdao.devtools.debug import debug
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -151,7 +152,9 @@ class Component(System):
     def set_var_indices(self, name, val=_NotSet, shape=None,
                         src_indices=None):
         """ Sets the 'src_indices' metadata of an existing variable
-        on this component, as well as its value, size, and shape.
+        on this component, as well as its value, size, shape, and
+        global size.
+
         This only works for numpy array variables.
 
         Args
@@ -168,6 +171,7 @@ class Component(System):
         src_indices : array of indices
             An index array indicating which entries in the distributed
             version of this variable are present in this process.
+
         """
         meta = self._params_dict.get(name)
         if meta is None:
@@ -262,7 +266,7 @@ class Component(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        if MPI and compute_indices:
+        if MPI and compute_indices and self.is_active():
             self.setup_distrib_idxs()
             # now update our distrib_size metadata for any distributed
             # unknowns
@@ -274,7 +278,7 @@ class Component(System):
                     names.append(name)
             if sizes:
                 if trace:
-                    print("allgathering src index sizes:")
+                    debug("allgathering src index sizes:")
                 allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
                 self.comm.Allgather(np.array(sizes, dtype=int), allsizes)
                 for i, name in enumerate(names):

@@ -1,0 +1,391 @@
+""" This tets out the Petsc KSP solver in Serial mode. """
+
+import unittest
+import numpy as np
+
+from openmdao.core import Group, Problem
+from openmdao.components.exec_comp import ExecComp
+from openmdao.components.param_comp import ParamComp
+from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
+                                           ConvergeDivergeGroups, SingleDiamondGrouped
+from openmdao.test.sellar import SellarDerivativesGrouped
+from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
+                                       FanOutGrouped, DoubleArrayComp, \
+                                       FanInGrouped, ArrayComp2D
+from openmdao.test.util import assert_rel_error
+
+try:
+    from openmdao.solvers.petsc_ksp import PetscKSP
+    from openmdao.core.petsc_impl import PetscImpl as impl
+except ImportError:
+    impl = None
+
+class TestPetscKSPSerial(unittest.TestCase):
+
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
+
+    def test_simple(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_simple_matvec_subbed(self):
+        group = Group()
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = Group()
+        prob.root.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        prob.root.add('sub', group, promotes=['*'])
+
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_simple_matvec_subbed_like_multipoint(self):
+        group = Group()
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = Group()
+        prob.root.add('sub', group, promotes=['*'])
+        prob.root.sub.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fd', return_format='array')
+        assert_rel_error(self, J[0][0], 2.0, 1e-6)
+
+    def test_array2D(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])
+        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        Jbase = prob.root.mycomp._jacobian_cache
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+    def test_double_arraycomp(self):
+        # Mainly testing a bug in the array return for multiple arrays
+
+        group = Group()
+        group.add('x_param1', ParamComp('x1', np.ones((2))), promotes=['*'])
+        group.add('x_param2', ParamComp('x2', np.ones((2))), promotes=['*'])
+        group.add('mycomp', DoubleArrayComp(), promotes=['*'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        Jbase = group.mycomp.JJ
+
+        J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='fwd',
+                               return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='fd',
+                               return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x1', 'x2'], ['y1', 'y2'], mode='rev',
+                               return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+    def test_simple_in_group_matvec(self):
+        group = Group()
+        sub = group.add('sub', Group(), promotes=['x', 'y'])
+        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        sub.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_simple_jac(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
+        group.add('mycomp', ExecComp(['y=2.0*x']), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+    def test_fan_out(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanOut()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['comp2.y', "comp3.y"]
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+    def test_fan_out_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+    def test_fan_in(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanIn()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+
+    def test_fan_in_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+        prob.root.ln_solver = PetscKSP()
+
+        param_list = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
+
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+
+    def test_converge_diverge(self):
+
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDiverge()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+    def test_converge_diverge_groups(self):
+
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDivergeGroups()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+    def test_single_diamond(self):
+
+        prob = Problem(impl=impl)
+        prob.root = SingleDiamond()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['comp4.y1', 'comp4.y2']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+
+    def test_single_diamond_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = SingleDiamondGrouped()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['comp4.y1', 'comp4.y2']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+
+    def test_sellar_derivs_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = SellarDerivativesGrouped()
+        prob.root.ln_solver = PetscKSP()
+
+        prob.root.mda.nl_solver.options['atol'] = 1e-12
+        prob.setup(check=False)
+        prob.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        param_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        prob.root.fd_options['form'] = 'central'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+if __name__ == "__main__":
+    unittest.main()

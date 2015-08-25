@@ -143,17 +143,19 @@ def _check_types_match(src, tgt):
     raise ConnectError._type_mismatch_error(src, tgt)
 
 
-def check_connections(connections, params, unknowns):
+def check_connections(connections, params_dict, unknowns_dict):
     """Checks the specified connections to make sure they are valid in
     OpenMDAO.
 
     Args
     ----
-    params : list of strings
-        Connection source names. Each param has a corresponding unknown.
+    params_dict : dict
+         A dictionary mapping absolute var name to its metadata for
+         every param in the model.
 
-    unknowns : list of strings
-        Connection target names. Each unknown has a corresponding param.
+    unknowns_dict : dict
+         A dictionary mapping absolute var name to its metadata for
+         every unknown in the model.
 
     Raises
     ------
@@ -162,10 +164,10 @@ def check_connections(connections, params, unknowns):
     """
 
     # Get metadata for all sources
-    sources = __get_metadata(itervalues(connections), unknowns)
+    sources = __get_metadata(itervalues(connections), unknowns_dict)
 
     #Get metadata for all targets
-    targets = __get_metadata(iterkeys(connections), params)
+    targets = __get_metadata(iterkeys(connections), params_dict)
 
     for source, target in zip(sources, targets):
         _check_types_match(source, target)
@@ -175,7 +177,9 @@ def check_connections(connections, params, unknowns):
 def _check_shapes_match(source, target):
     # Use the type of the shape of source and target to determine the
     # correct function to use for shape checking
-    check_shape_function = __shape_checks.get((type(source.get('shape')), type(target.get('shape'))), lambda x, y: None)
+    check_shape_function = __shape_checks.get((type(source.get('shape')),
+                                               type(target.get('shape'))),
+                                               lambda x, y: None)
     check_shape_function(source, target)
 
 

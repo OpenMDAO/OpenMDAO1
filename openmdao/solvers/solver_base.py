@@ -19,6 +19,16 @@ class SolverBase(object):
         self.recorders = []
         self.local_meta = None
 
+    def setup(self, sub):
+        """ Solvers override to define post-setup initiailzation.
+
+        Args
+        ----
+        sub: `System`
+            System that owns this solver.
+        """
+        pass
+
     def print_norm(self, solver_string, metadata, iteration, res, res0,
                    msg=None, indent=0, solver='NL'):
         """ Prints out the norm of the residual in a neat readable format.
