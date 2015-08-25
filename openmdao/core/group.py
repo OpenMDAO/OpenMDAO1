@@ -637,7 +637,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None], gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -656,6 +656,9 @@ class Group(System):
 
         vois: list of strings
             List of all quantities of interest to key into the mats.
+
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
         """
         if not self.is_active():
             return
@@ -670,16 +673,19 @@ class Group(System):
             if (isinstance(sub, Component) or \
                              sub.fd_options['force_fd']) and \
                              not isinstance(sub, ParamComp):
-                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
+                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
+                                               gs_outputs=gs_outputs)
 
             # Groups and all other systems just call their own apply_linear.
             else:
-                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
+                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                                 gs_outputs=gs_outputs)
 
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter
 
-    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None):
+    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None,
+                                  gs_outputs=None):
         """
         Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
@@ -701,6 +707,9 @@ class Group(System):
         ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
+
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
         """
 
         for voi in vois:
@@ -751,12 +760,20 @@ class Group(System):
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
-                        dresids[var] += dunknowns[var]
+                        if gs_outputs is None or var in gs_outputs[voi]:
+                            dresids[var] += dunknowns[var]
 
             # Adjoint Mode
             elif mode == 'rev':
 
-                dparams.vec[:] = 0.0
+                # Clear out our inputs. TODO: Once we have memory packing, we
+                # might be able to just do dparams[:]=0.
+                for key in system._params_dict:
+                    if key in dparams:
+                        dparams[key] *= 0.0
+                for key in system._unknowns_dict:
+                    if key in dunknowns:
+                        dunknowns[key] *= 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -787,7 +804,8 @@ class Group(System):
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
-                        dunknowns[var] += dresids[var]
+                        if gs_outputs is None or var in gs_outputs[voi]:
+                            dunknowns[var] = dresids[var]
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """

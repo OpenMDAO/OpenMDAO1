@@ -325,7 +325,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob = Problem()
         prob.root = SellarDerivatives()
         prob.root.ln_solver = LinearGaussSeidel()
-        prob.root.ln_solver.options['maxiter'] = 4
+        prob.root.ln_solver.options['maxiter'] = 10
+        prob.root.ln_solver.options['atol'] = 1e-12
+        prob.root.ln_solver.options['rtol'] = 1e-12
+        prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -338,6 +341,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         param_list = ['x', 'z']
         param_list = ['x']
         unknown_list = ['obj', 'con1', 'con2']
+        unknown_list = ['obj']
 
         Jbase = {}
         Jbase['con1'] = {}
