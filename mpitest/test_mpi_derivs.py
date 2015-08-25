@@ -183,7 +183,6 @@ class TestPetscKSP3(MPITestCase):
         assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
 
 
-
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()

@@ -397,6 +397,13 @@ class System(object):
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
 
+            # if a given param isn't present in this process, we need
+            # to still run the model once for each entry in that param
+            # in order to stay in sync with the other processes.
+            if p_size == 0:
+                for i in range(self._params_dict[p_name]['size']):
+                    run_model(params, unknowns, resids)
+
             # Finite Difference each index in array
             for idx in range(p_size):
 
@@ -458,6 +465,9 @@ class System(object):
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
+        if MPI:
+            jac = self.get_combined_jac(jac)
+
         return jac
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
@@ -518,11 +528,6 @@ class System(object):
         var_of_interest : str
             The name of a variable of interest.
 
-        Returns
-        -------
-        `VecTuple`
-            A namedtuple of six (6) `VecWrappers`:
-            unknowns, dunknowns, resids, dresids, params, dparams.
         """
 
         comm = self.comm
@@ -568,59 +573,50 @@ class System(object):
             Local gathered Jacobian
         """
 
-        comm = self.comm
         if not self.is_active():
             return J
 
-        myrank = comm.rank
+        comm = self.comm
+        iproc = comm.rank
+        nproc = comm.size
 
-        tups = []
         need_tups = []
+        has_tups = []
 
         # Gather a list of local tuples for J.
-        for output, dct in iteritems(J):
-            # Params are already only on this process. We need to add
-            # only outputs of components that are on this process.
-            for param, value in iteritems(dct):
-                if value is None or value.size == 0:
-                    if myrank != 0:
-                        need_tups.append((output, param))
-                else:
-                    tups.append((output, param))
+        for (output, param), value in iteritems(J):
+            if value.size == 0:
+                need_tups.append((output, param))
+            else:
+                has_tups.append((output, param))
 
-        dist_tups = comm.gather(tups, root=0)
-        dist_need_tups = comm.gather(need_tups, root=0)
+        dist_need_tups = comm.allgather(need_tups)
 
-        tupdict = {}
-        if myrank == 0:
-            for rank, tups in enumerate(dist_tups):
-                for tup in tups:
-                    if not tup in tupdict:
-                        tupdict[tup] = rank
+        needed_set = set()
+        for need_tups in dist_need_tups:
+            needed_set.update(need_tups)
 
-            #get rid of tups from the root proc before bcast
-            for tup, rank in iteritems(tupdict):
-                if rank == 0:
-                    del tupdict[tup]
+        if not needed_set:
+            return J  # nobody needs any J entries
 
-        tupdict = comm.bcast(tupdict, root=0)
+        dist_has_tups = comm.allgather(has_tups)
 
-        if myrank == 0:
-            for (output, param), rank in iteritems(tupdict):
-                J[output][param] = comm.recv(source=rank, tag=0)
+        found = set()
+        owned_vals = []
+        for rank, tups in enumerate(dist_has_tups):
+            for tup in tups:
+                if tup in needed_set and not tup in found:
+                    found.add(tup)
+                    if rank == iproc:
+                        owned_vals.append((tup, J[tup]))
 
-            # now send out missing stuff to procs that need it
-            for rank, need_tups in enumerate(dist_need_tups):
-                for output, param in need_tups:
-                    comm.send(J[output][param], dest=rank, tag=0)
-        else:
-            for (output, param), rank in iteritems(tupdict):
-                if rank == myrank:
-                    comm.send(J[output][param], dest=0, tag=0)
+        dist_vals = comm.allgather(owned_vals)
 
+        for rank, vals in enumerate(dist_vals):
+            if rank != iproc:
+                for (output, param), value in vals:
+                    J[output, param] = value
 
-        # return the combined dict
-        #return comm.bcast(J, root=0)
         return J
 
     def _get_var_pathname(self, name):
