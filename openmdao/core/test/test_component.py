@@ -146,7 +146,9 @@ class TestComponent(unittest.TestCase):
         self.comp.add_state("s1", 0.0)
 
         test_string = self.comp.generate_docstring()
-        self.assertEqual(test_string, '\t"""\n\n\tAttributes\n\t----------\n\n\t\txxyyzz : param \n\n\t\t\t<Insert description here.>\n\n\t\tt : param \n\n\t\t\t<Insert description here.>\n\n\t\tx :  unknown \n\n\t\t\t<Insert description here.>\n\n\t\ts1 :  unknown \n\n\t\t\t<Insert description here.>\n\n\n\tNote\n\t----\n\n\n\t"""\n')
+
+        original_string = '\t"""\n\n\tParams\n\t----------\n    xxyyzz : param\n        <Insert description here.>\n    t : param\n        <Insert description here.>\n    x : unknown\n        <Insert description here.>\n    s1 : unknown\n        <Insert description here.>\n\n\t"""\n'
+        self.assertEqual(test_string, original_string)
 
 if __name__ == "__main__":
     unittest.main()

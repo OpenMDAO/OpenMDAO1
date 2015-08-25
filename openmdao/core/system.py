@@ -620,3 +620,54 @@ class System(object):
         if self.pathname:
             return '.'.join((self.pathname, name))
         return name
+
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created System class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+
+        """
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
+
+        if self._params_dict or self._unknowns_dict:
+            docstring += '\n\tParams\n\t----------\n'
+
+        if self._params_dict:
+            for key, value in iteritems(self._params_dict):
+                docstring += "    "+key
+                docstring += " : param"
+                #docstring += type(value).__name__
+                docstring += "\n        <Insert description here.>\n"
+
+        if self._unknowns_dict:
+            for key, value in iteritems(self._unknowns_dict):
+                docstring += "    "+key
+                docstring += " : "
+                typ = type(value).__name__
+
+                if typ == 'dict':
+                    docstring += "unknown"
+                else:
+                    docstring += typ
+                docstring += "\n        <Insert description here.>\n"
+
+        if hasattr(self, 'options'):
+            docstring += '\n\tOptions\n\t----------\n'
+            for (name, val) in self.options.items():
+                typ = type(val).__name__
+                desc = self.options._options[name]['desc']
+                docstring += "    "+name
+                docstring += " :  "
+                docstring += typ
+                #docstring += "(" + str(val) + ")"
+                #docstring += " \n"
+                docstring += "\n        " + desc + "\n"
+
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring

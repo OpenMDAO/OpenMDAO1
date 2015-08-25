@@ -13,47 +13,30 @@ from openmdao.util.shell_proc import STDOUT, DEV_NULL, ShellProc
 from six import iteritems, itervalues, iterkeys
 
 class ExternalCode(Component):
-    """Run an external code as a component
+    """
+    Run an external code as a component
 
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
-    
-	Options
+
+    Options
 	----------
+    external_output_files :  list
+        (optional) list of input file names to check the pressence of after solve_nonlinear
+    timeout :  float
+        Maximum time to wait for command completion. A value of zero implies an infinite wait
+    poll_delay :  float
+        Delay between polling for command completion. A value of zero will use an internally computed default
+    command :  list
+        command to be executed
+    external_input_files :  list
+        (optional) list of input file names to check the pressence of before solve_nonlinear
+    env_vars :  dict
+        Environment variables required by the command
+    check_external_outputs :  bool
+        Check that all input or output external files exist
 
-		external_input_files : []
-
-			<Insert description here.>
-
-		env_vars : {}
-
-			<Insert description here.>
-
-		external_output_files : []
-
-			<Insert description here.>
-
-		command : []
-
-			<Insert description here.>
-
-		timeout : 0.0
-
-			<Insert description here.>
-
-		check_external_outputs : True
-
-			<Insert description here.>
-
-		poll_delay : 0.0
-
-			<Insert description here.>
-
-
-	Note
-	----
-
-    """
+	"""
 
     def __init__(self):
         super(ExternalCode, self).__init__()
@@ -65,11 +48,11 @@ class ExternalCode(Component):
         self.options = OptionsDictionary()
         self.options.add_option('command', [], desc='command to be executed')
         self.options.add_option('env_vars', {}, desc='Environment variables required by the command')
-        self.options.add_option('poll_delay', 0.0, desc='''Delay between polling for command completion.
-            A value of zero will use an internally computed default''')
-        self.options.add_option('timeout', 0.0, desc='''Maximum time to wait for command
-            completion. A value of zero implies an infinite wait''')
-        self.options.add_option('check_external_outputs', True, desc='Check that all input or output external files exist')
+        self.options.add_option('poll_delay', 0.0,
+            desc='Delay between polling for command completion. A value of zero will use an internally computed default')
+        self.options.add_option('timeout', 0.0, desc='Maximum time to wait for command completion. A value of zero implies an infinite wait')
+        self.options.add_option('check_external_outputs', True,
+            desc='Check that all input or output external files exist')
 
         self.options.add_option( 'external_input_files', [],
             desc='(optional) list of input file names to check the pressence of before solve_nonlinear')

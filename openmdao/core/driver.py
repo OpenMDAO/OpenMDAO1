@@ -507,3 +507,26 @@ class Driver(object):
         system.solve_nonlinear(metadata=metadata)
         for recorder in self.recorders:
             recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created Driver class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+        """
+
+        if hasattr(self, 'supports'):
+            #start the docstring off
+            docstring = '\t\"\"\"\n'
+            docstring += '\n\tOptions\n\t----------\n\n'
+            for (name, val) in self.supports.items():
+                typ = type(val).__name__
+                docstring += "    "+name
+                docstring += " :  " + typ + " \n"
+
+            #finish up docstring
+            docstring += '\n\t\"\"\"\n'
+            return docstring
