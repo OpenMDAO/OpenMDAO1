@@ -1,5 +1,5 @@
 import sys
-from unittest import TestCase
+import unittest
 import time
 
 import numpy as np
@@ -151,6 +151,15 @@ class MPITests1(MPITestCase):
             assert_rel_error(self, prob.root.G1.C2.unknowns['d'],
                              np.ones(size)*-.1, 1.e-10)
 
+    def test_wrong_impl(self):
+        if MPI:
+            try:
+                prob = Problem(Group())
+            except Exception as err:
+                self.assertEqual(str(err),
+                   "To run under MPI, the impl for a Problem must be PetscImpl.")
+            else:
+                self.fail("Exception expected")
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

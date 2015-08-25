@@ -251,13 +251,15 @@ class RBFInterpolator(NNBase):
 
         dRp = frnt * np.polyval(dRp_poly, T)
 
+
         # Now need dt/dx
         xpi = np.subtract(PrdPts, self._tp[ploc[:, :-1], :])
         xpm = PrdPts - self._tp[ploc[:, -1:], :]
-        dtx = (xpi - (T * T * xpm)) / \
-              (pdist[:, -1:, :] * pdist[:, -1:, :] * T)
+        dtx = (xpi - (np.square(T) * xpm)) / (np.square(pdist[:, -1:, :]) * T)
+
         # The gradient then is the summation across neighs of w*df/dt*dt/dx
-        grad = np.einsum('ijk,ijl...->ilk...', dRp * dtx, self.weights[ploc[:, :-1]])
+        grad = np.einsum('ijk,ijk,ijl...->ilk...', dRp, dtx, self.weights[ploc[:, :-1]])
+
         return grad.reshape((PrdPts.shape[0], self._dep_dims, self._indep_dims))
 
     def __init__(self, training_points, training_values, num_leaves=2, n=5, comp=2):
@@ -292,7 +294,7 @@ class RBFInterpolator(NNBase):
         # Setup prediction points and find their radial neighbors
         ndist, nloc = self._KData.query(normalized_pts, self.N)
         # Check if complex step is being run
-        if (np.any(normalized_pts[0, :].imag) > 0):
+        if np.any(np.abs(normalized_pts[0, :].imag)) > 0:
             dimdiff = np.subtract(normalized_pts.reshape((nppts, 1, self._indep_dims)),
                                   self._tp[nloc, :])
             # KD Tree ignores imaginary part, muse redo ndist if complex
