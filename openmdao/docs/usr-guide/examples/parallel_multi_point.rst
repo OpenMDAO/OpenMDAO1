@@ -89,10 +89,10 @@ need.
                 tot += params[v_name]
             unknowns['total'] = tot
 
-    class MultiPoint(Group):
+    class ParallelMultiPoint(Group):
 
         def __init__(self, adders, scalars):
-            super(MultiPoint, self).__init__()
+            super(ParallelMultiPoint, self).__init__()
 
             size = len(adders)
             self.add('desvar', ParamComp('X', val=np.zeros(size)), promotes=['*'])
@@ -118,7 +118,7 @@ need.
     adders = np.arange(size)/10.
     scalars = np.arange(size, 2*size)/10.
 
-    prob.root = MultiPoint(adders, scalars)
+    prob.root = ParallelMultiPoint(adders, scalars)
 
     prob.setup()
 

@@ -25,6 +25,7 @@ before_install:
 - ./miniconda.sh -b
 - PATHPREFIX=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "/Users/travis/miniconda/bin"; else echo "/home/travis/miniconda/bin"; fi)
 - export PATH=$PATHPREFIX:$PATH
+- export OPENMDAO_TEST_DOCS=1
 - conda update --yes conda
 
 install:
