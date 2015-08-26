@@ -9,7 +9,6 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.core import Group, ParallelGroup, Problem
 from openmdao.components import ExecComp
 
-from openmdao.solvers.petsc_ksp import PetscKSP
 from openmdao.test.converge_diverge import ConvergeDivergePar, SingleDiamondPar
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                         FanInGrouped, ArrayComp2D
@@ -22,6 +21,7 @@ from openmdao.devtools.debug import debug
 try:
     from mpi4py import MPI
     from openmdao.core.petsc_impl import PetscImpl as impl
+    from openmdao.solvers.petsc_ksp import PetscKSP
 except ImportError:
     impl = None
 
@@ -97,14 +97,12 @@ class TestPetscKSP(MPITestCase):
         unknown_list = ['comp3.y']
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
     def test_single_diamond(self):
 

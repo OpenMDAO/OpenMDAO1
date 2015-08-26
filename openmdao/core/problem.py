@@ -23,8 +23,6 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.param_comp import ParamComp
 
-from openmdao.solvers.run_once import RunOnce
-
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
@@ -228,7 +226,7 @@ class Problem(System):
         # TODO: handle any automatic grouping of systems here...
 
         # divide MPI communicators among subsystems
-        self.root._setup_communicators(self._impl.world_comm())
+        self._setup_communicators()
 
         # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
@@ -619,7 +617,6 @@ class Problem(System):
         ndarray or dict
             Jacobian of unknowns with respect to params.
         """
-
         if mode not in ['auto', 'fwd', 'rev', 'fd']:
             msg = "mode must be 'auto', 'fwd', 'rev', or 'fd'"
             raise ValueError(msg)
@@ -1258,6 +1255,24 @@ class Problem(System):
         """
         return self.root._relevance.json_dependencies()
 
+    def _setup_communicators(self):
+        comm = self._impl.world_comm()
+
+        # first determine how many procs that root can possibly use
+        minproc, maxproc = self.root.get_req_procs()
+        if MPI:
+            if not (maxproc is None or maxproc >= comm.size):
+                # we have more procs than we can use, so just raise an
+                # exception to encourage the user not to waste resources :)
+                raise RuntimeError("This problem was given %d MPI processes, "
+                                   "but it can only use %d." %
+                                   (comm.size, maxproc))
+            elif comm.size < minproc:
+                raise RuntimeError("This problem was given %d MPI processes, "
+                                   "but it requires at least %d." %
+                                   (comm.size, minproc))
+
+        self.root._setup_communicators(comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

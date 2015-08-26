@@ -58,7 +58,7 @@ class System(object):
                        desc='Set to absolute, relative')
 
         self._relevance = None
-        self._impl_factory = None
+        self._impl = None
 
     def __getitem__(self, name):
         """
@@ -244,7 +244,8 @@ class System(object):
             If running under MPI, returns True if this `System` has a valid
             communicator. Always returns True if not running under MPI.
         """
-        return MPI is None or self.comm != MPI.COMM_NULL
+        return MPI is None or not (self.comm is None or
+                                   self.comm == MPI.COMM_NULL)
 
     def get_req_procs(self):
         """
@@ -265,6 +266,11 @@ class System(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
+        minp, maxp = self.get_req_procs()
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
+            raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
+                              (self.pathname, minp, comm.size))
+
         self.comm = comm
 
     def _set_vars_as_remote(self):
@@ -542,14 +548,14 @@ class System(object):
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
             self.resids = parent.resids.get_view(self.pathname, comm, umap)
-            self.params = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+            self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
                               store_byobjs=True)
 
         self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
-        self.dpmat[voi] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                               my_params, self.connections,
                               relevance=relevance, var_of_interest=voi)
