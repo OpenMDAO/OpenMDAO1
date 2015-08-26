@@ -360,6 +360,8 @@ class System(object):
             resultvec = unknowns
             states = []
 
+        gather_jac = False
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
@@ -407,6 +409,7 @@ class System(object):
             # to still run the model once for each entry in that param
             # in order to stay in sync with the other processes.
             if p_size == 0:
+                gather_jac = True
                 for i in range(self._params_dict[p_name]['size']):
                     run_model(params, unknowns, resids)
 
@@ -471,7 +474,7 @@ class System(object):
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
-        if MPI:
+        if MPI and gather_jac:
             jac = self.get_combined_jac(jac)
 
         return jac
