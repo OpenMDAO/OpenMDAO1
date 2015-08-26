@@ -194,9 +194,7 @@ class TestPetscKSP3(MPITestCase):
         prob.run()
 
         param = 'sub.pgroup.p.x'
-        #currently, you can't have vars of interest that are down in a parallel system
         unknown_list = ['sub.comp2.y', "sub.comp3.y"]
-        #unknown_list = ['c2.y', "c3.y"]
 
         J = prob.calc_gradient([param], unknown_list, mode='fwd', return_format='dict')
 
