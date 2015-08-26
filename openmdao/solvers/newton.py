@@ -27,6 +27,8 @@ class Newton(NonLinearSolver):
                        desc='Maximum number of line searches.')
         opt.add_option('alpha', 1.0,
                        desc='Initial over-relaxation factor.')
+        opt.add_option('solve_subsystems', True,
+                       desc='Set to True to solve subsystems. You may need this for solvers nested under Newton, though it will be slower..')
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
@@ -96,7 +98,8 @@ class Newton(NonLinearSolver):
             update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
             # Just evaluate the model with the new points
-            system.children_solve_nonlinear(local_meta)
+            if self.options['solve_subsystems'] is True:
+                system.children_solve_nonlinear(local_meta)
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 
             for recorder in self.recorders:
