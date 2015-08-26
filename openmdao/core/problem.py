@@ -18,7 +18,7 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpi_wrap import MPI, FakeComm, under_mpirun
+from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.param_comp import ParamComp
@@ -29,6 +29,7 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
+
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
@@ -37,6 +38,12 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+
+        if MPI:
+            from openmdao.core.petsc_impl import PetscImpl
+            if impl != PetscImpl:
+                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+
         if impl is None:
             self._impl = BasicImpl
         else:
@@ -220,10 +227,7 @@ class Problem(System):
         # TODO: handle any automatic grouping of systems here...
 
         # divide MPI communicators among subsystems
-        if MPI:
-            self.root._setup_communicators(MPI.COMM_WORLD)
-        else:
-            self.root._setup_communicators(FakeComm())
+        self.root._setup_communicators(self._impl.world_comm())
 
         # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
@@ -322,6 +326,11 @@ class Problem(System):
 
         # Prepare Driver
         self.driver._setup(self.root)
+
+        # Prepare Solvers
+        for sub in self.root.subgroups(recurse=True, include_self=True):
+            sub.nl_solver.setup(sub)
+            sub.ln_solver.setup(sub)
 
         # check for any potential issues
         if check:
