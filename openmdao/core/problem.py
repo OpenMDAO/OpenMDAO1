@@ -836,7 +836,7 @@ class Problem(System):
             else:
                 input_set.update(inp)
 
-        # Our variables of interest inlude all sets for which at least
+        # Our variables of interest include all sets for which at least
         # one variable is requested.
         voi_sets = []
         for voi_set in all_vois:
@@ -903,20 +903,19 @@ class Problem(System):
             # up the actual indices for the current members of the group
             # of interest.
             for i in range(len(in_idxs)):
+                resets = set()
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
                         rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        resets.add(vkey)
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
-                for voi in rhs:
-                    try:
-                        rhs[voi][voi_idxs[voi][i]] = 0.0
-                    except IndexError:
-                        pass
+                for r in resets:
+                    rhs[r][voi_idxs[r][i]] = 0.0
 
                 for param, dx in iteritems(dx_mat):
                     if len(params) == 1:
