@@ -813,10 +813,6 @@ class Problem(System):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
                             J[okey][ikey] = None
-                            # print("adding",(okey,ikey),"to J")
-                            # if (root._unknowns_dict[okey].get('remote') or
-                            #          root._unknowns_dict[ikey].get('remote')):
-                            #     print("MISSING:",(okey,ikey))
         else:
             usize = 0
             psize = 0
@@ -866,8 +862,6 @@ class Problem(System):
 
         voi_srcs = {}
 
-        print("VOI sets:",voi_sets)
-
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         j = 0
@@ -896,12 +890,9 @@ class Problem(System):
 
             jbase = j
 
-            print ("IDXS:",in_idxs, type(in_idxs))
-
             if MPI:
                 all_idxs_sizes = self.root.comm.allgather(len(in_idxs))
                 if len(in_idxs) < max(all_idxs_sizes):
-                    print(len(in_idxs),"<",max(all_idxs_sizes))
                     # pad our idxs so we do the same number of linear sub-solves
                     pad = np.zeros(max(all_idxs_sizes), in_idxs.dtype)
                     if in_idxs.size > 0:
@@ -923,7 +914,6 @@ class Problem(System):
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
-                debug("linear solve done")
 
                 for voi in rhs:
                     try:
@@ -945,7 +935,6 @@ class Problem(System):
                             _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
                                                                            qoi_indices)
                             dxval = dx[out_idxs]
-                            print(self.root.comm.rank, mode, "own dxval:",dxval)
                             if dxval.size == 0:
                                 dxval = None
                         else:
@@ -953,7 +942,6 @@ class Problem(System):
                         if nproc > 1:# and mode=='rev':
                             dxval = comm.bcast(dxval, root=owned[item])
 
-                            print(mode, "after bcast, dxval:",dxval)
                         nk = len(dxval)
 
                         if return_format == 'dict':
@@ -973,7 +961,6 @@ class Problem(System):
                             i += nk
                 j += 1
 
-        print("returning J",J)
         return J
 
     def check_partial_derivatives(self, out_stream=sys.stdout):

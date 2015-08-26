@@ -1220,23 +1220,14 @@ class Group(System):
 
         else:
             var_rank = self._owning_ranks[uname] if not rev else iproc
-            print(mode, uname, "var rank:", var_rank)
             offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
             src_idxs = arg_idxs + offset
 
             var_rank = self._owning_ranks[pname] if rev else iproc
-            print(mode, pname, "var rank:", var_rank)
 
         tgt_start = (np.sum(p_sizes[:var_rank]) +
                      np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
-
-        if mode == 'fwd':
-            print(self.comm.rank,mode,uname,'-->',pname)
-            print(self.comm.rank,mode,src_idxs,'-->',tgt_idxs)
-        else:
-            print(self.comm.rank,mode,uname,'<--',pname)
-            print(self.comm.rank,mode,src_idxs,'<--',tgt_idxs)
 
         return src_idxs, tgt_idxs
 
