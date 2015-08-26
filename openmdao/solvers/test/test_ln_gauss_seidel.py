@@ -328,7 +328,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.root.ln_solver.options['maxiter'] = 10
         prob.root.ln_solver.options['atol'] = 1e-12
         prob.root.ln_solver.options['rtol'] = 1e-12
-        prob.root.ln_solver.options['iprint'] = 1
+        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -339,9 +339,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         param_list = ['x', 'z']
-        param_list = ['x']
         unknown_list = ['obj', 'con1', 'con2']
-        unknown_list = ['obj']
 
         Jbase = {}
         Jbase['con1'] = {}
@@ -355,23 +353,20 @@ class TestLinearGaussSeidel(unittest.TestCase):
         Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         # Obviously this test doesn't do much right now, but I need to verify
         # we don't get a keyerror here.

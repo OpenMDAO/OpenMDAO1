@@ -80,9 +80,9 @@ class LinearGaussSeidel(LinearSolver):
                 for sub in system.subsystems(local=True):
 
                     for voi in vois:
-                        #print('pre scatter', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre scatter', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
-                        #print('pre apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre apply', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                         gs_outputs[voi] = [x for x in dumat[voi]
                                            if x not in sub.dumat[voi]]

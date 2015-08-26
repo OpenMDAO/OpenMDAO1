@@ -62,6 +62,8 @@ class ParamComp(Component):
         """
         if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
+            for voi in vois:
+                rhs_vec[voi].vec[:] = 0.0
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
 
