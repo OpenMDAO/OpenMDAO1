@@ -18,10 +18,16 @@ trace = os.environ.get('TRACE_PETSC')
 if trace:
     from openmdao.devtools.debug import debug
 
+from mpi4py import MPI
+
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
 
     idx_arr_type = PETSc.IntType
+
+    @staticmethod
+    def world_comm():
+        return MPI.COMM_WORLD
 
     @staticmethod
     def create_src_vecwrapper(pathname, comm):
