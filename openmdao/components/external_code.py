@@ -4,7 +4,6 @@
 
 import sys
 import os
-#from distutils.spawn import find_executable
 from numpy.distutils.exec_command import find_executable
 
 from openmdao.core.component import Component
