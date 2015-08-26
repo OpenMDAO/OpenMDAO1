@@ -17,6 +17,31 @@ trace = os.environ.get("TRACE_PETSC")
 if trace:
     from openmdao.devtools.debug import debug
 
+
+def _get_petsc_vec_array_new(vec): 
+    """ helper function to handle a petsc backwards incompatibility between 3.6 
+    and older versions.""" 
+
+    return vec.getArray(readonly=True)
+
+
+def _get_petsc_vec_array_old(vec): 
+    """ helper function to handle a petsc backwards incompatibility between 3.6 
+    and older versions.""" 
+    
+    return  vec.getArray()
+
+try: 
+    petsc_version = petsc4py.__version__
+except AttributeError: #hack to fix doc-tests
+    petsc_version = "3.5"
+
+if int((petsc_version).split('.')[1]) >= 6:
+    _get_petsc_vec_array = _get_petsc_vec_array_new
+else: 
+    _get_petsc_vec_array = _get_petsc_vec_array_old
+
+
 # This class object is given to KSP as a callback object for printing the residual.
 class Monitor(object):
     """ Prints output from PETSc's KSP solvers """
@@ -169,7 +194,8 @@ class PetscKSP(LinearSolver):
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
-        sol_vec.vec[:] = arg.array[:]
+        # sol_vec.vec[:] = arg.array[:]
+        sol_vec.vec[:] = _get_petsc_vec_array(arg)
 
         # Start with a clean slate
         rhs_vec.vec[:] = 0.0
@@ -178,8 +204,9 @@ class PetscKSP(LinearSolver):
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
         result.array[:] = rhs_vec.vec[:]
-        #print("arg", arg.array)
-        #print("result", result.array)
+
+        # print("arg", arg.array)
+        # print("result", result.array)
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner
@@ -195,4 +222,10 @@ class PetscKSP(LinearSolver):
 
         # TODO - Preconditioning is not supported yet, so mimic an Identity
         # matrix.
-        rhs_vec.array[:] = sol_vec.array[:]
+        # if int((petsc4py.__version__).split('.')[1]) >= 6:
+        #     vec = sol_vec.getArray(readonly=True)
+        # else: 
+        #     vec = sol_vec.getArray()
+
+        rhs_vec.array[:] = _get_petsc_vec_array(sol_vec)
+

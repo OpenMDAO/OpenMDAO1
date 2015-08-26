@@ -29,6 +29,7 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
+
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
@@ -37,6 +38,12 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+
+        if MPI:
+            from openmdao.core.petsc_impl import PetscImpl
+            if impl != PetscImpl:
+                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+
         if impl is None:
             self._impl = BasicImpl
         else:
