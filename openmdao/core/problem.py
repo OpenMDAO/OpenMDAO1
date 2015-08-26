@@ -1265,12 +1265,14 @@ class Problem(System):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
                 raise RuntimeError("This problem was given %d MPI processes, "
-                                   "but it can only use %d." %
-                                   (comm.size, maxproc))
+                                   "but it requires between %d and %d." %
+                                   (comm.size, minproc, maxproc))
             elif comm.size < minproc:
+                if maxproc is None:
+                    maxproc = '(any)'
                 raise RuntimeError("This problem was given %d MPI processes, "
-                                   "but it requires at least %d." %
-                                   (comm.size, minproc))
+                                   "but it requires between %s and %s." %
+                                   (comm.size, minproc, maxproc))
 
         self.root._setup_communicators(comm)
 

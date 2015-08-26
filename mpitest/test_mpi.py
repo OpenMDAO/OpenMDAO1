@@ -107,7 +107,7 @@ class MPITests2(MPITestCase):
         except Exception as err:
             self.assertEqual(str(err),
                              "This problem was given 2 MPI processes, "
-                             "but it can only use 1.")
+                             "but it requires between 1 and 1.")
         else:
             if MPI:
                 self.fail("Exception expected")
