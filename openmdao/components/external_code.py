@@ -4,7 +4,7 @@
 
 import sys
 import os
-from distutils.spawn import find_executable
+from numpy.distutils.exec_command import find_executable
 
 from openmdao.core.component import Component
 from openmdao.core.options import OptionsDictionary
@@ -156,13 +156,17 @@ class ExternalCode(Component):
             program_to_execute = self.options['command']
         else:
             program_to_execute = self.options['command'][0]
+        
         command_full_path = find_executable( program_to_execute )
-
         if not command_full_path:
             raise ValueError("The command to be executed, '%s', cannot be found" % program_to_execute)
 
+        command_for_shell_proc = self.options['command']
+        if sys.platform == 'win32':
+            command_for_shell_proc = ['cmd.exe', '/c' ] + command_for_shell_proc
+
         self._process = \
-            ShellProc(self.options['command'], self.stdin,
+            ShellProc(command_for_shell_proc, self.stdin,
                       self.stdout, self.stderr, self.options['env_vars'])
         #self._logger.debug('PID = %d', self._process.pid)
 
