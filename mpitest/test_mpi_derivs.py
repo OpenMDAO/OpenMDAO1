@@ -1,4 +1,5 @@
 """ Unit test for the Scipy GMRES linear solver. """
+from __future__ import print_function
 
 import unittest
 import numpy as np
@@ -8,9 +9,8 @@ from openmdao.components.param_comp import ParamComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 
-from openmdao.solvers.scipy_gmres import ScipyGMRES
-from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
-                                           ConvergeDivergeGroups, SingleDiamondGrouped
+from openmdao.solvers.petsc_ksp import PetscKSP
+from openmdao.test.converge_diverge import ConvergeDivergePar, SingleDiamondPar
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
@@ -19,34 +19,40 @@ from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.devtools.debug import debug
 
-if MPI:
+try:
+    from mpi4py import MPI
     from openmdao.core.petsc_impl import PetscImpl as impl
-else:
-    from openmdao.core.basic_impl import BasicImpl as impl
+except ImportError:
+    impl = None
 
-
-class TestScipyGMRES(MPITestCase):
+class TestPetscKSP(MPITestCase):
 
     N_PROCS = 2
 
-    #def test_fan_out_grouped(self):
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
-        #prob = Problem()
-        #prob.root = FanOutGrouped()
-        #prob.root.ln_solver = ScipyGMRES()
-        #prob.setup(check=False)
-        #prob.run()
+    def test_fan_out_grouped(self):
 
-        #param_list = ['p.x']
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        #currently, you can't have vars of interest that are down in a parallel system
         #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+        unknown_list = ['c2.y', "c3.y"]
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J[unknown_list[0]]['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]]['p.x'][0][0], 15.0, 1e-6)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
-        #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J[unknown_list[0]]['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]]['p.x'][0][0], 15.0, 1e-6)
 
     def test_simple_deriv_xfer(self):
 
@@ -74,89 +80,97 @@ class TestScipyGMRES(MPITestCase):
         self.assertEqual(prob.root.comp3.dpmat[None]['x1'], 7.)
         self.assertEqual(prob.root.comp3.dpmat[None]['x2'], 11.)
 
-    #def test_fan_in(self):
+    def test_fan_in(self):
 
-        #prob = Problem(impl=impl)
-        #prob.root = FanInGrouped()
-        #prob.setup(check=False)
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+        prob.root.ln_solver = PetscKSP()
 
-        #param_list = ['p1.x1', 'p2.x2']
-        #unknown_list = ['comp3.y']
+        prob.setup(check=False)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #if not MPI or self.comm.rank == 0:
-            #assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            #assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        param_list = ['p1.x1', 'p2.x2']
+        unknown_list = ['comp3.y']
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #if not MPI or self.comm.rank == 0:
-            #assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            #assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        if not MPI or self.comm.rank == 0:
+            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-    #def test_converge_diverge_groups(self):
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        if not MPI or self.comm.rank == 0:
+            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        #prob = Problem()
-        #prob.root = ConvergeDivergeGroups()
-        #prob.root.ln_solver = ScipyGMRES()
-        #prob.setup(check=False)
-        #prob.run()
+    def test_single_diamond(self):
 
-        ## Make sure value is fine.
-        #assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+        prob = Problem(impl=impl)
+        prob.root = SingleDiamondPar()
+        prob.root.ln_solver = PetscKSP()
+        prob.setup(check=False)
+        prob.run()
 
-        #param_list = ['p.x']
-        #unknown_list = ['comp7.y1']
+        param_list = ['p.x']
+        unknown_list = ['comp4.y1', 'comp4.y2']
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
+        assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
-        #assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+    def test_converge_diverge_par(self):
 
-    #def test_single_diamond(self):
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = PetscKSP()
 
-        #prob = Problem()
-        #prob.root = SingleDiamond()
-        #prob.root.ln_solver = ScipyGMRES()
-        #prob.setup(check=False)
-        #prob.run()
+        prob.setup(check=False)
+        prob.run()
 
-        #param_list = ['p.x']
-        #unknown_list = ['comp4.y1', 'comp4.y2']
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
-        #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
-        #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-    #def test_single_diamond_grouped(self):
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        #prob = Problem()
-        #prob.root = SingleDiamondGrouped()
-        #prob.root.ln_solver = ScipyGMRES()
-        #prob.setup(check=False)
-        #prob.run()
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        #param_list = ['p.x']
-        #unknown_list = ['comp4.y1', 'comp4.y2']
+    def test_converge_diverge_compfd(self):
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
-        #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = PetscKSP()
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
-        #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+        # fd comp2 and comp5. each is under a par group
+        prob.root.par1.comp2.fd_options['force_fd'] = True
+        prob.root.par2.comp5.fd_options['force_fd'] = True
 
-        #J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
-        #assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
-        #assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
+        prob.setup(check=False)
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
 
 if __name__ == '__main__':

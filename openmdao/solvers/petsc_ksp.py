@@ -167,8 +167,6 @@ class PetscKSP(LinearSolver):
         self.system = None
         return unknowns_mat
 
-
-
     def mult(self, mat, arg, result):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
         system.
@@ -203,6 +201,9 @@ class PetscKSP(LinearSolver):
 
         result.array[:] = rhs_vec.vec[:]
 
+        # print("arg", arg.array)
+        # print("result", result.array)
+
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner
 
@@ -223,3 +224,4 @@ class PetscKSP(LinearSolver):
         #     vec = sol_vec.getArray()
 
         rhs_vec.array[:] = _get_petsc_vec_array(sol_vec)
+

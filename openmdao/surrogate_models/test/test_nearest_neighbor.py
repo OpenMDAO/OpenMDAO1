@@ -400,21 +400,21 @@ class TestRBFInterpolatorND(unittest.TestCase):
         assert_rel_error(self, mu, expected_y, 1e-6)
 
     def test_jacobian(self):
-        test_x = np.array([[1., 0.5],
-                           [0.5, 1.],
-                           [1., 1.5],
-                           [1.5, 1.]
+        test_x = np.array([[0.5, 0.5],
+                           [0.5, 1.5],
+                           [1.5, 1.5],
+                           [1.5, 0.5]
                            ])
-        a = -0.14125688
-        b = -0.39551926
-        c = -0.19255371
-        d = 1.08184367
+        a = -0.97153433
+        b = -0.97153433
+        c = 0.59055939
+        d = 0.59055939
 
         expected_deriv = np.array([
             [[a, b], [c, d], [0., 0.], [a, b]],
-            [[b, -a], [d, -c], [0., 0.], [b, -a]],
             [[a, -b], [c, -d], [0., 0.], [a, -b]],
-            [[-b, -a], [-d, -c], [0., 0.], [-b, -a]]
+            [[-a, -b], [-c, -d], [0., 0.], [-a, -b]],
+            [[-a, b], [-c, d], [0., 0.], [-a, b]]
         ])
 
         for x0, y0 in zip(test_x, expected_deriv):
