@@ -122,8 +122,8 @@ class Newton(NonLinearSolver):
                 update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
                 # Just evaluate the model with the new points
-
-                system.children_solve_nonlinear(local_meta)
+                if self.options['solve_subsystems'] is True:
+                    system.children_solve_nonlinear(local_meta)
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
 
                 for recorder in self.recorders:
@@ -132,13 +132,10 @@ class Newton(NonLinearSolver):
                 f_norm = resids.norm()
                 if self.options['iprint'] > 1:
                     self.print_norm('BK_TKG', local_meta, ls_itercount, f_norm,
-                                    f_norm/f_norm0, indent=1, solver='LS')
+                                    f_norm0, indent=1, solver='LS')
 
             # Reset backtracking
             alpha = alpha_base
-
-            for recorder in self.recorders:
-                recorder.raw_record(params, unknowns, resids, local_meta)
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
