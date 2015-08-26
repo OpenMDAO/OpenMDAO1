@@ -163,11 +163,9 @@ class ExternalCode(Component):
             raise ValueError("The command to be executed, '%s', cannot be found" % program_to_execute)
 
         command_for_shell_proc = self.options['command']
-
         if sys.platform == 'win32':
             command_for_shell_proc = ['cmd.exe', '/c' ] + command_for_shell_proc
 
-        # ShellProc(self.options['command'], self.stdin,
         self._process = \
             ShellProc(command_for_shell_proc, self.stdin,
                       self.stdout, self.stderr, self.options['env_vars'])
