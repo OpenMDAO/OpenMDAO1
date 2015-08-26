@@ -33,7 +33,7 @@ def _get_petsc_vec_array_old(vec):
 
 try: 
     petsc_version = petsc4py.__version__
-except: #hack to fix doc-tests
+except AttributeError: #hack to fix doc-tests
     petsc_version = "3.5"
 
 if int((petsc_version).split('.')[1]) >= 6:
