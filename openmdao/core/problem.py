@@ -935,7 +935,7 @@ class Problem(System):
                                 dxval = None
                         else:
                             dxval = None
-                        if nproc > 1:# and mode=='rev':
+                        if nproc > 1:
                             dxval = comm.bcast(dxval, root=owned[item])
 
                         nk = len(dxval)
