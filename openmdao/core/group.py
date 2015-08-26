@@ -763,6 +763,7 @@ class Group(System):
                         if gs_outputs is None or var in gs_outputs[voi]:
                             dresids[var] += dunknowns[var]
 
+
             # Adjoint Mode
             elif mode == 'rev':
 
@@ -853,7 +854,9 @@ class Group(System):
         rhs_buf = {}
         for voi in vois:
             rhs_buf[voi] = rhs_vec[voi].vec.copy()
+
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
+
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 

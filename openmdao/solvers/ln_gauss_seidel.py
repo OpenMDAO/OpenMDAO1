@@ -102,11 +102,12 @@ class LinearGaussSeidel(LinearSolver):
                                          gs_outputs=gs_outputs)
 
                     #for voi in vois:
-                        #print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                       # print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
                         drmat[voi].vec *= -1.0
                         drmat[voi].vec += rhs_mat[voi]
+                        dpmat[voi].vec *= 0.0
 
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
                     #for voi in vois:
