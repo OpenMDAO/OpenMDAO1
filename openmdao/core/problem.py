@@ -945,6 +945,9 @@ class Problem(System):
                             i += nk
                 j += 1
 
+        # Clean up after ourselves
+        root.clear_dparams()
+
         return J
 
     def check_partial_derivatives(self, out_stream=sys.stdout):
