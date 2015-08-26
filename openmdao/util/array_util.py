@@ -1,7 +1,7 @@
 """ Some useful array utilities. """
 
 import sys
-from six.moves import range
+from six.moves import range, zip
 import numpy as np
 from numpy import ndarray
 from itertools import product
@@ -52,3 +52,38 @@ def evenly_distrib_idxs(num_divisions, arr_size):
     offsets[1:] = np.cumsum(sizes)[:-1]
 
     return sizes, offsets
+
+def to_slices(sidxs, didxs):
+    """Convert matching src and dest idxs into slices if possible.
+    Sort the indices together to increase the likelihood of being able
+    to represent them as slices.
+    """
+    sort_idxs = np.argsort(sidxs)
+    return to_slice(sidxs[sort_idxs]), to_slice(didxs[sort_idxs])
+
+def to_slice(idxs):
+    """Convert an index array to a slice if possible. Otherwise,
+    return the index array.
+    """
+    if len(idxs) == 1:
+        return slice(idxs[0], idxs[0]+1)
+    elif len(idxs) == 0:
+        return slice(0,0)
+
+    imin = idxs.min()
+    imax = idxs.max()
+ 
+    stride = idxs[1]-idxs[0]
+
+    if stride == 0:
+        return idxs
+
+    for i in range(1, len(idxs)):
+        if (idxs[i] - idxs[i-1]) != stride:
+            return idxs
+
+    if stride < 0:
+        # negative strides cause some failures, so just do positive for now
+        return idxs
+    else:
+        return slice(imin, imax+1, stride)
