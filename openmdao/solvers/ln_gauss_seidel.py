@@ -22,7 +22,7 @@ class LinearGaussSeidel(LinearSolver):
                        desc='Absolute convergence tolerance.')
         opt.add_option('maxiter', 1,
                        desc='Maximum number of iterations.')
-        opt.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'],
+        opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
@@ -76,9 +76,9 @@ class LinearGaussSeidel(LinearSolver):
                 for sub in system.subsystems(local=True):
 
                     for voi in vois:
-                        #print('pre scatter', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        print('pre scatter', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
-                        #print('pre apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        print('pre apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     if isinstance(sub, Component):
 
@@ -91,16 +91,16 @@ class LinearGaussSeidel(LinearSolver):
                         # apply_linear.
                         sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois)
 
-                    #for voi in vois:
-                        #print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    for voi in vois:
+                        print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
                         drmat[voi].vec *= -1.0
                         drmat[voi].vec += rhs_mat[voi]
 
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
-                    #for voi in vois:
-                        #print('post solve', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    for voi in vois:
+                        print('post solve', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = dumat[voi].vec

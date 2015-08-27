@@ -18,27 +18,27 @@ if trace:
     from openmdao.devtools.debug import debug
 
 
-def _get_petsc_vec_array_new(vec): 
-    """ helper function to handle a petsc backwards incompatibility between 3.6 
-    and older versions.""" 
+def _get_petsc_vec_array_new(vec):
+    """ helper function to handle a petsc backwards incompatibility between 3.6
+    and older versions."""
 
     return vec.getArray(readonly=True)
 
 
-def _get_petsc_vec_array_old(vec): 
-    """ helper function to handle a petsc backwards incompatibility between 3.6 
-    and older versions.""" 
-    
+def _get_petsc_vec_array_old(vec):
+    """ helper function to handle a petsc backwards incompatibility between 3.6
+    and older versions."""
+
     return  vec.getArray()
 
-try: 
+try:
     petsc_version = petsc4py.__version__
 except AttributeError: #hack to fix doc-tests
     petsc_version = "3.5"
 
 if int((petsc_version).split('.')[1]) >= 6:
     _get_petsc_vec_array = _get_petsc_vec_array_new
-else: 
+else:
     _get_petsc_vec_array = _get_petsc_vec_array_old
 
 
@@ -74,7 +74,7 @@ class PetscKSP(LinearSolver):
                        desc='Relative convergence tolerance.')
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
-        opt.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'],
+        opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
@@ -226,7 +226,7 @@ class PetscKSP(LinearSolver):
         # matrix.
         # if int((petsc4py.__version__).split('.')[1]) >= 6:
         #     vec = sol_vec.getArray(readonly=True)
-        # else: 
+        # else:
         #     vec = sol_vec.getArray()
 
         rhs_vec.array[:] = _get_petsc_vec_array(sol_vec)
