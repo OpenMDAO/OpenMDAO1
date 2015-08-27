@@ -294,7 +294,7 @@ class VecWrapper(object):
             Name of variable to get the indices for.
 
         get_slice : bool, optional
-            If True, return the idxs as a slice object.
+            If True, return the idxs as a slice object, if possible.
 
         Returns
         -------
