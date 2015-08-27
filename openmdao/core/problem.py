@@ -876,7 +876,7 @@ class Problem(System):
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
-                _, in_idxs = duvec.get_local_idxs(voi, poi_indices)
+                in_idxs = duvec._get_local_idxs(voi, poi_indices)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -928,8 +928,9 @@ class Problem(System):
                     for item in output_list:
 
                         if mode=='fwd' or owned[item] == iproc:
-                            _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
-                                                                           qoi_indices)
+                            out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
+                                                               qoi_indices,
+                                                               get_slice=True)
                             dxval = dx[out_idxs]
                             if dxval.size == 0:
                                 dxval = None
