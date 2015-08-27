@@ -36,7 +36,13 @@ class DataTransfer(object):
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
 
-        self.src_slice, self.tgt_slice = to_slices(src_idxs, tgt_idxs)
+        # if in fwd mode, sort using src indices and in rev mode sort using tgt indices,
+        # to increase the likelihood of slice conversion for 'get' access in order to 
+        # avoid array copies.
+        if mode == 'fwd':
+            self.src_slice, self.tgt_slice = to_slices(self.src_idxs, self.tgt_idxs)
+        else:
+            self.tgt_slice, self.src_slice = to_slices(self.tgt_idxs, self.src_idxs)
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
@@ -73,10 +79,10 @@ class DataTransfer(object):
             if isinstance(self.src_slice, slice):
                 srcvec.vec[self.src_slice] += tgtvec.vec[self.tgt_slice]
             else:
-                np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
+                np.add.at(srcvec.vec, self.src_slice, tgtvec.vec[self.tgt_slice])
         else:
-            # forward, include byobjs if not a deriv scatter
             tgtvec.vec[self.tgt_slice] = srcvec.vec[self.src_slice]
+            # forward, include byobjs if not a deriv scatter
             if not deriv:
                 for tgt, src in self.byobj_conns:
                     tgtvec[tgt] = srcvec[src]

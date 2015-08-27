@@ -284,7 +284,7 @@ class VecWrapper(object):
         """
         return self._vardict.values()
 
-    def get_local_idxs(self, name, idx_dict):
+    def get_local_idxs(self, name, idx_dict, get_slice=False):
         """
         Returns all of the indices for the named variable in this vector.
 
@@ -292,6 +292,9 @@ class VecWrapper(object):
         ----
         name : str
             Name of variable to get the indices for.
+
+        get_slice : bool, optional
+            If True, return the idxs as a slice object.
 
         Returns
         -------
@@ -425,19 +428,15 @@ class VecWrapper(object):
         """
         return numpy.array(indices, dtype=self.idx_arr_type)
 
-    def merge_idxs(self, src_idxs, tgt_idxs):
+    def merge_idxs(self, idxs):
         """
         Return source and target index arrays, built up from
-        smaller index arrays and combined in order of ascending source
-        index (to allow us to convert src indices to a slice in some cases).
+        smaller index arrays.
 
         Args
         ----
-        src_idxs : array
-            Source indices.
-
-        tgt_idxs : array
-            Target indices.
+        idxs : array
+            Indices.
 
         Returns
         -------
@@ -445,16 +444,10 @@ class VecWrapper(object):
             Index array containing all of the merged indices.
 
         """
-        assert len(src_idxs) == len(tgt_idxs)
+        if len(idxs) == 0:
+            return self.make_idx_array(0, 0)
 
-        # filter out any zero length idx array entries
-        src_idxs = [i for i in src_idxs if len(i)]
-        tgt_idxs = [i for i in tgt_idxs if len(i)]
-
-        if len(src_idxs) == 0:
-            return self.make_idx_array(0, 0), self.make_idx_array(0, 0)
-
-        return numpy.concatenate(src_idxs), numpy.concatenate(tgt_idxs)
+        return numpy.concatenate(idxs)
 
     def get_promoted_varname(self, abs_name):
         """

@@ -1312,12 +1312,9 @@ class Group(System):
                         dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            if mode == 'fwd':
-                # sort based on ascending sources
-                src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            else:
-                # sort based on ascending targets
-                tgt_idxs, src_idxs = self.unknowns.merge_idxs(tgts, srcs)
+            src_idxs = self.unknowns.merge_idxs(srcs)
+            tgt_idxs = self.unknowns.merge_idxs(tgts)
+
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
                     self._impl.create_data_xfer(self.dumat[var_of_interest],
@@ -1343,7 +1340,8 @@ class Group(System):
                     full_flats.extend(flats)
                     full_byobjs.extend(byobjs)
 
-            src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
+            src_idxs = self.unknowns.merge_idxs(full_srcs)
+            tgt_idxs = self.unknowns.merge_idxs(full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
                 self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                     self.dpmat[var_of_interest],

@@ -68,11 +68,11 @@ def to_slice(idxs):
     if len(idxs) == 1:
         return slice(idxs[0], idxs[0]+1)
     elif len(idxs) == 0:
-        return slice(0,0)
+        return idxs
 
     imin = idxs.min()
     imax = idxs.max()
- 
+
     stride = idxs[1]-idxs[0]
 
     if stride == 0:
@@ -82,7 +82,7 @@ def to_slice(idxs):
         if (idxs[i] - idxs[i-1]) != stride:
             return idxs
 
-    if stride < 0:
+    if stride <= 0:
         # negative strides cause some failures, so just do positive for now
         return idxs
     else:
