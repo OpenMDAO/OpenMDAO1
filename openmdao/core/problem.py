@@ -23,11 +23,10 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.param_comp import ParamComp
 
-from openmdao.solvers.run_once import RunOnce
-
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
+from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -227,7 +226,7 @@ class Problem(System):
         # TODO: handle any automatic grouping of systems here...
 
         # divide MPI communicators among subsystems
-        self.root._setup_communicators(self._impl.world_comm())
+        self._setup_communicators()
 
         # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
@@ -618,7 +617,6 @@ class Problem(System):
         ndarray or dict
             Jacobian of unknowns with respect to params.
         """
-
         if mode not in ['auto', 'fwd', 'rev', 'fd']:
             msg = "mode must be 'auto', 'fwd', 'rev', or 'fd'"
             raise ValueError(msg)
@@ -838,7 +836,7 @@ class Problem(System):
             else:
                 input_set.update(inp)
 
-        # Our variables of interest inlude all sets for which at least
+        # Our variables of interest include all sets for which at least
         # one variable is requested.
         voi_sets = []
         for voi_set in all_vois:
@@ -889,23 +887,35 @@ class Problem(System):
 
             jbase = j
 
+            if MPI:
+                all_idxs_sizes = self.root.comm.allgather(len(in_idxs))
+                if len(in_idxs) < max(all_idxs_sizes):
+                    # pad our idxs so we do the same number of linear sub-solves
+                    pad = np.zeros(max(all_idxs_sizes), in_idxs.dtype)
+                    if in_idxs.size > 0:
+                        in_idxs = np.concatenate(in_idxs, pad)
+                    else:
+                        in_idxs = pad
+
             # at this point, we know that for all vars in the current
             # group of interest, the number of indices is the same. We loop
             # over the *size* of the indices and use the loop index to look
             # up the actual indices for the current members of the group
             # of interest.
             for i in range(len(in_idxs)):
+                resets = set()
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
                         rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        resets.add(vkey)
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
-                for voi in rhs:
-                    rhs[voi][voi_idxs[voi][i]] = 0.0
+                for r in resets:
+                    rhs[r][voi_idxs[r][i]] = 0.0
 
                 for param, dx in iteritems(dx_mat):
                     if len(params) == 1:
@@ -921,9 +931,11 @@ class Problem(System):
                             _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
                                                                            qoi_indices)
                             dxval = dx[out_idxs]
+                            if dxval.size == 0:
+                                dxval = None
                         else:
                             dxval = None
-                        if nproc > 1 and mode=='rev':
+                        if nproc > 1:
                             dxval = comm.bcast(dxval, root=owned[item])
 
                         nk = len(dxval)
@@ -1245,6 +1257,26 @@ class Problem(System):
         """
         return self.root._relevance.json_dependencies()
 
+    def _setup_communicators(self):
+        comm = self._impl.world_comm()
+
+        # first determine how many procs that root can possibly use
+        minproc, maxproc = self.root.get_req_procs()
+        if MPI:
+            if not (maxproc is None or maxproc >= comm.size):
+                # we have more procs than we can use, so just raise an
+                # exception to encourage the user not to waste resources :)
+                raise RuntimeError("This problem was given %d MPI processes, "
+                                   "but it requires between %d and %d." %
+                                   (comm.size, minproc, maxproc))
+            elif comm.size < minproc:
+                if maxproc is None:
+                    maxproc = '(any)'
+                raise RuntimeError("This problem was given %d MPI processes, "
+                                   "but it requires between %s and %s." %
+                                   (comm.size, minproc, maxproc))
+
+        self.root._setup_communicators(comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

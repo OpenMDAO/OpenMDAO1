@@ -53,10 +53,41 @@ class DistribExecComp(ExecComp):
             self.set_var_indices(n, val=numpy.ones(sizes[rank], float),
                                  src_indices=numpy.arange(start, end, dtype=int))
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 class MPITests1(MPITestCase):
+
+    N_PROCS = 1
+
+    def test_too_few_procs(self):
+        size = 3
+        group = Group()
+        group.add('P', ParamComp('x', numpy.ones(size)))
+        group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
+                                           x=numpy.zeros(size),
+                                           y=numpy.zeros(size)))
+        group.add('C2', ExecComp(['z=3.0*y'], y=numpy.zeros(size),
+                                           z=numpy.zeros(size)))
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.connect('P.x', 'C1.x')
+        prob.root.connect('C1.y', 'C2.y')
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "This problem was given 1 MPI processes, "
+                             "but it requires between 2 and 2.")
+        else:
+            if MPI:
+                self.fail("Exception expected")
+
+
+class MPITests2(MPITestCase):
 
     N_PROCS = 2
 

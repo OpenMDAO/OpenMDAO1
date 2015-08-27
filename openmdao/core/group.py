@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import sys
 import os
-from collections import Counter
+from collections import Counter, OrderedDict
 from six import iteritems, iterkeys, itervalues
 from itertools import chain
 
@@ -16,9 +16,6 @@ from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
-from openmdao.solvers.run_once import RunOnce
-from openmdao.solvers.scipy_gmres import ScipyGMRES
-from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 from openmdao.devtools.debug import debug
@@ -41,6 +38,10 @@ class Group(System):
 
         self._local_unknown_sizes = {}
         self._local_param_sizes = {}
+
+        # put these in here to avoid circular imports
+        from openmdao.solvers.run_once import RunOnce
+        from openmdao.solvers.scipy_gmres import ScipyGMRES
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
@@ -301,7 +302,7 @@ class Group(System):
                 self._local_subsystems[sub.name] = sub
 
     def _setup_vectors(self, param_owners, parent=None,
-                       top_unknowns=None, impl=BasicImpl):
+                       top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
@@ -330,7 +331,7 @@ class Group(System):
         if not self.is_active():
             return
 
-        self._impl_factory = impl
+        self._impl = impl
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
@@ -374,7 +375,8 @@ class Group(System):
 
         for sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
-                               top_unknowns=top_unknowns)
+                               top_unknowns=top_unknowns,
+                               impl=self._impl)
 
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
@@ -1267,11 +1269,11 @@ class Group(System):
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
-                                 dtype=self._impl_factory.idx_arr_type)
+                                 dtype=self._impl.idx_arr_type)
         self._local_unknown_sizes[var_of_interest] = unknown_sizes
 
         param_sizes = np.array(param_sizes,
-                               dtype=self._impl_factory.idx_arr_type)
+                               dtype=self._impl.idx_arr_type)
         self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
@@ -1318,7 +1320,7 @@ class Group(System):
                 tgt_idxs, src_idxs = self.unknowns.merge_idxs(tgts, srcs)
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                    self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                         self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns,
@@ -1343,7 +1345,7 @@ class Group(System):
 
             src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                     self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs,
