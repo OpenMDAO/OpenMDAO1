@@ -123,7 +123,7 @@ Next we'll use these components to build an actual distributed model:
         from openmdao.core import BasicImpl as impl
 
     #how many items in the array
-    size = 3e7
+    size = 30000000
 
     prob = Problem(impl=impl)
     prob.root = Group()
