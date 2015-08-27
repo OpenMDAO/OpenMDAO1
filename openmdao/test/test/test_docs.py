@@ -5,7 +5,7 @@ import tempfile
 import shutil
 from subprocess import Popen, PIPE, STDOUT
 
-if 'OPENMDAO_TEST_DOCS' in os.environ:
+if os.environ.get('OPENMDAO_TEST_DOCS'):
     def _run_subproc_test(tname):
         dn = os.path.dirname
         docdir = os.path.join(dn(dn(dn(os.path.abspath(__file__)))), 'docs')

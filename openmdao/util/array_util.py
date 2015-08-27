@@ -59,31 +59,24 @@ def to_slices(sidxs, didxs):
     to represent them as slices.
     """
     sort_idxs = np.argsort(sidxs)
-    return to_slice(sidxs[sort_idxs]), to_slice(didxs[sort_idxs])
+    return _to_slice(sidxs[sort_idxs]), _to_slice(didxs[sort_idxs])
 
-def to_slice(idxs):
+def _to_slice(idxs):
     """Convert an index array to a slice if possible. Otherwise,
-    return the index array.
+    return the index array. Indices are assumed to be sorted.
     """
     if len(idxs) == 1:
         return slice(idxs[0], idxs[0]+1)
     elif len(idxs) == 0:
         return idxs
 
-    imin = idxs.min()
-    imax = idxs.max()
-
     stride = idxs[1]-idxs[0]
 
-    if stride == 0:
-        return idxs
-
-    for i in range(1, len(idxs)):
-        if (idxs[i] - idxs[i-1]) != stride:
-            return idxs
-
     if stride <= 0:
-        # negative strides cause some failures, so just do positive for now
         return idxs
-    else:
-        return slice(imin, imax+1, stride)
+
+    #make sure stride is consistent throughout the array
+    if any(idxs[1:]-idxs[:-1] != stride):
+        return idxs
+
+    return slice(idxs[0], idxs[-1]+1, stride)
