@@ -307,7 +307,7 @@ class Component(System):
         return _new_params, _new_unknowns
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, impl=BasicImpl):
+                       top_unknowns=None, impl=None):
         """
         Set up local `VecWrappers` to store this component's variables.
 
@@ -333,7 +333,7 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._impl_factory = impl
+        self._impl = impl
 
         # create map of relative name in parent to relative name in child
         self._relname_map = self._get_relname_map(parent.unknowns)

@@ -58,7 +58,7 @@ class System(object):
                        desc='Set to absolute, relative')
 
         self._relevance = None
-        self._impl_factory = None
+        self._impl = None
 
     def __getitem__(self, name):
         """
@@ -243,7 +243,8 @@ class System(object):
             If running under MPI, returns True if this `System` has a valid
             communicator. Always returns True if not running under MPI.
         """
-        return MPI is None or self.comm != MPI.COMM_NULL
+        return MPI is None or not (self.comm is None or
+                                   self.comm == MPI.COMM_NULL)
 
     def get_req_procs(self):
         """
@@ -264,6 +265,11 @@ class System(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
+        minp, maxp = self.get_req_procs()
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
+            raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
+                              (self.pathname, minp, comm.size))
+
         self.comm = comm
 
     def _set_vars_as_remote(self):
@@ -353,6 +359,8 @@ class System(object):
             resultvec = unknowns
             states = []
 
+        gather_jac = False
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
@@ -395,6 +403,14 @@ class System(object):
             for u_name in fd_unknowns:
                 u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
+
+            # if a given param isn't present in this process, we need
+            # to still run the model once for each entry in that param
+            # in order to stay in sync with the other processes.
+            if p_size == 0:
+                gather_jac = True
+                for i in range(self._params_dict[p_name]['size']):
+                    run_model(params, unknowns, resids)
 
             # Finite Difference each index in array
             for idx in range(p_size):
@@ -457,6 +473,9 @@ class System(object):
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
+        if MPI and gather_jac:
+            jac = self.get_combined_jac(jac)
+
         return jac
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
@@ -517,11 +536,6 @@ class System(object):
         var_of_interest : str
             The name of a variable of interest.
 
-        Returns
-        -------
-        `VecTuple`
-            A namedtuple of six (6) `VecWrappers`:
-            unknowns, dunknowns, resids, dresids, params, dparams.
         """
 
         comm = self.comm
@@ -535,84 +549,82 @@ class System(object):
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
             self.resids = parent.resids.get_view(self.pathname, comm, umap)
-            self.params = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+            self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
                               store_byobjs=True)
 
         self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
-        self.dpmat[voi] = parent._impl_factory.create_tgt_vecwrapper(self.pathname, comm)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                               my_params, self.connections,
                               relevance=relevance, var_of_interest=voi)
 
-    #def get_combined_jac(self, J):
-        #"""
-        #Take a J dict that's distributed, i.e., has different values across
-        #different MPI processes, and return a dict that contains all of the
-        #values from all of the processes. If values are duplicated, use the
-        #value from the lowest rank process. Note that J has a nested dict
-        #structure.
+    def get_combined_jac(self, J):
+        """
+        Take a J dict that's distributed, i.e., has different values across
+        different MPI processes, and return a dict that contains all of the
+        values from all of the processes. If values are duplicated, use the
+        value from the lowest rank process. Note that J has a nested dict
+        structure.
 
-        #Args
-        #----
-        #J : `dict`
-            #Distributed Jacobian
+        Args
+        ----
+        J : `dict`
+            Distributed Jacobian
 
-        #Returns
-        #-------
-        #`dict`
-            #Local gathered Jacobian
-        #"""
+        Returns
+        -------
+        `dict`
+            Local gathered Jacobian
+        """
 
-        #comm = self.comm
-        #if not self.is_active():
-            #return J
+        if not self.is_active():
+            return J
 
-        #myrank = comm.rank
+        comm = self.comm
+        iproc = comm.rank
+        nproc = comm.size
 
-        #tups = []
+        need_tups = []
+        has_tups = []
 
-        ## Gather a list of local tuples for J.
-        #for output, dct in iteritems(J):
-            #for param, value in iteritems(dct):
+        # Gather a list of local tuples for J.
+        for (output, param), value in iteritems(J):
+            if value.size == 0:
+                need_tups.append((output, param))
+            else:
+                has_tups.append((output, param))
 
-                ## Params are already only on this process. We need to add
-                ## only outputs of components that are on this process.
-                #sub = getattr(self, output.partition('.')[0])
-                #if sub.is_active() and value is not None and value.size > 0:
-                    #tups.append((output, param))
+        dist_need_tups = comm.allgather(need_tups)
 
-        #dist_tups = comm.gather(tups, root=0)
+        needed_set = set()
+        for need_tups in dist_need_tups:
+            needed_set.update(need_tups)
 
-        #tupdict = {}
-        #if myrank == 0:
-            #for rank, tups in enumerate(dist_tups):
-                #for tup in tups:
-                    #if not tup in tupdict:
-                        #tupdict[tup] = rank
+        if not needed_set:
+            return J  # nobody needs any J entries
 
-            ##get rid of tups from the root proc before bcast
-            #for tup, rank in iteritems(tupdict):
-                #if rank == 0:
-                    #del tupdict[tup]
+        dist_has_tups = comm.allgather(has_tups)
 
-        #tupdict = comm.bcast(tupdict, root=0)
+        found = set()
+        owned_vals = []
+        for rank, tups in enumerate(dist_has_tups):
+            for tup in tups:
+                if tup in needed_set and not tup in found:
+                    found.add(tup)
+                    if rank == iproc:
+                        owned_vals.append((tup, J[tup]))
 
-        #if myrank == 0:
-            #for (param, output), rank in iteritems(tupdict):
-                #J[param][output] = comm.recv(source=rank, tag=0)
-        #else:
-            #for (param, output), rank in iteritems(tupdict):
-                #if rank == myrank:
-                    #comm.send(J[param][output], dest=0, tag=0)
+        dist_vals = comm.allgather(owned_vals)
 
-        ## FIXME: rework some of this using knowledge of local_var_sizes in order
-        ## to avoid any unnecessary data passing
+        for rank, vals in enumerate(dist_vals):
+            if rank != iproc:
+                for (output, param), value in vals:
+                    J[output, param] = value
 
-        ## return the combined dict
-        #return comm.bcast(J, root=0)
+        return J
 
     def _get_var_pathname(self, name):
         if self.pathname:

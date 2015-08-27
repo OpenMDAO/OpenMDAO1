@@ -107,10 +107,10 @@ class ParallelGroup(Group):
         max_req_procs = []
         for system in self.subsystems():
             subsystems.append(system)
-            mincpu, maxcpu = system.get_req_procs()
-            assert(mincpu > 0)
-            requested_procs.append(mincpu)
-            max_req_procs.append(maxcpu)
+            minproc, maxproc = system.get_req_procs()
+            assert(minproc > 0)
+            requested_procs.append(minproc)
+            max_req_procs.append(maxproc)
 
         assigned_procs = [0]*len(requested_procs)
 
