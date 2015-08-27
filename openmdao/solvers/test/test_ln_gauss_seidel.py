@@ -77,9 +77,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
     def test_array2D_index_connection(self):
         group = Group()
         group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])
-        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+        sub = group.add('sub', Group(), promotes=['*'])
+        sub.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
         group.add('obj', ExecComp('b = a'))
-        group.connect('y', 'obj.a',  src_indices=[0])
+        group.connect('y', 'obj.a',  src_indices=[3])
 
         prob = Problem()
         prob.root = group
@@ -88,12 +89,18 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.run()
 
         J = prob.calc_gradient(['x'], ['obj.b'], mode='fwd', return_format='dict')
-        Jbase = prob.root.mycomp._jacobian_cache
-        assert_rel_error(self, Jbase[('y', 'x')][0][0], J['obj.b']['x'][0][0], 1e-8)
+        Jbase = prob.root.sub.mycomp._jacobian_cache
+        assert_rel_error(self, Jbase[('y', 'x')][3][0], J['obj.b']['x'][0][0], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][1], J['obj.b']['x'][0][1], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][2], J['obj.b']['x'][0][2], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][3], J['obj.b']['x'][0][3], 1e-8)
 
         J = prob.calc_gradient(['x'], ['obj.b'], mode='rev', return_format='dict')
-        Jbase = prob.root.mycomp._jacobian_cache
-        assert_rel_error(self, Jbase[('y', 'x')][0][0], J['obj.b']['x'][0][0], 1e-8)
+        Jbase = prob.root.sub.mycomp._jacobian_cache
+        assert_rel_error(self, Jbase[('y', 'x')][3][0], J['obj.b']['x'][0][0], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][1], J['obj.b']['x'][0][1], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][2], J['obj.b']['x'][0][2], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][3], J['obj.b']['x'][0][3], 1e-8)
 
     def test_simple_in_group_matvec(self):
         group = Group()
