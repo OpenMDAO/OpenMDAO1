@@ -107,7 +107,7 @@ class LinearGaussSeidel(LinearSolver):
                     for voi in vois:
                         drmat[voi].vec *= -1.0
                         drmat[voi].vec += rhs_mat[voi]
-                        dpmat[voi].vec *= 0.0
+                        dpmat[voi].vec[:] = 0.0
 
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
                     #for voi in vois:
