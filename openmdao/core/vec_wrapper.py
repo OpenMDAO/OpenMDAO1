@@ -316,12 +316,15 @@ class VecWrapper(object):
 
         start, end = self._slices[name]
         if name in idx_dict:
+            #TODO: possible slice conversion
             idxs = self.to_idx_array(idx_dict[name]) + start
             if idxs.size > (end-start) or max(idxs) >= end:
                 raise RuntimeError("Indices of interest specified for '%s'"
                                    "are too large" % name)
             return idxs.size, idxs
         else:
+            if get_slice:
+                return meta['size'], slice(start, end)
             return meta['size'], self.make_idx_array(start, end)
 
     def norm(self):

@@ -929,7 +929,8 @@ class Problem(System):
 
                         if mode=='fwd' or owned[item] == iproc:
                             _, out_idxs = self.root.dumat[vkey].get_local_idxs(item,
-                                                                           qoi_indices)
+                                                                           qoi_indices,
+                                                                           get_slice=True)
                             dxval = dx[out_idxs]
                             if dxval.size == 0:
                                 dxval = None
