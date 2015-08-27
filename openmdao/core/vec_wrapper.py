@@ -284,7 +284,7 @@ class VecWrapper(object):
         """
         return self._vardict.values()
 
-    def get_local_idxs(self, name, idx_dict, get_slice=False):
+    def _get_local_idxs(self, name, idx_dict, get_slice=False):
         """
         Returns all of the indices for the named variable in this vector.
 
@@ -304,28 +304,23 @@ class VecWrapper(object):
         ndarray
             Index array containing all local indices for the named variable.
         """
-        # TODO: add support for returning slice objects
+        try:
+            start, end = self._slices[name]
+        except KeyError:
+            # this happens if 'name' doesn't exist in this process
+            return self.make_idx_array(0, 0)
 
-        meta = self._vardict[name]
-        if meta.get('pass_by_obj'):
-            raise RuntimeError("No vector indices can be provided "
-                               "for 'pass by object' variable '%s'" % name)
-
-        if name not in self._slices:
-            return meta['size'], self.make_idx_array(0, 0)
-
-        start, end = self._slices[name]
         if name in idx_dict:
             #TODO: possible slice conversion
             idxs = self.to_idx_array(idx_dict[name]) + start
             if idxs.size > (end-start) or max(idxs) >= end:
                 raise RuntimeError("Indices of interest specified for '%s'"
                                    "are too large" % name)
-            return idxs.size, idxs
+            return idxs
         else:
             if get_slice:
-                return meta['size'], slice(start, end)
-            return meta['size'], self.make_idx_array(start, end)
+                return slice(start, end)
+            return self.make_idx_array(start, end)
 
     def norm(self):
         """
