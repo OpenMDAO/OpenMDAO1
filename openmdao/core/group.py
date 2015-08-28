@@ -6,7 +6,7 @@ import sys
 import os
 from collections import Counter, OrderedDict
 from six import iteritems, iterkeys, itervalues
-from itertools import chain
+from itertools import chain, izip_longest
 
 import numpy as np
 import networkx as nx
@@ -899,6 +899,14 @@ class Group(System):
             new_subs[sub] = self._subsystems[sub]
 
         self._subsystems = new_subs
+
+        # reset locals
+        new_locs = OrderedDict()
+        for name, sub in iteritems(self._subsystems):
+            if name in self._local_subsystems:
+                new_locs[name] = sub
+        self._local_subsystems = new_locs
+
         self._order_set = True
 
     def list_order(self):
@@ -1203,17 +1211,17 @@ class Group(System):
         ivar = u_var_idxs[uname]
         if 'src_indices' in umeta or 'src_indices' in pmeta:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
-            if rev:
-                # if in rev mode, we need to avoid multiple scatters from
-                # duplicate params in different processes.
-                ipvar = p_var_idxs[pname]
-                pstart = np.sum(p_sizes[:iproc, ipvar])
-                pend = pstart + p_sizes[iproc, ipvar]
-                p_unique = np.any(np.logical_and(pstart <= arg_idxs,
-                                                 arg_idxs < pend))
-                if not p_unique:
-                    return (self.params.make_idx_array(0, 0),
-                            self.params.make_idx_array(0, 0))
+            # if rev:
+            #     # if in rev mode, we need to avoid multiple scatters from
+            #     # duplicate params in different processes.
+            #     ipvar = p_var_idxs[pname]
+            #     pstart = np.sum(p_sizes[:iproc, ipvar])
+            #     pend = pstart + p_sizes[iproc, ipvar]
+            #     p_unique = np.any(arg_idxs >= pstart)
+            #     print (uname,'-->',pname,'--',arg_idxs>=pstart)
+            #     if not p_unique:
+            #         return (self.params.make_idx_array(0, 0),
+            #                 self.params.make_idx_array(0, 0))
 
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
@@ -1449,6 +1457,76 @@ class Group(System):
             umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']
 
         return umap
+
+    def _dump_dist_idxs(self, stream=sys.stdout):
+        """For debugging.  prints out the distributed idxs along with the
+        variables they correspond to for the u and p vectors, for example:
+
+        C3.y     26
+        C3.y     25
+        C3.y     24
+        C2.y     23
+        C2.y     22
+        C2.y     21
+        sub.C3.y 20     20 C3.x
+        sub.C3.y 19     19 C3.x
+        sub.C3.y 18     18 C3.x
+        C1.y     17     17 C2.x
+        P.x      16     16 C2.x
+        P.x      15     15 C2.x
+        P.x      14     14 sub.C3.x
+        C3.y     13     13 sub.C3.x
+        C3.y     12     12 sub.C3.x
+        C3.y     11     11 C1.x
+        C2.y     10     10 C3.x
+        C2.y      9      9 C3.x
+        C2.y      8      8 C3.x
+        sub.C2.y  7      7 C2.x
+        sub.C2.y  6      6 C2.x
+        sub.C2.y  5      5 C2.x
+        C1.y      4      4 sub.C2.x
+        C1.y      3      3 sub.C2.x
+        P.x       2      2 sub.C2.x
+        P.x       1      1 C1.x
+        P.x       0      0 C1.x
+        """
+        idx = 0
+        pdata = []
+        pnwid = 0
+        piwid = 0
+        for lst in self._p_size_lists:
+            for name, sz in lst:
+                for i in range(sz):
+                    pdata.append((name, str(idx)))
+                    pnwid = max(pnwid, len(name))
+                    piwid = max(piwid, len(pdata[-1][1]))
+                    idx += 1
+            # insert a blank line to visually sparate processes
+            pdata.append(('','','',''))
+
+        idx = 0
+        udata = []
+        unwid = 0
+        uiwid = 0
+        for lst in self._u_size_lists:
+            for name, sz in lst:
+                for i in range(sz):
+                    udata.append((name, str(idx)))
+                    unwid = max(unwid, len(name))
+                    uiwid = max(uiwid, len(udata[-1][1]))
+                    idx += 1
+            # insert a blank line to visually sparate processes
+            udata.append(('','','',''))
+
+        data = []
+        for u, p in izip_longest(udata, pdata, fillvalue=('','')):
+            data.append((u[0],u[1],p[1],p[0]))
+
+        for d in data[::-1]:
+            template = "{0:<{wid0}} {1:>{wid1}}     {2:>{wid2}} {3:<{wid3}}\n"
+            stream.write(template.format(d[0], d[1], d[2], d[3],
+                                         wid0=unwid, wid1=uiwid,
+                                         wid2=piwid, wid3=pnwid))
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

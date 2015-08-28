@@ -330,25 +330,26 @@ class PetscDataTransfer(DataTransfer):
             # all targets. This does not involve pass_by_object.
             if trace:
                 conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
-                debug("'%s': rev scatter %s  %s <-- %s" %
+                debug("%s rev scatter %s  %s <-- %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
-                                                        srcvec.petsc_vec.array,
-                                                        tgtvec.petsc_vec.array))
+                debug("%s:    srcvec = %s" % (tgtvec.pathname,
+                                              tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
+            if trace:
+                debug("%s:    tgtvec = %s" % (srcvec.pathname,
+                                              srcvec.petsc_vec.array))
         else:
             # forward mode, source to target including pass_by_object
             if trace:
                 conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
-                debug("'%s': fwd scatter %s  %s --> %s" %
+                debug("%s fwd scatter %s  %s --> %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
-                                                            srcvec.petsc_vec.array,
-                                                            srcvec.pathname,
-                                                            tgtvec.petsc_vec.array))
+                debug("%s:    srcvec = %s" % (srcvec.pathname,
+                                              srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
             if trace:
-                debug("scatter done")
+                debug("%s:    tgtvec = %s" % (tgtvec.pathname,
+                                              tgtvec.petsc_vec.array))
 
             if not deriv:
                 for tgt, src in self.byobj_conns:
