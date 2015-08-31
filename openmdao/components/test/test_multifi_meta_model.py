@@ -5,21 +5,22 @@ from openmdao.core import Group, Problem
 from openmdao.core.component import _NotSet
 from openmdao.components import MetaModel, MultiFiMetaModel, ParamComp
 
-from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, KrigingSurrogate, SurrogateModel
+from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, \
+     KrigingSurrogate, MultiFiSurrogateModel
 
 from openmdao.test.util import assert_rel_error
 
 from six.moves import cStringIO
 from re import findall
 
-class MockSurrogate(SurrogateModel):
+class MockSurrogate(MultiFiSurrogateModel):
 
     def __init__(self):
         super(MockSurrogate, self).__init__()
         self.xtrain = None
         self.ytrain = None
 
-    def train(self, x, y):
+    def train_multifi(self, x, y):
         self.xtrain = x
         self.ytrain = y
 
@@ -62,8 +63,8 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
         prob['mm.train:x'] = [0.0, 0.4, 1.0]
         prob['mm.train:y'] = [3.02720998, 0.11477697, 15.82973195]
 
-        expected_xtrain=np.array([ [0.0], [0.4], [1.0] ])
-        expected_ytrain=np.array([ [3.02720998], [0.11477697], [15.82973195] ])
+        expected_xtrain=[np.array([ [0.0], [0.4], [1.0] ])]
+        expected_ytrain=[np.array([ [3.02720998], [0.11477697], [15.82973195] ])]
 
         prob.run()
         np.testing.assert_array_equal(surr.xtrain, expected_xtrain)

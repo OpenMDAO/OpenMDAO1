@@ -183,7 +183,8 @@ class MultiFiMetaModel(MetaModel):
 
             surrogate = self._unknowns_dict[name].get('surrogate')
             if surrogate is not None:
-                surrogate.train(self._training_input, self._training_output[name])
+                surrogate.train_multifi(self._training_input,
+                                        self._training_output[name])
 
         self.train = False
 
