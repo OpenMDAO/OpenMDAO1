@@ -1191,9 +1191,14 @@ class Group(System):
         umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
 
+        iproc = 0 if self.comm is None else self.comm.rank
+        udist = 'src_indices' in umeta
+        pdist = 'src_indices' in pmeta
+
         # FIXME: if we switch to push scatters, this check will flip
-        if ((mode == 'fwd' and not 'src_indices' in umeta and pmeta.get('remote')) or
-            (mode == 'rev' and not 'src_indices' in pmeta and umeta.get('remote'))):
+        if ((not rev and pmeta.get('remote')) or
+            (rev and not pdist and umeta.get('remote')) or
+            (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1201,35 +1206,20 @@ class Group(System):
            not self._relevance.is_relevant(var_of_interest, pname):
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
-        iproc = 0 if self.comm is None else self.comm.rank
-
-        if 'src_indices' in pmeta:
+        if pdist:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
         ivar = u_var_idxs[uname]
-        if 'src_indices' in umeta or 'src_indices' in pmeta:
+        if udist or pdist:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
-            # if rev:
-            #     # if in rev mode, we need to avoid multiple scatters from
-            #     # duplicate params in different processes.
-            #     ipvar = p_var_idxs[pname]
-            #     pstart = np.sum(p_sizes[:iproc, ipvar])
-            #     pend = pstart + p_sizes[iproc, ipvar]
-            #     p_unique = np.any(arg_idxs >= pstart)
-            #     print (uname,'-->',pname,'--',arg_idxs>=pstart)
-            #     if not p_unique:
-            #         return (self.params.make_idx_array(0, 0),
-            #                 self.params.make_idx_array(0, 0))
 
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
                 end = start + u_sizes[irank, ivar]
                 on_irank = np.logical_and(start <= arg_idxs,
                                              arg_idxs < end)
-                if rev and MPI and irank == iproc:
-                    on_my_rank = on_irank
 
                 # Compute conversion to new ordering
 
