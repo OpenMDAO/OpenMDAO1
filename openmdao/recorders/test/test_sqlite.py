@@ -5,7 +5,7 @@ import os
 import shelve
 import unittest
 
-from openmdao.recorders.sqlite_recorder import SqliteRecorder
+from openmdao.recorders.sqlite_recorder import SqliteDict, SqliteRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
@@ -41,7 +41,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         sentinel = object()
 
-        db = SqliteRecorder( self.filename )
+        db = SqliteDict( self.filename )
 
         ###### Need a way to get a list of the group_names in the order in which they were written and put it in  a variable named order
         order = db['order']
@@ -76,7 +76,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         # Having deleted all found values, the file should now be empty.
         ###### Need a way to get the number of records in the main table
-        self.assertEqual(len(f), 0)
+        self.assertEqual(len(db), 0)
 
         # As should the ordering.
         self.assertEqual(len(order), 0)
