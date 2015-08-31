@@ -3,6 +3,7 @@
 import numpy as np
 
 from openmdao.util import to_slices
+from openmdao.core.mpi_wrap import MPI
 
 class DataTransfer(object):
     """
@@ -36,13 +37,18 @@ class DataTransfer(object):
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
 
-        # if in fwd mode, sort using src indices and in rev mode sort using tgt indices,
-        # to increase the likelihood of slice conversion for 'get' access in order to
-        # avoid array copies.
-        if mode == 'fwd':
-            self.src_idxs, self.tgt_idxs = to_slices(self.src_idxs, self.tgt_idxs)
-        else:
-            self.tgt_idxs, self.src_idxs = to_slices(self.tgt_idxs, self.src_idxs)
+        if not MPI:
+            # if in fwd mode, sort using src indices and in rev mode sort using tgt indices,
+            # to increase the likelihood of slice conversion for 'get' access in order to
+            # avoid array copies.
+            if mode == 'fwd':
+                self.src_idxs, self.tgt_idxs = to_slices(self.src_idxs, self.tgt_idxs)
+            else:
+                # check uniqueness of src_idxs to see if we can avoid calling np.add.at
+                self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
+
+                self.tgt_idxs, self.src_idxs = to_slices(self.tgt_idxs, self.src_idxs)
+
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
@@ -70,7 +76,7 @@ class DataTransfer(object):
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. byobjs are never scattered in reverse
-            if isinstance(self.src_idxs, slice):
+            if self._src_unique:
                 srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
             else:
                 np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
