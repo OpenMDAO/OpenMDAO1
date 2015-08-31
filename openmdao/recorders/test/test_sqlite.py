@@ -22,7 +22,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
     def setUp(self):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
-
+        self.tablename = 'openmdao'
         self.recorder = SqliteRecorder(self.filename)
 
     def tearDown(self):
@@ -41,7 +41,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         sentinel = object()
 
-        db = SqliteDict( self.filename )
+        db = SqliteDict( self.filename, self.tablename )
 
         ###### Need a way to get a list of the group_names in the order in which they were written and put it in  a variable named order
         order = db['order']
