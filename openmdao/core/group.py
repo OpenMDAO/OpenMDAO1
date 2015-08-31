@@ -234,7 +234,7 @@ class Group(System):
         if self._src_idxs:
             for sub in self.subsystems(recurse=True):
                 pdict = sub._params_dict
-                spname = sub.pathname + '.'
+                spname = sub.pathname+'.'
                 splen = len(spname)
                 for p, idxs in iteritems(self._src_idxs):
                     if p[:splen] == spname:
@@ -264,8 +264,8 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            p_abs = get_absvarpathnames(p, self._params_dict, 'params')[0]
-            self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
+                self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
