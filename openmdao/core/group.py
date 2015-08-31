@@ -848,14 +848,15 @@ class Group(System):
         else:
             sol_vec, rhs_vec = drmat, dumat
 
-        # TODO: Need the norm. Loop over vois here.
-        #if np.linalg.norm(rhs) < 1e-15:
-        #    sol_vec.vec[:] = 0.0
-        #    return
-
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_buf = {}
         for voi in vois:
+
+            # Skip if we are all zeros.
+            if rhs_vec[voi].norm() < 1e-15:
+                sol_vec[voi].vec[:] = 0.0
+                continue
+
             rhs_buf[voi] = rhs_vec[voi].vec.copy()
 
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
