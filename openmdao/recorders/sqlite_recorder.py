@@ -466,6 +466,8 @@ class SqliteMultithread(Thread):
 class SqliteRecorder(BaseRecorder):
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()
+        sqlite_dict_args.setdefault('autocommit', True)
+        sqlite_dict_args.setdefault('tablename', 'openmdao')
         self.out = SqliteDict(filename=out, **sqlite_dict_args)
         self.order = []
 
