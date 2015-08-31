@@ -6,7 +6,8 @@ import sys
 import os
 from collections import Counter, OrderedDict
 from six import iteritems, iterkeys, itervalues
-from itertools import chain, izip_longest
+from six.moves import zip_longest
+from itertools import chain
 
 import numpy as np
 import networkx as nx
@@ -1509,7 +1510,7 @@ class Group(System):
             udata.append(('','','',''))
 
         data = []
-        for u, p in izip_longest(udata, pdata, fillvalue=('','')):
+        for u, p in zip_longest(udata, pdata, fillvalue=('','')):
             data.append((u[0],u[1],p[1],p[0]))
 
         for d in data[::-1]:
