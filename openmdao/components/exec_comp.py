@@ -31,6 +31,22 @@ class ExecComp(Component):
     \*\*kwargs: dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
+
+    Notes
+    -----
+    In order to create an ExecComp with array variables, or any other
+    variable type that is not a float, you must use a keyword arg to
+    set the initial value of each non-float variable.  For example,
+    let's say we have an ExecComp that takes an array 'x' as input and
+    outputs a float variable 'y' which is the sum of the entries in 'x'.
+
+    >>> import numpy
+    >>> from openmdao.components import ExecComp
+    >>> excomp = ExecComp('y=numpy.sum(x)', x=numpy.ones(10,dtype=float))
+
+    In this example, 'y' would be assumed to be the default type of float
+    and would be given an initial value of 0.0, while 'x' would be
+    initialized with a size 100 float array.
     """
 
     def __init__(self, exprs, **kwargs):
