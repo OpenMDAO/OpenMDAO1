@@ -234,7 +234,7 @@ class Group(System):
         if self._src_idxs:
             for sub in self.subsystems(recurse=True):
                 pdict = sub._params_dict
-                spname = sub.pathname+'.'
+                spname = sub.pathname + '.'
                 splen = len(spname)
                 for p, idxs in iteritems(self._src_idxs):
                     if p[:splen] == spname:
