@@ -10,6 +10,13 @@ from openmdao.test.util import assert_rel_error
 
 class TestExecComp(unittest.TestCase):
 
+    def test_bad_kwargs(self):
+        prob = Problem(root=Group())
+        try:
+            C1 = prob.root.add('C1', ExecComp('y=x+1.', xx=2.0))
+        except Exception as err:
+            self.assertEqual(str(err), "Keyword arg 'xx' in call to ExecComp() does not refer to any variable in the expressions ['y=x+1.']")
+
     def test_simple(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=x+1.', x=2.0))

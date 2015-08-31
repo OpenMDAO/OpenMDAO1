@@ -17,14 +17,14 @@ class ExecComp(Component):
     """
     Given a list of assignment statements, this component creates
     input and output variables at construction time.  All variables
-    appearing on the left-hand side of the assignments are outputs,
+    appearing on the left-hand side of an assignment are outputs,
     and the rest are inputs.  Each variable is assumed to be of
     type float unless the initial value for that variable is supplied
     in \*\*kwargs.  Derivatives are calculated using complex step.
 
     Args
     ----
-    exprs: str or iter of str
+    exprs: str or list of str
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
@@ -53,6 +53,13 @@ class ExecComp(Component):
             outs.update(parse_for_vars(lhs))
             allvars.update(parse_for_vars(expr, kwargs.keys()))
 
+        # make sure all kwargs are legit
+        for kwarg in kwargs:
+            if kwarg not in allvars:
+                raise RuntimeError("Keyword arg '%s' in call to ExecComp() "
+                                   "does not refer to any variable in the "
+                                   "expressions %s" % (kwarg, exprs))
+
         for var in sorted(allvars):
             # if user supplied an initial value, use it, otherwise set to 0.0
             val = kwargs.get(var, 0.0)
@@ -61,6 +68,7 @@ class ExecComp(Component):
                 self.add_output(var, val)
             else:
                 self.add_param(var, val)
+
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
