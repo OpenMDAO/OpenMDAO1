@@ -84,6 +84,8 @@ class MatMatTestCase(MPITestCase):
         prob.root = FanInGrouped()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.sub.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.sub.ln_solver.options['mode'] = 'fwd'
 
         # auto calculated mode is fwd, so we don't have to set it explicitly
         # in the ln_solvers in order to have our voi subvecs allocated

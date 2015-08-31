@@ -109,9 +109,11 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             A dictionary of absolute variable names keyed to an associated
             metadata dictionary.
 
-        relevant_vars : iter of str
-            Names of variables that are relevant a particular variable of
-            interest.
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
 
         store_byobjs : bool, optional
             Indicates that 'pass by object' vars should be stored.  This is only true
@@ -131,10 +133,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         Returns
         -------
-        list of `OrderedDict`
+        list of lists of (name, size) tuples
             Contains an entry for each process in this object's communicator.
-            Each entry is an `OrderedDict` mapping var name to local size for
-            'pass by vector' variables.
         """
         sizes = []
         for name, meta in self.get_vecvars():
@@ -145,7 +145,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
-        # where a variable belongs to a multiprocessor component.  In that
+        # where a variable belongs to a multiprocess component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if trace:
@@ -202,6 +202,12 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             A dict of absolute target names mapped to the absolute name of their
             source variable.
 
+        relevance : `Relevance` object
+            Object that knows what vars are relevant for each var_of_interest.
+
+        var_of_interest : str or None
+            Name of the current variable of interest.
+
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
         """
@@ -219,7 +225,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         """
         Returns
         -------
-        list of `OrderedDict`
+        list of lists of (name, size) tuples
             Contains an entry for each process in this object's communicator.
             Each entry is an `OrderedDict` mapping var name to local size for
             'pass by vector' params.
@@ -239,7 +245,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         return self.comm.allgather(psizes)
 
 
-class PetscDataTransfer(DataTransfer):
+class PetscDataTransfer(object):
     """
     Args
     ----
@@ -270,9 +276,8 @@ class PetscDataTransfer(DataTransfer):
     """
     def __init__(self, src_vec, tgt_vec,
                  src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
-        super(PetscDataTransfer, self).__init__(src_idxs, tgt_idxs,
-                                            vec_conns, byobj_conns, mode)
 
+        self.byobj_conns = byobj_conns
         self.comm = comm = src_vec.comm
 
         uvec = src_vec.petsc_vec
@@ -289,6 +294,7 @@ class PetscDataTransfer(DataTransfer):
             if trace:
                 self.src_idxs = src_idxs
                 self.tgt_idxs = tgt_idxs
+                self.vec_conns = vec_conns
                 arrow = '-->' if mode == 'fwd' else '<--'
                 debug("'%s': new %s scatter (sizes: %d, %d)\n%s %s %s %s %s %s" %
                       (name, mode, len(src_idx_set.indices), len(tgt_idx_set.indices),
@@ -330,25 +336,27 @@ class PetscDataTransfer(DataTransfer):
             # all targets. This does not involve pass_by_object.
             if trace:
                 conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
-                debug("'%s': rev scatter %s  %s <-- %s" %
+                debug("%s rev scatter %s  %s <-- %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s: srcvec = %s\ntgtvec = %s" % (srcvec.pathname,
-                                                        srcvec.petsc_vec.array,
-                                                        tgtvec.petsc_vec.array))
+                debug("%s:    srcvec = %s" % (tgtvec.pathname,
+                                              tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
+            if trace:
+                debug("%s:    tgtvec = %s" % (srcvec.pathname,
+                                              srcvec.petsc_vec.array))
         else:
             # forward mode, source to target including pass_by_object
             if trace:
                 conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
-                debug("'%s': fwd scatter %s  %s --> %s" %
+                debug("%s fwd scatter %s  %s --> %s" %
                       (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s: srcvec = %s\n%s: tgtvec = %s" % (srcvec.pathname,
-                                                            srcvec.petsc_vec.array,
-                                                            srcvec.pathname,
-                                                            tgtvec.petsc_vec.array))
+                debug("%s:    srcvec = %s" % (srcvec.pathname,
+                                              srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
+
             if trace:
-                debug("scatter done")
+                debug("%s:    tgtvec = %s" % (tgtvec.pathname,
+                                              tgtvec.petsc_vec.array))
 
             if not deriv:
                 for tgt, src in self.byobj_conns:

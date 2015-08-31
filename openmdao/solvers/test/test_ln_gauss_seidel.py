@@ -74,6 +74,34 @@ class TestLinearGaussSeidel(unittest.TestCase):
         diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
         assert_rel_error(self, diff, 0.0, 1e-8)
 
+    def test_array2D_index_connection(self):
+        group = Group()
+        group.add('x_param', ParamComp('x', np.ones((2, 2))), promotes=['*'])
+        sub = group.add('sub', Group(), promotes=['*'])
+        sub.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+        group.add('obj', ExecComp('b = a'))
+        group.connect('y', 'obj.a',  src_indices=[3])
+
+        prob = Problem()
+        prob.root = group
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['obj.b'], mode='fwd', return_format='dict')
+        Jbase = prob.root.sub.mycomp._jacobian_cache
+        assert_rel_error(self, Jbase[('y', 'x')][3][0], J['obj.b']['x'][0][0], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][1], J['obj.b']['x'][0][1], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][2], J['obj.b']['x'][0][2], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][3], J['obj.b']['x'][0][3], 1e-8)
+
+        J = prob.calc_gradient(['x'], ['obj.b'], mode='rev', return_format='dict')
+        Jbase = prob.root.sub.mycomp._jacobian_cache
+        assert_rel_error(self, Jbase[('y', 'x')][3][0], J['obj.b']['x'][0][0], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][1], J['obj.b']['x'][0][1], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][2], J['obj.b']['x'][0][2], 1e-8)
+        assert_rel_error(self, Jbase[('y', 'x')][3][3], J['obj.b']['x'][0][3], 1e-8)
+
     def test_simple_in_group_matvec(self):
         group = Group()
         group.add('x_param', ParamComp('x', 1.0), promotes=['*'])
@@ -325,7 +353,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob = Problem()
         prob.root = SellarDerivatives()
         prob.root.ln_solver = LinearGaussSeidel()
-        prob.root.ln_solver.options['maxiter'] = 4
+        prob.root.ln_solver.options['maxiter'] = 10
+        prob.root.ln_solver.options['atol'] = 1e-12
+        prob.root.ln_solver.options['rtol'] = 1e-12
+        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -336,7 +367,6 @@ class TestLinearGaussSeidel(unittest.TestCase):
         assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
         param_list = ['x', 'z']
-        param_list = ['x']
         unknown_list = ['obj', 'con1', 'con2']
 
         Jbase = {}
@@ -351,23 +381,20 @@ class TestLinearGaussSeidel(unittest.TestCase):
         Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         # Obviously this test doesn't do much right now, but I need to verify
         # we don't get a keyerror here.
@@ -379,6 +406,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.root = SellarDerivativesGrouped()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['maxiter'] = 15
+        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -403,20 +431,66 @@ class TestLinearGaussSeidel(unittest.TestCase):
         Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        print(J)
-        #for key1, val1 in Jbase.items():
-            #for key2, val2 in val1.items():
-                #assert_rel_error(self, J[key1][key2], val2, .00001)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
-        print(J)
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+    def test_sellar_derivs_grouped_GSnested(self):
+
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['maxiter'] = 15
+        #prob.root.ln_solver.options['iprint'] = 1
+
+        prob.root.mda.nl_solver.options['atol'] = 1e-12
+        prob.root.mda.ln_solver = LinearGaussSeidel()
+        prob.root.mda.ln_solver.options['maxiter'] = 15
+        #prob.root.mda.ln_solver.options['iprint'] = 1
+        prob.setup(check=False)
+        prob.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        param_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        prob.root.fd_options['form'] = 'central'
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)

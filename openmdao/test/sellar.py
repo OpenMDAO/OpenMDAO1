@@ -54,7 +54,7 @@ class SellarDis1withDerivatives(SellarDis1):
         J = {}
 
         J['y1','y2'] = -0.2
-        J['y1','z'] = np.array([[2*params['z'][0], 1.0]])
+        J['y1','z'] = np.array([[2.0*params['z'][0], 1.0]])
         J['y1','x'] = 1.0
 
         return J
