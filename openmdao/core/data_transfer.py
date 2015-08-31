@@ -44,10 +44,12 @@ class DataTransfer(object):
             if mode == 'fwd':
                 self.src_idxs, self.tgt_idxs = to_slices(self.src_idxs, self.tgt_idxs)
             else:
-                # check uniqueness of src_idxs to see if we can avoid calling np.add.at
-                self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
-
                 self.tgt_idxs, self.src_idxs = to_slices(self.tgt_idxs, self.src_idxs)
+                if isinstance(self.src_idxs, slice):
+                    self._src_unique = True
+                else:
+                    # check uniqueness of src_idxs to see if we can avoid calling np.add.at
+                    self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
 
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
