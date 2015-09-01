@@ -265,8 +265,8 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            p_abs = get_absvarpathnames(p, self._params_dict, 'params')[0]
-            self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
+                self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -625,9 +625,8 @@ class Group(System):
 
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd']) and \
-                                   not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
@@ -673,12 +672,10 @@ class Group(System):
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd']) and \
-                             not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
                                                gs_outputs=gs_outputs)
-
             # Groups and all other systems just call their own apply_linear.
             else:
                 sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
