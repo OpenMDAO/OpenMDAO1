@@ -185,7 +185,7 @@ for things like objectives and constraints.
 
 We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
-execute, so it to add them in the correct order. Here, this means starting
+execute, so it is important to add them in the correct order. Here, this means starting
 with the ParamComps, then adding our disciplines, and finishing with the objective and constraints.
 
 We have also decided to declare all of our connections to be implicit by
@@ -227,7 +227,7 @@ This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
 OpenMDAO can parse this expression so that the `solve_nonlinear` and
 `jacobian` methods are taken care of for you. Notice that standard math
 functions like `exp` are available to use. Because we promote every variable
-in our call to `add`, all of the inputs variables are automatically connected
+in our call to `add`, all of the input variables are automatically connected
 to sources in the model. We also specify our default initial values as the
 remaining arguments for the ExecComp. You are not required to do this for
 scalars, but you must always allocate the array inputs ('z' in this case).
@@ -303,7 +303,7 @@ Next we add the parameter for 'z'. Recall that the first argument for
 `add_param` is a string containing the name of a variable declared in a
 `ParamComp`. Since we are promoting the output of this pcomp, we use the
 promoted name, which is 'z' (and likewise we use 'x' for the other
-parameter.) Variable 'z' is an 2-element array, and each element has a
+parameter.) Variable 'z' is a 2-element array, and each element has a
 different set of bounds defined in the problem, so we  specify the `low`
 and `high` attributes as numpy arrays. If you are ok with the same `low` or `high`
 for all elements of your design variable array, you could also give a scalar for
@@ -400,7 +400,7 @@ First we need to write the component to replace the connection:
 So this `Component` has one `state` and one `param`. The `StateConnection` component
 will bridge the gap between the output of `y2` from Discipline2 and the input
 for `y2` in Discipline1. The solver
-sets the new value of y2 based on the models residuals, which now include the
+sets the new value of y2 based on the model's residuals, which now include the
 difference between 'y2' leaving Discipline2 and the 'y2' entering
 Discipline1. So the `solve_nonlinear` method does nothing, but we need to
 define `apply_nonlinear` to return this residual. Residuals live in the
