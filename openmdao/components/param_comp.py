@@ -1,7 +1,7 @@
 """ OpenMDAO class definition for ParamComp"""
 
 import collections
-from six import string_types
+from six import string_types, iteritems
 
 from openmdao.core.component import Component
 
@@ -42,7 +42,7 @@ class ParamComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    def apply_linear(self, mode, ls_inputs=None, vois=(None, )):
+    def apply_linear(self, mode, ls_inputs=None, vois=(None, ), gs_outputs=None):
         """For `ParamComp`, just pass on the incoming values.
 
         Args
@@ -56,14 +56,24 @@ class ParamComp(Component):
 
         vois: list of strings
             List of all quantities of interest to key into the mats.
+
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
         """
         if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
+            for voi in vois:
+                rhs_vec[voi].vec[:] = 0.0
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-            rhs_vec[voi].vec[:] += sol_vec[voi].vec[:]
+            if gs_outputs is None:
+                rhs_vec[voi].vec[:] += sol_vec[voi].vec[:]
+            else:
+                for var, meta in iteritems(self.dumat[voi]):
+                    if var in gs_outputs[voi]:
+                        rhs_vec[voi][var] += sol_vec[voi][var]
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Performs no operation. """

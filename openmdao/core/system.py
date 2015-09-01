@@ -151,7 +151,6 @@ class System(object):
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
                 raise RuntimeError(msg % (self.name, prom))
 
-
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
 
@@ -348,7 +347,7 @@ class System(object):
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        if total_derivs == False:
+        if total_derivs is False:
             run_model = self.apply_nonlinear
             cache1 = resids.vec.copy()
             resultvec = resids
@@ -540,7 +539,6 @@ class System(object):
         """
 
         comm = self.comm
-        unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
         voi = var_of_interest
         relevance = self._relevance
