@@ -135,8 +135,7 @@ were combined into a 2-element `ndarray`.
   of the absolute value solves the problem without impacting the final converged solution.
 
 
-We have written two (very simple) analysis components. If you were working on a real problem, these would
-your components could be more complex, or could potentially be wrappers for external analysis components.
+We have written two (very simple) analysis components. If you were working on a real problem, your components could be more complex, or could potentially be wrappers for external analysis components.
 But keep in mind that from an optimization point of view, whether they are simple tools or wrappers for
 real analyses, OpenMDAO still views them as components with `params`, `unknowns`, `resids` and a `solve_nonlinear` function,
 and optionally a `jacobian` function.
