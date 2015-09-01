@@ -66,6 +66,11 @@ class TestMPIOpt(MPITestCase):
 
     N_PROCS = 2
 
+    def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
+
     def test_parab_FD(self):
 
         model = Problem(impl=impl)
