@@ -143,15 +143,6 @@ class TestVecWrapper(unittest.TestCase):
         self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
         self.assertTrue((np.array(u.flat['C1.y2'])==np.array([2.])).all())
 
-        try:
-            u.flat['C1.y3']
-        except Exception as err:
-            self.assertEqual(str(err), "'C1.y3' is a 'pass by object' variable. Flat value not found.")
-        else:
-            self.fail('Exception expected')
-        self.assertTrue((np.array(u.flat['C2.y4'])==np.array([0., 0.])).all())
-        self.assertTrue((np.array(u.flat['C2.s1'])==np.array([-1.])).all())
-
     def test_norm(self):
         unknowns_dict = OrderedDict()
 
@@ -186,7 +177,7 @@ class TestVecWrapper(unittest.TestCase):
         try:
             u['A.y1']
         except KeyError as err:
-            self.assertEqual(str(err), '"Variable \'A.y1\' does not exist"')
+            self.assertEqual(str(err), "'A.y1'")
         else:
             self.fail('KeyError expected')
 

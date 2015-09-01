@@ -419,6 +419,7 @@ class Group(System):
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
         dresids = impl.create_src_vecwrapper(sys_pathname, comm)
         dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
+        dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
                         var_of_interest=var_of_interest)
@@ -762,10 +763,10 @@ class Group(System):
 
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
-                    if not meta.get('state'):
-                        if gs_outputs is None or var in gs_outputs[voi]:
-                            dresids[var] += dunknowns[var]
-
+                    if (gs_outputs is None or var in gs_outputs[voi]) and \
+                           not meta.get('state'):
+                        v = dresids._flat(var)
+                        v += dunknowns._flat(var)
 
             # Adjoint Mode
             elif mode == 'rev':
@@ -774,10 +775,10 @@ class Group(System):
                 # might be able to just do dparams[:]=0.
                 for key in system._params_dict:
                     if key in dparams:
-                        dparams[key] *= 0.0
+                        dparams.flat[key][:] = 0.0
                 for key in system._unknowns_dict:
                     if key in dunknowns:
-                        dunknowns[key] *= 0.0
+                        dunknowns.flat[key][:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -807,9 +808,10 @@ class Group(System):
 
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
-                    if not meta.get('state'):
-                        if gs_outputs is None or var in gs_outputs[voi]:
-                            dunknowns[var] = dresids[var]
+                    if (gs_outputs is None or var in gs_outputs[voi]) and \
+                            not meta.get('state'):
+                        v = dunknowns._flat(var)
+                        v += dresids._flat(var)
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """

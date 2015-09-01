@@ -12,6 +12,18 @@ from openmdao.util.string_util import get_common_ancestor
 
 #from openmdao.devtools.debug import *
 
+class NoPlusEqArray(object):
+    def __init__(self, arr):
+        self._arr = arr
+
+    def __getattr__(self, name):
+        return getattr(self._arr, name)
+
+    def __iadd__(self, other):
+        # instead of doing +=, just do =
+        self._arr[:] = other
+        return self._arr
+
 class _flat_dict(object):
     """This is here to allow the user to use vec.flat['foo'] syntax instead
     of vec.flat('foo').
@@ -20,10 +32,7 @@ class _flat_dict(object):
         self._dict = vardict
 
     def __getitem__(self, name):
-        meta = self._dict[name]
-        if 'pass_by_obj' in meta and meta['pass_by_obj']:
-            raise ValueError("'%s' is a 'pass by object' variable. Flat value not found." % name)
-        return meta['val']
+        return self._dict[name]['val']
 
 
 class _ByObjWrapper(object):
@@ -78,7 +87,12 @@ class VecWrapper(object):
 
         # Automatic unit conversion in target vectors
         self.deriv_units = False
-        self.adj_accumulate_mode = False
+
+    def _flat(self, name):
+        """
+        Return a flat version of the named variable.
+        """
+        return self._fastflat[name](self)
 
     def metadata(self, name):
         """
@@ -126,35 +140,37 @@ class VecWrapper(object):
         -------
             The unflattened value of the named variable.
         """
-        meta = self.metadata(name)
+        return self._fastget[name](self)
 
-        if 'pass_by_obj' in meta and meta['pass_by_obj']:
-            return meta['val'].val
-
-        # For dparam vector, getitem is disabled in adjoint mode.
-        if self.adj_accumulate_mode:
-            return numpy.zeros((meta['shape']))
-        elif 'unit_conv' in meta:
-            # Convert units
-            scale, offset = meta['unit_conv']
-
-            # Gradient is just the scale
-            if self.deriv_units:
-                offset = 0.0
-
-            shape = meta['shape']
-            # if shape is 1, it's a float
-            if shape == 1:
-                return scale*(meta['val'][0] + offset)
-            else:
-                return scale*(meta['val'].reshape(shape) + offset)
-        else:
-            shape = meta['shape']
-            # if shape is 1, it's a float
-            if shape == 1:
-                return meta['val'][0]
-            else:
-                return meta['val'].reshape(shape)
+        # meta = self.metadata(name)
+        #
+        # if 'pass_by_obj' in meta and meta['pass_by_obj']:
+        #     return meta['val'].val
+        #
+        # # For dparam vector, getitem is disabled in adjoint mode.
+        # if self.adj_accumulate_mode:
+        #     return numpy.zeros((meta['shape']))
+        # elif 'unit_conv' in meta:
+        #     # Convert units
+        #     scale, offset = meta['unit_conv']
+        #
+        #     # Gradient is just the scale
+        #     if self.deriv_units:
+        #         offset = 0.0
+        #
+        #     shape = meta['shape']
+        #     # if shape is 1, it's a float
+        #     if shape == 1:
+        #         return scale*(meta['val'][0] + offset)
+        #     else:
+        #         return scale*(meta['val'].reshape(shape) + offset)
+        # else:
+        #     shape = meta['shape']
+        #     # if shape is 1, it's a float
+        #     if shape == 1:
+        #         return meta['val'][0]
+        #     else:
+        #         return meta['val'].reshape(shape)
 
     def __setitem__(self, name, value):
         """
@@ -174,8 +190,9 @@ class VecWrapper(object):
             meta['val'].val = value
             return
 
-        # For dparam vector in adjoint mode, assignement behaves as +=.
-        if self.adj_accumulate_mode is True:
+        adj_accumulate_mode = self.adj_accumulate_mode if self.deriv_units else False
+
+        if adj_accumulate_mode:
             if self.deriv_units and 'unit_conv' in meta:
                 scale, offset = meta['unit_conv']
 
@@ -188,8 +205,6 @@ class VecWrapper(object):
                     meta['val'][:] += value.flat[:]
                 else:
                     meta['val'][0] += value
-
-        # Convert Units
         else:
             if self.deriv_units and 'unit_conv' in meta:
                 scale, offset = meta['unit_conv']
@@ -384,6 +399,7 @@ class VecWrapper(object):
             view.vec = self.vec[start:end]
 
         view._setup_prom_map()
+        view._setup_closures()
 
         return view
 
@@ -567,6 +583,62 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
+    def _setup_closure(self, name):
+        """
+        Returns a tuple of efficient closures (nonflat and flat) to access
+        the named value.
+        """
+        meta = self._vardict[name]
+        val = meta['val']
+        flatfunc = None
+
+        if meta.get('pass_by_obj'):
+            return lambda s: val.val, flatfunc
+
+        shape = meta['shape']
+        scale, offset = meta.get('unit_conv', (None, None))
+        if self.deriv_units:
+            offset = 0.0
+        is_scalar = shape == 1
+        if is_scalar:
+            shapes_same = True
+        else:
+            shapes_same = shape == val.shape
+
+        if scale is None:  # no unit conversion
+            flatfunc = lambda s: val
+            if is_scalar:
+                func = lambda s: val[0]
+            elif shapes_same:
+                func = flatfunc
+            else:
+                func = lambda s: val.reshape(shape)
+
+        else:  # we have a unit conversion
+            flatfunc = lambda s: scale*(val + offset)
+            if is_scalar:
+                func = lambda s: scale*(val[0] + offset)
+            elif shapes_same:
+                func = flatfunc
+            else:
+                func = lambda s: scale*(val.reshape(shape) + offset)
+
+        if hasattr(self, 'adj_accumulate_mode'):
+            z = NoPlusEqArray(numpy.zeros(shape))
+            # wrap existing lambda in if test for adj_accumulate_mode
+            return lambda s: z if s.adj_accumulate_mode else func(s), \
+                   lambda s: z if s.adj_accumulate_mode else flatfunc(s)
+
+        return func, flatfunc
+
+    def _setup_closures(self):
+        self._fastget = {}
+        self._fastflat = {}
+        for name in self:
+            func, flatfunc = self._setup_closure(name)
+            self._fastget[name] = func
+            if flatfunc:
+                self._fastflat[name] = flatfunc
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
@@ -628,6 +700,7 @@ class SrcVecWrapper(VecWrapper):
                     self[meta['promoted_name']] = meta['val']
 
         self._setup_prom_map()
+        self._setup_closures()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -767,6 +840,7 @@ class TgtVecWrapper(VecWrapper):
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
         self._setup_prom_map()
+        self._setup_closures()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -822,7 +896,12 @@ class TgtVecWrapper(VecWrapper):
                                pathname)
 
         vmeta['val'] = _ByObjWrapper(val)
-        self._vardict[self._scoped_abs_name(pathname)] = vmeta
+        sname = self._scoped_abs_name(pathname)
+        self._vardict[sname] = vmeta
+        func, flatfunc = self._setup_closure(sname)
+        self._fastget[sname] = func
+        if flatfunc:
+            self._fastflat[sname] = flatfunc
 
     def _get_flattened_sizes(self):
         """
