@@ -5,7 +5,8 @@ import os
 import shelve
 import unittest
 
-from openmdao.recorders.sqlite_recorder import SqliteDict, SqliteRecorder
+from sqlitedict import SqliteDict
+from openmdao.recorders.sqlite_recorder import SqliteRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
