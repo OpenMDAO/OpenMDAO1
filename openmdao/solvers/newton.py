@@ -151,6 +151,7 @@ class Newton(NonLinearSolver):
             if self.iter_count == maxiter or isnan(f_norm):
                 msg = 'FAILED to converge'
             else:
-                msg='converged'
+                msg = 'converged'
+
             self.print_norm('NEWTON', local_meta, self.iter_count, f_norm,
                             f_norm0, msg=msg)
