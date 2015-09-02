@@ -6,10 +6,11 @@ from six import iteritems
 
 import numpy as np
 
-from scipy.sparse.linalg import gmres, LinearOperator, aslinearoperator
+from scipy.sparse.linalg import gmres, LinearOperator
 import scipy
 
 from openmdao.solvers.solver_base import LinearSolver
+
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
@@ -92,15 +93,11 @@ class ScipyGMRES(LinearSolver):
             # Call GMRES to solve the linear system
             self.system = system
 
-            self.iter_count = 0
-            def foo(rk): 
-                
-                self.iter_count += 1
 
-            d_unknowns, info = gmres(A, rhs, M=M, callback=foo,
+
+            d_unknowns, info = gmres(A, rhs, M=M,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
-            print("foobar",  self.iter_count)
             self.system = None
 
             if info > 0:
