@@ -51,16 +51,18 @@ class ExplicitSolver(ScipyGMRES):
 
             # Preconditioning hack
             scales = {}
-            #for j in range(116, 136):
-                #scale = abs(partials[:, j]).max()
-                #partials[:, j] *= 1.0/scale
-                #partials[j, :] *= scale
-                #scales[j] = scale
-            #for j in range(346, 366):
-                #scale = abs(partials[j, :]).max()
-                #partials[j, :] *= 1.0/scale
-                #partials[:, j] *= scale
-                #scales[j] = scale
+            for j in range(116, 136):
+                scale = abs(partials[:, j]).max()
+                partials[:, j] *= 1.0/scale
+                partials[j, :] *= scale
+                rhs[j] *= scale
+                scales[j] = scale
+            for j in range(346, 366):
+                scale = abs(partials[j, :]).max()
+                partials[j, :] *= 1.0/scale
+                partials[:, j] *= scale
+                rhs[j] *= 1.0/scale
+                scales[j] = scale
 
             print "COND", np.linalg.cond(partials)
             #system.unknowns.dump()
@@ -71,10 +73,10 @@ class ExplicitSolver(ScipyGMRES):
 
             deriv = np.linalg.solve(partials, rhs)
 
-            #for j in range(116, 136):
-                #deriv[j] *= scales[j]
-            #for j in range(346, 366):
-                #deriv[j] *= 1.0/scales[j]
+            for j in range(116, 136):
+                deriv[j] *= scales[j]
+            for j in range(346, 366):
+                deriv[j] *= 1.0/scales[j]
 
             res = partials.dot(deriv) - rhs
             print "Check solution", np.linalg.norm(res)
