@@ -90,7 +90,7 @@ class VecWrapper(object):
 
     def _flat(self, name):
         """
-        Return a flat version of the named variable.
+        Return a flat version of the named variable, including any necessary conversions.
         """
         return self._fastflat[name](self)
 
@@ -336,7 +336,7 @@ class VecWrapper(object):
             view.vec = self.vec[start:end]
 
         view._setup_prom_map()
-        view._setup_closures()
+        view._setup_get_functs()
 
         return view
 
@@ -520,7 +520,7 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _setup_closure(self, name):
+    def _setup_get_funct(self, name):
         """
         Returns a tuple of efficient closures (nonflat and flat) to access
         the named value.
@@ -568,16 +568,16 @@ class VecWrapper(object):
 
         return func, flatfunc
 
-    def _setup_set_closure(self, name):
+    def _setup_set_funct(self, name):
         def _set_no_units_arr(self, name, value):
-            self._vardict[name]['val'][:] = value.flat[:]
+            self._vardict[name]['val'][:] = value.flat
 
         def _set_no_units_scalar(self, name, value):
             self._vardict[name]['val'][0] = value
 
         def _set_units_arr(self, name, value):
             meta = self._vardict[name]
-            meta['val'][:] = value.flat[:]
+            meta['val'][:] = value.flat
             meta['val'] *= meta['unit_conv'][0]
 
         def _set_units_scalar(self, name, value):
@@ -586,9 +586,9 @@ class VecWrapper(object):
 
         def _set_no_units_arr_accum(self, name, value):
             if self.adj_accumulate_mode:
-                self._vardict[name]['val'][:] += value.flat[:]
+                self._vardict[name]['val'][:] += value.flat
             else:
-                self._vardict[name]['val'][:] = value.flat[:]
+                self._vardict[name]['val'][:] = value.flat
 
         def _set_no_units_scalar_accum(self, name, value):
             if self.adj_accumulate_mode:
@@ -599,17 +599,18 @@ class VecWrapper(object):
         def _set_units_arr_accum(self, name, value):
             meta = self._vardict[name]
             if self.adj_accumulate_mode:
+                # removing the [:] here on the rhs causes failures...
                 meta['val'][:] += meta['unit_conv'][0]*value.flat[:]
             else:
-                meta['val'][:] = value.flat[:]
+                meta['val'][:] = value.flat
                 meta['val'] *= meta['unit_conv'][0]
 
         def _set_units_scalar_accum(self, name, value):
             meta = self._vardict[name]
             if self.adj_accumulate_mode:
-                meta['val'][0] += meta['unit_conv'][0]*value.flat[:]
+                meta['val'][0] += meta['unit_conv'][0]*value[0]
             else:
-                meta['val'][0] = meta['unit_conv'][0]*value.flat[:]
+                meta['val'][0] = meta['unit_conv'][0]*value[0]
 
         def _set_pbo(self, name, value):
             self._vardict[name]['val'].val = value
@@ -641,16 +642,16 @@ class VecWrapper(object):
                 else:
                     return _set_no_units_arr
 
-    def _setup_closures(self):
+    def _setup_get_functs(self):
         self._fastget = {}
         self._fastflat = {}
         self._fastset = {}
         for name in self:
-            func, flatfunc = self._setup_closure(name)
+            func, flatfunc = self._setup_get_funct(name)
             self._fastget[name] = func
             if flatfunc:
                 self._fastflat[name] = flatfunc
-            self._fastset[name] = self._setup_set_closure(name)
+            self._fastset[name] = self._setup_set_funct(name)
 
 
 class SrcVecWrapper(VecWrapper):
@@ -719,7 +720,7 @@ class SrcVecWrapper(VecWrapper):
                             self._vardict[meta['promoted_name']]['val'][:] = meta['val'].flat
 
         self._setup_prom_map()
-        self._setup_closures()
+        self._setup_get_functs()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -859,7 +860,7 @@ class TgtVecWrapper(VecWrapper):
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
         self._setup_prom_map()
-        self._setup_closures()
+        self._setup_get_functs()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -917,11 +918,11 @@ class TgtVecWrapper(VecWrapper):
         vmeta['val'] = _ByObjWrapper(val)
         sname = self._scoped_abs_name(pathname)
         self._vardict[sname] = vmeta
-        func, flatfunc = self._setup_closure(sname)
+        func, flatfunc = self._setup_get_funct(sname)
         self._fastget[sname] = func
         if flatfunc:
             self._fastflat[sname] = flatfunc
-        self._fastset[sname] = self._setup_set_closure(sname)
+        self._fastset[sname] = self._setup_set_funct(sname)
 
     def _get_flattened_sizes(self):
         """

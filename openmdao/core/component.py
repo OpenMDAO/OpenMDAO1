@@ -381,14 +381,14 @@ class Component(System):
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
-        resids.vec[:] = -unknowns.vec[:]
+        resids.vec[:] = -unknowns.vec
 
         self.solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
-        resids.vec[:] += unknowns.vec[:]
-        unknowns.vec[:] -= resids.vec[:]
+        resids.vec[:] += unknowns.vec
+        unknowns.vec[:] -= resids.vec
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -499,7 +499,7 @@ class Component(System):
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-            sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
+            sol_vec[voi].vec[:] = rhs_vec[voi].vec
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
         """

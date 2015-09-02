@@ -352,14 +352,14 @@ class System(object):
         # Prepare for calculating partial derivatives or total derivatives
         if total_derivs == False:
             run_model = self.apply_nonlinear
-            cache1 = resids.vec.copy()
             resultvec = resids
             states = self.states
         else:
             run_model = self.solve_nonlinear
-            cache1 = unknowns.vec.copy()
             resultvec = unknowns
             states = []
+
+        cache1 = resultvec.vec.copy()
 
         gather_jac = False
 
@@ -510,7 +510,7 @@ class System(object):
                 if isinstance(dresids, VecWrapper):
                     vec = dresids._flat(unknown)
                     vec += J.dot(arg_vec._flat(param))
-                else:
+                else:  # to allow for plain dicts to be used for testing...
                     vec = dresids[unknown]
                     vec += J.dot(arg_vec[param].flat).reshape(vec.shape)
             else:
