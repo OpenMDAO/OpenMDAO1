@@ -106,11 +106,11 @@ if __name__ == "__main__":
     for a,p in zip(actual, pbcok_mu):
         error += (a-p)**2
     error = (error/len(actual))
-    print "RMSE Cokriging = %g" % error
+    print("RMSE Cokriging = %g" % error)
 
     # RMSE Kriging
     error = 0.
     for a,p in zip(actual, pbk_mu):
         error += (a-p)**2
     error = (error/len(actual))
-    print "RMSE Kriging = %g" % error
+    print("RMSE Kriging = %g" % error)
