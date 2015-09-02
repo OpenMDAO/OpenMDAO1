@@ -6,13 +6,12 @@ import numpy as np
 
 from openmdao.components.param_comp import ParamComp
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.core import Group, ParallelGroup, Problem
+from openmdao.components import ExecComp
 
-from openmdao.solvers.petsc_ksp import PetscKSP
 from openmdao.test.converge_diverge import ConvergeDivergePar, SingleDiamondPar
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
-                                       FanOutGrouped, FanInGrouped, ArrayComp2D
+                                        FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
@@ -22,8 +21,35 @@ from openmdao.devtools.debug import debug
 try:
     from mpi4py import MPI
     from openmdao.core.petsc_impl import PetscImpl as impl
+    from openmdao.solvers.petsc_ksp import PetscKSP
 except ImportError:
     impl = None
+
+class FanOutGrouped(Group):
+    """ Topology where one comp broadcasts an output to two target
+    components. ParamComp and comp1 are in a subgroup of the
+    ParallelGroup.
+    """
+
+    def __init__(self):
+        super(FanOutGrouped, self).__init__()
+
+        sub = self.add('sub', ParallelGroup())
+        pgroup = sub.add('pgroup', Group())
+        pgroup.add('p', ParamComp('x', 1.0))
+        pgroup.add('comp1', ExecComp(['y=3.0*x']))
+        sub.add('comp2', ExecComp(['y=-2.0*x']))
+        sub.add('comp3', ExecComp(['y=5.0*x']))
+
+        self.add('c2', ExecComp(['y=x']))
+        self.add('c3', ExecComp(['y=x']))
+        self.connect('sub.comp2.y', 'c2.x')
+        self.connect('sub.comp3.y', 'c3.x')
+
+        self.connect("sub.pgroup.comp1.y", "sub.comp2.x")
+        self.connect("sub.pgroup.comp1.y", "sub.comp3.x")
+        self.connect("sub.pgroup.p.x", "sub.pgroup.comp1.x")
+
 
 class TestPetscKSP(MPITestCase):
 
@@ -32,27 +58,6 @@ class TestPetscKSP(MPITestCase):
     def setUp(self):
         if impl is None:
             raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
-
-    def test_fan_out_grouped(self):
-
-        prob = Problem(impl=impl)
-        prob.root = FanOutGrouped()
-        prob.root.ln_solver = PetscKSP()
-        prob.setup(check=False)
-        prob.run()
-
-        param_list = ['p.x']
-        #currently, you can't have vars of interest that are down in a parallel system
-        #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
-        unknown_list = ['c2.y', "c3.y"]
-
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J[unknown_list[0]]['p.x'][0][0], -6.0, 1e-6)
-        assert_rel_error(self, J[unknown_list[1]]['p.x'][0][0], 15.0, 1e-6)
-
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        assert_rel_error(self, J[unknown_list[0]]['p.x'][0][0], -6.0, 1e-6)
-        assert_rel_error(self, J[unknown_list[1]]['p.x'][0][0], 15.0, 1e-6)
 
     def test_simple_deriv_xfer(self):
 
@@ -92,14 +97,12 @@ class TestPetscKSP(MPITestCase):
         unknown_list = ['comp3.y']
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
         J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
-        if not MPI or self.comm.rank == 0:
-            assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
-            assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
     def test_single_diamond(self):
 
@@ -171,6 +174,37 @@ class TestPetscKSP(MPITestCase):
 
         J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+
+class TestPetscKSP3(MPITestCase):
+
+    N_PROCS = 3
+
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
+
+    def test_fan_out_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanOutGrouped()
+        prob.root.ln_solver = PetscKSP()
+
+        prob.setup(check=False)
+        prob.run()
+
+        param = 'sub.pgroup.p.x'
+        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+
+        J = prob.calc_gradient([param], unknown_list, mode='fwd', return_format='dict')
+
+        assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
+
+        J = prob.calc_gradient([param], unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
+
 
 
 if __name__ == '__main__':

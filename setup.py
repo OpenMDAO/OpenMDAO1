@@ -52,7 +52,7 @@ setup(name='openmdao',
       ],
       package_data = {'openmdao.units': ['unit_library.ini']},
       install_requires=[
-        'six', 'numpydoc', 'networkx==1.9.1', 'numpy', 'scipy'
+        'six', 'numpydoc', 'networkx==1.9.1', 'numpy', 'scipy', 'sqlitedict',
       ],
       entry_points= """
         [console_scripts]

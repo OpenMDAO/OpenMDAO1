@@ -54,7 +54,7 @@ class SellarDis1withDerivatives(SellarDis1):
         J = {}
 
         J['y1','y2'] = -0.2
-        J['y1','z'] = np.array([[2*params['z'][0], 1.0]])
+        J['y1','z'] = np.array([[2.0*params['z'][0], 1.0]])
         J['y1','x'] = 1.0
 
         return J
@@ -118,7 +118,7 @@ class SellarNoDerivatives(Group):
         self.add('d2', SellarDis2(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0),
                  promotes=['*'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
@@ -143,7 +143,7 @@ class SellarDerivatives(Group):
         self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0),
                  promotes=['*'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])

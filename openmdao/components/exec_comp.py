@@ -17,20 +17,36 @@ class ExecComp(Component):
     """
     Given a list of assignment statements, this component creates
     input and output variables at construction time.  All variables
-    appearing on the left-hand side of the assignments are outputs,
+    appearing on the left-hand side of an assignment are outputs,
     and the rest are inputs.  Each variable is assumed to be of
     type float unless the initial value for that variable is supplied
     in \*\*kwargs.  Derivatives are calculated using complex step.
 
     Args
     ----
-    exprs: str or iter of str
+    exprs: str or list of str
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
     \*\*kwargs: dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
+
+    Notes
+    -----
+    In order to create an ExecComp with array variables, or any other
+    variable type that is not a float, you must use a keyword arg to
+    set the initial value of each non-float variable.  For example,
+    let's say we have an ExecComp that takes an array 'x' as input and
+    outputs a float variable 'y' which is the sum of the entries in 'x'.
+
+    >>> import numpy
+    >>> from openmdao.components import ExecComp
+    >>> excomp = ExecComp('y=numpy.sum(x)', x=numpy.ones(10,dtype=float))
+
+    In this example, 'y' would be assumed to be the default type of float
+    and would be given an initial value of 0.0, while 'x' would be
+    initialized with a size 100 float array.
     """
 
     def __init__(self, exprs, **kwargs):
@@ -53,6 +69,13 @@ class ExecComp(Component):
             outs.update(parse_for_vars(lhs))
             allvars.update(parse_for_vars(expr, kwargs.keys()))
 
+        # make sure all kwargs are legit
+        for kwarg in kwargs:
+            if kwarg not in allvars:
+                raise RuntimeError("Keyword arg '%s' in call to ExecComp() "
+                                   "does not refer to any variable in the "
+                                   "expressions %s" % (kwarg, exprs))
+
         for var in sorted(allvars):
             # if user supplied an initial value, use it, otherwise set to 0.0
             val = kwargs.get(var, 0.0)
@@ -61,6 +84,7 @@ class ExecComp(Component):
                 self.add_output(var, val)
             else:
                 self.add_param(var, val)
+
 
     def solve_nonlinear(self, params, unknowns, resids):
         """

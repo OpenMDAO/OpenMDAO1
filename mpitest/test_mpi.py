@@ -1,5 +1,5 @@
 import sys
-from unittest import TestCase
+import unittest
 import time
 
 import numpy as np
@@ -47,10 +47,9 @@ class ABCDArrayComp(Component):
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
 
-
 class MPITests1(MPITestCase):
 
-    N_PROCS = 2
+    N_PROCS = 1
 
     def test_simple(self):
         prob = Problem(Group(), impl=impl)
@@ -83,15 +82,35 @@ class MPITests1(MPITestCase):
 
         prob.run()
 
-        if not MPI or self.comm.rank == 0:
-            self.assertTrue(all(prob['C2.a']==np.ones(size, float)*10.))
-            self.assertTrue(all(prob['C2.b']==np.ones(size, float)*5.))
-            self.assertTrue(all(prob['C2.c']==np.ones(size, float)*15.))
-            self.assertTrue(all(prob['C2.d']==np.ones(size, float)*5.))
+        self.assertTrue(all(prob['C2.a']==np.ones(size, float)*10.))
+        self.assertTrue(all(prob['C2.b']==np.ones(size, float)*5.))
+        self.assertTrue(all(prob['C2.c']==np.ones(size, float)*15.))
+        self.assertTrue(all(prob['C2.d']==np.ones(size, float)*5.))
 
-            # TODO: can't do MPI pass_by_object yet
-            # self.assertTrue(prob['C2.out_string']=='_C1_C2')
-            # self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
+        # TODO: can't do MPI pass_by_object yet
+        # self.assertTrue(prob['C2.out_string']=='_C1_C2')
+        # self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
+
+class MPITests2(MPITestCase):
+
+    N_PROCS = 2
+
+    def test_too_many_procs(self):
+        prob = Problem(Group(), impl=impl)
+
+        size = 5
+        A1 = prob.root.add('A1', ParamComp('a', np.zeros(size, float)))
+        C1 = prob.root.add('C1', ABCDArrayComp(size))
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "This problem was given 2 MPI processes, "
+                             "but it requires between 1 and 1.")
+        else:
+            if MPI:
+                self.fail("Exception expected")
 
     def test_parallel_fan_in(self):
         size = 3
@@ -151,6 +170,15 @@ class MPITests1(MPITestCase):
             assert_rel_error(self, prob.root.G1.C2.unknowns['d'],
                              np.ones(size)*-.1, 1.e-10)
 
+    def test_wrong_impl(self):
+        if MPI:
+            try:
+                prob = Problem(Group())
+            except Exception as err:
+                self.assertEqual(str(err),
+                   "To run under MPI, the impl for a Problem must be PetscImpl.")
+            else:
+                self.fail("Exception expected")
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
