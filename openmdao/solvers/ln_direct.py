@@ -6,7 +6,7 @@ import numpy as np
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 
-class ExplicitSolver(ScipyGMRES):
+class DirectSolver(ScipyGMRES):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve."""
 
