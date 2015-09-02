@@ -142,36 +142,6 @@ class VecWrapper(object):
         """
         return self._fastget[name](self)
 
-        # meta = self.metadata(name)
-        #
-        # if 'pass_by_obj' in meta and meta['pass_by_obj']:
-        #     return meta['val'].val
-        #
-        # # For dparam vector, getitem is disabled in adjoint mode.
-        # if self.adj_accumulate_mode:
-        #     return numpy.zeros((meta['shape']))
-        # elif 'unit_conv' in meta:
-        #     # Convert units
-        #     scale, offset = meta['unit_conv']
-        #
-        #     # Gradient is just the scale
-        #     if self.deriv_units:
-        #         offset = 0.0
-        #
-        #     shape = meta['shape']
-        #     # if shape is 1, it's a float
-        #     if shape == 1:
-        #         return scale*(meta['val'][0] + offset)
-        #     else:
-        #         return scale*(meta['val'].reshape(shape) + offset)
-        # else:
-        #     shape = meta['shape']
-        #     # if shape is 1, it's a float
-        #     if shape == 1:
-        #         return meta['val'][0]
-        #     else:
-        #         return meta['val'].reshape(shape)
-
     def __setitem__(self, name, value):
         """
         Set the value of the named variable.
@@ -184,40 +154,7 @@ class VecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        meta = self.metadata(name)
-
-        if 'pass_by_obj' in meta and meta['pass_by_obj']:
-            meta['val'].val = value
-            return
-
-        adj_accumulate_mode = self.adj_accumulate_mode if self.deriv_units else False
-
-        if adj_accumulate_mode:
-            if self.deriv_units and 'unit_conv' in meta:
-                scale, offset = meta['unit_conv']
-
-                if isinstance(value, numpy.ndarray):
-                    meta['val'][:] += scale*value.flat[:]
-                else:
-                    meta['val'][0] += scale*value
-            else:
-                if isinstance(value, numpy.ndarray):
-                    meta['val'][:] += value.flat[:]
-                else:
-                    meta['val'][0] += value
-        else:
-            if self.deriv_units and 'unit_conv' in meta:
-                scale, offset = meta['unit_conv']
-
-                if isinstance(value, numpy.ndarray):
-                    meta['val'][:] = scale*value.flat[:]
-                else:
-                    meta['val'][0] = scale*value
-            else:
-                if isinstance(value, numpy.ndarray):
-                    meta['val'][:] = value.flat[:]
-                else:
-                    meta['val'][0] = value
+        self._fastset[name](self, name, value)
 
     def __len__(self):
         """
@@ -631,14 +568,90 @@ class VecWrapper(object):
 
         return func, flatfunc
 
+    def _setup_set_closure(self, name):
+        def _set_no_units_arr(self, name, value):
+            self._vardict[name]['val'][:] = value.flat[:]
+
+        def _set_no_units_scalar(self, name, value):
+            self._vardict[name]['val'][0] = value
+
+        def _set_units_arr(self, name, value):
+            meta = self._vardict[name]
+            meta['val'][:] = value.flat[:]
+            meta['val'] *= meta['unit_conv'][0]
+
+        def _set_units_scalar(self, name, value):
+            meta = self._vardict[name]
+            meta['val'][0] = meta['unit_conv'][0]*value
+
+        def _set_no_units_arr_accum(self, name, value):
+            if self.adj_accumulate_mode:
+                self._vardict[name]['val'][:] += value.flat[:]
+            else:
+                self._vardict[name]['val'][:] = value.flat[:]
+
+        def _set_no_units_scalar_accum(self, name, value):
+            if self.adj_accumulate_mode:
+                self._vardict[name]['val'][0] += value
+            else:
+                self._vardict[name]['val'][0] = value
+
+        def _set_units_arr_accum(self, name, value):
+            meta = self._vardict[name]
+            if self.adj_accumulate_mode:
+                meta['val'][:] += meta['unit_conv'][0]*value.flat[:]
+            else:
+                meta['val'][:] = value.flat[:]
+                meta['val'] *= meta['unit_conv'][0]
+
+        def _set_units_scalar_accum(self, name, value):
+            meta = self._vardict[name]
+            if self.adj_accumulate_mode:
+                meta['val'][0] += meta['unit_conv'][0]*value.flat[:]
+            else:
+                meta['val'][0] = meta['unit_conv'][0]*value.flat[:]
+
+        def _set_pbo(self, name, value):
+            self._vardict[name]['val'].val = value
+
+        meta = self._vardict[name]
+
+        if 'pass_by_obj' in meta and meta['pass_by_obj']:
+            return _set_pbo
+        elif self.deriv_units:
+            if 'unit_conv' in meta:
+                if meta['shape'] == 1:
+                    return _set_units_scalar_accum
+                else:
+                    return _set_units_arr_accum
+            else:
+                if meta['shape'] == 1:
+                    return _set_no_units_scalar_accum
+                else:
+                    return _set_no_units_arr_accum
+        else:
+            if 'unit_conv' in meta:
+                if meta['shape'] == 1:
+                    return _set_units_scalar
+                else:
+                    return _set_units_arr
+            else:
+                if meta['shape'] == 1:
+                    return _set_no_units_scalar
+                else:
+                    return _set_no_units_arr
+
     def _setup_closures(self):
         self._fastget = {}
         self._fastflat = {}
+        self._fastset = {}
         for name in self:
             func, flatfunc = self._setup_closure(name)
             self._fastget[name] = func
             if flatfunc:
                 self._fastflat[name] = flatfunc
+            self._fastset[name] = self._setup_set_closure(name)
+
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
@@ -697,7 +710,13 @@ class SrcVecWrapper(VecWrapper):
                 if 'remote' not in meta and (relevance is None or
                                              relevance.is_relevant(var_of_interest,
                                                                   meta['pathname'])):
-                    self[meta['promoted_name']] = meta['val']
+                    if meta.get('pass_by_obj'):
+                        self._vardict[meta['promoted_name']]['val'].val = meta['val']
+                    else:
+                        if meta['shape'] == 1:
+                            self._vardict[meta['promoted_name']]['val'][0] = meta['val']
+                        else:
+                            self._vardict[meta['promoted_name']]['val'][:] = meta['val'].flat
 
         self._setup_prom_map()
         self._setup_closures()
@@ -902,6 +921,7 @@ class TgtVecWrapper(VecWrapper):
         self._fastget[sname] = func
         if flatfunc:
             self._fastflat[sname] = flatfunc
+        self._fastset[sname] = self._setup_set_closure(sname)
 
     def _get_flattened_sizes(self):
         """

@@ -115,14 +115,14 @@ class ScipyGMRES(LinearSolver):
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
-        sol_vec.vec[:] = arg[:]
+        sol_vec.vec[:] = arg
 
         # Start with a clean slate
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
+        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
 
         #print("arg", arg)
         #print("result", rhs_vec.vec)
-        return rhs_vec.vec[:]
+        return rhs_vec.vec

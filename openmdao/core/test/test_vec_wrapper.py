@@ -199,7 +199,7 @@ class TestVecWrapper(unittest.TestCase):
         try:
             u['A.y1'] = np.zeros((3, 2))
         except KeyError as err:
-            self.assertEqual(str(err), '"Variable \'A.y1\' does not exist"')
+            self.assertEqual(str(err), "'A.y1'")
         else:
             self.fail('KeyError expected')
 

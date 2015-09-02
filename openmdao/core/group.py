@@ -401,6 +401,7 @@ class Group(System):
         # create implementation specific VecWrappers
         if var_of_interest is None:
             self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
             self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
@@ -444,23 +445,24 @@ class Group(System):
             List of names of params that have sources that are ParamComps
             or sources that are outside of this `Group` .
         """
-        conns = self.connections
-        mypath = self.pathname + '.' if self.pathname else ''
-        mplen = len(mypath)
+        if self._fd_params is None:
+            conns = self.connections
+            mypath = self.pathname + '.' if self.pathname else ''
+            mplen = len(mypath)
 
-        params = []
-        for tgt, src in iteritems(conns):
-            if mypath == tgt[:mplen]:
-                # look up the Component that contains the source variable
-                scname = src.rsplit('.', 1)[0]
-                if mypath == scname[:mplen]:
-                    src_comp = self._subsystem(scname[mplen:])
-                    if isinstance(src_comp, ParamComp):
+            params = self._fd_params = []
+            for tgt, src in iteritems(conns):
+                if mypath == tgt[:mplen]:
+                    # look up the Component that contains the source variable
+                    scname = src.rsplit('.', 1)[0]
+                    if mypath == scname[:mplen]:
+                        src_comp = self._subsystem(scname[mplen:])
+                        if isinstance(src_comp, ParamComp):
+                            params.append(tgt[mplen:])
+                    else:
                         params.append(tgt[mplen:])
-                else:
-                    params.append(tgt[mplen:])
 
-        return params
+        return self._fd_params
 
     def _get_fd_unknowns(self):
         """
@@ -747,8 +749,8 @@ class Group(System):
 
                     if not nonzero:
                         # check for all zero states
-                        for key, meta in iteritems(system.unknowns):
-                            if meta.get('state') and np.any(dunknowns.flat[key]):
+                        for key in system.states:
+                            if np.any(dunknowns.flat[key]):
                                 nonzero = True
                                 break
 

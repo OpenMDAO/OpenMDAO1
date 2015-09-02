@@ -189,6 +189,8 @@ class System(object):
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
         """
+        self._fd_params = None
+
         if parent_path:
             self.pathname = '.'.join((parent_path, self.name))
         else:
@@ -352,8 +354,7 @@ class System(object):
             run_model = self.apply_nonlinear
             cache1 = resids.vec.copy()
             resultvec = resids
-            states = [name for name, meta in iteritems(self.unknowns)
-                           if meta.get('state')]
+            states = self.states
         else:
             run_model = self.solve_nonlinear
             cache1 = unknowns.vec.copy()
@@ -503,14 +504,21 @@ class System(object):
             if unknown not in dresids:
                 continue
 
-            result = dresids[unknown]
-
             # Vectors are flipped during adjoint
 
             if mode == 'fwd':
-                dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
+                if isinstance(dresids, VecWrapper):
+                    vec = dresids._flat(unknown)
+                    vec += J.dot(arg_vec._flat(param))
+                else:
+                    vec = dresids[unknown]
+                    vec += J.dot(arg_vec[param].flat).reshape(vec.shape)
             else:
-                arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
+                if isinstance(arg_vec, VecWrapper):
+                    shape = arg_vec._vardict[param]['shape']
+                else:
+                    shape = arg_vec[param].shape
+                arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
 
     def _create_views(self, top_unknowns, parent, my_params,
                       var_of_interest=None):
@@ -550,6 +558,7 @@ class System(object):
 
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
+            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = parent.resids.get_view(self.pathname, comm, umap)
             self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,

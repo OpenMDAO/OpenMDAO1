@@ -236,7 +236,9 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
+        if self._fd_params is None:
+            self._fd_params = [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
+        return self._fd_params
 
     def _get_fd_unknowns(self):
         """
