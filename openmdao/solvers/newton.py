@@ -64,7 +64,7 @@ class Newton(NonLinearSolver):
         # Metadata setup
         self.iter_count = 0
         ls_itercount = 0
-        local_meta = create_local_meta(metadata, system.name)
+        local_meta = create_local_meta(metadata, system.pathname)
         system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
@@ -92,6 +92,7 @@ class Newton(NonLinearSolver):
             # Calculate direction to take step
             arg.vec[:] = resids.vec[:]
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
+            print result.vec
 
             unknowns.vec[:] += alpha*result.vec[:]
 

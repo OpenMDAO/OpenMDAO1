@@ -49,7 +49,35 @@ class ExplicitSolver(ScipyGMRES):
             for i in range(n_edge):
                 partials[:, i] = self.mult(ident[:, i])
 
+            # Preconditioning hack
+            scales = {}
+            #for j in range(116, 136):
+                #scale = abs(partials[:, j]).max()
+                #partials[:, j] *= 1.0/scale
+                #partials[j, :] *= scale
+                #scales[j] = scale
+            #for j in range(346, 366):
+                #scale = abs(partials[j, :]).max()
+                #partials[j, :] *= 1.0/scale
+                #partials[:, j] *= scale
+                #scales[j] = scale
+
+            print "COND", np.linalg.cond(partials)
+            #system.unknowns.dump()
+            #for j in range(n_edge):
+                #print j, partials[j, :].max(), partials[j, :].min(), partials[j, :].argmax(), partials[j, :].argmin()
+            #for j in range(n_edge):
+                #print j, partials[:, j].max(), partials[:, j].min(), partials[:, j].argmax(), partials[:, j].argmin()
+
             deriv = np.linalg.solve(partials, rhs)
+
+            #for j in range(116, 136):
+                #deriv[j] *= scales[j]
+            #for j in range(346, 366):
+                #deriv[j] *= 1.0/scales[j]
+
+            res = partials.dot(deriv) - rhs
+            print "Check solution", np.linalg.norm(res)
 
             self.system = None
             sol_buf[voi] = deriv
