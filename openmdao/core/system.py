@@ -326,7 +326,7 @@ class System(object):
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
 
-        # Use settings in the system dict (nless variables override.
+        # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
