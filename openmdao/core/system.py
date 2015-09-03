@@ -3,7 +3,7 @@
 import sys
 from fnmatch import fnmatch
 from itertools import chain
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -195,20 +195,6 @@ class System(object):
             self.pathname = '.'.join((parent_path, self.name))
         else:
             self.pathname = self.name
-
-    def clear_dparams(self):
-        """ Zeros out the dparams (dp) vector."""
-
-        for parallel_set in self._relevance.vars_of_interest():
-            for name in parallel_set:
-                if name in self.dpmat:
-                    self.dpmat[name].vec[:] = 0.0
-
-        self.dpmat[None].vec[:] = 0.0
-
-        # Recurse to clear all dparams vectors.
-        for system in self.subsystems(local=True):
-            system.clear_dparams()
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -490,35 +476,41 @@ class System(object):
             msg = msg.format(name=self.name)
             raise ValueError(msg)
 
-        for key, J in iteritems(self._jacobian_cache):
-            unknown, param = key
+        isvw = isinstance(dresids, VecWrapper)
+        fwd = mode == 'fwd'
+        try:
+            states = self.states
+        except AttributeError:  # handle component unit test where setup has not been performed
+            # TODO: should we force all component unit tests to use a Problem test harness?
+            states = set([p for u,p in iterkeys(self._jacobian_cache)
+                             if p not in dparams])
 
-            # States are never in dparams.
-            if param in dparams:
-                arg_vec = dparams
-            elif param in dunknowns:
+        for (unknown, param), J in iteritems(self._jacobian_cache):
+            if param in states:
                 arg_vec = dunknowns
             else:
-                continue
-
-            if unknown not in dresids:
-                continue
+                arg_vec = dparams
 
             # Vectors are flipped during adjoint
 
-            if mode == 'fwd':
-                if isinstance(dresids, VecWrapper):
-                    vec = dresids._flat(unknown)
-                    vec += J.dot(arg_vec._flat(param))
-                else:  # to allow for plain dicts to be used for testing...
-                    vec = dresids[unknown]
-                    vec += J.dot(arg_vec[param].flat).reshape(vec.shape)
-            else:
-                if isinstance(arg_vec, VecWrapper):
-                    shape = arg_vec._vardict[param]['shape']
-                else:
-                    shape = arg_vec[param].shape
-                arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
+            try:
+                if isvw:
+                    if fwd:
+                        vec = dresids._flat(unknown)
+                        vec += J.dot(arg_vec._flat(param))
+                    else:
+                        shape = arg_vec._vardict[param]['shape']
+                        arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
+                else: # plain dicts were passed in for unit testing...
+                    if fwd:
+                        vec = dresids[unknown]
+                        vec += J.dot(arg_vec[param].flat).reshape(vec.shape)
+                    else:
+                        shape = arg_vec[param].shape
+                        arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
+            except KeyError:
+                continue # either didn't find param in dparams/dunknowns or
+                         # didn't find unknown in dresids
 
     def _create_views(self, top_unknowns, parent, my_params,
                       var_of_interest=None):

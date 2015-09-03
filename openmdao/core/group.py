@@ -389,6 +389,12 @@ class Group(System):
         for voi, vec in iteritems(self.dumat):
             self._ls_inputs[voi] = self._all_params(voi)
 
+        # cache this to speed up apply_linear
+        self._abs_inputs = {}
+        for voi, vec in iteritems(self.dpmat):
+            self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
+                                         if not meta.get('pass_by_obj')}
+
         self._relname_map = None # reclaim some memory
 
     def _create_vecs(self, my_params, var_of_interest, impl):
@@ -647,7 +653,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, mode, ls_inputs=None, vois=[None], gs_outputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -734,14 +740,15 @@ class Group(System):
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
             # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = {meta['pathname'] for meta in itervalues(dparams)}
+            abs_inputs = system._abs_inputs[voi]
+            do_apply = ls_inputs[voi] is None or (abs_inputs and abs_inputs.intersection(ls_inputs[voi]))
 
             # Forward Mode
             if mode == 'fwd':
 
                 dresids.vec[:] = 0.0
 
-                if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
+                if do_apply:
 
                     if force_fd:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
@@ -763,12 +770,10 @@ class Group(System):
 
                 # Clear out our inputs. TODO: Once we have memory packing, we
                 # might be able to just do dparams[:]=0.
-                for key in system._params_dict:
-                    if key in dparams:
-                        dparams.flat[key][:] = 0.0
-                for key in system._unknowns_dict:
-                    if key in dunknowns:
-                        dunknowns.flat[key][:] = 0.0
+                for key, val in dparams.get_vecvals():
+                    val[:] = 0.0
+                for key, val in dunknowns.get_vecvals():
+                    val[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -777,28 +782,26 @@ class Group(System):
                 # our local 'arg' by -1, and then revert it afterwards.
                 dresids.vec *= -1.0
 
-                if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
+                if do_apply:
 
-                    # Speedhack, don't call component's derivatives if
-                    # incoming vector is zero.
-                    if np.any(dresids.vec):
-                        try:
-                            dparams.adj_accumulate_mode = True
-                            if force_fd:
-                                system._apply_linear_jac(system.params,
-                                                         system.unknowns, dparams,
-                                                         dunknowns, dresids, mode)
-                            else:
-                                system.apply_linear(system.params, system.unknowns,
-                                                    dparams, dunknowns, dresids, mode)
-                        finally:
-                            dparams.adj_accumulate_mode = False
+                    #if np.any(dresids.vec):
+                    try:
+                        dparams.adj_accumulate_mode = True
+                        if force_fd:
+                            system._apply_linear_jac(system.params,
+                                                     system.unknowns, dparams,
+                                                     dunknowns, dresids, mode)
+                        else:
+                            system.apply_linear(system.params, system.unknowns,
+                                                dparams, dunknowns, dresids, mode)
+                    finally:
+                        dparams.adj_accumulate_mode = False
 
                 dresids.vec *= -1.0
 
                 for var in dunknowns:
                     # Skip all states
-                    if (gs_outputs is None or var in gs_outputs[voi]) and \
+                    if (gsouts is None or var in gsouts) and \
                             var not in states:
                         v = dunknowns._flat(var)
                         v += dresids._flat(var)
@@ -854,6 +857,25 @@ class Group(System):
 
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi]
+
+    def clear_dparams(self):
+        """ Zeros out the dparams (dp) vector."""
+
+        # this was moved here from system.py because Components never own
+        # their own params. All of the calls to clear_dparams on components
+        # are unnecessary
+
+        for parallel_set in self._relevance.vars_of_interest():
+            for name in parallel_set:
+                if name in self.dpmat:
+                    self.dpmat[name].vec[:] = 0.0
+
+        self.dpmat[None].vec[:] = 0.0
+
+        # Recurse to clear all dparams vectors.
+        for system in self._local_subsystems.itervalues(): #self.subsystems(local=True):
+            if isinstance(system, Group):
+                system.clear_dparams()  # only call on Groups
 
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only

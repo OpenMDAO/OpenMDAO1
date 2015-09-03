@@ -361,6 +361,12 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
+        # cache this to speed up apply linear
+        self._abs_inputs = {}
+        for voi, vec in iteritems(self.dpmat):
+            self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
+                                         if not meta.get('pass_by_obj')}
+
         self._setup_gs_outputs(all_vois)
 
     def apply_nonlinear(self, params, unknowns, resids):

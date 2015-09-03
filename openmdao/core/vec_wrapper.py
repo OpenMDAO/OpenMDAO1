@@ -83,6 +83,7 @@ class VecWrapper(object):
         self.vec = None
         self._vardict = OrderedDict()
         self._slices = {}
+        self._vecvals = None
 
         # add a flat attribute that will have access method consistent
         # with non-flat access but returns the flattened value
@@ -439,7 +440,21 @@ class VecWrapper(object):
             A list of names of variables found in our 'vec' array.
         """
         return [(n, meta) for n, meta in iteritems(self._vardict)
-                     if not meta.get('pass_by_obj')]
+                            if not meta.get('pass_by_obj')]
+
+    def get_vecvals(self):
+        """
+        Provides a quick way to iterate over vector subviews.
+
+        Returns
+        -------
+        A list of (name, array) for each local vector variable.
+        """
+        if self._vecvals is None:
+            self._vecvals = [(n,m['val']) for n,m in iteritems(self._vardict)
+                                if not m.get('pass_by_obj') and
+                                not m.get('remote')]
+        return self._vecvals
 
     def get_byobjs(self):
         """

@@ -185,13 +185,10 @@ class LinearGaussSeidel(LinearSolver):
         else:
             rhs_vec = system.dumat
 
-        ls_inputs = system._ls_inputs
-        gs_outputs = {}
-        for voi in ls_inputs:
-            gs_outputs[voi] = [x for x in system.dumat[voi]]
-
-        system.apply_linear(mode, ls_inputs=ls_inputs, vois=rhs_mat.keys(),
-                            gs_outputs=gs_outputs)
+        # we used to build gs_outputs up using dumat, but dumat is already
+        # identical to gs_outputs in the vois we care about, so just use it.
+        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
+                            gs_outputs=system.dumat)
 
         norm = 0.0
         for voi, rhs in iteritems(rhs_mat):
