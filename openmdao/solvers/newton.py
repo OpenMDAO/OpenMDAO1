@@ -1,5 +1,7 @@
 """ Non-linear solver that implements a Newton's method."""
 
+from math import isnan
+
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -145,5 +147,11 @@ class Newton(NonLinearSolver):
         #system.children_solve_nonlinear(local_meta)
 
         if self.options['iprint'] > 0:
+
+            if self.iter_count == maxiter or isnan(f_norm):
+                msg = 'FAILED to converge'
+            else:
+                msg = 'converged'
+
             self.print_norm('NEWTON', local_meta, self.iter_count, f_norm,
-                            f_norm0, msg='Converged')
+                            f_norm0, msg=msg)

@@ -1125,8 +1125,7 @@ class Problem(System):
             dresids.vec[:] = 0.0
             root.clear_dparams()
             dunknowns.vec[:] = 0.0
-            jac_fd = comp.fd_jacobian(params, unknowns, resids,
-                                      step_size=1e-6)
+            jac_fd = comp.fd_jacobian(params, unknowns, resids)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
