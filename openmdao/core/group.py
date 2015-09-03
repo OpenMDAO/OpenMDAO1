@@ -717,12 +717,16 @@ class Group(System):
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
+        states = system.states
 
         for voi in vois:
+            if not self._relevance.is_relevant_system(voi, system):
+                continue
 
             dresids = system.drmat[voi]
             dunknowns = system.dumat[voi]
             dparams = system.dpmat[voi]
+            gsouts = None if gs_outputs is None else gs_outputs[voi]
 
             # Linear GS imposes a stricter requirement on whether or not to run.
             abs_inputs = {meta['pathname'] for meta in itervalues(dparams)}
@@ -734,39 +738,18 @@ class Group(System):
 
                 if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
 
-                    # Speedhack, don't call component's derivatives if
-                    # incoming vector is zero.
-                    nonzero = False
-                    for key in system._get_fd_params():
-                        try:
-                            value = dparams.flat[key]
-                        # Var might be irrelevant.
-                        except KeyError:
-                            continue
-                        if np.any(value):
-                            nonzero = True
-                            break
-
-                    if not nonzero:
-                        # check for all zero states
-                        for key in system.states:
-                            if np.any(dunknowns.flat[key]):
-                                nonzero = True
-                                break
-
-                    if nonzero:
-                        if system.fd_options['force_fd']:
-                            system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                                     dunknowns, dresids, mode)
-                        else:
-                            system.apply_linear(system.params, system.unknowns, dparams,
-                                                dunknowns, dresids, mode)
+                    if system.fd_options['force_fd']:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
-                for var, meta in iteritems(dunknowns):
+                for var in dunknowns:
                     # Skip all states
-                    if (gs_outputs is None or var in gs_outputs[voi]) and \
-                           not meta.get('state'):
+                    if (gsouts is None or var in gsouts) and \
+                           var not in states:
                         v = dresids._flat(var)
                         v += dunknowns._flat(var)
 
@@ -808,10 +791,10 @@ class Group(System):
 
                 dresids.vec *= -1.0
 
-                for var, meta in iteritems(dunknowns):
+                for var in dunknowns:
                     # Skip all states
                     if (gs_outputs is None or var in gs_outputs[voi]) and \
-                            not meta.get('state'):
+                            var not in states:
                         v = dunknowns._flat(var)
                         v += dresids._flat(var)
 

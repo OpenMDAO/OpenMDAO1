@@ -34,6 +34,9 @@ class _flat_dict(object):
     def __getitem__(self, name):
         return self._dict[name]['val']
 
+    def __setitem__(self, name, value):
+        self._dict[name]['val'][:] = value
+
 
 class _ByObjWrapper(object):
     """
