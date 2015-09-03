@@ -15,7 +15,7 @@ class MultiFiMetaModel(MetaModel):
     with multi-fidelity training inputs. For a given number of levels of fidelity
     **nfi** (given at initialization) the corresponding training input variables
     *train:<invar>_fi<2..nfi>* and *train:<outvar>_fi<2..nfi>* are automatically created
-    besides the given *train:<invar>* and train:*<outvar>* variables.
+    besides the given *train:<invar>* and *train:<outvar>* variables.
     Note the index starts at 2, the index 1 is omitted considering
     the simple name *<var>* is equivalent to *<var>_fi1* which is intended
     to be the data of highest fidelity.
@@ -26,28 +26,29 @@ class MultiFiMetaModel(MetaModel):
     Obviously for a given level of fidelity corresponding lists
     *train:<var>_fi<n>* have to be of the same size.
 
-    Thus given the initialization:
-    mm = MultiFiMetaModel(nfi=2)
-    mm.add_param('x1', 0.)
-    mm.add_param('x2', 0.)
-    mm.add_ouput('y1', 0.)
-    mm.add_ouput('y2', 0.)
+    Thus given the initialization::
+
+    >>> mm = MultiFiMetaModel(nfi=2)
+    >>> mm.add_param('x1', 0.)
+    >>> mm.add_param('x2', 0.)
+    >>> mm.add_ouput('y1', 0.)
+    >>> mm.add_ouput('y2', 0.)
 
     the following supplementary training input variables
-    train:x1_fi2 and train:x2_fi2 are created together with the classic
-    ones train:x1 and train:x2 and the output variables train:y1_fi2
-    and train:y2_fi2 are created as well.
-    The embedded surrogate for y1 will be trained with a couple (X, Y)
+    ``train:x1_fi2`` and ``train:x2_fi2`` are created together with the classic
+    ones ``train:x1`` and ``train:x2`` and the output variables ``train:y1_fi2``
+    and ``train:y2_fi2`` are created as well.
+    The embedded surrogate for y1 will be trained with a couple (X, Y).
 
-    * where X is the list [X_fi1, X_fi2] where X_fi1 is an (m1, 2) ndarray
+    Where X is the list [X_fi1, X_fi2] where X_fi1 is an (m1, 2) ndarray
     filled with the m1 samples [x1 value, x2 value], X_fi2 is an (m2, 2) ndarray
     filled with the m2 samples [x1_fi2 value, x2_fi2 value]
 
-    * where Y is a list [Y1_fi1, Y1_fi2] where Y1_fi1 is a (m1, 1) ndarray of
+    Where Y is a list [Y1_fi1, Y1_fi2] where Y1_fi1 is a (m1, 1) ndarray of
     y1 values and Y1_fi2 a (m2, 1) ndarray y1_fi2 values.
 
-    Note: when **nfi** ==1 a :class:`MultiFiMetaModel` object behaves as
-    a :class:`MetaModel` object.
+    .. note:: when *nfi* ==1 a :class:`MultiFiMetaModel` object behaves as
+        a :class:`MetaModel` object.
     """
 
     def __init__(self, nfi=1):
