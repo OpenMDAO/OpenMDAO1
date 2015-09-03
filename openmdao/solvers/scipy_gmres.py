@@ -4,6 +4,8 @@ from __future__ import print_function
 
 from six import iteritems
 
+import numpy as np
+import scipy
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.solvers.solver_base import LinearSolver
@@ -68,11 +70,30 @@ class ScipyGMRES(LinearSolver):
                                matvec=self.mult,
                                dtype=float)
 
+            # dirty hack of a preconditioner
+            for voi, rhs in rhs_mat.items():
+                self.voi = None
+
+                self.system = system
+                self.mode = mode
+
+                n_edge = len(rhs)
+                ident = np.eye(n_edge)
+
+                partials = np.empty((n_edge, n_edge))
+
+                for i in range(n_edge):
+                    partials[:, i] = self.mult(ident[:, i])
+
+            pc = scipy.sparse.linalg.splu(partials)
+            M = scipy.sparse.linalg.LinearOperator(partials.shape, matvec=pc.solve)
+
             # Call GMRES to solve the linear system
             self.system = system
-            d_unknowns, info = gmres(A, rhs,
+            d_unknowns, info = gmres(A, rhs, M=M,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
+            d_unknowns[:-5] =  0.0
             self.system = None
 
             if info > 0:
