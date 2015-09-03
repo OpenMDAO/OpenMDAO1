@@ -52,6 +52,7 @@ class LinearGaussSeidel(LinearSolver):
         dumat = system.dumat
         drmat = system.drmat
         dpmat = system.dpmat
+        gs_outputs = system.gs_outputs
 
         system.clear_dparams()
         for names in system._relevance.vars_of_interest():
@@ -66,7 +67,6 @@ class LinearGaussSeidel(LinearSolver):
         #for voi in vois:
         #    drmat[voi].vec[:] = -rhs_mat[voi]
 
-        gs_outputs = {}
         sol_buf = {}
 
         f_norm0, f_norm = 1.0, 1.0
@@ -84,22 +84,19 @@ class LinearGaussSeidel(LinearSolver):
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
                         #print('pre apply', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                        gs_outputs[voi] = [x for x in dumat[voi]
-                                           if x not in sub.dumat[voi]]
-
-
+                    #print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
                     if isinstance(sub, Component):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
                         system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
-                                                         gs_outputs=gs_outputs)
+                                                         gs_outputs=gs_outputs['fwd'][sub.name])
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
                         sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
-                                         gs_outputs=gs_outputs)
+                                         gs_outputs=gs_outputs['fwd'][sub.name])
 
                     #for voi in vois:
                        # print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -133,22 +130,19 @@ class LinearGaussSeidel(LinearSolver):
                     #for voi in vois:
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                    for voi in vois:
-                        gs_outputs[voi] = [x for x in dumat[voi]
-                                           if x not in sub.dumat[voi]]
-
+                    #print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
                     if isinstance(sub, Component):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
                         system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
-                                                         gs_outputs=gs_outputs)
+                                                         gs_outputs=gs_outputs['rev'][sub.name])
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
                         sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
-                                         gs_outputs=gs_outputs)
+                                         gs_outputs=gs_outputs['rev'][sub.name])
 
                     #for voi in vois:
                         #print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)

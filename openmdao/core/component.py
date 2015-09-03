@@ -342,8 +342,10 @@ class Component(System):
 
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
+        all_vois = set([None])
         for group, vois in iteritems(relevance.groups):
             if group is not None:
+                all_vois.update(vois)
                 for voi in vois:
                     self._create_views(top_unknowns, parent, [],
                                        voi)
@@ -358,6 +360,8 @@ class Component(System):
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
+
+        self._setup_gs_outputs(all_vois)
 
     def apply_nonlinear(self, params, unknowns, resids):
         """

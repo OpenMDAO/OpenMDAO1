@@ -358,8 +358,10 @@ class Group(System):
 
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
+        all_vois = set([None])
         for group, vois in iteritems(self._relevance.groups):
             if group is not None:
+                all_vois.update(vois)
                 for voi in vois:
                     if parent is None:
                         self._create_vecs(my_params, voi, impl)
@@ -368,6 +370,8 @@ class Group(System):
                                            voi)
 
                     self._setup_data_transfer(my_params, voi)
+
+        self._setup_gs_outputs(all_vois)
 
         # convert any src_indices to index arrays
         for meta in itervalues(self._params_dict):
@@ -718,6 +722,7 @@ class Group(System):
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
         states = system.states
+        force_fd = system.fd_options['force_fd']
 
         for voi in vois:
             if not self._relevance.is_relevant_system(voi, system):
@@ -738,7 +743,7 @@ class Group(System):
 
                 if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
 
-                    if system.fd_options['force_fd']:
+                    if force_fd:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                  dunknowns, dresids, mode)
                     else:
@@ -779,7 +784,7 @@ class Group(System):
                     if np.any(dresids.vec):
                         try:
                             dparams.adj_accumulate_mode = True
-                            if system.fd_options['force_fd']:
+                            if force_fd:
                                 system._apply_linear_jac(system.params,
                                                          system.unknowns, dparams,
                                                          dunknowns, dresids, mode)
