@@ -297,11 +297,18 @@ class Driver(object):
         """
         scaler = self._params[name]['scaler']
         adder = self._params[name]['adder']
+        indices = self._params[name]['indices']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
            or scaler != 1.0 or adder != 0.0:
-            self.root.unknowns[name] = value/scaler - adder
+            if indices is None:
+                self.root.unknowns[name] = value/scaler - adder
+            else:
+                self.root.unknowns[name][indices] = value/scaler - adder
         else:
-            self.root.unknowns[name] = value
+            if indices is None:
+                self.root.unknowns[name] = value
+            else:
+                self.root.unknowns[name][indices] = value/scaler - adder
 
     def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
         """ Adds an objective to this driver.
