@@ -65,7 +65,7 @@ class ParallelGroup(Group):
         min_procs = 0
         max_procs = 0
 
-        for sub in self.subsystems():
+        for sub in self._subsystems.itervalues():
             sub_min, sub_max = sub.get_req_procs()
             min_procs += sub_min
             if max_procs is not None:
@@ -105,7 +105,7 @@ class ParallelGroup(Group):
         subsystems = []
         requested_procs = []
         max_req_procs = []
-        for system in self.subsystems():
+        for system in self._subsystems.itervalues():
             subsystems.append(system)
             minproc, maxproc = system.get_req_procs()
             assert(minproc > 0)
@@ -161,7 +161,7 @@ class ParallelGroup(Group):
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i, sub in enumerate(self.subsystems()):
+        for i, sub in enumerate(self._subsystems.itervalues()):
             if i == rank_color:
                 self._local_subsystems[sub.name] = sub
                 sub._setup_communicators(sub_comm)

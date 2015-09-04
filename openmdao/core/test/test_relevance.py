@@ -71,7 +71,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         p.setup(check=False)
 
         rel_systems = ['P1', 'C2', 'C8']
-        for s in root.subsystems():
+        for s in root._subsystems.itervalues():
             if s.pathname in rel_systems:
                 self.assertTrue(root._relevance.is_relevant_system('P1.x', s),
                                msg="%s should be relevant" % s.pathname)

@@ -17,7 +17,7 @@ class TestGroup(unittest.TestCase):
         comp = ExecComp('y=x*2.0')
         group.add('mycomp', comp)
 
-        subs = list(group.subsystems())
+        subs = list(group._subsystems.itervalues())
         self.assertEqual(len(subs), 1)
         self.assertEqual(subs[0], comp)
         self.assertEqual(subs[0].name, 'mycomp')
@@ -25,7 +25,7 @@ class TestGroup(unittest.TestCase):
         comp2 = ExecComp('y=x*2.0')
         group.add("nextcomp", comp2)
 
-        subs = list(group.subsystems())
+        subs = list(group._subsystems.itervalues())
         self.assertEqual(len(subs), 2)
         self.assertEqual(subs[0], comp)
         self.assertEqual(subs[1], comp2)

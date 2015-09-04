@@ -69,7 +69,7 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
                          (margin, klass, system.name))
 
     nest += 3
-    for sub in system.subsystems():
+    for sub in system._subsystems.itervalues():
         sub.dump_meta(nest, out_stream=out_stream)
 
     out_stream.flush()
