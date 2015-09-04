@@ -1034,7 +1034,8 @@ class Group(System):
 
         return ls_inputs
 
-    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
+             sizes=False):
         """
         Writes a formated dump of the `System` tree to file.
 
@@ -1047,12 +1048,15 @@ class Group(System):
             Where output is written.  Defaults to sys.stdout.
 
         verbose : bool, optional
-            If True (the default), output additional info beyond
-            just the tree structure.
+            If True, output additional info beyond
+            just the tree structure. Default is False.
 
         dvecs : bool, optional
             If True, show contents of du and dp vectors instead of
             u and p (the default).
+
+        sizes : bool, optional
+            If True, include vector sizes and comm sizes. Default is False.
         """
         klass = self.__class__.__name__
         if dvecs:
@@ -1063,16 +1067,19 @@ class Group(System):
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+        template = "%s %s '%s'"
+        out_stream.write(template % (" "*nest, klass, self.name))
 
-        template = "%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n"
-        out_stream.write(template % (" "*nest,
-                                     klass,
-                                     self.name,
-                                     self.get_req_procs(),
-                                     uvec.vec.size,
-                                     pvec.vec.size,
-                                     commsz))
+        out_stream.write("  NL: %s  LN: %s" % (self.nl_solver.__class__.__name__,
+                                               self.ln_solver.__class__.__name__))
+        if sizes:
+            commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+            template = "    req: %s  usize:%d  psize:%d  commsize:%d"
+            out_stream.write(template % (self.get_req_procs(),
+                                         uvec.vec.size,
+                                         pvec.vec.size,
+                                         commsz))
+        out_stream.write("\n")
 
         vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
         byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
@@ -1133,7 +1140,8 @@ class Group(System):
 
         nest += 3
         for sub in self.subsystems(local=True):
-            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
+            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs,
+                     sizes=sizes)
 
         out_stream.flush()
 
