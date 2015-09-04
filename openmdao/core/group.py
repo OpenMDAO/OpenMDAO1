@@ -165,7 +165,7 @@ class Group(System):
 
         subs = self._local_subsystems if local else self._subsystems
 
-        for name, sub in iteritems(subs):
+        for sub in itervalues(subs):
             if isinstance(sub, typ):
                 yield sub
             if recurse and isinstance(sub, Group):
