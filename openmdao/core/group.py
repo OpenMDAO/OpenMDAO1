@@ -4,8 +4,9 @@ from __future__ import print_function
 
 import sys
 import os
-from collections import Counter
+from collections import Counter, OrderedDict
 from six import iteritems, iterkeys, itervalues
+from six.moves import zip_longest
 from itertools import chain
 
 import numpy as np
@@ -16,9 +17,6 @@ from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
-from openmdao.solvers.run_once import RunOnce
-from openmdao.solvers.scipy_gmres import ScipyGMRES
-from collections import OrderedDict
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 from openmdao.devtools.debug import debug
@@ -41,6 +39,10 @@ class Group(System):
 
         self._local_unknown_sizes = {}
         self._local_param_sizes = {}
+
+        # put these in here to avoid circular imports
+        from openmdao.solvers.run_once import RunOnce
+        from openmdao.solvers.scipy_gmres import ScipyGMRES
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
@@ -263,8 +265,8 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            p_abs = get_absvarpathnames(p, self._params_dict, 'params')[0]
-            self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
+                self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -301,7 +303,7 @@ class Group(System):
                 self._local_subsystems[sub.name] = sub
 
     def _setup_vectors(self, param_owners, parent=None,
-                       top_unknowns=None, impl=BasicImpl):
+                       top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
@@ -330,7 +332,7 @@ class Group(System):
         if not self.is_active():
             return
 
-        self._impl_factory = impl
+        self._impl = impl
 
         my_params = param_owners.get(self.pathname, [])
         if parent is None:
@@ -374,7 +376,8 @@ class Group(System):
 
         for sub in self.subsystems():
             sub._setup_vectors(param_owners, parent=self,
-                               top_unknowns=top_unknowns)
+                               top_unknowns=top_unknowns,
+                               impl=self._impl)
 
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
@@ -622,9 +625,8 @@ class Group(System):
 
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd']) and \
-                                   not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
@@ -637,7 +639,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, mode, ls_inputs=None, vois=[None]):
+    def apply_linear(self, mode, ls_inputs=None, vois=[None], gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -656,6 +658,9 @@ class Group(System):
 
         vois: list of strings
             List of all quantities of interest to key into the mats.
+
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
         """
         if not self.is_active():
             return
@@ -667,19 +672,20 @@ class Group(System):
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd']) and \
-                             not isinstance(sub, ParamComp):
-                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs)
-
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
+                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
+                                               gs_outputs=gs_outputs)
             # Groups and all other systems just call their own apply_linear.
             else:
-                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois)
+                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                                 gs_outputs=gs_outputs)
 
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter
 
-    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None):
+    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None,
+                                  gs_outputs=None):
         """
         Calls apply_linear on any Component-like subsystem. This
         basically does two things: 1) multiplies the user Jacobian by -1, and
@@ -701,6 +707,9 @@ class Group(System):
         ls_inputs : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
+
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
         """
 
         for voi in vois:
@@ -751,12 +760,21 @@ class Group(System):
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
-                        dresids[var] += dunknowns[var]
+                        if gs_outputs is None or var in gs_outputs[voi]:
+                            dresids[var] += dunknowns[var]
+
 
             # Adjoint Mode
             elif mode == 'rev':
 
-                dparams.vec[:] = 0.0
+                # Clear out our inputs. TODO: Once we have memory packing, we
+                # might be able to just do dparams[:]=0.
+                for key in system._params_dict:
+                    if key in dparams:
+                        dparams[key] *= 0.0
+                for key in system._unknowns_dict:
+                    if key in dunknowns:
+                        dunknowns[key] *= 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -787,7 +805,8 @@ class Group(System):
                 for var, meta in iteritems(dunknowns):
                     # Skip all states
                     if not meta.get('state'):
-                        dunknowns[var] += dresids[var]
+                        if gs_outputs is None or var in gs_outputs[voi]:
+                            dunknowns[var] = dresids[var]
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -826,16 +845,19 @@ class Group(System):
         else:
             sol_vec, rhs_vec = drmat, dumat
 
-        # TODO: Need the norm. Loop over vois here.
-        #if np.linalg.norm(rhs) < 1e-15:
-        #    sol_vec.vec[:] = 0.0
-        #    return
-
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_buf = {}
         for voi in vois:
+
+            # Skip if we are all zeros.
+            if rhs_vec[voi].norm() < 1e-15:
+                sol_vec[voi].vec[:] = 0.0
+                continue
+
             rhs_buf[voi] = rhs_vec[voi].vec.copy()
+
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
+
         for voi in vois:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 
@@ -876,6 +898,14 @@ class Group(System):
             new_subs[sub] = self._subsystems[sub]
 
         self._subsystems = new_subs
+
+        # reset locals
+        new_locs = OrderedDict()
+        for name, sub in iteritems(self._subsystems):
+            if name in self._local_subsystems:
+                new_locs[name] = sub
+        self._local_subsystems = new_locs
+
         self._order_set = True
 
     def list_order(self):
@@ -1160,9 +1190,14 @@ class Group(System):
         umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
 
+        iproc = 0 if self.comm is None else self.comm.rank
+        udist = 'src_indices' in umeta
+        pdist = 'src_indices' in pmeta
+
         # FIXME: if we switch to push scatters, this check will flip
-        if ((mode == 'fwd' and not 'src_indices' in umeta and pmeta.get('remote')) or
-            (mode == 'rev' and not 'src_indices' in pmeta and umeta.get('remote'))):
+        if ((not rev and pmeta.get('remote')) or
+            (rev and not pdist and umeta.get('remote')) or
+            (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1170,35 +1205,20 @@ class Group(System):
            not self._relevance.is_relevant(var_of_interest, pname):
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
-        iproc = 0 if self.comm is None else self.comm.rank
-
-        if 'src_indices' in pmeta:
+        if pdist:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
             arg_idxs = self.params.make_idx_array(0, pmeta['size'])
 
         ivar = u_var_idxs[uname]
-        if 'src_indices' in umeta or 'src_indices' in pmeta:
+        if udist or pdist:
             new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
-            if rev:
-                # if in rev mode, we need to avoid multiple scatters from
-                # duplicate params in different processes.
-                ipvar = p_var_idxs[pname]
-                pstart = np.sum(p_sizes[:iproc, ipvar])
-                pend = pstart + p_sizes[iproc, ipvar]
-                p_unique = np.any(np.logical_and(pstart <= arg_idxs,
-                                                 arg_idxs < pend))
-                if not p_unique:
-                    return (self.params.make_idx_array(0, 0),
-                            self.params.make_idx_array(0, 0))
 
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
                 end = start + u_sizes[irank, ivar]
                 on_irank = np.logical_and(start <= arg_idxs,
                                              arg_idxs < end)
-                if rev and MPI and irank == iproc:
-                    on_my_rank = on_irank
 
                 # Compute conversion to new ordering
 
@@ -1267,11 +1287,11 @@ class Group(System):
                                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
-                                 dtype=self._impl_factory.idx_arr_type)
+                                 dtype=self._impl.idx_arr_type)
         self._local_unknown_sizes[var_of_interest] = unknown_sizes
 
         param_sizes = np.array(param_sizes,
-                               dtype=self._impl_factory.idx_arr_type)
+                               dtype=self._impl.idx_arr_type)
         self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
@@ -1310,15 +1330,12 @@ class Group(System):
                         dest_idx_list.append(didxs)
 
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            if mode == 'fwd':
-                # sort based on ascending sources
-                src_idxs, tgt_idxs = self.unknowns.merge_idxs(srcs, tgts)
-            else:
-                # sort based on ascending targets
-                tgt_idxs, src_idxs = self.unknowns.merge_idxs(tgts, srcs)
+            src_idxs = self.unknowns.merge_idxs(srcs)
+            tgt_idxs = self.unknowns.merge_idxs(tgts)
+
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                    self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                         self.dpmat[var_of_interest],
                                                         src_idxs, tgt_idxs,
                                                         vec_conns, byobj_conns,
@@ -1341,9 +1358,10 @@ class Group(System):
                     full_flats.extend(flats)
                     full_byobjs.extend(byobjs)
 
-            src_idxs, tgt_idxs = self.unknowns.merge_idxs(full_srcs, full_tgts)
+            src_idxs = self.unknowns.merge_idxs(full_srcs)
+            tgt_idxs = self.unknowns.merge_idxs(full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl_factory.create_data_xfer(self.dumat[var_of_interest],
+                self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                     self.dpmat[var_of_interest],
                                                     src_idxs, tgt_idxs,
                                                     full_flats, full_byobjs,
@@ -1428,6 +1446,76 @@ class Group(System):
             umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']
 
         return umap
+
+    def _dump_dist_idxs(self, stream=sys.stdout):
+        """For debugging.  prints out the distributed idxs along with the
+        variables they correspond to for the u and p vectors, for example:
+
+        C3.y     26
+        C3.y     25
+        C3.y     24
+        C2.y     23
+        C2.y     22
+        C2.y     21
+        sub.C3.y 20     20 C3.x
+        sub.C3.y 19     19 C3.x
+        sub.C3.y 18     18 C3.x
+        C1.y     17     17 C2.x
+        P.x      16     16 C2.x
+        P.x      15     15 C2.x
+        P.x      14     14 sub.C3.x
+        C3.y     13     13 sub.C3.x
+        C3.y     12     12 sub.C3.x
+        C3.y     11     11 C1.x
+        C2.y     10     10 C3.x
+        C2.y      9      9 C3.x
+        C2.y      8      8 C3.x
+        sub.C2.y  7      7 C2.x
+        sub.C2.y  6      6 C2.x
+        sub.C2.y  5      5 C2.x
+        C1.y      4      4 sub.C2.x
+        C1.y      3      3 sub.C2.x
+        P.x       2      2 sub.C2.x
+        P.x       1      1 C1.x
+        P.x       0      0 C1.x
+        """
+        idx = 0
+        pdata = []
+        pnwid = 0
+        piwid = 0
+        for lst in self._p_size_lists:
+            for name, sz in lst:
+                for i in range(sz):
+                    pdata.append((name, str(idx)))
+                    pnwid = max(pnwid, len(name))
+                    piwid = max(piwid, len(pdata[-1][1]))
+                    idx += 1
+            # insert a blank line to visually sparate processes
+            pdata.append(('','','',''))
+
+        idx = 0
+        udata = []
+        unwid = 0
+        uiwid = 0
+        for lst in self._u_size_lists:
+            for name, sz in lst:
+                for i in range(sz):
+                    udata.append((name, str(idx)))
+                    unwid = max(unwid, len(name))
+                    uiwid = max(uiwid, len(udata[-1][1]))
+                    idx += 1
+            # insert a blank line to visually sparate processes
+            udata.append(('','','',''))
+
+        data = []
+        for u, p in zip_longest(udata, pdata, fillvalue=('','')):
+            data.append((u[0],u[1],p[1],p[0]))
+
+        for d in data[::-1]:
+            template = "{0:<{wid0}} {1:>{wid1}}     {2:>{wid2}} {3:<{wid3}}\n"
+            stream.write(template.format(d[0], d[1], d[2], d[3],
+                                         wid0=unwid, wid1=uiwid,
+                                         wid2=piwid, wid3=pnwid))
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """

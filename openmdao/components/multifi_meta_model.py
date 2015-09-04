@@ -28,7 +28,7 @@ class MultiFiMetaModel(MetaModel):
 
     Thus given the initialization::
 
-    >>> mm = MultiFiMetaModel(nfi=2)
+    >>> mm = MultiFiMetaModel(nfi=2)`
     >>> mm.add_param('x1', 0.)
     >>> mm.add_param('x2', 0.)
     >>> mm.add_ouput('y1', 0.)
@@ -188,4 +188,3 @@ class MultiFiMetaModel(MetaModel):
                                         self._training_output[name])
 
         self.train = False
-

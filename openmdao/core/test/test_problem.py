@@ -800,6 +800,10 @@ class TestProblem(unittest.TestCase):
         sub2 = sub1.add('sub2', Group(), promotes=['*'])
         sub2.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
 
+        root.ln_solver.options['mode'] = 'fwd'
+        sub1.ln_solver.options['mode'] = 'fwd'
+        sub2.ln_solver.options['mode'] = 'fwd'
+
         prob.setup(check=False)
         prob.run()
 

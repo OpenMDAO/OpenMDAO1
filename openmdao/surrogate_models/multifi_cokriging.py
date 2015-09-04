@@ -73,7 +73,8 @@ def squared_exponential_correlation(theta, d):
         theta, dx --> r(theta, dx) = exp(  sum  - theta_i * (dx_i)^2 )
                                           i = 1
 
-    *Parameters*
+    Args
+    ----
 
     theta: array_like
         An array with shape 1 (isotropic) or n (anisotropic) giving the
@@ -84,7 +85,8 @@ def squared_exponential_correlation(theta, d):
         distances between locations x and x' at which the correlation model
         should be evaluated.
 
-    *Returns*
+    Returns
+    -------
 
     r: array_like
         An array with shape (n_eval, ) containing the values of the
@@ -112,7 +114,8 @@ def l1_cross_distances(X, Y=None):
 Computes the nonzero componentwise L1 cross-distances between the vectors
 in X and Y.
 
-*Parameters*
+Args
+----
 
 X: array_like
     An array with shape (n_samples_X, n_features)
@@ -120,7 +123,8 @@ X: array_like
 Y: array_like
     An array with shape (n_samples_Y, n_features)
 
-*Returns*
+Returns
+-------
 
 D: array with shape (n_samples * (n_samples - 1) / 2, n_features)
     The array of componentwise L1 cross-distances.
@@ -165,7 +169,8 @@ class MultiFiCoKriging(object):
 This class integrates the Multi-Fidelity Co-Kriging method described in
 [LeGratiet2013]_.
 
-`Parameters`
+Args
+----
 
 regr: string or callable, optional
     A regression function returning an array of outputs of the linear
@@ -220,7 +225,8 @@ thetaU: double, array_like or list, optional
     if list: a list of nlevel arrays specifying value for each level
 
 
-*Attributes*
+Attributes
+----------
 
 `theta`: list
     Specified theta for each level OR the best set of autocorrelation parameters
@@ -231,8 +237,10 @@ thetaU: double, array_like or list, optional
     for each level.
 
 
-*Examples*
+Examples
+--------
 
+>>> from openmdao.surrogate_models.multifi_cokriging import MultiFiCoKriging
 >>> import numpy as np
 >>> # Xe: DOE for expensive code (nested in Xc)
 >>> # Xc: DOE for cheap code
@@ -249,8 +257,8 @@ thetaU: double, array_like or list, optional
 True
 
 
-*Notes*
-
+Notes
+-----
 
 Implementation is based on the Package Scikit-Learn
 (Author: Vincent Dubourg <vincent.dubourg@gmail.com>) which translates
@@ -258,7 +266,7 @@ the DACE Matlab toolbox, see [NLNS2002]_.
 
 
 References
-
+----------
 
 .. [NLNS2002] H. B. Nielsen, S. N. Lophaven, and J. Sondergaard.
    `DACE - A MATLAB Kriging Toolbox.` (2002)
@@ -276,7 +284,7 @@ References
 .. [TBKH2011] Toal, D. J., Bressloff, N. W., Keane, A. J., & Holden, C. M. E. (2011).
    "The development of a hybridized particle swarm for kriging hyperparameter
    tuning." `Engineering optimization`, 43(6), 675-699.
-"""
+   """
 
     _regression_types = {
         'constant': constant_regression,
@@ -316,7 +324,8 @@ References
         """
 The Multi-Fidelity co-kriging model fitting method.
 
-*Parameters*
+Args
+----
 
 X: list of double array_like elements
     A list of arrays with the input at which observations were made, from lowest
@@ -438,7 +447,8 @@ equivalent to maximizing the likelihood of the assumed joint Gaussian
 distribution of the observations y evaluated onto the design of
 experiments X.
 
-*Parameters*
+Args
+----
 
 self: Multi-Fidelity Co-Kriging object
 
@@ -451,7 +461,8 @@ theta: array_like, optional
     Default uses the built-in autocorrelation parameters
     (ie ``theta = self.theta``).
 
-`Returns`
+Returns
+-------
 
 rlf_value: double
     The value of the negative concentrated reduced likelihood function
@@ -521,7 +532,8 @@ This function estimates the autocorrelation parameter theta
 as the maximizer of the reduced likelihood function of the given level (lvl).
 (Minimization of the negative reduced likelihood function is used for convenience.)
 
-`Parameters`
+Args
+----
 
 self: Most parameters are stored in the Gaussian Process model object.
 
@@ -534,7 +546,8 @@ initial_range: float
 tol: float
     Optimizer terminates when the tolerance tol is reached.
 
-`Returns`
+Returns
+-------
 
 optimal_theta: array_like
 optimal_rlf_value: double
@@ -585,7 +598,8 @@ res: dict
         """
 This function performs the predictions of the kriging model on X.
 
-`Parameters`
+Args
+----
 
 X: array_like
     An array with shape (n_eval, n_features) giving the point(s) at
@@ -595,7 +609,8 @@ eval_MSE: boolean, optional
     A boolean specifying whether the Mean Squared Error should be
     evaluated or not. Default assumes evalMSE is True.
 
-`Returns`
+Returns
+-------
 
 y: array_like
     An array with shape (n_eval, ) with the Best Linear Unbiased

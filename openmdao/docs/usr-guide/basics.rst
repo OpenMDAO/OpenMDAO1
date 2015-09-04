@@ -77,7 +77,7 @@ They are the `Component` class and the `Group` class.
 Component
 ---------
 
-The `Component` class is lowest level system in OpenMDAO. Child classes of
+The `Component` class is the lowest level system in OpenMDAO. Child classes of
 `Component` are the only classes allowed to create parameter, output, and state
 variables. By sub-classing `Component` and defining a *solve_nonlinear* (and
 *apply_nonlinear* if state variables are present), users can build their own
