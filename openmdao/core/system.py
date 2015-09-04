@@ -639,7 +639,8 @@ class System(object):
             for key, value in iteritems(self._params_dict):
                 docstring += "    "+key
                 docstring += " : param"
-                #docstring += type(value).__name__
+                docstring += type(value).__name__
+                docstring += "\n" + str(value)
                 docstring += "\n        <Insert description here.>\n"
 
         if self._unknowns_dict:
@@ -652,18 +653,30 @@ class System(object):
                     docstring += "unknown"
                 else:
                     docstring += typ
+                docstring += "\n " + str(value)
                 docstring += "\n        <Insert description here.>\n"
 
-        if hasattr(self, 'options'):
+        if hasattr(self, 'options') or hasattr(self, 'fd_options'):
             docstring += '\n\tOptions\n\t----------\n'
+
+        if hasattr(self, 'options'):
             for (name, val) in self.options.items():
                 typ = type(val).__name__
                 desc = self.options._options[name]['desc']
                 docstring += "    "+name
                 docstring += " :  "
                 docstring += typ
-                #docstring += "(" + str(val) + ")"
-                #docstring += " \n"
+                docstring += "(" + str(val) + ")"
+                docstring += "\n        " + desc + "\n"
+
+        if hasattr(self, 'fd_options'):
+            for (name, val) in self.fd_options.items():
+                typ = type(val).__name__
+                desc = self.fd_options._options[name]['desc']
+                docstring += "    "+name
+                docstring += " :  "
+                docstring += typ
+                docstring += "(" + str(val) + ")"
                 docstring += "\n        " + desc + "\n"
 
         #finish up docstring

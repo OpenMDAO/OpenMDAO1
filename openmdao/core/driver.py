@@ -25,7 +25,7 @@ class Driver(object):
 
         # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
-        self.supports.add_option('inequality_constraints', True)
+        self.supports.add_option('inequality_constraints', True, desc='junk')
         self.supports.add_option('equality_constraints', True)
         self.supports.add_option('linear_constraints', False)
         self.supports.add_option('multiple_objectives', False)
@@ -544,15 +544,30 @@ class Driver(object):
         docstring : str
                 string that contains a basic numpy docstring.
         """
-
-        if hasattr(self, 'supports'):
+        if hasattr(self, 'options') or hasattr(self, 'supports'):
             #start the docstring off
             docstring = '\t\"\"\"\n'
             docstring += '\n\tOptions\n\t----------\n\n'
+
+        if hasattr(self, 'options'):
+            for (name, val) in self.options.items():
+                typ = type(val).__name__
+                desc = self.options._options[name]['desc']
+                docstring += "    "+name
+                docstring += " :  "
+                docstring += typ
+                docstring += "(" + str(val) + ")"
+                docstring += "\n        " + desc + "\n"
+
+        if hasattr(self, 'supports'):
             for (name, val) in self.supports.items():
                 typ = type(val).__name__
                 docstring += "    "+name
-                docstring += " :  " + typ + " \n"
+                docstring += " :  " + typ
+                docstring += "(" + str(val) + ")\n"
+                desc = self.supports._options[name]['desc']
+                if(desc):
+                    docstring += "        " + desc + "\n"
 
             #finish up docstring
             docstring += '\n\t\"\"\"\n'
