@@ -308,7 +308,7 @@ class Driver(object):
             if indices is None:
                 self.root.unknowns[name] = value
             else:
-                self.root.unknowns[name][indices] = value/scaler - adder
+                self.root.unknowns[name][indices] = value
 
     def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
         """ Adds an objective to this driver.
