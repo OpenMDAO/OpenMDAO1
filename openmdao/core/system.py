@@ -22,6 +22,9 @@ class System(object):
         self.name = ''
         self.pathname = ''
 
+        self._subsystems = OrderedDict()
+        self._local_subsystems = []
+        
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
 
@@ -570,13 +573,13 @@ class System(object):
         self.gs_outputs = { 'fwd': {}, 'rev': {}}
         dumat = self.dumat
         gso = self.gs_outputs['fwd']
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             gso[sub.name] = {}
             for voi in vois:
                 gso[sub.name][voi] = set([x for x in dumat[voi] if
                                            sub.dumat and x not in sub.dumat[voi]])
         gso = self.gs_outputs['rev']
-        for sub in reversed(list(self.subsystems(local=True))):
+        for sub in reversed(list(self._local_subsystems)):
             gso[sub.name] = {}
             for voi in vois:
                 gso[sub.name][voi] = set([x for x in dumat[voi] if

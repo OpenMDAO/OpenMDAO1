@@ -77,7 +77,7 @@ class LinearGaussSeidel(LinearSolver):
 
             if mode == 'fwd':
 
-                for sub in system.subsystems(local=True):
+                for sub in system._local_subsystems:
 
                     for voi in vois:
                         #print('pre scatter', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -115,7 +115,7 @@ class LinearGaussSeidel(LinearSolver):
 
             else:
 
-                for sub in reversed(list(system.subsystems(local=True))):
+                for sub in reversed(list(system._local_subsystems)):
                     for voi in vois:
                         dumat[voi].vec *= 0.0
 

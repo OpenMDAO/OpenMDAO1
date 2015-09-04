@@ -31,8 +31,6 @@ class Group(System):
     def __init__(self):
         super(Group, self).__init__()
 
-        self._subsystems = OrderedDict()
-        self._local_subsystems = OrderedDict()
         self._src = {}
         self._src_idxs = {}
         self._data_xfer = {}
@@ -163,9 +161,9 @@ class Group(System):
         if include_self and isinstance(self, typ):
             yield self
 
-        subs = self._local_subsystems if local else self._subsystems
+        subs = self._local_subsystems if local else itervalues(self._subsystems)
 
-        for sub in itervalues(subs):
+        for sub in subs:
             if isinstance(sub, typ):
                 yield sub
             if recurse and isinstance(sub, Group):
@@ -293,14 +291,14 @@ class Group(System):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self._local_subsystems = OrderedDict()
+        self._local_subsystems = []
 
         self.comm = comm
 
         for sub in self._subsystems.itervalues():
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems.append(sub)
 
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
@@ -620,7 +618,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
 
             # Instigate finite difference on child if user requests.
             if sub.fd_options['force_fd']:
@@ -682,7 +680,7 @@ class Group(System):
         if mode == 'fwd':
             self._transfer_data(deriv=True) # Full Scatter
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
@@ -871,7 +869,7 @@ class Group(System):
         self.dpmat[None].vec[:] = 0.0
 
         # Recurse to clear all dparams vectors.
-        for system in self._local_subsystems.itervalues(): #self.subsystems(local=True):
+        for system in self._local_subsystems: #self._local_subsystems:
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
 
@@ -914,10 +912,10 @@ class Group(System):
         self._subsystems = new_subs
 
         # reset locals
-        new_locs = OrderedDict()
-        for name, sub in iteritems(self._subsystems):
-            if name in self._local_subsystems:
-                new_locs[name] = sub
+        new_locs = []
+        for sub in itervalues(self._subsystems):
+            if sub in self._local_subsystems:
+                new_locs.append(sub)
         self._local_subsystems = new_locs
 
         self._order_set = True
@@ -1139,7 +1137,7 @@ class Group(System):
                                                  nwid=nwid))
 
         nest += 3
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs,
                      sizes=sizes)
 

@@ -34,7 +34,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             if isinstance(sub, Component):
                 sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
@@ -47,7 +47,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             if isinstance(sub, Component):
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
@@ -92,7 +92,7 @@ class ParallelGroup(Group):
             The communicator being offered by the parent system.
         """
         self.comm = comm
-        self._local_subsystems = OrderedDict()
+        self._local_subsystems = []
 
         # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
@@ -163,7 +163,7 @@ class ParallelGroup(Group):
 
         for i, sub in enumerate(self._subsystems.itervalues()):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems.append(sub)
                 sub._setup_communicators(sub_comm)
             else:
                 sub._setup_communicators(MPI.COMM_NULL)
