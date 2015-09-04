@@ -341,6 +341,7 @@ class VecWrapper(object):
 
         view._setup_prom_map()
         view._setup_get_functs()
+        view.get_vecvals()
 
         return view
 
@@ -451,9 +452,9 @@ class VecWrapper(object):
         A list of (name, array) for each local vector variable.
         """
         if self._vecvals is None:
-            self._vecvals = [(n,m['val']) for n,m in iteritems(self._vardict)
+            self._vecvals = OrderedDict([(n,m['val']) for n,m in iteritems(self._vardict)
                                 if not m.get('pass_by_obj') and
-                                not m.get('remote')]
+                                not m.get('remote')])
         return self._vecvals
 
     def get_byobjs(self):
@@ -739,6 +740,7 @@ class SrcVecWrapper(VecWrapper):
 
         self._setup_prom_map()
         self._setup_get_functs()
+        self.get_vecvals()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -879,6 +881,7 @@ class TgtVecWrapper(VecWrapper):
 
         self._setup_prom_map()
         self._setup_get_functs()
+        self.get_vecvals()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """

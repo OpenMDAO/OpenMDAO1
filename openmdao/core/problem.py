@@ -1083,7 +1083,7 @@ class Problem(System):
                     root.clear_dparams()
                     dunknowns.vec[:] = 0.0
 
-                    dresids.flat[u_name][idx] = 1.0
+                    dresids._vecvals[u_name][idx] = 1.0
                     try:
                         dparams.adj_accumulate_mode = True
                         comp.apply_linear(params, unknowns, dparams,
@@ -1097,7 +1097,7 @@ class Problem(System):
 
                         dinputs = dunknowns if p_name in states else dparams
 
-                        jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
+                        jac_rev[(u_name, p_name)][idx, :] = dinputs._vecvals[p_name]
 
             # Forward derivatives second
             for p_name in chain(dparams, states):
@@ -1111,7 +1111,7 @@ class Problem(System):
                     root.clear_dparams()
                     dunknowns.vec[:] = 0.0
 
-                    dinputs.flat[p_name][idx] = 1.0
+                    dinputs._vecvals[p_name][idx] = 1.0
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
@@ -1119,7 +1119,7 @@ class Problem(System):
                         if (u_name, p_name) in skip_keys:
                             continue
 
-                        jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                        jac_fwd[(u_name, p_name)][:, idx] = dresids._vecvals[u_name]
 
             # Finite Difference goes last
             dresids.vec[:] = 0.0
