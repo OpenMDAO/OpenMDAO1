@@ -760,16 +760,16 @@ class Group(System):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids._vecvals[var] += dunknowns._vecvals[var]
+                        dresids.flat[var] += dunknowns.flat[var]
 
             # Adjoint Mode
             elif mode == 'rev':
 
                 # Clear out our inputs. TODO: Once we have memory packing, we
                 # might be able to just do dparams[:]=0.
-                for val in dparams._vecvals.itervalues():
+                for val in dparams.flat.itervalues():
                     val[:] = 0.0
-                for val in dunknowns._vecvals.itervalues():
+                for val in dunknowns.flat.itervalues():
                     val[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
@@ -800,7 +800,7 @@ class Group(System):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns._vecvals[var] += dresids._vecvals[var]
+                        dunknowns.flat[var] += dresids.flat[var]
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """

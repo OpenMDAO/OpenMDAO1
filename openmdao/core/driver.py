@@ -252,7 +252,7 @@ class Driver(object):
         for key, meta in iteritems(self._params):
             scaler = meta['scaler']
             adder = meta['adder']
-            flatval = uvec._vecvals[key]
+            flatval = uvec.flat[key]
             if 'indices' in meta:
 
                 # Make sure our indices are valid
@@ -364,7 +364,7 @@ class Driver(object):
         for key, meta in iteritems(self._objs):
             scaler = meta['scaler']
             adder = meta['adder']
-            flatval = uvec._vecvals[key]
+            flatval = uvec.flat[key]
 
             if 'indices' in meta:
                 # Make sure our indices are valid
@@ -482,7 +482,7 @@ class Driver(object):
 
             scaler = meta['scaler']
             adder = meta['adder']
-            flatval = uvec._vecvals[key]
+            flatval = uvec.flat[key]
 
             if 'indices' in meta:
                 # Make sure our indices are valid

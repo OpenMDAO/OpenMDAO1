@@ -24,7 +24,7 @@ class System(object):
 
         self._subsystems = OrderedDict()
         self._local_subsystems = []
-        
+
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
 
@@ -364,7 +364,7 @@ class System(object):
                 if param_src not in self.unknowns:
                     param_src = self.unknowns.get_promoted_varname(param_src)
 
-                target_input = unknowns.flat[param_src]
+                target_input = unknowns._vardict[param_src]['val']
 
             else:
                 # Cases where the paramcomp is somewhere above us.
@@ -373,7 +373,7 @@ class System(object):
                 else:
                     inputs = params
 
-                target_input = inputs.flat[p_name]
+                target_input = inputs._vardict[p_name]['val']
 
             mydict = {}
             if p_name in self._to_abs_pnames:
@@ -459,7 +459,7 @@ class System(object):
                     target_input[idx] += step
 
                 for u_name in fd_unknowns:
-                    jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
+                    jac[u_name, p_name][:, idx] = resultvec._vardict[u_name]['val']
 
                 # Restore old residual
                 resultvec.vec[:] = cache1

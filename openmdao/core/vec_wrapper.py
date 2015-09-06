@@ -12,7 +12,11 @@ from openmdao.util.string_util import get_common_ancestor
 
 #from openmdao.devtools.debug import *
 
-class NoPlusEqArray(object):
+class _NoPlusEqArray(object):
+    """
+    This is here as a hack to get around the issue of unit conversions
+    getting applied multiple times when doing a += in reverse mode.
+    """
     def __init__(self, arr):
         self._arr = arr
 
@@ -23,20 +27,6 @@ class NoPlusEqArray(object):
         # instead of doing +=, just do =
         self._arr[:] = other
         return self._arr
-
-class _flat_dict(object):
-    """This is here to allow the user to use vec.flat['foo'] syntax instead
-    of vec.flat('foo').
-    """
-    def __init__(self, vardict):
-        self._dict = vardict
-
-    def __getitem__(self, name):
-        return self._dict[name]['val']
-
-    def __setitem__(self, name, value):
-        self._dict[name]['val'][:] = value
-
 
 class _ByObjWrapper(object):
     """
@@ -83,11 +73,7 @@ class VecWrapper(object):
         self.vec = None
         self._vardict = OrderedDict()
         self._slices = {}
-        self._vecvals = None
-
-        # add a flat attribute that will have access method consistent
-        # with non-flat access but returns the flattened value
-        self.flat = _flat_dict(self._vardict)
+        self.flat = None
 
         # Automatic unit conversion in target vectors
         self.deriv_units = False
@@ -341,7 +327,7 @@ class VecWrapper(object):
 
         view._setup_prom_map()
         view._setup_get_functs()
-        view.get_vecvals()
+        view.setup_flat()
 
         return view
 
@@ -443,7 +429,7 @@ class VecWrapper(object):
         return [(n, meta) for n, meta in iteritems(self._vardict)
                             if not meta.get('pass_by_obj')]
 
-    def get_vecvals(self):
+    def setup_flat(self):
         """
         Provides a quick way to iterate over vector subviews.
 
@@ -451,11 +437,11 @@ class VecWrapper(object):
         -------
         A list of (name, array) for each local vector variable.
         """
-        if self._vecvals is None:
-            self._vecvals = OrderedDict([(n,m['val']) for n,m in iteritems(self._vardict)
+        if self.flat is None:
+            self.flat = OrderedDict([(n,m['val']) for n,m in iteritems(self._vardict)
                                 if not m.get('pass_by_obj') and
                                 not m.get('remote')])
-        return self._vecvals
+        return self.flat
 
     def get_byobjs(self):
         """
@@ -580,7 +566,7 @@ class VecWrapper(object):
                 func = lambda s: scale*(val.reshape(shape) + offset)
 
         if hasattr(self, 'adj_accumulate_mode'):
-            z = NoPlusEqArray(numpy.zeros(shape))
+            z = _NoPlusEqArray(numpy.zeros(shape))
             # wrap existing lambda in if test for adj_accumulate_mode
             return lambda s: z if s.adj_accumulate_mode else func(s), \
                    lambda s: z if s.adj_accumulate_mode else flatfunc(s)
@@ -740,7 +726,7 @@ class SrcVecWrapper(VecWrapper):
 
         self._setup_prom_map()
         self._setup_get_functs()
-        self.get_vecvals()
+        self.setup_flat()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -881,7 +867,7 @@ class TgtVecWrapper(VecWrapper):
 
         self._setup_prom_map()
         self._setup_get_functs()
-        self.get_vecvals()
+        self.setup_flat()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
