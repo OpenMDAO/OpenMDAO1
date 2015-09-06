@@ -154,7 +154,6 @@ class System(object):
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
                 raise RuntimeError(msg % (self.name, prom))
 
-
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
 
@@ -274,9 +273,8 @@ class System(object):
         for meta in itervalues(self._unknowns_dict):
             meta['remote'] = True
 
-    def fd_jacobian(self, params, unknowns, resids, step_size=None, form=None,
-                    step_type=None, total_derivs=False, fd_params=None,
-                    fd_unknowns=None):
+    def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
+                    fd_params=None, fd_unknowns=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -290,17 +288,6 @@ class System(object):
 
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
-
-        step_size : float, optional
-            Override all other specifications of finite difference step size.
-
-        form : float, optional
-            Override all other specifications of form. Can be forward,
-            backward, or central.
-
-        step_type : float, optional
-            Override all other specifications of step_type. Can be absolute
-            or relative.
 
         total_derivs : bool, optional
             Set to true to calculate total derivatives. Otherwise, partial
@@ -330,16 +317,16 @@ class System(object):
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
 
-        # Function call arguments have precedence over the system dict.
-        step_size = self.fd_options.get('step_size', step_size)
-        form = self.fd_options.get('form', form)
-        step_type = self.fd_options.get('step_type', step_type)
+        # Use settings in the system dict unless variables override.
+        step_size = self.fd_options.get('step_size', 1.0e-6)
+        form = self.fd_options.get('form', 'forward')
+        step_type = self.fd_options.get('step_type', 'relative')
 
         jac = {}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        if total_derivs == False:
+        if total_derivs is False:
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
@@ -543,7 +530,6 @@ class System(object):
         """
 
         comm = self.comm
-        unknowns_dict = self._unknowns_dict
         params_dict = self._params_dict
         voi = var_of_interest
         relevance = self._relevance

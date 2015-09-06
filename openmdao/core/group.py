@@ -263,8 +263,8 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            p_abs = get_absvarpathnames(p, self._params_dict, 'params')[0]
-            self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
+                self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -636,9 +636,8 @@ class Group(System):
 
             # Cache the Jacobian for Components that aren't Paramcomps.
             # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or \
-                                   sub.fd_options['force_fd']) and \
-                                   not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
@@ -684,12 +683,10 @@ class Group(System):
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if (isinstance(sub, Component) or \
-                             sub.fd_options['force_fd']) and \
-                             not isinstance(sub, ParamComp):
+            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+               and not isinstance(sub, ParamComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
                                                gs_outputs=gs_outputs)
-
             # Groups and all other systems just call their own apply_linear.
             else:
                 sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
@@ -839,14 +836,15 @@ class Group(System):
         else:
             sol_vec, rhs_vec = drmat, dumat
 
-        # TODO: Need the norm. Loop over vois here.
-        #if np.linalg.norm(rhs) < 1e-15:
-        #    sol_vec.vec[:] = 0.0
-        #    return
-
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_buf = {}
         for voi in vois:
+
+            # Skip if we are all zeros.
+            if rhs_vec[voi].norm() < 1e-15:
+                sol_vec[voi].vec[:] = 0.0
+                continue
+
             rhs_buf[voi] = rhs_vec[voi].vec.copy()
 
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)

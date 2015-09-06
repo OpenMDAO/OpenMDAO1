@@ -118,7 +118,7 @@ class SellarNoDerivatives(Group):
         self.add('d2', SellarDis2(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0),
                  promotes=['*'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
