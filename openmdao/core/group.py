@@ -867,7 +867,7 @@ class Group(System):
         self.dpmat[None].vec[:] = 0.0
 
         # Recurse to clear all dparams vectors.
-        for system in self._local_subsystems: #self._local_subsystems:
+        for system in self._local_subsystems:
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
 

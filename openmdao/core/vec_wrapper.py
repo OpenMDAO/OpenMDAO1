@@ -326,8 +326,8 @@ class VecWrapper(object):
             view.vec = self.vec[start:end]
 
         view._setup_prom_map()
-        view._setup_get_functs()
         view.setup_flat()
+        view._setup_access_functs()
 
         return view
 
@@ -574,47 +574,46 @@ class VecWrapper(object):
 
     def _setup_set_funct(self, name):
         def _set_no_units_arr(self, name, value):
-            self._vardict[name]['val'][:] = value.flat
+            self.flat[name][:] = value.flat
 
         def _set_no_units_scalar(self, name, value):
-            self._vardict[name]['val'][0] = value
+            self.flat[name][0] = value
 
         def _set_units_arr(self, name, value):
-            meta = self._vardict[name]
-            meta['val'][:] = value.flat
-            meta['val'] *= meta['unit_conv'][0]
+            val = self.flat[name]
+            val[:] = value.flat
+            val *= self._vardict[name]['unit_conv'][0]
 
         def _set_units_scalar(self, name, value):
-            meta = self._vardict[name]
-            meta['val'][0] = meta['unit_conv'][0]*value
+            self.flat[name][0] = self._vardict[name]['unit_conv'][0]*value
 
         def _set_no_units_arr_accum(self, name, value):
             if self.adj_accumulate_mode:
-                self._vardict[name]['val'][:] += value.flat
+                self.flat[name][:] += value.flat
             else:
-                self._vardict[name]['val'][:] = value.flat
+                self.flat[name][:] = value.flat
 
         def _set_no_units_scalar_accum(self, name, value):
             if self.adj_accumulate_mode:
-                self._vardict[name]['val'][0] += value
+                self.flat[name][0] += value
             else:
-                self._vardict[name]['val'][0] = value
+                self.flat[name][0] = value
 
         def _set_units_arr_accum(self, name, value):
-            meta = self._vardict[name]
+            val = self.flat[name]
             if self.adj_accumulate_mode:
                 # removing the [:] here on the rhs causes failures...
-                meta['val'][:] += meta['unit_conv'][0]*value.flat[:]
+                val[:] += self._vardict[name]['unit_conv'][0]*value.flat[:]
             else:
-                meta['val'][:] = value.flat
-                meta['val'] *= meta['unit_conv'][0]
+                val[:] = value.flat
+                val *= self._vardict[name]['unit_conv'][0]
 
         def _set_units_scalar_accum(self, name, value):
-            meta = self._vardict[name]
+            val = self.flat[name]
             if self.adj_accumulate_mode:
-                meta['val'][0] += meta['unit_conv'][0]*value[0]
+                val[0] += self._vardict[name]['unit_conv'][0]*value[0]
             else:
-                meta['val'][0] = meta['unit_conv'][0]*value[0]
+                val[0] = self._vardict[name]['unit_conv'][0]*value[0]
 
         def _set_pbo(self, name, value):
             self._vardict[name]['val'].val = value
@@ -646,7 +645,7 @@ class VecWrapper(object):
                 else:
                     return _set_no_units_arr
 
-    def _setup_get_functs(self):
+    def _setup_access_functs(self):
         self._fastget = {}
         self._fastflat = {}
         self._fastset = {}
@@ -724,8 +723,8 @@ class SrcVecWrapper(VecWrapper):
                             self._vardict[meta['promoted_name']]['val'][:] = meta['val'].flat
 
         self._setup_prom_map()
-        self._setup_get_functs()
         self.setup_flat()
+        self._setup_access_functs()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -864,8 +863,8 @@ class TgtVecWrapper(VecWrapper):
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
         self._setup_prom_map()
-        self._setup_get_functs()
         self.setup_flat()
+        self._setup_access_functs()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """

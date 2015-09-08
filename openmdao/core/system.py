@@ -560,15 +560,15 @@ class System(object):
         dumat = self.dumat
         gso = self.gs_outputs['fwd']
         for sub in self._local_subsystems:
-            gso[sub.name] = {}
+            gso[sub.name] = outs = {}
             for voi in vois:
-                gso[sub.name][voi] = set([x for x in dumat[voi] if
+                outs[voi] = set([x for x in dumat[voi] if
                                            sub.dumat and x not in sub.dumat[voi]])
         gso = self.gs_outputs['rev']
-        for sub in reversed(list(self._local_subsystems)):
-            gso[sub.name] = {}
+        for sub in reversed(self._local_subsystems):
+            gso[sub.name] = outs = {}
             for voi in vois:
-                gso[sub.name][voi] = set([x for x in dumat[voi] if
+                outs[voi] = set([x for x in dumat[voi] if
                                            not sub.dumat or
                                            (sub.dumat and x not in sub.dumat[voi])])
 
