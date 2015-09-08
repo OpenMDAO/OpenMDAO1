@@ -51,9 +51,6 @@ class ExplicitSolver(ScipyGMRES):
 
             deriv = np.linalg.solve(partials, rhs)
 
-            res = partials.dot(deriv) - rhs
-            print "Check solution", np.linalg.norm(res)
-
             self.system = None
             sol_buf[voi] = deriv
 
