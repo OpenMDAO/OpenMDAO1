@@ -105,7 +105,12 @@ class TestProblemCheckPartials(unittest.TestCase):
             data = prob.check_partial_derivatives(out_stream=None)
         except Exception as err:
             msg = "derivative in component 'comp' of 'y' wrt 'x' is the wrong size. It should be (2, 2), but got (3, 3)"
-            self.assertEqual(str(err), msg)
+
+            # Good ole Numpy
+            raised_error = str(err)
+            raised_error = raised_error.replace('(3L,', '(3,')
+
+            self.assertEqual(raised_error, msg)
         else:
             self.fail("Error expected")
 
