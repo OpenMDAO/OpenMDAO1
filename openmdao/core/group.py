@@ -858,7 +858,7 @@ class Group(System):
 
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
 
-        for voi in vois:
+        for voi in rhs_buf:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 
     def set_order(self, new_order):
