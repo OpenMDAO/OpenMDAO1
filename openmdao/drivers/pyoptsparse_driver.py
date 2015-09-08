@@ -295,6 +295,7 @@ class pyOptSparseDriver(Driver):
             import traceback
             traceback.print_exc()
             print(70*"=")
+            fail = 1
 
         #print("Functions calculated")
         #print(func_dict)

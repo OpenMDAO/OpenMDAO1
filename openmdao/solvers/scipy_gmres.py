@@ -28,6 +28,7 @@ class ScipyGMRES(LinearSolver):
         opt.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " + 
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
+
                        "let OpenMDAO determine the best mode.")
 
         # These are defined whenever we call solve to provide info we need in
@@ -123,6 +124,7 @@ class ScipyGMRES(LinearSolver):
 
             # print system.name, 'Linear solution vec', d_unknowns
 
+
         return unknowns_mat
 
     def mult(self, arg):
@@ -159,4 +161,5 @@ class ScipyGMRES(LinearSolver):
 
         # debug("arg", arg)
         # debug("result", rhs_vec.vec)
+
         return rhs_vec.vec[:]

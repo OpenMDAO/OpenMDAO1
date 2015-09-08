@@ -78,7 +78,7 @@ class DistribCompSimple(Component):
         else:
             unknowns['outvec'] = params['invec'] * 0.75
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 
@@ -112,7 +112,7 @@ class DistribInputComp(Component):
         self.set_var_indices('invec', val=np.ones(self.sizes[rank], float),
                              src_indices=np.arange(start, end, dtype=int))
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 
@@ -155,7 +155,7 @@ class DistribOverlappingInputComp(Component):
         self.set_var_indices('invec', val=np.ones(size, float),
                              src_indices=np.arange(start, end, dtype=int))
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 
@@ -188,7 +188,7 @@ class DistribInputDistribOutputComp(Component):
         self.set_var_indices('outvec', val=np.ones(sizes[rank], float),
                              src_indices=np.arange(start, end, dtype=int))
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 
@@ -221,7 +221,7 @@ class DistribNoncontiguousComp(Component):
         self.set_var_indices('outvec', val=np.ones(len(idxs), float),
                              src_indices=idxs)
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 
@@ -259,7 +259,7 @@ class DistribGatherComp(Component):
         self.set_var_indices('invec', val=np.ones(self.sizes[rank], float),
                              src_indices=np.arange(start, end, dtype=int))
 
-    def get_req_cpus(self):
+    def get_req_procs(self):
         return (2, 2)
 
 

@@ -12,10 +12,9 @@ class ConstraintComp(ExecComp):
         Constraint expression containing an operator that is
         one of ['<', '>', '<=', '>=', '='].
 
-    outname : str, optional
+    out : str, optional
         Name of the output variable containing the result of the
         constraint equation.  Default is 'out'.
-
     """
 
     def __init__(self, expr, out='out'):
