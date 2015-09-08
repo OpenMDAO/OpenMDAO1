@@ -26,7 +26,6 @@ class ScipyGMRES(LinearSolver):
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
-
                        "let OpenMDAO determine the best mode.")
         opt.add_option('precondition', False,
                        desc='Set to True to turn on preconditioning.')
