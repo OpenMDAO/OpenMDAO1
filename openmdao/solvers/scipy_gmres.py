@@ -100,7 +100,7 @@ class ScipyGMRES(LinearSolver):
 
             unknowns_mat[voi] = d_unknowns
 
-            #print system.name, 'Linear solution vec', d_unknowns
+            #print(system.name, 'Linear solution vec', d_unknowns)
 
 
         return unknowns_mat
