@@ -4,9 +4,13 @@ from __future__ import print_function
 
 from six import iteritems
 
+import numpy as np
+
 from scipy.sparse.linalg import gmres, LinearOperator
+import scipy
 
 from openmdao.solvers.solver_base import LinearSolver
+
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
@@ -21,9 +25,10 @@ class ScipyGMRES(LinearSolver):
                        desc='Absolute convergence tolerance.')
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
-        opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
-                       desc="Derivative calculation mode, set to 'fwd' for " + \
-                       "forward mode, 'rev' for reverse mode, or 'auto' to " + \
+        opt.add_option('mode', 'fwd', values=['fwd', 'rev', 'auto'],
+                       desc="Derivative calculation mode, set to 'fwd' for " + 
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " +
+
                        "let OpenMDAO determine the best mode.")
 
         # These are defined whenever we call solve to provide info we need in
@@ -70,6 +75,7 @@ class ScipyGMRES(LinearSolver):
 
             # Call GMRES to solve the linear system
             self.system = system
+
             d_unknowns, info = gmres(A, rhs,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
@@ -79,15 +85,15 @@ class ScipyGMRES(LinearSolver):
                 msg = "ERROR in solve in '{}': gmres failed to converge " \
                       "after {} iterations"
                 print(msg.format(system.name, options['maxiter']))
-                #logger.error(msg, system.name, info)
+                # logger.error(msg, system.name, info)
             elif info < 0:
                 msg = "ERROR in solve in '{}': gmres failed"
                 print(msg.format(system.name))
-                #logger.error(msg, system.name)
+                # logger.error(msg, system.name)
 
             unknowns_mat[voi] = d_unknowns
 
-            #print(system.name, 'Linear solution vec', d_unknowns)
+            # print system.name, 'Linear solution vec', d_unknowns
 
         return unknowns_mat
 
@@ -123,6 +129,7 @@ class ScipyGMRES(LinearSolver):
 
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
-        #print("arg", arg)
-        #print("result", rhs_vec.vec)
+        # debug("arg", arg)
+        # debug("result", rhs_vec.vec)
+
         return rhs_vec.vec[:]
