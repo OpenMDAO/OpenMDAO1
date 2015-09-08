@@ -37,7 +37,7 @@ class DirectSolver(ScipyGMRES):
         for voi, rhs in rhs_mat.items():
             self.voi = None
 
-            #TODO: When to record?
+            # TODO: When to record?
             self.system = system
             self.mode = mode
 
