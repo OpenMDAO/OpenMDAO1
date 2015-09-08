@@ -62,35 +62,6 @@ class ScipyGMRES(LinearSolver):
         options = self.options
         self.mode = mode
 
-        # dirty hack of a preconditioner
-        for voi, rhs in rhs_mat.items():
-            self.voi = None
-
-            self.system = system
-            self.mode = mode
-
-            n_edge = len(rhs)
-            ident = np.eye(n_edge)
-
-            partials = np.empty((n_edge, n_edge))
-
-            for i in range(n_edge):
-                partials[:, i] = self.mult(ident[:, i])
-
-        # pc = scipy.sparse.linalg.splu(partials)
-        # M = scipy.sparse.linalg.LinearOperator(partials.shape, matvec=pc.solve)
-
-        # lu_piv = scipy.linalg.lu_factor(partials)
-
-        # def pc_solve(rhs): # needed to invert the matrix
-        #     return scipy.linalg.lu_solve(lu_piv, rhs)
-
-        def pc_solve(rhs): 
-            np.set_printoptions(precision=6, suppress=True)
-            return np.linalg.solve(partials, rhs)
-
-        M = scipy.sparse.linalg.LinearOperator(partials.shape, matvec=pc_solve)
-
         unknowns_mat = {}
         for voi, rhs in iteritems(rhs_mat):
 
@@ -105,7 +76,7 @@ class ScipyGMRES(LinearSolver):
             # Call GMRES to solve the linear system
             self.system = system
 
-            d_unknowns, info = gmres(A, rhs, M=M,
+            d_unknowns, info = gmres(A, rhs,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
             self.system = None
