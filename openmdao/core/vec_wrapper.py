@@ -420,14 +420,15 @@ class VecWrapper(object):
         """
         return [n for n, meta in iteritems(self._vardict) if meta.get('state')]
 
-    def get_vecvars(self):
+    def _get_vecvars(self):
         """
         Returns
         -------
-            A list of names of variables found in our 'vec' array.
+            A list of names of variables found in our 'vec' array. This includes
+            params that are not 'owned' and remote vars, which have size 0 array values.
         """
-        return [(n, meta) for n, meta in iteritems(self._vardict)
-                            if not meta.get('pass_by_obj')]
+        return ((n, meta) for n, meta in iteritems(self._vardict)
+                            if not meta.get('pass_by_obj'))
 
     def setup_flat(self):
         """
@@ -438,9 +439,7 @@ class VecWrapper(object):
         A list of (name, array) for each local vector variable.
         """
         if self.flat is None:
-            self.flat = OrderedDict([(n,m['val']) for n,m in iteritems(self._vardict)
-                                if not m.get('pass_by_obj') and
-                                not m.get('remote')])
+            self.flat = OrderedDict([(n,m['val']) for n,m in self._get_vecvars()])
         return self.flat
 
     def get_byobjs(self):
@@ -492,7 +491,7 @@ class VecWrapper(object):
         nwid = max(lens) if lens else 10
         vlens = [len(repr(self[v])) for v in self.keys()]
         vwid = max(vlens) if vlens else 1
-        if len(self.get_vecvars()) != len(self): # we have some pass by obj
+        if len(self.flat) != len(self): # we have some pass by obj
             defwid = 8
         else:
             defwid = 1
@@ -755,12 +754,11 @@ class SrcVecWrapper(VecWrapper):
 
         Returns
         -------
-        list of `OrderedDict`
-            A one entry list containing an `OrderedDict` mapping var name to
+        list of lists of (name, size) tuples
+            A one entry list containing a list of tuples mapping var name to
             local size for 'pass by vector' variables.
         """
-        return [[(n, m['size']) for n, m in iteritems(self._vardict)
-                      if not m.get('pass_by_obj')]]
+        return [[(n, m['size']) for n, m in self._get_vecvars()]]
 
 
 class TgtVecWrapper(VecWrapper):
@@ -939,8 +937,8 @@ class TgtVecWrapper(VecWrapper):
             A one entry list of lists with tuples pairing names to local sizes
             of owned, local params in this `VecWrapper`.
         """
-        return [[(n, m['size']) for n, m in iteritems(self._vardict)
-                    if m.get('owned') and not m.get('pass_by_obj')]]
+        return [[(n, m['size']) for n, m in self._get_vecvars()
+                    if m.get('owned')]]
 
 
 class _PlaceholderVecWrapper(object):
