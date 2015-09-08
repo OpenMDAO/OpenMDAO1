@@ -1063,8 +1063,6 @@ class Problem(System):
                             user = (user[0], 1)
 
                         if user[0] != u_size or user[1] != p_size:
-                            import pprint
-                            pprint.pprint((u_name, p_name, comp._jacobian_cache[(u_name, p_name)]))
                             msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
                             "It should be {}, but got {}"
                             msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
