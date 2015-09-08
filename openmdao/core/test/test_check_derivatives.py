@@ -108,7 +108,7 @@ class TestProblemCheckPartials(unittest.TestCase):
 
             # Good ole Numpy
             raised_error = str(err)
-            raised_error = raised_error.replace('(3L,', '(3,')
+            raised_error = raised_error.replace('3L,', '3,')
 
             self.assertEqual(raised_error, msg)
         else:
