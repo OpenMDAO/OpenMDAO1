@@ -13,7 +13,7 @@ from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
 from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, DoubleArrayComp, \
-                                       FanInGrouped, ArrayComp2D
+                                       FanInGrouped, ArrayComp2D, FanOutAllGrouped
 from openmdao.test.util import assert_rel_error
 
 
@@ -379,6 +379,9 @@ class TestScipyGMRES(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+
+class TestScipyGMRESPreconditioner(unittest.TestCase):
+
     def test_sellar_derivs_grouped_precon(self):
 
         prob = Problem()
@@ -417,6 +420,60 @@ class TestScipyGMRES(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+    def test_converge_diverge_groups(self):
+
+        prob = Problem()
+        prob.root = ConvergeDivergeGroups()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.ln_solver.options['precondition'] = True
+
+        prob.root.sub1.ln_solver = ExplicitSolver()
+        prob.root.sub3.ln_solver = ExplicitSolver()
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        param_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+    def test_fan_out_all_grouped(self):
+
+        prob = Problem()
+        prob.root = FanOutAllGrouped()
+        prob.root.ln_solver = ScipyGMRES()
+
+        prob.root.ln_solver.options['precondition'] = True
+        prob.root.sub1.ln_solver = ExplicitSolver()
+        prob.root.sub2.ln_solver = ExplicitSolver()
+        prob.root.sub3.ln_solver = ExplicitSolver()
+
+        prob.setup(check=False)
+        prob.run()
+
+        param_list = ['p.x']
+        unknown_list = ['sub2.comp2.y', "sub3.comp3.y"]
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub2.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub3.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
+        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub2.comp2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['sub3.comp3.y']['p.x'][0][0], 15.0, 1e-6)
+
 
 
 if __name__ == "__main__":

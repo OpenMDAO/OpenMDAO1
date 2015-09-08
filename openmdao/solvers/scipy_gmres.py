@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from six import iteritems
 
+import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.solvers.solver_base import LinearSolver
@@ -164,23 +165,17 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = arg[:]
 
         # Start with a clean slate
-        #rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
         for sub in system.subsystems():
 
-            if mode == 'fwd':
-                sub_sol_vec, sub_rhs_vec = sub.dumat[voi], sub.drmat[voi]
-            else:
-                sub_sol_vec, sub_rhs_vec = sub.drmat[voi], sub.dumat[voi]
+            dumat = {}
+            dumat[voi] = sub.dumat[voi]
+            drmat = {}
+            drmat[voi] = sub.drmat[voi]
 
-            sol_mat = {}
-            sol_mat[voi] = sub_sol_vec
-            rhs_mat = {}
-            rhs_mat[voi] = sub_rhs_vec
+            sub.solve_linear(dumat, drmat, (voi, ), mode=mode)
 
-            sub.solve_linear(sol_mat, rhs_mat, [voi], mode=mode)
-
-        print("arg", arg)
-        print("result", rhs_vec.vec)
-        return sol_vec.vec[:]
+        #print("arg", arg)
+        #print("preconditioned arg", precon_rhs)
+        return sol_vec.vec
