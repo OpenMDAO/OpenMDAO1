@@ -297,7 +297,11 @@ class Driver(object):
         """
         scaler = self._params[name]['scaler']
         adder = self._params[name]['adder']
-        indices = self._params[name]['indices']
+        if 'indices' in self._params[name]:
+            indices = self._params[name]['indices']
+        else:
+            indices = None
+
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
            or scaler != 1.0 or adder != 0.0:
             if indices is None:
