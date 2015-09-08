@@ -92,7 +92,6 @@ class Newton(NonLinearSolver):
             # Calculate direction to take step
             arg.vec[:] = resids.vec[:]
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
-            print result.vec
 
             unknowns.vec[:] += alpha*result.vec[:]
 
