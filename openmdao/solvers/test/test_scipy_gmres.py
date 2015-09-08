@@ -7,7 +7,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.components.param_comp import ParamComp
 from openmdao.components.exec_comp import ExecComp
-from openmdao.solvers import ScipyGMRES, ExplicitSolver
+from openmdao.solvers import ScipyGMRES, DirectSolver
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -389,7 +389,7 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.root.ln_solver.options['precondition'] = True
-        prob.root.mda.ln_solver = ExplicitSolver()
+        prob.root.mda.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -428,8 +428,8 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
         prob.root.ln_solver.options['precondition'] = True
 
-        prob.root.sub1.ln_solver = ExplicitSolver()
-        prob.root.sub3.ln_solver = ExplicitSolver()
+        prob.root.sub1.ln_solver = DirectSolver()
+        prob.root.sub3.ln_solver = DirectSolver()
 
         prob.setup(check=False)
         prob.run()
@@ -456,9 +456,9 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         prob.root.ln_solver.options['precondition'] = True
-        prob.root.sub1.ln_solver = ExplicitSolver()
-        prob.root.sub2.ln_solver = ExplicitSolver()
-        prob.root.sub3.ln_solver = ExplicitSolver()
+        prob.root.sub1.ln_solver = DirectSolver()
+        prob.root.sub2.ln_solver = DirectSolver()
+        prob.root.sub3.ln_solver = DirectSolver()
 
         prob.setup(check=False)
         prob.run()
