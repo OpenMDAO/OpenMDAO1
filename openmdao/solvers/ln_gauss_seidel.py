@@ -115,7 +115,7 @@ class LinearGaussSeidel(LinearSolver):
 
             else:
 
-                for sub in reversed(list(system._local_subsystems)):
+                for sub in reversed(system._local_subsystems):
                     for voi in vois:
                         dumat[voi].vec *= 0.0
 
