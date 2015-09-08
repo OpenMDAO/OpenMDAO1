@@ -25,6 +25,8 @@ class ScipyGMRES(LinearSolver):
                        desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
+        opt.add_option('precondition', False,
+                       desc='Set to True to turn on preconditioning.')
 
         # These are defined whenever we call solve to provide info we need in
         # the callback.
@@ -68,9 +70,17 @@ class ScipyGMRES(LinearSolver):
                                matvec=self.mult,
                                dtype=float)
 
+            # Support a preconditioner
+            if self.options['precondition'] == True:
+                M = LinearOperator((n_edge, n_edge),
+                                   matvec=self.precon,
+                                   dtype=float)
+            else:
+                M = None
+
             # Call GMRES to solve the linear system
             self.system = system
-            d_unknowns, info = gmres(A, rhs,
+            d_unknowns, info = gmres(A, rhs, M=M,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'])
             self.system = None
@@ -126,3 +136,51 @@ class ScipyGMRES(LinearSolver):
         #print("arg", arg)
         #print("result", rhs_vec.vec)
         return rhs_vec.vec[:]
+
+    def precon(self, arg):
+        """ GMRES Callback: applies a preconditioner by calling
+        solve_nonlinear on this system's children.
+
+        Args
+        ----
+        arg : ndarray
+            Incoming vector
+
+        Returns
+        -------
+        ndarray : Preconditioned vector
+        """
+
+        system = self.system
+        mode = self.mode
+
+        voi = self.voi
+        if mode == 'fwd':
+            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
+        else:
+            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
+
+        # Set incoming vector
+        rhs_vec.vec[:] = arg[:]
+
+        # Start with a clean slate
+        #rhs_vec.vec[:] = 0.0
+        system.clear_dparams()
+
+        for sub in system.subsystems():
+
+            if mode == 'fwd':
+                sub_sol_vec, sub_rhs_vec = sub.dumat[voi], sub.drmat[voi]
+            else:
+                sub_sol_vec, sub_rhs_vec = sub.drmat[voi], sub.dumat[voi]
+
+            sol_mat = {}
+            sol_mat[voi] = sub_sol_vec
+            rhs_mat = {}
+            rhs_mat[voi] = sub_rhs_vec
+
+            sub.solve_linear(sol_mat, rhs_mat, [voi], mode=mode)
+
+        print("arg", arg)
+        print("result", rhs_vec.vec)
+        return sol_vec.vec[:]

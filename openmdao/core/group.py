@@ -856,6 +856,9 @@ class Group(System):
 
             rhs_buf[voi] = rhs_vec[voi].vec.copy()
 
+        if len(rhs_buf) == 0:
+            return
+
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
 
         for voi in vois:
