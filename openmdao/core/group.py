@@ -849,8 +849,8 @@ class Group(System):
 
         sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
 
-        for voi in vois:
-            sol_vec[voi].vec[:] = sol_buf[voi]
+        for voi in rhs_buf:
+            sol_vec[voi].vec[:] = sol_buf[voi][:]
 
     def clear_dparams(self):
         """ Zeros out the dparams (dp) vector."""
