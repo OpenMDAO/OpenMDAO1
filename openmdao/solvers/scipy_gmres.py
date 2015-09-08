@@ -95,7 +95,6 @@ class ScipyGMRES(LinearSolver):
 
             # print system.name, 'Linear solution vec', d_unknowns
 
-
         return unknowns_mat
 
     def mult(self, arg):
