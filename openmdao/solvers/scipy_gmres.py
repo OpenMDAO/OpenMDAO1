@@ -92,15 +92,15 @@ class ScipyGMRES(LinearSolver):
                 msg = "ERROR in solve in '{}': gmres failed to converge " \
                       "after {} iterations"
                 print(msg.format(system.name, options['maxiter']))
-                # logger.error(msg, system.name, info)
+                #logger.error(msg, system.name, info)
             elif info < 0:
                 msg = "ERROR in solve in '{}': gmres failed"
                 print(msg.format(system.name))
-                # logger.error(msg, system.name)
+                #logger.error(msg, system.name)
 
             unknowns_mat[voi] = d_unknowns
 
-            # print system.name, 'Linear solution vec', d_unknowns
+            #print system.name, 'Linear solution vec', d_unknowns
 
 
         return unknowns_mat
@@ -137,8 +137,8 @@ class ScipyGMRES(LinearSolver):
 
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
-        # debug("arg", arg)
-        # debug("result", rhs_vec.vec)
+        #print("arg", arg)
+        #print("result", rhs_vec.vec)
 
         return rhs_vec.vec[:]
 
