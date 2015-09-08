@@ -200,7 +200,7 @@ class Group(System):
             name of this child `System` and all subsystems.
         """
         super(Group, self)._setup_paths(parent_path)
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self, compute_indices=False):
@@ -244,7 +244,7 @@ class Group(System):
                             target = p.split('.',1)[1]
                             sub._src_idxs[target] = idxs
 
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
                 meta = meta.copy()
@@ -295,7 +295,7 @@ class Group(System):
 
         self.comm = comm
 
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
@@ -376,7 +376,7 @@ class Group(System):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
                                impl=self._impl)
@@ -564,7 +564,7 @@ class Group(System):
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
@@ -594,7 +594,7 @@ class Group(System):
             return
 
         # transfer data to each subsystem and then apply_nonlinear to it
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
@@ -764,9 +764,9 @@ class Group(System):
 
                 # Clear out our inputs. TODO: Once we have memory packing, we
                 # might be able to just do dparams[:]=0.
-                for val in dparams.flat.itervalues():
+                for val in itervalues(dparams.flat):
                     val[:] = 0.0
-                for val in dunknowns.flat.itervalues():
+                for val in itervalues(dunknowns.flat):
                     val[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
@@ -1152,7 +1152,7 @@ class Group(System):
         min_procs = 1
         max_procs = 1
 
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             sub_min, sub_max = sub.get_req_procs()
             min_procs = max(min_procs, sub_min)
             if max_procs is not None:

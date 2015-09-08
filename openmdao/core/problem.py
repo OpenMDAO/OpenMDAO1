@@ -472,7 +472,7 @@ class Problem(System):
 
             visited = set()
             out_of_order = {}
-            for sub in grp._subsystems.itervalues():
+            for sub in itervalues(grp._subsystems):
                 visited.add(sub.pathname)
                 for u, v in nx.dfs_edges(graph, sub.pathname):
                     if v in visited:

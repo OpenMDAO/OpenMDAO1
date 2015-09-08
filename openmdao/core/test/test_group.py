@@ -1,6 +1,6 @@
 
 import unittest
-from six import text_type, StringIO
+from six import text_type, StringIO, itervalues
 
 from openmdao.core.problem import Problem, _get_implicit_connections
 from openmdao.core.group import Group
@@ -17,7 +17,7 @@ class TestGroup(unittest.TestCase):
         comp = ExecComp('y=x*2.0')
         group.add('mycomp', comp)
 
-        subs = list(group._subsystems.itervalues())
+        subs = list(itervalues(group._subsystems))
         self.assertEqual(len(subs), 1)
         self.assertEqual(subs[0], comp)
         self.assertEqual(subs[0].name, 'mycomp')
@@ -25,7 +25,7 @@ class TestGroup(unittest.TestCase):
         comp2 = ExecComp('y=x*2.0')
         group.add("nextcomp", comp2)
 
-        subs = list(group._subsystems.itervalues())
+        subs = list(itervalues(group._subsystems))
         self.assertEqual(len(subs), 2)
         self.assertEqual(subs[0], comp)
         self.assertEqual(subs[1], comp2)

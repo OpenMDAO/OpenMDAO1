@@ -2,6 +2,7 @@
 used for systems of `Components` or `Groups` that can be run in parallel."""
 
 from collections import OrderedDict
+from six import itervalues
 
 from openmdao.core.component import Component
 from openmdao.core.group import Group
@@ -65,7 +66,7 @@ class ParallelGroup(Group):
         min_procs = 0
         max_procs = 0
 
-        for sub in self._subsystems.itervalues():
+        for sub in itervalues(self._subsystems):
             sub_min, sub_max = sub.get_req_procs()
             min_procs += sub_min
             if max_procs is not None:
@@ -105,7 +106,7 @@ class ParallelGroup(Group):
         subsystems = []
         requested_procs = []
         max_req_procs = []
-        for system in self._subsystems.itervalues():
+        for system in itervalues(self._subsystems):
             subsystems.append(system)
             minproc, maxproc = system.get_req_procs()
             assert(minproc > 0)
@@ -161,7 +162,7 @@ class ParallelGroup(Group):
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i, sub in enumerate(self._subsystems.itervalues()):
+        for i, sub in enumerate(itervalues(self._subsystems)):
             if i == rank_color:
                 self._local_subsystems.append(sub)
                 sub._setup_communicators(sub_comm)
