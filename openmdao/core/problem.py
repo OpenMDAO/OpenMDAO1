@@ -22,11 +22,12 @@ from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.param_comp import ParamComp
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
-from openmdao.devtools.debug import debug
+from openmdao.devtools import debug
 
 
 class Problem(System):
@@ -494,6 +495,21 @@ class Problem(System):
 
         return (cycles, sorted(ooo))
 
+    def _check_gmres_under_mpi(self, out_stream=sys.stdout):
+        """ warn when using ScipyGMRES solver under MPI.
+        """
+        if under_mpirun():
+            has_parallel = False
+            for s in self.root.subgroups(recurse=True, include_self=True):
+                if isinstance(s, ParallelGroup):
+                    has_parallel = True
+                    break
+
+            if has_parallel and isinstance(self.root.ln_solver, ScipyGMRES):
+                print("ScipyGMRES is being used under MPI. Problems can arise "
+                      "if a variable of interest (param/objective/constraint) "
+                      "does not exist in all MPI processes.", file=out_stream)
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
         with the current configuration of this ``Problem``.
@@ -515,6 +531,7 @@ class Problem(System):
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
+        results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models

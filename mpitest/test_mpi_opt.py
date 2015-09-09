@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.components import ParamComp, ExecComp
+from openmdao.solvers import LinearGaussSeidel, PetscKSP
 from openmdao.core import Component, ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
@@ -162,44 +163,138 @@ class TestMPIOpt(MPITestCase):
             assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
 
 
-# class ParallelMPIOpt(MPITestCase):
-#     N_PROCS = 2
-#
-#     def test_parallel_array_comps(self):
-#
-#         prob = Problem(impl=impl)
-#         root = prob.root = Group()
-#         par = root.add('par', ParallelGroup())
-#
-#         par1 = par.add('par1', Group())
-#         par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-#         par1.add('comp', SimpleArrayComp(), promotes=['*'])
-#         par1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
-#         par1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
-#
-#         par2 = par.add('par2', Group())
-#         par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-#         par2.add('comp', SimpleArrayComp(), promotes=['*'])
-#         par2.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
-#         par2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
-#
-#         root.add('total', ExecComp('obj = x1 + x2'))
-#
-#         root.connect('par.par1.o', 'total.x1')
-#         root.connect('par.par2.o', 'total.x2')
-#
-#         prob.driver = pyOptSparseDriver()
-#         prob.driver.add_param('par.par1.x', low=-50.0, high=50.0)
-#         prob.driver.add_param('par.par2.x', low=-50.0, high=50.0)
-#
-#         prob.driver.add_objective('total.obj')
-#         prob.driver.add_constraint('par.par1.c', ctype='eq')
-#         prob.driver.add_constraint('par.par2.c', ctype='eq')
-#
-#         prob.setup(check=False)
-#         prob.run()
-#
-#         assert_rel_error(self, prob['total.obj'], 40.0, 1e-6)
+class ParallelMPIOptAsym(MPITestCase):
+    N_PROCS = 2
+
+    def setUp(self):
+        prob = Problem(impl=impl)
+        root = prob.root = Group()
+        #root.ln_solver = PetscKSP()  # this works too
+        root.ln_solver = LinearGaussSeidel()
+        par = root.add('par', ParallelGroup())
+
+        par1 = par.add('par1', Group())
+
+        par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        par1.add('comp', SimpleArrayComp(), promotes=['*'])
+        par1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
+                                  y=np.array([0.0, 0.0])), promotes=['*'])
+        par1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                 promotes=['*'])
+
+        par2 = par.add('par2', Group())
+        par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        par2.add('comp', SimpleArrayComp(), promotes=['*'])
+        par2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                  promotes=['*'])
+
+        root.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
+                                 y=np.array([0.0, 0.0])))
+        root.add('total', ExecComp('obj = x1 + x2'))
+
+        root.connect('par.par1.o', 'total.x1')
+        root.connect('par.par2.o', 'total.x2')
+        root.connect('par.par2.y', 'con.y')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('par.par1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.par2.x', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('total.obj')
+        prob.driver.add_constraint('par.par1.c', ctype='eq')
+        prob.driver.add_constraint('con.c', ctype='eq')
+
+        self.prob = prob
+
+    def test_parallel_array_comps_asym_fwd(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_array_comps_asym_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+class ParallelMPIOpt(MPITestCase):
+    N_PROCS = 2
+
+    def setUp(self):
+        prob = Problem(impl=impl)
+        root = prob.root = Group()
+        #root.ln_solver = PetscKSP()
+        root.ln_solver = LinearGaussSeidel()
+        par = root.add('par', ParallelGroup())
+
+        par1 = par.add('par1', Group())
+
+        par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        par1.add('comp', SimpleArrayComp(), promotes=['*'])
+        par1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
+                                  y=np.array([0.0, 0.0])), promotes=['*'])
+        par1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                 promotes=['*'])
+
+        par2 = par.add('par2', Group())
+        par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        par2.add('comp', SimpleArrayComp(), promotes=['*'])
+        par2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
+                                 y=np.array([0.0, 0.0])), promotes=['*'])
+        par2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                  promotes=['*'])
+
+        root.add('total', ExecComp('obj = x1 + x2'))
+
+        root.connect('par.par1.o', 'total.x1')
+        root.connect('par.par2.o', 'total.x2')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('par.par1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.par2.x', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('total.obj')
+        prob.driver.add_constraint('par.par1.c', ctype='eq')
+        prob.driver.add_constraint('par.par2.c', ctype='eq')
+
+        self.prob = prob
+
+    def test_parallel_array_comps_fwd(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_array_comps_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

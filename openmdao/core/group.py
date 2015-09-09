@@ -19,7 +19,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
-from openmdao.devtools.debug import debug
+from openmdao.devtools import debug
 
 from openmdao.core.checks import ConnectError
 
@@ -1077,20 +1077,20 @@ class Group(System):
                                          commsz))
         out_stream.write("\n")
 
-        vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
-        byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
+        if verbose:
+            vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
+            byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
-        # collect width info
-        lens = [len(u)+sum(map(len, v)) for u, v in
-                chain(iteritems(vec_conns), iteritems(byobj_conns))]
-        if lens:
-            nwid = max(lens) + 9
-        else:
-            lens = [len(n) for n in iterkeys(uvec)]
-            nwid = max(lens) if lens else 12
+            # collect width info
+            lens = [len(u)+sum(map(len, v)) for u, v in
+                    chain(iteritems(vec_conns), iteritems(byobj_conns))]
+            if lens:
+                nwid = max(lens) + 9
+            else:
+                lens = [len(n) for n in iterkeys(uvec)]
+                nwid = max(lens) if lens else 12
 
-        for v, meta in iteritems(uvec):
-            if verbose:
+            for v, meta in iteritems(uvec):
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
@@ -1125,17 +1125,17 @@ class Group(System):
                                                      repr(uvec[v]),
                                                      nwid=nwid))
 
-        if not dvecs:
-            for dest, src in iteritems(byobj_conns):
-                out_stream.write(" "*(nest+8))
-                connstr = '%s -> %s:' % (src, dest)
-                template = "{0:<{nwid}} (by_obj)  ({1})\n"
-                out_stream.write(template.format(connstr,
-                                                 repr(uvec[src]),
-                                                 nwid=nwid))
+            if not dvecs:
+                for dest, src in iteritems(byobj_conns):
+                    out_stream.write(" "*(nest+8))
+                    connstr = '%s -> %s:' % (src, dest)
+                    template = "{0:<{nwid}} (by_obj)  ({1})\n"
+                    out_stream.write(template.format(connstr,
+                                                     repr(uvec[src]),
+                                                     nwid=nwid))
 
         nest += 3
-        for sub in self._local_subsystems:
+        for sub in self.subsystems():
             sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs,
                      sizes=sizes)
 

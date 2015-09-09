@@ -13,7 +13,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
-from openmdao.devtools.debug import debug
+from openmdao.devtools import debug
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -544,9 +544,6 @@ class Component(System):
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        lens = [len(n) for n in iterkeys(uvec)]
-        nwid = max(lens) if lens else 12
-
         template = "%s %s '%s'"
         out_stream.write(template % (" "*nest, klass, self.name))
 
@@ -559,8 +556,11 @@ class Component(System):
                                          commsz))
         out_stream.write("\n")
 
-        for v in uvec:
-            if verbose:
+        if verbose:
+            lens = [len(n) for n in iterkeys(uvec)]
+            nwid = max(lens) if lens else 12
+
+            for v in uvec:
                 if v in uvec._slices:
                     uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel,
                                                          uvec._slices[v])
