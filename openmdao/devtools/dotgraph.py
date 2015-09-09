@@ -120,7 +120,7 @@ def _dot_shape(system):
 
 def _sys_dot(system, indent, f):
 
-    for i, s in enumerate(system.subsystems()):
+    for i, s in enumerate(itervalues(system._subsystems)):
         meta = {
             'shape': _dot_shape(s),
             'label': '"' + s.name + '"'

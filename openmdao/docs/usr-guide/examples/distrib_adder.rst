@@ -36,7 +36,7 @@ to a large float array (30,000,000 elements).
             self.add_param('x', shape=size)
             self.add_output('y', shape=size)
 
-        def get_req_cpus(self):
+        def get_req_procs(self):
             """
             min/max number of cpus that this component can use
             """
