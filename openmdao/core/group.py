@@ -837,7 +837,8 @@ class Group(System):
             system's ln_solver.options.
 
         precon : bool, optional
-            Set to True to use the precon solver instead of the linear one.
+            Set to True to use the solver in `precon` instead of the one in
+            `ln_solver`.
         """
         if not self.is_active():
             return
