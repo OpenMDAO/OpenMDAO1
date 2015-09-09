@@ -41,12 +41,14 @@ class Group(System):
         self._local_param_sizes = {}
 
         # put these in here to avoid circular imports
+        from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
         from openmdao.solvers.run_once import RunOnce
         from openmdao.solvers.scipy_gmres import ScipyGMRES
 
         # These solvers are the default
         self.ln_solver = ScipyGMRES()
         self.nl_solver = RunOnce()
+        self.precon = LinearGaussSeidel()
 
         # Flag is true after order is set
         self._order_set = False
@@ -808,7 +810,7 @@ class Group(System):
                         if gs_outputs is None or var in gs_outputs[voi]:
                             dunknowns[var] = dresids[var]
 
-    def solve_linear(self, dumat, drmat, vois, mode=None):
+    def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -833,9 +835,17 @@ class Group(System):
             Derivative mode, can be 'fwd' or 'rev', but generally should be
             called without mode so that the user can set the mode in this
             system's ln_solver.options.
+
+        precon : bool, optional
+            Set to True to use the precon solver instead of the linear one.
         """
         if not self.is_active():
             return
+
+        if precon is True:
+            solver = self.precon
+        else:
+            solver = self.ln_solver
 
         if mode is None:
             mode = self.fd_options['mode']
@@ -859,7 +869,7 @@ class Group(System):
         if len(rhs_buf) == 0:
             return
 
-        sol_buf = self.ln_solver.solve(rhs_buf, self, mode=mode)
+        sol_buf = solver.solve(rhs_buf, self, mode=mode)
 
         for voi in rhs_buf:
             sol_vec[voi].vec[:] = sol_buf[voi][:]

@@ -170,14 +170,12 @@ class ScipyGMRES(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        for sub in system.subsystems():
+        dumat = {}
+        dumat[voi] = system.dumat[voi]
+        drmat = {}
+        drmat[voi] = system.drmat[voi]
 
-            dumat = {}
-            dumat[voi] = sub.dumat[voi]
-            drmat = {}
-            drmat[voi] = sub.drmat[voi]
-
-            sub.solve_linear(dumat, drmat, (voi, ), mode=mode)
+        system.solve_linear(dumat, drmat, (voi, ), mode=mode, precon=True)
 
         #print("arg", arg)
         #print("preconditioned arg", precon_rhs)
