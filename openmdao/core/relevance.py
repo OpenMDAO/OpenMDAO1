@@ -50,6 +50,7 @@ class Relevance(object):
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
+        self._relevant_systems = self._get_relevant_systems()
 
         if mode == 'fwd':
             self.groups = param_groups
@@ -90,7 +91,7 @@ class Relevance(object):
 
         Args
         ----
-        mode : string
+        mode : str
             Derivative mode, can be 'fwd' or 'rev'.
 
         Returns
@@ -105,6 +106,28 @@ class Relevance(object):
             return self.outputs
         else:
             return self.inputs+self.outputs
+
+    def is_relevant_system(self, var_of_interest, system):
+        """
+        Args
+        ----
+        var_of_interest : str
+            Name of a variable of interest (either a parameter or a constraint
+            or objective output, depending on mode.)
+
+        system : `System`
+            The system being checked for relevant w.r.t. the variable of
+            interest.
+
+        Returns
+        -------
+        bool
+            True if the given system is relevant for the given variable of
+            interest.
+        """
+        if var_of_interest is None:
+            return True
+        return system.pathname in self._relevant_systems[var_of_interest]
 
     def _setup_graphs(self, group, connections):
         """
@@ -134,23 +157,30 @@ class Relevance(object):
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
+        p_to_a = {} # mapping of promoted to abs names
         for meta in itervalues(params_dict):
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            if meta['promoted_name'] != param:# and param in connections:
-                promote_map[param] = meta['promoted_name']
+            prom = meta['promoted_name']
+            if prom != param:
+                promote_map[param] = prom
                 if param not in vgraph:
                     vgraph.add_node(param)
+            p_to_a.setdefault(prom, []).append(param)
 
         for meta in itervalues(unknowns_dict):
             unknown = meta['pathname']
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            if meta['promoted_name'] != unknown:
-                promote_map[unknown] = meta['promoted_name']
+            prom = meta['promoted_name']
+            if prom != unknown:
+                promote_map[unknown] = prom
                 if unknown not in vgraph:
                     vgraph.add_node(unknown)
+            p_to_a.setdefault(prom, []).append(unknown)
+
+        self._prom_to_abs = p_to_a
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -202,6 +232,23 @@ class Relevance(object):
                         relevant.setdefault(inp, set()).update(common)
 
         return relevant
+
+    def _get_relevant_systems(self):
+        """
+        Given the dict that maps relevant vars to each VOI, find the mapping
+        of each VOI to the set of systems that need to run.
+        """
+        relevant_systems = {}
+        for voi, relvars in iteritems(self.relevant):
+            comps = set()
+            for relvar in relvars:
+                for absvar in self._prom_to_abs[relvar]:
+                    parts = absvar.split('.')
+                    for i in range(len(parts)-1):
+                        comps.add('.'.join(parts[:i+1]))
+            relevant_systems[voi] = tuple(comps)
+
+        return relevant_systems
 
     def json_dependencies(self):
         """ Returns a json representation of a model's data dependency graph.

@@ -69,7 +69,7 @@ class ParamComp(Component):
 
         for voi in vois:
             if gs_outputs is None:
-                rhs_vec[voi].vec[:] += sol_vec[voi].vec[:]
+                rhs_vec[voi].vec[:] += sol_vec[voi].vec
             else:
                 for var, meta in iteritems(self.dumat[voi]):
                     if var in gs_outputs[voi]:

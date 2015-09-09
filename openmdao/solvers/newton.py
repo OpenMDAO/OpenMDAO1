@@ -90,10 +90,10 @@ class Newton(NonLinearSolver):
             system.jacobian(params, unknowns, resids)
 
             # Calculate direction to take step
-            arg.vec[:] = resids.vec[:]
+            arg.vec[:] = resids.vec
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
-            unknowns.vec[:] += alpha*result.vec[:]
+            unknowns.vec[:] += alpha*result.vec
 
             # Metadata update
             self.iter_count += 1
@@ -118,7 +118,7 @@ class Newton(NonLinearSolver):
                     f_norm/f_norm0 > ls_rtol:
 
                 alpha *= 0.5
-                unknowns.vec[:] -= alpha*result.vec[:]
+                unknowns.vec[:] -= alpha*result.vec
                 ls_itercount += 1
 
                 # Metadata update

@@ -236,7 +236,9 @@ class Component(System):
         list of str
             List of names of params for this `Component` .
         """
-        return [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
+        if self._fd_params is None:
+            self._fd_params = [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
+        return self._fd_params
 
     def _get_fd_unknowns(self):
         """
@@ -340,8 +342,10 @@ class Component(System):
 
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
+        all_vois = set([None])
         for group, vois in iteritems(relevance.groups):
             if group is not None:
+                all_vois.update(vois)
                 for voi in vois:
                     self._create_views(top_unknowns, parent, [],
                                        voi)
@@ -356,6 +360,14 @@ class Component(System):
             name = self.params._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
+
+        # cache this to speed up apply linear
+        self._abs_inputs = {}
+        for voi, vec in iteritems(self.dpmat):
+            self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
+                                         if not meta.get('pass_by_obj')}
+
+        self._setup_gs_outputs(all_vois)
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
@@ -379,14 +391,14 @@ class Component(System):
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
-        resids.vec[:] = -unknowns.vec[:]
+        resids.vec[:] = -unknowns.vec
 
         self.solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
-        resids.vec[:] += unknowns.vec[:]
-        unknowns.vec[:] -= resids.vec[:]
+        resids.vec[:] += unknowns.vec
+        unknowns.vec[:] -= resids.vec
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -497,9 +509,10 @@ class Component(System):
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-            sol_vec[voi].vec[:] = rhs_vec[voi].vec[:]
+            sol_vec[voi].vec[:] = rhs_vec[voi].vec
 
-    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
+             sizes=False):
         """
         Writes a formated dump of this `Component` to file.
 
@@ -512,12 +525,15 @@ class Component(System):
             Where output is written.  Defaults to sys.stdout.
 
         verbose : bool, optional
-            If True (the default), output additional info beyond
-            just the tree structure.
+            If True, output additional info beyond
+            just the tree structure. Default is False.
 
         dvecs : bool, optional
             If True, show contents of du and dp vectors instead of
             u and p (the default).
+
+        sizes : bool, optional
+            If True, show sizes of vectors and comms. Default is False.
         """
         klass = self.__class__.__name__
         if dvecs:
@@ -531,16 +547,17 @@ class Component(System):
         lens = [len(n) for n in iterkeys(uvec)]
         nwid = max(lens) if lens else 12
 
-        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+        template = "%s %s '%s'"
+        out_stream.write(template % (" "*nest, klass, self.name))
 
-        template = "%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n"
-        out_stream.write(template %(" "*nest,
-                                    klass,
-                                    self.name,
-                                    self.get_req_procs(),
-                                    uvec.vec.size,
-                                    pvec.vec.size,
-                                    commsz))
+        if sizes:
+            commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+            template = "    req: %s  usize:%d  psize:%d  commsize:%d"
+            out_stream.write(template % (self.get_req_procs(),
+                                         uvec.vec.size,
+                                         pvec.vec.size,
+                                         commsz))
+        out_stream.write("\n")
 
         for v in uvec:
             if verbose:

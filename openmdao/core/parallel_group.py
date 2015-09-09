@@ -2,6 +2,7 @@
 used for systems of `Components` or `Groups` that can be run in parallel."""
 
 from collections import OrderedDict
+from six import itervalues
 
 from openmdao.core.component import Component
 from openmdao.core.group import Group
@@ -34,7 +35,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             if isinstance(sub, Component):
                 sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
@@ -47,7 +48,7 @@ class ParallelGroup(Group):
         # full scatter
         self._transfer_data()
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             if isinstance(sub, Component):
                 sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
             else:
@@ -65,7 +66,7 @@ class ParallelGroup(Group):
         min_procs = 0
         max_procs = 0
 
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             sub_min, sub_max = sub.get_req_procs()
             min_procs += sub_min
             if max_procs is not None:
@@ -92,7 +93,7 @@ class ParallelGroup(Group):
             The communicator being offered by the parent system.
         """
         self.comm = comm
-        self._local_subsystems = OrderedDict()
+        self._local_subsystems = []
 
         # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
@@ -105,7 +106,7 @@ class ParallelGroup(Group):
         subsystems = []
         requested_procs = []
         max_req_procs = []
-        for system in self.subsystems():
+        for system in itervalues(self._subsystems):
             subsystems.append(system)
             minproc, maxproc = system.get_req_procs()
             assert(minproc > 0)
@@ -161,9 +162,9 @@ class ParallelGroup(Group):
         if sub_comm == MPI.COMM_NULL:
             return
 
-        for i, sub in enumerate(self.subsystems()):
+        for i, sub in enumerate(itervalues(self._subsystems)):
             if i == rank_color:
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems.append(sub)
                 sub._setup_communicators(sub_comm)
             else:
                 sub._setup_communicators(MPI.COMM_NULL)
