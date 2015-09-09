@@ -31,8 +31,6 @@ class Group(System):
     def __init__(self):
         super(Group, self).__init__()
 
-        self._subsystems = OrderedDict()
-        self._local_subsystems = OrderedDict()
         self._src = {}
         self._src_idxs = {}
         self._data_xfer = {}
@@ -165,9 +163,9 @@ class Group(System):
         if include_self and isinstance(self, typ):
             yield self
 
-        subs = self._local_subsystems if local else self._subsystems
+        subs = self._local_subsystems if local else itervalues(self._subsystems)
 
-        for name, sub in iteritems(subs):
+        for sub in subs:
             if isinstance(sub, typ):
                 yield sub
             if recurse and isinstance(sub, Group):
@@ -204,7 +202,7 @@ class Group(System):
             name of this child `System` and all subsystems.
         """
         super(Group, self)._setup_paths(parent_path)
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             sub._setup_paths(self.pathname)
 
     def _setup_variables(self, compute_indices=False):
@@ -248,7 +246,7 @@ class Group(System):
                             target = p.split('.',1)[1]
                             sub._src_idxs[target] = idxs
 
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
                 meta = meta.copy()
@@ -295,14 +293,14 @@ class Group(System):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self._local_subsystems = OrderedDict()
+        self._local_subsystems = []
 
         self.comm = comm
 
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             sub._setup_communicators(self.comm)
             if self.is_active() and sub.is_active():
-                self._local_subsystems[sub.name] = sub
+                self._local_subsystems.append(sub)
 
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
@@ -360,8 +358,10 @@ class Group(System):
 
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
+        all_vois = set([None])
         for group, vois in iteritems(self._relevance.groups):
             if group is not None:
+                all_vois.update(vois)
                 for voi in vois:
                     if parent is None:
                         self._create_vecs(my_params, voi, impl)
@@ -371,12 +371,14 @@ class Group(System):
 
                     self._setup_data_transfer(my_params, voi)
 
+        self._setup_gs_outputs(all_vois)
+
         # convert any src_indices to index arrays
         for meta in itervalues(self._params_dict):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
                                impl=self._impl)
@@ -386,6 +388,12 @@ class Group(System):
         self._ls_inputs = {}
         for voi, vec in iteritems(self.dumat):
             self._ls_inputs[voi] = self._all_params(voi)
+
+        # cache this to speed up apply_linear
+        self._abs_inputs = {}
+        for voi, vec in iteritems(self.dpmat):
+            self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
+                                         if not meta.get('pass_by_obj')}
 
         self._relname_map = None # reclaim some memory
 
@@ -403,6 +411,7 @@ class Group(System):
         # create implementation specific VecWrappers
         if var_of_interest is None:
             self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
             self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
 
@@ -421,6 +430,7 @@ class Group(System):
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
         dresids = impl.create_src_vecwrapper(sys_pathname, comm)
         dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
+        dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
                         var_of_interest=var_of_interest)
@@ -445,23 +455,24 @@ class Group(System):
             List of names of params that have sources that are ParamComps
             or sources that are outside of this `Group` .
         """
-        conns = self.connections
-        mypath = self.pathname + '.' if self.pathname else ''
-        mplen = len(mypath)
+        if self._fd_params is None:
+            conns = self.connections
+            mypath = self.pathname + '.' if self.pathname else ''
+            mplen = len(mypath)
 
-        params = []
-        for tgt, src in iteritems(conns):
-            if mypath == tgt[:mplen]:
-                # look up the Component that contains the source variable
-                scname = src.rsplit('.', 1)[0]
-                if mypath == scname[:mplen]:
-                    src_comp = self._subsystem(scname[mplen:])
-                    if isinstance(src_comp, ParamComp):
+            params = self._fd_params = []
+            for tgt, src in iteritems(conns):
+                if mypath == tgt[:mplen]:
+                    # look up the Component that contains the source variable
+                    scname = src.rsplit('.', 1)[0]
+                    if mypath == scname[:mplen]:
+                        src_comp = self._subsystem(scname[mplen:])
+                        if isinstance(src_comp, ParamComp):
+                            params.append(tgt[mplen:])
+                    else:
                         params.append(tgt[mplen:])
-                else:
-                    params.append(tgt[mplen:])
 
-        return params
+        return self._fd_params
 
     def _get_fd_unknowns(self):
         """
@@ -555,7 +566,7 @@ class Group(System):
         """
 
         # transfer data to each subsystem and then solve_nonlinear it
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
@@ -585,7 +596,7 @@ class Group(System):
             return
 
         # transfer data to each subsystem and then apply_nonlinear to it
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
@@ -609,7 +620,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
 
             # Instigate finite difference on child if user requests.
             if sub.fd_options['force_fd']:
@@ -641,7 +652,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, mode, ls_inputs=None, vois=[None], gs_outputs=None):
+    def apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -670,7 +681,7 @@ class Group(System):
         if mode == 'fwd':
             self._transfer_data(deriv=True) # Full Scatter
 
-        for sub in self.subsystems(local=True):
+        for sub in self._local_subsystems:
             # Components that are not paramcomps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
@@ -713,70 +724,52 @@ class Group(System):
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
+        states = system.states
+        force_fd = system.fd_options['force_fd']
 
         for voi in vois:
+            if not self._relevance.is_relevant_system(voi, system):
+                continue
 
             dresids = system.drmat[voi]
             dunknowns = system.dumat[voi]
             dparams = system.dpmat[voi]
+            gsouts = None if gs_outputs is None else gs_outputs[voi]
 
             # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = {meta['pathname'] for meta in itervalues(dparams)}
+            abs_inputs = system._abs_inputs[voi]
+            do_apply = ls_inputs[voi] is None or (abs_inputs and abs_inputs.intersection(ls_inputs[voi]))
 
             # Forward Mode
             if mode == 'fwd':
 
                 dresids.vec[:] = 0.0
 
-                if ls_inputs[voi] is None or abs_inputs.intersection(ls_inputs[voi]):
+                if do_apply:
 
-                    # Speedhack, don't call component's derivatives if
-                    # incoming vector is zero.
-                    nonzero = False
-                    for key in system._get_fd_params():
-                        try:
-                            value = dparams.flat[key]
-                        # Var might be irrelevant.
-                        except KeyError:
-                            continue
-                        if np.any(value):
-                            nonzero = True
-                            break
-
-                    if not nonzero:
-                        # check for all zero states
-                        for key, meta in iteritems(system.unknowns):
-                            if meta.get('state') and np.any(dunknowns.flat[key]):
-                                nonzero = True
-                                break
-
-                    if nonzero:
-                        if system.fd_options['force_fd']:
-                            system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                                     dunknowns, dresids, mode)
-                        else:
-                            system.apply_linear(system.params, system.unknowns, dparams,
-                                                dunknowns, dresids, mode)
+                    if force_fd:
+                        system._apply_linear_jac(system.params, system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns, dparams,
+                                            dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
-                for var, meta in iteritems(dunknowns):
+                for var in dunknowns:
                     # Skip all states
-                    if not meta.get('state'):
-                        if gs_outputs is None or var in gs_outputs[voi]:
-                            dresids[var] += dunknowns[var]
-
+                    if (gsouts is None or var in gsouts) and \
+                           var not in states:
+                        dresids.flat[var] += dunknowns.flat[var]
 
             # Adjoint Mode
             elif mode == 'rev':
 
                 # Clear out our inputs. TODO: Once we have memory packing, we
                 # might be able to just do dparams[:]=0.
-                for key in system._params_dict:
-                    if key in dparams:
-                        dparams[key] *= 0.0
-                for key in system._unknowns_dict:
-                    if key in dunknowns:
-                        dunknowns[key] *= 0.0
+                for val in itervalues(dparams.flat):
+                    val[:] = 0.0
+                for val in itervalues(dunknowns.flat):
+                    val[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -785,30 +778,28 @@ class Group(System):
                 # our local 'arg' by -1, and then revert it afterwards.
                 dresids.vec *= -1.0
 
-                if ls_inputs[voi] is None or set(abs_inputs).intersection(ls_inputs[voi]):
+                if do_apply:
 
-                    # Speedhack, don't call component's derivatives if
-                    # incoming vector is zero.
-                    if np.any(dresids.vec):
-                        try:
-                            dparams.adj_accumulate_mode = True
-                            if system.fd_options['force_fd']:
-                                system._apply_linear_jac(system.params,
-                                                         system.unknowns, dparams,
-                                                         dunknowns, dresids, mode)
-                            else:
-                                system.apply_linear(system.params, system.unknowns,
-                                                    dparams, dunknowns, dresids, mode)
-                        finally:
-                            dparams.adj_accumulate_mode = False
+                    #if np.any(dresids.vec):
+                    try:
+                        dparams.adj_accumulate_mode = True
+                        if force_fd:
+                            system._apply_linear_jac(system.params,
+                                                     system.unknowns, dparams,
+                                                     dunknowns, dresids, mode)
+                        else:
+                            system.apply_linear(system.params, system.unknowns,
+                                                dparams, dunknowns, dresids, mode)
+                    finally:
+                        dparams.adj_accumulate_mode = False
 
                 dresids.vec *= -1.0
 
-                for var, meta in iteritems(dunknowns):
+                for var in dunknowns:
                     # Skip all states
-                    if not meta.get('state'):
-                        if gs_outputs is None or var in gs_outputs[voi]:
-                            dunknowns[var] = dresids[var]
+                    if (gsouts is None or var in gsouts) and \
+                            var not in states:
+                        dunknowns.flat[var] += dresids.flat[var]
 
     def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
         """
@@ -875,6 +866,25 @@ class Group(System):
         for voi in rhs_buf:
             sol_vec[voi].vec[:] = sol_buf[voi][:]
 
+    def clear_dparams(self):
+        """ Zeros out the dparams (dp) vector."""
+
+        # this was moved here from system.py because Components never own
+        # their own params. All of the calls to clear_dparams on components
+        # are unnecessary
+
+        for parallel_set in self._relevance.vars_of_interest():
+            for name in parallel_set:
+                if name in self.dpmat:
+                    self.dpmat[name].vec[:] = 0.0
+
+        self.dpmat[None].vec[:] = 0.0
+
+        # Recurse to clear all dparams vectors.
+        for system in self._local_subsystems:
+            if isinstance(system, Group):
+                system.clear_dparams()  # only call on Groups
+
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only
         be called after all subsystems have been added.
@@ -914,10 +924,10 @@ class Group(System):
         self._subsystems = new_subs
 
         # reset locals
-        new_locs = OrderedDict()
-        for name, sub in iteritems(self._subsystems):
-            if name in self._local_subsystems:
-                new_locs[name] = sub
+        new_locs = []
+        for sub in itervalues(self._subsystems):
+            if sub in self._local_subsystems:
+                new_locs.append(sub)
         self._local_subsystems = new_locs
 
         self._order_set = True
@@ -1034,7 +1044,8 @@ class Group(System):
 
         return ls_inputs
 
-    def dump(self, nest=0, out_stream=sys.stdout, verbose=True, dvecs=False):
+    def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
+             sizes=False):
         """
         Writes a formated dump of the `System` tree to file.
 
@@ -1047,12 +1058,15 @@ class Group(System):
             Where output is written.  Defaults to sys.stdout.
 
         verbose : bool, optional
-            If True (the default), output additional info beyond
-            just the tree structure.
+            If True, output additional info beyond
+            just the tree structure. Default is False.
 
         dvecs : bool, optional
             If True, show contents of du and dp vectors instead of
             u and p (the default).
+
+        sizes : bool, optional
+            If True, include vector sizes and comm sizes. Default is False.
         """
         klass = self.__class__.__name__
         if dvecs:
@@ -1063,16 +1077,19 @@ class Group(System):
         uvec = getattr(self, uvecname)
         pvec = getattr(self, pvecname)
 
-        commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+        template = "%s %s '%s'"
+        out_stream.write(template % (" "*nest, klass, self.name))
 
-        template = "%s %s '%s'    req: %s  usize:%d  psize:%d  commsize:%d\n"
-        out_stream.write(template % (" "*nest,
-                                     klass,
-                                     self.name,
-                                     self.get_req_procs(),
-                                     uvec.vec.size,
-                                     pvec.vec.size,
-                                     commsz))
+        out_stream.write("  NL: %s  LN: %s" % (self.nl_solver.__class__.__name__,
+                                               self.ln_solver.__class__.__name__))
+        if sizes:
+            commsz = self.comm.size if hasattr(self.comm, 'size') else 0
+            template = "    req: %s  usize:%d  psize:%d  commsize:%d"
+            out_stream.write(template % (self.get_req_procs(),
+                                         uvec.vec.size,
+                                         pvec.vec.size,
+                                         commsz))
+        out_stream.write("\n")
 
         vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
         byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
@@ -1132,8 +1149,9 @@ class Group(System):
                                                  nwid=nwid))
 
         nest += 3
-        for sub in self.subsystems(local=True):
-            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs)
+        for sub in self._local_subsystems:
+            sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs,
+                     sizes=sizes)
 
         out_stream.flush()
 
@@ -1148,7 +1166,7 @@ class Group(System):
         min_procs = 1
         max_procs = 1
 
-        for sub in self.subsystems():
+        for sub in itervalues(self._subsystems):
             sub_min, sub_max = sub.get_req_procs()
             min_procs = max(min_procs, sub_min)
             if max_procs is not None:

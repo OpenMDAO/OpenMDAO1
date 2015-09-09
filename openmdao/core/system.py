@@ -3,13 +3,14 @@
 import sys
 from fnmatch import fnmatch
 from itertools import chain
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.options import OptionsDictionary
 from collections import OrderedDict
+from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 
 
@@ -20,6 +21,9 @@ class System(object):
     def __init__(self):
         self.name = ''
         self.pathname = ''
+
+        self._subsystems = OrderedDict()
+        self._local_subsystems = []
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
@@ -36,7 +40,6 @@ class System(object):
         self.params = _PlaceholderVecWrapper('params')
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
-        self.dparams = _PlaceholderVecWrapper('dparams')
 
         # dicts of vectors used for parallel solution of multiple RHS
         self.dumat = {}
@@ -188,24 +191,12 @@ class System(object):
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
         """
+        self._fd_params = None
+
         if parent_path:
             self.pathname = '.'.join((parent_path, self.name))
         else:
             self.pathname = self.name
-
-    def clear_dparams(self):
-        """ Zeros out the dparams (dp) vector."""
-
-        for parallel_set in self._relevance.vars_of_interest():
-            for name in parallel_set:
-                if name in self.dpmat:
-                    self.dpmat[name].vec[:] = 0.0
-
-        self.dpmat[None].vec[:] = 0.0
-
-        # Recurse to clear all dparams vectors.
-        for system in self.subsystems(local=True):
-            system.clear_dparams()
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -337,15 +328,14 @@ class System(object):
         # Prepare for calculating partial derivatives or total derivatives
         if total_derivs is False:
             run_model = self.apply_nonlinear
-            cache1 = resids.vec.copy()
             resultvec = resids
-            states = [name for name, meta in iteritems(self.unknowns)
-                           if meta.get('state')]
+            states = self.states
         else:
             run_model = self.solve_nonlinear
-            cache1 = unknowns.vec.copy()
             resultvec = unknowns
             states = []
+
+        cache1 = resultvec.vec.copy()
 
         gather_jac = False
 
@@ -476,28 +466,41 @@ class System(object):
             msg = msg.format(name=self.name)
             raise ValueError(msg)
 
-        for key, J in iteritems(self._jacobian_cache):
-            unknown, param = key
+        isvw = isinstance(dresids, VecWrapper)
+        fwd = mode == 'fwd'
+        try:
+            states = self.states
+        except AttributeError:  # handle component unit test where setup has not been performed
+            # TODO: should we force all component unit tests to use a Problem test harness?
+            states = set([p for u,p in iterkeys(self._jacobian_cache)
+                             if p not in dparams])
 
-            # States are never in dparams.
-            if param in dparams:
-                arg_vec = dparams
-            elif param in dunknowns:
+        for (unknown, param), J in iteritems(self._jacobian_cache):
+            if param in states:
                 arg_vec = dunknowns
             else:
-                continue
-
-            if unknown not in dresids:
-                continue
-
-            result = dresids[unknown]
+                arg_vec = dparams
 
             # Vectors are flipped during adjoint
 
-            if mode == 'fwd':
-                dresids[unknown] += J.dot(arg_vec[param].flat).reshape(result.shape)
-            else:
-                arg_vec[param] += J.T.dot(result.flat).reshape(arg_vec[param].shape)
+            try:
+                if isvw:
+                    if fwd:
+                        vec = dresids._flat(unknown)
+                        vec += J.dot(arg_vec._flat(param))
+                    else:
+                        shape = arg_vec._vardict[param]['shape']
+                        arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
+                else: # plain dicts were passed in for unit testing...
+                    if fwd:
+                        vec = dresids[unknown]
+                        vec += J.dot(arg_vec[param].flat).reshape(vec.shape)
+                    else:
+                        shape = arg_vec[param].shape
+                        arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
+            except KeyError:
+                continue # either didn't find param in dparams/dunknowns or
+                         # didn't find unknown in dresids
 
     def _create_views(self, top_unknowns, parent, my_params,
                       var_of_interest=None):
@@ -536,6 +539,7 @@ class System(object):
 
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
+            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = parent.resids.get_view(self.pathname, comm, umap)
             self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
@@ -545,9 +549,28 @@ class System(object):
         self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
         self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
+        self.dpmat[voi].adj_accumulate_mode = False
+
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                               my_params, self.connections,
                               relevance=relevance, var_of_interest=voi)
+
+    def _setup_gs_outputs(self, vois):
+        self.gs_outputs = { 'fwd': {}, 'rev': {}}
+        dumat = self.dumat
+        gso = self.gs_outputs['fwd']
+        for sub in self._local_subsystems:
+            gso[sub.name] = outs = {}
+            for voi in vois:
+                outs[voi] = set([x for x in dumat[voi] if
+                                           sub.dumat and x not in sub.dumat[voi]])
+        gso = self.gs_outputs['rev']
+        for sub in reversed(self._local_subsystems):
+            gso[sub.name] = outs = {}
+            for voi in vois:
+                outs[voi] = set([x for x in dumat[voi] if
+                                           not sub.dumat or
+                                           (sub.dumat and x not in sub.dumat[voi])])
 
     def get_combined_jac(self, J):
         """

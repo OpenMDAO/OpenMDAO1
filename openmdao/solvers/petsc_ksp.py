@@ -196,7 +196,7 @@ class PetscKSP(LinearSolver):
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
         # Set incoming vector
-        # sol_vec.vec[:] = arg.array[:]
+        # sol_vec.vec[:] = arg.array
         sol_vec.vec[:] = _get_petsc_vec_array(arg)
 
         # Start with a clean slate
@@ -205,7 +205,7 @@ class PetscKSP(LinearSolver):
 
         system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
-        result.array[:] = rhs_vec.vec[:]
+        result.array[:] = rhs_vec.vec
 
         # print("arg", arg.array)
         # print("result", result.array)
@@ -230,4 +230,3 @@ class PetscKSP(LinearSolver):
         #     vec = sol_vec.getArray()
 
         rhs_vec.array[:] = _get_petsc_vec_array(sol_vec)
-

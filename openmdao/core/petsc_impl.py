@@ -137,7 +137,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Contains an entry for each process in this object's communicator.
         """
         sizes = []
-        for name, meta in self.get_vecvars():
+        for name, meta in self._get_vecvars():
             if meta.get('remote'):
                 sizes.append((name, 0))
             else:
@@ -231,8 +231,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             'pass by vector' params.
         """
         psizes = []
-        for name, m in iteritems(self._vardict):
-            if m.get('owned') and not m.get('pass_by_obj'):
+        for name, m in self._get_vecvars():
+            if m.get('owned'):
                 if m.get('remote'):
                     psizes.append((name, 0))
                 else:
