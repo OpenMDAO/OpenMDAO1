@@ -679,28 +679,22 @@ class System(object):
                 docstring += "\n " + str(value)
                 docstring += "\n        <Insert description here.>\n"
 
-        if hasattr(self, 'options') or hasattr(self, 'fd_options'):
-            docstring += '\n\tOptions\n\t----------\n'
-
-        if hasattr(self, 'options'):
-            for (name, val) in self.options.items():
-                typ = type(val).__name__
-                desc = self.options._options[name]['desc']
-                docstring += "    "+name
-                docstring += " :  "
-                docstring += typ
-                docstring += "(" + str(val) + ")"
-                docstring += "\n        " + desc + "\n"
-
-        if hasattr(self, 'fd_options'):
-            for (name, val) in self.fd_options.items():
-                typ = type(val).__name__
-                desc = self.fd_options._options[name]['desc']
-                docstring += "    "+name
-                docstring += " :  "
-                docstring += typ
-                docstring += "(" + str(val) + ")"
-                docstring += "\n        " + desc + "\n"
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        v = vars(self)
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n\tOptions\n\t----------\n\n'
+                    firstTime = 0
+                for (name, val) in value.items():
+                    docstring += "    "+name
+                    docstring += " :  " + type(val).__name__
+                    docstring += "(" + str(val) + ")\n"
+                    desc = value._options[name]['desc']
+                    if(desc):
+                        docstring += "        " + desc + "\n"
 
         #finish up docstring
         docstring += '\n\t\"\"\"\n'

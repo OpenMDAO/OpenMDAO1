@@ -544,31 +544,36 @@ class Driver(object):
         docstring : str
                 string that contains a basic numpy docstring.
         """
-        if hasattr(self, 'options') or hasattr(self, 'supports'):
-            #start the docstring off
-            docstring = '\t\"\"\"\n'
-            docstring += '\n\tOptions\n\t----------\n\n'
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
 
-        if hasattr(self, 'options'):
-            for (name, val) in self.options.items():
-                typ = type(val).__name__
-                desc = self.options._options[name]['desc']
-                docstring += "    "+name
-                docstring += " :  "
-                docstring += typ
-                docstring += "(" + str(val) + ")"
-                docstring += "\n        " + desc + "\n"
+        if self._params:
+            docstring += '\n\tParams\n\t----------\n'
 
-        if hasattr(self, 'supports'):
-            for (name, val) in self.supports.items():
-                typ = type(val).__name__
-                docstring += "    "+name
-                docstring += " :  " + typ
-                docstring += "(" + str(val) + ")\n"
-                desc = self.supports._options[name]['desc']
-                if(desc):
-                    docstring += "        " + desc + "\n"
+        if self._params:
+            for key, value in iteritems(self._params):
+                docstring += "    "+key
+                docstring += " : param"
+                docstring += type(value).__name__
+                docstring += "\n" + str(value)
+                docstring += "\n        <Insert description here.>\n"
 
-            #finish up docstring
-            docstring += '\n\t\"\"\"\n'
-            return docstring
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        v = vars(self)
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n\tOptions\n\t----------\n\n'
+                    firstTime = 0
+                for (name, val) in value.items():
+                        docstring += "    "+name
+                        docstring += " :  " + type(val).__name__
+                        docstring += "(" + str(val) + ")\n"
+                        desc = value._options[name]['desc']
+                        if(desc):
+                            docstring += "        " + desc + "\n"
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring
