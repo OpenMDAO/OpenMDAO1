@@ -239,8 +239,10 @@ class ParallelMPIOpt(MPITestCase):
         #root.ln_solver = PetscKSP()
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
+        par.ln_solver = LinearGaussSeidel()
 
         par1 = par.add('par1', Group())
+        par1.ln_solver = LinearGaussSeidel()
 
         par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
         par1.add('comp', SimpleArrayComp(), promotes=['*'])
@@ -250,6 +252,8 @@ class ParallelMPIOpt(MPITestCase):
                                  promotes=['*'])
 
         par2 = par.add('par2', Group())
+        par2.ln_solver = LinearGaussSeidel()
+
         par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
         par2.add('comp', SimpleArrayComp(), promotes=['*'])
         par2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
@@ -272,6 +276,31 @@ class ParallelMPIOpt(MPITestCase):
 
         self.prob = prob
 
+    def test_parallel_array_comps_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_derivs_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+        prob.driver.parallel_derivs(['par.par1.c','par.par2.c'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
     def test_parallel_array_comps_fwd(self):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'fwd'
@@ -284,12 +313,13 @@ class ParallelMPIOpt(MPITestCase):
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
 
-    def test_parallel_array_comps_rev(self):
+    def test_parallel_derivs_fwd(self):
         prob = self.prob
-        prob.root.ln_solver.options['mode'] = 'rev'
-        prob.root.par.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
+        prob.driver.parallel_derivs(['par.par1.x','par.par2.x'])
 
         prob.setup(check=False)
         prob.run()

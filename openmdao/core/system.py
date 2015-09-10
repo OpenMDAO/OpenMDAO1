@@ -12,7 +12,7 @@ from openmdao.core.options import OptionsDictionary
 from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
-
+from openmdao.devtools import TraceCalls
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -456,6 +456,7 @@ class System(object):
 
         return jac
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """ See apply_linear. This method allows the framework to override
         any derivative specification in any `Component` or `Group` to perform

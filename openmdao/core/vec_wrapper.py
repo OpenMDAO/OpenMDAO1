@@ -9,6 +9,7 @@ from six.moves import cStringIO
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
+from openmdao.devtools import TraceCalls
 
 #from openmdao.devtools.debug import *
 
@@ -226,6 +227,7 @@ class VecWrapper(object):
         """
         return self._vardict.values()
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _get_local_idxs(self, name, idx_dict, get_slice=False):
         """
         Returns all of the indices for the named variable in this vector.

@@ -27,7 +27,7 @@ from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
-from openmdao.devtools import debug
+from openmdao.devtools import debug, TraceCalls
 
 
 class Problem(System):
@@ -761,6 +761,7 @@ class Problem(System):
                 ui += rows
         return J
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
@@ -895,11 +896,11 @@ class Problem(System):
                 voi_srcs[vkey] = voi
                 in_idxs = duvec._get_local_idxs(voi, poi_indices)
 
-                if old_size is None:
-                    old_size = len(in_idxs)
-                elif old_size != len(in_idxs):
-                    raise RuntimeError("Indices within the same VOI group must be the same size, but"
-                                       " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
+                # if old_size is None:
+                #     old_size = len(in_idxs)
+                # elif old_size != len(in_idxs):
+                #     raise RuntimeError("Indices within the same VOI group must be the same size, but"
+                #                        " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
 
             jbase = j

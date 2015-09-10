@@ -15,7 +15,7 @@ from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
-
+from openmdao.devtools import TraceCalls
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
@@ -62,6 +62,7 @@ class pyOptSparseDriver(Driver):
         self.exit_flag = 0
         self._problem = None
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
@@ -214,6 +215,7 @@ class pyOptSparseDriver(Driver):
         except KeyError: #nothing is here, so something bad happened!
             self.exit_flag = 0
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def objfunc(self, dv_dict):
         """ Function that evaluates and returns the objective function and
         constraints. This function is passed to pyOpt's Optimization object
@@ -301,6 +303,7 @@ class pyOptSparseDriver(Driver):
         #print(func_dict)
         return func_dict, fail
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def gradfunc(self, dv_dict, func_dict):
         """ Function that evaluates and returns the gradient of the objective
         function and constraints. This function is passed to pyOpt's

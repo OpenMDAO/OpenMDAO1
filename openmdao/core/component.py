@@ -13,7 +13,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
-from openmdao.devtools import debug
+from openmdao.devtools import debug, TraceCalls
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -400,6 +400,7 @@ class Component(System):
         resids.vec[:] += unknowns.vec
         unknowns.vec[:] -= resids.vec
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def solve_nonlinear(self, params, unknowns, resids):
         """
         Runs the component. The user is required to define this function in
@@ -418,6 +419,7 @@ class Component(System):
         """
         raise NotImplementedError("solve_nonlinear")
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def jacobian(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides this method
@@ -443,6 +445,7 @@ class Component(System):
         """
         return None
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """
         Multiplies incoming vector by the Jacobian (fwd mode) or the
@@ -476,6 +479,7 @@ class Component(System):
         self._apply_linear_jac(params, unknowns, dparams, dunknowns, dresids,
                                mode)
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
         Single linear solution applied to whatever input is sitting in

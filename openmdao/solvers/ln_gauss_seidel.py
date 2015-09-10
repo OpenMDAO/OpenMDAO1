@@ -6,7 +6,7 @@ from six import iteritems
 
 from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
-
+from openmdao.devtools import TraceCalls
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
@@ -27,6 +27,7 @@ class LinearGaussSeidel(LinearSolver):
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
@@ -75,9 +76,12 @@ class LinearGaussSeidel(LinearSolver):
               f_norm > self.options['atol'] and \
               f_norm/f_norm0 > self.options['rtol']:
 
+            print("iter count",self.iter_count)
+
             if mode == 'fwd':
 
                 for sub in system._local_subsystems:
+                    print("local sub",sub.pathname)
 
                     for voi in vois:
                         #print('pre scatter', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -89,14 +93,18 @@ class LinearGaussSeidel(LinearSolver):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
+                        print("_sub_apply_linear_wrapper",sub.pathname)
                         system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
                                                          gs_outputs=gs_outputs['fwd'][sub.name])
+                        print("_sub_apply_linear_wrapper done",sub.pathname)
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
+                        print("apply_linear",sub.pathname)
                         sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['fwd'][sub.name])
+                        print("apply_linear done",sub.pathname)
 
                     #for voi in vois:
                        # print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -106,7 +114,9 @@ class LinearGaussSeidel(LinearSolver):
                         drmat[voi].vec += rhs_mat[voi]
                         dpmat[voi].vec[:] = 0.0
 
+                    print("solve_linear",sub.pathname)
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
+                    print("solve_linear done",sub.pathname)
                     #for voi in vois:
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
@@ -163,6 +173,7 @@ class LinearGaussSeidel(LinearSolver):
 
         return sol_buf
 
+    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _norm(self, system, mode, rhs_mat):
         """ Computes the norm of the linear residual
 
