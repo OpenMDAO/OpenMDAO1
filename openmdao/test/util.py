@@ -36,7 +36,8 @@ def problem_derivatives_test(unittest, problem, tol = 1e-5):
                     unittest.assertLessEqual(max(err), tol)
                     # print "Deriv test passed:", comp, deriv, max(err) 
                 except AssertionError as e:
-                    print "Deriv test failed:", comp, deriv, max(err)   
+                    print("Deriv test failed:", comp, deriv, max(err))
+                      
                     raise e
 
 def assert_rel_error(test_case, actual, desired, tolerance):
