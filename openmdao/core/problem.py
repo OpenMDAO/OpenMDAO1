@@ -816,7 +816,11 @@ class Problem(System):
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns.metadata(p)['size']
+                idx = self._poi_indices
+                if p in idx:
+                    psize += len(idx)
+                else:
+                    psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':

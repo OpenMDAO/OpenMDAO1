@@ -17,7 +17,8 @@ class DumpRecorder(BaseRecorder):
     string, then a file with that name will be opened in the current
     directory. If `out` is None, cases will be ignored. When called under
     MPI, the dumprecorder writes to a separate file for each rank, with the
-    rank number appended to each filename.
+    rank number appended to each filename. In this case, only variables that
+    exist on all processes can be printed.
     """
 
     def __init__(self, out='stdout'):
@@ -39,7 +40,7 @@ class DumpRecorder(BaseRecorder):
                         parts[-2] += '_' + str(MPI.COMM_WORLD.rank)
                         out = '.'.join(parts)
                     else:
-                        out += str(MPI.COMM_W.rank)
+                        out += str(MPI.COMM_WORLD.rank)
 
                 out = open(out, 'w')
 
