@@ -139,16 +139,5 @@ class TestComponent(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-    def test_generate_numpydocstring(self):
-        self.comp.add_param("xxyyzz", 0.0)
-        self.comp.add_param("t", shape=2)
-        self.comp.add_output("x", -1)
-        self.comp.add_state("s1", 0.0)
-
-        test_string = self.comp.generate_docstring()
-
-        original_string = '\t"""\n\n\tParams\n\t----------\n    xxyyzz : param\n        <Insert description here.>\n    t : param\n        <Insert description here.>\n    x : unknown\n        <Insert description here.>\n    s1 : unknown\n        <Insert description here.>\n\n\t"""\n'
-        self.assertEqual(test_string, original_string)
-
 if __name__ == "__main__":
     unittest.main()
