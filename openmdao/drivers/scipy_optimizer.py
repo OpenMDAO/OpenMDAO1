@@ -62,6 +62,7 @@ class ScipyOptimizer(Driver):
         self._problem = None
         self.result = None
         self.grad_cache = None
+        self.con_cache = None
         self.con_idx = {}
         self.cons = None
         self.objs = None
@@ -89,6 +90,7 @@ class ScipyOptimizer(Driver):
         self.objs = list(iterkeys(self.get_objectives()))
         con_meta = self.get_constraint_metadata()
         self.cons = list(iterkeys(con_meta))
+        self.con_cache = self.get_constraints()
 
         self.opt_settings['maxiter'] = self.options['maxiter']
         self.opt_settings['disp'] = self.options['disp']
@@ -202,14 +204,19 @@ class ScipyOptimizer(Driver):
         update_local_meta(metadata, (self.iter_count,))
 
         system.solve_nonlinear(metadata=metadata)
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns,
-                                system.resids, metadata)
 
         # Get the objective function evaluations
         for name, obj in self.get_objectives().items():
             f_new = obj
             break
+
+        self.con_cache = self.get_constraints()
+
+        # Record after getting obj and constraints to assure it has been
+        # gathered in MPI.
+        for recorder in self.recorders:
+            recorder.raw_record(system.params, system.unknowns,
+                                system.resids, metadata)
 
         #print("Functions calculated")
         #print(x_new)
@@ -239,7 +246,7 @@ class ScipyOptimizer(Driver):
             Value of the constraint function.
         """
 
-        cons = self.get_constraints()
+        cons = self.con_cache
 
         #print("Constraint returned")
         #print(x_new)
