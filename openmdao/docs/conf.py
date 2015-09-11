@@ -26,8 +26,9 @@ import textwrap
 
 import openmdao
 
-
 def generate_docs():
+    IGNORE_LIST = ['docs', 'test', 'config', 'devtools', '__pycache__']
+
     index_top = """.. _source_documentation:
 
 =============================
@@ -83,8 +84,9 @@ Indices and tables
     # Everything in listings that isn't discarded is appended as a source package.
     for listing in listings:
         if os.path.isdir(os.path.join("..", listing)):
-            if listing != "docs" and listing != "test" and listing != "config" \
-                    and listing != "devtools" and listing != "__pycache__":
+            # if listing != "docs" and listing != "test" and listing != "config" \
+            #         and listing != "devtools" and listing != "__pycache__":
+            if listing not in IGNORE_LIST:
                 packages.append(listing)
 
     # begin writing the 'srcdocs/index.rst' file at top level.
@@ -127,23 +129,25 @@ Indices and tables
             package_file.write(package_top)
 
             for sub_package in sub_packages:
+                SKIP_SUBPACKAGES = ['nn_interpolators']
                 # this line writes subpackage name e.g. "core/component.py"
                 # into the corresponding package index file (e.g. "openmdao.core.rst")
-                package_file.write("    " + os.path.join(package, sub_package) + "\n")
+                if sub_package not in SKIP_SUBPACKAGES:
+                    package_file.write("    " + os.path.join(package, sub_package) + "\n")
 
-                # creates and writes out one reference sheet (e.g. core/component.rst)
-                ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
-                ref_sheet = open(ref_sheet_filename, "w")
-                # get the meat of the ref sheet code done
-                filename = sub_package + ".py"
-                ref_sheet.write(".. index:: " + filename + "\n\n")
-                ref_sheet.write(".. _" + package_name + "." + filename + ":\n\n")
-                ref_sheet.write(filename + "\n")
-                ref_sheet.write("+" * len(filename) + "\n\n")
-                ref_sheet.write(".. automodule:: " + package_name + "." + sub_package)
-                # finish and close each reference sheet.
-                ref_sheet.write(ref_sheet_bottom)
-                ref_sheet.close()
+                    # creates and writes out one reference sheet (e.g. core/component.rst)
+                    ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
+                    ref_sheet = open(ref_sheet_filename, "w")
+                    # get the meat of the ref sheet code done
+                    filename = sub_package + ".py"
+                    ref_sheet.write(".. index:: " + filename + "\n\n")
+                    ref_sheet.write(".. _" + package_name + "." + filename + ":\n\n")
+                    ref_sheet.write(filename + "\n")
+                    ref_sheet.write("+" * len(filename) + "\n\n")
+                    ref_sheet.write(".. automodule:: " + package_name + "." + sub_package)
+                    # finish and close each reference sheet.
+                    ref_sheet.write(ref_sheet_bottom)
+                    ref_sheet.close()
 
             # finish and close each package file
             package_file.write(package_bottom)
