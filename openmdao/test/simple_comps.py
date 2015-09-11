@@ -330,6 +330,30 @@ class FanOutGrouped(Group):
         self.connect("p.x", "comp1.x")
 
 
+class FanOutAllGrouped(Group):
+    """ Traditional FanOut with every comp in its own group to help test out preconditioning."""
+
+    def __init__(self):
+        super(FanOutAllGrouped, self).__init__()
+
+        self.add('p', ParamComp('x', 1.0))
+        sub1 = self.add('sub1', Group())
+        sub1.add('comp1', ExecComp(['y=3.0*x']))
+        sub2 = self.add('sub2', Group())
+        sub2.add('comp2', ExecComp(['y=-2.0*x']))
+        sub3 = self.add('sub3', Group())
+        sub3.add('comp3', ExecComp(['y=5.0*x']))
+
+        self.add('c2', ExecComp(['y=x']))
+        self.add('c3', ExecComp(['y=x']))
+        self.connect('sub2.comp2.y', 'c2.x')
+        self.connect('sub3.comp3.y', 'c3.x')
+
+        self.connect("sub1.comp1.y", "sub2.comp2.x")
+        self.connect("sub1.comp1.y", "sub3.comp3.x")
+        self.connect("p.x", "sub1.comp1.x")
+
+
 class FanIn(Group):
     """ Topology where two comps feed a single comp."""
 
