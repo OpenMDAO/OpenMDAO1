@@ -8,17 +8,20 @@ import numpy as np
 
 
 def problem_derivatives_test(unittest, problem, tol = 1e-5):
-    """
-    Runs partial derivates check on an OpenMDAO problem instance.
+    """Runs partial derivates check on an OpenMDAO problem instance.
     Asserts that forward and reverse derivatives are within a specified
     relative tolerance.
 
-    unittest -> unittest.TestCase : unit test instance
+    Args:
+    -----
+    unittest : `unittest.TestCase`
+        Unit test instance.
 
-    problem  -> Problem : OpenMDAO problem instance to be tested
+    problem : `Problem`
+        OpenMDAO problem instance to be tested.
 
-    tol: float -> Float : tolerance for relative error in the derivative checks
-
+    tol : `Float`
+        Tolerance for relative error in the derivative checks.
     """
     partials = problem.check_partial_derivatives(out_stream=None)
     for comp in partials:
