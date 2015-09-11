@@ -104,10 +104,13 @@ class TestProblemCheckPartials(unittest.TestCase):
         try:
             data = prob.check_partial_derivatives(out_stream=None)
         except Exception as err:
-            msg = "Jacobian in component 'comp' between the" + \
-                " variables 'x' and 'y' is the wrong size. " + \
-                "It should be 2 by 2"
-            self.assertEqual(str(err), msg)
+            msg = "derivative in component 'comp' of 'y' wrt 'x' is the wrong size. It should be (2, 2), but got (3, 3)"
+
+            # Good ole Numpy
+            raised_error = str(err)
+            raised_error = raised_error.replace('3L', '3')
+
+            self.assertEqual(raised_error, msg)
         else:
             self.fail("Error expected")
 

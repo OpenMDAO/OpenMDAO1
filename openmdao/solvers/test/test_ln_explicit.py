@@ -5,7 +5,7 @@ import numpy as np
 
 from openmdao.core import Group, Problem
 from openmdao.components import ParamComp, ExecComp
-from openmdao.solvers import ExplicitSolver
+from openmdao.solvers import DirectSolver
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
@@ -13,7 +13,7 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
 from openmdao.test.util import assert_rel_error
 
 
-class TestExplicitSolver(unittest.TestCase):
+class TestDirectSolver(unittest.TestCase):
 
     def test_simple_matvec(self):
         group = Group()
@@ -22,7 +22,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = group
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -41,7 +41,7 @@ class TestExplicitSolver(unittest.TestCase):
         prob.root.add('x_param', ParamComp('x', 1.0), promotes=['*'])
         prob.root.add('sub', group, promotes=['*'])
 
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -58,7 +58,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = group
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -79,7 +79,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = group
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -96,7 +96,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = group
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -110,7 +110,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = FanOut()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -129,7 +129,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = FanOutGrouped()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -148,7 +148,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = FanIn()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -167,7 +167,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = FanInGrouped()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -186,7 +186,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = ConvergeDiverge()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -211,7 +211,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -234,7 +234,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = SingleDiamond()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
@@ -253,7 +253,7 @@ class TestExplicitSolver(unittest.TestCase):
 
         prob = Problem()
         prob.root = SingleDiamondGrouped()
-        prob.root.ln_solver = ExplicitSolver()
+        prob.root.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
 
