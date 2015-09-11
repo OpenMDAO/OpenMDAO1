@@ -5,6 +5,7 @@ import sys
 
 from six import string_types, iteritems
 
+from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
@@ -13,19 +14,35 @@ class DumpRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
     ``stderr``, then that standard stream is used. Otherwise, if `out` is a
-    string, then a file with that name will be opened in the current directory.
-    If `out` is None, cases will be ignored.
+    string, then a file with that name will be opened in the current
+    directory. If `out` is None, cases will be ignored. When called under
+    MPI, the dumprecorder writes to a separate file for each rank, with the
+    rank number appended to each filename.
     """
 
     def __init__(self, out='stdout'):
         super(DumpRecorder, self).__init__()
         if isinstance(out, string_types):
+
             if out == 'stdout':
                 out = sys.stdout
+
             elif out == 'stderr':
                 out = sys.stderr
+
             else:
+                # Dump out to a separate file for each process if we are under
+                # MPI
+                if MPI:
+                    if '.' in out:
+                        parts = out.split('.')
+                        parts[-2] += '_' + str(MPI.COMM_WORLD.rank)
+                        out = '.'.join(parts)
+                    else:
+                        out += str(MPI.COMM_W.rank)
+
                 out = open(out, 'w')
+
         self.out = out
 
     def startup(self, group):

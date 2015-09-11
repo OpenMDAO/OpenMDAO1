@@ -254,9 +254,6 @@ class pyOptSparseDriver(Driver):
             update_local_meta(metadata, (self.iter_count,))
 
             system.solve_nonlinear(metadata=metadata)
-            for recorder in self.recorders:
-                recorder.raw_record(system.params, system.unknowns,
-                                    system.resids, metadata)
 
             # Get the objective function evaluations
             for name, obj in iteritems(self.get_objectives()):
@@ -279,6 +276,12 @@ class pyOptSparseDriver(Driver):
                 #         func_dict[name] = comm.bcast(None, root=owner)
                 # else:
                 func_dict[name] = con
+
+            # Record after getting obj and constraint to assure they have
+            # been gathered in MPI.
+            for recorder in self.recorders:
+                recorder.raw_record(system.params, system.unknowns,
+                                    system.resids, metadata)
 
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
