@@ -356,5 +356,32 @@ class TestScipyOptimize(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
+    def test_index_array_param(self):
+
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+
+        prob.driver.add_param('z', low=np.array([-10.0]), high=np.array([10.0]),
+                              indices=[0])
+        prob.driver.add_param('x', low=0.0, high=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1')
+        prob.driver.add_constraint('con2')
+        prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+        prob['z'][1] = 5.0
+        prob.run()
+
+        assert_rel_error(self, prob['z'][0], 0.1005, 1e-3)
+        assert_rel_error(self, prob['z'][1], 5.0, 1e-3)
+        assert_rel_error(self, prob['x'], 0.0, 1e-3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -299,7 +299,14 @@ class Driver(object):
         adder = self._params[name]['adder']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
            or scaler != 1.0 or adder != 0.0:
-            self.root.unknowns[name] = value/scaler - adder
+            value = value/scaler - adder
+        else:
+            value = value
+
+        # Only set the indices we requested when we set the parameter.
+        idx = self._params[name].get('indices')
+        if idx is not None:
+            self.root.unknowns[name][idx] = value
         else:
             self.root.unknowns[name] = value
 
