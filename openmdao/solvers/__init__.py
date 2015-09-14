@@ -1,4 +1,4 @@
-from openmdao.solvers.ln_explicit import ExplicitSolver
+from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.solvers.newton import Newton
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel

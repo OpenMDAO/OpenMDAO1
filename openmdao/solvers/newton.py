@@ -69,8 +69,7 @@ class Newton(NonLinearSolver):
         update_local_meta(local_meta, (self.iter_count, ls_itercount))
 
         # Perform an initial run to propagate srcs to targets.
-        if self.options['solve_subsystems'] is True:
-            system.children_solve_nonlinear(local_meta)
+        system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids)
 
         f_norm = resids.norm()

@@ -6,7 +6,7 @@ import numpy as np
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 
-class ExplicitSolver(ScipyGMRES):
+class DirectSolver(ScipyGMRES):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve."""
 
@@ -37,7 +37,7 @@ class ExplicitSolver(ScipyGMRES):
         for voi, rhs in rhs_mat.items():
             self.voi = None
 
-            #TODO: When to record?
+            # TODO: When to record?
             self.system = system
             self.mode = mode
 

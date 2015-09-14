@@ -117,6 +117,7 @@ class LinearGaussSeidel(LinearSolver):
                     print("solve_linear",sub.pathname)
                     sub.solve_linear(sub.dumat, sub.drmat,vois, mode=mode)
                     print("solve_linear done",sub.pathname)
+
                     #for voi in vois:
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
