@@ -10,14 +10,28 @@ from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.drivers import ScipyOptimizer
-from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
+SKIP = False
+try:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+except ImportError:
+    # Just so python can parse this file.
+    from openmdao.core.driver import Driver
+    pyOptSparseDriver = Driver
+    SKIP = True
+
 
 class TestParamIndices(unittest.TestCase):
+
+    def setUp(self):
+        if SKIP is True:
+            raise unittest.SkipTest("Could not import pyOptSparseDriver. "
+                                    "Is pyoptsparse installed?")
+
 
     def test_Sellar_state_SLSQP(self):
         """ Baseline Sellar test case without specifying indices.
