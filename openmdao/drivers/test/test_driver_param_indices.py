@@ -188,6 +188,36 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
+    def test_driver_param_indices_snopt_force_fd_shift(self):
+        """ Testt driver param indices with pyOptSparse and force_fd=True
+
+        """
+
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.root.fd_options['force_fd'] = True
+
+        prob.driver.add_param('z', low=np.array([-10.0, -10.0]),
+                              high=np.array([10.0, 10.0]), indices=[1])
+        prob.driver.add_param('x', low=0.0, high=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1')
+        prob.driver.add_constraint('con2')
+        #prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+
+        prob['z'][1] = 0.0
+
+        prob.run()
+
+        J = prob.calc_gradient(['x', 'z'], ['obj'], mode='fd',
+                              return_format='array')
+        print J
+        assert_rel_error(self, J[0][1], 1.78402, 1e-3)
+
+
 
 if __name__ == "__main__":
     unittest.main()

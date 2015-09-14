@@ -380,9 +380,12 @@ class System(object):
             fdform = mydict.get('fd_form', form)
 
             # Size our Inputs
-            p_size = np.size(target_input)
             if desvar_indices is not None and param_src in desvar_indices:
-                p_size = len(desvar_indices[param_src])
+                idxes = desvar_indices[param_src]
+                p_size = len(idxes)
+            else:
+                p_size = np.size(target_input)
+                idxes = range(p_size)
 
             # Size our Outputs
             for u_name in fd_unknowns:
@@ -398,14 +401,7 @@ class System(object):
                     run_model(params, unknowns, resids)
 
             # Finite Difference each index in array
-            for idx in range(p_size):
-
-                # Support for adding a parameter on a subslice of a varaible.
-                # Skip if not in declared index set.
-                if desvar_indices is not None:
-                    if param_src in desvar_indices:
-                        if idx not in desvar_indices[param_src]:
-                            continue
+            for j, idx in enumerate(idxes):
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
@@ -460,7 +456,7 @@ class System(object):
                     target_input[idx] += step
 
                 for u_name in fd_unknowns:
-                    jac[u_name, p_name][:, idx] = resultvec.flat[u_name]
+                    jac[u_name, p_name][:, j] = resultvec.flat[u_name]
 
                 # Restore old residual
                 resultvec.vec[:] = cache1
