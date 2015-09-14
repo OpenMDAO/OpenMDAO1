@@ -90,10 +90,8 @@ We add an optimizer to the problem and initialize it.
 These two lines are all it takes to record the state of the problem as the
 optimizer progresses. We initialize a `SqliteRecorder` by passing it a
 `filename` argument. This recorder indirectly uses Python's `sqlite3` module to store the
-data generated. In this case, `sqlite3` will open a file named 'paraboloid'
-to use as a back-end. Note that depending on your operating system and version
-of Python, the actual file generated may have a different name (e.g.
-paraboloid.db), but `sqlite3` will be able to open the correct file. 
+data generated. In this case, `sqlite3` will open a database file named 'paraboloid'
+to use as a back-end. 
 Actually, OpenMDAO's `SqliteRecorder` makes use of the 
 `sqlitedict module <https://pypi.python.org/pypi/sqlitedict>`_ because it has a
 simple, Pythonic dict-like interface to Python’s sqlite3 database.
@@ -165,7 +163,7 @@ etc. To access the data from our run, we can use the following code:
     db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao' )
 
 There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
-is the name of the sqlite file. The second, `'openmdao'`, is the name of the table
+is the name of the sqlite database file. The second, `'openmdao'`, is the name of the table
 in the sqlite database. For the SqliteRecorder in OpenMDAO, all the case 
 recording is done to the `'openmdao'` table.
 
