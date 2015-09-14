@@ -13,7 +13,7 @@ save the data generated for future use. Consider the code below:
     from openmdao.components import ParamComp
     from openmdao.core import Component, Group, Problem
     from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import ShelveRecorder
+    from openmdao.recorders import SqliteRecorder
 
 
     class Paraboloid(Component):
@@ -64,7 +64,7 @@ save the data generated for future use. Consider the code below:
         driver.add_param('y')
         driver.add_objective('f_xy')
 
-        recorder = ShelveRecorder('paraboloid')
+        recorder = SqliteRecorder('paraboloid')
         driver.add_recorder(recorder)
 
         top.setup()
@@ -84,16 +84,19 @@ We add an optimizer to the problem and initialize it.
 
 ::
 
-    recorder = ShelveRecorder('paraboloid')
+    recorder = SqliteRecorder('paraboloid')
     driver.add_recorder(recorder)
 
 These two lines are all it takes to record the state of the problem as the
-optimizer progresses. We initialize a `ShelveRecorder` by passing it a
-`filename` argument. This recorder uses Python's `shelve` module to store the
-data generated. In this case, `shelve` will open a file named 'paraboloid'
+optimizer progresses. We initialize a `SqliteRecorder` by passing it a
+`filename` argument. This recorder indirectly uses Python's `sqlite3` module to store the
+data generated. In this case, `sqlite3` will open a file named 'paraboloid'
 to use as a back-end. Note that depending on your operating system and version
 of Python, the actual file generated may have a different name (e.g.
-paraboloid.db), but `shelve` will be able to open the correct file.
+paraboloid.db), but `sqlite3` will be able to open the correct file. 
+Actually, OpenMDAO's `SqliteRecorder` makes use of the 
+`sqlitedict module <https://pypi.python.org/pypi/sqlitedict>`_ because it has a
+simple, Pythonic dict-like interface to Python’s sqlite3 database.
 
 We then attach the recorder to the driver using `driver.add_recorder`.
 Depending on your needs, you are able to attach more recorders by using
@@ -119,7 +122,7 @@ model, we could record that by setting the includes as follows:
 
 ::
 
-    recorder = ShelveRecorder('paraboloid')
+    recorder = SqliteRecorder('paraboloid')
     recorder.options['includes'] = ['x']
 
     driver.add_recorder(recorder)
@@ -128,7 +131,7 @@ Similarly, if we were interested in everything except the value of `f_xy`, we
 could exclude that by doing the following:
 ::
 
-    recorder = ShelveRecorder('paraboloid')
+    recorder = SqliteRecorder('paraboloid')
     recorder.options['excludes'] = ['f_xy']
 
     driver.add_recorder(recorder)
@@ -152,19 +155,25 @@ iteration number may be of the form '1-3', indicating the third sub-step of the
 first iteration.
 
 Since our Paraboloid only has a recorder attached to the driver, our
-'paraboloid' shelve file will contain keys of the form 'SLSQP/1', 'SLSQP/2',
+'paraboloid' sqlite file will contain keys of the form 'SLSQP/1', 'SLSQP/2',
 etc. To access the data from our run, we can use the following code:
 
 ::
 
-    import shelve
-    f = shelve.open('paraboloid')
+    import sqlitedict
+
+    db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao' )
+
+There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
+is the name of the sqlite file. The second, `'openmdao'`, is the name of the table
+in the sqlite database. For the SqliteRecorder in OpenMDAO, all the case 
+recording is done to the `'openmdao'` table.
 
 Now, we can access the data using an iteration coordinate.
 
 ::
 
-    data = f['SLSQP/1']
+    data = db['SLSQP/1']
 
 This `data` variable has three keys, 'Parameters', 'Unknowns', and 'Residuals'.
 Using any of these keys will yield a dictionary containing variable names
