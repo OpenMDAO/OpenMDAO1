@@ -214,7 +214,6 @@ class TestParamIndices(unittest.TestCase):
 
         J = prob.calc_gradient(['x', 'z'], ['obj'], mode='fd',
                               return_format='array')
-        print J
         assert_rel_error(self, J[0][1], 1.78402, 1e-3)
 
 
