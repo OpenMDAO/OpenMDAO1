@@ -11,7 +11,6 @@ class SqliteRecorder(BaseRecorder):
         sqlite_dict_args.setdefault('autocommit', True)
         sqlite_dict_args.setdefault('tablename', 'openmdao')
         self.out = SqliteDict(filename=out, **sqlite_dict_args)
-        self.order = []
 
 
     def record(self, params, unknowns, resids, metadata):
@@ -37,13 +36,8 @@ class SqliteRecorder(BaseRecorder):
         iteration_coordinate = metadata['coord']
         group_name = format_iteration_coordinate(iteration_coordinate)
 
-        self.order.append(group_name)
-
-        f = self.out
-
         data = OrderedDict([('Parameters', params),
                             ('Unknowns', unknowns),
                             ('Residuals', resids)])
 
-        f[group_name] = data
-        f['order'] = self.order
+        self.out[group_name] = data
