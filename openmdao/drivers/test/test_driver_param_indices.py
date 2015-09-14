@@ -156,7 +156,7 @@ class TestParamIndices(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
 
         prob.driver.add_param('z', low=np.array([-10.0]),
-                              high=np.array([10.0]),indices=[0])
+                              high=np.array([10.0]), indices=[0])
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')

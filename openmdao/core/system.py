@@ -274,7 +274,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None):
+                    fd_params=None, fd_unknowns=None, desvar_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -302,6 +302,11 @@ class System(object):
             List of output or state name strings for derivatives to be
             calculated. This is used by problem to limit the derivatives that
             are taken.
+
+        desvar_incides: dict of list of integers, optional
+            This is a dict that contains the index values for each param that
+            was declared, so that we only finite difference those
+            indices.
 
         Returns
         -------
@@ -376,6 +381,8 @@ class System(object):
 
             # Size our Inputs
             p_size = np.size(target_input)
+            if desvar_indices is not None and param_src in desvar_indices:
+                p_size = len(desvar_indices[param_src])
 
             # Size our Outputs
             for u_name in fd_unknowns:
@@ -392,6 +399,13 @@ class System(object):
 
             # Finite Difference each index in array
             for idx in range(p_size):
+
+                # Support for adding a parameter on a subslice of a varaible.
+                # Skip if not in declared index set.
+                if desvar_indices is not None:
+                    if param_src in desvar_indices:
+                        if idx not in desvar_indices[param_src]:
+                            continue
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
