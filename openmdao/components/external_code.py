@@ -19,25 +19,33 @@ class ExternalCode(Component):
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
 
-    Options
+	Options
 	----------
-    external_output_files :  list
-        (optional) list of input file names to check the pressence of after solve_nonlinear
-    timeout :  float
-        Maximum time to wait for command completion. A value of zero implies an infinite wait
-    poll_delay :  float
-        Delay between polling for command completion. A value of zero will use an internally computed default
-    command :  list
-        command to be executed
-    external_input_files :  list
+
+    force_fd :  bool(False)
+        Set to True to finite difference this system.
+    step_size :  float(1e-06)
+        Default finite difference stepsize
+    step_type :  str(absolute)
+        Set to absolute, relative
+    form :  str(forward)
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    external_input_files :  list([])
         (optional) list of input file names to check the pressence of before solve_nonlinear
-    env_vars :  dict
+    env_vars :  dict({})
         Environment variables required by the command
-    check_external_outputs :  bool
+    external_output_files :  list([])
+        (optional) list of input file names to check the pressence of after solve_nonlinear
+    command :  list([])
+        command to be executed
+    timeout :  float(0.0)
+        Maximum time to wait for command completion. A value of zero implies an infinite wait
+    check_external_outputs :  bool(True)
         Check that all input or output external files exist
-
+    poll_delay :  float(0.0)
+        Delay between polling for command completion. A value of zero will use an internally computed default
 	"""
-
+    
     def __init__(self):
         super(ExternalCode, self).__init__()
 
@@ -176,7 +184,7 @@ class ExternalCode(Component):
             program_to_execute = self.options['command']
         else:
             program_to_execute = self.options['command'][0]
-        
+
         command_full_path = find_executable( program_to_execute )
         if not command_full_path:
             raise ValueError("The command to be executed, '%s', cannot be found" % program_to_execute)

@@ -25,7 +25,7 @@ class Driver(object):
 
         # What this driver supports
         self.supports = OptionsDictionary(read_only=True)
-        self.supports.add_option('inequality_constraints', True, desc='junk')
+        self.supports.add_option('inequality_constraints', True)
         self.supports.add_option('equality_constraints', True)
         self.supports.add_option('linear_constraints', False)
         self.supports.add_option('multiple_objectives', False)

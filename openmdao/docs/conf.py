@@ -27,8 +27,6 @@ import textwrap
 import openmdao
 
 def generate_docs():
-    IGNORE_LIST = ['docs', 'test', 'config', 'devtools', '__pycache__']
-
     index_top = """.. _source_documentation:
 
 =============================
@@ -79,13 +77,12 @@ Indices and tables
     # look for directories in the openmdao level, one up from docs
     # those directories will be the openmdao packages
     # auto-generate the top-level index.rst file for srcdocs, based on openmdao packages:
+    IGNORE_LIST = ['docs', 'test', 'config', 'devtools', '__pycache__']
     packages = []
     listings = os.listdir(os.path.join(dir, ".."))
     # Everything in listings that isn't discarded is appended as a source package.
     for listing in listings:
         if os.path.isdir(os.path.join("..", listing)):
-            # if listing != "docs" and listing != "test" and listing != "config" \
-            #         and listing != "devtools" and listing != "__pycache__":
             if listing not in IGNORE_LIST:
                 packages.append(listing)
 
