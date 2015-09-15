@@ -170,7 +170,9 @@ class Driver(object):
                     msg = "'%s' cannot be added to VOI set %s because it " + \
                           "already exists in VOI set: %s"
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
+
         param_intsect = set(vnames).intersection(self._params.keys())
+        
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
