@@ -54,6 +54,9 @@ class pyOptSparseDriver(Driver):
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
 
+        # The user can set a file name here to store history
+        self.hist_file = None
+
         self.pyopt_solution = None
 
         self.lin_jacs = {}
@@ -184,10 +187,10 @@ class pyOptSparseDriver(Driver):
         if self.options['pyopt_diff'] is True:
             # Use pyOpt's internal finite difference
             fd_step = problem.root.fd_options['step_size']
-            sol = opt(opt_prob, sens='FD', sensStep=fd_step)
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
         else:
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self.gradfunc)
+            sol = opt(opt_prob, sens=self.gradfunc, storeHistory=self.hist_file)
 
         self._problem = None
 
