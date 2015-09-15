@@ -1,6 +1,8 @@
 """ Class definition for HDF5Recorder, which uses the shelve format."""
 
 import shelve
+import warnings
+
 from collections import OrderedDict
 
 from openmdao.recorders.base_recorder import BaseRecorder
@@ -10,6 +12,8 @@ from openmdao.util.record_util import format_iteration_coordinate
 class ShelveRecorder(BaseRecorder):
     """
     A recorder that stores data using Python's shelve.
+
+    ShelveRecorder is deprecated. Please consider using the SqliteRecorder instead.
 
     Args
     ----
@@ -22,6 +26,12 @@ class ShelveRecorder(BaseRecorder):
 
     def __init__(self, out, **shelve_args):
         super(ShelveRecorder, self).__init__()
+        
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("ShelveRecorder is deprecated, use SqliteRecorder instead",
+                       DeprecationWarning,stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
+
         self.out = shelve.open(out, **shelve_args)
         self.order = []
 
