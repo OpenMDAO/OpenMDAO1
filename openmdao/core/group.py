@@ -20,7 +20,6 @@ from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 from openmdao.devtools.debug import debug
-from openmdao.devtools.trace import TraceCalls
 
 from openmdao.core.checks import ConnectError
 
@@ -531,7 +530,6 @@ class Group(System):
 
         return connections
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
         """
         Solves the group using the slotted nl_solver.
@@ -557,7 +555,6 @@ class Group(System):
 
             self.nl_solver.solve(params, unknowns, resids, self, metadata)
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def children_solve_nonlinear(self, metadata):
         """
         Loops over our children systems and asks them to solve.
@@ -607,7 +604,6 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def jacobian(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
@@ -656,7 +652,6 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
@@ -702,7 +697,6 @@ class Group(System):
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None,
                                   gs_outputs=None):
         """
@@ -1410,7 +1404,6 @@ class Group(System):
                                                     full_flats, full_byobjs,
                                                     mode)
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
         """

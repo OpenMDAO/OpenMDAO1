@@ -9,7 +9,6 @@ from six.moves import cStringIO
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
-from openmdao.devtools.trace import TraceCalls
 
 class _NoPlusEqArray(object):
     """
@@ -227,7 +226,6 @@ class VecWrapper(object):
         """
         return self._vardict.values()
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _get_local_idxs(self, name, idx_dict, get_slice=False):
         """
         Returns all of the indices for the named variable in this vector.
@@ -910,8 +908,8 @@ class TgtVecWrapper(VecWrapper):
         Add an entry to this vecwrapper for the given unconnected variable so the
         component can access its value through the vecwrapper.
         """
+        sname = self._scoped_abs_name(pathname)
         vmeta = meta.copy()
-        vmeta['pass_by_obj'] = True
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:
@@ -921,8 +919,14 @@ class TgtVecWrapper(VecWrapper):
             raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
                                pathname)
 
+        if not vmeta.get('pass_by_obj'):
+            if isinstance(val, numpy.ndarray):
+                self.flat[sname] = val.flat
+            else:
+                self.flat[sname] = numpy.array([val])
+
         vmeta['val'] = _ByObjWrapper(val)
-        sname = self._scoped_abs_name(pathname)
+        vmeta['pass_by_obj'] = True
         self._vardict[sname] = vmeta
         func, flatfunc = self._setup_get_funct(sname)
         self._fastget[sname] = func

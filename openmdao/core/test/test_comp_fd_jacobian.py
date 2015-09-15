@@ -29,7 +29,9 @@ class TestProb(Problem):
         root.add('pi1', ParamComp('p', 1.))
         root.connect('pi1.p','ci1.x')
 
+        root.add('pjunk', ParamComp('pj', np.ones((2,2))))
         root.add('junk', ExecComp('y=x', x=np.zeros((2,2)), y=np.zeros((2,2))))
+        root.connect('pjunk.pj', 'junk.x')
 
 
 class CompFDTestCase(unittest.TestCase):
@@ -93,36 +95,6 @@ class CompFDTestCase(unittest.TestCase):
         #Got lucky that the way this comp was written, it would accept any square
         # matrix. But provided jacobian would be really wrong!
 
-        #params_dict = OrderedDict()
-        #params_dict['x'] = { 'val': np.ones((2, 2)),
-                             #'pathname' : 'x',
-                             #'promoted_name' : 'x',
-                             #'shape': (2,2), 'size' : 4 }
-
-
-        #unknowns_dict = OrderedDict()
-        #unknowns_dict['y'] = { 'val': np.zeros((2, 2)),
-                               #'pathname' : 'y',
-                               #'promoted_name' : 'y',
-                             #'shape': (2,2), 'size' : 4 }
-
-
-        #resids_dict = OrderedDict()
-        #resids_dict['y'] = { 'val': np.zeros((2, 2)),
-                             #'pathname' : 'y',
-                             #'promoted_name' : 'y',
-                             #'shape': (2,2), 'size' : 4 }
-
-
-        #params = SrcVecWrapper()
-        #params.setup(params_dict, store_byobjs=True)
-
-        #unknowns = SrcVecWrapper()
-        #unknowns.setup(unknowns_dict, store_byobjs=True)
-
-        #resids = SrcVecWrapper()
-        #resids.setup(resids_dict, store_byobjs=True)
-
         params = self.p.root.junk.params
         unknowns = self.p.root.junk.unknowns
         resids = self.p.root.junk.resids
@@ -145,42 +117,17 @@ class CompFDTestCase(unittest.TestCase):
 
     def test_correct_vals_in_jac_implicit(self):
 
-        params_dict = OrderedDict()
-        params_dict['x'] = { 'val': np.array([0.5]),
-                             'pathname' : 'x',
-                             'promoted_name' : 'x',
-                             'shape': (1,), 'size' : 1 }
-
-        unknowns_dict = OrderedDict()
-        unknowns_dict['y'] = { 'val': np.array([0.0]),
-                               'pathname' : 'y',
-                               'promoted_name' : 'y',
-                             'shape': (1,), 'size' : 1 }
-        unknowns_dict['z'] = { 'val': np.array([0.0]),
-                               'pathname' : 'z',
-                               'promoted_name' : 'z',
-                             'shape': (1,), 'size' : 1 }
-
-        resids_dict = OrderedDict()
-        resids_dict['y'] = { 'val': np.array([0.0]),
-                             'pathname' : 'y',
-                             'promoted_name' : 'y',
-                             'shape': (1,), 'size' : 1 }
-        resids_dict['z'] = { 'val': np.array([0.0]),
-                             'pathname' : 'z',
-                             'promoted_name' : 'z',
-                             'shape': (1,), 'size' : 1 }
-
-        params = SrcVecWrapper()
-        params.setup(params_dict, store_byobjs=True)
-
-        unknowns = SrcVecWrapper()
-        unknowns.setup(unknowns_dict, store_byobjs=True)
-
-        resids = SrcVecWrapper()
-        resids.setup(resids_dict, store_byobjs=True)
-
         # Partials
+
+        params = self.p.root.ci1.params
+        unknowns = self.p.root.ci1.unknowns
+        resids = self.p.root.ci1.resids
+
+        params['x'] = np.array([0.5])
+        unknowns['y'] = np.array([0.0])
+        unknowns['z'] = np.array([0.0])
+        resids['y'] = np.array([0.0])
+        resids['z'] = np.array([0.0])
 
         self.p.root.ci1.solve_nonlinear(params, unknowns, resids)
 

@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
-from openmdao.devtools.trace import TraceCalls
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.

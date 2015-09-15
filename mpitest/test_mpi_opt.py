@@ -343,7 +343,6 @@ class ParallelMPIOptPromoted(MPITestCase):
         prob.driver.parallel_derivs(['par.ser1.x','par.ser2.x'])
 
         prob.setup(check=False)
-        prob.root._dump_dist_idxs()
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
@@ -452,7 +451,6 @@ class ParallelMPIOpt(MPITestCase):
         prob.driver.parallel_derivs(['par.ser1.p1.x','par.ser2.p1.x'])
 
         prob.setup(check=False)
-        prob.root._dump_dist_idxs()
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)

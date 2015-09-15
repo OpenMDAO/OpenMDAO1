@@ -28,7 +28,6 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 from openmdao.devtools.debug import debug
-from openmdao.devtools.trace import TraceCalls
 
 
 class Problem(System):
@@ -769,7 +768,6 @@ class Problem(System):
                 ui += rows
         return J
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
