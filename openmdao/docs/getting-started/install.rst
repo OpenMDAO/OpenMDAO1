@@ -123,7 +123,7 @@ install the latest OpenMDAO from its Github repository with this line:
 
 ::
 
-pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
+    pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
 
 
 Supported Platforms
