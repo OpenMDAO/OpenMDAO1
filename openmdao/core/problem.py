@@ -951,7 +951,7 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        if owned[item] == iproc or fwd:
+                        if fwd or owned[item] == iproc:
                             out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
                                                                qoi_indices,
                                                                get_slice=True)
