@@ -26,31 +26,6 @@ try:
 except ImportError:
     impl = None
 
-class FanOutGrouped(Group):
-    """ Topology where one comp broadcasts an output to two target
-    components. ParamComp and comp1 are in a subgroup of the
-    ParallelGroup.
-    """
-
-    def __init__(self):
-        super(FanOutGrouped, self).__init__()
-
-        sub = self.add('sub', ParallelGroup())
-        pgroup = sub.add('pgroup', Group())
-        pgroup.add('p', ParamComp('x', 1.0))
-        pgroup.add('comp1', ExecComp(['y=3.0*x']))
-        sub.add('comp2', ExecComp(['y=-2.0*x']))
-        sub.add('comp3', ExecComp(['y=5.0*x']))
-
-        self.add('c2', ExecComp(['y=x']))
-        self.add('c3', ExecComp(['y=x']))
-        self.connect('sub.comp2.y', 'c2.x')
-        self.connect('sub.comp3.y', 'c3.x')
-
-        self.connect("sub.pgroup.comp1.y", "sub.comp2.x")
-        self.connect("sub.pgroup.comp1.y", "sub.comp3.x")
-        self.connect("sub.pgroup.p.x", "sub.pgroup.comp1.x")
-
 
 class TestPetscKSP(MPITestCase):
 
@@ -188,7 +163,24 @@ class TestPetscKSP3(MPITestCase):
     def test_fan_out_grouped(self):
 
         prob = Problem(impl=impl)
-        prob.root = FanOutGrouped()
+        prob.root = root = Group()
+
+        sub = root.add('sub', ParallelGroup())
+        pgroup = sub.add('pgroup', Group())
+        pgroup.add('p', ParamComp('x', 1.0))
+        pgroup.add('comp1', ExecComp(['y=3.0*x']))
+        sub.add('comp2', ExecComp(['y=-2.0*x']))
+        sub.add('comp3', ExecComp(['y=5.0*x']))
+
+        root.add('c2', ExecComp(['y=x']))
+        root.add('c3', ExecComp(['y=x']))
+        root.connect('sub.comp2.y', 'c2.x')
+        root.connect('sub.comp3.y', 'c3.x')
+
+        root.connect("sub.pgroup.comp1.y", "sub.comp2.x")
+        root.connect("sub.pgroup.comp1.y", "sub.comp3.x")
+        root.connect("sub.pgroup.p.x", "sub.pgroup.comp1.x")
+
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.sub.ln_solver = LinearGaussSeidel()
         prob.root.sub.pgroup.ln_solver = LinearGaussSeidel()

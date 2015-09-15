@@ -110,18 +110,22 @@ class Driver(object):
         into tuples based on the previously defined grouping of VOIs.
         """
         vois = []
-        done_sets = set()
-        for v in voi_list:
-            for voi_set in self._voi_sets:
-                if voi_set in done_sets:
-                    break
+        remaining = set(voi_list)
+        for voi_set in self._voi_sets:
+            vois.append([])
+
+        for i, voi_set in enumerate(self._voi_sets):
+            for v in voi_list:
                 if v in voi_set:
-                    vois.append(tuple([x for x in voi_set
-                                       if x in voi_list]))
-                    done_sets.add(voi_set)
-                    break
-            else:
+                    vois[i].append(v)
+                    remaining.remove(v)
+
+        vois = [tuple(x) for x in vois if x]
+
+        for v in voi_list:
+            if v in remaining:
                 vois.append((v,))
+
         return vois
 
     def params_of_interest(self):

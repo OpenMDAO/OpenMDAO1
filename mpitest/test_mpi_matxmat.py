@@ -94,6 +94,7 @@ class MatMatTestCase(MPITestCase):
         # Parallel Groups
         prob.driver.add_param('p1.x1')
         prob.driver.add_param('p2.x2')
+        prob.driver.add_param('p3.x3')
         prob.driver.add_objective('comp3.y')
 
         # make sure we can't mix inputs and outputs in parallel sets
@@ -109,9 +110,9 @@ class MatMatTestCase(MPITestCase):
         prob.driver.parallel_derivs(['p1.x1','p2.x2'])
 
         if MPI:
-            expected = [('p1.x1','p2.x2')]
+            expected = [('p1.x1','p2.x2'),('p3.x3',)]
         else:
-            expected = [('p1.x1',),('p2.x2',)]
+            expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
 
         self.assertEqual(prob.driver.params_of_interest(),
                          expected)
