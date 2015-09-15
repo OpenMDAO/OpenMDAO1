@@ -9,9 +9,7 @@ from six.moves import cStringIO
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
-from openmdao.devtools import TraceCalls
-
-#from openmdao.devtools.debug import *
+from openmdao.devtools.trace import TraceCalls
 
 class _NoPlusEqArray(object):
     """
@@ -115,8 +113,10 @@ class VecWrapper(object):
         Sets up the internal dict that maps absolute name to promoted name.
         """
         self._to_prom_name = {}
+        self._to_top_prom_name = {}
         for prom_name, meta in iteritems(self):
             self._to_prom_name[meta['pathname']] = prom_name
+            self._to_top_prom_name[prom_name] = meta['top_promoted_name']
 
     def __getitem__(self, name):
         """

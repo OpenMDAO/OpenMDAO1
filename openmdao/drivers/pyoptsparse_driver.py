@@ -15,7 +15,7 @@ from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
-from openmdao.devtools import TraceCalls
+from openmdao.devtools.trace import TraceCalls
 
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which

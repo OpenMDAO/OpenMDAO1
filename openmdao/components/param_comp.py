@@ -4,7 +4,6 @@ import collections
 from six import string_types, iteritems
 
 from openmdao.core.component import Component
-from openmdao.devtools import TraceCalls
 
 class ParamComp(Component):
     """A Component that provides an output to connect to a parameter."""
@@ -42,7 +41,6 @@ class ParamComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    @TraceCalls(env_vars=('OPENMDAO_TRACE',))
     def apply_linear(self, mode, ls_inputs=None, vois=(None, ), gs_outputs=None):
         """For `ParamComp`, just pass on the incoming values.
 

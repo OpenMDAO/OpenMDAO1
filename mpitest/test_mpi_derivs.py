@@ -8,6 +8,7 @@ from openmdao.components.param_comp import ParamComp
 
 from openmdao.core import Group, ParallelGroup, Problem
 from openmdao.components import ExecComp
+from openmdao.solvers import LinearGaussSeidel
 
 from openmdao.test.converge_diverge import ConvergeDivergePar, SingleDiamondPar
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
@@ -188,7 +189,9 @@ class TestPetscKSP3(MPITestCase):
 
         prob = Problem(impl=impl)
         prob.root = FanOutGrouped()
-        prob.root.ln_solver = PetscKSP()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
+        prob.root.sub.pgroup.ln_solver = LinearGaussSeidel()
 
         prob.setup(check=False)
         prob.run()

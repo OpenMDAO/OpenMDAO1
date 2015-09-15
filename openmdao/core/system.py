@@ -12,7 +12,7 @@ from openmdao.core.options import OptionsDictionary
 from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
-from openmdao.devtools import TraceCalls
+from openmdao.devtools.trace import TraceCalls
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -594,7 +594,7 @@ class System(object):
         Args
         ----
         J : `dict`
-            Distributed Jacobian
+            Local Jacobian
 
         Returns
         -------
@@ -652,3 +652,8 @@ class System(object):
         if self.pathname:
             return '.'.join((self.pathname, name))
         return name
+
+def _iter_J_nested(J):
+    for output, subdict in iteritems(J):
+        for param, value in iteritems(subdict):
+            yield (output, param), value

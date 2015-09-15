@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
+import warnings
 
 import numpy as np
 
@@ -153,6 +154,12 @@ class Driver(object):
         vnames : iter of str
             The names of variables of interest that are to be grouped.
         """
+        #make sure all vnames are params, constraints, or objectives
+        found = set()
+        for n in vnames:
+            if not (n in self._params or n in self._objs or n in self._cons):
+                raise RuntimeError("'%s' is not a param, objective, or "
+                                   "constraint" % n)
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
@@ -164,7 +171,11 @@ class Driver(object):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
-        self._voi_sets.append(tuple(vnames))
+
+        if MPI:
+            self._voi_sets.append(tuple(vnames))
+        else:
+            warnings.warn("parallel derivs %s specified but not running under MPI")
 
     def add_recorder(self, recorder):
         """

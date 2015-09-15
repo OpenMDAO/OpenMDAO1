@@ -1,5 +1,6 @@
 """ Testing out MPI optimization with pyopt_sparse"""
 
+import os
 import unittest
 import numpy as np
 
@@ -71,6 +72,12 @@ class TestMPIOpt(MPITestCase):
         if SKIP:
             raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
 
+    def tearDown(self):
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
 
     def test_parab_FD(self):
 
@@ -173,45 +180,52 @@ class ParallelMPIOptAsym(MPITestCase):
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
 
-        par1 = par.add('par1', Group())
+        ser1 = par.add('ser1', Group())
 
-        par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-        par1.add('comp', SimpleArrayComp(), promotes=['*'])
-        par1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
+        ser1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser1.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
                                   y=np.array([0.0, 0.0])), promotes=['*'])
-        par1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+        ser1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
                                  promotes=['*'])
 
-        par2 = par.add('par2', Group())
-        par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-        par2.add('comp', SimpleArrayComp(), promotes=['*'])
-        par2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+        ser2 = par.add('ser2', Group())
+        ser2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser2.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
                                   promotes=['*'])
 
         root.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
                                  y=np.array([0.0, 0.0])))
         root.add('total', ExecComp('obj = x1 + x2'))
 
-        root.connect('par.par1.o', 'total.x1')
-        root.connect('par.par2.o', 'total.x2')
-        root.connect('par.par2.y', 'con.y')
+        root.connect('par.ser1.o', 'total.x1')
+        root.connect('par.ser2.o', 'total.x2')
+        root.connect('par.ser2.y', 'con.y')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('par.par1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('par.par2.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.ser1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.par1.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.c', ctype='eq')
         prob.driver.add_constraint('con.c', ctype='eq')
 
         self.prob = prob
+
+    def tearDown(self):
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
 
     def test_parallel_array_comps_asym_fwd(self):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.par.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'fwd'
 
         prob.setup(check=False)
         prob.run()
@@ -222,10 +236,114 @@ class ParallelMPIOptAsym(MPITestCase):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.par.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'rev'
 
         prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+class ParallelMPIOptPromoted(MPITestCase):
+    N_PROCS = 2
+
+    def setUp(self):
+        prob = Problem(impl=impl)
+        root = prob.root = Group()
+        #root.ln_solver = PetscKSP()
+        root.ln_solver = LinearGaussSeidel()
+        par = root.add('par', ParallelGroup())
+        par.ln_solver = LinearGaussSeidel()
+
+        ser1 = par.add('ser1', Group())
+        ser1.ln_solver = LinearGaussSeidel()
+
+        ser1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser1.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
+                                  y=np.array([0.0, 0.0])), promotes=['*'])
+        ser1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                 promotes=['*'])
+
+        ser2 = par.add('ser2', Group())
+        ser2.ln_solver = LinearGaussSeidel()
+
+        ser2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser2.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
+                                 y=np.array([0.0, 0.0])), promotes=['*'])
+        ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
+                                  promotes=['*'])
+
+        root.add('total', ExecComp('obj = x1 + x2'))
+
+        root.connect('par.ser1.o', 'total.x1')
+        root.connect('par.ser2.o', 'total.x2')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('par.ser1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('total.obj')
+        prob.driver.add_constraint('par.ser1.c', ctype='eq')
+        prob.driver.add_constraint('par.ser2.c', ctype='eq')
+
+        self.prob = prob
+
+    def tearDown(self):
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
+
+    def test_parallel_array_comps_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_derivs_rev(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'rev'
+        prob.driver.parallel_derivs(['par.ser1.c','par.ser2.c'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_array_comps_fwd(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
+    def test_parallel_derivs_fwd(self):
+        prob = self.prob
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'fwd'
+        prob.driver.parallel_derivs(['par.ser1.x','par.ser2.x'])
+
+        prob.setup(check=False)
+        prob.root._dump_dist_idxs()
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
@@ -241,47 +359,59 @@ class ParallelMPIOpt(MPITestCase):
         par = root.add('par', ParallelGroup())
         par.ln_solver = LinearGaussSeidel()
 
-        par1 = par.add('par1', Group())
-        par1.ln_solver = LinearGaussSeidel()
+        ser1 = par.add('ser1', Group())
+        ser1.ln_solver = LinearGaussSeidel()
 
-        par1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-        par1.add('comp', SimpleArrayComp(), promotes=['*'])
-        par1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
-                                  y=np.array([0.0, 0.0])), promotes=['*'])
-        par1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                 promotes=['*'])
+        ser1.add('p1', ParamComp('x', np.zeros([2])))
+        ser1.add('comp', SimpleArrayComp())
+        ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
+                                  y=np.array([0.0, 0.0])))
+        ser1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])))
 
-        par2 = par.add('par2', Group())
-        par2.ln_solver = LinearGaussSeidel()
+        ser2 = par.add('ser2', Group())
+        ser2.ln_solver = LinearGaussSeidel()
 
-        par2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
-        par2.add('comp', SimpleArrayComp(), promotes=['*'])
-        par2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
-                                 y=np.array([0.0, 0.0])), promotes=['*'])
-        par2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                  promotes=['*'])
+        ser2.add('p1', ParamComp('x', np.zeros([2])))
+        ser2.add('comp', SimpleArrayComp())
+        ser2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
+                                 y=np.array([0.0, 0.0])))
+        ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])))
 
         root.add('total', ExecComp('obj = x1 + x2'))
 
-        root.connect('par.par1.o', 'total.x1')
-        root.connect('par.par2.o', 'total.x2')
+        ser1.connect('p1.x', 'comp.x')
+        ser1.connect('comp.y', 'con.y')
+        ser1.connect('comp.y', 'obj.y')
+        root.connect('par.ser1.obj.o', 'total.x1')
+
+        ser2.connect('p1.x', 'comp.x')
+        ser2.connect('comp.y', 'con.y')
+        ser2.connect('comp.y', 'obj.y')
+        root.connect('par.ser2.obj.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('par.par1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('par.par2.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.ser1.p1.x', low=-50.0, high=50.0)
+        prob.driver.add_param('par.ser2.p1.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.par1.c', ctype='eq')
-        prob.driver.add_constraint('par.par2.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.con.c', ctype='eq')
+        prob.driver.add_constraint('par.ser2.con.c', ctype='eq')
 
         self.prob = prob
+
+    def tearDown(self):
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
 
     def test_parallel_array_comps_rev(self):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.par.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'rev'
 
         prob.setup(check=False)
         prob.run()
@@ -292,9 +422,9 @@ class ParallelMPIOpt(MPITestCase):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.par.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par1.ln_solver.options['mode'] = 'rev'
-        prob.root.par.par2.ln_solver.options['mode'] = 'rev'
-        prob.driver.parallel_derivs(['par.par1.c','par.par2.c'])
+        prob.root.par.ser1.ln_solver.options['mode'] = 'rev'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'rev'
+        prob.driver.parallel_derivs(['par.ser1.con.c','par.ser2.con.c'])
 
         prob.setup(check=False)
         prob.run()
@@ -305,8 +435,8 @@ class ParallelMPIOpt(MPITestCase):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.par.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'fwd'
 
         prob.setup(check=False)
         prob.run()
@@ -317,11 +447,12 @@ class ParallelMPIOpt(MPITestCase):
         prob = self.prob
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.par.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par1.ln_solver.options['mode'] = 'fwd'
-        prob.root.par.par2.ln_solver.options['mode'] = 'fwd'
-        prob.driver.parallel_derivs(['par.par1.x','par.par2.x'])
+        prob.root.par.ser1.ln_solver.options['mode'] = 'fwd'
+        prob.root.par.ser2.ln_solver.options['mode'] = 'fwd'
+        prob.driver.parallel_derivs(['par.ser1.p1.x','par.ser2.p1.x'])
 
         prob.setup(check=False)
+        prob.root._dump_dist_idxs()
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)

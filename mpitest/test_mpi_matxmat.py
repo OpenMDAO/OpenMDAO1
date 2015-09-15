@@ -108,18 +108,24 @@ class MatMatTestCase(MPITestCase):
 
         prob.driver.parallel_derivs(['p1.x1','p2.x2'])
 
+        if MPI:
+            expected = [('p1.x1','p2.x2')]
+        else:
+            expected = [('p1.x1',),('p2.x2',)]
+
         self.assertEqual(prob.driver.params_of_interest(),
-                         [('p1.x1','p2.x2')])
+                         expected)
 
         # make sure we can't add a VOI to multiple groups
-        try:
-            prob.driver.parallel_derivs(['p1.x1','p3.x3'])
-        except Exception as err:
-            self.assertEqual(str(err),
-               "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
-               "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
-        else:
-            self.fail("Exception expected")
+        if MPI:
+            try:
+                prob.driver.parallel_derivs(['p1.x1','p3.x3'])
+            except Exception as err:
+                self.assertEqual(str(err),
+                   "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
+                   "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
+            else:
+                self.fail("Exception expected")
 
         prob.setup(check=False)
         prob.run()
@@ -153,8 +159,14 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_constraint('c3.y')
         prob.driver.parallel_derivs(['c2.y','c3.y'])
 
+        if MPI:
+            expected = [('c2.y','c3.y')]
+        else:
+            expected = [('c2.y',),('c3.y',)]
+
         self.assertEqual(prob.driver.outputs_of_interest(),
-                         [('c2.y','c3.y')])
+                         expected)
+
         prob.setup(check=False)
         prob.run()
 
