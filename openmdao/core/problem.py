@@ -673,7 +673,8 @@ class Problem(System):
             abs_params.append(name)
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
-                               fd_params=abs_params, fd_unknowns=unknown_list)
+                               fd_params=abs_params, fd_unknowns=unknown_list,
+                               desvar_indices=self._poi_indices)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -721,7 +722,11 @@ class Problem(System):
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns.metadata(p)['size']
+                idx = self._poi_indices
+                if p in idx:
+                    psize += len(idx)
+                else:
+                    psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
             ui = 0
@@ -737,6 +742,8 @@ class Problem(System):
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
+                    if p in idx:
+                        cols = len(idx)
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
@@ -816,7 +823,11 @@ class Problem(System):
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in param_list:
-                psize += self.root.unknowns.metadata(p)['size']
+                idx = self._poi_indices
+                if p in idx:
+                    psize += len(idx)
+                else:
+                    psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
         if mode == 'fwd':

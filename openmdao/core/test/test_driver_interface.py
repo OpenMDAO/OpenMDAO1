@@ -280,7 +280,7 @@ class TestDriver(unittest.TestCase):
 
             msg = "Index for parameter 'myparams.x' is out of bounds. "
             msg += "Requested index: [0 3 4], "
-            msg += "Parameter shape: (4,)."
+            msg += "shape: (4,)."
             raised_error = str(cm.exception)
             raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
@@ -309,7 +309,7 @@ class TestDriver(unittest.TestCase):
 
             msg = "Index for objective 'rosen.xxx' is out of bounds. "
             msg += "Requested index: [4], "
-            msg += "Parameter shape: (4,)."
+            msg += "shape: (4,)."
             raised_error = str(cm.exception)
             raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
@@ -338,7 +338,7 @@ class TestDriver(unittest.TestCase):
 
             msg = "Index for constraint 'rosen.xxx' is out of bounds. "
             msg += "Requested index: [4], "
-            msg += "Parameter shape: (4,)."
+            msg += "shape: (4,)."
             raised_error = str(cm.exception)
             raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)

@@ -6,7 +6,7 @@ import shelve
 import unittest
 
 from sqlitedict import SqliteDict
-from openmdao.recorders.sqlite_recorder import SqliteRecorder
+from openmdao.recorders import SqliteRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
@@ -44,14 +44,9 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         db = SqliteDict( self.filename, self.tablename )
 
-        ###### Need a way to get a list of the group_names in the order in which they were written and put it in  a variable named order
-        order = db['order']
-        del db['order']
 
         for coord, expect in expected:
             iter_coord = format_iteration_coordinate(coord)
-
-            self.assertEqual(order.pop(0), iter_coord)
 
             groupings = (
                 ("Parameters", expect[0]),
@@ -78,9 +73,6 @@ class TestSqliteRecorder(RecorderTests.Tests):
         # Having deleted all found values, the file should now be empty.
         ###### Need a way to get the number of records in the main table
         self.assertEqual(len(db), 0)
-
-        # As should the ordering.
-        self.assertEqual(len(order), 0)
 
         db.close()
 
