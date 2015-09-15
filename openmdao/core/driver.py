@@ -172,7 +172,7 @@ class Driver(object):
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
 
         param_intsect = set(vnames).intersection(self._params.keys())
-        
+
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
@@ -291,7 +291,7 @@ class Driver(object):
             except IndexError:
                 msg = "Index for {} '{}' is out of bounds. "
                 msg += "Requested index: {}, "
-                msg += "Parameter shape: {}."
+                msg += "shape: {}."
                 raise IndexError(msg.format(voi_type, name, meta['indices'],
                                             uvec.metadata(name)['shape']))
 
