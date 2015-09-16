@@ -19,9 +19,9 @@ class BaseRecorder(object):
         self.options.add_option('excludes', [],
                                 desc='Patterns for variables to exclude from recording '
                                 '(processed after includes)')
-
+        
         self.out = None
-
+        self._parallel = False
         self._filtered = {}
         # TODO: System specific includes/excludes
 
