@@ -3,10 +3,10 @@
 from __future__ import print_function
 
 from six import iteritems
+from collections import OrderedDict
 
 from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
-
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
@@ -67,7 +67,7 @@ class LinearGaussSeidel(LinearSolver):
         #for voi in vois:
         #    drmat[voi].vec[:] = -rhs_mat[voi]
 
-        sol_buf = {}
+        sol_buf = OrderedDict()
 
         f_norm0, f_norm = 1.0, 1.0
         self.iter_count = 0
@@ -80,9 +80,11 @@ class LinearGaussSeidel(LinearSolver):
                 for sub in system._local_subsystems:
 
                     for voi in vois:
-                        #print('pre scatter', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
+                        #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
-                        #print('pre apply', sub.pathname, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
+                        #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
 
                     #print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
                     if isinstance(sub, Component):
@@ -99,7 +101,7 @@ class LinearGaussSeidel(LinearSolver):
                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
                     #for voi in vois:
-                       # print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
                         drmat[voi].vec *= -1.0
@@ -107,8 +109,9 @@ class LinearGaussSeidel(LinearSolver):
                         dpmat[voi].vec[:] = 0.0
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
+
                     #for voi in vois:
-                        #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = dumat[voi].vec

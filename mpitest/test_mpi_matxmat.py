@@ -94,6 +94,7 @@ class MatMatTestCase(MPITestCase):
         # Parallel Groups
         prob.driver.add_param('p1.x1')
         prob.driver.add_param('p2.x2')
+        prob.driver.add_param('p3.x3')
         prob.driver.add_objective('comp3.y')
 
         # make sure we can't mix inputs and outputs in parallel sets
@@ -108,18 +109,24 @@ class MatMatTestCase(MPITestCase):
 
         prob.driver.parallel_derivs(['p1.x1','p2.x2'])
 
+        if MPI:
+            expected = [('p1.x1','p2.x2'),('p3.x3',)]
+        else:
+            expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
+
         self.assertEqual(prob.driver.params_of_interest(),
-                         [('p1.x1','p2.x2')])
+                         expected)
 
         # make sure we can't add a VOI to multiple groups
-        try:
-            prob.driver.parallel_derivs(['p1.x1','p3.x3'])
-        except Exception as err:
-            self.assertEqual(str(err),
-               "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
-               "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
-        else:
-            self.fail("Exception expected")
+        if MPI:
+            try:
+                prob.driver.parallel_derivs(['p1.x1','p3.x3'])
+            except Exception as err:
+                self.assertEqual(str(err),
+                   "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
+                   "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
+            else:
+                self.fail("Exception expected")
 
         prob.setup(check=False)
         prob.run()
@@ -153,8 +160,14 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_constraint('c3.y')
         prob.driver.parallel_derivs(['c2.y','c3.y'])
 
+        if MPI:
+            expected = [('c2.y','c3.y')]
+        else:
+            expected = [('c2.y',),('c3.y',)]
+
         self.assertEqual(prob.driver.outputs_of_interest(),
-                         [('c2.y','c3.y')])
+                         expected)
+
         prob.setup(check=False)
         prob.run()
 

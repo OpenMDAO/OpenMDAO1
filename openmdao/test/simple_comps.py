@@ -383,6 +383,7 @@ class FanInGrouped(Group):
 
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
+        self.add('p3', ParamComp('x3', 1.0))
         sub = self.add('sub', ParallelGroup())
 
         sub.add('comp1', ExecComp(['y=-2.0*x']))

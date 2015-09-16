@@ -848,9 +848,8 @@ class Group(System):
             sol_vec, rhs_vec = drmat, dumat
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
-        rhs_buf = {}
+        rhs_buf = OrderedDict()
         for voi in vois:
-
             # Skip if we are all zeros.
             if rhs_vec[voi].norm() < 1e-15:
                 sol_vec[voi].vec[:] = 0.0
@@ -1091,20 +1090,20 @@ class Group(System):
                                          commsz))
         out_stream.write("\n")
 
-        vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
-        byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
+        if verbose:
+            vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
+            byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
-        # collect width info
-        lens = [len(u)+sum(map(len, v)) for u, v in
-                chain(iteritems(vec_conns), iteritems(byobj_conns))]
-        if lens:
-            nwid = max(lens) + 9
-        else:
-            lens = [len(n) for n in iterkeys(uvec)]
-            nwid = max(lens) if lens else 12
+            # collect width info
+            lens = [len(u)+sum(map(len, v)) for u, v in
+                    chain(iteritems(vec_conns), iteritems(byobj_conns))]
+            if lens:
+                nwid = max(lens) + 9
+            else:
+                lens = [len(n) for n in iterkeys(uvec)]
+                nwid = max(lens) if lens else 12
 
-        for v, meta in iteritems(uvec):
-            if verbose:
+            for v, meta in iteritems(uvec):
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
@@ -1139,17 +1138,17 @@ class Group(System):
                                                      repr(uvec[v]),
                                                      nwid=nwid))
 
-        if not dvecs:
-            for dest, src in iteritems(byobj_conns):
-                out_stream.write(" "*(nest+8))
-                connstr = '%s -> %s:' % (src, dest)
-                template = "{0:<{nwid}} (by_obj)  ({1})\n"
-                out_stream.write(template.format(connstr,
-                                                 repr(uvec[src]),
-                                                 nwid=nwid))
+            if not dvecs:
+                for dest, src in iteritems(byobj_conns):
+                    out_stream.write(" "*(nest+8))
+                    connstr = '%s -> %s:' % (src, dest)
+                    template = "{0:<{nwid}} (by_obj)  ({1})\n"
+                    out_stream.write(template.format(connstr,
+                                                     repr(uvec[src]),
+                                                     nwid=nwid))
 
         nest += 3
-        for sub in self._local_subsystems:
+        for sub in self.subsystems():
             sub.dump(nest, out_stream=out_stream, verbose=verbose, dvecs=dvecs,
                      sizes=sizes)
 
@@ -1177,8 +1176,8 @@ class Group(System):
 
         return (min_procs, max_procs)
 
-    def _get_global_idxs(self, uname, pname, u_var_idxs, u_sizes,
-                         p_var_idxs, p_sizes, var_of_interest, mode):
+    def _get_global_idxs(self, uname, pname, top_uname, top_pname, u_var_idxs,
+                         u_sizes, p_var_idxs, p_sizes, var_of_interest, mode):
         """
         Return the global indices into the distributed unknowns and params vectors
         for the given unknown and param.  The given unknown and param have already
@@ -1233,8 +1232,8 @@ class Group(System):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
-        if not self._relevance.is_relevant(var_of_interest, uname) or \
-           not self._relevance.is_relevant(var_of_interest, pname):
+        if not self._relevance.is_relevant(var_of_interest, top_uname) or \
+           not self._relevance.is_relevant(var_of_interest, top_pname):
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if pdist:
@@ -1304,10 +1303,12 @@ class Group(System):
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
-                           if relevance.is_relevant(var_of_interest, n))
+                           if relevance.is_relevant(var_of_interest,
+                                          self.unknowns._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
-                        if relevance.is_relevant(var_of_interest, n))
+                        if relevance.is_relevant(var_of_interest,
+                                            self.params._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
@@ -1332,8 +1333,11 @@ class Group(System):
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)
 
-                if not (relevance.is_relevant(var_of_interest, prelname) or
-                        relevance.is_relevant(var_of_interest, urelname)):
+                top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
+                top_prelname = self._params_dict[param]['top_promoted_name']
+
+                if not (relevance.is_relevant(var_of_interest, top_prelname) or
+                        relevance.is_relevant(var_of_interest, top_urelname)):
                     continue
 
                 umeta = self.unknowns.metadata(urelname)
@@ -1354,6 +1358,7 @@ class Group(System):
                             byobj_conns.append((prelname, urelname))
                     else: # pass by vector
                         sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                             top_urelname, top_prelname,
                                                              vec_unames, unknown_sizes,
                                                              vec_pnames, param_sizes,
                                                              var_of_interest, mode)
@@ -1479,7 +1484,7 @@ class Group(System):
 
         return umap
 
-    def _dump_dist_idxs(self, stream=sys.stdout):
+    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):
         """For debugging.  prints out the distributed idxs along with the
         variables they correspond to for the u and p vectors, for example:
 
@@ -1511,43 +1516,54 @@ class Group(System):
         P.x       1      1 C1.x
         P.x       0      0 C1.x
         """
-        idx = 0
-        pdata = []
-        pnwid = 0
-        piwid = 0
-        for lst in self._p_size_lists:
-            for name, sz in lst:
-                for i in range(sz):
-                    pdata.append((name, str(idx)))
-                    pnwid = max(pnwid, len(name))
-                    piwid = max(piwid, len(pdata[-1][1]))
-                    idx += 1
-            # insert a blank line to visually sparate processes
-            pdata.append(('','','',''))
 
-        idx = 0
-        udata = []
-        unwid = 0
-        uiwid = 0
-        for lst in self._u_size_lists:
-            for name, sz in lst:
-                for i in range(sz):
-                    udata.append((name, str(idx)))
-                    unwid = max(unwid, len(name))
-                    uiwid = max(uiwid, len(udata[-1][1]))
-                    idx += 1
-            # insert a blank line to visually sparate processes
-            udata.append(('','','',''))
+        def _dump(g, stream=sys.stdout):
+            stream.write("\nDistributed u and p vecs for system '%s'\n\n" % g.pathname)
+            idx = 0
+            pdata = []
+            pnwid = 0
+            piwid = 0
+            for lst in g._p_size_lists:
+                for name, sz in lst:
+                    for i in range(sz):
+                        pdata.append((name, str(idx)))
+                        pnwid = max(pnwid, len(name))
+                        piwid = max(piwid, len(pdata[-1][1]))
+                        idx += 1
+                # insert a blank line to visually sparate processes
+                pdata.append(('','','',''))
 
-        data = []
-        for u, p in zip_longest(udata, pdata, fillvalue=('','')):
-            data.append((u[0],u[1],p[1],p[0]))
+            idx = 0
+            udata = []
+            unwid = 0
+            uiwid = 0
+            for lst in g._u_size_lists:
+                for name, sz in lst:
+                    for i in range(sz):
+                        udata.append((name, str(idx)))
+                        unwid = max(unwid, len(name))
+                        uiwid = max(uiwid, len(udata[-1][1]))
+                        idx += 1
+                # insert a blank line to visually sparate processes
+                udata.append(('','','',''))
 
-        for d in data[::-1]:
-            template = "{0:<{wid0}} {1:>{wid1}}     {2:>{wid2}} {3:<{wid3}}\n"
-            stream.write(template.format(d[0], d[1], d[2], d[3],
-                                         wid0=unwid, wid1=uiwid,
-                                         wid2=piwid, wid3=pnwid))
+            data = []
+            for u, p in zip_longest(udata, pdata, fillvalue=('','')):
+                data.append((u[0],u[1],p[1],p[0]))
+
+            for d in data[::-1]:
+                template = "{0:<{wid0}} {1:>{wid1}}     {2:>{wid2}} {3:<{wid3}}\n"
+                stream.write(template.format(d[0], d[1], d[2], d[3],
+                                             wid0=unwid, wid1=uiwid,
+                                             wid2=piwid, wid3=pnwid))
+            stream.write("\n\n")
+
+        if recurse:
+            for s in self.subgroups(recurse=True, include_self=True):
+                if s.is_active():
+                    _dump(s, stream)
+        else:
+            _dump(self, stream)
 
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
