@@ -5,7 +5,7 @@ Who is Testing the Testers?
 import logging
 import os.path
 import sys
-from StringIO import StringIO
+
 import unittest
 import numpy as np
 
@@ -65,9 +65,6 @@ class TestCase(unittest.TestCase):
 
 
     def test_problem_deriv_test(self):
-        output = StringIO()
-        saved_stdout = sys.stdout
-        sys.stdout = output
 
         prob = Problem()
         prob.root = Group()
@@ -83,11 +80,8 @@ class TestCase(unittest.TestCase):
         try:
             problem_derivatives_test(self, prob)
         except AssertionError as err:
-            printed = output.getvalue().strip()
-            self.assertIn("('Deriv test failed:', 'comp', ('y', 'x')", printed)
+            self.assertIn("not less than or equal to 1e-05", err.message)
 
-        finally:
-            sys.stdout = saved_stdout
 
 
 if __name__ == "__main__":
