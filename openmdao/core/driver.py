@@ -541,6 +541,10 @@ class Driver(object):
         return self._cons
 
     def _gather_vars(self, vec, varnames):
+        '''
+        Gathers and returns only variables listed in 
+        `varnames` from the vector `vec`
+        '''
         local_vars = []
 
         for key, value in iteritems(vec):
@@ -557,6 +561,11 @@ class Driver(object):
         '''
         Gathers variables for non-parallel case recorders and
         calls record for all recorders
+
+        Args
+        ----
+        metadata: `dict`
+        Metadata for iteration coordinate
         '''
         params = self.root.params
         unknowns = self.root.unknowns
@@ -573,13 +582,8 @@ class Driver(object):
         
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
-        #
-        # Otherwise, it shouldn't matter.
         for recorder in self.recorders:
-            if not recorder._parallel and self.root.comm.rank == 0:
-                recorder.raw_record(params, unknowns, resids, metadata)
-
-            elif recorder._parallel:
+            if self.root.comm.rank == 0 or recorder._parallel:
                 recorder.raw_record(params, unknowns, resids, metadata)
 
     def run(self, problem):
