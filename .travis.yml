@@ -30,6 +30,10 @@ before_install:
 
 install:
 - conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock
+- pip install coveralls
 - pip install .
 
-script: nosetests
+script: nosetests --with-coverage
+
+after_success:
+  coveralls
