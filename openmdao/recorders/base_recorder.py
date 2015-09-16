@@ -21,7 +21,18 @@ class BaseRecorder(object):
                                 '(processed after includes)')
         
         self.out = None
+
+        
+        # This is for drivers to determine if a recorder supports
+        # real parallel recording (recording on each process), because
+        # if it doesn't, the driver figures out what variables must
+        # be gathered to rank 0 if running under MPI.
+        #
+        # By default, this is False, but it should be set to True
+        # if the recorder will record data on each process to avoid 
+        # unnecessary gathering.
         self._parallel = False
+
         self._filtered = {}
         # TODO: System specific includes/excludes
 

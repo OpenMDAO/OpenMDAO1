@@ -50,7 +50,8 @@ class Driver(object):
 
     def _setup(self, root):
         """ Updates metadata for params, constraints and objectives, and
-        check for errors.
+        check for errors. Also determines all variables that need to be
+        gathered for case recording.
         """
         self.root = root
 
@@ -553,6 +554,10 @@ class Driver(object):
             return OrderedDict(itertools.chain(*all_vars))
 
     def record(self, metadata):
+        '''
+        Gathers variables for non-parallel case recorders and
+        calls record for all recorders
+        '''
         params = self.root.params
         unknowns = self.root.unknowns
         resids = self.root.resids
@@ -565,9 +570,16 @@ class Driver(object):
             params = self._gather_vars(params, pnames)
             unknowns = self._gather_vars(unknowns, unames)
             resids = self._gather_vars(resids, rnames)
+        
+        # If the recorder does not support parallel recording
+        # we need to make sure we only record on rank 0.
+        #
+        # Otherwise, it shouldn't matter.
+        for recorder in self.recorders:
+            if not recorder._parallel and self.root.comm.rank == 0:
+                recorder.raw_record(params, unknowns, resids, metadata)
 
-        if not MPI or self.root.comm.rank == 0:
-            for recorder in self.recorders:
+            elif recorder._parallel:
                 recorder.raw_record(params, unknowns, resids, metadata)
 
     def run(self, problem):
