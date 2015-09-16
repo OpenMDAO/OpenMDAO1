@@ -31,7 +31,7 @@ class Driver(object):
         self.supports.add_option('linear_constraints', False)
         self.supports.add_option('multiple_objectives', False)
         self.supports.add_option('two_sided_constraints', False)
-        self.supports.add_option('integer_parameters', False)
+        self.supports.add_option('integer_design_vars', False)
 
         # This driver's options
         self.options = OptionsDictionary()
@@ -252,7 +252,7 @@ class Driver(object):
 
         self._desvars[name] = param
 
-    def get_design_vars(self):
+    def get_desvars(self):
         """ Returns a dict of possibly distributed parameters.
 
         Returns
@@ -319,7 +319,7 @@ class Driver(object):
         """
         return self._desvars
 
-    def set_param(self, name, value):
+    def set_desvar(self, name, value):
         """ Sets a parameter.
 
         Args

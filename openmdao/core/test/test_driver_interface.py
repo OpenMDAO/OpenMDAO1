@@ -40,7 +40,7 @@ class MySimpleDriver(Driver):
         """ Mimic a very simplistic unconstrained optimization."""
 
         # Get dicts with pointers to our vectors
-        params = self.get_design_vars()
+        params = self.get_desvars()
         objective = self.get_objectives()
         constraints = self.get_constraints()
 
@@ -75,7 +75,7 @@ class MySimpleDriver(Driver):
                     new_val = params[key2] - self.alpha*grad
 
                     # Set parameter
-                    self.set_param(key2, new_val)
+                    self.set_desvar(key2, new_val)
 
             self.violated = []
             for name, val in constraints.items():
@@ -125,10 +125,10 @@ class TestDriver(unittest.TestCase):
             def run(self, problem):
                 """ Save away scaled info."""
 
-                params = self.get_design_vars()
+                params = self.get_desvars()
                 param_meta = self.get_param_metadata()
 
-                self.set_param('x', 0.5)
+                self.set_desvar('x', 0.5)
                 problem.root.solve_nonlinear()
 
                 objective = self.get_objectives()
@@ -172,10 +172,10 @@ class TestDriver(unittest.TestCase):
             def run(self, problem):
                 """ Save away scaled info."""
 
-                params = self.get_design_vars()
+                params = self.get_desvars()
                 param_meta = self.get_param_metadata()
 
-                self.set_param('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
+                self.set_desvar('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
                 problem.root.solve_nonlinear()
 
                 objective = self.get_objectives()

@@ -109,7 +109,7 @@ class ScipyOptimizer(Driver):
         else:
             bounds = None
 
-        for name, val in iteritems(self.get_design_vars()):
+        for name, val in iteritems(self.get_desvars()):
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size
@@ -197,7 +197,7 @@ class ScipyOptimizer(Driver):
         i = 0
         for name, meta in self.get_param_metadata().items():
             size = meta['size']
-            self.set_param(name, x_new[i:i+size])
+            self.set_desvar(name, x_new[i:i+size])
             i += size
 
         self.iter_count += 1
