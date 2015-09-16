@@ -651,11 +651,6 @@ class System(object):
             return '.'.join((self.pathname, name))
         return name
 
-    def _iter_J_nested(J):
-        for output, subdict in iteritems(J):
-            for param, value in iteritems(subdict):
-                yield (output, param), value
-
     def generate_docstring(self):
         """
         Generates a numpy-style docstring for a user-created System class.
@@ -713,3 +708,8 @@ class System(object):
         #finish up docstring
         docstring += '\n\t\"\"\"\n'
         return docstring
+
+def _iter_J_nested(J):
+    for output, subdict in iteritems(J):
+        for param, value in iteritems(subdict):
+            yield (output, param), value
