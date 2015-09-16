@@ -1,6 +1,21 @@
 import unittest
-from openmdao.components.indep_var_comp import IndepVarComp
+import warnings
+from openmdao.components import IndepVarComp, ParamComp
 
+class TestDeprecated(unittest.TestCase):
+    def test_deprecated_paramcomp(self):
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            p = ParamComp('x', 1.0)
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                             'ParamComp is deprecated. Please switch to '
+                             'IndepVarComp, which can be found in '
+                             'openmdao.components.indep_var_comp.')
 
 class TestUnitComp(unittest.TestCase):
 
