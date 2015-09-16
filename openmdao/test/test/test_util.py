@@ -5,7 +5,11 @@ Who is Testing the Testers?
 import logging
 import os.path
 import sys
-from io import BytesIO as StringIO
+try:
+    from StringIO import StringIO
+except:
+    from io import StringIO
+    
 import unittest
 import numpy as np
 
