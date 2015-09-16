@@ -90,7 +90,7 @@ Variables are added to the class in the constructor (*__init__* method) via the
 
     class MyComp(Component):
         def __init__(self):
-            self.add_desvar('x', val=0.)
+            self.add_param('x', val=0.)
 
             self.add_output('y', shape=1)
 

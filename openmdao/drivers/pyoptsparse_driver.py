@@ -36,7 +36,7 @@ class pyOptSparseDriver(Driver):
         # TODO: Support these
         self.supports['linear_constraints'] = False
         self.supports['two_sided_constraints'] = False
-        self.supports['integer_parameters'] = False
+        self.supports['integer_design_vars'] = False
 
         # User Options
         self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],
@@ -85,7 +85,7 @@ class pyOptSparseDriver(Driver):
         opt_prob = Optimization(self.options['title'], self.objfunc)
 
         # Add all parameters
-        param_meta = self.get_param_metadata()
+        param_meta = self.get_desvar_metadata()
         indep_list = list(iterkeys(param_meta))
         param_vals = self.get_desvars()
         for name, meta in iteritems(param_meta):

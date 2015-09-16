@@ -23,8 +23,8 @@ this code into a file, and run it directly.
         def __init__(self):
             super(Paraboloid, self).__init__()
 
-            self.add_desvar('x', val=0.0)
-            self.add_desvar('y', val=0.0)
+            self.add_param('x', val=0.0)
+            self.add_param('y', val=0.0)
 
             self.add_output('f_xy', val=0.0)
 
@@ -99,8 +99,8 @@ using explicit outputs.
         def __init__(self):
             super(Paraboloid, self).__init__()
 
-            self.add_desvar('x', val=0.0)
-            self.add_desvar('y', val=0.0)
+            self.add_param('x', val=0.0)
+            self.add_param('y', val=0.0)
 
             self.add_output('f_xy', shape=1)
 

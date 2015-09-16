@@ -45,7 +45,7 @@ class InOutArrayComp(Component):
         super(InOutArrayComp, self).__init__()
         self.delay = 0.01
 
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -59,7 +59,7 @@ class DistribCompSimple(Component):
     def __init__(self, arr_size=10):
         super(DistribCompSimple, self).__init__()
 
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -87,7 +87,7 @@ class DistribInputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribInputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -121,7 +121,7 @@ class DistribOverlappingInputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribOverlappingInputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_desvar('invec', np.zeros(arr_size, float))
+        self.add_param('invec', np.zeros(arr_size, float))
         self.add_output('outvec', np.zeros(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -164,7 +164,7 @@ class DistribInputDistribOutputComp(Component):
     def __init__(self, arr_size=11):
         super(DistribInputDistribOutputComp, self).__init__()
         self.arr_size = arr_size
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -199,7 +199,7 @@ class DistribNoncontiguousComp(Component):
     def __init__(self, arr_size=11):
         super(DistribNoncontiguousComp, self).__init__()
         self.arr_size = arr_size
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -231,7 +231,7 @@ class DistribGatherComp(Component):
     def __init__(self, arr_size=11):
         super(DistribGatherComp, self).__init__()
         self.arr_size = arr_size
-        self.add_desvar('invec', np.ones(arr_size, float))
+        self.add_param('invec', np.ones(arr_size, float))
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -267,7 +267,7 @@ class NonDistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""
     def __init__(self, size):
         super(NonDistribGatherComp, self).__init__()
-        self.add_desvar('invec', np.ones(size, float))
+        self.add_param('invec', np.ones(size, float))
         self.add_output('outvec', np.ones(size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):

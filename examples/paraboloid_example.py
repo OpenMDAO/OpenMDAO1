@@ -13,8 +13,8 @@ class Paraboloid(Component):
     def __init__(self):
         super(Paraboloid, self).__init__()
 
-        self.add_desvar('x', val=0.0)
-        self.add_desvar('y', val=0.0)
+        self.add_param('x', val=0.0)
+        self.add_param('y', val=0.0)
 
         self.add_output('f_xy', val=0.0)
 

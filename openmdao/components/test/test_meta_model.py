@@ -17,7 +17,7 @@ class TestMetaModel(unittest.TestCase):
 
         # create a MetaModel for Sin and add it to a Problem
         sin_mm = MetaModel()
-        sin_mm.add_desvar('x', 0.)
+        sin_mm.add_param('x', 0.)
         sin_mm.add_output('f_x', 0.)
 
         prob = Problem(Group())
@@ -56,7 +56,7 @@ class TestMetaModel(unittest.TestCase):
 
         # create a MetaModel for Sin and add it to a Problem
         sin_mm = MetaModel()
-        sin_mm.add_desvar('x', 0.)
+        sin_mm.add_param('x', 0.)
         sin_mm.add_output('f_x', (0.,0.))
 
         prob = Problem(Group())
@@ -93,8 +93,8 @@ class TestMetaModel(unittest.TestCase):
         # create a metamodel component
         mm = MetaModel()
 
-        mm.add_desvar('x1', 0.)
-        mm.add_desvar('x2', 0.)
+        mm.add_param('x1', 0.)
+        mm.add_param('x2', 0.)
 
         mm.add_output('y1', 0.)
         mm.add_output('y2', 0., surrogate=FloatKrigingSurrogate())
@@ -158,8 +158,8 @@ class TestMetaModel(unittest.TestCase):
     def test_warm_start(self):
         # create metamodel with warm_restart = True
         meta = MetaModel()
-        meta.add_desvar('x1', 0.)
-        meta.add_desvar('x2', 0.)
+        meta.add_param('x1', 0.)
+        meta.add_param('x2', 0.)
         meta.add_output('y1', 0.)
         meta.add_output('y2', 0.)
         meta.default_surrogate = ResponseSurface()
@@ -200,7 +200,7 @@ class TestMetaModel(unittest.TestCase):
     def test_vector_inputs(self):
 
         meta = MetaModel()
-        meta.add_desvar('x', np.zeros(4))
+        meta.add_param('x', np.zeros(4))
         meta.add_output('y1', 0.)
         meta.add_output('y2', 0.)
         meta.default_surrogate = FloatKrigingSurrogate()
@@ -227,7 +227,7 @@ class TestMetaModel(unittest.TestCase):
 
     def test_array_inputs(self):
         meta = MetaModel()
-        meta.add_desvar('x', np.zeros((2,2)))
+        meta.add_param('x', np.zeros((2,2)))
         meta.add_output('y1', 0.)
         meta.add_output('y2', 0.)
         meta.default_surrogate = FloatKrigingSurrogate()
@@ -254,7 +254,7 @@ class TestMetaModel(unittest.TestCase):
 
     def test_array_outputs(self):
         meta = MetaModel()
-        meta.add_desvar('x', np.zeros((2, 2)))
+        meta.add_param('x', np.zeros((2, 2)))
         meta.add_output('y', np.zeros(2,))
         meta.default_surrogate = FloatKrigingSurrogate()
 
@@ -284,8 +284,8 @@ class TestMetaModel(unittest.TestCase):
     def test_unequal_training_inputs(self):
 
         meta = MetaModel()
-        meta.add_desvar('x', 0.)
-        meta.add_desvar('y', 0.)
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
         meta.add_output('f', 0.)
         meta.default_surrogate = FloatKrigingSurrogate()
 
@@ -311,8 +311,8 @@ class TestMetaModel(unittest.TestCase):
 
     def test_unequal_training_outputs(self):
         meta = MetaModel()
-        meta.add_desvar('x', 0.)
-        meta.add_desvar('y', 0.)
+        meta.add_param('x', 0.)
+        meta.add_param('y', 0.)
         meta.add_output('f', 0.)
         meta.default_surrogate = FloatKrigingSurrogate()
 
@@ -338,7 +338,7 @@ class TestMetaModel(unittest.TestCase):
 
     def test_derivatives(self):
         meta = MetaModel()
-        meta.add_desvar('x', 0.)
+        meta.add_param('x', 0.)
         meta.add_output('f', 0.)
         meta.default_surrogate = FloatKrigingSurrogate()
 

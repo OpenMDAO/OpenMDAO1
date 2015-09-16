@@ -26,10 +26,10 @@ class ABCDArrayComp(Component):
 
     def __init__(self, arr_size=9, delay=0.01):
         super(ABCDArrayComp, self).__init__()
-        self.add_desvar('a', np.ones(arr_size, float))
-        self.add_desvar('b', np.ones(arr_size, float))
-        self.add_desvar('in_string', '')
-        self.add_desvar('in_list', [])
+        self.add_param('a', np.ones(arr_size, float))
+        self.add_param('b', np.ones(arr_size, float))
+        self.add_param('in_string', '')
+        self.add_param('in_list', [])
 
         self.add_output('c', np.ones(arr_size, float))
         self.add_output('d', np.ones(arr_size, float))

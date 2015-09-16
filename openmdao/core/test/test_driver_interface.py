@@ -89,7 +89,7 @@ class Rosenbrock(Component):
     def __init__(self, size=2):
         super(Rosenbrock, self).__init__()
         # self.force_fd = True
-        self.add_desvar('x', val=np.zeros(size))
+        self.add_param('x', val=np.zeros(size))
         self.add_output('f', val=0.0)
         self.add_output('xxx', val=np.zeros(size))
 
@@ -126,7 +126,7 @@ class TestDriver(unittest.TestCase):
                 """ Save away scaled info."""
 
                 params = self.get_desvars()
-                param_meta = self.get_param_metadata()
+                param_meta = self.get_desvar_metadata()
 
                 self.set_desvar('x', 0.5)
                 problem.root.solve_nonlinear()
@@ -173,7 +173,7 @@ class TestDriver(unittest.TestCase):
                 """ Save away scaled info."""
 
                 params = self.get_desvars()
-                param_meta = self.get_param_metadata()
+                param_meta = self.get_desvar_metadata()
 
                 self.set_desvar('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
                 problem.root.solve_nonlinear()

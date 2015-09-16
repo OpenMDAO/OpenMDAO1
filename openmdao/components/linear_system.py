@@ -13,8 +13,8 @@ class LinearSystem(Component):
         super(LinearSystem, self).__init__()
         self.size = size
 
-        self.add_desvar("A", val=np.eye(size))
-        self.add_desvar("b", val=np.ones(size))
+        self.add_param("A", val=np.eye(size))
+        self.add_param("b", val=np.ones(size))
 
         self.add_state("x", val=np.zeros(size))
 

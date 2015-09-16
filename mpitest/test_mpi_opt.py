@@ -38,7 +38,7 @@ class Parab1D(Component):
         self.root = root
 
         # Params
-        self.add_desvar('x', 0.0)
+        self.add_param('x', 0.0)
 
         # Unknowns
         self.add_output('y', 1.0)

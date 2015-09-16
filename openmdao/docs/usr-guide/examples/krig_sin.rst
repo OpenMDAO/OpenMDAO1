@@ -38,7 +38,7 @@ This code will set up a really simple `Group` with only a single
 
             # Create meta_model for f_x as the response
             sin_mm = self.add("sin_mm", MetaModel())
-            sin_mm.add_desvar('x', val=0.)
+            sin_mm.add_param('x', val=0.)
             sin_mm.add_output('f_x:float', val=0., surrogate=FloatKrigingSurrogate())
             sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
 

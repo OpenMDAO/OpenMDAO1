@@ -44,7 +44,7 @@ class MetaModel(Component):
 
         self._input_size = 0
 
-    def add_desvar(self, name, val=_NotSet, **kwargs):
+    def add_param(self, name, val=_NotSet, **kwargs):
         """ Add a `param` input to this component and a corresponding
         training parameter.
 
@@ -56,8 +56,8 @@ class MetaModel(Component):
         val : float or ndarray or object
             Initial value for the input.
         """
-        super(MetaModel, self).add_desvar(name, val, **kwargs)
-        super(MetaModel, self).add_desvar('train:'+name, val=list(), pass_by_obj=True)
+        super(MetaModel, self).add_param(name, val, **kwargs)
+        super(MetaModel, self).add_param('train:'+name, val=list(), pass_by_obj=True)
 
         input_size = self._params_dict[name]['size']
 

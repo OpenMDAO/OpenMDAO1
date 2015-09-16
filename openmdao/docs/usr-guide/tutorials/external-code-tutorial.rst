@@ -63,8 +63,8 @@ Next we need to build the OpenMDAO component that makes use of this external cod
       def __init__(self):
           super(ParaboloidExternalCode, self).__init__()
 
-          self.add_desvar('x', val=0.0)
-          self.add_desvar('y', val=0.0)
+          self.add_param('x', val=0.0)
+          self.add_param('y', val=0.0)
 
           self.add_output('f_xy', val=0.0)
 
@@ -154,8 +154,8 @@ also define the command that should be called by the external code.
         def __init__(self):
             super(ParaboloidExternalCode, self).__init__()
 
-            self.add_desvar('x', val=0.0)
-            self.add_desvar('y', val=0.0)
+            self.add_param('x', val=0.0)
+            self.add_param('y', val=0.0)
 
             self.add_output('f_xy', val=0.0)
 

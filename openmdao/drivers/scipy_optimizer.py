@@ -85,7 +85,7 @@ class ScipyOptimizer(Driver):
         # Initial Run
         problem.root.solve_nonlinear(metadata=self.metadata)
 
-        pmeta = self.get_param_metadata()
+        pmeta = self.get_desvar_metadata()
         self.params = list(iterkeys(pmeta))
         self.objs = list(iterkeys(self.get_objectives()))
         con_meta = self.get_constraint_metadata()
@@ -195,7 +195,7 @@ class ScipyOptimizer(Driver):
 
         # Pass in new parameters
         i = 0
-        for name, meta in self.get_param_metadata().items():
+        for name, meta in self.get_desvar_metadata().items():
             size = meta['size']
             self.set_desvar(name, x_new[i:i+size])
             i += size

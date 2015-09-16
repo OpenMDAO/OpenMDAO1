@@ -28,7 +28,7 @@ need.
 
         def __init__(self, adder):
             super(Plus, self).__init__()
-            self.add_desvar('x', np.random.random())
+            self.add_param('x', np.random.random())
             self.add_output('f1', shape=1)
             self.adder = float(adder)
 
@@ -46,7 +46,7 @@ need.
 
         def __init__(self, scalar):
             super(Times, self).__init__()
-            self.add_desvar('f1', np.random.random())
+            self.add_param('f1', np.random.random())
             self.add_output('f2', shape=1)
             self.scalar = float(scalar)
 
@@ -78,7 +78,7 @@ need.
             self.vars = []
             for i in range(size):
                 v_name = 'f2_%d'%i
-                self.add_desvar(v_name, 0.)
+                self.add_param(v_name, 0.)
                 self.vars.append(v_name)
 
             self.add_output('total', shape=1)

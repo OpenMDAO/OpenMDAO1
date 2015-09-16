@@ -186,7 +186,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(OverrideComp, self).__init__()
 
                 # Params
-                self.add_desvar('x', 3.0)
+                self.add_param('x', 3.0)
 
                 # Unknowns
                 self.add_output('y', 5.5)
@@ -299,8 +299,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(ScaledParaboloid, self).__init__()
 
                 # Params
-                self.add_desvar('x', 1.0)
-                self.add_desvar('y', 1.0)
+                self.add_param('x', 1.0)
+                self.add_param('y', 1.0)
 
                 # Unknowns
                 self.add_output('f_xy', 0.0)
@@ -363,8 +363,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(MetaParaboloid, self).__init__()
 
                 # Params
-                self.add_desvar('x', 1.0, fd_step_size = 1.0e5)
-                self.add_desvar('y', 1.0, fd_step_size = 1.0e5)
+                self.add_param('x', 1.0, fd_step_size = 1.0e5)
+                self.add_param('y', 1.0, fd_step_size = 1.0e5)
 
                 # Unknowns
                 self.add_output('f_xy', 0.0)
@@ -420,9 +420,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(MetaParaboloid, self).__init__()
 
                 # Params
-                self.add_desvar('x1', 1.0, fd_form = 'forward')
-                self.add_desvar('x2', 1.0, fd_form = 'backward')
-                self.add_desvar('y', 1.0)
+                self.add_param('x1', 1.0, fd_form = 'forward')
+                self.add_param('x2', 1.0, fd_form = 'backward')
+                self.add_param('y', 1.0)
 
                 # Unknowns
                 self.add_output('f_xy', 0.0)

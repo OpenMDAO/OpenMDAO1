@@ -80,7 +80,7 @@ component, it would look like this:
 
     class Times2(Component):
         def __init__(self):
-            self.add_desvar('x', 1.0, desc='my var x')
+            self.add_param('x', 1.0, desc='my var x')
             self.add_output('y', 2.0, desc='my var y')
 
 
@@ -92,7 +92,7 @@ so you could do the following, for example:
 ::
 
     def __init__(self):
-        self.add_desvar('z', 1.0, units='ft', weird_meta='foo')
+        self.add_param('z', 1.0, units='ft', weird_meta='foo')
 
 
 The example above also specifies *units*.  New OpenMDAO uses the same unit names
@@ -247,9 +247,9 @@ And for new OpenMDAO:
     class AircraftSim(Component):
         def __init__(self):
 
-            self.add_desvar('fcc1:airspeed', 120.0, units='nmi/h')
-            self.add_desvar('fcc1:angle_of_attack', 0.0, units='deg')
-            self.add_desvar('fcc1:sideslip_angle', 0.0, units='deg')
+            self.add_param('fcc1:airspeed', 120.0, units='nmi/h')
+            self.add_param('fcc1:angle_of_attack', 0.0, units='deg')
+            self.add_param('fcc1:sideslip_angle', 0.0, units='deg')
 
             self.add_output('fcc2:airspeed', 120.0, units='nmi/h')
             self.add_output('fcc2:angle_of_attack', 0.0, units='deg')
@@ -294,7 +294,7 @@ And for new OpenMDAO:
 
     class Times2(Component):
         def __init__(self):
-            self.add_desvar('x', 1.0, desc='my var x')
+            self.add_param('x', 1.0, desc='my var x')
             self.add_output('y', 2.0, desc='my var y')
 
         def solve_nonlinear(self, params, unknowns, resids):

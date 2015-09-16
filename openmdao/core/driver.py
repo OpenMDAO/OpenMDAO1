@@ -308,7 +308,7 @@ class Driver(object):
         else:
             return flatval
 
-    def get_param_metadata(self):
+    def get_desvar_metadata(self):
         """ Returns a dict of parameter metadata.
 
         Returns

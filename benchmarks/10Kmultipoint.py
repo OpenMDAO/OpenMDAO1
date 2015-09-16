@@ -12,7 +12,7 @@ from openmdao.components.exec_comp import ExecComp
 class Plus(Component):
     def __init__(self, adder):
         super(Plus, self).__init__()
-        self.add_desvar('x', np.random.random())
+        self.add_param('x', np.random.random())
         self.add_output('f1', shape=1)
         self.adder = float(adder)
 
@@ -22,7 +22,7 @@ class Plus(Component):
 class Times(Component):
     def __init__(self, scalar):
         super(Times, self).__init__()
-        self.add_desvar('f1', np.random.random())
+        self.add_param('f1', np.random.random())
         self.add_output('f2', shape=1)
         self.scalar = float(scalar)
 
@@ -47,7 +47,7 @@ class Summer(Component):
         super(Summer, self).__init__()
         self.size = size
         for i in range(size):
-            self.add_desvar('y%d'%i, 0.)
+            self.add_param('y%d'%i, 0.)
 
         self.add_output('total', shape=1)
 
@@ -97,9 +97,9 @@ if __name__ == '__main__':
     print("setup time", time.time() - st)
 
     print("num connections:",len(prob.root.connections))
-    print("num unknowns:", len(prob.root._unknowns_dict), 
+    print("num unknowns:", len(prob.root._unknowns_dict),
           "size:", prob.root.unknowns.vec.size)
-    print("num params:", len(prob.root._params_dict), 
+    print("num params:", len(prob.root._params_dict),
           "size:", prob.root.params.vec.size)
 
     # prob['p0.x'] = 10

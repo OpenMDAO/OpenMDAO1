@@ -362,7 +362,7 @@ class TestProblem(unittest.TestCase):
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_desvar('x', 0)
+                self.add_param('x', 0)
 
         prob = Problem()
         prob.root = Group()
@@ -420,7 +420,7 @@ class TestProblem(unittest.TestCase):
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_desvar('y', np.zeros((3,)), shape=(3,))
+                self.add_param('y', np.zeros((3,)), shape=(3,))
 
         class C(Component):
             def __init__(self):
@@ -430,12 +430,12 @@ class TestProblem(unittest.TestCase):
         class D(Component):
             def __init__(self):
                 super(D, self).__init__()
-                self.add_desvar('y', np.zeros((2,)))
+                self.add_param('y', np.zeros((2,)))
 
         class E(Component):
             def __init__(self):
                 super(E, self).__init__()
-                self.add_desvar('y', 1.0)
+                self.add_param('y', 1.0)
 
         #Explicit
         expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
@@ -693,19 +693,19 @@ class TestProblem(unittest.TestCase):
         class A(Component):
             def __init__(self):
                 super(A, self).__init__()
-                self.add_desvar('x', shape=1)
+                self.add_param('x', shape=1)
                 self.add_output('y', shape=1)
 
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_desvar('x', shape=2)
+                self.add_param('x', shape=2)
                 self.add_output('y', shape=2)
 
         class C(Component):
             def __init__(self):
                 super(C, self).__init__()
-                self.add_desvar('x', shape=3)
+                self.add_param('x', shape=3)
                 self.add_output('y', shape=3)
 
         # Scalar Values
@@ -842,8 +842,8 @@ class TestProblem(unittest.TestCase):
         root = prob.root = Group()
 
         comp = Component()
-        comp.add_desvar('x', 0.)
-        comp.add_desvar('y', 0.)
+        comp.add_param('x', 0.)
+        comp.add_param('y', 0.)
         comp.add_output('z', 0.)
         comp.solve_nonlinear = lambda p, u, r: u.__setitem__('z', 1.)
         comp._get_fd_params = lambda: ['x']

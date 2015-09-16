@@ -9,7 +9,7 @@ class Comp1(Component):
 
     def __init__(self):
         super(Comp1, self).__init__()
-        self.add_desvar('x1', 1.0)
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
         self.add_output('y2', 1.0)
 
@@ -29,7 +29,7 @@ class Comp2(Component):
 
     def __init__(self):
         super(Comp2, self).__init__()
-        self.add_desvar('x1', 1.0)
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -46,7 +46,7 @@ class Comp3(Component):
 
     def __init__(self):
         super(Comp3, self).__init__()
-        self.add_desvar('x1', 1.0)
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -63,8 +63,8 @@ class Comp4(Component):
 
     def __init__(self):
         super(Comp4, self).__init__()
-        self.add_desvar('x1', 1.0)
-        self.add_desvar('x2', 1.0)
+        self.add_param('x1', 1.0)
+        self.add_param('x2', 1.0)
         self.add_output('y1', 1.0)
         self.add_output('y2', 1.0)
 
@@ -86,7 +86,7 @@ class Comp5(Component):
 
     def __init__(self):
         super(Comp5, self).__init__()
-        self.add_desvar('x1', 1.0)
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -103,7 +103,7 @@ class Comp6(Component):
 
     def __init__(self):
         super(Comp6, self).__init__()
-        self.add_desvar('x1', 1.0)
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -120,8 +120,8 @@ class Comp7(Component):
 
     def __init__(self):
         super(Comp7, self).__init__()
-        self.add_desvar('x1', 1.0)
-        self.add_desvar('x2', 1.0)
+        self.add_param('x1', 1.0)
+        self.add_param('x2', 1.0)
         self.add_output('y1', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):

@@ -83,7 +83,7 @@ class ExecComp(Component):
             if var in outs:
                 self.add_output(var, val)
             else:
-                self.add_desvar(var, val)
+                self.add_param(var, val)
 
 
     def solve_nonlinear(self, params, unknowns, resids):

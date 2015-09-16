@@ -73,7 +73,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 super(SimpleComp, self).__init__()
 
                 # Params
-                self.add_desvar('x', 2.0)
+                self.add_param('x', 2.0)
 
                 # Unknowns
                 self.add_output('y', 0.0)

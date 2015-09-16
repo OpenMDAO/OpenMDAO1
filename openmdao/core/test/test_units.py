@@ -16,7 +16,7 @@ class SrcComp(Component):
     def __init__(self):
         super(SrcComp, self).__init__()
 
-        self.add_desvar('x1', 100.0)
+        self.add_param('x1', 100.0)
         self.add_output('x2', 100.0, units='degC')
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -35,7 +35,7 @@ class TgtCompF(Component):
     def __init__(self):
         super(TgtCompF, self).__init__()
 
-        self.add_desvar('x2', 100.0, units='degF')
+        self.add_param('x2', 100.0, units='degF')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -55,9 +55,9 @@ class TgtCompFMulti(Component):
     def __init__(self):
         super(TgtCompFMulti, self).__init__()
 
-        self.add_desvar('_x2', 100.0, units='degF')
-        self.add_desvar('x2', 100.0, units='degF')
-        self.add_desvar('x2_', 100.0, units='degF')
+        self.add_param('_x2', 100.0, units='degF')
+        self.add_param('x2', 100.0, units='degF')
+        self.add_param('x2_', 100.0, units='degF')
         self.add_output('_x3', 100.0)
         self.add_output('x3', 100.0)
         self.add_output('x3_', 100.0)
@@ -86,7 +86,7 @@ class TgtCompC(Component):
     def __init__(self):
         super(TgtCompC, self).__init__()
 
-        self.add_desvar('x2', 100.0, units='degC')
+        self.add_param('x2', 100.0, units='degC')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -105,7 +105,7 @@ class TgtCompK(Component):
     def __init__(self):
         super(TgtCompK, self).__init__()
 
-        self.add_desvar('x2', 100.0, units='degK')
+        self.add_param('x2', 100.0, units='degK')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -333,7 +333,7 @@ class TestUnitConversion(unittest.TestCase):
             def __init__(self):
                 super(BadComp, self).__init__()
 
-                self.add_desvar('x2', 100.0, units='m')
+                self.add_param('x2', 100.0, units='m')
                 self.add_output('x3', 100.0)
 
         # Explicit Connection

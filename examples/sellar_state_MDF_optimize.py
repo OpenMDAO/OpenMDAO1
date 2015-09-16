@@ -17,13 +17,13 @@ class SellarDis1(Component):
         super(SellarDis1, self).__init__()
 
         # Global Design Variable
-        self.add_desvar('z', val=np.zeros(2))
+        self.add_param('z', val=np.zeros(2))
 
         # Local Design Variable
-        self.add_desvar('x', val=0.)
+        self.add_param('x', val=0.)
 
         # Coupling parameter
-        self.add_desvar('y2', val=0.)
+        self.add_param('y2', val=0.)
 
         # Coupling output
         self.add_output('y1', val=1.0)
@@ -57,10 +57,10 @@ class SellarDis2(Component):
         super(SellarDis2, self).__init__()
 
         # Global Design Variable
-        self.add_desvar('z', val=np.zeros(2))
+        self.add_param('z', val=np.zeros(2))
 
         # Coupling parameter
-        self.add_desvar('y1', val=0.)
+        self.add_param('y1', val=0.)
 
         # Coupling output
         self.add_output('y2', val=1.0)
@@ -97,7 +97,7 @@ class StateConnection(Component):
         super(StateConnection, self).__init__()
 
         # Inputs
-        self.add_desvar('y2_actual', 1.0)
+        self.add_param('y2_actual', 1.0)
 
         # States
         self.add_state('y2_command', val=1.0)
