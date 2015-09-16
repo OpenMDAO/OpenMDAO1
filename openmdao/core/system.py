@@ -152,7 +152,7 @@ class System(object):
                     break
             else:
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
-                raise RuntimeError(msg % (self.name, prom))
+                raise RuntimeError(msg % (self.pathname, prom))
 
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
