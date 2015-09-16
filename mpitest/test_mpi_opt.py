@@ -174,6 +174,9 @@ class ParallelMPIOptAsym(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
         #root.ln_solver = lin_solver()  # this works too (PetscKSP)
@@ -248,6 +251,9 @@ class ParallelMPIOptPromoted(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
         #root.ln_solver = lin_solver()
@@ -351,6 +357,9 @@ class ParallelMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
         #root.ln_solver = lin_solver()
