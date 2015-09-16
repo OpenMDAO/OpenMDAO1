@@ -5,6 +5,10 @@ from pprint import pformat
 
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 
+def debug(*msg):
+    for m in msg:
+        sys.stdout.write("%s " % str(m))
+    sys.stdout.write('\n')
 
 if under_mpirun():
     def debug(*msg):
@@ -13,11 +17,6 @@ if under_mpirun():
             sys.stdout.write("%s " % m)
         sys.stdout.write('\n')
         sys.stdout.flush()
-else:
-    def debug(*msg):
-        for m in msg:
-            sys.stdout.write("%s " % str(m))
-        sys.stdout.write('\n')
 
 
 def dump_meta(system, nest=0, out_stream=sys.stdout):

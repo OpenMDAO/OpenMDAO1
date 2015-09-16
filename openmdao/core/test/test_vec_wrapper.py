@@ -19,6 +19,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -66,6 +67,7 @@ class TestVecWrapper(unittest.TestCase):
         for p, meta in params.items():
             meta['pathname'] = p
             meta['promoted_name'] = p
+            meta['top_promoted_name'] = p
 
         connections = {}
         for p in params:
@@ -98,6 +100,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -137,6 +140,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -153,6 +157,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -168,6 +173,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)
@@ -190,6 +196,7 @@ class TestVecWrapper(unittest.TestCase):
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
+            meta['top_promoted_name'] = u
 
         u = SrcVecWrapper()
         u.setup(unknowns_dict, store_byobjs=True)

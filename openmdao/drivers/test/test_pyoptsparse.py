@@ -1,6 +1,7 @@
 """ Testing pyoptsparse SNOPT."""
 
 from pprint import pformat
+import os
 import unittest
 
 import numpy as np
@@ -29,6 +30,13 @@ class TestPyoptSparse(unittest.TestCase):
         if SKIP is True:
             raise unittest.SkipTest("Could not import pyOptSparseDriver. "
                                     "Is pyoptsparse installed?")
+
+    def tearDown(self):
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
 
     def test_simple_paraboloid(self):
 

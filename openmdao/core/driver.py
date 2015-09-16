@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
+import warnings
 
 import numpy as np
 
@@ -77,9 +78,6 @@ class Driver(object):
                     msg = msg.format(item_name, name)
                     raise ValueError(msg)
 
-                if rootmeta.get('remote'):
-                    continue
-
                 # Size is useful metadata to save
                 if 'indices' in meta:
                     meta['size'] = len(meta['indices'])
@@ -112,18 +110,22 @@ class Driver(object):
         into tuples based on the previously defined grouping of VOIs.
         """
         vois = []
-        done_sets = set()
-        for v in voi_list:
-            for voi_set in self._voi_sets:
-                if voi_set in done_sets:
-                    break
+        remaining = set(voi_list)
+        for voi_set in self._voi_sets:
+            vois.append([])
+
+        for i, voi_set in enumerate(self._voi_sets):
+            for v in voi_list:
                 if v in voi_set:
-                    vois.append(tuple([x for x in voi_set
-                                       if x in voi_list]))
-                    done_sets.add(voi_set)
-                    break
-            else:
+                    vois[i].append(v)
+                    remaining.remove(v)
+
+        vois = [tuple(x) for x in vois if x]
+
+        for v in voi_list:
+            if v in remaining:
                 vois.append((v,))
+
         return vois
 
     def params_of_interest(self):
@@ -156,18 +158,30 @@ class Driver(object):
         vnames : iter of str
             The names of variables of interest that are to be grouped.
         """
+        #make sure all vnames are params, constraints, or objectives
+        found = set()
+        for n in vnames:
+            if not (n in self._params or n in self._objs or n in self._cons):
+                raise RuntimeError("'%s' is not a param, objective, or "
+                                   "constraint" % n)
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
                     msg = "'%s' cannot be added to VOI set %s because it " + \
                           "already exists in VOI set: %s"
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
+
         param_intsect = set(vnames).intersection(self._params.keys())
+
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
-        self._voi_sets.append(tuple(vnames))
+
+        if MPI:
+            self._voi_sets.append(tuple(vnames))
+        else:
+            warnings.warn("parallel derivs %s specified but not running under MPI")
 
     def add_recorder(self, recorder):
         """
@@ -238,7 +252,7 @@ class Driver(object):
         self._params[name] = param
 
     def get_params(self):
-        """ Returns a dict of parameters.
+        """ Returns a dict of possibly distributed parameters.
 
         Returns
         -------
@@ -250,28 +264,48 @@ class Driver(object):
         params = OrderedDict()
 
         for key, meta in iteritems(self._params):
-            scaler = meta['scaler']
-            adder = meta['adder']
-            flatval = uvec.flat[key]
-            if 'indices' in meta:
-
-                # Make sure our indices are valid
-                try:
-                    flatval = flatval[meta['indices']]
-                except IndexError:
-                    msg = "Index for parameter '{}' is out of bounds. "
-                    msg += "Requested index: {}, "
-                    msg += "Parameter shape: {}."
-                    raise IndexError(msg.format(key, meta['indices'],
-                                                uvec.metadata(key)['shape']))
-
-            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or scaler != 1.0 or adder != 0.0:
-                params[key] = (flatval + adder)*scaler
-            else:
-                params[key] = flatval
+            params[key] = self._get_distrib_var(key, meta, 'parameter')
 
         return params
+
+    def _get_distrib_var(self, name, meta, voi_type):
+        uvec = self.root.unknowns
+        comm = self.root.comm
+        nproc = comm.size
+        iproc = comm.rank
+
+        if nproc > 1:
+            owner = self.root._owning_ranks[name]
+            if iproc == owner:
+                flatval = uvec.flat[name]
+            else:
+                flatval = None
+        else:
+            owner = 0
+            flatval = uvec.flat[name]
+
+        if 'indices' in meta and not (nproc > 1 and owner != iproc):
+            # Make sure our indices are valid
+            try:
+                flatval = flatval[meta['indices']]
+            except IndexError:
+                msg = "Index for {} '{}' is out of bounds. "
+                msg += "Requested index: {}, "
+                msg += "shape: {}."
+                raise IndexError(msg.format(voi_type, name, meta['indices'],
+                                            uvec.metadata(name)['shape']))
+
+        if nproc > 1:
+            flatval = comm.bcast(flatval, root=owner)
+
+        scaler = meta['scaler']
+        adder = meta['adder']
+
+        if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
+           or scaler != 1.0 or adder != 0.0:
+            return (flatval + adder)*scaler
+        else:
+            return flatval
 
     def get_param_metadata(self):
         """ Returns a dict of parameter metadata.
@@ -295,6 +329,9 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
+        if self.root.unknowns.flat[name].size == 0:
+            return
+
         scaler = self._params[name]['scaler']
         adder = self._params[name]['adder']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
@@ -369,26 +406,7 @@ class Driver(object):
         objs = OrderedDict()
 
         for key, meta in iteritems(self._objs):
-            scaler = meta['scaler']
-            adder = meta['adder']
-            flatval = uvec.flat[key]
-
-            if 'indices' in meta:
-                # Make sure our indices are valid
-                try:
-                    flatval = flatval[meta['indices']]
-                except IndexError:
-                    msg = "Index for objective '{}' is out of bounds. "
-                    msg += "Requested index: {}, "
-                    msg += "Parameter shape: {}."
-                    raise IndexError(msg.format(key, meta['indices'],
-                                                uvec.metadata(key)['shape']))
-
-            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or adder != 0.0 or scaler != 1.0:
-                objs[key] = (flatval + adder)*scaler
-            else:
-                objs[key] = flatval
+            objs[key] = self._get_distrib_var(key, meta, 'objective')
 
         return objs
 
@@ -489,24 +507,8 @@ class Driver(object):
 
             scaler = meta['scaler']
             adder = meta['adder']
-            flatval = uvec.flat[key]
 
-            if 'indices' in meta:
-                # Make sure our indices are valid
-                try:
-                    flatval = flatval[meta['indices']]
-                except IndexError:
-                    msg = "Index for constraint '{}' is out of bounds. "
-                    msg += "Requested index: {}, "
-                    msg += "Parameter shape: {}."
-                    raise IndexError(msg.format(key, meta['indices'],
-                                                uvec.metadata(key)['shape']))
-
-            if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-               or adder != 0.0 or scaler != 1.0:
-                cons[key] = (flatval + adder)*scaler
-            else:
-                cons[key] = flatval
+            cons[key] = self._get_distrib_var(key, meta, 'constraint')
 
         return cons
 
