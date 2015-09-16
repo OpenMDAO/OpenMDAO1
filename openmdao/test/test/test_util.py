@@ -13,7 +13,7 @@ from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.components.param_comp import ParamComp
 
-from openmdao.test.util import assert_rel_error, problem_derivatives_test
+from openmdao.test.util import assert_rel_error, problem_derivatives_check
 from openmdao.test.simple_comps import SimpleCompWrongDeriv
 
 
@@ -78,7 +78,7 @@ class TestCase(unittest.TestCase):
         data = prob.check_partial_derivatives(out_stream=None)
 
         try:
-            problem_derivatives_test(self, prob)
+            problem_derivatives_check(self, prob)
         except AssertionError as err:
             self.assertIn("not less than or equal to 1e-05", err.message)
 
