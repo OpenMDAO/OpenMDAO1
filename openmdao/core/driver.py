@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
+import warnings
 
 import numpy as np
 
@@ -109,18 +110,22 @@ class Driver(object):
         into tuples based on the previously defined grouping of VOIs.
         """
         vois = []
-        done_sets = set()
-        for v in voi_list:
-            for voi_set in self._voi_sets:
-                if voi_set in done_sets:
-                    break
+        remaining = set(voi_list)
+        for voi_set in self._voi_sets:
+            vois.append([])
+
+        for i, voi_set in enumerate(self._voi_sets):
+            for v in voi_list:
                 if v in voi_set:
-                    vois.append(tuple([x for x in voi_set
-                                       if x in voi_list]))
-                    done_sets.add(voi_set)
-                    break
-            else:
+                    vois[i].append(v)
+                    remaining.remove(v)
+
+        vois = [tuple(x) for x in vois if x]
+
+        for v in voi_list:
+            if v in remaining:
                 vois.append((v,))
+
         return vois
 
     def params_of_interest(self):
@@ -153,18 +158,30 @@ class Driver(object):
         vnames : iter of str
             The names of variables of interest that are to be grouped.
         """
+        #make sure all vnames are params, constraints, or objectives
+        found = set()
+        for n in vnames:
+            if not (n in self._params or n in self._objs or n in self._cons):
+                raise RuntimeError("'%s' is not a param, objective, or "
+                                   "constraint" % n)
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
                     msg = "'%s' cannot be added to VOI set %s because it " + \
                           "already exists in VOI set: %s"
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
+
         param_intsect = set(vnames).intersection(self._params.keys())
+
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
-        self._voi_sets.append(tuple(vnames))
+
+        if MPI:
+            self._voi_sets.append(tuple(vnames))
+        else:
+            warnings.warn("parallel derivs %s specified but not running under MPI")
 
     def add_recorder(self, recorder):
         """

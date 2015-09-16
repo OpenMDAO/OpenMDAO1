@@ -22,6 +22,7 @@ from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.param_comp import ParamComp
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
@@ -282,9 +283,6 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = _assign_parameters(connections)
 
-        # get map of vars to VOI indices
-        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
-
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
 
@@ -325,6 +323,9 @@ class Problem(System):
 
         # Prepare Driver
         self.driver._setup(self.root)
+
+        # get map of vars to VOI indices
+        self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
 
         # Prepare Solvers
         for sub in self.root.subgroups(recurse=True, include_self=True):
@@ -494,6 +495,21 @@ class Problem(System):
 
         return (cycles, sorted(ooo))
 
+    def _check_gmres_under_mpi(self, out_stream=sys.stdout):
+        """ warn when using ScipyGMRES solver under MPI.
+        """
+        if under_mpirun():
+            has_parallel = False
+            for s in self.root.subgroups(recurse=True, include_self=True):
+                if isinstance(s, ParallelGroup):
+                    has_parallel = True
+                    break
+
+            if has_parallel and isinstance(self.root.ln_solver, ScipyGMRES):
+                print("ScipyGMRES is being used under MPI. Problems can arise "
+                      "if a variable of interest (param/objective/constraint) "
+                      "does not exist in all MPI processes.", file=out_stream)
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
         with the current configuration of this ``Problem``.
@@ -515,6 +531,7 @@ class Problem(System):
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
+        results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
@@ -566,7 +583,7 @@ class Problem(System):
             if prom_name in uset:
                 self._u_length += meta['size']
                 uset.remove(prom_name)
-            elif prom_name in pset:
+            if prom_name in pset:
                 self._p_length += meta['size']
                 pset.remove(prom_name)
 
@@ -781,6 +798,8 @@ class Problem(System):
 
         root = self.root
         unknowns = root.unknowns
+        unknowns_dict = root._unknowns_dict
+        to_abs_unames = root._to_abs_unames
         params = root.params
         comm = root.comm
         iproc = comm.rank
@@ -790,6 +809,8 @@ class Problem(System):
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
         mode = self._mode(mode, param_list, unknown_list)
+
+        fwd = mode == 'fwd'
 
         # Prepare model for calculation
         root.clear_dparams()
@@ -830,7 +851,7 @@ class Problem(System):
                     psize += self.root.unknowns.metadata(p)['size']
             J = np.zeros((usize, psize))
 
-        if mode == 'fwd':
+        if fwd:
             input_list, output_list = param_list, unknown_list
             poi_indices, qoi_indices = self._poi_indices, self._qoi_indices
         else:
@@ -874,7 +895,7 @@ class Problem(System):
         # If Adjoint mode, solve linear system for each unknown
         j = 0
         for params in voi_sets:
-            rhs = {}
+            rhs = OrderedDict()
             voi_idxs = {}
 
             old_size = None
@@ -887,7 +908,13 @@ class Problem(System):
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
-                in_idxs = duvec._get_local_idxs(voi, poi_indices)
+                if voi in duvec:
+                    in_idxs = duvec._get_local_idxs(voi, poi_indices)
+                else:
+                    in_idxs = []
+
+                if len(in_idxs) == 0:
+                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'],dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -898,35 +925,21 @@ class Problem(System):
 
             jbase = j
 
-            if MPI:
-                all_idxs_sizes = self.root.comm.allgather(len(in_idxs))
-                if len(in_idxs) < max(all_idxs_sizes):
-                    # pad our idxs so we do the same number of linear sub-solves
-                    pad = np.zeros(max(all_idxs_sizes), in_idxs.dtype)
-                    if in_idxs.size > 0:
-                        in_idxs = np.concatenate(in_idxs, pad)
-                    else:
-                        in_idxs = pad
-
             # at this point, we know that for all vars in the current
             # group of interest, the number of indices is the same. We loop
             # over the *size* of the indices and use the loop index to look
             # up the actual indices for the current members of the group
             # of interest.
             for i in range(len(in_idxs)):
-                resets = set()
                 for voi in params:
                     vkey = voi if len(params) > 1 else None
+                    rhs[vkey][:] = 0.0
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
                         rhs[vkey][voi_idxs[vkey][i]] = 1.0
-                        resets.add(vkey)
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
-
-                for r in resets:
-                    rhs[r][voi_idxs[r][i]] = 0.0
 
                 for param, dx in iteritems(dx_mat):
                     if len(params) == 1:
@@ -938,7 +951,7 @@ class Problem(System):
                     i = 0
                     for item in output_list:
 
-                        if mode=='fwd' or owned[item] == iproc:
+                        if fwd or owned[item] == iproc:
                             out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
                                                                qoi_indices,
                                                                get_slice=True)
@@ -950,23 +963,24 @@ class Problem(System):
                         if nproc > 1:
                             dxval = comm.bcast(dxval, root=owned[item])
 
-                        nk = len(dxval)
+                        if dxval is not None:
+                            nk = len(dxval)
 
-                        if return_format == 'dict':
-                            if mode == 'fwd':
-                                if J[item][param] is None:
-                                    J[item][param] = np.zeros((nk, len(in_idxs)))
-                                J[item][param][:, j-jbase] = dxval
+                            if return_format == 'dict':
+                                if mode == 'fwd':
+                                    if J[item][param] is None:
+                                        J[item][param] = np.zeros((nk, len(in_idxs)))
+                                    J[item][param][:, j-jbase] = dxval
+                                else:
+                                    if J[param][item] is None:
+                                        J[param][item] = np.zeros((len(in_idxs), nk))
+                                    J[param][item][j-jbase, :] = dxval
                             else:
-                                if J[param][item] is None:
-                                    J[param][item] = np.zeros((len(in_idxs), nk))
-                                J[param][item][j-jbase, :] = dxval
-                        else:
-                            if mode == 'fwd':
-                                J[i:i+nk, j] = dx[out_idxs]
-                            else:
-                                J[j, i:i+nk] = dx[out_idxs]
-                            i += nk
+                                if mode == 'fwd':
+                                    J[i:i+nk, j] = dx[out_idxs]
+                                else:
+                                    J[j, i:i+nk] = dx[out_idxs]
+                                i += nk
                 j += 1
 
         # Clean up after ourselves
