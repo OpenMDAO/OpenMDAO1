@@ -36,7 +36,7 @@ class Driver(object):
         # This driver's options
         self.options = OptionsDictionary()
 
-        self._params = OrderedDict()
+        self._desvars = OrderedDict()
         self._objs = OrderedDict()
         self._cons = OrderedDict()
 
@@ -48,17 +48,17 @@ class Driver(object):
         self.iter_count = 0
 
     def _setup(self, root):
-        """ Updates metadata for params, constraints and objectives, and
+        """ Updates metadata for desvars, constraints and objectives, and
         check for errors.
         """
         self.root = root
 
-        params = OrderedDict()
+        desvars = OrderedDict()
         objs = OrderedDict()
         cons = OrderedDict()
 
         item_tups = [
-            ('Parameter', self._params, params),
+            ('Parameter', self._desvars, desvars),
             ('Objective', self._objs, objs),
             ('Constraint', self._cons, cons)
         ]
@@ -69,7 +69,7 @@ class Driver(object):
 
                 if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
-                                     "not be used as a parameter, objective, "
+                                     "not be used as a design var, objective, "
                                      "or constraint." % name)
 
                 # Check validity of variable
@@ -86,7 +86,7 @@ class Driver(object):
 
                 newitem[name] = meta
 
-        self._params = params
+        self._desvars = desvars
         self._objs = objs
         self._cons = cons
 
@@ -98,7 +98,7 @@ class Driver(object):
             if 'indices' in meta:
                 qoi_indices[name] = meta['indices']
 
-        for name, meta in iteritems(self._params):
+        for name, meta in iteritems(self._desvars):
             # set indices of interest
             if 'indices' in meta:
                 poi_indices[name] = meta['indices']
@@ -128,15 +128,15 @@ class Driver(object):
 
         return vois
 
-    def params_of_interest(self):
+    def desvars_of_interest(self):
         """
         Returns
         -------
         list of tuples of str
-            The list of params, organized into tuples according to previously
-            defined VOI groups.
+            The list of design vars, organized into tuples according to
+            previously defined VOI groups.
         """
-        return self._of_interest(self._params)
+        return self._of_interest(self._desvars)
 
     def outputs_of_interest(self):
         """
@@ -158,10 +158,10 @@ class Driver(object):
         vnames : iter of str
             The names of variables of interest that are to be grouped.
         """
-        #make sure all vnames are params, constraints, or objectives
+        #make sure all vnames are desvars, constraints, or objectives
         found = set()
         for n in vnames:
-            if not (n in self._params or n in self._objs or n in self._cons):
+            if not (n in self._desvars or n in self._objs or n in self._cons):
                 raise RuntimeError("'%s' is not a param, objective, or "
                                    "constraint" % n)
         for grp in self._voi_sets:
@@ -171,10 +171,11 @@ class Driver(object):
                           "already exists in VOI set: %s"
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
 
-        param_intsect = set(vnames).intersection(self._params.keys())
+        param_intsect = set(vnames).intersection(self._desvars.keys())
 
         if param_intsect and len(param_intsect) != len(vnames):
-            raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
+            raise RuntimeError("%s cannot be grouped because %s are design "
+                               "vars and %s are not." %
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
 
@@ -194,14 +195,14 @@ class Driver(object):
         """
         self.recorders.append(recorder)
 
-    def add_param(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
+    def add_desvar(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
         """
         Adds a parameter to this driver.
 
         Args
         ----
         name : string
-           Name of the paramcomp in the root system.
+           Name of the IndepVarComp in the root system.
 
         low : float or ndarray, optional
             Lower boundary for the param
@@ -249,9 +250,9 @@ class Driver(object):
         if indices:
             param['indices'] = np.array(indices, dtype=int)
 
-        self._params[name] = param
+        self._desvars[name] = param
 
-    def get_params(self):
+    def get_design_vars(self):
         """ Returns a dict of possibly distributed parameters.
 
         Returns
@@ -261,12 +262,12 @@ class Driver(object):
             values.
         """
         uvec = self.root.unknowns
-        params = OrderedDict()
+        desvars = OrderedDict()
 
-        for key, meta in iteritems(self._params):
-            params[key] = self._get_distrib_var(key, meta, 'parameter')
+        for key, meta in iteritems(self._desvars):
+            desvars[key] = self._get_distrib_var(key, meta, 'design var')
 
-        return params
+        return desvars
 
     def _get_distrib_var(self, name, meta, voi_type):
         uvec = self.root.unknowns
@@ -316,7 +317,7 @@ class Driver(object):
             Keys are the param object names, and the values are the param
             values.
         """
-        return self._params
+        return self._desvars
 
     def set_param(self, name, value):
         """ Sets a parameter.
@@ -324,7 +325,7 @@ class Driver(object):
         Args
         ----
         name : string
-           Name of the paramcomp in the root system.
+           Name of the IndepVarComp in the root system.
 
         val : ndarray or float
             value to set the parameter
@@ -332,8 +333,8 @@ class Driver(object):
         if self.root.unknowns.flat[name].size == 0:
             return
 
-        scaler = self._params[name]['scaler']
-        adder = self._params[name]['adder']
+        scaler = self._desvars[name]['scaler']
+        adder = self._desvars[name]['adder']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
            or scaler != 1.0 or adder != 0.0:
             value = value/scaler - adder
@@ -341,7 +342,7 @@ class Driver(object):
             value = value
 
         # Only set the indices we requested when we set the parameter.
-        idx = self._params[name].get('indices')
+        idx = self._desvars[name].get('indices')
         if idx is not None:
             self.root.unknowns[name][idx] = value
         else:
@@ -425,12 +426,12 @@ class Driver(object):
             that you are adding.
 
         linear : bool, optional
-            Set to True if this constraint is linear with respect to all params
-            so that it can be calculated once and cached.
+            Set to True if this constraint is linear with respect to all design
+            variables so that it can be calculated once and cached.
 
         jacs : dict of functions, optional
             Dictionary of user-defined functions that return the flattened
-            Jacobian of this constraint with repsect to the params of
+            Jacobian of this constraint with repsect to the design vars of
             this driver, as indicated by the dictionary keys. Default is None
             to let OpenMDAO calculate all derivatives. Note, this is currently
             unsupported

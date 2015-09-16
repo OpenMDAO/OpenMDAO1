@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
@@ -16,7 +16,7 @@ class SrcComp(Component):
     def __init__(self):
         super(SrcComp, self).__init__()
 
-        self.add_param('x1', 100.0)
+        self.add_desvar('x1', 100.0)
         self.add_output('x2', 100.0, units='degC')
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -35,7 +35,7 @@ class TgtCompF(Component):
     def __init__(self):
         super(TgtCompF, self).__init__()
 
-        self.add_param('x2', 100.0, units='degF')
+        self.add_desvar('x2', 100.0, units='degF')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -55,9 +55,9 @@ class TgtCompFMulti(Component):
     def __init__(self):
         super(TgtCompFMulti, self).__init__()
 
-        self.add_param('_x2', 100.0, units='degF')
-        self.add_param('x2', 100.0, units='degF')
-        self.add_param('x2_', 100.0, units='degF')
+        self.add_desvar('_x2', 100.0, units='degF')
+        self.add_desvar('x2', 100.0, units='degF')
+        self.add_desvar('x2_', 100.0, units='degF')
         self.add_output('_x3', 100.0)
         self.add_output('x3', 100.0)
         self.add_output('x3_', 100.0)
@@ -86,7 +86,7 @@ class TgtCompC(Component):
     def __init__(self):
         super(TgtCompC, self).__init__()
 
-        self.add_param('x2', 100.0, units='degC')
+        self.add_desvar('x2', 100.0, units='degC')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -105,7 +105,7 @@ class TgtCompK(Component):
     def __init__(self):
         super(TgtCompK, self).__init__()
 
-        self.add_param('x2', 100.0, units='degK')
+        self.add_desvar('x2', 100.0, units='degK')
         self.add_output('x3', 100.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -130,7 +130,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('tgtF', TgtCompF())
         prob.root.add('tgtC', TgtCompC())
         prob.root.add('tgtK', TgtCompK())
-        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtF.x2')
         prob.root.connect('src.x2', 'tgtC.x2')
@@ -148,16 +148,16 @@ class TestUnitConversion(unittest.TestCase):
         self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
-        param_list = ['x1']
+        indep_list = ['x1']
         unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -172,7 +172,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('tgtF', TgtCompF())
         prob.root.add('tgtC', TgtCompC())
         prob.root.add('tgtK', TgtCompK())
-        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtC.x2')
         prob.root.connect('tgtC.x2', 'tgtF.x2')
@@ -190,16 +190,16 @@ class TestUnitConversion(unittest.TestCase):
         self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
-        param_list = ['x1']
+        indep_list = ['x1']
         unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -214,7 +214,7 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('tgtF', TgtCompF(), promotes=['x2'])
         prob.root.add('tgtC', TgtCompC(), promotes=['x2'])
         prob.root.add('tgtK', TgtCompK(), promotes=['x2'])
-        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
 
         prob.setup(check=False)
         prob.run()
@@ -228,16 +228,16 @@ class TestUnitConversion(unittest.TestCase):
         self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
-        param_list = ['x1']
+        indep_list = ['x1']
         unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -254,7 +254,7 @@ class TestUnitConversion(unittest.TestCase):
         sub2.add('tgtF', TgtCompF())
         sub2.add('tgtC', TgtCompC())
         sub2.add('tgtK', TgtCompK())
-        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
         prob.root.connect('x1', 'sub1.src.x1')
         prob.root.connect('sub1.src.x2', 'sub2.tgtF.x2')
         prob.root.connect('sub1.src.x2', 'sub2.tgtC.x2')
@@ -272,16 +272,16 @@ class TestUnitConversion(unittest.TestCase):
         self.assertEqual(prob.root.sub2.params.metadata('tgtC.x2').get('unit_conv'),
                          None)
 
-        param_list = ['x1']
+        indep_list = ['x1']
         unknown_list = ['sub2.tgtF.x3', 'sub2.tgtC.x3', 'sub2.tgtK.x3']
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
                                return_format='dict')
 
         assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
 
         assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -297,7 +297,7 @@ class TestUnitConversion(unittest.TestCase):
         root.add('tgtF', TgtCompFMulti())
         root.add('tgtC', TgtCompC())
         root.add('tgtK', TgtCompK())
-        prob.root.add('px1', ParamComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
         prob.root.connect('x1', 'sub1.src.x1')
         prob.root.connect('x2', 'tgtF.x2')
         prob.root.connect('x2', 'tgtC.x2')
@@ -311,16 +311,16 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
         assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
 
-        param_list = ['x1']
+        indep_list = ['x1']
         unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev',
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -333,7 +333,7 @@ class TestUnitConversion(unittest.TestCase):
             def __init__(self):
                 super(BadComp, self).__init__()
 
-                self.add_param('x2', 100.0, units='m')
+                self.add_desvar('x2', 100.0, units='m')
                 self.add_output('x3', 100.0)
 
         # Explicit Connection

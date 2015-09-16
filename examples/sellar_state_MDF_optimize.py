@@ -4,7 +4,7 @@ and replaces it with an implicit component."""
 import numpy as np
 
 from openmdao.components.exec_comp import ExecComp
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.newton import Newton
@@ -17,13 +17,13 @@ class SellarDis1(Component):
         super(SellarDis1, self).__init__()
 
         # Global Design Variable
-        self.add_param('z', val=np.zeros(2))
+        self.add_desvar('z', val=np.zeros(2))
 
         # Local Design Variable
-        self.add_param('x', val=0.)
+        self.add_desvar('x', val=0.)
 
         # Coupling parameter
-        self.add_param('y2', val=0.)
+        self.add_desvar('y2', val=0.)
 
         # Coupling output
         self.add_output('y1', val=1.0)
@@ -57,10 +57,10 @@ class SellarDis2(Component):
         super(SellarDis2, self).__init__()
 
         # Global Design Variable
-        self.add_param('z', val=np.zeros(2))
+        self.add_desvar('z', val=np.zeros(2))
 
         # Coupling parameter
-        self.add_param('y1', val=0.)
+        self.add_desvar('y1', val=0.)
 
         # Coupling output
         self.add_output('y2', val=1.0)
@@ -97,7 +97,7 @@ class StateConnection(Component):
         super(StateConnection, self).__init__()
 
         # Inputs
-        self.add_param('y2_actual', 1.0)
+        self.add_desvar('y2_actual', 1.0)
 
         # States
         self.add_state('y2_command', val=1.0)
@@ -133,8 +133,8 @@ class SellarStateConnection(Group):
     def __init__(self):
         super(SellarStateConnection, self).__init__()
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
         self.add('state_eq', StateConnection())
         self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
@@ -168,9 +168,9 @@ if __name__ == '__main__':
     top.driver.options['optimizer'] = 'SLSQP'
     top.driver.options['tol'] = 1.0e-8
 
-    top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+    top.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
                          high=np.array([10.0, 10.0]))
-    top.driver.add_param('x', low=0.0, high=10.0)
+    top.driver.add_desvar('x', low=0.0, high=10.0)
 
     top.driver.add_objective('obj')
     top.driver.add_constraint('con1')

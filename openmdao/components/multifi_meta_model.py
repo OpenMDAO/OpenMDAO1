@@ -29,8 +29,8 @@ class MultiFiMetaModel(MetaModel):
     Thus given the initialization::
 
     >>> mm = MultiFiMetaModel(nfi=2)`
-    >>> mm.add_param('x1', 0.)
-    >>> mm.add_param('x2', 0.)
+    >>> mm.add_desvar('x1', 0.)
+    >>> mm.add_desvar('x2', 0.)
     >>> mm.add_ouput('y1', 0.)
     >>> mm.add_ouput('y2', 0.)
 
@@ -60,15 +60,15 @@ class MultiFiMetaModel(MetaModel):
         self._training_input = nfi*[np.zeros(0)]
         self._input_sizes = nfi*[0]
 
-    def add_param(self, name, val=_NotSet, **kwargs):
-        super(MultiFiMetaModel, self).add_param(name, val, **kwargs)
+    def add_desvar(self, name, val=_NotSet, **kwargs):
+        super(MultiFiMetaModel, self).add_desvar(name, val, **kwargs)
         self._input_sizes[0]=self._input_size
 
         # Add train:<invar>_fi<n>
         for fi in range(self._nfi):
             if fi > 0:
                 name_with_fi = 'train:'+_get_name_fi(name, fi)
-                super(MetaModel, self).add_param(name_with_fi, val=list(), pass_by_obj=True)
+                super(MetaModel, self).add_desvar(name_with_fi, val=list(), pass_by_obj=True)
                 self._input_sizes[fi]+=self._params_dict[name]['size']
 
 

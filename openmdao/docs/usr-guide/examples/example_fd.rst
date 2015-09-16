@@ -33,7 +33,7 @@ so that we can watch what it does.
 
         from __future__ import print_function
 
-        from openmdao.components import ParamComp
+        from openmdao.components import IndepVarComp
         from openmdao.core import Component, Group, Problem
 
 
@@ -44,7 +44,7 @@ so that we can watch what it does.
                 super(SimpleComp, self).__init__()
 
                 # Params
-                self.add_param('x', 2.0)
+                self.add_desvar('x', 2.0)
 
                 # Unknowns
                 self.add_output('y', 0.0)
@@ -74,7 +74,7 @@ let's finite difference the 2nd and 4th component in the chain.
                     def __init__(self):
                         super(Model, self).__init__()
 
-                        self.add('px', ParamComp('x', 2.0))
+                        self.add('px', IndepVarComp('x', 2.0))
 
                         self.add('comp1', SimpleComp())
                         self.add('comp2', SimpleComp())
@@ -151,7 +151,7 @@ comp3 in that group.
         def __init__(self):
             super(Model, self).__init__()
 
-            self.add('px', ParamComp('x', 2.0))
+            self.add('px', IndepVarComp('x', 2.0))
 
             self.add('comp1', SimpleComp())
 
@@ -219,7 +219,7 @@ OpenMDAO to do this by setting force_fd in the parent `Group`.
         def __init__(self):
             super(Model, self).__init__()
 
-            self.add('px', ParamComp('x', 2.0))
+            self.add('px', IndepVarComp('x', 2.0))
 
             self.add('comp1', SimpleComp())
             self.add('comp2', SimpleComp())

@@ -5,14 +5,14 @@ import numpy as np
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 
 
 class Plus(Component):
     def __init__(self, adder):
         super(Plus, self).__init__()
-        self.add_param('x', np.random.random())
+        self.add_desvar('x', np.random.random())
         self.add_output('f1', shape=1)
         self.adder = float(adder)
 
@@ -22,7 +22,7 @@ class Plus(Component):
 class Times(Component):
     def __init__(self, scalar):
         super(Times, self).__init__()
-        self.add_param('f1', np.random.random())
+        self.add_desvar('f1', np.random.random())
         self.add_output('f2', shape=1)
         self.scalar = float(scalar)
 
@@ -47,7 +47,7 @@ class Summer(Component):
         super(Summer, self).__init__()
         self.size = size
         for i in range(size):
-            self.add_param('y%d'%i, 0.)
+            self.add_desvar('y%d'%i, 0.)
 
         self.add_output('total', shape=1)
 
@@ -63,7 +63,7 @@ class MultiPoint(Group):
         super(MultiPoint, self).__init__()
 
         size = len(adders)
-        # self.add('desvar', ParamComp('X', val=10*np.arange(size, dtype=float)), promotes=['*'])
+        # self.add('desvar', IndepVarComp('X', val=10*np.arange(size, dtype=float)), promotes=['*'])
 
         order = []
         for i,(a,s) in enumerate(zip(adders, scalars)):

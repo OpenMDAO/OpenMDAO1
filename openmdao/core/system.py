@@ -346,7 +346,7 @@ class System(object):
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
-            # If our input is connected to a Paramcomp, then we need to twiddle
+            # If our input is connected to a IndepVarComp, then we need to twiddle
             # the unknowns vector instead of the params vector.
             param_src = self.connections.get(p_name)
             if param_src is not None:
@@ -358,7 +358,7 @@ class System(object):
                 target_input = unknowns.flat[param_src]
 
             else:
-                # Cases where the paramcomp is somewhere above us.
+                # Cases where the IndepVarComp is somewhere above us.
                 if p_name in states:
                     inputs = unknowns
                 else:

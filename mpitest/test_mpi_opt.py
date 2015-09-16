@@ -4,7 +4,7 @@ import os
 import unittest
 import numpy as np
 
-from openmdao.components import ParamComp, ExecComp
+from openmdao.components import IndepVarComp, ExecComp
 from openmdao.solvers import LinearGaussSeidel, PetscKSP
 from openmdao.core import Component, ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
@@ -38,7 +38,7 @@ class Parab1D(Component):
         self.root = root
 
         # Params
-        self.add_param('x', 0.0)
+        self.add_desvar('x', 0.0)
 
         # Unknowns
         self.add_output('y', 1.0)
@@ -59,7 +59,7 @@ class MP_Point(Group):
     def __init__(self, root=1.0):
         super(MP_Point, self).__init__()
 
-        self.add('p', ParamComp('x', val=0.0))
+        self.add('p', IndepVarComp('x', val=0.0))
         self.add('c', Parab1D(root=root))
         self.connect('p.x', 'c.x')
 
@@ -88,8 +88,8 @@ class TestMPIOpt(MPITestCase):
         par.add('c1', Parab1D(root=2.0))
         par.add('c2', Parab1D(root=3.0))
 
-        root.add('p1', ParamComp('x', val=0.0))
-        root.add('p2', ParamComp('x', val=0.0))
+        root.add('p1', IndepVarComp('x', val=0.0))
+        root.add('p2', IndepVarComp('x', val=0.0))
         root.connect('p1.x', 'par.c1.x')
         root.connect('p2.x', 'par.c2.x')
 
@@ -98,8 +98,8 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.c2.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
-        driver.add_param('p1.x', low=-100, high=100)
-        driver.add_param('p2.x', low=-100, high=100)
+        driver.add_desvar('p1.x', low=-100, high=100)
+        driver.add_desvar('p2.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
 
         root.fd_options['force_fd'] = True
@@ -125,8 +125,8 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
-        driver.add_param('par.s1.p.x', low=-100, high=100)
-        driver.add_param('par.s2.p.x', low=-100, high=100)
+        driver.add_desvar('par.s1.p.x', low=-100, high=100)
+        driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
 
         root.fd_options['force_fd'] = True
@@ -156,8 +156,8 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
-        driver.add_param('par.s1.p.x', low=-100, high=100)
-        driver.add_param('par.s2.p.x', low=-100, high=100)
+        driver.add_desvar('par.s1.p.x', low=-100, high=100)
+        driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
 
         model.setup(check=False)
@@ -182,7 +182,7 @@ class ParallelMPIOptAsym(MPITestCase):
 
         ser1 = par.add('ser1', Group())
 
-        ser1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser1.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser1.add('comp', SimpleArrayComp(), promotes=['*'])
         ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
                                   y=np.array([0.0, 0.0])), promotes=['*'])
@@ -190,7 +190,7 @@ class ParallelMPIOptAsym(MPITestCase):
                                  promotes=['*'])
 
         ser2 = par.add('ser2', Group())
-        ser2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser2.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser2.add('comp', SimpleArrayComp(), promotes=['*'])
         ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
                                   promotes=['*'])
@@ -204,8 +204,8 @@ class ParallelMPIOptAsym(MPITestCase):
         root.connect('par.ser2.y', 'con.y')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('par.ser1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.c', ctype='eq')
@@ -258,7 +258,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         ser1 = par.add('ser1', Group())
         ser1.ln_solver = LinearGaussSeidel()
 
-        ser1.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser1.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser1.add('comp', SimpleArrayComp(), promotes=['*'])
         ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
                                   y=np.array([0.0, 0.0])), promotes=['*'])
@@ -268,7 +268,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         ser2 = par.add('ser2', Group())
         ser2.ln_solver = LinearGaussSeidel()
 
-        ser2.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        ser2.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser2.add('comp', SimpleArrayComp(), promotes=['*'])
         ser2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
                                  y=np.array([0.0, 0.0])), promotes=['*'])
@@ -281,8 +281,8 @@ class ParallelMPIOptPromoted(MPITestCase):
         root.connect('par.ser2.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('par.ser1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.c', ctype='eq')
@@ -361,7 +361,7 @@ class ParallelMPIOpt(MPITestCase):
         ser1 = par.add('ser1', Group())
         ser1.ln_solver = LinearGaussSeidel()
 
-        ser1.add('p1', ParamComp('x', np.zeros([2])))
+        ser1.add('p1', IndepVarComp('x', np.zeros([2])))
         ser1.add('comp', SimpleArrayComp())
         ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
                                   y=np.array([0.0, 0.0])))
@@ -370,7 +370,7 @@ class ParallelMPIOpt(MPITestCase):
         ser2 = par.add('ser2', Group())
         ser2.ln_solver = LinearGaussSeidel()
 
-        ser2.add('p1', ParamComp('x', np.zeros([2])))
+        ser2.add('p1', IndepVarComp('x', np.zeros([2])))
         ser2.add('comp', SimpleArrayComp())
         ser2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
                                  y=np.array([0.0, 0.0])))
@@ -389,8 +389,8 @@ class ParallelMPIOpt(MPITestCase):
         root.connect('par.ser2.obj.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('par.ser1.p1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('par.ser2.p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser2.p1.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.con.c', ctype='eq')

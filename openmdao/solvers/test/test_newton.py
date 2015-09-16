@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from openmdao.components.exec_comp import ExecComp
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel

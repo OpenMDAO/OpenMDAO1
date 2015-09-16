@@ -3,7 +3,7 @@ import unittest
 
 from openmdao.core import Group, Problem
 from openmdao.core.component import _NotSet
-from openmdao.components import MetaModel, MultiFiMetaModel, ParamComp
+from openmdao.components import MetaModel, MultiFiMetaModel, IndepVarComp
 
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, \
      KrigingSurrogate, MultiFiSurrogateModel
@@ -34,7 +34,7 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
     def test_inputs_wrt_nfidelity(self):
         mm = MultiFiMetaModel(nfi=3)
 
-        mm.add_param('x', 0.)
+        mm.add_desvar('x', 0.)
         mm.add_output('y', 0.)
 
         prob = Problem(Group())
@@ -52,7 +52,7 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
 
         mm = MultiFiMetaModel()
 
-        mm.add_param('x', 0.)
+        mm.add_desvar('x', 0.)
         surr = MockSurrogate()
         mm.add_output('y', 0., surrogate = surr)
 
@@ -79,7 +79,7 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
     def test_one_dim_bi_fidelity_training(self):
 
         mm = MultiFiMetaModel(nfi=2)
-        mm.add_param('x', 0.)
+        mm.add_desvar('x', 0.)
         surr = MockSurrogate()
         mm.add_output('y', 0., surrogate = surr)
 
@@ -110,8 +110,8 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
 
     def test_two_dim_bi_fidelity_training(self):
         mm = MultiFiMetaModel(nfi=2)
-        mm.add_param('x1', 0.)
-        mm.add_param('x2', 0.)
+        mm.add_desvar('x1', 0.)
+        mm.add_desvar('x2', 0.)
         surr_y1 = MockSurrogate()
         surr_y2 = MockSurrogate()
         mm.add_output('y1', 0., surrogate = surr_y1)
@@ -150,7 +150,7 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
 
     def test_multifidelity_warm_start(self):
         mm = MultiFiMetaModel(nfi=2)
-        mm.add_param('x', 0.)
+        mm.add_desvar('x', 0.)
         surr = MockSurrogate()
         mm.add_output('y', 0., surrogate = surr)
         mm.warm_restart=True

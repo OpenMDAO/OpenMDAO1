@@ -13,8 +13,8 @@ class TestComponent(unittest.TestCase):
         self.comp = Component()
 
     def test_promotes(self):
-        self.comp.add_param("xxyyzz", 0.0)
-        self.comp.add_param("foobar", 0.0)
+        self.comp.add_desvar("xxyyzz", 0.0)
+        self.comp.add_desvar("foobar", 0.0)
         self.comp.add_output("a:bcd:efg", -1)
         self.comp.add_output("x_y_z", np.zeros(10))
 
@@ -58,14 +58,14 @@ class TestComponent(unittest.TestCase):
                              "'' promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
 
     def test_add_params(self):
-        self.comp.add_param("x", 0.0)
-        self.comp.add_param("y", 0.0)
-        self.comp.add_param("z", shape=(1,))
-        self.comp.add_param("t", shape=2)
-        self.comp.add_param("u", shape=1)
+        self.comp.add_desvar("x", 0.0)
+        self.comp.add_desvar("y", 0.0)
+        self.comp.add_desvar("z", shape=(1,))
+        self.comp.add_desvar("t", shape=2)
+        self.comp.add_desvar("u", shape=1)
 
         with self.assertRaises(ValueError) as cm:
-            self.comp.add_param("w")
+            self.comp.add_desvar("w")
 
         self.assertEqual(str(cm.exception), "Shape of param 'w' must be specified because 'val' is not set")
 
@@ -140,8 +140,8 @@ class TestComponent(unittest.TestCase):
             self.fail("Exception expected")
 
     def test_generate_numpydocstring(self):
-        self.comp.add_param("xxyyzz", 0.0)
-        self.comp.add_param("t", shape=2)
+        self.comp.add_desvar("xxyyzz", 0.0)
+        self.comp.add_desvar("t", shape=2)
         self.comp.add_output("x", -1)
         self.comp.add_state("s1", 0.0)
 

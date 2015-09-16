@@ -86,8 +86,8 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = list(iterkeys(param_meta))
-        param_vals = self.get_params()
+        indep_list = list(iterkeys(param_meta))
+        param_vals = self.get_design_vars()
         for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
                                  value=param_vals[name],
@@ -104,7 +104,7 @@ class pyOptSparseDriver(Driver):
         # Calculate and save gradient for any linear constraints.
         lcons = self.get_constraints(lintype='linear').values()
         if len(lcons) > 0:
-            self.lin_jacs = problem.calc_gradient(param_list, lcons,
+            self.lin_jacs = problem.calc_gradient(indep_list, lcons,
                                                   return_format='dict')
             #print("Linear Gradient")
             #print(self.lin_jacs)
@@ -119,7 +119,7 @@ class pyOptSparseDriver(Driver):
             upper = np.zeros((size))
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(param_list)
+            wrt = rel.relevant[name].intersection(indep_list)
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
@@ -137,7 +137,7 @@ class pyOptSparseDriver(Driver):
             upper = np.zeros((size))
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(param_list)
+            wrt = rel.relevant[name].intersection(indep_list)
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, linear=True,
@@ -155,7 +155,7 @@ class pyOptSparseDriver(Driver):
             #if con.linear is True:
                 #opt_prob.addConGroup(name,
                 #size, upper=upper, lower=lower,
-                                     #linear=True, wrt=param_list,
+                                     #linear=True, wrt=indep_list,
                                      #jac=self.lin_jacs[name])
             #else:
                 #opt_prob.addConGroup(name,
@@ -197,7 +197,7 @@ class pyOptSparseDriver(Driver):
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        for name in self.get_params():
+        for name in self.get_design_vars():
             val = dv_dict[name]
             self.set_param(name, val)
 
@@ -242,7 +242,7 @@ class pyOptSparseDriver(Driver):
         nproc = comm.size
 
         try:
-            for name in self.get_params():
+            for name in self.get_design_vars():
                 self.set_param(name, dv_dict[name])
 
             # Execute the model

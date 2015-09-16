@@ -10,7 +10,7 @@ from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from openmdao.core.checks import ConnectError
 from openmdao.core.group import Group
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
@@ -33,7 +33,7 @@ class TestProblem(unittest.TestCase):
         # this is a conflict because G3.x (aka G3.C4.x) is already connected
         # to G3.C3.x
         G2 = root.add('G2', Group(), promotes=['x'])  # BAD PROMOTE
-        G2.add('C1', ParamComp('x', 5.), promotes=['x'])
+        G2.add('C1', IndepVarComp('x', 5.), promotes=['x'])
 
         G1 = G2.add('G1', Group(), promotes=['x'])
         G1.add('C2', ExecComp('y=x*2.0'), promotes=['x'])
@@ -82,7 +82,7 @@ class TestProblem(unittest.TestCase):
         # promoting a pattern with no matches should throw an error
         prob = Problem(Group())
         G = prob.root.add('G', Group())
-        P = G.add('P', ParamComp('x', 5.), promotes=['a*'])     # there is no match
+        P = G.add('P', IndepVarComp('x', 5.), promotes=['a*'])     # there is no match
         try:
             prob.setup(check=False)
         except Exception as error:
@@ -99,7 +99,7 @@ class TestProblem(unittest.TestCase):
         # this is a conflict because G3.x (aka G3.C4.x) is already connected
         # to G3.C3.x
         G2 = root.add('G2', Group())
-        G2.add('C1', ParamComp('x', 5.), promotes=['x'])
+        G2.add('C1', IndepVarComp('x', 5.), promotes=['x'])
 
         G1 = G2.add('G1', Group(), promotes=['x'])
         G1.add('C2', ExecComp('y=x*2.0'), promotes=['x'])
@@ -194,7 +194,7 @@ class TestProblem(unittest.TestCase):
     def test_input_input_explicit_conns_no_conn(self):
         prob = Problem(root=Group())
         root = prob.root
-        root.add('p1', ParamComp('x', 1.0))
+        root.add('p1', IndepVarComp('x', 1.0))
         root.add('c1', ExecComp('y = x*2.0'))
         root.add('c2', ExecComp('y = x*3.0'))
         root.connect('c1.x', 'c2.x')
@@ -210,7 +210,7 @@ class TestProblem(unittest.TestCase):
     def test_input_input_explicit_conns_w_conn(self):
         prob = Problem(root=Group())
         root = prob.root
-        root.add('p1', ParamComp('x', 1.0))
+        root.add('p1', IndepVarComp('x', 1.0))
         root.add('c1', ExecComp('y = x*2.0'))
         root.add('c2', ExecComp('y = x*3.0'))
         root.connect('c1.x', 'c2.x')
@@ -245,7 +245,7 @@ class TestProblem(unittest.TestCase):
 
     def test_calc_gradient(self):
         root = Group()
-        parm = root.add('parm', ParamComp('x', np.array([1., 1., 1., 1.])))
+        parm = root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 1.])))
         comp = root.add('comp', RosenSuzuki())
 
         root.connect('parm.x', 'comp.x')
@@ -254,11 +254,11 @@ class TestProblem(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['parm.x']
+        indep_list = ['parm.x']
         unknown_list = ['comp.f', 'comp.g']
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
             [ -3., -3., -17.,  9.],
         ]))
@@ -269,7 +269,7 @@ class TestProblem(unittest.TestCase):
         ]))
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([
             [-3.,  -3., -17.,  9.],
             [ 3.,   1.,   3.,  1.],
@@ -278,7 +278,7 @@ class TestProblem(unittest.TestCase):
         ]))
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
             [ -3., -3., -17.,  9.],
         ]))
@@ -289,7 +289,7 @@ class TestProblem(unittest.TestCase):
         ]))
 
         # check that calc_gradient returns proper array value when mode is 'rev'
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
         np.testing.assert_almost_equal(J, np.array([
             [-3.,  -3., -17.,  9.],
             [ 3.,   1.,   3.,  1.],
@@ -298,7 +298,7 @@ class TestProblem(unittest.TestCase):
         ]))
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
             [ -3., -3., -17.,  9.],
         ]), decimal=5)
@@ -309,7 +309,7 @@ class TestProblem(unittest.TestCase):
         ]), decimal=5)
 
         # check that calc_gradient returns proper array value when mode is 'fd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([
             [-3.,  -3., -17.,  9.],
             [ 3.,   1.,   3.,  1.],
@@ -323,34 +323,34 @@ class TestProblem(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list   = ['p1.x1', 'p2.x2']
+        indep_list   = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'rev'
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
         np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fd'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='array')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
         np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
 
     def test_explicit_connection_errors(self):
@@ -362,7 +362,7 @@ class TestProblem(unittest.TestCase):
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_param('x', 0)
+                self.add_desvar('x', 0)
 
         prob = Problem()
         prob.root = Group()
@@ -420,7 +420,7 @@ class TestProblem(unittest.TestCase):
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_param('y', np.zeros((3,)), shape=(3,))
+                self.add_desvar('y', np.zeros((3,)), shape=(3,))
 
         class C(Component):
             def __init__(self):
@@ -430,12 +430,12 @@ class TestProblem(unittest.TestCase):
         class D(Component):
             def __init__(self):
                 super(D, self).__init__()
-                self.add_param('y', np.zeros((2,)))
+                self.add_desvar('y', np.zeros((2,)))
 
         class E(Component):
             def __init__(self):
                 super(E, self).__init__()
-                self.add_param('y', 1.0)
+                self.add_desvar('y', 1.0)
 
         #Explicit
         expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
@@ -603,7 +603,7 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root=Group())
         root = prob.root
 
-        root.add('x_param', ParamComp('x', 7.0))
+        root.add('x_param', IndepVarComp('x', 7.0))
         root.add('mycomp', ExecComp('y=x*2.0'))
 
         root.connect('x_param.x', 'mycomp.x')
@@ -618,8 +618,8 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root=Group())
         root = prob.root
 
-        # ? Didn't we say that ParamComp by default promoted its variable?
-        root.add('x_param', ParamComp('x', 7.0), promotes=['x'])
+        # ? Didn't we say that IndepVarComp by default promoted its variable?
+        root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
         root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x'])
 
         prob.setup(check=False)
@@ -641,7 +641,7 @@ class TestProblem(unittest.TestCase):
 
         prob.setup(check=False)
 
-        self.assertEqual(prob['G2.C1.x'], 5.)                 # default output from ParamComp
+        self.assertEqual(prob['G2.C1.x'], 5.)                 # default output from IndepVarComp
         self.assertEqual(prob['G2.G1.C2.y'], 5.5)             # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)     # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)  # initial value for a parameter
@@ -693,25 +693,25 @@ class TestProblem(unittest.TestCase):
         class A(Component):
             def __init__(self):
                 super(A, self).__init__()
-                self.add_param('x', shape=1)
+                self.add_desvar('x', shape=1)
                 self.add_output('y', shape=1)
 
         class B(Component):
             def __init__(self):
                 super(B, self).__init__()
-                self.add_param('x', shape=2)
+                self.add_desvar('x', shape=2)
                 self.add_output('y', shape=2)
 
         class C(Component):
             def __init__(self):
                 super(C, self).__init__()
-                self.add_param('x', shape=3)
+                self.add_desvar('x', shape=3)
                 self.add_output('y', shape=3)
 
         # Scalar Values
         prob = Problem()
         root = prob.root = Group()
-        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('X', IndepVarComp('x', 0., shape=1), promotes=['x'])
         root.add('A1', A(), promotes=['x'])
         root.add('A2', A())
         root.connect('A1.y', 'A2.x')
@@ -720,7 +720,7 @@ class TestProblem(unittest.TestCase):
         # Array Values
         prob = Problem()
         root = prob.root = Group()
-        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('X', IndepVarComp('x', np.zeros(2), shape=2), promotes=['x'])
         root.add('B1', B(), promotes=['x'])
         root.add('B2', B())
         root.connect('B1.y', 'B2.x')
@@ -729,7 +729,7 @@ class TestProblem(unittest.TestCase):
         # Mismatched Array Values
         prob = Problem()
         root = prob.root = Group()
-        root.add('X', ParamComp('x', np.zeros(2), shape=2), promotes=['x'])
+        root.add('X', IndepVarComp('x', np.zeros(2), shape=2), promotes=['x'])
         root.add('B1', B(), promotes=['x'])
         root.add('C1', C())
         root.connect('B1.y', 'C1.x')
@@ -743,7 +743,7 @@ class TestProblem(unittest.TestCase):
         # Mismatched Scalar to Array Value
         prob = Problem()
         root = prob.root = Group()
-        root.add('X', ParamComp('x', 0., shape=1), promotes=['x'])
+        root.add('X', IndepVarComp('x', 0., shape=1), promotes=['x'])
         root.add('B1', B(), promotes=['x'])
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
@@ -761,8 +761,8 @@ class TestProblem(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('a', 1.0), promotes=['*'])
-        root.add('p2', ParamComp('b', 1.0), promotes=['*'])
+        root.add('p1', IndepVarComp('a', 1.0), promotes=['*'])
+        root.add('p2', IndepVarComp('b', 1.0), promotes=['*'])
         root.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
 
         root.ln_solver.options['mode'] = 'auto'
@@ -794,8 +794,8 @@ class TestProblem(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('a', 1.0), promotes=['*'])
-        root.add('p2', ParamComp('b', 1.0), promotes=['*'])
+        root.add('p1', IndepVarComp('a', 1.0), promotes=['*'])
+        root.add('p2', IndepVarComp('b', 1.0), promotes=['*'])
         sub1 = root.add('sub1', Group(), promotes=['*'])
         sub2 = sub1.add('sub2', Group(), promotes=['*'])
         sub2.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
@@ -842,8 +842,8 @@ class TestProblem(unittest.TestCase):
         root = prob.root = Group()
 
         comp = Component()
-        comp.add_param('x', 0.)
-        comp.add_param('y', 0.)
+        comp.add_desvar('x', 0.)
+        comp.add_desvar('y', 0.)
         comp.add_output('z', 0.)
         comp.solve_nonlinear = lambda p, u, r: u.__setitem__('z', 1.)
         comp._get_fd_params = lambda: ['x']
@@ -851,8 +851,8 @@ class TestProblem(unittest.TestCase):
 
         root.add('comp', comp, promotes=['x', 'y'])
 
-        root.add('px', ParamComp('x', 0.), promotes=['*'])
-        root.add('py', ParamComp('y', 0.), promotes=['*'])
+        root.add('px', IndepVarComp('x', 0.), promotes=['*'])
+        root.add('py', IndepVarComp('y', 0.), promotes=['*'])
 
         prob.setup(check=False)
         prob.run()

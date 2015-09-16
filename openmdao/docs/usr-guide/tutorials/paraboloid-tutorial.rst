@@ -14,7 +14,7 @@ this code into a file, and run it directly.
 
     from __future__ import print_function
 
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
     from openmdao.core import Component, Problem, Group
 
     class Paraboloid(Component):
@@ -23,8 +23,8 @@ this code into a file, and run it directly.
         def __init__(self):
             super(Paraboloid, self).__init__()
 
-            self.add_param('x', val=0.0)
-            self.add_param('y', val=0.0)
+            self.add_desvar('x', val=0.0)
+            self.add_desvar('y', val=0.0)
 
             self.add_output('f_xy', val=0.0)
 
@@ -54,8 +54,8 @@ this code into a file, and run it directly.
 
         root = top.root = Group()
 
-        root.add('p1', ParamComp('x', 3.0))
-        root.add('p2', ParamComp('y', -4.0))
+        root.add('p1', IndepVarComp('x', 3.0))
+        root.add('p2', IndepVarComp('y', -4.0))
         root.add('p', Paraboloid())
 
         root.connect('p1.x', 'p.x')
@@ -76,7 +76,7 @@ Building the component
 
     from __future__ import print_function
 
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
     from openmdao.core import Component, Problem, Group
 
 We need to import some OpenMDAO classes. We also import the print_function to
@@ -99,8 +99,8 @@ using explicit outputs.
         def __init__(self):
             super(Paraboloid, self).__init__()
 
-            self.add_param('x', val=0.0)
-            self.add_param('y', val=0.0)
+            self.add_desvar('x', val=0.0)
+            self.add_desvar('y', val=0.0)
 
             self.add_output('f_xy', shape=1)
 
@@ -170,14 +170,14 @@ This code instantiates a `Problem` object and sets the root to be an empty `Grou
 
 ::
 
-    root.add('p1', ParamComp('x', 3.0))
-    root.add('p2', ParamComp('y', -4.0))
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
 
-Now it is time to add components to the empty group. `ParamComp`
+Now it is time to add components to the empty group. `IndepVarComp`
 is a `Component` that provides the source for a variable which we can later give
 to a `Driver` as a design variable to control.
 
-We created two `ParamComps` (one for each param on the `Paraboloid`
+We created two `IndepVarComps` (one for each param on the `Paraboloid`
 component), gave them names, and added them to the root `Group`. The `add`
 method takes a name as the first argument, and a `Component` instance as the
 second argument.
@@ -193,9 +193,9 @@ Then we add the paraboloid using the same syntax as before, giving it the name '
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
 
-Then we connect up the outputs of the `ParamComps` to the parameters of the
+Then we connect up the outputs of the `IndepVarComps` to the parameters of the
 `Paraboloid`. Notice the dotted naming convention used to refer to variables.
-So, for example, `p1` represents the first `ParamComp` that we created to set
+So, for example, `p1` represents the first `IndepVarComp` that we created to set
 the value of `x` and so we connect that to parameter `x` of the `Paraboloid`.
 Since the `Paraboloid` is named `p` and has a parameter
 `x`, it is referred to as `p.x` in the call to the `connect` method.
@@ -240,8 +240,8 @@ Putting it all together:
     top = Problem()
     root = top.root = Group()
 
-    root.add('p1', ParamComp('x', 3.0))
-    root.add('p2', ParamComp('y', -4.0))
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
     root.add('p', Paraboloid())
 
     root.connect('p1.x', 'p.x')
@@ -287,8 +287,8 @@ SLSQP because it supports OpenMDAO-supplied gradients.
 
         root = top.root = Group()
 
-        root.add('p1', ParamComp('x', 3.0))
-        root.add('p2', ParamComp('y', -4.0))
+        root.add('p1', IndepVarComp('x', 3.0))
+        root.add('p2', IndepVarComp('y', -4.0))
         root.add('p', Paraboloid())
 
         root.connect('p1.x', 'p.x')
@@ -297,8 +297,8 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
 
-        top.driver.add_param('p1.x', low=-50, high=50)
-        top.driver.add_param('p2.y', low=-50, high=50)
+        top.driver.add_desvar('p1.x', low=-50, high=50)
+        top.driver.add_desvar('p2.y', low=-50, high=50)
         top.driver.add_objective('p.f_xy')
 
         top.setup()
@@ -313,7 +313,7 @@ select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 'tol' and a maximum number of iterations 'maxiter.'
 
 Next, we select the parameters the optimizer will drive by calling
-`add_param` and giving it the `ParamComp` unknowns that we have created. We
+`add_param` and giving it the `IndepVarComp` unknowns that we have created. We
 also set a high and low bounds for this problem. It is not required to set
 these (they will default to -1e99 and 1e99 respectively), but it is generally
 a good idea.
@@ -363,8 +363,8 @@ We'll use a ConstraintComp to represent our constraint in the model.
 
     root = top.root = Group()
 
-    root.add('p1', ParamComp('x', 3.0))
-    root.add('p2', ParamComp('y', -4.0))
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
     root.add('p', Paraboloid())
 
     # Constraint Equation
@@ -378,8 +378,8 @@ We'll use a ConstraintComp to represent our constraint in the model.
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
 
-    top.driver.add_param('p1.x', low=-50, high=50)
-    top.driver.add_param('p2.y', low=-50, high=50)
+    top.driver.add_desvar('p1.x', low=-50, high=50)
+    top.driver.add_desvar('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
     top.driver.add_constraint('con.c')
 

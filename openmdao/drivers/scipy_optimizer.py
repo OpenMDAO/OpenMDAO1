@@ -109,7 +109,7 @@ class ScipyOptimizer(Driver):
         else:
             bounds = None
 
-        for name, val in iteritems(self.get_params()):
+        for name, val in iteritems(self.get_design_vars()):
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size

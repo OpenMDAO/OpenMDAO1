@@ -7,7 +7,7 @@ from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 
 
@@ -20,7 +20,7 @@ class SimpleComp(Component):
         self.multiplier = multiplier
 
         # Params
-        self.add_param('x', 3.0)
+        self.add_desvar('x', 3.0)
 
         # Unknowns
         self.add_output('y', 5.5)
@@ -52,7 +52,7 @@ class SimpleArrayComp(Component):
         super(SimpleArrayComp, self).__init__()
 
         # Params
-        self.add_param('x', np.zeros([2]))
+        self.add_desvar('x', np.zeros([2]))
 
         # Unknowns
         self.add_output('y', np.zeros([2]))
@@ -84,8 +84,8 @@ class DoubleArrayComp(Component):
         super(DoubleArrayComp, self).__init__()
 
         # Params
-        self.add_param('x1', np.zeros([2]))
-        self.add_param('x2', np.zeros([2]))
+        self.add_desvar('x1', np.zeros([2]))
+        self.add_desvar('x2', np.zeros([2]))
 
         # Unknowns
         self.add_output('y1', np.zeros([2]))
@@ -122,7 +122,7 @@ class ArrayComp2D(Component):
         super(ArrayComp2D, self).__init__()
 
         # Params
-        self.add_param('x', np.zeros((2, 2)))
+        self.add_desvar('x', np.zeros((2, 2)))
 
         # Unknowns
         self.add_output('y', np.zeros((2, 2)))
@@ -165,7 +165,7 @@ class SimpleSparseArrayComp(Component):
         super(SimpleSparseArrayComp, self).__init__()
 
         # Params
-        self.add_param('x', np.zeros([4]))
+        self.add_desvar('x', np.zeros([4]))
 
         # Unknowns
         self.add_output('y', np.zeros([4]))
@@ -215,7 +215,7 @@ class SimpleImplicitComp(Component):
         super(SimpleImplicitComp, self).__init__()
 
         # Params
-        self.add_param('x', 0.5, low=0.01, high=1.0)
+        self.add_desvar('x', 0.5, low=0.01, high=1.0)
 
         # Unknowns
         self.add_output('y', 0.0)
@@ -279,7 +279,7 @@ class SimplePassByObjComp(Component):
         super(SimplePassByObjComp, self).__init__()
 
         # Params
-        self.add_param('x', '')
+        self.add_desvar('x', '')
 
         # Unknowns
         self.add_output('y', '')
@@ -297,7 +297,7 @@ class FanOut(Group):
     def __init__(self):
         super(FanOut, self).__init__()
 
-        self.add('p', ParamComp('x', 1.0))
+        self.add('p', IndepVarComp('x', 1.0))
         self.add('comp1', ExecComp(['y=3.0*x']))
         self.add('comp2', ExecComp(['y=-2.0*x']))
         self.add('comp3', ExecComp(['y=5.0*x']))
@@ -314,7 +314,7 @@ class FanOutGrouped(Group):
     def __init__(self):
         super(FanOutGrouped, self).__init__()
 
-        self.add('p', ParamComp('x', 1.0))
+        self.add('p', IndepVarComp('x', 1.0))
         self.add('comp1', ExecComp(['y=3.0*x']))
         sub = self.add('sub', ParallelGroup())
         sub.add('comp2', ExecComp(['y=-2.0*x']))
@@ -336,7 +336,7 @@ class FanOutAllGrouped(Group):
     def __init__(self):
         super(FanOutAllGrouped, self).__init__()
 
-        self.add('p', ParamComp('x', 1.0))
+        self.add('p', IndepVarComp('x', 1.0))
         sub1 = self.add('sub1', Group())
         sub1.add('comp1', ExecComp(['y=3.0*x']))
         sub2 = self.add('sub2', Group())
@@ -360,8 +360,8 @@ class FanIn(Group):
     def __init__(self):
         super(FanIn, self).__init__()
 
-        self.add('p1', ParamComp('x1', 1.0))
-        self.add('p2', ParamComp('x2', 1.0))
+        self.add('p1', IndepVarComp('x1', 1.0))
+        self.add('p2', IndepVarComp('x2', 1.0))
         self.add('comp1', ExecComp(['y=-2.0*x']))
         self.add('comp2', ExecComp(['y=5.0*x']))
         self.add('comp3', ExecComp(['y=3.0*x1+7.0*x2']))
@@ -381,9 +381,9 @@ class FanInGrouped(Group):
     def __init__(self):
         super(FanInGrouped, self).__init__()
 
-        self.add('p1', ParamComp('x1', 1.0))
-        self.add('p2', ParamComp('x2', 1.0))
-        self.add('p3', ParamComp('x3', 1.0))
+        self.add('p1', IndepVarComp('x1', 1.0))
+        self.add('p2', IndepVarComp('x2', 1.0))
+        self.add('p3', IndepVarComp('x3', 1.0))
         sub = self.add('sub', ParallelGroup())
 
         sub.add('comp1', ExecComp(['y=-2.0*x']))
@@ -425,7 +425,7 @@ class RosenSuzuki(Component):
         super(RosenSuzuki, self).__init__()
 
         # parameters
-        self.add_param('x', np.array([1., 1., 1., 1.])) # low=-10, high=99
+        self.add_desvar('x', np.array([1., 1., 1., 1.])) # low=-10, high=99
 
         # unknowns
         self.add_output('g', np.array([1., 1., 1.]))    # constraints

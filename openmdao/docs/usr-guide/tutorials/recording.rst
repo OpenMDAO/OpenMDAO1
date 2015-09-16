@@ -10,7 +10,7 @@ save the data generated for future use. Consider the code below:
 
 ::
 
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
     from openmdao.core import Component, Group, Problem
     from openmdao.drivers import ScipyOptimizer
     from openmdao.recorders import SqliteRecorder
@@ -22,8 +22,8 @@ save the data generated for future use. Consider the code below:
         def __init__(self):
             super(Paraboloid, self).__init__()
 
-            self.add_param('x', val=0.0)
-            self.add_param('y', val=0.0)
+            self.add_desvar('x', val=0.0)
+            self.add_desvar('y', val=0.0)
 
             self.add_output('f_xy', val=0.0)
 
@@ -54,14 +54,14 @@ save the data generated for future use. Consider the code below:
 
         root = top.root = Group()
 
-        root.add('p1', ParamComp('x', 3.0), promotes=['*'])
-        root.add('p2', ParamComp('y', -4.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 3.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', -4.0), promotes=['*'])
         paraboloid = root.add('p', Paraboloid(), promotes=['*'])
 
         top.driver = driver = ScipyOptimizer()
 
-        driver.add_param('x')
-        driver.add_param('y')
+        driver.add_desvar('x')
+        driver.add_desvar('y')
         driver.add_objective('f_xy')
 
         recorder = SqliteRecorder('paraboloid')
@@ -76,8 +76,8 @@ This script is very similar to the code in the Paraboloid tutorial, with a few i
 
     top.driver = driver = ScipyOptimizer()
 
-    driver.add_param('x')
-    driver.add_param('y')
+    driver.add_desvar('x')
+    driver.add_desvar('y')
     driver.add_objective('f_xy')
 
 We add an optimizer to the problem and initialize it.

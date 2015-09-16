@@ -104,7 +104,7 @@ class Component(System):
 
         return meta
 
-    def add_param(self, name, val=_NotSet, **kwargs):
+    def add_desvar(self, name, val=_NotSet, **kwargs):
         """ Add a `param` input to this component.
 
         Args

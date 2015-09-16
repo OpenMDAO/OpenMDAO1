@@ -31,7 +31,7 @@ class UnitComp(Component):
             msg = "UnitComp param_name cannot match out_name: '{name}'"
             raise ValueError(msg.format(name=param_name))
 
-        self.add_param(param_name, shape=shape, units=units)
+        self.add_desvar(param_name, shape=shape, units=units)
         self.add_output(out_name, shape=shape, units=units)
 
     def solve_nonlinear(self, params, unknowns, resids):

@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from openmdao.components.exec_comp import ExecComp
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.core.group import Group
@@ -40,11 +40,11 @@ class MySimpleDriver(Driver):
         """ Mimic a very simplistic unconstrained optimization."""
 
         # Get dicts with pointers to our vectors
-        params = self.get_params()
+        params = self.get_design_vars()
         objective = self.get_objectives()
         constraints = self.get_constraints()
 
-        param_list = params.keys()
+        indep_list = params.keys()
         objective_names = list(objective.keys())
         constraint_names = list(constraints.keys())
         unknown_list = objective_names + constraint_names
@@ -63,13 +63,13 @@ class MySimpleDriver(Driver):
                                                    #problem['con2']))
 
             # Calculate gradient
-            J = problem.calc_gradient(param_list, unknown_list, return_format='dict')
+            J = problem.calc_gradient(indep_list, unknown_list, return_format='dict')
 
             objective = self.get_objectives()
             constraints = self.get_constraints()
 
             for key1 in objective_names:
-                for key2 in param_list:
+                for key2 in indep_list:
 
                     grad = J[key1][key2] * objective[key1]
                     new_val = params[key2] - self.alpha*grad
@@ -89,7 +89,7 @@ class Rosenbrock(Component):
     def __init__(self, size=2):
         super(Rosenbrock, self).__init__()
         # self.force_fd = True
-        self.add_param('x', val=np.zeros(size))
+        self.add_desvar('x', val=np.zeros(size))
         self.add_output('f', val=0.0)
         self.add_output('xxx', val=np.zeros(size))
 
@@ -106,7 +106,7 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
-        prob.driver.add_param('z', low=-100.0, high=100.0)
+        prob.driver.add_desvar('z', low=-100.0, high=100.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1')
@@ -125,7 +125,7 @@ class TestDriver(unittest.TestCase):
             def run(self, problem):
                 """ Save away scaled info."""
 
-                params = self.get_params()
+                params = self.get_design_vars()
                 param_meta = self.get_param_metadata()
 
                 self.set_param('x', 0.5)
@@ -145,12 +145,12 @@ class TestDriver(unittest.TestCase):
         root = prob.root = Group()
         driver = prob.driver = ScaleAddDriver()
 
-        root.add('p1', ParamComp([('x',60000.0,{'desc':'my x'}),
+        root.add('p1', IndepVarComp([('x',60000.0,{'desc':'my x'}),
                                   ('y',60000.0,{'desc':'my y'})]), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
 
-        driver.add_param('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
+        driver.add_desvar('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
         driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
         driver.add_constraint('con', adder=-10890487502.0, scaler=1.0/20)
 
@@ -172,7 +172,7 @@ class TestDriver(unittest.TestCase):
             def run(self, problem):
                 """ Save away scaled info."""
 
-                params = self.get_params()
+                params = self.get_design_vars()
                 param_meta = self.get_param_metadata()
 
                 self.set_param('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
@@ -191,7 +191,7 @@ class TestDriver(unittest.TestCase):
         root = prob.root = Group()
         driver = prob.driver = ScaleAddDriver()
 
-        root.add('p1', ParamComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
+        root.add('p1', IndepVarComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
                  promotes=['*'])
         root.add('comp', ArrayComp2D(), promotes=['*'])
         root.add('constraint', ExecComp('con = x + y',
@@ -200,7 +200,7 @@ class TestDriver(unittest.TestCase):
                                         con=np.array([[1.0, 1.0], [1.0, 1.0]])),
                  promotes=['*'])
 
-        driver.add_param('x', low=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
+        driver.add_desvar('x', low=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
                          adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
         driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
@@ -263,13 +263,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
             prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('myparams.x', indices=[0, 3, 4])
+            prob.driver.add_desvar('myparams.x', indices=[0, 3, 4])
             prob.driver.add_objective('rosen.f')
 
             prob.setup(check=False)
@@ -278,7 +278,7 @@ class TestDriver(unittest.TestCase):
             with self.assertRaises(IndexError) as cm:
                 prob.run()
 
-            msg = "Index for parameter 'myparams.x' is out of bounds. "
+            msg = "Index for design var 'myparams.x' is out of bounds. "
             msg += "Requested index: [0 3 4], "
             msg += "shape: (4,)."
             raised_error = str(cm.exception)
@@ -292,13 +292,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
             prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('myparams.x')
+            prob.driver.add_desvar('myparams.x')
             prob.driver.add_objective('rosen.xxx', indices=[4])
 
             prob.setup(check=False)
@@ -321,13 +321,13 @@ class TestDriver(unittest.TestCase):
             prob.root.fd_options['force_fd'] = True
             prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', ParamComp('x', np.zeros(4)))
+            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
             prob.root.add('rosen', Rosenbrock(4))
 
             prob.root.connect('myparams.x', 'rosen.x')
 
             prob.driver = MySimpleDriver()
-            prob.driver.add_param('myparams.x')
+            prob.driver.add_desvar('myparams.x')
             prob.driver.add_constraint('rosen.xxx', indices=[4])
 
             prob.setup(check=False)

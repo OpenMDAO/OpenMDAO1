@@ -33,7 +33,7 @@ to a large float array (30,000,000 elements).
             self.local_size = self.size = int(size)
 
             #NOTE: we declare the variables at full size so that the component will work in serial too
-            self.add_param('x', shape=size)
+            self.add_desvar('x', shape=size)
             self.add_output('y', shape=size)
 
         def get_req_procs(self):
@@ -84,7 +84,7 @@ to a large float array (30,000,000 elements).
 
             #NOTE: this component depends on the full y array, so OpenMDAO
             #      will automatically gather all the values for it
-            self.add_param('y', val=np.zeros(size))
+            self.add_desvar('y', val=np.zeros(size))
             self.add_output('sum', shape=1)
 
         def solve_nonlinear(self, params, unknowns, resids):
@@ -111,7 +111,7 @@ Next we'll use these components to build an actual distributed model:
     import time
 
     from openmdao.core import Problem, Group
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
 
     from openmdao.core.mpi_wrap import MPI
 
@@ -128,7 +128,7 @@ Next we'll use these components to build an actual distributed model:
     prob = Problem(impl=impl)
     prob.root = Group()
 
-    prob.root.add('des_vars', ParamComp('x', np.ones(size)), promotes=['*'])
+    prob.root.add('des_vars', IndepVarComp('x', np.ones(size)), promotes=['*'])
     prob.root.add('plus', DistributedAdder(size), promotes=['*'])
     prob.root.add('summer', Summer(size), promotes=['*'])
 

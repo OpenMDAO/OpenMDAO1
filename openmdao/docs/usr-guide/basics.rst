@@ -90,7 +90,7 @@ Variables are added to the class in the constructor (*__init__* method) via the
 
     class MyComp(Component):
         def __init__(self):
-            self.add_param('x', val=0.)
+            self.add_desvar('x', val=0.)
 
             self.add_output('y', shape=1)
 
@@ -279,15 +279,15 @@ The general procedure for defining and solving a `Problem` in OpenMDAO is:
 
 A very basic example of defining and running a `Problem` as discussed here is shown below.
 This example makes use of a couple of convenience components to provide a source for the
-parameter (`ParamComp`) and to quickly define a `Component` for an equation (`ExecComp`).
+parameter (`IndepVarComp`) and to quickly define a `Component` for an equation (`ExecComp`).
 
 ::
 
     from openmdao.core import Group, Problem
-    from openmdao.components import ParamComp, ExecComp
+    from openmdao.components import IndepVarComp, ExecComp
 
     root = Group()
-    root.add('x_param', ParamComp('x', 7.0))
+    root.add('x_param', IndepVarComp('x', 7.0))
     root.add('mycomp', ExecComp('y=x*2.0'))
     root.connect('x_param.x', 'mycomp.x')
 

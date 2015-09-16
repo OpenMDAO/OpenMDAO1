@@ -22,7 +22,7 @@ class Simulation(Group):
         self.surrogate = surrogate
 
         mm = self.add("mm", MultiFiMetaModel(nfi=nfi))
-        mm.add_param('x', val=0.)
+        mm.add_desvar('x', val=0.)
         mm.add_output('f_x', val=(0.,0.), surrogate=surrogate)
 
 if __name__ == "__main__":
