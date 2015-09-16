@@ -139,5 +139,15 @@ class TestComponent(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def test_generate_numpydocstring(self):
+        self.comp.add_param("xxyyzz", 0.0)
+        self.comp.add_param("t", shape=2)
+        self.comp.add_output("x", -1)
+        self.comp.add_state("s1", 0.0)
+
+        test_string = self.comp.generate_docstring()
+        original_string = '\t"""\n\n\tParams\n\t----------\n    xxyyzz : paramdict\n{\'shape\': 1, \'size\': 1, \'val\': 0.0, \'promoted_name\': \'xxyyzz\'}\n        <Insert description here.>\n    t : paramdict\n{\'shape\': (2,), \'size\': 2, \'val\': array([ 0.,  0.]), \'promoted_name\': \'t\'}\n        <Insert description here.>\n    x : unknown\n {\'pass_by_obj\': True, \'size\': 0, \'val\': -1, \'promoted_name\': \'x\'}\n        <Insert description here.>\n    s1 : unknown\n {\'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0, \'promoted_name\': \'s1\'}\n        <Insert description here.>\n\n\tOptions\n\t----------\n\n    force_fd :  bool(False)\n        Set to True to finite difference this system.\n    step_size :  float(1e-06)\n        Default finite difference stepsize\n    step_type :  str(absolute)\n        Set to absolute, relative\n    form :  str(forward)\n        Finite difference mode. (forward, backward, central) You can also set to \'complex_step\' to peform the complex step method if your components support it.\n\n\t"""\n'
+        self.assertEqual(test_string, original_string)
+
 if __name__ == "__main__":
     unittest.main()

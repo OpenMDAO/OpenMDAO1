@@ -556,17 +556,6 @@ class Driver(object):
         #start the docstring off
         docstring = '\t\"\"\"\n'
 
-        if self._params:
-            docstring += '\n\tParams\n\t----------\n'
-
-        if self._params:
-            for key, value in iteritems(self._params):
-                docstring += "    "+key
-                docstring += " : param"
-                docstring += type(value).__name__
-                docstring += "\n" + str(value)
-                docstring += "\n        <Insert description here.>\n"
-
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
         firstTime = 1
@@ -576,7 +565,7 @@ class Driver(object):
                 if firstTime:  #start of Options docstring
                     docstring += '\n\tOptions\n\t----------\n\n'
                     firstTime = 0
-                for (name, val) in value.items():
+                for (name, val) in sorted(value.items()):
                         docstring += "    "+name
                         docstring += " :  " + type(val).__name__
                         docstring += "(" + str(val) + ")\n"
