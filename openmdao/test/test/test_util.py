@@ -80,7 +80,7 @@ class TestCase(unittest.TestCase):
         try:
             problem_derivatives_check(self, prob)
         except AssertionError as err:
-            self.assertIn("not less than or equal to 1e-05", err.message)
+            self.assertIn("not less than or equal to 1e-05", err.args[0])
 
 
 
