@@ -86,6 +86,30 @@ class TestPyoptSparse(unittest.TestCase):
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
+    def test_simple_paraboloid_lower(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
+        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_param('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
     def test_simple_paraboloid_equality(self):
 
         prob = Problem()

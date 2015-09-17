@@ -351,10 +351,12 @@ First, we need to add one more import to the beginning of our model.
 
 .. testcode:: parab
 
-    from openmdao.components import ConstraintComp
+    from openmdao.components import ExecComp
 
 
-We'll use a ConstraintComp to represent our constraint in the model.
+We'll use an `ExecComp` to represent our constraint in the model. An ExecComp
+is a shortcut that lets us easily create a component that defines a simple
+expression for us.
 
 
 .. testcode:: parab
@@ -368,7 +370,7 @@ We'll use a ConstraintComp to represent our constraint in the model.
     root.add('p', Paraboloid())
 
     # Constraint Equation
-    root.add('con', ConstraintComp('x - y > 15.', out='c'))
+    root.add('con', ExecComp('c = x-y'))
 
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
@@ -381,7 +383,7 @@ We'll use a ConstraintComp to represent our constraint in the model.
     top.driver.add_param('p1.x', low=-50, high=50)
     top.driver.add_param('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
-    top.driver.add_constraint('con.c')
+    top.driver.add_constraint('con.c', lower=15.0)
 
     top.setup()
     top.run()
@@ -389,21 +391,16 @@ We'll use a ConstraintComp to represent our constraint in the model.
     print('\n')
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
-Here, we added a ConstraintComp named 'con' to represent our constraint equation.
-For our expression, x - y > 15, 'con' is created with inputs 'x' and 'y', and
-we specified that the output name was 'c'. The `solve_nonlinear` and `jacobian`
-functions are implemented based on the equation.  The ConstraintComp
-automatically rearranges our constraint equation into the proper form such that
-its unknown 'c' will have a value less than zero if the constraint is satisfied
-and greater than 0 if it is violated.
+Here, we added an ExcComp named 'con' to represent part of our
+constraint inequality. Our constraint is "x - y > 15", so we have created an
+ExecComp that will evaluate the expression "x - y" and place that result into
+the unknown 'con.c'. To complete the definition of the constraint, we also
+need to connect our 'con' expression to 'x' and 'y' on the paraboloid.
 
-We also need to connect our 'con' expression to 'x' and 'y' on the
-paraboloid. Finally, we call add_constraint on the driver, giving it the
-output from the constraint component, which is 'con.c'. The default
-behavior for `add_constraint` is to add a nonlinear constraint like the one
-in our problem. You can also add a linear constraint, provided that your
-optimizer supports it (SLSQP does), by setting the ctype call attribute to
-'lin'.
+Finally, we need to tell the driver to use the unknown "con.c" as a
+constraint using the `add_constraint` method. This method takes the name of
+the variable and an "upper" or "lower" bound. Here we give it a lower bound
+of 15, which completes the inequality constraint "x - y > 15".
 
 
 So now, putting it all together, we can run the model and get this:

@@ -468,6 +468,10 @@ class Driver(object):
         if lower is not None and upper is not None and self.supports['two_sided_constraints'] is False:
             msg = "Driver does not support 2-sided constraint '{}'."
             raise RuntimeError(msg.format(name))
+        if lower is None and upper is None and equals is None:
+            msg = "Constraint '{}' needs to define lower, upper, or equals."
+            raise RuntimeError(msg.format(name))
+
 
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
