@@ -23,6 +23,8 @@ class DumpRecorder(BaseRecorder):
 
     def __init__(self, out='stdout'):
         super(DumpRecorder, self).__init__()
+        self._parallel = True
+
         if isinstance(out, string_types):
 
             if out == 'stdout':

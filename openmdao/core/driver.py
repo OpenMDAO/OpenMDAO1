@@ -547,15 +547,14 @@ class Driver(object):
         '''
         local_vars = []
 
-        for key, value in iteritems(vec):
-            if key in varnames:
-                if self.root.comm.rank == self.root._owning_ranks[key]:
-                    local_vars.append((key, value['val']))
+        for name in varnames:
+            if self.root.comm.rank == self.root._owning_ranks[name]:
+                local_vars.append((name, vec[name]))
 
         all_vars = self.root.comm.gather(local_vars, root=0)
 
         if self.root.comm.rank == 0:
-            return OrderedDict(itertools.chain(*all_vars))
+            return dict(itertools.chain(*all_vars))
 
     def record(self, metadata):
         '''
