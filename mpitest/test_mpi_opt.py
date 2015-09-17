@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from openmdao.components import IndepVarComp, ExecComp
-from openmdao.solvers import LinearGaussSeidel, PetscKSP
+from openmdao.solvers import LinearGaussSeidel
 from openmdao.core import Component, ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
@@ -174,9 +174,12 @@ class ParallelMPIOptAsym(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()  # this works too
+        #root.ln_solver = lin_solver()  # this works too (PetscKSP)
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
 
@@ -248,9 +251,12 @@ class ParallelMPIOptPromoted(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()
+        #root.ln_solver = lin_solver()
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
         par.ln_solver = LinearGaussSeidel()
@@ -351,9 +357,12 @@ class ParallelMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()
+        #root.ln_solver = lin_solver()
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
         par.ln_solver = LinearGaussSeidel()

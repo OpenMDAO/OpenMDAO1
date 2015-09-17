@@ -45,6 +45,21 @@ class SimpleCompDerivMatVec(SimpleComp):
             dparams['x'] = self.multiplier*dresids['y']
 
 
+class SimpleCompWrongDeriv(SimpleComp):
+    """ The simplest component you can imagine, this time with incorrect
+    derivatives."""
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                     mode):
+        """Returns the product of the incoming vector with the Jacobian."""
+
+        if mode == 'fwd':
+            dresids['y'] += 0.0
+
+        elif mode == 'rev':
+            dparams['x'] = 1e6
+
+
 class SimpleArrayComp(Component):
     """A fairly simple array component."""
 

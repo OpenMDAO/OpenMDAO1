@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from six import iteritems
+from six import iteritems, itervalues
 from collections import OrderedDict
 
 from openmdao.core.component import Component
@@ -77,7 +77,7 @@ class LinearGaussSeidel(LinearSolver):
 
             if mode == 'fwd':
 
-                for sub in system._local_subsystems:
+                for sub in itervalues(system._subsystems):
 
                     for voi in vois:
                         #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
@@ -85,6 +85,12 @@ class LinearGaussSeidel(LinearSolver):
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
                         #print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
+
+                    # we need to loop over all subsystems in order to make
+                    # the necessary collective calls to scatter, but only
+                    # active subsystems do anything else
+                    if not sub.is_active():
+                        continue
 
                     #print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
                     if isinstance(sub, Component):
@@ -118,16 +124,27 @@ class LinearGaussSeidel(LinearSolver):
 
             else:
 
-                for sub in reversed(system._local_subsystems):
+                for sub in reversed(list(itervalues(system._subsystems))):
+
+                    active = sub.is_active()
+
                     for voi in vois:
-                        dumat[voi].vec *= 0.0
+                        if active:
+                            dumat[voi].vec *= 0.0
 
                         #print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, mode='rev', deriv=True, var_of_interest=voi)
                         #print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                        dumat[voi].vec *= -1.0
-                        dumat[voi].vec += rhs_mat[voi]
+                        if active:
+                            dumat[voi].vec *= -1.0
+                            dumat[voi].vec += rhs_mat[voi]
+
+                    # we need to loop over all subsystems in order to make
+                    # the necessary collective calls to scatter, but only
+                    # active subsystems do anything else
+                    if not active:
+                        continue
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
                     #for voi in vois:

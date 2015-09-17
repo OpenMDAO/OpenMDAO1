@@ -206,6 +206,50 @@ class TestUnderPar(MPITestCase):
         assert_rel_error(self, J[unknown_list[0]][param][0][0], 6.0, 1e-6)
         assert_rel_error(self, J[unknown_list[1]][param][0][0], 45.0, 1e-6)
 
+class TestLinGSPar3(MPITestCase):
+
+    N_PROCS = 3
+
+    def test_fan_out_grouped(self):
+
+        prob = Problem(impl=impl)
+        prob.root = root = Group()
+
+        sub = root.add('sub', ParallelGroup())
+        pgroup = sub.add('pgroup', Group())
+        pgroup.add('p', IndepVarComp('x', 1.0))
+        pgroup.add('comp1', ExecComp(['y=3.0*x']))
+        sub.add('comp2', ExecComp(['y=-2.0*x']))
+        sub.add('comp3', ExecComp(['y=5.0*x']))
+
+        root.add('c2', ExecComp(['y=x']))
+        root.add('c3', ExecComp(['y=x']))
+        root.connect('sub.comp2.y', 'c2.x')
+        root.connect('sub.comp3.y', 'c3.x')
+
+        root.connect("sub.pgroup.comp1.y", "sub.comp2.x")
+        root.connect("sub.pgroup.comp1.y", "sub.comp3.x")
+        root.connect("sub.pgroup.p.x", "sub.pgroup.comp1.x")
+
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
+        prob.root.sub.pgroup.ln_solver = LinearGaussSeidel()
+
+        prob.setup(check=False)
+        prob.run()
+
+        param = 'sub.pgroup.p.x'
+        unknown_list = ['sub.comp2.y', "sub.comp3.y"]
+
+        J = prob.calc_gradient([param], unknown_list, mode='fwd', return_format='dict')
+
+        assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
+
+        J = prob.calc_gradient([param], unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J[unknown_list[0]][param][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J[unknown_list[1]][param][0][0], 15.0, 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
