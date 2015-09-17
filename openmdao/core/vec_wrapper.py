@@ -10,8 +10,6 @@ from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable, int_types
 from openmdao.util.string_util import get_common_ancestor
 
-#from openmdao.devtools.debug import *
-
 class _NoPlusEqArray(object):
     """
     This is here as a hack to get around the issue of unit conversions
@@ -114,8 +112,10 @@ class VecWrapper(object):
         Sets up the internal dict that maps absolute name to promoted name.
         """
         self._to_prom_name = {}
+        self._to_top_prom_name = {}
         for prom_name, meta in iteritems(self):
             self._to_prom_name[meta['pathname']] = prom_name
+            self._to_top_prom_name[prom_name] = meta['top_promoted_name']
 
     def __getitem__(self, name):
         """
@@ -908,8 +908,8 @@ class TgtVecWrapper(VecWrapper):
         Add an entry to this vecwrapper for the given unconnected variable so the
         component can access its value through the vecwrapper.
         """
+        sname = self._scoped_abs_name(pathname)
         vmeta = meta.copy()
-        vmeta['pass_by_obj'] = True
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:
@@ -919,8 +919,14 @@ class TgtVecWrapper(VecWrapper):
             raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
                                pathname)
 
+        if not vmeta.get('pass_by_obj'):
+            if isinstance(val, numpy.ndarray):
+                self.flat[sname] = val.flat
+            else:
+                self.flat[sname] = numpy.array([val])
+
         vmeta['val'] = _ByObjWrapper(val)
-        sname = self._scoped_abs_name(pathname)
+        vmeta['pass_by_obj'] = True
         self._vardict[sname] = vmeta
         func, flatfunc = self._setup_get_funct(sname)
         self._fastget[sname] = func

@@ -296,7 +296,7 @@ class PetscDataTransfer(object):
                 self.tgt_idxs = tgt_idxs
                 self.vec_conns = vec_conns
                 arrow = '-->' if mode == 'fwd' else '<--'
-                debug("'%s': new %s scatter (sizes: %d, %d)\n%s %s %s %s %s %s" %
+                debug("'%s': new %s scatter (sizes: %d, %d)\n   %s %s %s %s %s %s" %
                       (name, mode, len(src_idx_set.indices), len(tgt_idx_set.indices),
                        [v for u, v in vec_conns], arrow, [u for u, v in vec_conns],
                        src_idx_set.indices, arrow, tgt_idx_set.indices))
