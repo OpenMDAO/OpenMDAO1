@@ -668,25 +668,18 @@ class System(object):
             docstring += '\n\tParams\n\t----------\n'
 
         if self._params_dict:
-            for key, value in iteritems(self._params_dict):
-                docstring += "    "+key
-                docstring += " : param"
-                docstring += type(value).__name__
-                docstring += "\n" + str(value)
-                docstring += "\n        <Insert description here.>\n"
+            #for key, value in iteritems(self._params_dict):
+            for key, value in self._params_dict.items():
+                docstring += "    " + key + ": "
+                docstring += "param"
+                #docstring += type(value).__name__
+                docstring += "  (" + str(value) + ")\n"
 
         if self._unknowns_dict:
             for key, value in iteritems(self._unknowns_dict):
-                docstring += "    "+key
-                docstring += " : "
-                typ = type(value).__name__
-
-                if typ == 'dict':
-                    docstring += "unknown"
-                else:
-                    docstring += typ
-                docstring += "\n " + str(value)
-                docstring += "\n        <Insert description here.>\n"
+                docstring += "    " + key + " : "
+                docstring += "unknown"
+                docstring += "  (" + str(value) + ")\n"
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
@@ -695,9 +688,9 @@ class System(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t----------\n\n'
+                    docstring += '\n\tOptions\n\t----------\n'
                     firstTime = 0
-                for (name, val) in value.items():
+                for (name, val) in sorted(value.items()):
                     docstring += "    "+name
                     docstring += " :  " + type(val).__name__
                     docstring += "(" + str(val) + ")\n"
