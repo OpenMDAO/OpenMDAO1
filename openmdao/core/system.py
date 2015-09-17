@@ -668,17 +668,13 @@ class System(object):
             docstring += '\n\tParams\n\t----------\n'
 
         if self._params_dict:
-            #for key, value in iteritems(self._params_dict):
             for key, value in self._params_dict.items():
-                docstring += "    " + key + ": "
-                docstring += "param"
+                docstring += "    " + key + ": param"
                 #docstring += type(value).__name__
                 docstring += "  (" + str(value) + ")\n"
-
         if self._unknowns_dict:
-            for key, value in iteritems(self._unknowns_dict):
-                docstring += "    " + key + " : "
-                docstring += "unknown"
+            for key, value in self._unknowns_dict.items():
+                docstring += "    " + key + " : unknown"
                 docstring += "  (" + str(value) + ")\n"
 
         #Put options into docstring
