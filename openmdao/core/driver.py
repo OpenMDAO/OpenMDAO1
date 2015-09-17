@@ -566,3 +566,35 @@ class Driver(object):
         system.solve_nonlinear(metadata=metadata)
         for recorder in self.recorders:
             recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created Driver class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+        """
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
+
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        v = vars(self)
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n\tOptions\n\t----------\n'
+                    firstTime = 0
+                for (name, val) in sorted(value.items()):
+                        docstring += "    "+name
+                        docstring += " :  " + type(val).__name__
+                        docstring += "(" + str(val) + ")\n"
+                        desc = value._options[name]['desc']
+                        if(desc):
+                            docstring += "        " + desc + "\n"
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring

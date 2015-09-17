@@ -185,7 +185,7 @@ multi-point problem needs only a few minor modifications in order to run in para
 
 .. note::
 
-     You'll nedd to make sure you have mpi, mpi4py, petsc, and petsc4py installed
+     You'll need to make sure you have mpi, mpi4py, petsc, and petsc4py installed
      in order to do anything in parallel.
 
 All of the changes you're going to make are in the run-script itself.
