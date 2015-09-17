@@ -240,6 +240,16 @@ class TestDriver(unittest.TestCase):
 
         prob.driver = MySimpleDriver()
 
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1')
+
+        self.assertEqual(str(cm.exception), "Constraint 'con1' needs to define lower, upper, or equals.")
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1', lower=0.0, upper=1.1, equals=2.2)
+
+        self.assertEqual(str(cm.exception), "Constraint 'con1' cannot be both equality and inequality.")
+
         # Don't try this at home, kids
         prob.driver.supports['equality_constraints'] = False
 

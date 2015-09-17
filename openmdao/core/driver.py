@@ -457,7 +457,7 @@ class Driver(object):
         """
 
         if equals is not None and (lower is not None or upper is not None):
-            msg = "Constraint cannot be both equality and inequality."
+            msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))
         if equals is not None and self.supports['equality_constraints'] is False:
             msg = "Driver does not support equality constraint '{}'."
