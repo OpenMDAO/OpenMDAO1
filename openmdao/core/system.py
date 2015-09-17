@@ -680,7 +680,7 @@ class System(object):
                     if (dictPosition != dictItemCount):
                         docstring += ", "
                     dictPosition += 1
-                docstring += "})"
+                docstring += "})\n"
 
         if self._unknowns_dict:
             for key, value in self._unknowns_dict.items():
@@ -692,7 +692,7 @@ class System(object):
                     if (dictPosition != dictItemCount):
                         docstring += ", "
                     dictPosition += 1
-                docstring += "})"
+                docstring += "})\n"
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
