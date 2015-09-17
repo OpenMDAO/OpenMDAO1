@@ -250,6 +250,11 @@ class TestDriver(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), "Constraint 'con1' cannot be both equality and inequality.")
 
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1', lower=0.0, upper=1.1)
+
+        self.assertEqual(str(cm.exception), "Driver does not support 2-sided constraint 'con1'.")
+
         # Don't try this at home, kids
         prob.driver.supports['equality_constraints'] = False
 
