@@ -669,13 +669,30 @@ class System(object):
 
         if self._params_dict:
             for key, value in self._params_dict.items():
-                docstring += "    " + key + ": param"
                 #docstring += type(value).__name__
-                docstring += "  (" + str(value) + ")\n"
+                docstring += "    " + key + ": param ({"
+                #get the values out in order
+                dictItemCount = len(value)
+                dictPosition = 1
+                for k in sorted(value):
+                    docstring +=  "'" +k+ "'" + ": " + str(value[k])
+                    #don't want a trailing comma
+                    if (dictPosition != dictItemCount):
+                        docstring += ", "
+                    dictPosition += 1
+                docstring += "})"
+
         if self._unknowns_dict:
             for key, value in self._unknowns_dict.items():
-                docstring += "    " + key + " : unknown"
-                docstring += "  (" + str(value) + ")\n"
+                docstring += "    " + key + " : unknown ({"
+                dictItemCount = len(value)
+                dictPosition = 1
+                for k in sorted(value):
+                    docstring += "'" +k+ "'" + ": " + str(value[k])
+                    if (dictPosition != dictItemCount):
+                        docstring += ", "
+                    dictPosition += 1
+                docstring += "})"
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
