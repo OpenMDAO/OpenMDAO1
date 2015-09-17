@@ -391,7 +391,7 @@ expression for us.
     print('\n')
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
-Here, we added an ExcComp named 'con' to represent part of our
+Here, we added an ExecComp named 'con' to represent part of our
 constraint inequality. Our constraint is "x - y > 15", so we have created an
 ExecComp that will evaluate the expression "x - y" and place that result into
 the unknown 'con.c'. To complete the definition of the constraint, we also
