@@ -135,8 +135,8 @@ class pyOptSparseDriver(Driver):
             size = con_meta[name]['size']
 
             # Bounds - double sided is supported
-            lower = con_meta[name].get('lower')
-            upper = con_meta[name].get('upper')
+            lower = con_meta[name]['lower']
+            upper = con_meta[name]['upper']
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(param_list)
