@@ -523,6 +523,51 @@ class Driver(object):
         """
         return self._cons
 
+    def _gather_vars(self, vec, varnames):
+        '''
+        Gathers and returns only variables listed in 
+        `varnames` from the vector `vec`
+        '''
+        local_vars = []
+
+        for name in varnames:
+            if self.root.comm.rank == self.root._owning_ranks[name]:
+                local_vars.append((name, vec[name]))
+
+        all_vars = self.root.comm.gather(local_vars, root=0)
+
+        if self.root.comm.rank == 0:
+            return dict(itertools.chain(*all_vars))
+
+    def record(self, metadata):
+        '''
+        Gathers variables for non-parallel case recorders and
+        calls record for all recorders
+
+        Args
+        ----
+        metadata: `dict`
+        Metadata for iteration coordinate
+        '''
+        params = self.root.params
+        unknowns = self.root.unknowns
+        resids = self.root.resids
+
+        if MPI and self._vars_to_record is not None:
+            pnames = self._vars_to_record['pnames']
+            unames = self._vars_to_record['unames']
+            rnames = self._vars_to_record['rnames']
+            
+            params = self._gather_vars(params, pnames)
+            unknowns = self._gather_vars(unknowns, unames)
+            resids = self._gather_vars(resids, rnames)
+        
+        # If the recorder does not support parallel recording
+        # we need to make sure we only record on rank 0.
+        for recorder in self.recorders:
+            if self.root.comm.rank == 0 or recorder._parallel:
+                recorder.record(params, unknowns, resids, metadata)
+
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
 
@@ -541,8 +586,7 @@ class Driver(object):
 
         # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+        self.record(metadata)
 
     def generate_docstring(self):
         """

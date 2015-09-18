@@ -59,39 +59,52 @@ class BaseRecorder(object):
         # Did not match anything in includes.
         return False
 
-    def raw_record(self, params, unknowns, resids, metadata):
-        """
-        This is the method that drivers and solvers will call during their
-        execution to record their current state. This method is responsible
-        for filtering the provided data to reflect the includes/excludes
-        provided by the user and then calling `self.record`.
+    def _get_pathname(self, iteration_coordinate):
+        return '.'.join(iteration_coordinate[4::2])
 
-        Recorder subclasses should override `record`, altering this function
-        should not be necessary.
-
-        Args
-        ----
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        resids : `VecWrapper`
-            `VecWrapper` containing residuals. (r)
-
-        metadata : dict
-            Dictionary containing execution metadata (e.g. iteration coordinate).
-        """
-
-        # Coord will look like ['Driver', (1,), 'root', (1,), 'G1', (1,1), ...]
-        # So the pathname is every other entry, starting with the fifth.
-        pathname = '.'.join(metadata['coord'][4::2])
+    def _filter_vectors(self, params, unknowns, resids, iteration_coordinate):
+        pathname = self._get_pathname(iteration_coordinate)
         pnames, unames, rnames = self._filtered[pathname]
-        filtered_params = {key: params[key] for key in pnames}
-        filtered_unknowns = {key: unknowns[key] for key in unames}
-        filtered_resids = {key: resids[key] for key in rnames}
-        self.record(filtered_params, filtered_unknowns, filtered_resids, metadata)
+
+        params = {key: params[key] for key in pnames}
+        unknowns = {key: unknowns[key] for key in unames}
+        resids = {key: resids[key] for key in rnames}
+
+        return params, unknowns, resids
+
+    #def raw_record(self, params, unknowns, resids, metadata):
+    #    """
+    #    This is the method that drivers and solvers will call during their
+    #    execution to record their current state. This method is responsible
+    #    for filtering the provided data to reflect the includes/excludes
+    #    provided by the user and then calling `self.record`.
+
+    #    Recorder subclasses should override `record`, altering this function
+    #    should not be necessary.
+
+    #    Args
+    #    ----
+    #    params : `VecWrapper`
+    #        `VecWrapper` containing parameters. (p)
+
+    #    unknowns : `VecWrapper`
+    #        `VecWrapper` containing outputs and states. (u)
+
+    #    resids : `VecWrapper`
+    #        `VecWrapper` containing residuals. (r)
+
+    #    metadata : dict
+    #        Dictionary containing execution metadata (e.g. iteration coordinate).
+    #    """
+
+    #    # Coord will look like ['Driver', (1,), 'root', (1,), 'G1', (1,1), ...]
+    #    # So the pathname is every other entry, starting with the fifth.
+    #    pathname = '.'.join(metadata['coord'][4::2])
+    #    pnames, unames, rnames = self._filtered[pathname]
+    #    filtered_params = {key: params[key] for key in pnames}
+    #    filtered_unknowns = {key: unknowns[key] for key in unames}
+    #    filtered_resids = {key: resids[key] for key in rnames}
+    #    self.record(filtered_params, filtered_unknowns, filtered_resids, metadata)
 
     def record(self, params, unknowns, resids, metadata):
         """ Records the requested variables. This method must be defined in
