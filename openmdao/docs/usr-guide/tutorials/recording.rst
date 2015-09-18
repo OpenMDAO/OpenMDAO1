@@ -4,11 +4,10 @@
 Recording
 =========
 
-In a previous example, we looked at the Paraboloid component. This tutorial
-builds on this example by adding optimization and demonstrating how to
-save the data generated for future use. Consider the code below:
+This tutorial is builds on the :ref:`Optimization of the Paraboloid Tutorial <paraboloid_optimization_tutorial>`
+by demonstrating how to save the data generated for future use. Consider the code below:
 
-::
+.. testcode:: recording
 
     from openmdao.components import ParamComp
     from openmdao.core import Component, Group, Problem
@@ -54,15 +53,19 @@ save the data generated for future use. Consider the code below:
 
         root = top.root = Group()
 
-        root.add('p1', ParamComp('x', 3.0), promotes=['*'])
-        root.add('p2', ParamComp('y', -4.0), promotes=['*'])
-        paraboloid = root.add('p', Paraboloid(), promotes=['*'])
+        root.add('p1', ParamComp('x', 3.0))
+        root.add('p2', ParamComp('y', -4.0))
+        root.add('p', Paraboloid())
 
-        top.driver = driver = ScipyOptimizer()
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
 
-        driver.add_param('x')
-        driver.add_param('y')
-        driver.add_objective('f_xy')
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+
+        top.driver.add_param('p1.x', low=-50, high=50)
+        top.driver.add_param('p2.y', low=-50, high=50)
+        top.driver.add_objective('p.f_xy')
 
         recorder = SqliteRecorder('paraboloid')
         driver.add_recorder(recorder)
@@ -70,25 +73,20 @@ save the data generated for future use. Consider the code below:
         top.setup()
         top.run()
 
-This script is very similar to the code in the Paraboloid tutorial, with a few important differences.
+        driver.recorders[0].close()
 
-::
+        print('\n')
+        print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
-    top.driver = driver = ScipyOptimizer()
-
-    driver.add_param('x')
-    driver.add_param('y')
-    driver.add_objective('f_xy')
-
-We add an optimizer to the problem and initialize it.
+Two lines are all it takes to record the state of the problem as the
+optimizer progresses. 
 
 ::
 
     recorder = SqliteRecorder('paraboloid')
     driver.add_recorder(recorder)
 
-These two lines are all it takes to record the state of the problem as the
-optimizer progresses. We initialize a `SqliteRecorder` by passing it a
+We initialize a `SqliteRecorder` by passing it a
 `filename` argument. This recorder indirectly uses Python's `sqlite3` module to store the
 data generated. In this case, `sqlite3` will open a database file named 'paraboloid'
 to use as a back-end. 
@@ -96,11 +94,33 @@ Actually, OpenMDAO's `SqliteRecorder` makes use of the
 `sqlitedict module <https://pypi.python.org/pypi/sqlitedict>`_ because it has a
 simple, Pythonic dict-like interface to Python’s sqlite3 database.
 
-We then attach the recorder to the driver using `driver.add_recorder`.
-Depending on your needs, you are able to attach more recorders by using
+We then add the recorder to the driver using `driver.add_recorder`.
+Depending on your needs, you are able to add more recorders by using
 additional `driver.add_recorder` calls. Solvers also have an `add_recorder`
 method that is invoked the same way. This allows you to record the evolution
 of variables at lower levels.
+
+While it might not be an issue, it is good practice to close the 
+recorder explicitly before the program terminates.
+For this tutorial with one recorder added to the driver, this is simply done with:
+
+::
+
+    driver.recorders[0].close()
+
+If your model has recorders added to both drivers and solvers,
+a way to make sure all recorders are closed is to use code like this:
+
+::
+
+    for recorder in top.driver.recorders:
+        recorder.close()
+
+    for sub in top.root.subgroups(recurse=True, include_self=True):
+        for recorder in sub.nl_solver.recorders:
+            recorder.close()
+        for recorder in sub.ln_solver.recorders:
+            recorder.close()
 
 
 Includes and Excludes
@@ -152,7 +172,7 @@ and drivers may have sub-steps that are recorded. In those cases, the
 iteration number may be of the form '1-3', indicating the third sub-step of the
 first iteration.
 
-Since our Paraboloid only has a recorder attached to the driver, our
+Since our Paraboloid only has a recorder added to the driver, our
 'paraboloid' sqlite file will contain keys of the form 'SLSQP/1', 'SLSQP/2',
 etc. To access the data from our run, we can use the following code:
 
@@ -164,7 +184,7 @@ etc. To access the data from our run, we can use the following code:
 
 There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
 is the name of the sqlite database file. The second, `'openmdao'`, is the name of the table
-in the sqlite database. For the SqliteRecorder in OpenMDAO, all the case 
+in the sqlite database. For the SqliteRecorder in OpenMDAO, all the  
 recording is done to the `'openmdao'` table.
 
 Now, we can access the data using an iteration coordinate.
