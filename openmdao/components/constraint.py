@@ -1,9 +1,15 @@
+""" ConstraintComp is now deprecated."""
+
+import warnings
 
 from openmdao.components.exec_comp import ExecComp
 
 
 class ConstraintComp(ExecComp):
     """
+
+    ConstraintComp is deprecated. Please see the basic tutorial for more information.
+
     A Component that represents an equality or inequality constraint.
 
     Args
@@ -18,6 +24,12 @@ class ConstraintComp(ExecComp):
     """
 
     def __init__(self, expr, out='out'):
+
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("ConstraintComp is deprecated, see the new add_constraint interface.",
+                      DeprecationWarning,stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
+
         newexpr = _combined_expr(expr)
         super(ConstraintComp, self).__init__("%s = %s" % (out, newexpr))
 
