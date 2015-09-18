@@ -15,7 +15,7 @@ class SolverBase(object):
         desc = 'Set to 0 to disable printing, set to 1 to print the ' \
                'residual to stdout each iteration, set to 2 to print ' \
                'subiteration residuals as well.'
-        self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
+        self.options.add_option('iprint', 1, values=[0, 1, 2], desc=desc)
         self.recorders = []
         self.local_meta = None
 
@@ -29,7 +29,7 @@ class SolverBase(object):
         """
         pass
 
-    def print_norm(self, solver_string, metadata, iteration, res, res0,
+    def print_norm(self, solver_string, pathname, iteration, res, res0,
                    msg=None, indent=0, solver='NL'):
         """ Prints out the norm of the residual in a neat readable format.
 
@@ -39,8 +39,8 @@ class SolverBase(object):
             Unique string to identify your solver type (e.g., 'LN_GS' or
             'NEWTON').
 
-        metadata: dict
-            OpenMDAO execution metadata containing iteration info.
+        pathname: dict
+            Parent system pathname.
 
         iteration: int
             Current iteration number
@@ -60,11 +60,13 @@ class SolverBase(object):
         solver: string, optional
             Solver type if not LN or NL (mostly for line search operations.)
         """
-        name = metadata['name']
+        if pathname=='':
+            name = 'root'
+        else:
+            name = 'root.' + pathname
 
         # Find indentation level
-        level = sum(len(item) for item in metadata['coord']
-                    if not isinstance(item, str))
+        level = pathname.count('.')
         # No indentation for driver; top solver is no indentation.
         level = level + indent - 2
 
