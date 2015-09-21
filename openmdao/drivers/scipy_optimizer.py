@@ -157,7 +157,10 @@ class ScipyOptimizer(Driver):
                 size = meta['size']
                 for j in range(0, size):
                     con_dict = {}
-                    con_dict['type'] = meta['ctype']
+                    if meta['equals'] is not None:
+                        con_dict['type'] = 'eq'
+                    else:
+                        con_dict['type'] = 'ineq'
                     con_dict['fun'] = self.confunc
                     if opt in _constraint_grad_optimizers:
                         con_dict['jac'] = self.congradfunc
@@ -264,14 +267,18 @@ class ScipyOptimizer(Driver):
         """
 
         cons = self.con_cache
+        meta = self._cons[name]
 
-        #print("Constraint returned")
-        #print(x_new)
-        #print(name, idx, cons[name][idx])
+        # Equality constraints
+        if meta['equals'] is not None:
+            return meta['equals'] - cons[name][idx]
 
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        return -cons[name][idx]
+        if meta['upper'] is not None:
+            return meta['upper'] - cons[name][idx]
+        else:
+            return cons[name][idx] - meta['lower']
 
     def gradfunc(self, x_new):
         """ Function that evaluates and returns the objective function.
@@ -321,12 +328,20 @@ class ScipyOptimizer(Driver):
         """
 
         grad = self.grad_cache
+        meta = self._cons[name]
         grad_idx = self.con_idx[name] + idx + 1
 
         #print("Constraint Gradient returned")
         #print(x_new)
         #print(name, idx, grad[grad_idx, :])
 
+        # Equality constraints
+        if meta['equals'] is not None:
+            return -grad[grad_idx, :]
+
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        return -grad[grad_idx, :]
+        if meta['upper'] is not None:
+            return -grad[grad_idx, :]
+        else:
+            return grad[grad_idx, :]
