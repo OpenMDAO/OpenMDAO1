@@ -261,6 +261,7 @@ The output should look like this:
 
 Future tutorials will show more complex `Problems`.
 
+.. _`paraboloid_optimization_tutorial`:
 
 Optimization of the Paraboloid
 ==============================

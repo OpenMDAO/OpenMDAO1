@@ -40,5 +40,5 @@ class RunOnce(NonLinearSolver):
         system.children_solve_nonlinear(local_meta)
 
         for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns, system.resids, local_meta)
+            recorder.record(system.params, system.unknowns, system.resids, local_meta)
 
