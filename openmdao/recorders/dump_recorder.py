@@ -80,9 +80,13 @@ class DumpRecorder(BaseRecorder):
             return
 
         iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
         params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         write = self.out.write
+        fmat = "Timestamp: {0!r}\n"
+        write(fmat.format(timestamp))
+
         fmat = "Iteration Coordinate: {0:s}\n"
         write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
