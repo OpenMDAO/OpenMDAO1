@@ -1210,13 +1210,11 @@ class Problem(System):
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        for recorder in self.driver.recorders:
-            recorder.startup(self.root)
+        self.driver.recorders.startup(self.root)
 
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
-                for recorder in solver.recorders:
-                    recorder.startup(group)
+                solver.recorders.startup(group)
 
     def _check_for_matrix_matrix(self, params, unknowns):
         """ Checks a system hiearchy to make sure that no settings violate the
