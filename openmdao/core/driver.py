@@ -569,7 +569,7 @@ class Driver(object):
 
     def _gather_vars(self, vec, varnames):
         '''
-        Gathers and returns only variables listed in 
+        Gathers and returns only variables listed in
         `varnames` from the vector `vec`
         '''
         local_vars = []
@@ -601,11 +601,11 @@ class Driver(object):
             pnames = self._vars_to_record['pnames']
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']
-            
+
             params = self._gather_vars(params, pnames)
             unknowns = self._gather_vars(unknowns, unames)
             resids = self._gather_vars(resids, rnames)
-        
+
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self.recorders:
@@ -662,7 +662,6 @@ class Driver(object):
                         docstring += str(val)
                         if type(val).__name__ == 'str': docstring += "'"
                         docstring += ")\n"
-                        #docstring += "(" + str(val) + ")\n"
                         desc = value._options[name]['desc']
                         if(desc):
                             docstring += "        " + desc + "\n"
