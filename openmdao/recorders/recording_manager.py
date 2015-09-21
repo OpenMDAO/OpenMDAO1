@@ -1,4 +1,5 @@
 import itertools
+import time
 from openmdao.core.mpi_wrap import MPI
 
 class RecordingManager(object):
@@ -64,6 +65,7 @@ class RecordingManager(object):
         metadata: `dict`
         Metadata for iteration coordinate
         '''
+        metadata['timestamp'] = time.time()
         params = self._root.params
         unknowns = self._root.unknowns
         resids = self._root.resids
