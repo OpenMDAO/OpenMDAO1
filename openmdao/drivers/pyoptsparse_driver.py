@@ -25,9 +25,9 @@ class pyOptSparseDriver(Driver):
 	-------
     equality_constraints :  bool(True)
     inequality_constraints :  bool(True)
-    integer_parameters :  bool(True)
-    linear_constraints :  bool(True)
-    multiple_objectives :  bool(True)
+    integer_parameters :  bool(False)
+    linear_constraints :  bool(False)
+    multiple_objectives :  bool(False)
     two_sided_constraints :  bool(True)
     exit_flag :  int(0)
         0 for fail, 1 for ok
