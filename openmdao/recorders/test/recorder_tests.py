@@ -1,5 +1,5 @@
 import unittest
-
+import time
 from openmdao.core.problem import Problem
 from openmdao.recorders import BaseRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
@@ -9,9 +9,16 @@ class RecorderTests(object):
     class Tests(unittest.TestCase):
         recorder = BaseRecorder()
         eps = 1e-5
+        t0 = None
+        t1 = None
 
         def assertDatasetEquals(self, expected, tolerance):
             self.fail("assertDatasetEquals not implemented!")
+
+        def run_problem(self, problem):
+            self.t0 = time.time()
+            problem.run()
+            self.t1 = time.time()
 
         def tearDown(self):
             self.recorder.close()
@@ -21,7 +28,8 @@ class RecorderTests(object):
             prob.root = ConvergeDiverge()
             prob.driver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+
+            self.run_problem(prob)
 
             expected_params = [
                 ("comp1.x1", 2.0),
@@ -72,7 +80,7 @@ class RecorderTests(object):
             prob.driver.add_recorder(self.recorder)
             self.recorder.options['includes'] = ['comp1.*']
             prob.setup(check=False)
-            prob.run()
+            self.run_problem(prob)
 
             expected_params = [
                 ("comp1.x1", 2.0)
@@ -100,7 +108,7 @@ class RecorderTests(object):
             self.recorder.options['includes'] = ['comp1.*']
             self.recorder.options['excludes'] = ["*.y2"]
             prob.setup(check=False)
-            prob.run()
+            self.run_problem(prob)
 
             expected_params = [
                 ("comp1.x1", 2.0)
@@ -124,7 +132,7 @@ class RecorderTests(object):
             prob.root = ConvergeDiverge()
             prob.root.nl_solver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run_problem(prob)
 
             expected_params = [
                 ("comp1.x1", 2.0),
@@ -175,7 +183,7 @@ class RecorderTests(object):
             prob.root = ExampleGroup()
             prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run_problem(prob)
 
             expected_params = [
                 ("C2.x", 5.0)
@@ -200,7 +208,7 @@ class RecorderTests(object):
             prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
             prob.driver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run_problem(prob)
 
             g1_expected_params = [
                 ("C2.x", 5.0)
