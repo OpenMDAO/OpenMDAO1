@@ -31,6 +31,23 @@ class ScipyOptimizer(Driver):
     optimizers. Inequality constraints are supported by COBYLA and SLSQP,
     but equality constraints are only supported by COBYLA. None of the other
     optimizers support constraints.
+
+	Options
+	----------
+    equality_constraints :  bool(True)
+    inequality_constraints :  bool(True)
+    integer_parameters :  bool(False)
+    linear_constraints :  bool(False)
+    multiple_objectives :  bool(False)
+    two_sided_constraints :  bool(False)
+    disp :  bool(True)
+        Set to False to prevent printing of Scipy convergence messages
+    maxiter :  int(200)
+        Maximum number of iterations.
+    optimizer :  str(SLSQP)
+        Name of optimizer to use
+    tol :  float(1e-06)
+        Tolerance for termination. For detailed control, use solver-specific options.
     """
 
     def __init__(self):

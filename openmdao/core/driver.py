@@ -563,7 +563,7 @@ class Driver(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t----------\n'
+                    docstring += '\n\tOptions\n\t-------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
                         docstring += "    "+name
