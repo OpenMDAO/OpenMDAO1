@@ -28,10 +28,10 @@ class Driver(object):
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('inequality_constraints', True)
         self.supports.add_option('equality_constraints', True)
-        self.supports.add_option('linear_constraints', False)
-        self.supports.add_option('multiple_objectives', False)
-        self.supports.add_option('two_sided_constraints', False)
-        self.supports.add_option('integer_parameters', False)
+        self.supports.add_option('linear_constraints', True)
+        self.supports.add_option('multiple_objectives', True)
+        self.supports.add_option('two_sided_constraints', True)
+        self.supports.add_option('integer_parameters', True)
 
         # This driver's options
         self.options = OptionsDictionary()
