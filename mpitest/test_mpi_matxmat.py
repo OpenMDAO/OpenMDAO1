@@ -61,8 +61,8 @@ class MatMatTestCase(MPITestCase):
 
         # Parallel Groups
         prob.driver.add_param('p.x')
-        prob.driver.add_constraint('c2.y')
-        prob.driver.add_constraint('c3.y')
+        prob.driver.add_constraint('c2.y', upper=0.0)
+        prob.driver.add_constraint('c3.y', upper=0.0)
 
         prob.setup(check=False)
         prob.run()
@@ -156,8 +156,8 @@ class MatMatTestCase(MPITestCase):
 
         # Parallel Groups
         prob.driver.add_param('p.x')
-        prob.driver.add_constraint('c2.y')
-        prob.driver.add_constraint('c3.y')
+        prob.driver.add_constraint('c2.y', upper=0.0)
+        prob.driver.add_constraint('c3.y', upper=0.0)
         prob.driver.parallel_derivs(['c2.y','c3.y'])
 
         if MPI:
@@ -209,8 +209,8 @@ class MatMatIndicesTestCase(MPITestCase):
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
         prob.driver.add_param('p.x', indices=[1,2])
-        prob.driver.add_constraint('c4.y', indices=[1])
-        prob.driver.add_constraint('c5.y', indices=[2])
+        prob.driver.add_constraint('c4.y', upper=0.0, indices=[1])
+        prob.driver.add_constraint('c5.y', upper=0.0, indices=[2])
         prob.driver.parallel_derivs(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')

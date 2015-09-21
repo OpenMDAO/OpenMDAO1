@@ -427,19 +427,27 @@ class Driver(object):
 
         return objs
 
-    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None,
-                       indices=None, adder=0.0, scaler=1.0):
-        """ Adds a constraint to this driver.
+    def add_constraint(self, name, lower=None, upper=None, equals=None,
+                       linear=False, jacs=None, indices=None, adder=0.0,
+                       scaler=1.0):
+        """ Adds a constraint to this driver. For inequality constraints,
+        `lower` or `upper` must be specified. For equality constraints, `equals`
+        must be specified.
 
         Args
         ----
         name : string
-            Promoted pathname of the output that will serve as the objective.
+            Promoted pathname of the output that will serve as the quantity to
+            constrain.
 
-        ctype : string
-            Set to 'ineq' for inequality constraints, or 'eq' for equality
-            constraints. Make sure your driver supports the ctype of constraint
-            that you are adding.
+        lower : float or ndarray, optional
+             Constrain the quantity to be greater than this value.
+
+        upper : float or ndarray, optional
+             Constrain the quantity to be less than this value.
+
+        equals : float or ndarray, optional
+             Constrain the quantity to be equal to this value.
 
         linear : bool, optional
             Set to True if this constraint is linear with respect to all params
@@ -465,24 +473,43 @@ class Driver(object):
             is second in precedence.
         """
 
-        if ctype == 'eq' and self.supports['equality_constraints'] is False:
+        if equals is not None and (lower is not None or upper is not None):
+            msg = "Constraint '{}' cannot be both equality and inequality."
+            raise RuntimeError(msg.format(name))
+        if equals is not None and self.supports['equality_constraints'] is False:
             msg = "Driver does not support equality constraint '{}'."
             raise RuntimeError(msg.format(name))
-        if ctype == 'ineq' and self.supports['inequality_constraints'] is False:
+        if equals is None and self.supports['inequality_constraints'] is False:
             msg = "Driver does not support inequality constraint '{}'."
             raise RuntimeError(msg.format(name))
+        if lower is not None and upper is not None and self.supports['two_sided_constraints'] is False:
+            msg = "Driver does not support 2-sided constraint '{}'."
+            raise RuntimeError(msg.format(name))
+        if lower is None and upper is None and equals is None:
+            msg = "Constraint '{}' needs to define lower, upper, or equals."
+            raise RuntimeError(msg.format(name))
 
-        if isinstance(adder, np.ndarray):
-            adder = adder.flatten()
+
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(lower, np.ndarray):
+            lower = lower.flatten()
+        if isinstance(upper, np.ndarray):
+            upper = upper.flatten()
+        if isinstance(equals, np.ndarray):
+            equals = equals.flatten()
 
         con = {}
+        con['lower'] = lower
+        con['upper'] = upper
+        con['equals'] = equals
         con['linear'] = linear
-        con['ctype'] = ctype
         con['adder'] = adder
         con['scaler'] = scaler
         con['jacs'] = jacs
+
         if indices:
             con['indices'] = indices
         self._cons[name] = con
@@ -516,10 +543,10 @@ class Driver(object):
             if lintype == 'nonlinear' and meta['linear']:
                 continue
 
-            if ctype == 'eq' and meta['ctype'] == 'ineq':
+            if ctype == 'eq' and meta['equals'] is None:
                 continue
 
-            if ctype == 'ineq' and meta['ctype'] == 'eq':
+            if ctype == 'ineq' and meta['equals'] is not None:
                 continue
 
             scaler = meta['scaler']
