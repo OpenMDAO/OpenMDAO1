@@ -23,11 +23,11 @@ class UnitComp(Component):
 	-------
     force_fd :  bool(False)
         Set to True to finite difference this system.
-    form :  str(forward)
+    form :  str('forward')
         Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
     step_size :  float(1e-06)
         Default finite difference stepsize
-    step_type :  str(absolute)
+    step_type :  str('absolute')
         Set to absolute, relative
 
     """

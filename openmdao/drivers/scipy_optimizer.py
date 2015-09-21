@@ -32,8 +32,8 @@ class ScipyOptimizer(Driver):
     but equality constraints are only supported by COBYLA. None of the other
     optimizers support constraints.
 
-	Options
-	----------
+    Options
+    -------
     equality_constraints :  bool(True)
     inequality_constraints :  bool(True)
     integer_parameters :  bool(False)
@@ -44,7 +44,7 @@ class ScipyOptimizer(Driver):
         Set to False to prevent printing of Scipy convergence messages
     maxiter :  int(200)
         Maximum number of iterations.
-    optimizer :  str(SLSQP)
+    optimizer :  str('SLSQP')
         Name of optimizer to use
     tol :  float(1e-06)
         Tolerance for termination. For detailed control, use solver-specific options.
@@ -253,10 +253,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 
@@ -314,10 +312,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 

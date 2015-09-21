@@ -706,7 +706,12 @@ class System(object):
                 for (name, val) in sorted(value.items()):
                     docstring += "    "+name
                     docstring += " :  " + type(val).__name__
-                    docstring += "(" + str(val) + ")\n"
+                    docstring += "("
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += str(val)
+                    if type(val).__name__ == 'str': docstring += "'" 
+                    docstring += ")\n"
+
                     desc = value._options[name]['desc']
                     if(desc):
                         docstring += "        " + desc + "\n"
