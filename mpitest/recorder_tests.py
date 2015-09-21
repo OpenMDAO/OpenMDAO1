@@ -49,6 +49,13 @@ class RecorderTests(object):
         N_PROCS = 2
         recorder = BaseRecorder()
         eps = 1e-5
+        t0 = None
+        t1 = None
+
+        def run(self, problem):
+            self.t0 = time.time()
+            problem.run()
+            self.t1 = time.time()
 
         def assertDatasetEquals(self, expected, tolerance):
             self.fail("assertDatasetEquals not implemented!")
@@ -71,7 +78,7 @@ class RecorderTests(object):
             prob.root.connect('G1.P2.x', 'C1.b')
             prob.driver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
             
             if not MPI or prob.root.comm.rank == 0:
 
@@ -119,7 +126,7 @@ class RecorderTests(object):
             prob.driver.add_recorder(self.recorder)
             self.recorder.options['includes'] = ['C1.*']
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
 
             if not MPI or prob.root.comm.rank == 0:
                 expected_params = [
@@ -163,7 +170,7 @@ class RecorderTests(object):
             self.recorder.options['includes'] = ['C1.*']
             self.recorder.options['excludes'] = ['*.out*']
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
 
             if not MPI or prob.root.comm.rank == 0:
                 expected_params = [
@@ -201,7 +208,7 @@ class RecorderTests(object):
             prob.root.connect('G1.P2.x', 'C1.b')
             prob.root.nl_solver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
             
             if not MPI or prob.root.comm.rank == 0:
 
