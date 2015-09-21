@@ -610,7 +610,7 @@ class Driver(object):
         # we need to make sure we only record on rank 0.
         for recorder in self.recorders:
             if self.root.comm.rank == 0 or recorder._parallel:
-                recorder.raw_record(params, unknowns, resids, metadata)
+                recorder.record(params, unknowns, resids, metadata)
 
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.

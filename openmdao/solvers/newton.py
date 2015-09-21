@@ -105,7 +105,7 @@ class Newton(NonLinearSolver):
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 
             for recorder in self.recorders:
-                recorder.raw_record(params, unknowns, resids, local_meta)
+                recorder.record(params, unknowns, resids, local_meta)
 
             f_norm = resids.norm()
             if self.options['iprint'] > 0:
@@ -129,7 +129,7 @@ class Newton(NonLinearSolver):
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
 
                 for recorder in self.recorders:
-                    recorder.raw_record(params, unknowns, resids, local_meta)
+                    recorder.record(params, unknowns, resids, local_meta)
 
                 f_norm = resids.norm()
                 if self.options['iprint'] > 1:

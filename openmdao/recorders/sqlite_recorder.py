@@ -34,8 +34,9 @@ class SqliteRecorder(BaseRecorder):
         """
 
         iteration_coordinate = metadata['coord']
+        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
         group_name = format_iteration_coordinate(iteration_coordinate)
-
+        
         data = OrderedDict([('Parameters', params),
                             ('Unknowns', unknowns),
                             ('Residuals', resids)])

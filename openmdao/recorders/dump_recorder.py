@@ -79,9 +79,12 @@ class DumpRecorder(BaseRecorder):
         if not self.out:  # if self.out is None, just do nothing
             return
 
+        iteration_coordinate = metadata['coord']
+        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
+
         write = self.out.write
         fmat = "Iteration Coordinate: {0:s}\n"
-        write(fmat.format(format_iteration_coordinate(metadata['coord'])))
+        write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
         write("Params:\n")
         for param, val in sorted(iteritems(params)):
