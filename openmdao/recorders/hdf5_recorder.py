@@ -58,7 +58,7 @@ class HDF5Recorder(BaseRecorder):
         f = self.out
 
         group = f.require_group(group_name)
-        group.create_dataset('timestamp', data=timestamp)
+        group.attrs['timestamp'] = timestamp
         p_group = group.create_group("Parameters")
         u_group = group.create_group("Unknowns")
         r_group = group.create_group("Residuals")
