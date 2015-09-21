@@ -266,9 +266,7 @@ class pyOptSparseDriver(Driver):
 
             # Record after getting obj and constraint to assure they have
             # been gathered in MPI.
-            for recorder in self.recorders:
-                recorder.raw_record(system.params, system.unknowns,
-                                    system.resids, metadata)
+            self.record(metadata)
 
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
