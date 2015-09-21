@@ -33,13 +33,13 @@ class ScipyOptimizer(Driver):
     optimizers support constraints.
 
     Options
-    -------
+	-------
     equality_constraints :  bool(True)
     inequality_constraints :  bool(True)
-    integer_parameters :  bool(False)
-    linear_constraints :  bool(False)
+    integer_parameters :  bool(True)
+    linear_constraints :  bool(True)
     multiple_objectives :  bool(False)
-    two_sided_constraints :  bool(False)
+    two_sided_constraints :  bool(True)
     disp :  bool(True)
         Set to False to prevent printing of Scipy convergence messages
     maxiter :  int(200)
