@@ -1,7 +1,7 @@
 """ Base class for linear and nonlinear solvers."""
 
 from __future__ import print_function
-
+from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.core.options import OptionsDictionary
 
 
@@ -16,7 +16,7 @@ class SolverBase(object):
                'residual to stdout each iteration, set to 2 to print ' \
                'subiteration residuals as well.'
         self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
-        self.recorders = []
+        self.recorders = RecordingManager()
         self.local_meta = None
 
     def setup(self, sub):
