@@ -1,10 +1,10 @@
 import itertools
 from openmdao.core.mpi_wrap import MPI
 
-class RecordingManager(list):
+class RecordingManager(object):
     def __init__(self, *args, **kargs):
-        super(Recorders, self).__init__(*args, **kargs)
-        self._root = root
+        super(RecordingManager, self).__init__(*args, **kargs)
+        self._root = None 
         self._vars_to_record = {
                 'pnames' : set(),
                 'unames' : set(),
@@ -13,6 +13,16 @@ class RecordingManager(list):
 
         self._recorders = []
         self.__has_serial_recorders = False
+
+
+    def append(self, recorder):
+        self._recorders.append(recorder)
+
+    def __getitem__(self, index):
+        return self._recorders[index]
+
+    def __iter__(self):
+        return iter(self._recorders)
 
     def _gather_vars(self, vec, varnames):
         '''
@@ -38,6 +48,7 @@ class RecordingManager(list):
 
             if not recorder._parallel:
                 self.__has_serial_recorders = True
+                pnames, unames, rnames = recorder._filtered[self._root.pathname]
                 
                 self._vars_to_record['pnames'].update(pnames)
                 self._vars_to_record['unames'].update(unames)
@@ -69,5 +80,5 @@ class RecordingManager(list):
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self._recorders:
-            if self._supports_parallel(recorder) or self._root.comm.rank == 0:
-                recorder.raw_record(params, unknowns, resids, metadata)gg
+            if recorder._parallel or self._root.comm.rank == 0:
+                recorder.record(params, unknowns, resids, metadata)
