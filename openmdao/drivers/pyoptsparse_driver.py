@@ -87,7 +87,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_param_metadata()
-        param_list = list(iterkeys(param_meta))
+        self.param_list = param_list = list(iterkeys(param_meta))
         param_vals = self.get_params()
         for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
@@ -198,7 +198,7 @@ class pyOptSparseDriver(Driver):
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        for name in self.get_params():
+        for name in param_list:
             val = dv_dict[name]
             self.set_param(name, val)
 
@@ -243,7 +243,7 @@ class pyOptSparseDriver(Driver):
         nproc = comm.size
 
         try:
-            for name in self.get_params():
+            for name in self.param_list:
                 self.set_param(name, dv_dict[name])
 
             # Execute the model
