@@ -194,7 +194,7 @@ Now, we can access the data using an iteration coordinate.
     data = db['SLSQP/1']
 
 This `data` variable has four keys, 'timestamp', 'Parameters', 'Unknowns', and 'Residuals'. 'timestamp'
-yields the tiem at which data was recorded:
+yields the time at which data was recorded:
 
 ::
 
