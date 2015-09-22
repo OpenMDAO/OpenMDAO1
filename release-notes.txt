@@ -6,6 +6,10 @@ API Changes
 supplies one or more independent variables as outputs, and it has no parameters. And
 overuse of term 'param' may have been causing confusion.
 
+* Changed the names of some Driver methods, replacing 'param' with
+'desvar,' which is short for ‘design variable’.  So 'set_param' is now
+'set_desvar,' 'get_params' is now 'get_desvars,' and 'add_param' is now 'add_desvar.'
+
 * ConstraintComp is going away, but user can add constraints directly to an optimizer
  via driver.add_constraint(‘<var_name>’, lower=xxx, upper=xxx, equals=xxxx)
 
