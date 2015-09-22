@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from openmdao.components import ParamComp, ExecComp
-from openmdao.solvers import LinearGaussSeidel, PetscKSP
+from openmdao.solvers import LinearGaussSeidel
 from openmdao.core import Component, ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
@@ -174,9 +174,12 @@ class ParallelMPIOptAsym(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()  # this works too
+        #root.ln_solver = lin_solver()  # this works too (PetscKSP)
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
 
@@ -208,8 +211,8 @@ class ParallelMPIOptAsym(MPITestCase):
         prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.c', ctype='eq')
-        prob.driver.add_constraint('con.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.c', equals=0.0)
+        prob.driver.add_constraint('con.c', equals=0.0)
 
         self.prob = prob
 
@@ -248,9 +251,12 @@ class ParallelMPIOptPromoted(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()
+        #root.ln_solver = lin_solver()
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
         par.ln_solver = LinearGaussSeidel()
@@ -285,8 +291,8 @@ class ParallelMPIOptPromoted(MPITestCase):
         prob.driver.add_param('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.c', ctype='eq')
-        prob.driver.add_constraint('par.ser2.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.c', equals=0.0)
+        prob.driver.add_constraint('par.ser2.c', equals=0.0)
 
         self.prob = prob
 
@@ -351,9 +357,12 @@ class ParallelMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        if SKIP:
+            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        #root.ln_solver = PetscKSP()
+        #root.ln_solver = lin_solver()
         root.ln_solver = LinearGaussSeidel()
         par = root.add('par', ParallelGroup())
         par.ln_solver = LinearGaussSeidel()
@@ -393,8 +402,8 @@ class ParallelMPIOpt(MPITestCase):
         prob.driver.add_param('par.ser2.p1.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.con.c', ctype='eq')
-        prob.driver.add_constraint('par.ser2.con.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.con.c', equals=0.0)
+        prob.driver.add_constraint('par.ser2.con.c', equals=0.0)
 
         self.prob = prob
 

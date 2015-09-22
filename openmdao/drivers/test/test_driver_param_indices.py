@@ -49,8 +49,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -79,8 +79,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         #prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -113,8 +113,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         #prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -144,8 +144,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
 
         prob.setup(check=False)
 
@@ -174,8 +174,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         #prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -202,8 +202,8 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         #prob.driver.options['disp'] = False
 
         prob.setup(check=False)

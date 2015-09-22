@@ -140,13 +140,13 @@ class TestComponent(unittest.TestCase):
             self.fail("Exception expected")
 
     def test_generate_numpydocstring(self):
-        self.comp.add_param("xxyyzz", 0.0)
-        self.comp.add_param("t", shape=2)
-        self.comp.add_output("x", -1)
-        self.comp.add_state("s1", 0.0)
-
+        self.comp.add_param("x", 0.0)
+        self.comp.add_param("y", shape=2)
+        self.comp.add_output("z", -1)
+        self.comp.add_state("s", 0.0)
         test_string = self.comp.generate_docstring()
-        self.assertEqual(test_string, '\t"""\n\n\tAttributes\n\t----------\n\n\t\txxyyzz : param \n\n\t\t\t<Insert description here.>\n\n\t\tt : param \n\n\t\t\t<Insert description here.>\n\n\t\tx :  unknown \n\n\t\t\t<Insert description here.>\n\n\t\ts1 :  unknown \n\n\t\t\t<Insert description here.>\n\n\n\tNote\n\t----\n\n\n\t"""\n')
+        original_string = '\t"""\n\n\tParams\n\t----------\n    x: param ({\'promoted_name\': x, \'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'promoted_name\': y, \'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'promoted_name\': z, \'size\': 0, \'val\': -1})\n    s : unknown ({\'promoted_name\': s, \'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n\tOptions\n\t----------\n    force_fd :  bool(False)\n        Set to True to finite difference this system.\n    form :  str(forward)\n        Finite difference mode. (forward, backward, central) You can also set to \'complex_step\' to peform the complex step method if your components support it.\n    step_size :  float(1e-06)\n        Default finite difference stepsize\n    step_type :  str(absolute)\n        Set to absolute, relative\n\n\t"""\n'
+        self.assertEqual(original_string, test_string)
 
 if __name__ == "__main__":
     unittest.main()

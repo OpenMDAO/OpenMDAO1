@@ -5,10 +5,17 @@ Who is Testing the Testers?
 import logging
 import os.path
 import sys
+
 import unittest
 import numpy as np
 
-from openmdao.test.util import assert_rel_error
+from openmdao.core.group import Group
+from openmdao.core.problem import Problem
+from openmdao.components.param_comp import ParamComp
+
+from openmdao.test.util import assert_rel_error, problem_derivatives_check
+from openmdao.test.simple_comps import SimpleCompWrongDeriv
+
 
 class TestCase(unittest.TestCase):
     """ Test Test functions. """
@@ -55,6 +62,26 @@ class TestCase(unittest.TestCase):
 
         err = assert_rel_error(self, 1e-2*np.ones(3), 1.00001e-2*np.ones(3), 1e-3)
         self.assertLessEqual(err, 1e-5)
+
+
+    def test_problem_deriv_test(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleCompWrongDeriv())
+        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        try:
+            problem_derivatives_check(self, prob)
+        except AssertionError as err:
+            self.assertIn("not less than or equal to 1e-05", err.args[0])
+
 
 
 if __name__ == "__main__":
