@@ -9,7 +9,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 .. testcode:: recording
 
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
     from openmdao.core import Component, Group, Problem
     from openmdao.drivers import ScipyOptimizer
     from openmdao.recorders import SqliteRecorder
@@ -53,8 +53,8 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
         root = top.root = Group()
 
-        root.add('p1', ParamComp('x', 3.0))
-        root.add('p2', ParamComp('y', -4.0))
+        root.add('p1', IndepVarComp('x', 3.0))
+        root.add('p2', IndepVarComp('y', -4.0))
         root.add('p', Paraboloid())
 
         root.connect('p1.x', 'p.x')
@@ -63,8 +63,8 @@ by demonstrating how to save the data generated for future use. Consider the cod
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
 
-        top.driver.add_param('p1.x', low=-50, high=50)
-        top.driver.add_param('p2.y', low=-50, high=50)
+        top.driver.add_desvar('p1.x', low=-50, high=50)
+        top.driver.add_desvar('p2.y', low=-50, high=50)
         top.driver.add_objective('p.f_xy')
 
         recorder = SqliteRecorder('paraboloid')
@@ -78,8 +78,9 @@ by demonstrating how to save the data generated for future use. Consider the cod
         print('\n')
         print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
+
 Two lines are all it takes to record the state of the problem as the
-optimizer progresses. 
+optimizer progresses.
 
 ::
 
@@ -89,8 +90,8 @@ optimizer progresses.
 We initialize a `SqliteRecorder` by passing it a
 `filename` argument. This recorder indirectly uses Python's `sqlite3` module to store the
 data generated. In this case, `sqlite3` will open a database file named 'paraboloid'
-to use as a back-end. 
-Actually, OpenMDAO's `SqliteRecorder` makes use of the 
+to use as a back-end.
+Actually, OpenMDAO's `SqliteRecorder` makes use of the
 `sqlitedict module <https://pypi.python.org/pypi/sqlitedict>`_ because it has a
 simple, Pythonic dict-like interface to Python’s sqlite3 database.
 
@@ -100,7 +101,7 @@ additional `driver.add_recorder` calls. Solvers also have an `add_recorder`
 method that is invoked the same way. This allows you to record the evolution
 of variables at lower levels.
 
-While it might not be an issue, it is good practice to close the 
+While it might not be an issue, it is good practice to close the
 recorder explicitly before the program terminates.
 For this tutorial with one recorder added to the driver, this is simply done with:
 
@@ -184,7 +185,7 @@ etc. To access the data from our run, we can use the following code:
 
 There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
 is the name of the sqlite database file. The second, `'openmdao'`, is the name of the table
-in the sqlite database. For the SqliteRecorder in OpenMDAO, all the  
+in the sqlite database. For the SqliteRecorder in OpenMDAO, all the
 recording is done to the `'openmdao'` table.
 
 Now, we can access the data using an iteration coordinate.

@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from openmdao.components import ParamComp, ExecComp
+from openmdao.components import IndepVarComp, ExecComp
 from openmdao.core import Group, Problem
 from openmdao.test.util import assert_rel_error
 
@@ -81,7 +81,7 @@ class TestExecComp(unittest.TestCase):
                                         'y[1]=5.0*x[0]-3.0*x[1]'],
                                        x=np.zeros([2]), y=np.zeros([2])))
 
-        prob.root.add('p1', ParamComp('x', np.ones([2])))
+        prob.root.add('p1', IndepVarComp('x', np.ones([2])))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -104,7 +104,7 @@ class TestExecComp(unittest.TestCase):
                                               x=np.zeros((2,)), y=np.zeros((2,)),
                                               mat=np.array([[2.,7.],[5.,-3.]])))
 
-        p1 = prob.root.add('p1', ParamComp('x', np.ones([2])))
+        p1 = prob.root.add('p1', IndepVarComp('x', np.ones([2])))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -139,7 +139,7 @@ class TestExecComp(unittest.TestCase):
     def test_complex_step2(self):
         prob = Problem(Group())
         comp = prob.root.add('comp', ExecComp('y=x*x + x*2.0'))
-        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = False

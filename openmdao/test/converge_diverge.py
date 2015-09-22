@@ -1,7 +1,7 @@
 """ Formerly the one-two-one-two-one test. A model that diverges, converges,
 diverges, then converges again. """
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core import Component, Group, ParallelGroup
 
 
@@ -143,7 +143,7 @@ class ConvergeDiverge(Group):
     def __init__(self):
         super(ConvergeDiverge, self).__init__()
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         self.add('comp1', Comp1())
         self.add('comp2', Comp2())
@@ -171,7 +171,7 @@ class ConvergeDivergePar(Group):
     def __init__(self):
         super(ConvergeDivergePar, self).__init__()
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         self.add('comp1', Comp1())
         par1 = self.add('par1', ParallelGroup())
@@ -202,7 +202,7 @@ class ConvergeDivergeGroups(Group):
         super(ConvergeDivergeGroups, self).__init__()
 
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         sub1 = self.add('sub1', Group())
         sub1.add('comp1', Comp1())
@@ -234,7 +234,7 @@ class SingleDiamond(Group):
     def __init__(self):
         super(SingleDiamond, self).__init__()
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         self.add('comp1', Comp1())
         self.add('comp2', Comp2())
@@ -254,7 +254,7 @@ class SingleDiamondPar(Group):
     def __init__(self):
         super(SingleDiamondPar, self).__init__()
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         self.add('comp1', Comp1())
         sub = self.add('sub', ParallelGroup())
@@ -275,7 +275,7 @@ class SingleDiamondGrouped(Group):
     def __init__(self):
         super(SingleDiamondGrouped, self).__init__()
 
-        self.add('p', ParamComp('x', 2.0))
+        self.add('p', IndepVarComp('x', 2.0))
 
         sub1 = self.add('sub1', Group())
         sub1.add('comp1', Comp1())

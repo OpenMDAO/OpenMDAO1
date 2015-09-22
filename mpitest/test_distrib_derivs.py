@@ -10,7 +10,7 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.core.component import Component
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpi_util import MPITestCase
@@ -63,7 +63,7 @@ class MPITests1(MPITestCase):
     def test_too_few_procs(self):
         size = 3
         group = Group()
-        group.add('P', ParamComp('x', numpy.ones(size)))
+        group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
                                            x=numpy.zeros(size),
                                            y=numpy.zeros(size)))
@@ -94,7 +94,7 @@ class MPITests2(MPITestCase):
     def test_two_simple(self):
         size = 3
         group = Group()
-        group.add('P', ParamComp('x', numpy.ones(size)))
+        group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
                                            x=numpy.zeros(size),
                                            y=numpy.zeros(size)))
@@ -120,7 +120,7 @@ class MPITests2(MPITestCase):
         size = 3
         prob = Problem(impl=impl)
         prob.root = root = Group()
-        root.add('P', ParamComp('x', numpy.ones(size, dtype=float)))
+        root.add('P', IndepVarComp('x', numpy.ones(size, dtype=float)))
         root.add('C1', DistribExecComp(['y=3.0*x'], arr_size=size,
                                    x=numpy.zeros(size, dtype=float),
                                    y=numpy.zeros(size, dtype=float)))
@@ -165,8 +165,8 @@ class MPITests2(MPITestCase):
         prob = Problem(impl=impl)
         prob.root = root = Group()
 
-        root.add('P1', ParamComp('x', numpy.ones(size, dtype=float)))
-        root.add('P2', ParamComp('x', numpy.ones(size, dtype=float)))
+        root.add('P1', IndepVarComp('x', numpy.ones(size, dtype=float)))
+        root.add('P2', IndepVarComp('x', numpy.ones(size, dtype=float)))
         sub = root.add('sub', ParallelGroup())
 
         sub.add('C1', ExecComp(['y=-2.0*x'],
@@ -206,7 +206,7 @@ class MPITests2(MPITestCase):
     def test_src_indices_error(self):
         size = 3
         group = Group()
-        group.add('P', ParamComp('x', numpy.ones(size)))
+        group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
                                            x=numpy.zeros(size),
                                            y=numpy.zeros(size)))
@@ -219,7 +219,7 @@ class MPITests2(MPITestCase):
         prob.root.connect('P.x', 'C1.x')
         prob.root.connect('C1.y', 'C2.y')
 
-        prob.driver.add_param('P.x')
+        prob.driver.add_desvar('P.x')
         prob.driver.add_objective('C1.y')
 
         try:
@@ -227,7 +227,7 @@ class MPITests2(MPITestCase):
         except Exception as err:
             self.assertEqual(str(err),
                "'C1.y' is a distributed variable and may not be used as a "
-               "parameter, objective, or constraint.")
+               "design var, objective, or constraint.")
         else:
             if MPI:
                 self.fail("Exception expected")

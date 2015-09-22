@@ -6,7 +6,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.component import Component
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 
 from openmdao.test.mpi_util import MPITestCase
@@ -62,8 +62,8 @@ class RecorderTests(object):
             prob = Problem(Group(), impl=impl)
 
             G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
             prob.root.add('C1', ABCDArrayComp(size))
 
@@ -72,7 +72,7 @@ class RecorderTests(object):
             prob.driver.add_recorder(self.recorder)
             prob.setup(check=False)
             prob.run()
-            
+
             if not MPI or prob.root.comm.rank == 0:
 
                 expected_params = [
@@ -97,7 +97,7 @@ class RecorderTests(object):
                 ]
 
                 expected = (expected_params, expected_unknowns, expected_resids)
-                
+
                 self.assertDatasetEquals(
                     [(['Driver', (1,)], expected)],
                     self.eps
@@ -109,8 +109,8 @@ class RecorderTests(object):
             prob = Problem(Group(), impl=impl)
 
             G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
             prob.root.add('C1', ABCDArrayComp(size))
 
@@ -145,15 +145,15 @@ class RecorderTests(object):
                     [(['Driver', (1,)], expected)],
                     self.eps
                 )
-        
+
         def test_includes_and_excludes(self):
             size = 3
 
             prob = Problem(Group(), impl=impl)
 
             G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
             prob.root.add('C1', ABCDArrayComp(size))
 
