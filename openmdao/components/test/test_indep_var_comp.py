@@ -17,7 +17,7 @@ class TestDeprecated(unittest.TestCase):
                              'IndepVarComp, which can be found in '
                              'openmdao.components.indep_var_comp.')
 
-class TestUnitComp(unittest.TestCase):
+class TestErrors(unittest.TestCase):
 
     def test_bad_init1(self):
         try:
