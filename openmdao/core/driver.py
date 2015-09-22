@@ -569,7 +569,7 @@ class Driver(object):
 
     def _gather_vars(self, vec, varnames):
         '''
-        Gathers and returns only variables listed in 
+        Gathers and returns only variables listed in
         `varnames` from the vector `vec`
         '''
         local_vars = []
@@ -601,11 +601,11 @@ class Driver(object):
             pnames = self._vars_to_record['pnames']
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']
-            
+
             params = self._gather_vars(params, pnames)
             unknowns = self._gather_vars(unknowns, unames)
             resids = self._gather_vars(resids, rnames)
-        
+
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self.recorders:
@@ -643,7 +643,7 @@ class Driver(object):
                 string that contains a basic numpy docstring.
         """
         #start the docstring off
-        docstring = '\t\"\"\"\n'
+        docstring = '    \"\"\"\n'
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
@@ -652,15 +652,19 @@ class Driver(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t----------\n'
+                    docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
                         docstring += "    "+name
                         docstring += " :  " + type(val).__name__
-                        docstring += "(" + str(val) + ")\n"
+                        docstring += "("
+                        if type(val).__name__ == 'str': docstring += "'"
+                        docstring += str(val)
+                        if type(val).__name__ == 'str': docstring += "'"
+                        docstring += ")\n"
                         desc = value._options[name]['desc']
                         if(desc):
                             docstring += "        " + desc + "\n"
         #finish up docstring
-        docstring += '\n\t\"\"\"\n'
+        docstring += '\n    \"\"\"\n'
         return docstring
