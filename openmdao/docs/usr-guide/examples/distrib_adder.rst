@@ -95,7 +95,7 @@ The distributed component magic happens in the `setup_distrib_idxs` method of
 the `DistributedAdder` class. This is where we tell the framework how to split
 up the the big array into smaller chunks handled separately by each distributed
 process. In this case, we just split the array up one chuck at a time in order
-as we go from process to process. But OpenMDAO does not requires that the `src_indices`
+as we go from process to process. But OpenMDAO does not require that the `src_indices`
 be ordered or sequential!
 
 .. note::
@@ -191,6 +191,6 @@ And you can expect to see some output as follows:
 
 With two processes running, you get a decent speed up. You can see that each process took
 half the array. Why don't we get a full 2x speedup? Two reasons. The first, and more
-significant factor is that we don't have a fully parallel model. The `plus` component is
-distributed, but the `summer` component is not. This introduces a bottleneck because we have to wait
-for the serial operation to complete.
+significant factor is that we don't have a fully parallel model. The `DistributedAdder`
+component is distributed, but the `Summer` component is not. This introduces a bottleneck
+because we have to wait for the serial operation to complete.

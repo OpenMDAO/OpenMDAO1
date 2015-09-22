@@ -1,6 +1,5 @@
 """
 OpenMDAO Wrapper for pyoptsparse.
-
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
 additional MPI capability. Note: only SNOPT is supported right now.
@@ -21,6 +20,26 @@ class pyOptSparseDriver(Driver):
     is an object-oriented framework for formulating and solving nonlinear
     constrained optimization problems, with additional MPI capability. Note:
     only SNOPT is supported right now.
+
+    Options
+    -------
+    equality_constraints :  bool(True)
+    inequality_constraints :  bool(True)
+    integer_design_vars :  bool(False)
+    linear_constraints :  bool(False)
+    multiple_objectives :  bool(False)
+    two_sided_constraints :  bool(True)
+    exit_flag :  int(0)
+        0 for fail, 1 for ok
+    optimizer :  str('SNOPT')
+        Name of optimizers to use
+    print_results :  bool(True)
+        Print pyOpt results if True
+    pyopt_diff :  bool(True)
+        Set to True to let pyOpt calculate the gradient
+    title :  str('Optimization using pyOpt_sparse')
+        Title of this optimization run
+
     """
 
     def __init__(self):
@@ -32,10 +51,10 @@ class pyOptSparseDriver(Driver):
         self.supports['inequality_constraints'] = True
         self.supports['equality_constraints'] = True
         self.supports['multiple_objectives'] = False
+        self.supports['two_sided_constraints'] = True
 
         # TODO: Support these
         self.supports['linear_constraints'] = False
-        self.supports['two_sided_constraints'] = False
         self.supports['integer_design_vars'] = False
 
         # User Options
@@ -115,8 +134,7 @@ class pyOptSparseDriver(Driver):
         self.quantities += list(iterkeys(econs))
         for name in econs:
             size = con_meta[name]['size']
-            lower = np.zeros((size))
-            upper = np.zeros((size))
+            lower = upper = con_meta[name]['equals']
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
@@ -134,32 +152,21 @@ class pyOptSparseDriver(Driver):
         self.quantities += list(iterkeys(incons))
         for name in incons:
             size = con_meta[name]['size']
-            upper = np.zeros((size))
+
+            # Bounds - double sided is supported
+            lower = con_meta[name]['lower']
+            upper = con_meta[name]['upper']
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
 
             if con_meta[name]['linear'] is True:
-                opt_prob.addConGroup(name, size, upper=upper, linear=True,
-                                     wrt=wrt, jac=self.lin_jacs[name])
+                opt_prob.addConGroup(name, size, upper=upper, lower=lower,
+                                     linear=True, wrt=wrt,
+                                     jac=self.lin_jacs[name])
             else:
-                opt_prob.addConGroup(name, size, upper=upper, wrt=wrt)
-
-        # TODO: Support double-sided constraints in openMDAO
-        # Add all double_sided constraints
-        #for name, con in iteritems(self.get_2sided_constraints()):
-            #size = con_meta[name]['size']
-            #upper = con.high * np.ones((size))
-            #lower = con.low * np.ones((size))
-            #name = '%s.out0' % con.pcomp_name
-            #if con.linear is True:
-                #opt_prob.addConGroup(name,
-                #size, upper=upper, lower=lower,
-                                     #linear=True, wrt=indep_list,
-                                     #jac=self.lin_jacs[name])
-            #else:
-                #opt_prob.addConGroup(name,
-                #                     size, upper=upper, lower=lower)
+                opt_prob.addConGroup(name, size, upper=upper, lower=lower,
+                                     wrt=wrt)
 
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
@@ -227,7 +234,6 @@ class pyOptSparseDriver(Driver):
         -------
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
-
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
@@ -278,9 +284,7 @@ class pyOptSparseDriver(Driver):
 
             # Record after getting obj and constraint to assure they have
             # been gathered in MPI.
-            for recorder in self.recorders:
-                recorder.raw_record(system.params, system.unknowns,
-                                    system.resids, metadata)
+            self.record(metadata)
 
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
@@ -312,7 +316,6 @@ class pyOptSparseDriver(Driver):
         ----
         dv_dict : dict
             Dictionary of design variable values.
-
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
 
@@ -320,7 +323,6 @@ class pyOptSparseDriver(Driver):
         -------
         sens_dict : dict
             Dictionary of dictionaries for gradient of each dv/func pair
-
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation

@@ -35,6 +35,7 @@ class ScipyGMRES(LinearSolver):
         self.system = None
         self.voi = None
         self.mode = None
+        self._norm0 = 0.0
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -82,20 +83,30 @@ class ScipyGMRES(LinearSolver):
 
             # Call GMRES to solve the linear system
             self.system = system
+            self.iter_count = 0
             d_unknowns, info = gmres(A, rhs, M=M,
                                      tol=options['atol'],
-                                     maxiter=options['maxiter'])
+                                     maxiter=options['maxiter'],
+                                     callback=self.monitor)
             self.system = None
 
             if info > 0:
                 msg = "ERROR in solve in '{}': gmres failed to converge " \
                       "after {} iterations"
                 print(msg.format(system.name, options['maxiter']))
+                msg = 'FAILED to converge after hitting max iterations'
                 #logger.error(msg, system.name, info)
             elif info < 0:
                 msg = "ERROR in solve in '{}': gmres failed"
                 print(msg.format(system.name))
+                msg = 'FAILED to converge'
                 #logger.error(msg, system.name)
+            else:
+                msg = 'Converged'
+
+            if self.options['iprint'] > 0:
+                self.print_norm('GMRES', system.pathname, self.iter_count,
+                                0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = d_unknowns
 
@@ -179,4 +190,24 @@ class ScipyGMRES(LinearSolver):
         #print("arg", arg)
         #print("preconditioned arg", precon_rhs)
         return sol_vec.vec
+
+    def monitor(self, res):
+        """ GMRES Callback: Prints the current residual norm.
+
+        Args
+        ----
+        res : ndarray
+            Current residual.
+        """
+
+        if self.options['iprint'] > 0:
+            f_norm = np.linalg.norm(res)
+            if self.iter_count == 0:
+                if f_norm != 0.0:
+                    self._norm0 = f_norm
+                else:
+                    self._norm0 = 1.0
+            self.print_norm('GMRES', self.system.pathname, self.iter_count,
+                            f_norm, self._norm0, indent=1, solver='LN')
+            self.iter_count += 1
 

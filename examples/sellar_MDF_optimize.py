@@ -131,8 +131,8 @@ if __name__ == '__main__':
     top.driver.add_desvar('x', low=0.0, high=10.0)
 
     top.driver.add_objective('obj')
-    top.driver.add_constraint('con1')
-    top.driver.add_constraint('con2')
+    top.driver.add_constraint('con1', upper=0.0)
+    top.driver.add_constraint('con2', upper=0.0)
 
     top.setup()
     top.run()

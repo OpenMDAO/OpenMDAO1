@@ -271,8 +271,8 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
         top.driver.add_desvar('x', low=0.0, high=10.0)
 
         top.driver.add_objective('obj')
-        top.driver.add_constraint('con1')
-        top.driver.add_constraint('con2')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
 
         top.setup()
         top.run()
@@ -316,10 +316,9 @@ variable, you will have to place a minus sign in the expression you give to
 the objective `ExecComp`.
 
 Finally we add the constraints using the `add_constraint` method, which takes
-any valid `unknown` in the model as the first argument. Constraints in
-OpenMDAO are defined so that a negative value means the constraint is
-satisfied, and a positive value means it is violated. When a constraint is
-equal to zero, it is called an 'active' constraint.
+any valid `unknown` in the model as the first argument. We want to constrain
+the unknowns "con1" and "con2" to be less than zero, so we set an upper bound
+of zero on both constraints.
 
 Don't forget to call `setup` on your `Problem` before calling `run`. Also, we
 are using the Python 3.x print function to print results. To keep
@@ -480,8 +479,8 @@ which one, since they should only differ by the solver tolerance at most.
         top.driver.add_desvar('x', low=0.0, high=10.0)
 
         top.driver.add_objective('obj')
-        top.driver.add_constraint('con1')
-        top.driver.add_constraint('con2')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
 
         top.setup()
         top.run()

@@ -2,6 +2,7 @@
 
 from pprint import pformat
 import unittest
+import warnings
 
 import numpy as np
 
@@ -109,8 +110,8 @@ class TestDriver(unittest.TestCase):
         prob.driver.add_desvar('z', low=-100.0, high=100.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
 
         prob.setup(check=False)
         prob.run()
@@ -152,7 +153,7 @@ class TestDriver(unittest.TestCase):
 
         driver.add_desvar('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
         driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
-        driver.add_constraint('con', adder=-10890487502.0, scaler=1.0/20)
+        driver.add_constraint('con', upper=0.0, adder=-10890487502.0, scaler=1.0/20)
 
         prob.setup(check=False)
         prob.run()
@@ -205,7 +206,7 @@ class TestDriver(unittest.TestCase):
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
         driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
-        driver.add_constraint('con', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                               scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
 
         prob.setup(check=False)
@@ -240,11 +241,29 @@ class TestDriver(unittest.TestCase):
 
         prob.driver = MySimpleDriver()
 
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1')
+
+        self.assertEqual(str(cm.exception), "Constraint 'con1' needs to define lower, upper, or equals.")
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1', lower=0.0, upper=1.1, equals=2.2)
+
+        self.assertEqual(str(cm.exception), "Constraint 'con1' cannot be both equality and inequality.")
+
+        # Don't try this at home, kids
+        prob.driver.supports['two_sided_constraints'] = False
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1', lower=0.0, upper=1.1)
+
+        self.assertEqual(str(cm.exception), "Driver does not support 2-sided constraint 'con1'.")
+
         # Don't try this at home, kids
         prob.driver.supports['equality_constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
-            prob.driver.add_constraint('con1', ctype='eq')
+            prob.driver.add_constraint('con1', equals=0.0)
 
         self.assertEqual(str(cm.exception), "Driver does not support equality constraint 'con1'.")
 
@@ -252,7 +271,7 @@ class TestDriver(unittest.TestCase):
         prob.driver.supports['inequality_constraints'] = False
 
         with self.assertRaises(RuntimeError) as cm:
-            prob.driver.add_constraint('con1', ctype='ineq')
+            prob.driver.add_constraint('con1', upper=0.0)
 
         self.assertEqual(str(cm.exception), "Driver does not support inequality constraint 'con1'.")
 
@@ -328,7 +347,7 @@ class TestDriver(unittest.TestCase):
 
             prob.driver = MySimpleDriver()
             prob.driver.add_desvar('myparams.x')
-            prob.driver.add_constraint('rosen.xxx', indices=[4])
+            prob.driver.add_constraint('rosen.xxx', upper=0.0, indices=[4])
 
             prob.setup(check=False)
 
@@ -342,6 +361,20 @@ class TestDriver(unittest.TestCase):
             raised_error = str(cm.exception)
             raised_error = raised_error.replace('(4L,', '(4,')
             self.assertEqual(msg, raised_error)
+
+class TestDeprecated(unittest.TestCase):
+    def test_deprecated_add_param(self):
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            p = Problem()
+            p.driver.add_param('x', 1.0)
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                             'Driver.add_param() is deprecated. Use add_desvar() instead.')
 
 if __name__ == "__main__":
     unittest.main()

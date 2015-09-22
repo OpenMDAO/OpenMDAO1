@@ -38,7 +38,7 @@ class TestPyoptSparse(unittest.TestCase):
         except OSError:
             pass
 
-    def test_simple_paraboloid(self):
+    def test_simple_paraboloid_upper(self):
 
         prob = Problem()
         root = prob.root = Group()
@@ -46,14 +46,62 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+    def test_simple_paraboloid_lower(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+    def test_simple_paraboloid_lower(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=15.0)
 
         prob.setup(check=False)
         prob.run()
@@ -70,14 +118,14 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', ctype='ineq')
+        prob.driver.add_constraint('c', equals=-15.0)
 
         prob.setup(check=False)
         prob.run()
@@ -85,6 +133,52 @@ class TestPyoptSparse(unittest.TestCase):
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+    def test_simple_paraboloid_double_sided_low(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=-11.0, upper=-10.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['y'] - prob['x'], -11.0, 1e-6)
+
+    def test_simple_paraboloid_double_sided_high(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
 
     def test_simple_array_comp(self):
 
@@ -100,7 +194,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
-        prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_constraint('c', equals=0.0)
 
         prob.setup(check=False)
         prob.run()
@@ -122,7 +216,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
-        prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_constraint('c', equals=0.0)
 
         prob.setup(check=False)
         prob.run()
@@ -144,7 +238,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_desvar('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
 
         prob.driver.add_objective('o')
-        prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_constraint('c', equals=0.0)
 
         prob.setup(check=False)
         prob.run()
@@ -179,8 +273,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
-        prob.driver.add_constraint('con1.c', ctype='eq')
-        prob.driver.add_constraint('con2.c', ctype='eq')
+        prob.driver.add_constraint('con1.c', equals=0.0)
+        prob.driver.add_constraint('con2.c', equals=0.0)
 
         prob.setup(check=False)
         prob.run()

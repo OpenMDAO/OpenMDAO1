@@ -74,7 +74,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as error:
-            msg = "'C' promotes 'spoon' but has no variables matching that specification"
+            msg = "'G.C' promotes 'spoon' but has no variables matching that specification"
             self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
@@ -86,7 +86,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as error:
-            msg = "'P' promotes 'a*' but has no variables matching that specification"
+            msg = "'G.P' promotes 'a*' but has no variables matching that specification"
             self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")

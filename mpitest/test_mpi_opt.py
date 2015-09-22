@@ -211,8 +211,8 @@ class ParallelMPIOptAsym(MPITestCase):
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.c', ctype='eq')
-        prob.driver.add_constraint('con.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.c', equals=0.0)
+        prob.driver.add_constraint('con.c', equals=0.0)
 
         self.prob = prob
 
@@ -291,8 +291,8 @@ class ParallelMPIOptPromoted(MPITestCase):
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.c', ctype='eq')
-        prob.driver.add_constraint('par.ser2.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.c', equals=0.0)
+        prob.driver.add_constraint('par.ser2.c', equals=0.0)
 
         self.prob = prob
 
@@ -402,8 +402,8 @@ class ParallelMPIOpt(MPITestCase):
         prob.driver.add_desvar('par.ser2.p1.x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('total.obj')
-        prob.driver.add_constraint('par.ser1.con.c', ctype='eq')
-        prob.driver.add_constraint('par.ser2.con.c', ctype='eq')
+        prob.driver.add_constraint('par.ser1.con.c', equals=0.0)
+        prob.driver.add_constraint('par.ser2.con.c', equals=0.0)
 
         self.prob = prob
 

@@ -2,8 +2,8 @@
 
 from __future__ import print_function
 
-from openmdao.components.constraint import ConstraintComp
 from openmdao.components.indep_var_comp import IndepVarComp
+from openmdao.components import ExecComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     root.add('p', Paraboloid())
 
     # Constraint Equation
-    root.add('con', ConstraintComp('x-y > 15.0', out='c'))
+    root.add('con', ExecComp('c = x-y'))
 
     root.connect('p1.x', 'p.x')
     root.connect('p2.y', 'p.y')
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     top.driver.add_desvar('p1.x', low=-50, high=50)
     top.driver.add_desvar('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
-    top.driver.add_constraint('con.c')
+    top.driver.add_constraint('con.c', lower=15.0)
 
     top.setup()
     top.run()
