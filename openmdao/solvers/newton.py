@@ -76,7 +76,7 @@ class Newton(NonLinearSolver):
         f_norm0 = f_norm
 
         if self.options['iprint'] > 0:
-            self.print_norm('NEWTON', local_meta, 0, f_norm, f_norm0)
+            self.print_norm('NEWTON', system.pathname, 0, f_norm, f_norm0)
 
         arg = system.drmat[None]
         result = system.dumat[None]
@@ -105,11 +105,11 @@ class Newton(NonLinearSolver):
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 
             for recorder in self.recorders:
-                recorder.raw_record(params, unknowns, resids, local_meta)
+                recorder.record(params, unknowns, resids, local_meta)
 
             f_norm = resids.norm()
             if self.options['iprint'] > 0:
-                self.print_norm('NEWTON', local_meta, self.iter_count, f_norm, f_norm0)
+                self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm, f_norm0)
 
             # Backtracking Line Search
             while ls_itercount < ls_maxiter and \
@@ -129,11 +129,11 @@ class Newton(NonLinearSolver):
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
 
                 for recorder in self.recorders:
-                    recorder.raw_record(params, unknowns, resids, local_meta)
+                    recorder.record(params, unknowns, resids, local_meta)
 
                 f_norm = resids.norm()
                 if self.options['iprint'] > 1:
-                    self.print_norm('BK_TKG', local_meta, ls_itercount, f_norm,
+                    self.print_norm('BK_TKG', system.pathname, ls_itercount, f_norm,
                                     f_norm0, indent=1, solver='LS')
 
             # Reset backtracking
@@ -152,5 +152,5 @@ class Newton(NonLinearSolver):
             else:
                 msg = 'converged'
 
-            self.print_norm('NEWTON', local_meta, self.iter_count, f_norm,
+            self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm,
                             f_norm0, msg=msg)

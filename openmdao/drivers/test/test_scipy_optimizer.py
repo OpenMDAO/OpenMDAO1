@@ -156,7 +156,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c')
+        prob.driver.add_constraint('c', upper=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -166,7 +166,7 @@ class TestScipyOptimize(unittest.TestCase):
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
-    def test_simple_paraboloid_constrained_COBYLA(self):
+    def test_simple_paraboloid_constrained_COBYLA_upper(self):
 
         prob = Problem()
         root = prob.root = Group()
@@ -174,7 +174,7 @@ class TestScipyOptimize(unittest.TestCase):
         root.add('p1', ParamComp('x', 50.0), promotes=['*'])
         root.add('p2', ParamComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
+        root.add('con', ExecComp('c = y - x'), promotes=['*'])
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'COBYLA'
@@ -183,7 +183,34 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c')
+        prob.driver.add_constraint('c', upper=-15.0)
+        prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+    def test_simple_paraboloid_constrained_COBYLA_lower(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
+        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'COBYLA'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_param('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=15.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -201,7 +228,7 @@ class TestScipyOptimize(unittest.TestCase):
         root.add('p1', ParamComp('x', 50.0), promotes=['*'])
         root.add('p2', ParamComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = 15.0 - x + y'), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
@@ -210,7 +237,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', ctype='ineq')
+        prob.driver.add_constraint('c', equals=15.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -235,7 +262,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
-        prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_constraint('c', equals=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -259,7 +286,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
-        prob.driver.add_constraint('c', ctype='eq')
+        prob.driver.add_constraint('c', equals=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -296,8 +323,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('p1.x', low=-50.0, high=50.0)
         prob.driver.add_param('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
-        prob.driver.add_constraint('con1.c', ctype='eq')
-        prob.driver.add_constraint('con2.c', ctype='eq')
+        prob.driver.add_constraint('con1.c', equals=0.0)
+        prob.driver.add_constraint('con2.c', equals=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -320,8 +347,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -345,8 +372,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)
@@ -370,8 +397,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_param('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1')
-        prob.driver.add_constraint('con2')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
         prob.driver.options['disp'] = False
 
         prob.setup(check=False)

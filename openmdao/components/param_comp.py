@@ -5,7 +5,6 @@ from six import string_types, iteritems
 
 from openmdao.core.component import Component
 
-
 class ParamComp(Component):
     """A Component that provides an output to connect to a parameter."""
 

@@ -215,21 +215,24 @@ class Relevance(object):
         succs = {}
         for nodes in self.inputs:
             for node in nodes:
-                succs[node] = set([v for u, v in nx.dfs_edges(g, node)])
-                succs[node].add(node)
+                if node in g:
+                    succs[node] = set([v for u, v in nx.dfs_edges(g, node)])
+                    succs[node].add(node)
 
         relevant = {}
         grev = g.reverse()
         for nodes in self.outputs:
             for node in nodes:
-                relevant[node] = set()
-                preds = set([v for u, v in nx.dfs_edges(grev, node)])
-                preds.add(node)
-                for inps in self.inputs:
-                    for inp in inps:
-                        common = preds.intersection(succs[inp])
-                        relevant[node].update(common)
-                        relevant.setdefault(inp, set()).update(common)
+                if node in g:
+                    relevant[node] = set()
+                    preds = set([v for u, v in nx.dfs_edges(grev, node)])
+                    preds.add(node)
+                    for inps in self.inputs:
+                        for inp in inps:
+                            if inp in g:
+                                common = preds.intersection(succs[inp])
+                                relevant[node].update(common)
+                                relevant.setdefault(inp, set()).update(common)
 
         return relevant
 

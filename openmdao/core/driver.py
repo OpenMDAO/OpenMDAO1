@@ -5,7 +5,8 @@ from __future__ import print_function
 from collections import OrderedDict
 from itertools import chain
 from six import iteritems
-
+import warnings
+import itertools
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -27,10 +28,10 @@ class Driver(object):
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('inequality_constraints', True)
         self.supports.add_option('equality_constraints', True)
-        self.supports.add_option('linear_constraints', False)
-        self.supports.add_option('multiple_objectives', False)
-        self.supports.add_option('two_sided_constraints', False)
-        self.supports.add_option('integer_parameters', False)
+        self.supports.add_option('linear_constraints', True)
+        self.supports.add_option('multiple_objectives', True)
+        self.supports.add_option('two_sided_constraints', True)
+        self.supports.add_option('integer_parameters', True)
 
         # This driver's options
         self.options = OptionsDictionary()
@@ -40,6 +41,7 @@ class Driver(object):
         self._cons = OrderedDict()
 
         self._voi_sets = []
+        self._vars_to_record = None
 
         # We take root during setup
         self.root = None
@@ -48,7 +50,8 @@ class Driver(object):
 
     def _setup(self, root):
         """ Updates metadata for params, constraints and objectives, and
-        check for errors.
+        check for errors. Also determines all variables that need to be
+        gathered for case recording.
         """
         self.root = root
 
@@ -89,6 +92,14 @@ class Driver(object):
         self._objs = objs
         self._cons = cons
 
+        if self._vars_to_record is not None:
+            for recorder in self.recorders:
+                pnames, unames, rnames = recorder._filtered[self.root.pathname]
+
+                self._vars_to_record['pnames'].update(pnames)
+                self._vars_to_record['unames'].update(unames)
+                self._vars_to_record['rnames'].update(rnames)
+
     def _map_voi_indices(self):
         poi_indices = {}
         qoi_indices = {}
@@ -109,18 +120,22 @@ class Driver(object):
         into tuples based on the previously defined grouping of VOIs.
         """
         vois = []
-        done_sets = set()
-        for v in voi_list:
-            for voi_set in self._voi_sets:
-                if voi_set in done_sets:
-                    break
+        remaining = set(voi_list)
+        for voi_set in self._voi_sets:
+            vois.append([])
+
+        for i, voi_set in enumerate(self._voi_sets):
+            for v in voi_list:
                 if v in voi_set:
-                    vois.append(tuple([x for x in voi_set
-                                       if x in voi_list]))
-                    done_sets.add(voi_set)
-                    break
-            else:
+                    vois[i].append(v)
+                    remaining.remove(v)
+
+        vois = [tuple(x) for x in vois if x]
+
+        for v in voi_list:
+            if v in remaining:
                 vois.append((v,))
+
         return vois
 
     def params_of_interest(self):
@@ -153,18 +168,30 @@ class Driver(object):
         vnames : iter of str
             The names of variables of interest that are to be grouped.
         """
+        #make sure all vnames are params, constraints, or objectives
+        found = set()
+        for n in vnames:
+            if not (n in self._params or n in self._objs or n in self._cons):
+                raise RuntimeError("'%s' is not a param, objective, or "
+                                   "constraint" % n)
         for grp in self._voi_sets:
             for vname in vnames:
                 if vname in grp:
                     msg = "'%s' cannot be added to VOI set %s because it " + \
                           "already exists in VOI set: %s"
                     raise RuntimeError(msg % (vname, tuple(vnames), grp))
+
         param_intsect = set(vnames).intersection(self._params.keys())
+
         if param_intsect and len(param_intsect) != len(vnames):
             raise RuntimeError("%s cannot be grouped because %s are params and %s are not." %
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
-        self._voi_sets.append(tuple(vnames))
+
+        if MPI:
+            self._voi_sets.append(tuple(vnames))
+        else:
+            warnings.warn("parallel derivs %s specified but not running under MPI")
 
     def add_recorder(self, recorder):
         """
@@ -175,6 +202,13 @@ class Driver(object):
         recorder : BaseRecorder
            A recorder instance.
         """
+        if not recorder._parallel and self._vars_to_record is None:
+            self._vars_to_record = {
+                'pnames' : set(),
+                'unames' : set(),
+                'rnames' : set()
+            }
+
         self.recorders.append(recorder)
 
     def add_param(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
@@ -393,19 +427,27 @@ class Driver(object):
 
         return objs
 
-    def add_constraint(self, name, ctype='ineq', linear=False, jacs=None,
-                       indices=None, adder=0.0, scaler=1.0):
-        """ Adds a constraint to this driver.
+    def add_constraint(self, name, lower=None, upper=None, equals=None,
+                       linear=False, jacs=None, indices=None, adder=0.0,
+                       scaler=1.0):
+        """ Adds a constraint to this driver. For inequality constraints,
+        `lower` or `upper` must be specified. For equality constraints, `equals`
+        must be specified.
 
         Args
         ----
         name : string
-            Promoted pathname of the output that will serve as the objective.
+            Promoted pathname of the output that will serve as the quantity to
+            constrain.
 
-        ctype : string
-            Set to 'ineq' for inequality constraints, or 'eq' for equality
-            constraints. Make sure your driver supports the ctype of constraint
-            that you are adding.
+        lower : float or ndarray, optional
+             Constrain the quantity to be greater than this value.
+
+        upper : float or ndarray, optional
+             Constrain the quantity to be less than this value.
+
+        equals : float or ndarray, optional
+             Constrain the quantity to be equal to this value.
 
         linear : bool, optional
             Set to True if this constraint is linear with respect to all params
@@ -431,24 +473,43 @@ class Driver(object):
             is second in precedence.
         """
 
-        if ctype == 'eq' and self.supports['equality_constraints'] is False:
+        if equals is not None and (lower is not None or upper is not None):
+            msg = "Constraint '{}' cannot be both equality and inequality."
+            raise RuntimeError(msg.format(name))
+        if equals is not None and self.supports['equality_constraints'] is False:
             msg = "Driver does not support equality constraint '{}'."
             raise RuntimeError(msg.format(name))
-        if ctype == 'ineq' and self.supports['inequality_constraints'] is False:
+        if equals is None and self.supports['inequality_constraints'] is False:
             msg = "Driver does not support inequality constraint '{}'."
             raise RuntimeError(msg.format(name))
+        if lower is not None and upper is not None and self.supports['two_sided_constraints'] is False:
+            msg = "Driver does not support 2-sided constraint '{}'."
+            raise RuntimeError(msg.format(name))
+        if lower is None and upper is None and equals is None:
+            msg = "Constraint '{}' needs to define lower, upper, or equals."
+            raise RuntimeError(msg.format(name))
 
-        if isinstance(adder, np.ndarray):
-            adder = adder.flatten()
+
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
+        if isinstance(adder, np.ndarray):
+            adder = adder.flatten()
+        if isinstance(lower, np.ndarray):
+            lower = lower.flatten()
+        if isinstance(upper, np.ndarray):
+            upper = upper.flatten()
+        if isinstance(equals, np.ndarray):
+            equals = equals.flatten()
 
         con = {}
+        con['lower'] = lower
+        con['upper'] = upper
+        con['equals'] = equals
         con['linear'] = linear
-        con['ctype'] = ctype
         con['adder'] = adder
         con['scaler'] = scaler
         con['jacs'] = jacs
+
         if indices:
             con['indices'] = indices
         self._cons[name] = con
@@ -482,10 +543,10 @@ class Driver(object):
             if lintype == 'nonlinear' and meta['linear']:
                 continue
 
-            if ctype == 'eq' and meta['ctype'] == 'ineq':
+            if ctype == 'eq' and meta['equals'] is None:
                 continue
 
-            if ctype == 'ineq' and meta['ctype'] == 'eq':
+            if ctype == 'ineq' and meta['equals'] is not None:
                 continue
 
             scaler = meta['scaler']
@@ -506,6 +567,51 @@ class Driver(object):
         """
         return self._cons
 
+    def _gather_vars(self, vec, varnames):
+        '''
+        Gathers and returns only variables listed in 
+        `varnames` from the vector `vec`
+        '''
+        local_vars = []
+
+        for name in varnames:
+            if self.root.comm.rank == self.root._owning_ranks[name]:
+                local_vars.append((name, vec[name]))
+
+        all_vars = self.root.comm.gather(local_vars, root=0)
+
+        if self.root.comm.rank == 0:
+            return dict(itertools.chain(*all_vars))
+
+    def record(self, metadata):
+        '''
+        Gathers variables for non-parallel case recorders and
+        calls record for all recorders
+
+        Args
+        ----
+        metadata: `dict`
+        Metadata for iteration coordinate
+        '''
+        params = self.root.params
+        unknowns = self.root.unknowns
+        resids = self.root.resids
+
+        if MPI and self._vars_to_record is not None:
+            pnames = self._vars_to_record['pnames']
+            unames = self._vars_to_record['unames']
+            rnames = self._vars_to_record['rnames']
+            
+            params = self._gather_vars(params, pnames)
+            unknowns = self._gather_vars(unknowns, unames)
+            resids = self._gather_vars(resids, rnames)
+        
+        # If the recorder does not support parallel recording
+        # we need to make sure we only record on rank 0.
+        for recorder in self.recorders:
+            if self.root.comm.rank == 0 or recorder._parallel:
+                recorder.record(params, unknowns, resids, metadata)
+
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
 
@@ -524,5 +630,37 @@ class Driver(object):
 
         # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+
+        self.record(metadata)
+
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created Driver class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+        """
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
+
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        v = vars(self)
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n\tOptions\n\t----------\n'
+                    firstTime = 0
+                for (name, val) in sorted(value.items()):
+                        docstring += "    "+name
+                        docstring += " :  " + type(val).__name__
+                        docstring += "(" + str(val) + ")\n"
+                        desc = value._options[name]['desc']
+                        if(desc):
+                            docstring += "        " + desc + "\n"
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring

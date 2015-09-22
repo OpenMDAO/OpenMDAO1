@@ -45,6 +45,21 @@ class SimpleCompDerivMatVec(SimpleComp):
             dparams['x'] = self.multiplier*dresids['y']
 
 
+class SimpleCompWrongDeriv(SimpleComp):
+    """ The simplest component you can imagine, this time with incorrect
+    derivatives."""
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                     mode):
+        """Returns the product of the incoming vector with the Jacobian."""
+
+        if mode == 'fwd':
+            dresids['y'] += 0.0
+
+        elif mode == 'rev':
+            dparams['x'] = 1e6
+
+
 class SimpleArrayComp(Component):
     """A fairly simple array component."""
 
@@ -383,6 +398,7 @@ class FanInGrouped(Group):
 
         self.add('p1', ParamComp('x1', 1.0))
         self.add('p2', ParamComp('x2', 1.0))
+        self.add('p3', ParamComp('x3', 1.0))
         sub = self.add('sub', ParallelGroup())
 
         sub.add('comp1', ExecComp(['y=-2.0*x']))

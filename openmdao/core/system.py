@@ -13,7 +13,6 @@ from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 
-
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
     inherit from `Group` or `Component`"""
@@ -152,7 +151,7 @@ class System(object):
                     break
             else:
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
-                raise RuntimeError(msg % (self.name, prom))
+                raise RuntimeError(msg % (self.pathname, prom))
 
     def subsystems(self, local=False, recurse=False, include_self=False):
         """ Returns an iterator over subsystems.  For `System`, this is an empty list.
@@ -593,7 +592,7 @@ class System(object):
         Args
         ----
         J : `dict`
-            Distributed Jacobian
+            Local Jacobian
 
         Returns
         -------
@@ -651,3 +650,72 @@ class System(object):
         if self.pathname:
             return '.'.join((self.pathname, name))
         return name
+
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created System class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+
+        """
+        #start the docstring off
+        docstring = '\t\"\"\"\n'
+
+        if self._params_dict or self._unknowns_dict:
+            docstring += '\n\tParams\n\t----------\n'
+
+        if self._params_dict:
+            for key, value in self._params_dict.items():
+                #docstring += type(value).__name__
+                docstring += "    " + key + ": param ({"
+                #get the values out in order
+                dictItemCount = len(value)
+                dictPosition = 1
+                for k in sorted(value):
+                    docstring +=  "'" +k+ "'" + ": " + str(value[k])
+                    #don't want a trailing comma
+                    if (dictPosition != dictItemCount):
+                        docstring += ", "
+                    dictPosition += 1
+                docstring += "})\n"
+
+        if self._unknowns_dict:
+            for key, value in self._unknowns_dict.items():
+                docstring += "    " + key + " : unknown ({"
+                dictItemCount = len(value)
+                dictPosition = 1
+                for k in sorted(value):
+                    docstring += "'" +k+ "'" + ": " + str(value[k])
+                    if (dictPosition != dictItemCount):
+                        docstring += ", "
+                    dictPosition += 1
+                docstring += "})\n"
+
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        v = vars(self)
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n\tOptions\n\t----------\n'
+                    firstTime = 0
+                for (name, val) in sorted(value.items()):
+                    docstring += "    "+name
+                    docstring += " :  " + type(val).__name__
+                    docstring += "(" + str(val) + ")\n"
+                    desc = value._options[name]['desc']
+                    if(desc):
+                        docstring += "        " + desc + "\n"
+
+        #finish up docstring
+        docstring += '\n\t\"\"\"\n'
+        return docstring
+
+def _iter_J_nested(J):
+    for output, subdict in iteritems(J):
+        for param, value in iteritems(subdict):
+            yield (output, param), value
