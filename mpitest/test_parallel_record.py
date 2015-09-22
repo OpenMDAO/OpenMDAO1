@@ -47,9 +47,9 @@ class TestDumpRecorder(MPITestCase):
         with open(self.filename, 'r') as dumpfile:
             dump = dumpfile.readlines()
 
-        self.assertEqual(dump[3], '  comp3.y: 29.0\n')
-        self.assertEqual(dump[4], '  p1.x1: 1.0\n')
-        self.assertEqual(dump[5], '  p2.x2: 1.0\n')
+        self.assertEqual(dump[4], '  comp3.y: 29.0\n')
+        self.assertEqual(dump[5], '  p1.x1: 1.0\n')
+        self.assertEqual(dump[6], '  p2.x2: 1.0\n')
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

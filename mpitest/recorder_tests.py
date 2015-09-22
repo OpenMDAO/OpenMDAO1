@@ -49,6 +49,13 @@ class RecorderTests(object):
         N_PROCS = 2
         recorder = BaseRecorder()
         eps = 1e-5
+        t0 = None
+        t1 = None
+
+        def run(self, problem):
+            self.t0 = time.time()
+            problem.run()
+            self.t1 = time.time()
 
         def assertDatasetEquals(self, expected, tolerance):
             self.fail("assertDatasetEquals not implemented!")
@@ -71,7 +78,7 @@ class RecorderTests(object):
             prob.root.connect('G1.P2.x', 'C1.b')
             prob.driver.add_recorder(self.recorder)
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
 
             if not MPI or prob.root.comm.rank == 0:
 
@@ -119,7 +126,7 @@ class RecorderTests(object):
             prob.driver.add_recorder(self.recorder)
             self.recorder.options['includes'] = ['C1.*']
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
 
             if not MPI or prob.root.comm.rank == 0:
                 expected_params = [
@@ -163,7 +170,7 @@ class RecorderTests(object):
             self.recorder.options['includes'] = ['C1.*']
             self.recorder.options['excludes'] = ['*.out*']
             prob.setup(check=False)
-            prob.run()
+            self.run(prob)
 
             if not MPI or prob.root.comm.rank == 0:
                 expected_params = [
@@ -183,5 +190,52 @@ class RecorderTests(object):
 
                 self.assertDatasetEquals(
                     [(['Driver', (1,)], expected)],
+                    self.eps
+                )
+
+        def test_solver_record(self):
+            size = 3
+
+            prob = Problem(Group(), impl=impl)
+
+            G1 = prob.root.add('G1', ParallelGroup())
+            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+            prob.root.add('C1', ABCDArrayComp(size))
+
+            prob.root.connect('G1.P1.x', 'C1.a')
+            prob.root.connect('G1.P2.x', 'C1.b')
+            prob.root.nl_solver.add_recorder(self.recorder)
+            prob.setup(check=False)
+            self.run(prob)
+
+            if not MPI or prob.root.comm.rank == 0:
+
+                expected_params = [
+                    ("C1.a", [1.0, 1.0, 1.0]),
+                    ("C1.b", [2.0, 2.0, 2.0]),
+                ]
+                expected_unknowns = [
+                    ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
+                    ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
+                    ("C1.c",  np.array([3.0, 3.0, 3.0])),
+                    ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+                    ("C1.out_string", "_C1"),
+                    ("C1.out_list", [1.5]),
+                ]
+                expected_resids = [
+                    ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
+                    ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
+                    ("C1.c",  np.array([0.0, 0.0, 0.0])),
+                    ("C1.d",  np.array([0.0, 0.0, 0.0])),
+                    ("C1.out_string", ""),
+                    ("C1.out_list", []),
+                ]
+
+                expected = (expected_params, expected_unknowns, expected_resids)
+
+                self.assertDatasetEquals(
+                    [(['Driver', (1,), "root", (1,)], expected)],
                     self.eps
                 )

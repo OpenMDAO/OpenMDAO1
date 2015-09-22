@@ -28,12 +28,13 @@ class TestHDF5Recorder(RecorderTests.Tests):
             icoord = format_iteration_coordinate(coord)
 
             f = self.recorder.out[icoord]
+            timestamp = f.attrs['timestamp']
             params = f['Parameters']
             unknowns = f['Unknowns']
             resids = f['Residuals']
 
             sentinel = object()
-
+            self.assertTrue(self.t0 <= timestamp and timestamp <= self.t1)
             # If len(actual) == len(expected) and actual <= expected, then
             # actual == expected.
             for actual, exp in zip((params, unknowns, resids), expect):
