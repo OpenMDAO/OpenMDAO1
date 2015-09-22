@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
@@ -43,14 +43,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
@@ -67,14 +67,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=15.0)
@@ -91,14 +91,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=15.0)
@@ -115,14 +115,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', equals=-15.0)
@@ -139,14 +139,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=-11.0, upper=-10.0)
@@ -162,14 +162,14 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 50.0), promotes=['*'])
-        root.add('p2', ParamComp('y', 50.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
-        prob.driver.add_param('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
@@ -185,13 +185,13 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', np.zeros([2])), promotes=['*'])
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         root.add('comp', SimpleArrayComp(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
         root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', equals=0.0)
@@ -207,13 +207,13 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
+        root.add('p1', IndepVarComp('x', np.zeros((2, 2))), promotes=['*'])
         root.add('comp', ArrayComp2D(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', equals=0.0)
@@ -229,13 +229,13 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', np.zeros((2, 2))), promotes=['*'])
+        root.add('p1', IndepVarComp('x', np.zeros((2, 2))), promotes=['*'])
         root.add('comp', ArrayComp2D(), promotes=['*'])
         root.add('con', ExecComp('c = y - 20.0', c=np.zeros((2, 2)), y=np.zeros((2, 2))), promotes=['*'])
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
+        prob.driver.add_desvar('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', equals=0.0)
@@ -251,8 +251,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob = Problem()
         root = prob.root = Group()
 
-        root.add('p1', ParamComp('x', 1.0))
-        root.add('p2', ParamComp('x', 1.0))
+        root.add('p1', IndepVarComp('x', 1.0))
+        root.add('p2', IndepVarComp('x', 1.0))
 
         root.add('comp1', ExecComp('y = 3.0*x'))
         root.add('comp2', ExecComp('y = 5.0*x'))
@@ -270,8 +270,8 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_param('p1.x', low=-50.0, high=50.0)
-        prob.driver.add_param('p2.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
         prob.driver.add_constraint('con1.c', equals=0.0)
         prob.driver.add_constraint('con2.c', equals=0.0)

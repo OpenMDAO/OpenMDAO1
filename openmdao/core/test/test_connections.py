@@ -6,7 +6,7 @@ import warnings
 
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 
 
@@ -19,7 +19,7 @@ class TestConnections(unittest.TestCase):
         self.G1 = root.add("G1", Group())
         self.G2 = self.G1.add("G2", Group())
         self.C1 = self.G2.add("C1", ExecComp('y=x*2.0'))
-        self.C2 = self.G2.add("C2", ParamComp('x', 1.0))
+        self.C2 = self.G2.add("C2", IndepVarComp('x', 1.0))
 
         self.G3 = root.add("G3", Group())
         self.G4 = self.G3.add("G4", Group())
@@ -151,7 +151,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         G1 = root.add("G1", Group(), promotes=['x'])
         G2 = G1.add("G2", Group(), promotes=['x'])
         C1 = G2.add("C1", ExecComp('y=x*2.0'))
-        C2 = G2.add("C2", ParamComp('x', 1.0), promotes=['x'])
+        C2 = G2.add("C2", IndepVarComp('x', 1.0), promotes=['x'])
 
         G3 = root.add("G3", Group(), promotes=['x'])
         G4 = G3.add("G4", Group(), promotes=['x'])
@@ -180,7 +180,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         G1 = root.add("G1", Group())
         G2 = G1.add("G2", Group(), promotes=['x'])
         C1 = G2.add("C1", ExecComp('y=x*2.0'))
-        C2 = G2.add("C2", ParamComp('x', 1.0), promotes=['x'])
+        C2 = G2.add("C2", IndepVarComp('x', 1.0), promotes=['x'])
 
         G3 = root.add("G3", Group())
         G4 = G3.add("G4", Group(), promotes=['x'])

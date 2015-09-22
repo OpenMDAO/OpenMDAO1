@@ -30,17 +30,17 @@ class MPITests1(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['p.x']
+        indep_list = ['p.x']
         #unknown_list = ['sub.comp2.y', "sub.comp3.y"]
         unknown_list = ['c2.y', "c3.y"]
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         #assert_rel_error(self, J['sub.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         #assert_rel_error(self, J['sub.comp3.y']['p.x'][0][0], 15.0, 1e-6)
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
@@ -55,14 +55,14 @@ class MPITests1(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['p1.x1', 'p2.x2']
+        indep_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 

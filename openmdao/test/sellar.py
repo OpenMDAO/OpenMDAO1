@@ -9,7 +9,7 @@ From Sellar's analytic problem.
 import numpy as np
 
 from openmdao.components.exec_comp import ExecComp
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
@@ -111,8 +111,8 @@ class SellarNoDerivatives(Group):
     def __init__(self):
         super(SellarNoDerivatives, self).__init__()
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
         self.add('d1', SellarDis1(), promotes=['*'])
         self.add('d2', SellarDis2(), promotes=['*'])
@@ -136,8 +136,8 @@ class SellarDerivatives(Group):
     def __init__(self):
         super(SellarDerivatives, self).__init__()
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
         self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
         self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
@@ -159,8 +159,8 @@ class SellarDerivativesGrouped(Group):
     def __init__(self):
         super(SellarDerivativesGrouped, self).__init__()
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
         sub = self.add('mda', Group(), promotes=['*'])
 
         sub.add('d1', SellarDis1withDerivatives(), promotes=['*'])
@@ -220,8 +220,8 @@ class SellarStateConnection(Group):
     def __init__(self):
         super(SellarStateConnection, self).__init__()
 
-        self.add('px', ParamComp('x', 1.0), promotes=['*'])
-        self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
         self.add('state_eq', StateConnection())
         self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])

@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 
 from openmdao.core import Group, Problem
-from openmdao.components import MetaModel, ParamComp
+from openmdao.components import MetaModel, IndepVarComp
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, KrigingSurrogate
 
 from openmdao.test.util import assert_rel_error
@@ -344,7 +344,7 @@ class TestMetaModel(unittest.TestCase):
 
         prob = Problem(Group())
         prob.root.add('meta', meta, promotes=['x'])
-        prob.root.add('p', ParamComp('x', 0.), promotes=['x'])
+        prob.root.add('p', IndepVarComp('x', 0.), promotes=['x'])
         prob.setup(check=False)
 
         prob['meta.train:x'] = [0., .25, .5, .75, 1.]

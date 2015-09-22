@@ -31,6 +31,23 @@ class ScipyOptimizer(Driver):
     optimizers. Inequality constraints are supported by COBYLA and SLSQP,
     but equality constraints are only supported by COBYLA. None of the other
     optimizers support constraints.
+
+    Options
+    -------
+    equality_constraints :  bool(True)
+    inequality_constraints :  bool(True)
+    integer_parameters :  bool(True)
+    linear_constraints :  bool(True)
+    multiple_objectives :  bool(False)
+    two_sided_constraints :  bool(True)
+    disp :  bool(True)
+        Set to False to prevent printing of Scipy convergence messages
+    maxiter :  int(200)
+        Maximum number of iterations.
+    optimizer :  str('SLSQP')
+        Name of optimizer to use
+    tol :  float(1e-06)
+        Tolerance for termination. For detailed control, use solver-specific options.
     """
 
     def __init__(self):
@@ -85,7 +102,7 @@ class ScipyOptimizer(Driver):
         # Initial Run
         problem.root.solve_nonlinear(metadata=self.metadata)
 
-        pmeta = self.get_param_metadata()
+        pmeta = self.get_desvar_metadata()
         self.params = list(iterkeys(pmeta))
         self.objs = list(iterkeys(self.get_objectives()))
         con_meta = self.get_constraint_metadata()
@@ -109,7 +126,7 @@ class ScipyOptimizer(Driver):
         else:
             bounds = None
 
-        for name, val in iteritems(self.get_params()):
+        for name, val in iteritems(self.get_desvars()):
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size
@@ -198,9 +215,9 @@ class ScipyOptimizer(Driver):
 
         # Pass in new parameters
         i = 0
-        for name, meta in self.get_param_metadata().items():
+        for name, meta in self.get_desvar_metadata().items():
             size = meta['size']
-            self.set_param(name, x_new[i:i+size])
+            self.set_desvar(name, x_new[i:i+size])
             i += size
 
         self.iter_count += 1
@@ -217,9 +234,7 @@ class ScipyOptimizer(Driver):
 
         # Record after getting obj and constraints to assure it has been
         # gathered in MPI.
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns,
-                                system.resids, metadata)
+        self.recorders.record(system, metadata)
 
         #print("Functions calculated")
         #print(x_new)
@@ -236,10 +251,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 
@@ -297,10 +310,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 

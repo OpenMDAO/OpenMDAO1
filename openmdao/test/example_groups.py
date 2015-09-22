@@ -3,7 +3,7 @@
 import numpy as np
 
 from openmdao.core.group import Group
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.test.simple_comps import SimplePassByObjComp
 
@@ -13,7 +13,7 @@ class ExampleGroup(Group):
         super(ExampleGroup, self).__init__()
 
         self.G2 = self.add('G2', Group())
-        self.C1 = self.G2.add('C1', ParamComp('x', 5.))
+        self.C1 = self.G2.add('C1', IndepVarComp('x', 5.))
 
         self.G1 = self.G2.add('G1', Group())
         self.C2 = self.G1.add('C2', ExecComp('y=x*2.0',x=3.,y=5.5))
@@ -32,7 +32,7 @@ class ExampleByObjGroup(Group):
         super(ExampleByObjGroup, self).__init__()
 
         self.G2 = self.add('G2', Group())
-        self.C1 = self.G2.add('C1', ParamComp('x', 'foo'))
+        self.C1 = self.G2.add('C1', IndepVarComp('x', 'foo'))
 
         self.G1 = self.G2.add('G1', Group())
         self.C2 = self.G1.add('C2', SimplePassByObjComp())
@@ -52,7 +52,7 @@ class ExampleGroupWithPromotes(Group):
         super(ExampleGroupWithPromotes, self).__init__()
 
         self.G2 = self.add('G2', Group())
-        self.C1 = self.G2.add('C1', ParamComp('x', 5.), promotes=['x'])
+        self.C1 = self.G2.add('C1', IndepVarComp('x', 5.), promotes=['x'])
 
         self.G1 = self.G2.add('G1', Group(), promotes=['x'])
         self.C2 = self.G1.add('C2', ExecComp('y=x*2.0',x=3.,y=5.5), promotes=['x'])

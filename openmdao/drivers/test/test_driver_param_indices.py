@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
@@ -44,9 +44,9 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_param('z', low=np.array([-10.0, 0.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
                              high=np.array([10.0, 10.0]))
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -74,9 +74,9 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
         prob.root.fd_options['force_fd'] = False
 
-        prob.driver.add_param('z', low=np.array([-10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0]),
                               high=np.array([10.0]),indices=[0])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -108,9 +108,9 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_param('z', low=np.array([-10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0]),
                               high=np.array([10.0]),indices=[0])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -139,9 +139,9 @@ class TestParamIndices(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
 
-        prob.driver.add_param('z', low=np.array([-10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0]),
                               high=np.array([10.0]),indices=[0])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -169,9 +169,9 @@ class TestParamIndices(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
 
-        prob.driver.add_param('z', low=np.array([-10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0]),
                               high=np.array([10.0]), indices=[0])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -197,9 +197,9 @@ class TestParamIndices(unittest.TestCase):
         prob.root = SellarStateConnection()
         prob.root.fd_options['force_fd'] = True
 
-        prob.driver.add_param('z', low=np.array([-10.0, -10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0, -10.0]),
                               high=np.array([10.0, 10.0]), indices=[1])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)

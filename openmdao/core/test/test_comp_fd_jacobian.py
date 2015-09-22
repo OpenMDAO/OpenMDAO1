@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from openmdao.core import Component, Group, Problem, System, SrcVecWrapper
-from openmdao.components import ParamComp, ExecComp
+from openmdao.components import IndepVarComp, ExecComp
 from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
 from openmdao.test.paraboloid import Paraboloid
@@ -22,14 +22,14 @@ class TestProb(Problem):
 
         self.root = root = Group()
         root.add('c1', SimpleArrayComp())
-        root.add('p1', ParamComp('p', 1*np.ones(2)))
+        root.add('p1', IndepVarComp('p', 1*np.ones(2)))
         root.connect('p1.p','c1.x')
 
         root.add('ci1', SimpleImplicitComp())
-        root.add('pi1', ParamComp('p', 1.))
+        root.add('pi1', IndepVarComp('p', 1.))
         root.connect('pi1.p','ci1.x')
 
-        root.add('pjunk', ParamComp('pj', np.ones((2,2))))
+        root.add('pjunk', IndepVarComp('pj', np.ones((2,2))))
         root.add('junk', ExecComp('y=x', x=np.zeros((2,2)), y=np.zeros((2,2))))
         root.connect('pjunk.pj', 'junk.x')
 
@@ -164,7 +164,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', ExecComp('y=x*2.0'))
-        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = True
@@ -207,7 +207,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', OverrideComp())
-        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
         comp.fd_options['force_fd'] = True
@@ -223,7 +223,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', Paraboloid())
-        prob.root.add('p1', ParamComp([('x', 15.0), ('y', 15.0)]))
+        prob.root.add('p1', IndepVarComp([('x', 15.0), ('y', 15.0)]))
         prob.root.connect('p1.x', 'comp.x')
         prob.root.connect('p1.y', 'comp.y')
 
@@ -247,20 +247,20 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', Paraboloid())
-        prob.root.add('p1', ParamComp('x', 15.0))
-        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.add('p1', IndepVarComp('x', 15.0))
+        prob.root.add('p2', IndepVarComp('y', 15.0))
         prob.root.connect('p1.x', 'comp.x')
         prob.root.connect('p2.y', 'comp.y')
 
         comp.fd_options['force_fd'] = True
         comp.fd_options['form'] = 'forward'
 
-        param_list = ['p1.x']
+        indep_list = ['p1.x']
         unknowns_list = ['comp.f_xy']
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(param_list, unknowns_list, return_format='dict')
+        J = prob.calc_gradient(indep_list, unknowns_list, return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
 
         # Make sure it gives good result with small stepsize
@@ -333,8 +333,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', ScaledParaboloid())
-        prob.root.add('p1', ParamComp('x', 8.0*comp.scale))
-        prob.root.add('p2', ParamComp('y', 8.0*comp.scale))
+        prob.root.add('p1', IndepVarComp('x', 8.0*comp.scale))
+        prob.root.add('p2', IndepVarComp('y', 8.0*comp.scale))
         prob.root.connect('p1.x', 'comp.x')
         prob.root.connect('p2.y', 'comp.y')
 
@@ -395,8 +395,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', MetaParaboloid())
-        prob.root.add('p1', ParamComp('x', 15.0))
-        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.add('p1', IndepVarComp('x', 15.0))
+        prob.root.add('p2', IndepVarComp('y', 15.0))
         prob.root.connect('p1.x', 'comp.x')
         prob.root.connect('p2.y', 'comp.y')
 
@@ -456,9 +456,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         comp = prob.root.add('comp', MetaParaboloid())
-        prob.root.add('p11', ParamComp('x1', 15.0))
-        prob.root.add('p12', ParamComp('x2', 15.0))
-        prob.root.add('p2', ParamComp('y', 15.0))
+        prob.root.add('p11', IndepVarComp('x1', 15.0))
+        prob.root.add('p12', IndepVarComp('x2', 15.0))
+        prob.root.add('p2', IndepVarComp('y', 15.0))
         prob.root.connect('p11.x1', 'comp.x1')
         prob.root.connect('p12.x2', 'comp.x2')
         prob.root.connect('p2.y', 'comp.y')

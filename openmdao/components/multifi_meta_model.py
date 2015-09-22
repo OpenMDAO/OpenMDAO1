@@ -49,6 +49,19 @@ class MultiFiMetaModel(MetaModel):
 
     .. note:: when *nfi* ==1 a :class:`MultiFiMetaModel` object behaves as
         a :class:`MetaModel` object.
+
+    Options
+    -------
+    force_fd :  bool(False)
+        Set to True to finite difference this system.
+    form :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    step_size :  float(1e-06)
+        Default finite difference stepsize
+    step_type :  str('absolute')
+        Set to absolute, relative
+
+
     """
 
     def __init__(self, nfi=1):

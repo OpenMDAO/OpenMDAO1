@@ -23,6 +23,8 @@ class DumpRecorder(BaseRecorder):
 
     def __init__(self, out='stdout'):
         super(DumpRecorder, self).__init__()
+        self._parallel = True
+
         if isinstance(out, string_types):
 
             if out == 'stdout':
@@ -77,9 +79,16 @@ class DumpRecorder(BaseRecorder):
         if not self.out:  # if self.out is None, just do nothing
             return
 
+        iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
+        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
+
         write = self.out.write
+        fmat = "Timestamp: {0!r}\n"
+        write(fmat.format(timestamp))
+
         fmat = "Iteration Coordinate: {0:s}\n"
-        write(fmat.format(format_iteration_coordinate(metadata['coord'])))
+        write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
         write("Params:\n")
         for param, val in sorted(iteritems(params)):

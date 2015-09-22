@@ -178,7 +178,7 @@ class LinearGaussSeidel(LinearSolver):
                 f_norm = self._norm(system, mode, rhs_mat)
 
             if self.options['iprint'] > 0:
-                self.print_norm('LN_GS', self.local_meta, self.iter_count,
+                self.print_norm('LN_GS', system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
         return sol_buf
