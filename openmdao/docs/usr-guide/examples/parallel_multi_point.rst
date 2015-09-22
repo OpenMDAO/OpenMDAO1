@@ -18,7 +18,7 @@ need.
 
     from openmdao.core import Component, Group, ParallelGroup
 
-    from openmdao.components import ParamComp, ExecComp
+    from openmdao.components import IndepVarComp, ExecComp
 
     class Plus(Component):
         """
@@ -95,7 +95,7 @@ need.
             super(ParallelMultiPoint, self).__init__()
 
             size = len(adders)
-            self.add('desvar', ParamComp('X', val=np.zeros(size)), promotes=['*'])
+            self.add('desvar', IndepVarComp('X', val=np.zeros(size)), promotes=['*'])
 
             self.add('aggregate', Summer(size))
 

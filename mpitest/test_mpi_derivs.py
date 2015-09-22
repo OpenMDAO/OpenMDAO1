@@ -4,7 +4,7 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 
 from openmdao.core import Group, ParallelGroup, Problem
 from openmdao.components import ExecComp
@@ -69,14 +69,14 @@ class TestPetscKSP(MPITestCase):
 
         prob.setup(check=False)
 
-        param_list = ['p1.x1', 'p2.x2']
+        indep_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
@@ -88,14 +88,14 @@ class TestPetscKSP(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['p.x']
+        indep_list = ['p.x']
         unknown_list = ['comp4.y1', 'comp4.y2']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp4.y1']['p.x'][0][0], 25, 1e-6)
         assert_rel_error(self, J['comp4.y2']['p.x'][0][0], -40.5, 1e-6)
 
@@ -111,16 +111,16 @@ class TestPetscKSP(MPITestCase):
         # Make sure value is fine.
         assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
 
-        param_list = ['p.x']
+        indep_list = ['p.x']
         unknown_list = ['comp7.y1']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
     def test_converge_diverge_compfd(self):
@@ -139,16 +139,16 @@ class TestPetscKSP(MPITestCase):
         # Make sure value is fine.
         assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
 
-        param_list = ['p.x']
+        indep_list = ['p.x']
         unknown_list = ['comp7.y1']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
 
@@ -161,7 +161,7 @@ class TestUnderPar(MPITestCase):
         prob = Problem(impl=impl)
         prob.root = root = Group()
 
-        root.add('p', ParamComp('x', 1.0))
+        root.add('p', IndepVarComp('x', 1.0))
         root.add('comp1', ExecComp(['y=3.0*x']))
 
         sub = root.add('sub', ParallelGroup())
@@ -217,7 +217,7 @@ class TestLinGSPar3(MPITestCase):
 
         sub = root.add('sub', ParallelGroup())
         pgroup = sub.add('pgroup', Group())
-        pgroup.add('p', ParamComp('x', 1.0))
+        pgroup.add('p', IndepVarComp('x', 1.0))
         pgroup.add('comp1', ExecComp(['y=3.0*x']))
         sub.add('comp2', ExecComp(['y=-2.0*x']))
         sub.add('comp3', ExecComp(['y=5.0*x']))

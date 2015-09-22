@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from openmdao.core import Group, Problem
-from openmdao.components import ParamComp, ExecComp
+from openmdao.components import IndepVarComp, ExecComp
 
 from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp
 from openmdao.test.util import assert_rel_error
@@ -18,7 +18,7 @@ class TestIndices(unittest.TestCase):
 
         root = Group()
 
-        root.add('P1', ParamComp('x', np.zeros(size)))
+        root.add('P1', IndepVarComp('x', np.zeros(size)))
         root.add('C1', ExecComp('y = x * 2.', y=np.zeros(size//2), x=np.zeros(size//2)))
         root.add('C2', ExecComp('y = x * 3.', y=np.zeros(size//2), x=np.zeros(size//2)))
 
@@ -39,7 +39,7 @@ class TestIndices(unittest.TestCase):
     def test_array_to_scalar(self):
         root = Group()
 
-        root.add('P1', ParamComp('x', np.array([2., 3.])))
+        root.add('P1', IndepVarComp('x', np.array([2., 3.])))
         root.add('C1', SimpleComp())
         root.add('C2', ExecComp('y = x * 3.', y=0., x=0.))
 
@@ -56,7 +56,7 @@ class TestIndices(unittest.TestCase):
     def test_subarray_to_promoted_var(self):
         root = Group()
 
-        P = root.add('P', ParamComp('x', np.array([1., 2., 3.])))
+        P = root.add('P', IndepVarComp('x', np.array([1., 2., 3.])))
         G = root.add('G', Group())
         C = root.add('C', SimpleComp())
 
@@ -75,7 +75,7 @@ class TestIndices(unittest.TestCase):
         # no try the same thing with promoted var
         root = Group()
 
-        P = root.add('P', ParamComp('x', np.array([1., 2., 3.])))
+        P = root.add('P', IndepVarComp('x', np.array([1., 2., 3.])))
         G = root.add('G', Group())
         C = root.add('C', SimpleComp())
 

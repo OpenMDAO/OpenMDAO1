@@ -10,7 +10,7 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 
 from openmdao.test.mpi_util import MPITestCase
 
@@ -55,11 +55,11 @@ class MPITests1(MPITestCase):
         prob = Problem(Group(), impl=impl)
 
         size = 5
-        A1 = prob.root.add('A1', ParamComp('a', np.zeros(size, float)))
-        B1 = prob.root.add('B1', ParamComp('b', np.zeros(size, float)))
-        B2 = prob.root.add('B2', ParamComp('b', np.zeros(size, float)))
-        S1 = prob.root.add('S1', ParamComp('s', ''))
-        L1 = prob.root.add('L1', ParamComp('l', []))
+        A1 = prob.root.add('A1', IndepVarComp('a', np.zeros(size, float)))
+        B1 = prob.root.add('B1', IndepVarComp('b', np.zeros(size, float)))
+        B2 = prob.root.add('B2', IndepVarComp('b', np.zeros(size, float)))
+        S1 = prob.root.add('S1', IndepVarComp('s', ''))
+        L1 = prob.root.add('L1', IndepVarComp('l', []))
 
         C1 = prob.root.add('C1', ABCDArrayComp(size))
         C2 = prob.root.add('C2', ABCDArrayComp(size))
@@ -99,7 +99,7 @@ class MPITests2(MPITestCase):
         prob = Problem(Group(), impl=impl)
 
         size = 5
-        A1 = prob.root.add('A1', ParamComp('a', np.zeros(size, float)))
+        A1 = prob.root.add('A1', IndepVarComp('a', np.zeros(size, float)))
         C1 = prob.root.add('C1', ABCDArrayComp(size))
 
         try:
@@ -118,8 +118,8 @@ class MPITests2(MPITestCase):
         prob = Problem(Group(), impl=impl)
 
         G1 = prob.root.add('G1', ParallelGroup())
-        G1.add('P1', ParamComp('x', np.ones(size, float) * 1.0))
-        G1.add('P2', ParamComp('x', np.ones(size, float) * 2.0))
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
         prob.root.add('C1', ABCDArrayComp(size))
 
@@ -140,7 +140,7 @@ class MPITests2(MPITestCase):
         size = 3
         prob = Problem(Group(), impl=impl)
         root = prob.root
-        root.add('P1', ParamComp('x', np.ones(size, float) * 1.1))
+        root.add('P1', IndepVarComp('x', np.ones(size, float) * 1.1))
         G1 = root.add('G1', ParallelGroup())
         G1.add('C1', ABCDArrayComp(size))
         G1.add('C2', ABCDArrayComp(size))

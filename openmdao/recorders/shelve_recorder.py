@@ -56,6 +56,7 @@ class ShelveRecorder(BaseRecorder):
         """
 
         iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
         params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
         group_name = format_iteration_coordinate(iteration_coordinate)
 
@@ -63,7 +64,8 @@ class ShelveRecorder(BaseRecorder):
 
         f = self.out
 
-        data = OrderedDict([('Parameters', params),
+        data = OrderedDict([('timestamp', timestamp),
+                            ('Parameters', params),
                             ('Unknowns', unknowns),
                             ('Residuals', resids)])
 

@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.components import LinearSystem, ParamComp
+from openmdao.components import LinearSystem, IndepVarComp
 from openmdao.core import Group, Problem
 from openmdao.test.util import assert_rel_error
 
@@ -19,8 +19,8 @@ class TestLinearSystem(unittest.TestCase):
         A = np.array([[ 5.0, -3.0, 2.0], [1.0, 7.0, -4.0], [1.0, 0.0, 8.0]])
         b = A.dot(x)
 
-        root.add('p1', ParamComp('A', A))
-        root.add('p2', ParamComp('b', b))
+        root.add('p1', IndepVarComp('A', A))
+        root.add('p2', IndepVarComp('b', b))
         root.connect('p1.A', 'lin.A')
         root.connect('p2.b', 'lin.b')
 

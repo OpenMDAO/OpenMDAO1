@@ -33,14 +33,14 @@ Here is example code for a model that consists of a single `Component`,
    import numpy as np
    import sys
 
-   from openmdao.components import ParamComp
+   from openmdao.components import IndepVarComp
    from openmdao.core import Problem, Group
    from openmdao.test.simple_comps import SimpleArrayComp
 
    prob = Problem()
    prob.root = Group()
    prob.root.add('comp', SimpleArrayComp())
-   prob.root.add('p1', ParamComp('x', np.ones([2])))
+   prob.root.add('p1', IndepVarComp('x', np.ones([2])))
 
    prob.root.connect('p1.x', 'comp.x')
 

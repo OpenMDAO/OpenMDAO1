@@ -111,7 +111,7 @@ Next we'll use these components to build an actual distributed model:
     import time
 
     from openmdao.core import Problem, Group
-    from openmdao.components import ParamComp
+    from openmdao.components import IndepVarComp
 
     from openmdao.core.mpi_wrap import MPI
 
@@ -128,7 +128,7 @@ Next we'll use these components to build an actual distributed model:
     prob = Problem(impl=impl)
     prob.root = Group()
 
-    prob.root.add('des_vars', ParamComp('x', np.ones(size)), promotes=['*'])
+    prob.root.add('des_vars', IndepVarComp('x', np.ones(size)), promotes=['*'])
     prob.root.add('plus', DistributedAdder(size), promotes=['*'])
     prob.root.add('summer', Summer(size), promotes=['*'])
 
