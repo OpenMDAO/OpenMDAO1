@@ -33,7 +33,7 @@ class ScipyOptimizer(Driver):
     optimizers support constraints.
 
     Options
-	-------
+    -------
     equality_constraints :  bool(True)
     inequality_constraints :  bool(True)
     integer_parameters :  bool(True)

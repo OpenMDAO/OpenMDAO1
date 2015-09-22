@@ -22,7 +22,7 @@ class pyOptSparseDriver(Driver):
     only SNOPT is supported right now.
 
     Options
-	-------
+    -------
     equality_constraints :  bool(True)
     inequality_constraints :  bool(True)
     integer_parameters :  bool(False)

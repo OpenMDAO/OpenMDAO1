@@ -11,7 +11,7 @@ class LinearSystem(Component):
     and x is a state.
 
     Options
-	-------
+    -------
     force_fd :  bool(False)
         Set to True to finite difference this system.
     form :  str('forward')

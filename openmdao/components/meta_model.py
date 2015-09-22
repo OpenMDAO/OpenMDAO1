@@ -17,7 +17,7 @@ class MetaModel(Component):
     For a Float variable, the training data is an array of length m.
 
     Options
-	-------
+    -------
     force_fd :  bool(False)
         Set to True to finite difference this system.
     form :  str('forward')

@@ -19,8 +19,8 @@ class ExternalCode(Component):
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
 
-	Options
-	-------
+    Options
+    -------
 
     force_fd :  bool(False)
         Set to True to finite difference this system.

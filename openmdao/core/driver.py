@@ -643,7 +643,7 @@ class Driver(object):
                 string that contains a basic numpy docstring.
         """
         #start the docstring off
-        docstring = '\t\"\"\"\n'
+        docstring = '    \"\"\"\n'
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
@@ -652,7 +652,7 @@ class Driver(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t-------\n'
+                    docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
                         docstring += "    "+name
@@ -666,5 +666,5 @@ class Driver(object):
                         if(desc):
                             docstring += "        " + desc + "\n"
         #finish up docstring
-        docstring += '\n\t\"\"\"\n'
+        docstring += '\n    \"\"\"\n'
         return docstring

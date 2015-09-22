@@ -22,8 +22,8 @@ class ConstraintComp(ExecComp):
         Name of the output variable containing the result of the
         constraint equation.  Default is 'out'.
 
-	Options
-	----------
+    Options
+    -------
     force_fd :  bool(False)
         Set to True to finite difference this system.
     form :  str('forward')

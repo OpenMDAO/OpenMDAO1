@@ -10,7 +10,7 @@ class ParamComp(Component):
     A Component that provides an output to connect to a parameter.
 
     Options
-	-------
+    -------
     force_fd :  bool(False)
         Set to True to finite difference this system.
     form :  str('forward')

@@ -662,10 +662,10 @@ class System(object):
 
         """
         #start the docstring off
-        docstring = '\t\"\"\"\n'
+        docstring = '    \"\"\"\n'
 
         if self._params_dict or self._unknowns_dict:
-            docstring += '\n\tParams\n\t----------\n'
+            docstring += '\n    Params\n    ----------\n'
 
         if self._params_dict:
             for key, value in self._params_dict.items():
@@ -701,7 +701,7 @@ class System(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t-------\n'
+                    docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
                     docstring += "    "+name
@@ -709,7 +709,7 @@ class System(object):
                     docstring += "("
                     if type(val).__name__ == 'str': docstring += "'"
                     docstring += str(val)
-                    if type(val).__name__ == 'str': docstring += "'" 
+                    if type(val).__name__ == 'str': docstring += "'"
                     docstring += ")\n"
 
                     desc = value._options[name]['desc']
@@ -717,7 +717,7 @@ class System(object):
                         docstring += "        " + desc + "\n"
 
         #finish up docstring
-        docstring += '\n\t\"\"\"\n'
+        docstring += '\n    \"\"\"\n'
         return docstring
 
 def _iter_J_nested(J):
