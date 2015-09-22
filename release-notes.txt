@@ -1,3 +1,45 @@
+OpenMDAO Version 1.1.0 Alpha Release Notes
+September 22, 2015
+
+API Changes
+*Rename ParamComp to IndepVarComp, because it’s really just a component that
+supplies one or more independent variables as outputs, and it has no parameters.
+
+*ConstraintComp is going away, but user can add constraints to an optimizer
+ via driver.add_constraint(‘<var_name>’, lower=xxx, upper=xxx, equals=xxxx)
+
+
+Features
+* Multiple documentation changes and fixes, including:
+    - an example for running check_partial_derivatives,
+    - an MPI parallelization tutorial,
+    - ExecComp example that shows how to handle array vars,
+    - better auto-documentation of our components/drivers (now including Options).
+* User can solve for derivatives with a Petsc KSP solver.
+* User can now create a recorder using SQLlite as the db w/shelve API.
+* GMRES linear solver now uses solve_linear method for preconditioning.
+* Added iprint output to all the linear and nonlinear solvers.
+* Convert CADRE problem for use with the Alpha, including Linear Gauss-Seidel.
+* Added support for distributed components.
+* Added Surrogate Generators
+* Further work on parallel, incuding:
+    - Got parallel working with petsc 3.6.
+    - Got parallel derivs in adjoint when voi are under parallel goups
+    - Get gradient calculation working for constraints that live in (or below) parallel systems under MPI.
+
+
+Bugfixes:
+* Fixed bug where derivative calculation breaks when a parameter sub_slice is added to a driver.
+* pyoptsparse now works with Python 3.4.x
+* Made dump recorder work in parallel for CADRE. Also, updated drivers so that all obj/cons are gathered by the time we record.
+* When calling group.subsystems with local=True, execution order of systems is now preserved.
+* User now gets a clearer error about petscImpl if they try to run under MPI without the petsc_impl
+* ExecComp now throws an error if 'promotes' kwarg is given.
+* Driver.set_param no longer ignores 'indices' metadata.
+* Promotion of a non-existent variable now provides full path name in the error message.
+* Fixed a bug in reverse mode when using apply_linear
+* Now skips tests (instead of failing) in test_mpi_derivs.py if petsc4py is not installed on host system.
+ ---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.0.5 Alpha Release Notes
 August 12, 2015
 
