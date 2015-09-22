@@ -234,7 +234,7 @@ class ScipyOptimizer(Driver):
 
         # Record after getting obj and constraints to assure it has been
         # gathered in MPI.
-        self.record(metadata)
+        self.recorders.record(system, metadata)
 
         #print("Functions calculated")
         #print(x_new)
