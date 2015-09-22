@@ -71,7 +71,7 @@ class Relevance(object):
         -------
         bool: True if varname is in the relevant path of var_of_interest
         """
-        if var_of_interest is None:
+        if var_of_interest is None or var_of_interest not in self.relevant:
             return True
         return varname in self.relevant[var_of_interest]
 

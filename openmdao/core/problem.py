@@ -767,7 +767,7 @@ class Problem(System):
                         cols = len(idx)
                     for row in range(0, rows):
                         for col in range(0, cols):
-                            J[ui+row][pi+col] = pd[row][col]
+                            J[ui+row, pi+col] = pd[row, col]
                     pi += cols
                 ui += rows
         return J
@@ -801,6 +801,7 @@ class Problem(System):
         """
 
         root = self.root
+        relevance = root._relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
         to_abs_unames = root._to_abs_unames
@@ -823,8 +824,6 @@ class Problem(System):
                 if name in root.dumat:
                     root.dumat[name].vec[:] = 0.0
                     root.drmat[name].vec[:] = 0.0
-        #root.dumat[None].vec[:] = 0.0
-        #root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
@@ -845,14 +844,19 @@ class Problem(System):
         else:
             usize = 0
             psize = 0
+            Jslices = {}
             for u in unknown_list:
+                start = usize
                 usize += self.root.unknowns.metadata(u)['size']
+                Jslices[u] = slice(start, usize)
             for p in param_list:
                 idx = self._poi_indices
+                start = psize
                 if p in idx:
                     psize += len(idx)
                 else:
                     psize += self.root.unknowns.metadata(p)['size']
+                Jslices[p] = slice(start, psize)
             J = np.zeros((usize, psize))
 
         if fwd:
@@ -897,7 +901,6 @@ class Problem(System):
 
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
-        j = 0
         for params in voi_sets:
             rhs = OrderedDict()
             voi_idxs = {}
@@ -927,8 +930,6 @@ class Problem(System):
                                        " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
 
-            jbase = j
-
             # at this point, we know that for all vars in the current
             # group of interest, the number of indices is the same. We loop
             # over the *size* of the indices and use the loop index to look
@@ -952,8 +953,9 @@ class Problem(System):
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
 
-                    i = 0
                     for item in output_list:
+                        if not relevance.is_relevant(param, item):
+                            continue
 
                         if fwd or owned[item] == iproc:
                             out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
@@ -971,21 +973,19 @@ class Problem(System):
                             nk = len(dxval)
 
                             if return_format == 'dict':
-                                if mode == 'fwd':
+                                if fwd:
                                     if J[item][param] is None:
                                         J[item][param] = np.zeros((nk, len(in_idxs)))
-                                    J[item][param][:, j-jbase] = dxval
+                                    J[item][param][:, i] = dxval
                                 else:
                                     if J[param][item] is None:
                                         J[param][item] = np.zeros((len(in_idxs), nk))
-                                    J[param][item][j-jbase, :] = dxval
+                                    J[param][item][i, :] = dxval
                             else:
-                                if mode == 'fwd':
-                                    J[i:i+nk, j] = dx[out_idxs]
+                                if fwd:
+                                    J[Jslices[item], Jslices[param].start+i] = dxval
                                 else:
-                                    J[j, i:i+nk] = dx[out_idxs]
-                                i += nk
-                j += 1
+                                    J[Jslices[param].start+i, Jslices[item]] = dxval
 
         # Clean up after ourselves
         root.clear_dparams()

@@ -749,10 +749,10 @@ class Group(System):
 
         for voi in vois:
             if not self._relevance.is_relevant_system(voi, system):
-                print ("skipping",system.pathname,"for",voi)
+                #print ("skipping",system.pathname,"for",voi)
                 continue
-            else:
-                print("keeping",system.pathname,"for",voi)
+            # else:
+            #     print("keeping",system.pathname,"for",voi)
 
             dresids = system.drmat[voi]
             dunknowns = system.dumat[voi]

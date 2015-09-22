@@ -6,7 +6,7 @@ import numpy as np
 from openmdao.util import to_slices
 from openmdao.core.mpi_wrap import MPI
 
-trace = True#os.environ.get('OPENMDAO_TRACE')
+trace = os.environ.get('OPENMDAO_TRACE')
 
 class DataTransfer(object):
     """
