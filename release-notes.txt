@@ -35,7 +35,7 @@ Bugfixes:
 * Made dump recorder work in parallel for CADRE. Also, updated drivers so that all obj/cons are gathered by the time we record.
 * When calling group.subsystems with local=True, execution order of systems is now preserved.
 * User now gets a clearer error about petscImpl if they try to run under MPI without the petsc_impl
-* ExecComp now throws an error if 'promotes' kwarg is given.
+* ExecComp now raises an exception if any of the kwargs passed to init are not variables found in the ExecComp equations.
 * Driver.set_param no longer ignores 'indices' metadata.
 * Promotion of a non-existent variable now provides full path name in the error message.
 * Fixed a bug in reverse mode when using apply_linear
