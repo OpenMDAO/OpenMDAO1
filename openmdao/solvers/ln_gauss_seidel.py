@@ -53,13 +53,13 @@ class LinearGaussSeidel(LinearSolver):
         drmat = system.drmat
         dpmat = system.dpmat
         gs_outputs = system.gs_outputs
+        relevance = system._relevance
+        fwd = mode == 'fwd'
 
         system.clear_dparams()
-        for names in system._relevance.vars_of_interest():
-            for name in names:
-                if name in dumat:
-                    dumat[name].vec[:] = 0.0
-        dumat[None].vec[:] = 0.0
+        for name in rhs_mat:
+            dumat[name].vec[:] = 0.0
+        #dumat[None].vec[:] = 0.0
 
         vois = rhs_mat.keys()
         # John starts with the following. It is not necessary, but
@@ -75,7 +75,7 @@ class LinearGaussSeidel(LinearSolver):
               f_norm > self.options['atol'] and \
               f_norm/f_norm0 > self.options['rtol']:
 
-            if mode == 'fwd':
+            if fwd:
 
                 for sub in itervalues(system._subsystems):
 
@@ -97,7 +97,8 @@ class LinearGaussSeidel(LinearSolver):
 
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
-                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
+                        system._sub_apply_linear_wrapper(sub, mode, vois,
+                                                         ls_inputs=system._ls_inputs,
                                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
                     else:

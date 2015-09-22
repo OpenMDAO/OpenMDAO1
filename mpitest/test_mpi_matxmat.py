@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import time
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
@@ -33,7 +34,6 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.sub.ln_solver = LinearGaussSeidel()
 
-        # Parallel Groups
         prob.driver.add_param('p1.x1')
         prob.driver.add_param('p2.x2')
         prob.driver.add_objective('comp3.y')
@@ -59,7 +59,6 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.sub.ln_solver = LinearGaussSeidel()
 
-        # Parallel Groups
         prob.driver.add_param('p.x')
         prob.driver.add_constraint('c2.y')
         prob.driver.add_constraint('c3.y')
@@ -87,11 +86,6 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.sub.ln_solver.options['mode'] = 'fwd'
 
-        # auto calculated mode is fwd, so we don't have to set it explicitly
-        # in the ln_solvers in order to have our voi subvecs allocated
-        # properly.
-
-        # Parallel Groups
         prob.driver.add_param('p1.x1')
         prob.driver.add_param('p2.x2')
         prob.driver.add_param('p3.x3')
@@ -154,7 +148,6 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.sub.ln_solver.options['mode'] = 'rev'
 
-        # Parallel Groups
         prob.driver.add_param('p.x')
         prob.driver.add_constraint('c2.y')
         prob.driver.add_constraint('c3.y')
@@ -199,9 +192,10 @@ class MatMatIndicesTestCase(MPITestCase):
         G1.ln_solver = LinearGaussSeidel()
         G1.ln_solver.options['mode'] = 'rev'
 
-        c2 = G1.add('c2', ExecComp4Test('y = x * 2.0',
+        c2 = G1.add('c2', ExecComp4Test('y = x * 2.0', lin_delay=1.0, trace=True,
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c3 = G1.add('c3', ExecComp4Test('y = numpy.ones(3).T*x.dot(numpy.arange(3.,6.))',
+                                   lin_delay=1.0, trace=True,
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c4 = root.add('c4', ExecComp4Test('y = x * 4.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
@@ -211,7 +205,7 @@ class MatMatIndicesTestCase(MPITestCase):
         prob.driver.add_param('p.x', indices=[1,2])
         prob.driver.add_constraint('c4.y', indices=[1])
         prob.driver.add_constraint('c5.y', indices=[2])
-        prob.driver.parallel_derivs(['c4.y','c5.y'])
+        #prob.driver.parallel_derivs(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')
@@ -228,9 +222,12 @@ class MatMatIndicesTestCase(MPITestCase):
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
 
-        J = prob.calc_gradient(['p.x'],
-                              ['c4.y','c5.y'],
-                              mode='rev', return_format='dict')
+        start = time.time()
+        J = prob.calc_gradient(['p.x'], ['c4.y','c5.y'],
+                               mode='rev', return_format='dict')
+        for out in ['c4.y','c5.y']:
+            print(out,"relevant systems:",prob.root._relevance._relevant_systems[out])
+        print("elapsed:",time.time()-start)
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)

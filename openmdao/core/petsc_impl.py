@@ -14,7 +14,7 @@ import numpy
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.data_transfer import DataTransfer
 
-trace = os.environ.get('TRACE_PETSC')
+trace = os.environ.get('OPENMDAO_TRACE')
 if trace:
     from openmdao.devtools.debug import debug
 
@@ -99,7 +99,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, unknowns_dict, relevance, var_of_interest=None,
-              store_byobjs=False):
+              store_byobjs=False, shared_vec=None):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -118,6 +118,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         store_byobjs : bool, optional
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
+
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
                                               var_of_interest=var_of_interest,

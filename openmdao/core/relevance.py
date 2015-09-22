@@ -19,34 +19,23 @@ class Relevance(object):
         self.unknowns_dict = unknowns_dict
         self.mode = mode
 
-        param_groups = {}
-        output_groups = {}
-        g_id = 0
+        param_groups = []
+        output_groups = []
 
         # turn all inputs and outputs, even singletons, into tuples
         self.inputs = []
         for inp in inputs:
             if isinstance(inp, string_types):
                 inp = (inp,)
-            if len(inp) == 1:
-                param_groups.setdefault(None, []).append(inp[0])
-            else:
-                param_groups[g_id] = tuple(inp)
-                g_id += 1
-
+            param_groups.append(tuple(inp))
             self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
             if isinstance(out, string_types):
                 out = (out,)
-            if len(out) == 1:
-                output_groups.setdefault(None, []).append(out)
-            else:
-                output_groups[g_id] = tuple(out)
-                g_id += 1
-
-            self.outputs.append(out)
+            output_groups.append(tuple(out))
+            self.outputs.append(tuple(out))
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -212,19 +201,21 @@ class Relevance(object):
             Dictionary that maps a variable name to all other variables in the
             graph that are relevant to it.
         """
+        relevant = {}
         succs = {}
         for nodes in self.inputs:
             for node in nodes:
+                relevant[node] = set()
+                succs[node] = set()
                 if node in g:
-                    succs[node] = set([v for u, v in nx.dfs_edges(g, node)])
-                    succs[node].add(node)
+                    succs[node].update([v for u, v in nx.dfs_edges(g, node)])
+                succs[node].add(node)
 
-        relevant = {}
         grev = g.reverse()
         for nodes in self.outputs:
             for node in nodes:
+                relevant[node] = set()
                 if node in g:
-                    relevant[node] = set()
                     preds = set([v for u, v in nx.dfs_edges(grev, node)])
                     preds.add(node)
                     for inps in self.inputs:
@@ -232,7 +223,7 @@ class Relevance(object):
                             if inp in g:
                                 common = preds.intersection(succs[inp])
                                 relevant[node].update(common)
-                                relevant.setdefault(inp, set()).update(common)
+                                relevant[inp].update(common)
 
         return relevant
 

@@ -5,6 +5,7 @@ import sys
 import os
 import re
 from six import iteritems, itervalues, iterkeys
+from itertools import chain
 
 import numpy as np
 
@@ -21,7 +22,7 @@ _NotSet = object()
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
 
-trace = os.environ.get('TRACE_PETSC')
+trace = os.environ.get('OPENMDAO_TRACE')
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -342,12 +343,10 @@ class Component(System):
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
         all_vois = set([None])
-        for group, vois in iteritems(relevance.groups):
-            if group is not None:
-                all_vois.update(vois)
-                for voi in vois:
-                    self._create_views(top_unknowns, parent, [],
-                                       voi)
+        for vois in chain(relevance.inputs, relevance.outputs):
+            all_vois.update(vois)
+            for voi in vois:
+                self._create_views(top_unknowns, parent, [], voi)
 
         # we don't get non-deriv vecs (u, p, r) unless we have a None group,
         # so force their creation here

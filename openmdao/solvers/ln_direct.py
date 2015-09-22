@@ -33,9 +33,8 @@ class DirectSolver(ScipyGMRES):
         """
         sol_buf = {}
 
-        # TODO: This solver could probably work with multiple RHS
         for voi, rhs in rhs_mat.items():
-            self.voi = None
+            self.voi = voi
 
             # TODO: When to record?
             self.system = system

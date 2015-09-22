@@ -286,6 +286,10 @@ class Problem(System):
         pois = self.driver.params_of_interest()
         oois = self.driver.outputs_of_interest()
 
+        self._driver_vois = set()
+        for tup in chain(pois, oois):
+            self._driver_vois.update(tup)
+
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
@@ -819,8 +823,8 @@ class Problem(System):
                 if name in root.dumat:
                     root.dumat[name].vec[:] = 0.0
                     root.drmat[name].vec[:] = 0.0
-        root.dumat[None].vec[:] = 0.0
-        root.drmat[None].vec[:] = 0.0
+        #root.dumat[None].vec[:] = 0.0
+        #root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
@@ -902,7 +906,7 @@ class Problem(System):
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                vkey = voi if len(params) > 1 else None
+                vkey = voi if voi in self._driver_vois else None
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -932,7 +936,7 @@ class Problem(System):
             # of interest.
             for i in range(len(in_idxs)):
                 for voi in params:
-                    vkey = voi if len(params) > 1 else None
+                    vkey = voi if voi in self._driver_vois else None
                     rhs[vkey][:] = 0.0
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
@@ -942,11 +946,11 @@ class Problem(System):
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
                 for param, dx in iteritems(dx_mat):
-                    if len(params) == 1:
+                    if param in self._driver_vois:
+                        vkey = param
+                    else:
                         vkey = None
                         param = params[0] # if voi is None, params has only one serial entry
-                    else:
-                        vkey = param
 
                     i = 0
                     for item in output_list:

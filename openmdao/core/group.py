@@ -23,7 +23,7 @@ from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
-trace = os.environ.get('TRACE_PETSC')
+trace = os.environ.get('OPENMDAO_TRACE')
 
 class Group(System):
     """A system that contains other systems."""
@@ -328,6 +328,7 @@ class Group(System):
         self._local_unknown_sizes = {}
         self._local_param_sizes = {}
         self._owning_ranks = None
+        relevance = self._relevance
 
         if not self.is_active():
             return
@@ -335,7 +336,28 @@ class Group(System):
         self._impl = impl
 
         my_params = param_owners.get(self.pathname, [])
+
         if parent is None:
+            # determine the size of the largest grouping of parallel subvecs, allocate
+            # an array of that size, and sub-allocate from that for all relevant subvecs
+            # We should never need more memory than the largest sized collection of parallel
+            # vecs.
+            umetas = [m for m in itervalues(self._unknowns_dict)
+                          if not m.get('pass_by_obj') and not m.get('remote')]
+            full_u_size = sum([m['size'] for m in umetas])
+
+            # max_usize = 0
+            # for vois in relevance.groups:
+            #     for voi in vois:
+            #         vec_size = sum([m['size'] for m in umetas
+            #                          if relevance.is_relevant(voi, m['top_promoted_name'])])
+            #         if vec_size > max_usize:
+            #             max_usize = vec_size
+
+            # other vecs will be sub-sliced from this one
+            self._shared_du_vec = np.zeros(full_u_size)
+            self._shared_dr_vec = np.zeros(full_u_size)
+
             self._create_vecs(my_params, var_of_interest=None, impl=impl)
             top_unknowns = self.unknowns
         else:
@@ -351,25 +373,19 @@ class Group(System):
 
         self._setup_data_transfer(my_params, None)
 
-        # TODO: determine the size of the largest grouping of parallel subvecs, allocate
-        #       an array of that size, and sub-allocate from that for all relevant subvecs
-        #       We should never need more memory than the largest sized collection of parallel
-        #       vecs.
-
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
         all_vois = set([None])
-        for group, vois in iteritems(self._relevance.groups):
-            if group is not None:
-                all_vois.update(vois)
-                for voi in vois:
-                    if parent is None:
-                        self._create_vecs(my_params, voi, impl)
-                    else:
-                        self._create_views(top_unknowns, parent, my_params,
-                                           voi)
+        for vois in chain(relevance.inputs, relevance.outputs):
+            all_vois.update(vois)
+            for voi in vois:
+                if parent is None:
+                    self._create_vecs(my_params, voi, impl)
+                else:
+                    self._create_views(top_unknowns, parent, my_params,
+                                       voi)
 
-                    self._setup_data_transfer(my_params, voi)
+                self._setup_data_transfer(my_params, voi)
 
         self._setup_gs_outputs(all_vois)
 
@@ -433,9 +449,11 @@ class Group(System):
         dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
-                        var_of_interest=var_of_interest)
+                        var_of_interest=var_of_interest,
+                        shared_vec=self._shared_du_vec)
         dresids.setup(unknowns_dict, relevance=self._relevance,
-                      var_of_interest=var_of_interest)
+                      var_of_interest=var_of_interest,
+                      shared_vec=self._shared_dr_vec)
         dparams.setup(None, params_dict, self.unknowns, my_params,
                       self.connections, relevance=self._relevance,
                       var_of_interest=var_of_interest)
@@ -679,7 +697,8 @@ class Group(System):
             return
 
         if mode == 'fwd':
-            self._transfer_data(deriv=True) # Full Scatter
+            for voi in vois:
+                self._transfer_data(deriv=True, var_of_interest=voi) # Full Scatter
 
         for sub in self._local_subsystems:
             # Components that are not paramcomps perform a matrix-vector
@@ -695,7 +714,8 @@ class Group(System):
                                  gs_outputs=gs_outputs)
 
         if mode == 'rev':
-            self._transfer_data(mode='rev', deriv=True) # Full Scatter
+            for voi in vois:
+                self._transfer_data(mode='rev', deriv=True, var_of_interest=voi) # Full Scatter
 
     def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None,
                                   gs_outputs=None):
@@ -729,7 +749,10 @@ class Group(System):
 
         for voi in vois:
             if not self._relevance.is_relevant_system(voi, system):
+                print ("skipping",system.pathname,"for",voi)
                 continue
+            else:
+                print("keeping",system.pathname,"for",voi)
 
             dresids = system.drmat[voi]
             dunknowns = system.dumat[voi]
@@ -738,7 +761,8 @@ class Group(System):
 
             # Linear GS imposes a stricter requirement on whether or not to run.
             abs_inputs = system._abs_inputs[voi]
-            do_apply = ls_inputs[voi] is None or (abs_inputs and abs_inputs.intersection(ls_inputs[voi]))
+            do_apply = ls_inputs[voi] is None or (abs_inputs and
+                                                  len(abs_inputs.intersection(ls_inputs[voi])))
 
             # Forward Mode
             if mode == 'fwd':
@@ -764,12 +788,12 @@ class Group(System):
             # Adjoint Mode
             elif mode == 'rev':
 
-                # Clear out our inputs. TODO: Once we have memory packing, we
-                # might be able to just do dparams[:]=0.
+                # Clear out our inputs.
                 for val in itervalues(dparams.flat):
                     val[:] = 0.0
-                for val in itervalues(dunknowns.flat):
-                    val[:] = 0.0
+                #for val in itervalues(dunknowns.flat):
+                #    val[:] = 0.0
+                dunknowns.vec[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
                 # we add in the fake residual. Since we can't modify
@@ -1033,13 +1057,12 @@ class Group(System):
         ls_inputs = set(iterkeys(self.dpmat[voi]))
         abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
 
-        for comp in self.components(local=True, recurse=True):
-            for intinp_rel, meta in iteritems(comp.dpmat[voi]):
-                intinp_abs = meta['pathname']
-                src = self.connections.get(intinp_abs)
-
-                if src in abs_uvec:
-                    ls_inputs.add(intinp_abs)
+        for initp_abs, meta in iteritems(self._params_dict):
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            src = self.connections.get(initp_abs)
+            if src in abs_uvec:
+                ls_inputs.add(initp_abs)
 
         return ls_inputs
 
@@ -1366,17 +1389,24 @@ class Group(System):
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
+        if var_of_interest is None:
+            uvec = self.unknowns
+            pvec = self.params
+        else:
+            uvec = self.dumat[var_of_interest]
+            pvec = self.dpmat[var_of_interest]
+
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
             src_idxs = self.unknowns.merge_idxs(srcs)
             tgt_idxs = self.unknowns.merge_idxs(tgts)
 
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                        self.dpmat[var_of_interest],
-                                                        src_idxs, tgt_idxs,
-                                                        vec_conns, byobj_conns,
-                                                        mode)
+                    self._impl.create_data_xfer(uvec, #self.dumat[var_of_interest],
+                                                pvec, #self.dpmat[var_of_interest],
+                                                src_idxs, tgt_idxs,
+                                                vec_conns, byobj_conns,
+                                                mode)
 
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
@@ -1398,11 +1428,11 @@ class Group(System):
             src_idxs = self.unknowns.merge_idxs(full_srcs)
             tgt_idxs = self.unknowns.merge_idxs(full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                    self.dpmat[var_of_interest],
-                                                    src_idxs, tgt_idxs,
-                                                    full_flats, full_byobjs,
-                                                    mode)
+                self._impl.create_data_xfer(uvec,#self.dumat[var_of_interest],
+                                            pvec,#self.dpmat[var_of_interest],
+                                            src_idxs, tgt_idxs,
+                                            full_flats, full_byobjs,
+                                            mode)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):

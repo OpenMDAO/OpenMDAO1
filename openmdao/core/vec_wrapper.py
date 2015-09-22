@@ -661,7 +661,7 @@ class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False):
+              store_byobjs=False, shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -683,6 +683,8 @@ class SrcVecWrapper(VecWrapper):
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
 
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
         vec_size = 0
         for meta in itervalues(unknowns_dict):
@@ -696,7 +698,10 @@ class SrcVecWrapper(VecWrapper):
 
                 self._vardict[promname] = vmeta
 
-        self.vec = numpy.zeros(vec_size)
+        if shared_vec is not None:
+            self.vec = shared_vec[:vec_size]
+        else:
+            self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, meta in iteritems(self):

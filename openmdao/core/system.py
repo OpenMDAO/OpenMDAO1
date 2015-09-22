@@ -22,7 +22,6 @@ class System(object):
         self.pathname = ''
 
         self._subsystems = OrderedDict()
-        self._local_subsystems = []
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
@@ -40,11 +39,6 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = {}
-        self.dpmat = {}
-        self.drmat = {}
-
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
                        desc="Set to True to finite difference this system.")
@@ -59,8 +53,20 @@ class System(object):
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
 
-        self._relevance = None
         self._impl = None
+
+        self._reset() # initialize some attrs that are set during setup
+
+    def _reset(self):
+        """This is called at the beginning of the problem setup."""
+        self.pathname = ''
+        # dicts of vectors used for parallel solution of multiple RHS
+        self.dumat = {}
+        self.dpmat = {}
+        self.drmat = {}
+        self._local_subsystems = []
+        self._relevance = None
+        self._fd_params = None
 
     def __getitem__(self, name):
         """
@@ -190,7 +196,7 @@ class System(object):
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
         """
-        self._fd_params = None
+        self._reset()
 
         if parent_path:
             self.pathname = '.'.join((parent_path, self.name))
