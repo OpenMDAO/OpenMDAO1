@@ -18,6 +18,18 @@ class UnitComp(Component):
         A string containing the name for the output variable.
     units : str
         A string containing the units to which inputs are converted.
+
+    Options
+    -------
+    force_fd :  bool(False)
+        Set to True to finite difference this system.
+    form :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    step_size :  float(1e-06)
+        Default finite difference stepsize
+    step_type :  str('absolute')
+        Set to absolute, relative
+
     """
 
     def __init__(self, shape, param_name, out_name, units):

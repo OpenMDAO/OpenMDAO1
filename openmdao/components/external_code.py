@@ -19,16 +19,16 @@ class ExternalCode(Component):
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
 
-	Options
-	----------
+    Options
+    -------
 
     force_fd :  bool(False)
         Set to True to finite difference this system.
     step_size :  float(1e-06)
         Default finite difference stepsize
-    step_type :  str(absolute)
+    step_type :  str('absolute')
         Set to absolute, relative
-    form :  str(forward)
+    form :  str('forward')
         Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
     external_input_files :  list([])
         (optional) list of input file names to check the pressence of before solve_nonlinear
@@ -45,7 +45,7 @@ class ExternalCode(Component):
     poll_delay :  float(0.0)
         Delay between polling for command completion. A value of zero will use an internally computed default
 	"""
-    
+
     def __init__(self):
         super(ExternalCode, self).__init__()
 

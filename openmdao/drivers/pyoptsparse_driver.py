@@ -1,6 +1,5 @@
 """
 OpenMDAO Wrapper for pyoptsparse.
-
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
 additional MPI capability. Note: only SNOPT is supported right now.
@@ -21,6 +20,26 @@ class pyOptSparseDriver(Driver):
     is an object-oriented framework for formulating and solving nonlinear
     constrained optimization problems, with additional MPI capability. Note:
     only SNOPT is supported right now.
+
+    Options
+    -------
+    equality_constraints :  bool(True)
+    inequality_constraints :  bool(True)
+    integer_parameters :  bool(False)
+    linear_constraints :  bool(False)
+    multiple_objectives :  bool(False)
+    two_sided_constraints :  bool(True)
+    exit_flag :  int(0)
+        0 for fail, 1 for ok
+    optimizer :  str('SNOPT')
+        Name of optimizers to use
+    print_results :  bool(True)
+        Print pyOpt results if True
+    pyopt_diff :  bool(True)
+        Set to True to let pyOpt calculate the gradient
+    title :  str('Optimization using pyOpt_sparse')
+        Title of this optimization run
+
     """
 
     def __init__(self):
@@ -218,7 +237,6 @@ class pyOptSparseDriver(Driver):
         -------
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
-
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
@@ -269,9 +287,7 @@ class pyOptSparseDriver(Driver):
 
             # Record after getting obj and constraint to assure they have
             # been gathered in MPI.
-            for recorder in self.recorders:
-                recorder.raw_record(system.params, system.unknowns,
-                                    system.resids, metadata)
+            self.record(metadata)
 
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
@@ -303,7 +319,6 @@ class pyOptSparseDriver(Driver):
         ----
         dv_dict : dict
             Dictionary of design variable values.
-
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
 
@@ -311,7 +326,6 @@ class pyOptSparseDriver(Driver):
         -------
         sens_dict : dict
             Dictionary of dictionaries for gradient of each dv/func pair
-
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation

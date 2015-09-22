@@ -6,7 +6,7 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
-
+import itertools
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -28,10 +28,10 @@ class Driver(object):
         self.supports = OptionsDictionary(read_only=True)
         self.supports.add_option('inequality_constraints', True)
         self.supports.add_option('equality_constraints', True)
-        self.supports.add_option('linear_constraints', False)
-        self.supports.add_option('multiple_objectives', False)
-        self.supports.add_option('two_sided_constraints', False)
-        self.supports.add_option('integer_parameters', False)
+        self.supports.add_option('linear_constraints', True)
+        self.supports.add_option('multiple_objectives', True)
+        self.supports.add_option('two_sided_constraints', True)
+        self.supports.add_option('integer_parameters', True)
 
         # This driver's options
         self.options = OptionsDictionary()
@@ -41,6 +41,7 @@ class Driver(object):
         self._cons = OrderedDict()
 
         self._voi_sets = []
+        self._vars_to_record = None
 
         # We take root during setup
         self.root = None
@@ -49,7 +50,8 @@ class Driver(object):
 
     def _setup(self, root):
         """ Updates metadata for params, constraints and objectives, and
-        check for errors.
+        check for errors. Also determines all variables that need to be
+        gathered for case recording.
         """
         self.root = root
 
@@ -89,6 +91,14 @@ class Driver(object):
         self._params = params
         self._objs = objs
         self._cons = cons
+
+        if self._vars_to_record is not None:
+            for recorder in self.recorders:
+                pnames, unames, rnames = recorder._filtered[self.root.pathname]
+
+                self._vars_to_record['pnames'].update(pnames)
+                self._vars_to_record['unames'].update(unames)
+                self._vars_to_record['rnames'].update(rnames)
 
     def _map_voi_indices(self):
         poi_indices = {}
@@ -192,6 +202,13 @@ class Driver(object):
         recorder : BaseRecorder
            A recorder instance.
         """
+        if not recorder._parallel and self._vars_to_record is None:
+            self._vars_to_record = {
+                'pnames' : set(),
+                'unames' : set(),
+                'rnames' : set()
+            }
+
         self.recorders.append(recorder)
 
     def add_param(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
@@ -550,6 +567,51 @@ class Driver(object):
         """
         return self._cons
 
+    def _gather_vars(self, vec, varnames):
+        '''
+        Gathers and returns only variables listed in
+        `varnames` from the vector `vec`
+        '''
+        local_vars = []
+
+        for name in varnames:
+            if self.root.comm.rank == self.root._owning_ranks[name]:
+                local_vars.append((name, vec[name]))
+
+        all_vars = self.root.comm.gather(local_vars, root=0)
+
+        if self.root.comm.rank == 0:
+            return dict(itertools.chain(*all_vars))
+
+    def record(self, metadata):
+        '''
+        Gathers variables for non-parallel case recorders and
+        calls record for all recorders
+
+        Args
+        ----
+        metadata: `dict`
+        Metadata for iteration coordinate
+        '''
+        params = self.root.params
+        unknowns = self.root.unknowns
+        resids = self.root.resids
+
+        if MPI and self._vars_to_record is not None:
+            pnames = self._vars_to_record['pnames']
+            unames = self._vars_to_record['unames']
+            rnames = self._vars_to_record['rnames']
+
+            params = self._gather_vars(params, pnames)
+            unknowns = self._gather_vars(unknowns, unames)
+            resids = self._gather_vars(resids, rnames)
+
+        # If the recorder does not support parallel recording
+        # we need to make sure we only record on rank 0.
+        for recorder in self.recorders:
+            if self.root.comm.rank == 0 or recorder._parallel:
+                recorder.record(params, unknowns, resids, metadata)
+
     def run(self, problem):
         """ Runs the driver. This function should be overriden when inheriting.
 
@@ -568,8 +630,8 @@ class Driver(object):
 
         # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns, system.resids, metadata)
+
+        self.record(metadata)
 
     def generate_docstring(self):
         """
@@ -581,7 +643,7 @@ class Driver(object):
                 string that contains a basic numpy docstring.
         """
         #start the docstring off
-        docstring = '\t\"\"\"\n'
+        docstring = '    \"\"\"\n'
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
@@ -590,15 +652,19 @@ class Driver(object):
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n\tOptions\n\t----------\n'
+                    docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
                         docstring += "    "+name
                         docstring += " :  " + type(val).__name__
-                        docstring += "(" + str(val) + ")\n"
+                        docstring += "("
+                        if type(val).__name__ == 'str': docstring += "'"
+                        docstring += str(val)
+                        if type(val).__name__ == 'str': docstring += "'"
+                        docstring += ")\n"
                         desc = value._options[name]['desc']
                         if(desc):
                             docstring += "        " + desc + "\n"
         #finish up docstring
-        docstring += '\n\t\"\"\"\n'
+        docstring += '\n    \"\"\"\n'
         return docstring
