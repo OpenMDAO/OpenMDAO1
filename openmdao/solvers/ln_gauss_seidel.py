@@ -71,7 +71,8 @@ class LinearGaussSeidel(LinearSolver):
 
         f_norm0, f_norm = 1.0, 1.0
         self.iter_count = 0
-        while self.iter_count < self.options['maxiter'] and \
+        maxiter = self.options['maxiter']
+        while self.iter_count < maxiter and \
               f_norm > self.options['atol'] and \
               f_norm/f_norm0 > self.options['rtol']:
 
@@ -170,7 +171,6 @@ class LinearGaussSeidel(LinearSolver):
                 for voi in vois:
                     sol_buf[voi] = drmat[voi].vec
 
-
             self.iter_count += 1
             if self.options['maxiter'] == 1:
                 f_norm = 0.0
@@ -180,6 +180,15 @@ class LinearGaussSeidel(LinearSolver):
             if self.options['iprint'] > 0:
                 self.print_norm('LN_GS', system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
+
+        if self.options['iprint'] > 0:
+            if maxiter > 1 and self.iter_count == maxiter:
+                msg = 'FAILED to converge after max iterations'
+            else:
+                msg = 'converged'
+
+            self.print_norm('LN_GS', system.pathname, self.iter_count, f_norm,
+                            f_norm0, indent=1, solver='LN', msg=msg)
 
         return sol_buf
 
