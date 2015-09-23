@@ -214,12 +214,19 @@ class MatMatIndicesTestCase(MPITestCase):
         root.connect('G1.c2.y','c4.x')
         root.connect('G1.c3.y','c5.x')
 
+        start = time.time()
         prob.setup(check=False)
+        print("setup took",time.time()-start)
+        start = time.time()
         prob.run()
+        print("run took",time.time()-start)
 
+        start = time.time()
         J = prob.calc_gradient(['p.x'],
                               ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
+        print("fwd took",time.time()-start)
+        print("fwd J",J)
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
@@ -227,9 +234,10 @@ class MatMatIndicesTestCase(MPITestCase):
         start = time.time()
         J = prob.calc_gradient(['p.x'], ['c4.y','c5.y'],
                                mode='rev', return_format='dict')
+        print("rev took",time.time()-start)
+        print("rev J",J)
         for out in ['c4.y','c5.y']:
             print(out,"relevant systems:",prob.root._relevance._relevant_systems[out])
-        print("elapsed:",time.time()-start)
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)

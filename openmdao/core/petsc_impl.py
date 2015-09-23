@@ -124,7 +124,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
                                               var_of_interest=var_of_interest,
-                                              store_byobjs=store_byobjs)
+                                              store_byobjs=store_byobjs,
+                                              shared_vec=shared_vec)
         if trace:
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self.pathname, len(self.vec), self.keys(), self.vec))
@@ -181,7 +182,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevance, var_of_interest=None, store_byobjs=False):
+              connections, relevance, var_of_interest=None, store_byobjs=False,
+              shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -213,12 +215,16 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
+
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, relevance=relevance,
                                               var_of_interest=var_of_interest,
-                                              store_byobjs=store_byobjs)
+                                              store_byobjs=store_byobjs,
+                                              shared_vec=shared_vec)
         if trace:
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self.pathname, len(self.vec), self.keys(), self.vec))

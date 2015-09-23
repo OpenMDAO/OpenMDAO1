@@ -769,7 +769,8 @@ class TgtVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevance=None, var_of_interest=None, store_byobjs=False):
+              connections, relevance=None, var_of_interest=None,
+              store_byobjs=False, shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -801,8 +802,10 @@ class TgtVecWrapper(VecWrapper):
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
-        """
 
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
+        """
         # dparams vector has some additional behavior
         if not store_byobjs:
             self.deriv_units = True
@@ -836,7 +839,11 @@ class TgtVecWrapper(VecWrapper):
                             common = get_common_ancestor(src, pathname)
                             if common == self.pathname or (self.pathname+'.') not in common:
                                 missing.append(meta)
-        self.vec = numpy.zeros(vec_size)
+
+        if shared_vec is not None:
+            self.vec = shared_vec[:vec_size]
+        else:
+            self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, meta in iteritems(self._vardict):

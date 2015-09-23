@@ -518,7 +518,7 @@ class System(object):
                          # didn't find unknown in dresids
 
     def _create_views(self, top_unknowns, parent, my_params,
-                      var_of_interest=None):
+                      voi=None):
         """
         A manager of the data transfer of a possibly distributed collection of
         variables.  The variables are based on views into an existing
@@ -539,14 +539,13 @@ class System(object):
         relevance : `Relevance`
             Object containing relevance info for each variable of interest.
 
-        var_of_interest : str
+        voi : str
             The name of a variable of interest.
 
         """
 
         comm = self.comm
         params_dict = self._params_dict
-        voi = var_of_interest
         relevance = self._relevance
 
         # map promoted name in parent to corresponding promoted name in this view
@@ -567,8 +566,9 @@ class System(object):
         self.dpmat[voi].adj_accumulate_mode = False
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
-                              my_params, self.connections,
-                              relevance=relevance, var_of_interest=voi)
+                  my_params, self.connections,
+                  relevance=relevance, var_of_interest=voi,
+                  shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
     def _setup_gs_outputs(self, vois):
         self.gs_outputs = { 'fwd': {}, 'rev': {}}
@@ -725,6 +725,37 @@ class System(object):
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring
+
+    def _get_shared_vec_info(self, vdict, my_params=None):
+        # determine the size of the largest grouping of parallel subvecs and the
+        # offsets within those vecs for each voi in a parallel set.
+        # We should never need more memory than the largest sized collection of parallel
+        # vecs.
+        metas = [m for m in itervalues(vdict)
+                      if not m.get('pass_by_obj') and not m.get('remote')]
+
+        # for params, we only include 'owned' vars in the vector
+        if my_params is not None:
+            metas = [m for m in metas if m['pathname'] in my_params]
+
+        full_size = sum([m['size'] for m in metas])  # 'None' vecs are this size
+        max_size = full_size
+
+        offsets = { None: 0 }
+
+        relevance = self._relevance
+        for vois in chain(relevance.inputs, relevance.outputs):
+            vec_size = 0
+            for voi in vois:
+                sz = sum([m['size'] for m in metas
+                                 if relevance.is_relevant(voi, m['top_promoted_name'])])
+                offsets[voi] = vec_size
+                vec_size += sz
+
+            if vec_size > max_size:
+                max_size = vec_size
+
+        return max_size, offsets
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):

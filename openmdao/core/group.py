@@ -335,36 +335,33 @@ class Group(System):
 
         self._impl = impl
 
-        my_params = param_owners.get(self.pathname, [])
+        my_params = param_owners.get(self.pathname, ())
+
+        max_psize, self._shared_p_offsets = \
+                           self._get_shared_vec_info(self._params_dict,
+                                                     my_params=my_params)
 
         if parent is None:
             # determine the size of the largest grouping of parallel subvecs, allocate
             # an array of that size, and sub-allocate from that for all relevant subvecs
             # We should never need more memory than the largest sized collection of parallel
             # vecs.
-            umetas = [m for m in itervalues(self._unknowns_dict)
-                          if not m.get('pass_by_obj') and not m.get('remote')]
-            full_u_size = sum([m['size'] for m in umetas])
-
-            # max_usize = 0
-            # for vois in relevance.groups:
-            #     for voi in vois:
-            #         vec_size = sum([m['size'] for m in umetas
-            #                          if relevance.is_relevant(voi, m['top_promoted_name'])])
-            #         if vec_size > max_usize:
-            #             max_usize = vec_size
+            max_usize, self._shared_u_offsets = \
+                               self._get_shared_vec_info(self._unknowns_dict)
 
             # other vecs will be sub-sliced from this one
-            self._shared_du_vec = np.zeros(full_u_size)
-            self._shared_dr_vec = np.zeros(full_u_size)
+            self._shared_du_vec = np.zeros(max_usize)
+            self._shared_dr_vec = np.zeros(max_usize)
+            self._shared_dp_vec = np.zeros(max_psize)
 
-            self._create_vecs(my_params, var_of_interest=None, impl=impl)
+            self._create_vecs(my_params, voi=None, impl=impl)
             top_unknowns = self.unknowns
         else:
+            self._shared_dp_vec = np.zeros(max_psize)
+
             # map promoted name in parent to corresponding promoted name in this view
             self._relname_map = self._get_relname_map(parent.unknowns)
-            self._create_views(top_unknowns, parent, my_params,
-                               var_of_interest=None)
+            self._create_views(top_unknowns, parent, my_params, voi=None)
 
         self._u_size_lists = self.unknowns._get_flattened_sizes()
         self._p_size_lists = self.params._get_flattened_sizes()
@@ -413,7 +410,7 @@ class Group(System):
 
         self._relname_map = None # reclaim some memory
 
-    def _create_vecs(self, my_params, var_of_interest, impl):
+    def _create_vecs(self, my_params, voi, impl):
         """ This creates our vecs and mats. This is only called on
         the top level Group.
         """
@@ -425,7 +422,7 @@ class Group(System):
         self.comm = comm
 
         # create implementation specific VecWrappers
-        if var_of_interest is None:
+        if voi is None:
             self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
@@ -449,18 +446,19 @@ class Group(System):
         dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
-                        var_of_interest=var_of_interest,
-                        shared_vec=self._shared_du_vec)
+                        var_of_interest=voi,
+                        shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
         dresids.setup(unknowns_dict, relevance=self._relevance,
-                      var_of_interest=var_of_interest,
-                      shared_vec=self._shared_dr_vec)
+                      var_of_interest=voi,
+                      shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
         dparams.setup(None, params_dict, self.unknowns, my_params,
                       self.connections, relevance=self._relevance,
-                      var_of_interest=var_of_interest)
+                      var_of_interest=voi,
+                      shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
-        self.dumat[var_of_interest] = dunknowns
-        self.drmat[var_of_interest] = dresids
-        self.dpmat[var_of_interest] = dparams
+        self.dumat[voi] = dunknowns
+        self.drmat[voi] = dresids
+        self.dpmat[voi] = dparams
 
     def _get_fd_params(self):
         """

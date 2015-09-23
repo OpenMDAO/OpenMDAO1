@@ -1365,7 +1365,7 @@ def _assign_parameters(connections):
     param_owners = {}
 
     for par, unk in iteritems(connections):
-        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), set()).add(par)
 
     return param_owners
 
