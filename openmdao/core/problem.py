@@ -1056,6 +1056,10 @@ class Problem(System):
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
 
+            # Skip if our inputs are unconnected.
+            if len(dparams) == 0:
+                continue
+
             if out_stream is not None:
                 out_stream.write('-'*(len(cname)+15) + '\n')
                 out_stream.write("Component: '%s'\n" % cname)
