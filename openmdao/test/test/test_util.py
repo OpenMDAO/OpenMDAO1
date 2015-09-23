@@ -11,7 +11,7 @@ import numpy as np
 
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 
 from openmdao.test.util import assert_rel_error, problem_derivatives_check
 from openmdao.test.simple_comps import SimpleCompWrongDeriv
@@ -69,7 +69,7 @@ class TestCase(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', SimpleCompWrongDeriv())
-        prob.root.add('p1', ParamComp('x', 2.0))
+        prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
         prob.setup(check=False)

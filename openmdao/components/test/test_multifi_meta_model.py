@@ -3,7 +3,7 @@ import unittest
 
 from openmdao.core import Group, Problem
 from openmdao.core.component import _NotSet
-from openmdao.components import MetaModel, MultiFiMetaModel, ParamComp
+from openmdao.components import MetaModel, MultiFiMetaModel, IndepVarComp
 
 from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, \
      KrigingSurrogate, MultiFiSurrogateModel

@@ -2,8 +2,8 @@
 
 from __future__ import print_function
 
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components import ExecComp
-from openmdao.components.param_comp import ParamComp
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem, Group
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
@@ -44,8 +44,8 @@ if __name__ == "__main__":
 
     root = top.root = Group()
 
-    root.add('p1', ParamComp('x', 3.0))
-    root.add('p2', ParamComp('y', -4.0))
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
     root.add('p', Paraboloid())
 
     # Constraint Equation
@@ -59,8 +59,8 @@ if __name__ == "__main__":
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
 
-    top.driver.add_param('p1.x', low=-50, high=50)
-    top.driver.add_param('p2.y', low=-50, high=50)
+    top.driver.add_desvar('p1.x', low=-50, high=50)
+    top.driver.add_desvar('p2.y', low=-50, high=50)
     top.driver.add_objective('p.f_xy')
     top.driver.add_constraint('con.c', lower=15.0)
 
@@ -72,4 +72,3 @@ if __name__ == "__main__":
 
     # Expected Output
     # Minimum of -27.083333 found at (7.166667, -7.833333)
-

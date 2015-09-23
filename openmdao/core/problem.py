@@ -21,7 +21,7 @@ from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 
 from openmdao.units.units import get_conversion_tuple
@@ -283,7 +283,7 @@ class Problem(System):
         # to the parameters that system must transfer data to
         param_owners = _assign_parameters(connections)
 
-        pois = self.driver.params_of_interest()
+        pois = self.driver.desvars_of_interest()
         oois = self.driver.outputs_of_interest()
 
         # make sure pois and oois all refer to existing vars.
@@ -556,11 +556,11 @@ class Problem(System):
         if self.root.is_active():
             self.driver.run(self)
 
-    def _mode(self, mode, param_list, unknown_list):
+    def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
         first. If that is 'auto', then the mode in root.ln_options takes
         precedence. If that is 'auto', then mode is determined by the width
-        of the parameter and quantity space."""
+        of the independent variable and quantity space."""
 
         self._p_length = 0
         self._u_length = 0
@@ -571,7 +571,7 @@ class Problem(System):
             else:
                 uset.add(unames)
         pset = set()
-        for pnames in param_list:
+        for pnames in indep_list:
             if isinstance(pnames, tuple):
                 pset.update(pnames)
             else:
@@ -605,7 +605,7 @@ class Problem(System):
 
         return mode
 
-    def calc_gradient(self, param_list, unknown_list, mode='auto',
+    def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array'):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer but also can be
@@ -613,13 +613,13 @@ class Problem(System):
 
         Args
         ----
-        param_list : list of strings
-            List of parameter name strings with respect to which derivatives
-            are desired. All params must have a paramcomp.
+        indep_list : list of strings
+            List of independent variable names that derivatives are to
+            be calculated with respect to. All params must have a IndepVarComp.
 
         unknown_list : list of strings
-            List of output or state name strings for derivatives to be
-            calculated. All must be valid unknowns in OpenMDAO.
+            List of output or state names that derivatives are to
+            be calculated for. All must be valid unknowns in OpenMDAO.
 
         mode : string, optional
             Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
@@ -644,25 +644,25 @@ class Problem(System):
 
         # Either analytic or finite difference
         if mode == 'fd' or self.root.fd_options['force_fd']:
-            return self._calc_gradient_fd(param_list, unknown_list,
+            return self._calc_gradient_fd(indep_list, unknown_list,
                                           return_format)
         else:
-            return self._calc_gradient_ln_solver(param_list, unknown_list,
+            return self._calc_gradient_ln_solver(indep_list, unknown_list,
                                                  return_format, mode)
 
-    def _calc_gradient_fd(self, param_list, unknown_list, return_format):
+    def _calc_gradient_fd(self, indep_list, unknown_list, return_format):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
         Args
         ----
-        param_list : list of strings
-            List of parameter name strings with respect to which derivatives
-            are desired. All params must have a paramcomp.
+        indep_list : list of strings
+            List of independent variable names that derivatives are to
+            be calculated with respect to. All params must have a IndepVarComp.
 
         unknown_list : list of strings
-            List of output or state name strings for derivatives to be
-            calculated. All must be valid unknowns in OpenMDAO.
+            List of output or state names that derivatives are to
+            be calculated for. All must be valid unknowns in OpenMDAO.
 
         return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
@@ -677,7 +677,7 @@ class Problem(System):
         params = root.params
 
         abs_params = []
-        for name in param_list:
+        for name in indep_list:
 
             if name in unknowns:
                 name = unknowns.metadata(name)['pathname']
@@ -724,11 +724,11 @@ class Problem(System):
             J = {}
             for okey in unknown_list:
                 J[okey] = {}
-                for j, ikey in enumerate(param_list):
+                for j, ikey in enumerate(indep_list):
                     abs_ikey = abs_params[j]
                     fd_ikey = get_fd_ikey(abs_ikey)
 
-                    # Support for paramcomps that are buried in sub-Groups
+                    # Support for IndepVarComps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
@@ -738,7 +738,7 @@ class Problem(System):
             psize = 0
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
-            for p in param_list:
+            for p in indep_list:
                 idx = self._poi_indices
                 if p in idx:
                     psize += len(idx)
@@ -749,11 +749,11 @@ class Problem(System):
             ui = 0
             for u in unknown_list:
                 pi = 0
-                for j, p in enumerate(param_list):
+                for j, p in enumerate(indep_list):
                     abs_ikey = abs_params[j]
                     fd_ikey = get_fd_ikey(abs_ikey)
 
-                    # Support for paramcomps that are buried in sub-Groups
+                    # Support for IndepVarComps that are buried in sub-Groups
                     if (u, fd_ikey) not in Jfd:
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
@@ -768,19 +768,19 @@ class Problem(System):
                 ui += rows
         return J
 
-    def _calc_gradient_ln_solver(self, param_list, unknown_list, return_format, mode):
+    def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
         Args
         ----
-        param_list : list of strings
-            List of parameter name strings with respect to which derivatives
-            are desired. All params must have a paramcomp.
+        indep_list : list of strings
+            List of independent variable names that derivatives are to
+            be calculated with respect to. All params must have a IndepVarComp.
 
         unknown_list : list of strings
-            List of output or state name strings for derivatives to be
-            calculated. All must be valid unknowns in OpenMDAO.
+            List of output or state names that derivatives are to
+            be calculated for. All must be valid unknowns in OpenMDAO.
 
         return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
@@ -808,7 +808,7 @@ class Problem(System):
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
-        mode = self._mode(mode, param_list, unknown_list)
+        mode = self._mode(mode, indep_list, unknown_list)
 
         fwd = mode == 'fwd'
 
@@ -833,7 +833,7 @@ class Problem(System):
                     okeys = (okeys,)
                 for okey in okeys:
                     J[okey] = {}
-                    for ikeys in param_list:
+                    for ikeys in indep_list:
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
@@ -843,7 +843,7 @@ class Problem(System):
             psize = 0
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
-            for p in param_list:
+            for p in indep_list:
                 idx = self._poi_indices
                 if p in idx:
                     psize += len(idx)
@@ -852,10 +852,10 @@ class Problem(System):
             J = np.zeros((usize, psize))
 
         if fwd:
-            input_list, output_list = param_list, unknown_list
+            input_list, output_list = indep_list, unknown_list
             poi_indices, qoi_indices = self._poi_indices, self._qoi_indices
         else:
-            input_list, output_list = unknown_list, param_list
+            input_list, output_list = unknown_list, indep_list
             qoi_indices, poi_indices = self._poi_indices, self._qoi_indices
 
         # Process our inputs/outputs of interest for parallel groups
@@ -1040,8 +1040,8 @@ class Problem(System):
             if comp.fd_options['force_fd']:
                 continue
 
-            # Paramcomps are just clutter too.
-            if isinstance(comp, ParamComp):
+            # IndepVarComps are just clutter too.
+            if isinstance(comp, IndepVarComp):
                 continue
 
             data[cname] = {}
@@ -1185,20 +1185,20 @@ class Problem(System):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        abs_param_list = self.root._get_fd_params()
-        param_srcs = [self.root.connections[p] for p in abs_param_list]
+        abs_indep_list = self.root._get_fd_params()
+        param_srcs = [self.root.connections[p] for p in abs_indep_list]
         unknown_list = self.root._get_fd_unknowns()
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        param_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
+        indep_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
 
         # Calculate all our Total Derivatives
-        Jfor = self.calc_gradient(param_list, unknown_list, mode='fwd',
+        Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
                                   return_format='dict')
-        Jrev = self.calc_gradient(param_list, unknown_list, mode='rev',
+        Jrev = self.calc_gradient(indep_list, unknown_list, mode='rev',
                                   return_format='dict')
-        Jfd = self.calc_gradient(param_list, unknown_list, mode='fd',
+        Jfd = self.calc_gradient(indep_list, unknown_list, mode='fd',
                                  return_format='dict')
 
         Jfor = _jac_to_flat_dict(Jfor)
@@ -1207,20 +1207,18 @@ class Problem(System):
 
         # Assemble and Return all metrics.
         data = {}
-        _assemble_deriv_data(param_list, unknown_list, data,
+        _assemble_deriv_data(indep_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
         return data
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        for recorder in self.driver.recorders:
-            recorder.startup(self.root)
+        self.driver.recorders.startup(self.root)
 
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
-                for recorder in solver.recorders:
-                    recorder.startup(group)
+                solver.recorders.startup(group)
 
     def _check_for_matrix_matrix(self, params, unknowns):
         """ Checks a system hiearchy to make sure that no settings violate the

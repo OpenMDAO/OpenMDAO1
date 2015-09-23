@@ -1,7 +1,7 @@
 import unittest
 from six import itervalues
 
-from openmdao.components import ExecComp, ParamComp
+from openmdao.components import ExecComp, IndepVarComp
 from openmdao.core import Problem, Group
 
 class TestLinearGaussSeidel(unittest.TestCase):
@@ -9,8 +9,8 @@ class TestLinearGaussSeidel(unittest.TestCase):
         self.p = Problem(Group())
         root = self.p.root
 
-        root.add('P1', ParamComp('x', 2.0))
-        root.add('P2', ParamComp('x', 2.0))
+        root.add('P1', IndepVarComp('x', 2.0))
+        root.add('P2', IndepVarComp('x', 2.0))
 
         root.add('C2', ExecComp('y = 2.0*x'))
         root.add('C3', ExecComp('y = 2.0*x'))
@@ -36,7 +36,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         p = self.p
         root = p.root
 
-        p.driver.add_param('P1.x')
+        p.driver.add_desvar('P1.x')
         p.driver.add_objective('C8.y')
 
         p.setup(check=False)
@@ -66,7 +66,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         p = self.p
         root = p.root
 
-        p.driver.add_param('P1.x')
+        p.driver.add_desvar('P1.x')
         p.driver.add_objective('C8.y')
 
         p.setup(check=False)
