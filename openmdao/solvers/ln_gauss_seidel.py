@@ -82,7 +82,8 @@ class LinearGaussSeidel(LinearSolver):
                     for voi in vois:
                         #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
-                        system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
+                        system._transfer_data(sub.name, deriv=True,
+                                              var_of_interest=voi)
                         #print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
 
@@ -98,13 +99,14 @@ class LinearGaussSeidel(LinearSolver):
                         # Components need to reverse sign and add 1 on diagonal
                         # for explicit unknowns
                         system._sub_apply_linear_wrapper(sub, mode, vois,
-                                                         ls_inputs=system._ls_inputs,
-                                                         gs_outputs=gs_outputs['fwd'][sub.name])
+                                         ls_inputs=system._ls_inputs,
+                                         gs_outputs=gs_outputs['fwd'][sub.name])
 
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                        sub.apply_linear(mode, ls_inputs=system._ls_inputs,
+                                         vois=vois,
                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
                     #for voi in vois:

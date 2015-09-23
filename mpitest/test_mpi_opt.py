@@ -184,7 +184,9 @@ class ParallelMPIOptAsym(MPITestCase):
         root = prob.root = Group()
         #root.ln_solver = lin_solver()  # this works too (PetscKSP)
         root.ln_solver = LinearGaussSeidel()
+
         par = root.add('par', ParallelGroup())
+        par.ln_solver = LinearGaussSeidel()
 
         ser1 = par.add('ser1', Group())
 

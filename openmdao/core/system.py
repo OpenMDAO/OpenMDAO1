@@ -732,7 +732,7 @@ class System(object):
         # We should never need more memory than the largest sized collection of parallel
         # vecs.
         metas = [m for m in itervalues(vdict)
-                      if not m.get('pass_by_obj') and not m.get('remote')]
+                      if not m.get('pass_by_obj')]# and not m.get('remote')]
 
         # for params, we only include 'owned' vars in the vector
         if my_params is not None:

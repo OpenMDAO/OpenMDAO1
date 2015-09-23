@@ -7,6 +7,7 @@ additional MPI capability. Note: only SNOPT is supported right now.
 
 from __future__ import print_function
 
+import traceback
 from six import iterkeys, iteritems
 import numpy as np
 
@@ -262,24 +263,10 @@ class pyOptSparseDriver(Driver):
 
             # Get the objective function evaluations
             for name, obj in iteritems(self.get_objectives()):
-                # if nproc > 1:
-                #     owner = system._owning_ranks[name]
-                #     if iproc == owner:
-                #         func_dict[name] = comm.bcast(obj, root=owner)
-                #     else:
-                #         func_dict[name] = comm.bcast(None, root=owner)
-                # else:
                 func_dict[name] = obj
 
             # Get the constraint evaluations
             for name, con in iteritems(self.get_constraints()):
-                # if nproc > 1:
-                #     owner = system._owning_ranks[name]
-                #     if iproc == owner:
-                #         func_dict[name] = comm.bcast(con, root=owner)
-                #     else:
-                #         func_dict[name] = comm.bcast(None, root=owner)
-                # else:
                 func_dict[name] = con
 
             # Record after getting obj and constraint to assure they have
@@ -293,14 +280,12 @@ class pyOptSparseDriver(Driver):
             fail = 0
 
         except Exception as msg:
+            tb = traceback.format_exc()
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
-            print(70*"=")
-            import traceback
-            traceback.print_exc()
-            print(70*"=")
+            print(70*"=",tb,70*"=")
             fail = 1
 
         #print("Functions calculated")
@@ -341,14 +326,12 @@ class pyOptSparseDriver(Driver):
             fail = 0
 
         except Exception as msg:
+            tb = traceback.format_exc()
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
-            print(70*"=")
-            import traceback
-            traceback.print_exc()
-            print(70*"=")
+            print(70*"=",tb,70*"=")
 
         #print("Derivatives calculated")
         #print(dv_dict)
