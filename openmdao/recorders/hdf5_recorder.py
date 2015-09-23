@@ -51,11 +51,14 @@ class HDF5Recorder(BaseRecorder):
         """
 
         iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
+        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
         group_name = format_iteration_coordinate(iteration_coordinate)
 
         f = self.out
 
         group = f.require_group(group_name)
+        group.attrs['timestamp'] = timestamp
         p_group = group.create_group("Parameters")
         u_group = group.create_group("Unknowns")
         r_group = group.create_group("Residuals")

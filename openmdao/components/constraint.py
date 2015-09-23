@@ -1,9 +1,15 @@
+""" ConstraintComp is now deprecated."""
+
+import warnings
 
 from openmdao.components.exec_comp import ExecComp
 
 
 class ConstraintComp(ExecComp):
     """
+
+    ConstraintComp is deprecated. Please see the basic tutorial for more information.
+
     A Component that represents an equality or inequality constraint.
 
     Args
@@ -15,9 +21,26 @@ class ConstraintComp(ExecComp):
     out : str, optional
         Name of the output variable containing the result of the
         constraint equation.  Default is 'out'.
+
+    Options
+    -------
+    force_fd :  bool(False)
+        Set to True to finite difference this system.
+    form :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    step_size :  float(1e-06)
+        Default finite difference stepsize
+    step_type :  str('absolute')
+        Set to absolute, relative
     """
 
     def __init__(self, expr, out='out'):
+
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("ConstraintComp is deprecated, see the new add_constraint interface.",
+                      DeprecationWarning,stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
+
         newexpr = _combined_expr(expr)
         super(ConstraintComp, self).__init__("%s = %s" % (out, newexpr))
 

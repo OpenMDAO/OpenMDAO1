@@ -5,7 +5,7 @@ from six import text_type, StringIO, itervalues
 from openmdao.core.problem import Problem, _get_implicit_connections
 from openmdao.core.group import Group
 from openmdao.core.problem import Relevance
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 
@@ -321,7 +321,7 @@ class TestGroup(unittest.TestCase):
         prob.setup(check=False)
 
         # check that we can access values from unknowns (default) and params
-        self.assertEqual(prob['G2.C1.x'], 5.)             # default output from ParamComp
+        self.assertEqual(prob['G2.C1.x'], 5.)             # default output from IndepVarComp
         self.assertEqual(prob['G2.G1.C2.y'], 5.5)         # output from ExecComp
         self.assertEqual(prob.root.G3.C3.params['x'], 0.)      # initial value for a parameter
         self.assertEqual(prob.root.G2.G1.C2.params['x'], 0.)   # initial value for a parameter
@@ -371,14 +371,14 @@ class TestGroup(unittest.TestCase):
         root = prob.root
         G1 = root.add('G1', Group())
         G2 = G1.add('G2', Group())
-        C1 = G2.add('C1', ParamComp('x', 5.))
+        C1 = G2.add('C1', IndepVarComp('x', 5.))
         C2 = G2.add('C2', ExecComp('y=x*2.0'))
         G2.connect('C1.x', 'C2.x')
         prob.setup(check=False)
 
     def test_fd_params(self):
         # tests retrieval of a list of any internal params whose source is either
-        # a ParamComp or is outside of the Group
+        # a IndepVarComp or is outside of the Group
         prob = Problem(root=ExampleGroup())
         prob.setup(check=False)
         root = prob.root
@@ -392,7 +392,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(root.G2.G1.C2._get_fd_params(), ['x'])
 
     def test_fd_unknowns(self):
-        # tests retrieval of a list of any internal unknowns with ParamComp
+        # tests retrieval of a list of any internal unknowns with IndepVarComp
         # variables filtered out.
         prob = Problem(root=ExampleGroup())
         prob.setup(check=False)
@@ -496,7 +496,7 @@ class TestGroup(unittest.TestCase):
         C2 = root.add("C2", ExecComp('y=x*2.0'))
         C3 = root.add("C3", ExecComp(['y=x*2.0','y2=x2+1.0']))
         C4 = root.add("C4", ExecComp(['y=x*2.0','y2=x2+1.0']))
-        P1 = root.add("P1", ParamComp('x', 1.0))
+        P1 = root.add("P1", IndepVarComp('x', 1.0))
 
         root.connect('P1.x', 'C1.x')
         root.connect('C1.y', 'C2.x')

@@ -31,6 +31,23 @@ class ScipyOptimizer(Driver):
     optimizers. Inequality constraints are supported by COBYLA and SLSQP,
     but equality constraints are only supported by COBYLA. None of the other
     optimizers support constraints.
+
+    Options
+    -------
+    equality_constraints :  bool(True)
+    inequality_constraints :  bool(True)
+    integer_parameters :  bool(True)
+    linear_constraints :  bool(True)
+    multiple_objectives :  bool(False)
+    two_sided_constraints :  bool(True)
+    disp :  bool(True)
+        Set to False to prevent printing of Scipy convergence messages
+    maxiter :  int(200)
+        Maximum number of iterations.
+    optimizer :  str('SLSQP')
+        Name of optimizer to use
+    tol :  float(1e-06)
+        Tolerance for termination. For detailed control, use solver-specific options.
     """
 
     def __init__(self):
@@ -85,7 +102,7 @@ class ScipyOptimizer(Driver):
         # Initial Run
         problem.root.solve_nonlinear(metadata=self.metadata)
 
-        pmeta = self.get_param_metadata()
+        pmeta = self.get_desvar_metadata()
         self.params = list(iterkeys(pmeta))
         self.objs = list(iterkeys(self.get_objectives()))
         con_meta = self.get_constraint_metadata()
@@ -109,7 +126,7 @@ class ScipyOptimizer(Driver):
         else:
             bounds = None
 
-        for name, val in iteritems(self.get_params()):
+        for name, val in iteritems(self.get_desvars()):
             size = pmeta[name]['size']
             x_init[i:i+size] = val
             i += size
@@ -140,7 +157,10 @@ class ScipyOptimizer(Driver):
                 size = meta['size']
                 for j in range(0, size):
                     con_dict = {}
-                    con_dict['type'] = meta['ctype']
+                    if meta['equals'] is not None:
+                        con_dict['type'] = 'eq'
+                    else:
+                        con_dict['type'] = 'ineq'
                     con_dict['fun'] = self.confunc
                     if opt in _constraint_grad_optimizers:
                         con_dict['jac'] = self.congradfunc
@@ -195,9 +215,9 @@ class ScipyOptimizer(Driver):
 
         # Pass in new parameters
         i = 0
-        for name, meta in self.get_param_metadata().items():
+        for name, meta in self.get_desvar_metadata().items():
             size = meta['size']
-            self.set_param(name, x_new[i:i+size])
+            self.set_desvar(name, x_new[i:i+size])
             i += size
 
         self.iter_count += 1
@@ -214,9 +234,7 @@ class ScipyOptimizer(Driver):
 
         # Record after getting obj and constraints to assure it has been
         # gathered in MPI.
-        for recorder in self.recorders:
-            recorder.raw_record(system.params, system.unknowns,
-                                system.resids, metadata)
+        self.recorders.record(system, metadata)
 
         #print("Functions calculated")
         #print(x_new)
@@ -233,10 +251,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 
@@ -247,14 +263,18 @@ class ScipyOptimizer(Driver):
         """
 
         cons = self.con_cache
+        meta = self._cons[name]
 
-        #print("Constraint returned")
-        #print(x_new)
-        #print(name, idx, cons[name][idx])
+        # Equality constraints
+        if meta['equals'] is not None:
+            return meta['equals'] - cons[name][idx]
 
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        return -cons[name][idx]
+        if meta['upper'] is not None:
+            return meta['upper'] - cons[name][idx]
+        else:
+            return cons[name][idx] - meta['lower']
 
     def gradfunc(self, x_new):
         """ Function that evaluates and returns the objective function.
@@ -290,10 +310,8 @@ class ScipyOptimizer(Driver):
         ----
         x_new : ndarray
             Array containing parameter values at new design point.
-
         name : string
             Name of the constraint to be evaluated.
-
         idx : float
             Contains index into the constraint array.
 
@@ -304,12 +322,20 @@ class ScipyOptimizer(Driver):
         """
 
         grad = self.grad_cache
+        meta = self._cons[name]
         grad_idx = self.con_idx[name] + idx + 1
 
         #print("Constraint Gradient returned")
         #print(x_new)
         #print(name, idx, grad[grad_idx, :])
 
+        # Equality constraints
+        if meta['equals'] is not None:
+            return -grad[grad_idx, :]
+
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        return -grad[grad_idx, :]
+        if meta['upper'] is not None:
+            return -grad[grad_idx, :]
+        else:
+            return grad[grad_idx, :]

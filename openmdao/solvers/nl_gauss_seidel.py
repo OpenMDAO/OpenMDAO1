@@ -59,8 +59,7 @@ class NLGaussSeidel(NonLinearSolver):
         # Initial Solve
         system.children_solve_nonlinear(local_meta)
 
-        for recorder in self.recorders:
-            recorder.raw_record(params, unknowns, resids, local_meta)
+        self.recorders.record(system, local_meta)
 
         # Bail early if the user wants to.
         if maxiter == 1:
@@ -74,7 +73,7 @@ class NLGaussSeidel(NonLinearSolver):
         basenorm = normval if normval > atol else 1.0
 
         if self.options['iprint'] > 0:
-            self.print_norm('NLN_GS', local_meta, 0, normval, basenorm)
+            self.print_norm('NLN_GS', system.pathname, 0, normval, basenorm)
 
         while self.iter_count < maxiter and \
                 normval > atol and \
@@ -86,17 +85,16 @@ class NLGaussSeidel(NonLinearSolver):
 
             # Runs an iteration
             system.children_solve_nonlinear(local_meta)
-            for recorder in self.recorders:
-                recorder.raw_record(params, unknowns, resids, local_meta)
+            self.recorders.record(system, local_meta)
 
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
 
             if self.options['iprint'] > 0:
-                self.print_norm('NLN_GS', local_meta, self.iter_count, normval,
+                self.print_norm('NLN_GS', system.pathname, self.iter_count, normval,
                                 basenorm)
 
         if self.options['iprint'] > 0:
-            self.print_norm('NLN_GS', local_meta, self.iter_count, normval,
+            self.print_norm('NLN_GS', system.pathname, self.iter_count, normval,
                             basenorm, msg='Converged')

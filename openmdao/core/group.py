@@ -12,7 +12,7 @@ from itertools import chain
 import numpy as np
 import networkx as nx
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
@@ -470,7 +470,7 @@ class Group(System):
         Returns
         -------
         list of str
-            List of names of params that have sources that are ParamComps
+            List of names of params that have sources that are IndepVarComps
             or sources that are outside of this `Group` .
         """
         if self._fd_params is None:
@@ -485,7 +485,7 @@ class Group(System):
                     scname = src.rsplit('.', 1)[0]
                     if mypath == scname[:mplen]:
                         src_comp = self._subsystem(scname[mplen:])
-                        if isinstance(src_comp, ParamComp):
+                        if isinstance(src_comp, IndepVarComp):
                             params.append(tgt[mplen:])
                     else:
                         params.append(tgt[mplen:])
@@ -501,14 +501,14 @@ class Group(System):
         -------
         list of str
             List of names of unknowns for this `Group` that don't come from a
-            `ParamComp`.
+            `IndepVarComp`.
         """
         mypath = self.pathname + '.' if self.pathname else ''
         fd_unknowns = []
         for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
             sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
-            if not isinstance(sub, ParamComp):
+            if not isinstance(sub, IndepVarComp):
                 fd_unknowns.append(name)
 
         return fd_unknowns
@@ -654,10 +654,10 @@ class Group(System):
                 jacobian_cache = sub.jacobian(sub.params, sub.unknowns,
                                               sub.resids)
 
-            # Cache the Jacobian for Components that aren't Paramcomps.
+            # Cache the Jacobian for Components that aren't IndepVarComps.
             # Also cache it for systems that are finite differenced.
             if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-               and not isinstance(sub, ParamComp):
+               and not isinstance(sub, IndepVarComp):
                 sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
@@ -701,11 +701,11 @@ class Group(System):
                 self._transfer_data(deriv=True, var_of_interest=voi) # Full Scatter
 
         for sub in self._local_subsystems:
-            # Components that are not paramcomps perform a matrix-vector
+            # Components that are not IndepVarComps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
             if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-               and not isinstance(sub, ParamComp):
+               and not isinstance(sub, IndepVarComp):
                 self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
                                                gs_outputs=gs_outputs)
             # Groups and all other systems just call their own apply_linear.

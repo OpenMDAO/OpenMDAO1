@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
@@ -40,7 +40,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', SimpleArrayComp())
-        prob.root.add('p1', ParamComp('x', np.ones([2])))
+        prob.root.add('p1', IndepVarComp('x', np.ones([2])))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -63,7 +63,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', SimpleImplicitComp())
-        prob.root.add('p1', ParamComp('x', 0.5))
+        prob.root.add('p1', IndepVarComp('x', 0.5))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -94,7 +94,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', BadComp())
-        prob.root.add('p1', ParamComp('x', np.ones([2])))
+        prob.root.add('p1', IndepVarComp('x', np.ones([2])))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -122,7 +122,7 @@ class TestProblemFullFD(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', SimpleCompDerivMatVec())
-        prob.root.add('p1', ParamComp('x', 1.0))
+        prob.root.add('p1', IndepVarComp('x', 1.0))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -131,10 +131,10 @@ class TestProblemFullFD(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['comp.x']
+        indep_list = ['comp.x']
         unknown_list = ['comp.y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
 
 
@@ -144,17 +144,17 @@ class TestProblemFullFD(unittest.TestCase):
         prob.root = Group()
         sub = prob.root.add('sub', Group(), promotes=['*'])
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
-        prob.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+        prob.root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
 
         prob.root.fd_options['force_fd'] = True
 
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['x']
+        indep_list = ['x']
         unknown_list = ['y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
     def test_full_model_fd_double_diamond_grouped(self):
@@ -166,14 +166,14 @@ class TestProblemFullFD(unittest.TestCase):
 
         prob.root.fd_options['force_fd'] = True
 
-        param_list = ['sub1.comp1.x1']
+        indep_list = ['sub1.comp1.x1']
         unknown_list = ['comp7.y1']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
         prob.root.fd_options['form'] = 'central'
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
 
@@ -202,7 +202,7 @@ class TestProblemCheckTotals(unittest.TestCase):
         prob = Problem()
         prob.root = Group()
         prob.root.add('comp', SimpleImplicitComp())
-        prob.root.add('p1', ParamComp('x', 0.5))
+        prob.root.add('p1', IndepVarComp('x', 0.5))
 
         prob.root.connect('p1.x', 'comp.x')
 
@@ -225,7 +225,7 @@ class TestProblemCheckTotals(unittest.TestCase):
         prob.root = Group()
         sub = prob.root.add('sub', Group(), promotes=['*'])
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
-        prob.root.add('p1', ParamComp('x', 1.0), promotes=['*'])
+        prob.root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
 
         prob.setup(check=False)
         prob.run()

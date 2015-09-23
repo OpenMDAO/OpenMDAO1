@@ -56,8 +56,12 @@ class Monitor(object):
         if counter == 0 and norm != 0.0:
             self._norm0 = norm
 
-        if self._ksp.options['iprint'] > 0:
-            self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
+        ksp = self._ksp
+        ksp.iter_count += 1
+
+        if ksp.options['iprint'] > 0:
+            ksp.print_norm('KSP', ksp.system.pathname, ksp.iter_count, norm,
+                           self._norm0, indent=1, solver='LN')
 
 
 class PetscKSP(LinearSolver):
@@ -163,8 +167,17 @@ class PetscKSP(LinearSolver):
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
             self.system = system
+            self.iter_count = 0
             self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
+
+            if self.options['iprint'] > 0:
+                if self.iter_count == self.options['maxiter']:
+                    msg = 'FAILED to converge after hitting max iterations'
+                else:
+                    msg = 'Converged'
+                    self.print_norm('KSP', system.pathname, self.iter_count,
+                                    0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = sol_vec
 

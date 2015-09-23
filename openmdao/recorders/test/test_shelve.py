@@ -58,6 +58,8 @@ class TestShelveRecorder(RecorderTests.Tests):
             )
 
             actual_group = f[iter_coord]
+            timestamp = actual_group['timestamp']
+            self.assertTrue(self.t0 <= timestamp and timestamp <= self.t1)
 
             for label, values in groupings:
                 actual = actual_group[label]

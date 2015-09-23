@@ -9,7 +9,7 @@ from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.problem import Problem
-from openmdao.components.param_comp import ParamComp
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
@@ -41,14 +41,14 @@ class MatMatTestCase(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['p1.x1', 'p2.x2']
+        indep_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
@@ -59,21 +59,21 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.sub.ln_solver = LinearGaussSeidel()
 
-        prob.driver.add_param('p.x')
-        prob.driver.add_constraint('c2.y')
-        prob.driver.add_constraint('c3.y')
+        prob.driver.add_desvar('p.x')
+        prob.driver.add_constraint('c2.y', upper=0.0)
+        prob.driver.add_constraint('c3.y', upper=0.0)
 
         prob.setup(check=False)
         prob.run()
 
         unknown_list = ['c2.y', 'c3.y']
-        param_list = ['p.x']
+        indep_list = ['p.x']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
@@ -86,9 +86,9 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.sub.ln_solver.options['mode'] = 'fwd'
 
-        prob.driver.add_param('p1.x1')
-        prob.driver.add_param('p2.x2')
-        prob.driver.add_param('p3.x3')
+        prob.driver.add_desvar('p1.x1')
+        prob.driver.add_desvar('p2.x2')
+        prob.driver.add_desvar('p3.x3')
         prob.driver.add_objective('comp3.y')
 
         # make sure we can't mix inputs and outputs in parallel sets
@@ -97,7 +97,7 @@ class MatMatTestCase(MPITestCase):
         except Exception as err:
             self.assertEqual(str(err),
                "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
-               "params and ['comp3.y'] are not.")
+               "design vars and ['comp3.y'] are not.")
         else:
             self.fail("Exception expected")
 
@@ -108,7 +108,7 @@ class MatMatTestCase(MPITestCase):
         else:
             expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
 
-        self.assertEqual(prob.driver.params_of_interest(),
+        self.assertEqual(prob.driver.desvars_of_interest(),
                          expected)
 
         # make sure we can't add a VOI to multiple groups
@@ -125,14 +125,14 @@ class MatMatTestCase(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        param_list = ['p1.x1', 'p2.x2']
+        indep_list = ['p1.x1', 'p2.x2']
         unknown_list = ['comp3.y']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
 
@@ -148,9 +148,10 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.sub.ln_solver.options['mode'] = 'rev'
 
-        prob.driver.add_param('p.x')
-        prob.driver.add_constraint('c2.y')
-        prob.driver.add_constraint('c3.y')
+
+        prob.driver.add_desvar('p.x')
+        prob.driver.add_constraint('c2.y', upper=0.0)
+        prob.driver.add_constraint('c3.y', upper=0.0)
         prob.driver.parallel_derivs(['c2.y','c3.y'])
 
         if MPI:
@@ -165,13 +166,13 @@ class MatMatTestCase(MPITestCase):
         prob.run()
 
         unknown_list = ['c2.y', 'c3.y']
-        param_list = ['p.x']
+        indep_list = ['p.x']
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='rev', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
-        J = prob.calc_gradient(param_list, unknown_list, mode='fwd', return_format='dict')
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
 
@@ -187,7 +188,7 @@ class MatMatIndicesTestCase(MPITestCase):
         root.ln_solver = LinearGaussSeidel()
         root.ln_solver.options['mode'] = 'rev'
 
-        p = root.add('p', ParamComp('x', np.arange(asize, dtype=float)+1.0))
+        p = root.add('p', IndepVarComp('x', np.arange(asize, dtype=float)+1.0))
         G1 = root.add('G1', ParallelGroup())
         G1.ln_solver = LinearGaussSeidel()
         G1.ln_solver.options['mode'] = 'rev'
@@ -202,10 +203,11 @@ class MatMatIndicesTestCase(MPITestCase):
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
 
-        prob.driver.add_param('p.x', indices=[1,2])
-        prob.driver.add_constraint('c4.y', indices=[1])
-        prob.driver.add_constraint('c5.y', indices=[2])
-        #prob.driver.parallel_derivs(['c4.y','c5.y'])
+
+        prob.driver.add_desvar('p.x', indices=[1,2])
+        prob.driver.add_constraint('c4.y', upper=0.0, indices=[1])
+        prob.driver.add_constraint('c5.y', upper=0.0, indices=[2])
+        prob.driver.parallel_derivs(['c4.y','c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')

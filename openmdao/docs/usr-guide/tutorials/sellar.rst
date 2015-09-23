@@ -156,7 +156,7 @@ for things like objectives and constraints.
 
 .. testcode:: Disciplines
 
-    from openmdao.components import ExecComp, ParamComp
+    from openmdao.components import ExecComp, IndepVarComp
     from openmdao.core import Group
     from openmdao.solvers import NLGaussSeidel
 
@@ -167,8 +167,8 @@ for things like objectives and constraints.
         def __init__(self):
             super(SellarDerivatives, self).__init__()
 
-            self.add('px', ParamComp('x', 1.0), promotes=['*'])
-            self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+            self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
             self.add('d1', SellarDis1(), promotes=['*'])
             self.add('d2', SellarDis2(), promotes=['*'])
@@ -186,7 +186,7 @@ for things like objectives and constraints.
 We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
 execute, so it is important to add them in the correct order. Here, this means starting
-with the ParamComps, then adding our disciplines, and finishing with the objective and constraints.
+with the IndepVarComps, then adding our disciplines, and finishing with the objective and constraints.
 
 We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
@@ -266,13 +266,13 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-8
 
-        top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+        top.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
                              high=np.array([10.0, 10.0]))
-        top.driver.add_param('x', low=0.0, high=10.0)
+        top.driver.add_desvar('x', low=0.0, high=10.0)
 
         top.driver.add_objective('obj')
-        top.driver.add_constraint('con1')
-        top.driver.add_constraint('con2')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
 
         top.setup()
         top.run()
@@ -301,7 +301,7 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
 
 Next we add the parameter for 'z'. Recall that the first argument for
 `add_param` is a string containing the name of a variable declared in a
-`ParamComp`. Since we are promoting the output of this pcomp, we use the
+`IndepVarComp`. Since we are promoting the output of this pcomp, we use the
 promoted name, which is 'z' (and likewise we use 'x' for the other
 parameter.) Variable 'z' is a 2-element array, and each element has a
 different set of bounds defined in the problem, so we  specify the `low`
@@ -316,10 +316,9 @@ variable, you will have to place a minus sign in the expression you give to
 the objective `ExecComp`.
 
 Finally we add the constraints using the `add_constraint` method, which takes
-any valid `unknown` in the model as the first argument. Constraints in
-OpenMDAO are defined so that a negative value means the constraint is
-satisfied, and a positive value means it is violated. When a constraint is
-equal to zero, it is called an 'active' constraint.
+any valid `unknown` in the model as the first argument. We want to constrain
+the unknowns "con1" and "con2" to be less than zero, so we set an upper bound
+of zero on both constraints.
 
 Don't forget to call `setup` on your `Problem` before calling `run`. Also, we
 are using the Python 3.x print function to print results. To keep
@@ -427,8 +426,8 @@ break the connection and use the `StateConnection` component.
         def __init__(self):
             super(SellarStateConnection, self).__init__()
 
-            self.add('px', ParamComp('x', 1.0), promotes=['*'])
-            self.add('pz', ParamComp('z', np.array([5.0, 2.0])), promotes=['*'])
+            self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
+            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
             self.add('state_eq', StateConnection())
             self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
@@ -475,13 +474,13 @@ which one, since they should only differ by the solver tolerance at most.
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-8
 
-        top.driver.add_param('z', low=np.array([-10.0, 0.0]),
+        top.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
                              high=np.array([10.0, 10.0]))
-        top.driver.add_param('x', low=0.0, high=10.0)
+        top.driver.add_desvar('x', low=0.0, high=10.0)
 
         top.driver.add_objective('obj')
-        top.driver.add_constraint('con1')
-        top.driver.add_constraint('con2')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
 
         top.setup()
         top.run()

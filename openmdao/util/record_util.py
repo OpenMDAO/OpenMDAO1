@@ -1,12 +1,12 @@
 """ Utility functions related to recording or execution metadata. """
-
 from six.moves import map, zip
 
 
 class _ExecutionMetadata(object):
-    def __init__(self, name='', coord=None):
+    def __init__(self, name='', coord=None, timestamp=None):
         self.name = name
         self.coord = coord
+        self.timestamp = timestamp
 
     def __getitem__(self, key):
         try:
