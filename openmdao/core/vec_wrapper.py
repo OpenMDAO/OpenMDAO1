@@ -546,7 +546,9 @@ class VecWrapper(object):
         else:
             shapes_same = shape == val.shape
 
-        if scale is None:  # no unit conversion
+        # No unit conversion.
+        # dparams vector does no unit conversion.
+        if scale is None or self.deriv_units is True:
             flatfunc = lambda s: val
             if is_scalar:
                 func = lambda s: val[0]
@@ -555,7 +557,8 @@ class VecWrapper(object):
             else:
                 func = lambda s: val.reshape(shape)
 
-        else:  # we have a unit conversion
+        # We have a unit conversion
+        else:
             flatfunc = lambda s: scale*(val + offset)
             if is_scalar:
                 func = lambda s: scale*(val[0] + offset)
@@ -564,15 +567,11 @@ class VecWrapper(object):
             else:
                 func = lambda s: scale*(val.reshape(shape) + offset)
 
-        if hasattr(self, 'adj_accumulate_mode'):
-            z = _NoPlusEqArray(numpy.zeros(shape))
-            # wrap existing lambda in if test for adj_accumulate_mode
-            return lambda s: z if s.adj_accumulate_mode else func(s), \
-                   lambda s: z if s.adj_accumulate_mode else flatfunc(s)
-
         return func, flatfunc
 
     def _setup_set_funct(self, name):
+        """ Sets up our fast set functions."""
+
         def _set_no_units_arr(self, name, value):
             self.flat[name][:] = value.flat
 
@@ -587,34 +586,6 @@ class VecWrapper(object):
         def _set_units_scalar(self, name, value):
             self.flat[name][0] = self._vardict[name]['unit_conv'][0]*value
 
-        def _set_no_units_arr_accum(self, name, value):
-            if self.adj_accumulate_mode:
-                self.flat[name][:] += value.flat
-            else:
-                self.flat[name][:] = value.flat
-
-        def _set_no_units_scalar_accum(self, name, value):
-            if self.adj_accumulate_mode:
-                self.flat[name][0] += value
-            else:
-                self.flat[name][0] = value
-
-        def _set_units_arr_accum(self, name, value):
-            val = self.flat[name]
-            if self.adj_accumulate_mode:
-                # removing the [:] here on the rhs causes failures...
-                val[:] += self._vardict[name]['unit_conv'][0]*value.flat[:]
-            else:
-                val[:] = value.flat
-                val *= self._vardict[name]['unit_conv'][0]
-
-        def _set_units_scalar_accum(self, name, value):
-            val = self.flat[name]
-            if self.adj_accumulate_mode:
-                val[0] += self._vardict[name]['unit_conv'][0]*value[0]
-            else:
-                val[0] = self._vardict[name]['unit_conv'][0]*value[0]
-
         def _set_pbo(self, name, value):
             self._vardict[name]['val'].val = value
 
@@ -622,28 +593,16 @@ class VecWrapper(object):
 
         if 'pass_by_obj' in meta and meta['pass_by_obj']:
             return _set_pbo
-        elif self.deriv_units:
-            if 'unit_conv' in meta:
-                if meta['shape'] == 1:
-                    return _set_units_scalar_accum
-                else:
-                    return _set_units_arr_accum
+        elif self.deriv_units or 'unit_conv' not in meta:
+            if meta['shape'] == 1:
+                return _set_no_units_scalar
             else:
-                if meta['shape'] == 1:
-                    return _set_no_units_scalar_accum
-                else:
-                    return _set_no_units_arr_accum
+                return _set_no_units_arr
         else:
-            if 'unit_conv' in meta:
-                if meta['shape'] == 1:
-                    return _set_units_scalar
-                else:
-                    return _set_units_arr
+            if meta['shape'] == 1:
+                return _set_units_scalar
             else:
-                if meta['shape'] == 1:
-                    return _set_no_units_scalar
-                else:
-                    return _set_no_units_arr
+                return _set_units_arr
 
     def _setup_access_functs(self):
         self._fastget = {}
@@ -944,6 +903,15 @@ class TgtVecWrapper(VecWrapper):
         """
         return [[(n, m['size']) for n, m in self._get_vecvars()
                     if m.get('owned')]]
+
+    def _convert_units(self, varnames):
+        """ Applies unit conversion factor to params sitting in vector for
+        names passed in varnames."""
+        if self.deriv_units:
+            for name in varnames:
+                conv = self._vardict[name].get('unit_conv')
+                if conv is not None:
+                    self[name] *= conv[0]
 
 
 class _PlaceholderVecWrapper(object):

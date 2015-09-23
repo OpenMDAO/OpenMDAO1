@@ -430,7 +430,6 @@ class Group(System):
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
         dresids = impl.create_src_vecwrapper(sys_pathname, comm)
         dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
-        dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
                         var_of_interest=var_of_interest)
@@ -747,6 +746,9 @@ class Group(System):
 
                 if do_apply:
 
+                    # Process incoming unit conversions
+                    dparams._convert_units(iterkeys(dparams))
+
                     if force_fd:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                  dunknowns, dresids, mode)
@@ -782,7 +784,6 @@ class Group(System):
 
                     #if np.any(dresids.vec):
                     try:
-                        dparams.adj_accumulate_mode = True
                         if force_fd:
                             system._apply_linear_jac(system.params,
                                                      system.unknowns, dparams,
@@ -791,7 +792,8 @@ class Group(System):
                             system.apply_linear(system.params, system.unknowns,
                                                 dparams, dunknowns, dresids, mode)
                     finally:
-                        dparams.adj_accumulate_mode = False
+                        # Process incoming unit conversions
+                        dparams._convert_units(iterkeys(dparams))
 
                 dresids.vec *= -1.0
 

@@ -164,6 +164,13 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
     def test_basic_input_input(self):
 
         prob = Problem()
@@ -206,6 +213,13 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
     def test_basic_implicit_conn(self):
 
         prob = Problem()
@@ -238,6 +252,13 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
@@ -288,6 +309,13 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
     def test_basic_grouped_bug_from_pycycle(self):
 
         prob = Problem()
@@ -321,6 +349,13 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
