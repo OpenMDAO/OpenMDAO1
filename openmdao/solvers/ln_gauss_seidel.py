@@ -172,7 +172,7 @@ class LinearGaussSeidel(LinearSolver):
                     sol_buf[voi] = drmat[voi].vec
 
             self.iter_count += 1
-            if self.options['maxiter'] == 1:
+            if maxiter == 1:
                 f_norm = 0.0
             else:
                 f_norm = self._norm(system, mode, rhs_mat)
