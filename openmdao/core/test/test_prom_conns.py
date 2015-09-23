@@ -4,7 +4,7 @@ from six import text_type
 import numpy as np
 
 from openmdao.core import Problem, Group
-from openmdao.components import ParamComp, ExecComp
+from openmdao.components import IndepVarComp, ExecComp
 
 class TestPromConns(unittest.TestCase):
     def test_prom_conns(self):
@@ -17,7 +17,7 @@ class TestPromConns(unittest.TestCase):
 
         prob = Problem(root=Group())
         root = prob.root
-        desVars = root.add("desVars", ParamComp('Ps_exhaust', 1.0), promotes=('Ps_exhaust',))
+        desVars = root.add("desVars", IndepVarComp('Ps_exhaust', 1.0), promotes=('Ps_exhaust',))
         nozzle = root.add("nozzle", Group())
         press_calcs = nozzle.add('press_calcs', ExecComp('out=Ps_exhaust'), promotes=('Ps_exhaust',))
         ideal_flow = nozzle.add("ideal_flow", Group())

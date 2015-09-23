@@ -59,6 +59,9 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
             #### Need to get the record with the key of 'iter_coord'
             actual_group = db[iter_coord]
+            timestamp = actual_group['timestamp']
+
+            self.assertTrue(self.t0 <= timestamp and timestamp <= self.t1 )
 
             for label, values in groupings:
                 actual = actual_group[label]

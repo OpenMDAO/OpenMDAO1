@@ -47,7 +47,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         for coord, expect in expected:
             iter_coord = format_iteration_coordinate(coord)
-
+            
             groupings = (
                 ("Parameters", expect[0]),
                 ("Unknowns", expect[1]),
@@ -56,6 +56,9 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
             #### Need to get the record with the key of 'iter_coord'
             actual_group = db[iter_coord]
+            timestamp = actual_group['timestamp']
+
+            self.assertTrue(self.t0 <= timestamp and timestamp <= self.t1)
 
             for label, values in groupings:
                 actual = actual_group[label]
