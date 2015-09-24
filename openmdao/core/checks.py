@@ -22,15 +22,15 @@ class ConnectError(Exception):
 
     @classmethod
     def _size_mismatch_error(cls, src, target):
-        msg  = "Size {len(target[src_indices])} of the indexed sub-part of source '{src[promoted_name]}' must match the size '{target[size]}' of the target '{target[promoted_name]}'"
-        msg = msg.format(src=src, target=target)
+        msg  = "Size {isize} of the indexed sub-part of source '{src[promoted_name]}' must match the size '{target[size]}' of the target '{target[promoted_name]}'"
+        msg = msg.format(src=src, target=target, isize=len(target['src_indices']))
 
         return cls(msg)
 
     @classmethod
     def _indices_too_large(cls, src, target):
-        msg  = "Size {len(target[src_indices])} of target indices is larger than size {src[size]} of source '{src[promoted_name]}'"
-        msg = msg.format(src=src, target=target)
+        msg  = "Size {isize} of target indices is larger than size {src[size]} of source '{src[promoted_name]}'"
+        msg = msg.format(src=src, target=target, isize=len(target['src_indices']))
 
         return cls(msg)
 
