@@ -235,6 +235,7 @@ class pyOptSparseDriver(Driver):
         -------
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
+
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
@@ -317,6 +318,7 @@ class pyOptSparseDriver(Driver):
         ----
         dv_dict : dict
             Dictionary of design variable values.
+
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
 
@@ -324,6 +326,7 @@ class pyOptSparseDriver(Driver):
         -------
         sens_dict : dict
             Dictionary of dictionaries for gradient of each dv/func pair
+
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation

@@ -747,7 +747,7 @@ class Group(System):
                 if do_apply:
 
                     # Process incoming unit conversions
-                    dparams._convert_units(iterkeys(dparams))
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
 
                     if force_fd:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
@@ -793,7 +793,7 @@ class Group(System):
                                                 dparams, dunknowns, dresids, mode)
                     finally:
                         # Process incoming unit conversions
-                        dparams._convert_units(iterkeys(dparams))
+                        dparams._apply_unit_derivatives(iterkeys(dparams))
 
                 dresids.vec *= -1.0
 

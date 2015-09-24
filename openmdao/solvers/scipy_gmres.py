@@ -92,7 +92,7 @@ class ScipyGMRES(LinearSolver):
 
             if info > 0:
                 msg = "Solve in '{}': gmres failed to converge " \
-                -                      "after {} iterations"
+                                      "after {} iterations"
                 print(msg.format(system.name, options['maxiter']))
                 #logger.error(msg, system.name, info)
                 msg = 'FAILED to converge after max iterations'

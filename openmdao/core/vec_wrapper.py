@@ -7,24 +7,9 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
 from collections import OrderedDict
-from openmdao.util.type_util import is_differentiable, int_types
+from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
-class _NoPlusEqArray(object):
-    """
-    This is here as a hack to get around the issue of unit conversions
-    getting applied multiple times when doing a += in reverse mode.
-    """
-    def __init__(self, arr):
-        self._arr = arr
-
-    def __getattr__(self, name):
-        return getattr(self._arr, name)
-
-    def __iadd__(self, other):
-        # instead of doing +=, just do =
-        self._arr[:] = other
-        return self._arr
 
 class _ByObjWrapper(object):
     """
@@ -904,9 +889,9 @@ class TgtVecWrapper(VecWrapper):
         return [[(n, m['size']) for n, m in self._get_vecvars()
                     if m.get('owned')]]
 
-    def _convert_units(self, varnames):
-        """ Applies unit conversion factor to params sitting in vector for
-        names passed in varnames."""
+    def _apply_unit_derivatives(self, varnames):
+        """ Applies derivative of the unit conversion factor to params
+        sitting in vector for names passed in varnames."""
         if self.deriv_units:
             for name in varnames:
                 conv = self._vardict[name].get('unit_conv')

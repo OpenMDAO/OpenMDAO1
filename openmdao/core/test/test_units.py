@@ -1,6 +1,7 @@
 """ Tests the ins and outs of automatic unit conversion in OpenMDAO."""
 
 import unittest
+from six import iteritems
 
 import numpy as np
 
@@ -170,6 +171,20 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        prob.run()
+
+        # Make sure check partials handles conversion
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
 
     def test_basic_input_input(self):
 
@@ -361,6 +376,116 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+    def test_apply_linear_adjoint(self):
+        # Make sure we can index into dparams
+
+        class Attitude_Angular(Component):
+            """ Calculates angular velocity vector from the satellite's orientation
+            matrix and its derivative.
+            """
+
+            def __init__(self, n=2):
+                super(Attitude_Angular, self).__init__()
+
+                self.n = n
+
+                # Inputs
+                self.add_param('O_BI', np.zeros((3, 3, n)), units="ft",
+                               desc="Rotation matrix from body-fixed frame to Earth-centered "
+                               "inertial frame over time")
+
+                self.add_param('Odot_BI', np.zeros((3, 3, n)), units="km",
+                               desc="First derivative of O_BI over time")
+
+                # Outputs
+                self.add_output('w_B', np.zeros((3, n)), units="1/s",
+                                desc="Angular velocity vector in body-fixed frame over time")
+
+                self.dw_dOdot = np.zeros((n, 3, 3, 3))
+                self.dw_dO = np.zeros((n, 3, 3, 3))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Calculate output. """
+
+                O_BI = params['O_BI']
+                Odot_BI = params['Odot_BI']
+                w_B = unknowns['w_B']
+
+                for i in range(0, self.n):
+                    w_B[0, i] = np.dot(Odot_BI[2, :, i], O_BI[1, :, i])
+                    w_B[1, i] = np.dot(Odot_BI[0, :, i], O_BI[2, :, i])
+                    w_B[2, i] = np.dot(Odot_BI[1, :, i], O_BI[0, :, i])
+
+            def jacobian(self, params, unknowns, resids):
+                """ Calculate and save derivatives. (i.e., Jacobian) """
+
+                O_BI = params['O_BI']
+                Odot_BI = params['Odot_BI']
+
+                for i in range(0, self.n):
+                    self.dw_dOdot[i, 0, 2, :] = O_BI[1, :, i]
+                    self.dw_dO[i, 0, 1, :] = Odot_BI[2, :, i]
+
+                    self.dw_dOdot[i, 1, 0, :] = O_BI[2, :, i]
+                    self.dw_dO[i, 1, 2, :] = Odot_BI[0, :, i]
+
+                    self.dw_dOdot[i, 2, 1, :] = O_BI[0, :, i]
+                    self.dw_dO[i, 2, 0, :] = Odot_BI[1, :, i]
+
+            def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+                """ Matrix-vector product with the Jacobian. """
+
+                dw_B = dresids['w_B']
+
+                if mode == 'fwd':
+                    for k in range(3):
+                        for i in range(3):
+                            for j in range(3):
+                                if 'O_BI' in dparams:
+                                    dw_B[k, :] += self.dw_dO[:, k, i, j] * \
+                                        dparams['O_BI'][i, j, :]
+                                if 'Odot_BI' in dparams:
+                                    dw_B[k, :] += self.dw_dOdot[:, k, i, j] * \
+                                        dparams['Odot_BI'][i, j, :]
+
+                else:
+
+                    for k in range(3):
+                        for i in range(3):
+                            for j in range(3):
+
+                                if 'O_BI' in dparams:
+                                    dparams['O_BI'][i, j, :] += self.dw_dO[:, k, i, j] * \
+                                        dw_B[k, :]
+
+                                if 'Odot_BI' in dparams:
+                                    dparams['Odot_BI'][i, j, :] -= -self.dw_dOdot[:, k, i, j] * \
+                                        dw_B[k, :]
+
+        prob = Problem()
+        root = prob.root = Group()
+        prob.root.add('comp', Attitude_Angular(n=5), promotes=['*'])
+        prob.root.add('p1', IndepVarComp('O_BI', np.ones((3, 3, 5))), promotes=['*'])
+        prob.root.add('p2', IndepVarComp('Odot_BI', np.ones((3, 3, 5))), promotes=['*'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['O_BI', 'Odot_BI']
+        unknown_list = ['w_B']
+        Jf = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                                return_format='dict')
+
+        indep_list = ['O_BI', 'Odot_BI']
+        unknown_list = ['w_B']
+        Jr = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                                return_format='dict')
+
+        for key, val in iteritems(Jr):
+            for key2 in val:
+                diff = abs(Jf[key][key2] - Jr[key][key2])
+                assert_rel_error(self, diff, 0.0, 1e-10)
 
     def test_incompatible_connections(self):
 

@@ -1115,7 +1115,7 @@ class Problem(System):
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
                     finally:
-                        pass
+                        dparams._apply_unit_derivatives(iterkeys(dparams))
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:
@@ -1138,6 +1138,7 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dinputs.flat[p_name][idx] = 1.0
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
