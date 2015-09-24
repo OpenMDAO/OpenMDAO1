@@ -72,6 +72,9 @@ class pyOptSparseDriver(Driver):
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
 
+        # The user can set a file name here to store history
+        self.hist_file = None
+
         self.pyopt_solution = None
 
         self.lin_jacs = {}
@@ -105,8 +108,9 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
-        indep_list = list(iterkeys(param_meta))
+        self.indep_list = indep_list = list(iterkeys(param_meta))
         param_vals = self.get_desvars()
+
         for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
                                  value=param_vals[name],
@@ -190,10 +194,10 @@ class pyOptSparseDriver(Driver):
         if self.options['pyopt_diff'] is True:
             # Use pyOpt's internal finite difference
             fd_step = problem.root.fd_options['step_size']
-            sol = opt(opt_prob, sens='FD', sensStep=fd_step)
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
         else:
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self.gradfunc)
+            sol = opt(opt_prob, sens=self.gradfunc, storeHistory=self.hist_file)
 
         self._problem = None
 
@@ -204,7 +208,7 @@ class pyOptSparseDriver(Driver):
         # Pull optimal parameters back into framework and re-run, so that
         # framework is left in the right final state
         dv_dict = sol.getDVs()
-        for name in self.get_desvars():
+        for name in indep_list:
             val = dv_dict[name]
             self.set_desvar(name, val)
 
@@ -234,6 +238,7 @@ class pyOptSparseDriver(Driver):
         -------
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
+
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
@@ -248,7 +253,7 @@ class pyOptSparseDriver(Driver):
         nproc = comm.size
 
         try:
-            for name in self.get_desvars():
+            for name in self.indep_list:
                 self.set_desvar(name, dv_dict[name])
 
             # Execute the model
@@ -316,6 +321,7 @@ class pyOptSparseDriver(Driver):
         ----
         dv_dict : dict
             Dictionary of design variable values.
+
         func_dict : dict
             Dictionary of all functional variables evaluated at design point.
 
@@ -323,6 +329,7 @@ class pyOptSparseDriver(Driver):
         -------
         sens_dict : dict
             Dictionary of dictionaries for gradient of each dv/func pair
+
         fail : int
             0 for successful function evaluation
             1 for unsuccessful function evaluation
