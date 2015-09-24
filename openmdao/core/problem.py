@@ -1115,11 +1115,10 @@ class Problem(System):
 
                     dresids.flat[u_name][idx] = 1.0
                     try:
-                        dparams.adj_accumulate_mode = True
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
                     finally:
-                        dparams.adj_accumulate_mode = False
+                        dparams._apply_unit_derivatives(iterkeys(dparams))
 
                     for p_name in chain(dparams, states):
                         if (u_name, p_name) in skip_keys:
@@ -1142,6 +1141,7 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dinputs.flat[p_name][idx] = 1.0
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
