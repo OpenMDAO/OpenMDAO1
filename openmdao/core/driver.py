@@ -602,24 +602,26 @@ class Driver(object):
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
+        import six
         firstTime = 1
         v = vars(self)
-        for key, value in v.items():
+        for key, value in six.iteritems(v):
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
-                        docstring += "    "+name
-                        docstring += " :  " + type(val).__name__
-                        docstring += "("
-                        if type(val).__name__ == 'str': docstring += "'"
-                        docstring += str(val)
-                        if type(val).__name__ == 'str': docstring += "'"
-                        docstring += ")\n"
-                        desc = value._options[name]['desc']
-                        if(desc):
-                            docstring += "        " + desc + "\n"
+                    docstring += "    "+name
+                    docstring += " :  " + type(val).__name__
+                    docstring += "("
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += str(val)
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += ")\n"
+
+                    desc = value._options[name]['desc']
+                    if(desc):
+                        docstring += "        " + desc + "\n"
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring
