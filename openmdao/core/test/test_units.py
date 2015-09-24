@@ -172,6 +172,7 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+        # Need to clean up after FD gradient call, so just rerun.
         prob.run()
 
         # Make sure check partials handles conversion
