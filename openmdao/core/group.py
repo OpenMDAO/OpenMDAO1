@@ -234,17 +234,14 @@ class Group(System):
         # percolate up to all levels above
         if self._src_idxs:
             for sub in self.subsystems(recurse=True):
-                pdict = sub._params_dict
-                spname = sub.pathname + '.'
-                splen = len(spname)
                 for p, idxs in iteritems(self._src_idxs):
-                    if p[:splen] == spname:
+                    ppath = p.rsplit('.',1)[0]
+                    if ppath == sub.pathname:
+                        pname = p.rsplit('.',1)[1]
                         if isinstance(sub, Component):
-                            pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
+                            sub._params_dict[pname]['src_indices'] = idxs
                         elif isinstance(sub, Group):
-                            # it's a promoted var, resolve at next level
-                            target = p.split('.',1)[1]
-                            sub._src_idxs[target] = idxs
+                            sub._src_idxs[pname] = idxs
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
