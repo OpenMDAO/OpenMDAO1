@@ -35,7 +35,7 @@ class Problem(System):
     model.
     """
 
-    def __init__(self, root=None, driver=None, impl=None):
+    def __init__(self, root=None, driver=None, impl=None, comm=None):
         super(Problem, self).__init__()
         self.root = root
 
@@ -48,6 +48,9 @@ class Problem(System):
             self._impl = BasicImpl
         else:
             self._impl = impl
+
+        self._comm = comm
+
         if driver is None:
             self.driver = Driver()
         else:
@@ -1283,25 +1286,27 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
     def _setup_communicators(self):
-        comm = self._impl.world_comm()
+        if not self._comm:
+            self._comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
         if MPI:
-            if not (maxproc is None or maxproc >= comm.size):
+            comm_size = self._comm.size
+            if not (maxproc is None or maxproc >= comm_size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %d and %d." %
-                                   (comm.size, minproc, maxproc))
-            elif comm.size < minproc:
+                                   (comm_size, minproc, maxproc))
+            elif comm_size < minproc:
                 if maxproc is None:
                     maxproc = '(any)'
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %s and %s." %
-                                   (comm.size, minproc, maxproc))
+                                   (comm_size, minproc, maxproc))
 
-        self.root._setup_communicators(comm)
+        self.root._setup_communicators(self._comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
