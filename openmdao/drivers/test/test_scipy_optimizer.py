@@ -417,9 +417,9 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_param('z', low=np.array([-10.0]), high=np.array([10.0]),
+        prob.driver.add_desvar('z', low=np.array([-10.0]), high=np.array([10.0]),
                               indices=[0])
-        prob.driver.add_param('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -427,7 +427,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['disp'] = False
 
         test_string = prob.driver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    equality_constraints :  bool(True)\n    inequality_constraints :  bool(True)\n    integer_parameters :  bool(True)\n    linear_constraints :  bool(True)\n    multiple_objectives :  bool(False)\n    two_sided_constraints :  bool(True)\n    disp :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    maxiter :  int(200)\n        Maximum number of iterations.\n    optimizer :  str(\'SLSQP\')\n        Name of optimizer to use\n    tol :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
+        original_string = '    """\n\n    Options\n    -------\n    equality_constraints :  bool(True)\n    inequality_constraints :  bool(True)\n    integer_design_vars :  bool(True)\n    linear_constraints :  bool(True)\n    multiple_objectives :  bool(False)\n    two_sided_constraints :  bool(True)\n    disp :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    maxiter :  int(200)\n        Maximum number of iterations.\n    optimizer :  str(\'SLSQP\')\n        Name of optimizer to use\n    tol :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
         self.assertEqual(original_string, test_string)
 
 if __name__ == "__main__":
