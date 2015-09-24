@@ -1026,7 +1026,6 @@ class Problem(System):
             out_stream.write('Partial Derivatives Check\n\n')
 
         data = {}
-        skip_keys = set()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1056,7 +1055,7 @@ class Problem(System):
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
 
-            # Skip if our inputs are unconnected.
+            # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 continue
 
@@ -1080,28 +1079,27 @@ class Problem(System):
                     u_size = np.size(dunknowns[u_name])
                     if comp._jacobian_cache:
 
-                        # Go no further if we aren't defined.
-                        if (u_name, p_name) not in comp._jacobian_cache:
-                            skip_keys.add((u_name, p_name))
-                            continue
+                        # We can perform some additional helpful checks.
+                        if (u_name, p_name) in comp._jacobian_cache:
 
-                        user = comp._jacobian_cache[(u_name, p_name)].shape
+                            user = comp._jacobian_cache[(u_name, p_name)].shape
 
-                        # User may use floats for scalar jacobians
-                        if len(user) < 2:
-                            user = (user[0], 1)
+                            # User may use floats for scalar jacobians
+                            if len(user) < 2:
+                                user = (user[0], 1)
 
-                        if user[0] != u_size or user[1] != p_size:
-                            msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
-                            "It should be {}, but got {}"
-                            msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
-                            raise ValueError(msg)
+                            if user[0] != u_size or user[1] != p_size:
+                                msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
+                                "It should be {}, but got {}"
+                                msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
+                                raise ValueError(msg)
 
                     jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for u_name in dresids:
+            for var_tuple in dresids._get_vecvars():
+                u_name = var_tuple[0]
                 u_size = np.size(dunknowns[u_name])
 
                 # Send columns of identity
@@ -1118,11 +1116,8 @@ class Problem(System):
                         dparams._apply_unit_derivatives(iterkeys(dparams))
 
                     for p_name in chain(dparams, states):
-                        if (u_name, p_name) in skip_keys:
-                            continue
 
                         dinputs = dunknowns if p_name in states else dparams
-
                         jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
             # Forward derivatives second
@@ -1142,10 +1137,8 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for u_name in dresids:
-                        if (u_name, p_name) in skip_keys:
-                            continue
-
+                    for var_tuple in dresids._get_vecvars():
+                        u_name = var_tuple[0]
                         jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
 
             # Finite Difference goes last
@@ -1155,9 +1148,10 @@ class Problem(System):
             jac_fd = comp.fd_jacobian(params, unknowns, resids)
 
             # Assemble and Return all metrics.
-            _assemble_deriv_data(chain(dparams, states), resids, data[cname],
+            resid_list = [z[0] for z in resids._get_vecvars()]
+            _assemble_deriv_data(chain(dparams, states), resid_list, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
-                                 skip_keys, c_name=cname)
+                                 c_name=cname)
 
         return data
 
@@ -1392,7 +1386,7 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, skip_keys=(None, ), c_name='root'):
+                         out_stream, c_name='root'):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""
@@ -1400,8 +1394,6 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
     for p_name in params:
         for u_name in resids:
-            if (u_name, p_name) in skip_keys:
-                continue
 
             ldata = cdata[(u_name, p_name)] = {}
 
