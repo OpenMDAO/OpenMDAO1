@@ -126,7 +126,7 @@ class Newton(NonLinearSolver):
                 if self.options['solve_subsystems'] is True:
                     system.children_solve_nonlinear(local_meta)
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
-                
+
                 self.recorders.record(system, local_meta)
 
                 f_norm = resids.norm()
@@ -146,7 +146,7 @@ class Newton(NonLinearSolver):
         if self.options['iprint'] > 0:
 
             if self.iter_count == maxiter or isnan(f_norm):
-                msg = 'FAILED to converge'
+                msg = 'FAILED to converge after max iterations'
             else:
                 msg = 'converged'
 

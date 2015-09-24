@@ -1,5 +1,7 @@
 """ Gauss Seidel non-linear solver."""
 
+from math import isnan
+
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -96,5 +98,10 @@ class NLGaussSeidel(NonLinearSolver):
                                 basenorm)
 
         if self.options['iprint'] > 0:
+            if self.iter_count == maxiter or isnan(normval):
+                msg = 'FAILED to converge after max iterations'
+            else:
+                msg = 'converged'
+
             self.print_norm('NLN_GS', system.pathname, self.iter_count, normval,
-                            basenorm, msg='Converged')
+                            basenorm, msg=msg)

@@ -234,17 +234,14 @@ class Group(System):
         # percolate up to all levels above
         if self._src_idxs:
             for sub in self.subsystems(recurse=True):
-                pdict = sub._params_dict
-                spname = sub.pathname + '.'
-                splen = len(spname)
                 for p, idxs in iteritems(self._src_idxs):
-                    if p[:splen] == spname:
+                    ppath = p.rsplit('.',1)[0]
+                    if ppath == sub.pathname:
+                        pname = p.rsplit('.',1)[1]
                         if isinstance(sub, Component):
-                            pdict[p.rsplit('.',1)[1]]['src_indices'] = idxs
+                            sub._params_dict[pname]['src_indices'] = idxs
                         elif isinstance(sub, Group):
-                            # it's a promoted var, resolve at next level
-                            target = p.split('.',1)[1]
-                            sub._src_idxs[target] = idxs
+                            sub._src_idxs[pname] = idxs
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
@@ -443,7 +440,6 @@ class Group(System):
         dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
         dresids = impl.create_src_vecwrapper(sys_pathname, comm)
         dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
-        dparams.adj_accumulate_mode = False
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
                         var_of_interest=voi,
@@ -769,6 +765,9 @@ class Group(System):
 
                 if do_apply:
 
+                    # Process incoming unit conversions
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
+
                     if force_fd:
                         system._apply_linear_jac(system.params, system.unknowns, dparams,
                                                  dunknowns, dresids, mode)
@@ -804,7 +803,6 @@ class Group(System):
 
                     #if np.any(dresids.vec):
                     try:
-                        dparams.adj_accumulate_mode = True
                         if force_fd:
                             system._apply_linear_jac(system.params,
                                                      system.unknowns, dparams,
@@ -813,7 +811,8 @@ class Group(System):
                             system.apply_linear(system.params, system.unknowns,
                                                 dparams, dunknowns, dresids, mode)
                     finally:
-                        dparams.adj_accumulate_mode = False
+                        # Process incoming unit conversions
+                        dparams._apply_unit_derivatives(iterkeys(dparams))
 
                 dresids.vec *= -1.0
 

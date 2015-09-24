@@ -563,7 +563,6 @@ class System(object):
         self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
         self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
-        self.dpmat[voi].adj_accumulate_mode = False
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                   my_params, self.connections,
