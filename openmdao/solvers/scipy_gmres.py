@@ -21,7 +21,7 @@ class ScipyGMRES(LinearSolver):
         opt = self.options
         opt.add_option('atol', 1e-12,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('maxiter', 100,
+        opt.add_option('maxiter', 1000,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
@@ -92,7 +92,7 @@ class ScipyGMRES(LinearSolver):
 
             if info > 0:
                 msg = "Solve in '{}': gmres failed to converge " \
-                -                      "after {} iterations"
+                                      "after {} iterations"
                 print(msg.format(system.name, options['maxiter']))
                 #logger.error(msg, system.name, info)
                 msg = 'FAILED to converge after max iterations'
