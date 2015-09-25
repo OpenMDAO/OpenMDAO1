@@ -1136,8 +1136,8 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for u_name in dresids:
-                        jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                    for u_name, u_val in iteritems(dresids.flat):
+                        jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
             dresids.vec[:] = 0.0
@@ -1392,12 +1392,18 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
     for p_name in params:
         for u_name in resids:
 
-            ldata = cdata[(u_name, p_name)] = {}
+            key = (u_name, p_name)
 
-            Jsub_fd = jac_fd[(u_name, p_name)]
+            # Ignore non-differentiables
+            if key not in jac_fd:
+                continue
 
-            Jsub_for = jac_fwd[(u_name, p_name)]
-            Jsub_rev = jac_rev[(u_name, p_name)]
+            ldata = cdata[key] = {}
+
+            Jsub_fd = jac_fd[key]
+
+            Jsub_for = jac_fwd[key]
+            Jsub_rev = jac_rev[key]
 
             ldata['J_fd'] = Jsub_fd
             ldata['J_fwd'] = Jsub_for
