@@ -11,7 +11,20 @@ from openmdao.core.mpi_wrap import MPI
 
 class ParallelGroup(Group):
     """ParallelGroup is used for systems of `Components` or `Groups` that can
-    be run in parallel."""
+    be run in parallel.
+
+    Options
+    -------
+    fd_options['force_fd'] :  bool(False)
+        Set to True to finite difference this system.
+    fd_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+
+    """
 
     def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """ Evaluates the residuals of our children systems.

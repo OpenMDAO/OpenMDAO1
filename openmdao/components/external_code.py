@@ -21,29 +21,29 @@ class ExternalCode(Component):
 
     Options
     -------
-
-    force_fd :  bool(False)
+    fd_options['force_fd'] :  bool(False)
         Set to True to finite difference this system.
-    step_size :  float(1e-06)
-        Default finite difference stepsize
-    step_type :  str('absolute')
-        Set to absolute, relative
-    form :  str('forward')
+    fd_options['form'] :  str('forward')
         Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    external_input_files :  list([])
-        (optional) list of input file names to check the pressence of before solve_nonlinear
-    env_vars :  dict({})
-        Environment variables required by the command
-    external_output_files :  list([])
-        (optional) list of input file names to check the pressence of after solve_nonlinear
-    command :  list([])
-        command to be executed
-    timeout :  float(0.0)
-        Maximum time to wait for command completion. A value of zero implies an infinite wait
-    check_external_outputs :  bool(True)
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+    options['check_external_outputs'] :  bool(True)
         Check that all input or output external files exist
-    poll_delay :  float(0.0)
+    options['command'] :  list([])
+        command to be executed
+    options['env_vars'] :  dict({})
+        Environment variables required by the command
+    options['external_input_files'] :  list([])
+        (optional) list of input file names to check the pressence of before solve_nonlinear
+    options['external_output_files'] :  list([])
+        (optional) list of input file names to check the pressence of after solve_nonlinear
+    options['poll_delay'] :  float(0.0)
         Delay between polling for command completion. A value of zero will use an internally computed default
+    options['timeout'] :  float(0.0)
+        Maximum time to wait for command completion. A value of zero implies an infinite wait
+
 	"""
 
     def __init__(self):

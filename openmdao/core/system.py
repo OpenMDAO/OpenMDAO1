@@ -704,7 +704,8 @@ class System(object):
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
-                    docstring += "    "+name
+                    docstring += "    " + key + "['"
+                    docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
                     if type(val).__name__ == 'str': docstring += "'"
