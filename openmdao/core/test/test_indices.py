@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 from six import PY3
 
-from openmdao.core import Group, Problem
+from openmdao.core import Group, Component, Problem
 from openmdao.core.checks import ConnectError
 from openmdao.components import IndepVarComp, ExecComp
 
@@ -151,6 +151,56 @@ class TestIndices(unittest.TestCase):
             prob.setup(check=False)
 
         self.assertEqual(str(cm.exception), expected_error_message)
+
+    def test_inner_connection(self):
+        OUTER_SIZE=5
+        INNER_SIZE=3
+
+        class Squarer(Component):
+            def __init__(self):
+                super(Squarer, self).__init__()
+                self.add_param(name='input:x', val=np.zeros(INNER_SIZE), desc='x')
+                self.add_output(name='output:x2', val=np.zeros(INNER_SIZE), desc='x squared')
+
+            def solve_nonlinear(self,params,unknowns,resids):
+                unknowns['output:x2'] = params['input:x']**2
+
+        class Cuber(Component):
+            def __init__(self):
+                super(Cuber, self).__init__()
+                self.add_param(name='x', val=np.zeros(INNER_SIZE), desc='x')
+                self.add_output(name='output:x3', val=np.zeros(INNER_SIZE), desc='x squared')
+
+            def solve_nonlinear(self,params,unknowns,resids):
+                unknowns['output:x3'] = params['x']**3
+
+        class InnerGroup(Group):
+            def __init__(self):
+                super(InnerGroup, self).__init__()
+                self.add(name='squarer',system=Squarer(),promotes=['input:x'])
+                self.add(name='cuber',system=Cuber())
+                self.connect('input:x','cuber.x')
+
+        class OuterGroup(Group):
+            def __init__(self):
+                super(OuterGroup, self).__init__()
+                self.add(name='inner1',system=InnerGroup())
+                iv = (( 'input:x', np.zeros(OUTER_SIZE), {'units':'m'}),)
+                self.add('indep_vars',system=IndepVarComp(iv),promotes=['*'])
+                self.connect('input:x','inner1.input:x',src_indices=[0,1,2])
+
+        prob = Problem(root=OuterGroup())
+        prob.setup()
+
+        prob['input:x'] = np.array([4., 5., 6., 7., 8.])
+        prob.run()
+
+        assert_rel_error(self, prob.root.inner1.squarer.params['input:x'],
+                         np.array([4., 5., 6.]), 0.00000001)
+
+        assert_rel_error(self, prob.root.inner1.cuber.params['x'],
+                         np.array([4., 5., 6.]), 0.00000001)
+
 
 
 if __name__ == "__main__":

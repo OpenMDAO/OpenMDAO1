@@ -230,6 +230,15 @@ class Group(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
+        # transfer _src_indices to any 'sideways' connections
+        if self._src_idxs:
+            for p, idxs in self._src_idxs.items():
+                # if p is connected to anything, that target also needs src_idxs
+                for tgt in self._src:
+                    for src in self._src[tgt]:
+                        if src == p:
+                            self._src_idxs[tgt] = idxs
+
         # set any src_indices metadata down at Component level so it will
         # percolate up to all levels above
         if self._src_idxs:
