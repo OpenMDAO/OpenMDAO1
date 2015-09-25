@@ -18,7 +18,7 @@ from openmdao.test.simple_comps import FanInGrouped, FanOutGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.array_util import evenly_distrib_idxs
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
     rank = MPI.COMM_WORLD.rank
 else:
@@ -83,7 +83,7 @@ class MPITests1(MPITestCase):
                              "This problem was given 1 MPI processes, "
                              "but it requires between 2 and 2.")
         else:
-            if MPI:
+            if MPI:  # pragma: no cover
                 self.fail("Exception expected")
 
 
@@ -229,7 +229,7 @@ class MPITests2(MPITestCase):
                "'C1.y' is a distributed variable and may not be used as a "
                "design var, objective, or constraint.")
         else:
-            if MPI:
+            if MPI:  # pragma: no cover
                 self.fail("Exception expected")
 
 

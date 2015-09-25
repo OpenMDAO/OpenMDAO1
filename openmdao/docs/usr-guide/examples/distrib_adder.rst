@@ -115,7 +115,7 @@ Next we'll use these components to build an actual distributed model:
 
     from openmdao.core.mpi_wrap import MPI
 
-    if MPI:
+    if MPI: # pragma: no cover
         # if you called this script with 'mpirun', then use the petsc data passing
         from openmdao.core.petsc_impl import PetscImpl as impl
     else:

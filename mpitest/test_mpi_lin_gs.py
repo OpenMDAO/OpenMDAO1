@@ -11,7 +11,7 @@ from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.test.util import assert_rel_error
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl

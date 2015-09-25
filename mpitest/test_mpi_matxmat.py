@@ -16,7 +16,7 @@ from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.test.util import assert_rel_error
 from openmdao.devtools.debug import debug
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
@@ -109,7 +109,7 @@ class MatMatTestCase(MPITestCase):
 
         prob.driver.parallel_derivs(['p1.x1','p2.x2'])
 
-        if MPI:
+        if MPI: # pragma: no cover
             expected = [('p1.x1','p2.x2'),('p3.x3',)]
         else:
             expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
@@ -118,7 +118,7 @@ class MatMatTestCase(MPITestCase):
                          expected)
 
         # make sure we can't add a VOI to multiple groups
-        if MPI:
+        if MPI: # pragma: no cover
             try:
                 prob.driver.parallel_derivs(['p1.x1','p3.x3'])
             except Exception as err:
@@ -160,7 +160,7 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_constraint('c3.y', upper=0.0)
         prob.driver.parallel_derivs(['c2.y','c3.y'])
 
-        if MPI:
+        if MPI: # pragma: no cover
             expected = [('c2.y','c3.y')]
         else:
             expected = [('c2.y',),('c3.y',)]
