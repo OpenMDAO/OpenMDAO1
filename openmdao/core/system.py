@@ -696,7 +696,7 @@ class System(object):
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
         firstTime = 1
-        #v = vars(self)
+        #for py3.4, items from vars must come out in same order.
         v = OrderedDict(sorted(vars(self).items()))
         for key, value in v.items():
             if type(value)==OptionsDictionary:
