@@ -1098,8 +1098,7 @@ class Problem(System):
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for var_tuple in dresids._get_vecvars():
-                u_name = var_tuple[0]
+            for u_name in dresids:
                 u_size = np.size(dunknowns[u_name])
 
                 # Send columns of identity
@@ -1137,8 +1136,7 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for var_tuple in dresids._get_vecvars():
-                        u_name = var_tuple[0]
+                    for u_name in dresids:
                         jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
 
             # Finite Difference goes last
@@ -1148,8 +1146,7 @@ class Problem(System):
             jac_fd = comp.fd_jacobian(params, unknowns, resids)
 
             # Assemble and Return all metrics.
-            resid_list = [z[0] for z in resids._get_vecvars()]
-            _assemble_deriv_data(chain(dparams, states), resid_list, data[cname],
+            _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
                                  c_name=cname)
 

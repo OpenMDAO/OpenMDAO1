@@ -352,6 +352,8 @@ class TestMetaModel(unittest.TestCase):
         prob['x'] = 0.125
         prob.run()
 
+        Jf = prob.calc_gradient(['x'], ['meta.f'], mode='fwd')
+
         stream = cStringIO()
         prob.check_partial_derivatives(out_stream=stream)
 
