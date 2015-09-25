@@ -425,7 +425,7 @@ class Problem(System):
         if under_mpirun():
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
-            if MPI.COMM_WORLD.rank == 0:
+            if self._comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if isinstance(grp, ParallelGroup):
                         break
@@ -435,11 +435,11 @@ class Problem(System):
                           file=out_stream)
 
                 mincpu, maxcpu = self.root.get_req_procs()
-                if maxcpu is not None and MPI.COMM_WORLD.size > maxcpu:
+                if maxcpu is not None and self._comm.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
-                          (MPI.COMM_WORLD.size, maxcpu))
+                          (self._comm.size, maxcpu))
 
-                return (MPI.COMM_WORLD.size, maxcpu, parr)
+                return (self._comm.size, maxcpu, parr)
         # or any ParalleGroups found when not running under MPI
         else:
             pargrps = []
