@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 from six import PY3
 
-from openmdao.core import Group, Component, Problem
+from openmdao.core import Problem, Group, Component
 from openmdao.core.checks import ConnectError
 from openmdao.components import IndepVarComp, ExecComp
 
