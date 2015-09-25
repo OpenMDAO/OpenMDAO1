@@ -602,10 +602,10 @@ class Driver(object):
 
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
-        import six
         firstTime = 1
-        v = vars(self)
-        for key, value in six.iteritems(v):
+        #for py3.4, items from vars must come out in same order.
+        v = OrderedDict(sorted(vars(self).items()))
+        for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
