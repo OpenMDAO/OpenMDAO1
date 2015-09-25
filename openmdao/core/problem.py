@@ -1286,7 +1286,7 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
     def _setup_communicators(self):
-        if not self._comm:
+        if self._comm is None:
             self._comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
