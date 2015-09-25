@@ -279,7 +279,7 @@ class Component(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        if MPI and compute_indices and self.is_active():
+        if MPI and compute_indices and self.is_active(): # pragma: no cover
             self.setup_distrib_idxs()
             # now update our distrib_size metadata for any distributed
             # unknowns

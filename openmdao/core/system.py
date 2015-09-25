@@ -256,7 +256,7 @@ class System(object):
             The communicator being offered by the parent system.
         """
         minp, maxp = self.get_req_procs()
-        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp: # pragma: no cover
             raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
                               (self.pathname, minp, comm.size))
 
@@ -460,7 +460,7 @@ class System(object):
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
-        if MPI and gather_jac:
+        if MPI and gather_jac: # pragma: no cover
             jac = self.get_combined_jac(jac)
 
         return jac

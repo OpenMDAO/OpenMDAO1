@@ -10,7 +10,7 @@ def debug(*msg):
         sys.stdout.write("%s " % str(m))
     sys.stdout.write('\n')
 
-if under_mpirun():
+if under_mpirun(): # pragma: no cover
     def debug(*msg):
         newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
         for m in newmsg:

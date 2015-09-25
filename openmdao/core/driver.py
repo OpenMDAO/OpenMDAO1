@@ -70,7 +70,7 @@ class Driver(object):
             for name, meta in iteritems(item):
                 rootmeta = root.unknowns.metadata(name)
 
-                if MPI and 'src_indices' in rootmeta:
+                if MPI and 'src_indices' in rootmeta: # pragma: no cover
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
@@ -182,7 +182,7 @@ class Driver(object):
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
 
-        if MPI:
+        if MPI: # pragma: no cover
             self._voi_sets.append(tuple(vnames))
         else:
             warnings.warn("parallel derivs %s specified but not running under MPI")

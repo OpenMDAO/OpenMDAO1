@@ -27,7 +27,7 @@ trace = os.environ.get('TRACE_PETSC')
 
 class Group(System):
     """A system that contains other systems.
-    
+
     Options
     -------
     fd_options['force_fd'] :  bool(False)
@@ -1458,7 +1458,7 @@ class Group(System):
         local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
         local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
-        if MPI:
+        if MPI: # pragma: no cover
             if trace:
                 debug("allgathering local varnames: locals = ",local_vars)
             all_locals = self.comm.allgather(local_vars)
