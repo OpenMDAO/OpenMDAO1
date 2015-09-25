@@ -33,12 +33,7 @@ class pyOptSparseDriver(Driver):
         Set to True to let pyOpt calculate the gradient
     options['title'] :  str('Optimization using pyOpt_sparse')
         Title of this optimization run
-    supports['equality_constraints'] :  bool(True)
-    supports['inequality_constraints'] :  bool(True)
-    supports['integer_design_vars'] :  bool(False)
-    supports['linear_constraints'] :  bool(False)
-    supports['multiple_objectives'] :  bool(False)
-    supports['two_sided_constraints'] :  bool(True)
+
     """
 
     def __init__(self):

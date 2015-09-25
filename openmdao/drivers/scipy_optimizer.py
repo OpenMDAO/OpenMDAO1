@@ -42,12 +42,6 @@ class ScipyOptimizer(Driver):
         Name of optimizer to use
     options['tol'] :  float(1e-06)
         Tolerance for termination. For detailed control, use solver-specific options.
-    supports['equality_constraints'] :  bool(True)
-    supports['inequality_constraints'] :  bool(True)
-    supports['integer_design_vars'] :  bool(True)
-    supports['linear_constraints'] :  bool(True)
-    supports['multiple_objectives'] :  bool(False)
-    supports['two_sided_constraints'] :  bool(True)
 
     """
 

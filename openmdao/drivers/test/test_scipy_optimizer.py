@@ -427,7 +427,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['disp'] = False
 
         test_string = prob.driver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    options[\'disp\'] :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    options[\'maxiter\'] :  int(200)\n        Maximum number of iterations.\n    options[\'optimizer\'] :  str(\'SLSQP\')\n        Name of optimizer to use\n    options[\'tol\'] :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n    supports[\'equality_constraints\'] :  bool(True)\n    supports[\'inequality_constraints\'] :  bool(True)\n    supports[\'integer_design_vars\'] :  bool(True)\n    supports[\'linear_constraints\'] :  bool(True)\n    supports[\'multiple_objectives\'] :  bool(False)\n    supports[\'two_sided_constraints\'] :  bool(True)\n\n    """\n'
+        original_string = '    """\n\n    Options\n    -------\n    options[\'disp\'] :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    options[\'maxiter\'] :  int(200)\n        Maximum number of iterations.\n    options[\'optimizer\'] :  str(\'SLSQP\')\n        Name of optimizer to use\n    options[\'tol\'] :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
         self.assertEqual(original_string, test_string)
 
 if __name__ == "__main__":

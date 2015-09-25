@@ -19,16 +19,6 @@ class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
     Problem, and every problem has a Driver. Driver is the simplest driver that
     runs (solves using solve_nonlinear) a problem once.
-
-    Options
-    -------
-    supports['equality_constraints'] :  bool(True)
-    supports['inequality_constraints'] :  bool(True)
-    supports['integer_design_vars'] :  bool(True)
-    supports['linear_constraints'] :  bool(True)
-    supports['multiple_objectives'] :  bool(True)
-    supports['two_sided_constraints'] :  bool(True)
-
     """
 
     def __init__(self):
@@ -617,6 +607,7 @@ class Driver(object):
         v = OrderedDict(sorted(vars(self).items()))
         for key, value in v.items():
             if type(value)==OptionsDictionary:
+                if key == "supports": continue
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
