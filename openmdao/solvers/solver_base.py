@@ -124,7 +124,15 @@ class SolverBase(object):
 
 class LinearSolver(SolverBase):
     """ Base class for all linear solvers. Inherit from this class to create a
-    new custom linear solver."""
+    new custom linear solver.
+
+    Options
+    -------
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+
+
+    """
 
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
@@ -162,7 +170,14 @@ class LinearSolver(SolverBase):
 
 class NonLinearSolver(SolverBase):
     """ Base class for all nonlinear solvers. Inherit from this class to create a
-    new custom nonlinear solver."""
+    new custom nonlinear solver.
+
+    Options
+    -------
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+
+    """
 
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
