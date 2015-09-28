@@ -153,23 +153,20 @@ class TestIndices(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_error_message)
 
     def test_inner_connection(self):
-        OUTER_SIZE=5
-        INNER_SIZE=3
-
         class Squarer(Component):
-            def __init__(self):
+            def __init__(self, size):
                 super(Squarer, self).__init__()
-                self.add_param(name='input:x', val=np.zeros(INNER_SIZE), desc='x')
-                self.add_output(name='output:x2', val=np.zeros(INNER_SIZE), desc='x squared')
+                self.add_param(name='input:x', val=np.zeros(size), desc='x')
+                self.add_output(name='output:x2', val=np.zeros(size), desc='x squared')
 
             def solve_nonlinear(self,params,unknowns,resids):
                 unknowns['output:x2'] = params['input:x']**2
 
         class Cuber(Component):
-            def __init__(self):
+            def __init__(self, size):
                 super(Cuber, self).__init__()
-                self.add_param(name='x', val=np.zeros(INNER_SIZE), desc='x')
-                self.add_output(name='output:x3', val=np.zeros(INNER_SIZE), desc='x squared')
+                self.add_param(name='x', val=np.zeros(size), desc='x')
+                self.add_output(name='output:x3', val=np.zeros(size), desc='x squared')
 
             def solve_nonlinear(self,params,unknowns,resids):
                 unknowns['output:x3'] = params['x']**3
@@ -177,17 +174,31 @@ class TestIndices(unittest.TestCase):
         class InnerGroup(Group):
             def __init__(self):
                 super(InnerGroup, self).__init__()
-                self.add(name='squarer',system=Squarer(),promotes=['input:x'])
-                self.add(name='cuber',system=Cuber())
-                self.connect('input:x','cuber.x')
+
+                self.add('square1', Squarer(5))
+                self.add('square2', Squarer(3), promotes=['input:x'])
+
+                # the following connection should result in 'cuber.x' using the
+                # same src_indices as 'input:x' ([3,4,5] from the outer connection)
+                self.add('cube1', Cuber(3))
+                self.connect('input:x', 'cube1.x')
+
+                # the following connection should result in 'cuber2.x' using
+                # src_indices [0,1] of 'input:x' (which corresponds to the
+                # src_indices [3,4] from the outer connection)
+                self.add('cube2', Cuber(2))
+                self.connect('input:x', 'cube2.x', src_indices=[0,1])
 
         class OuterGroup(Group):
             def __init__(self):
                 super(OuterGroup, self).__init__()
-                self.add(name='inner1',system=InnerGroup())
-                iv = (( 'input:x', np.zeros(OUTER_SIZE), {'units':'m'}),)
-                self.add('indep_vars',system=IndepVarComp(iv),promotes=['*'])
-                self.connect('input:x','inner1.input:x',src_indices=[0,1,2])
+
+                iv = IndepVarComp('input:x', np.zeros(5))
+                self.add('indep_vars', iv, promotes=['*'])
+
+                self.add('inner', InnerGroup())
+                self.connect('input:x', 'inner.square1.input:x')
+                self.connect('input:x', 'inner.input:x', src_indices=[3,4,5])
 
         prob = Problem(root=OuterGroup())
         prob.setup()
@@ -195,12 +206,14 @@ class TestIndices(unittest.TestCase):
         prob['input:x'] = np.array([4., 5., 6., 7., 8.])
         prob.run()
 
-        assert_rel_error(self, prob.root.inner1.squarer.params['input:x'],
-                         np.array([4., 5., 6.]), 0.00000001)
+        assert_rel_error(self, prob.root.inner.square1.params['input:x'],
+                         np.array([6., 7., 8.]), 0.00000001)
 
-        assert_rel_error(self, prob.root.inner1.cuber.params['x'],
-                         np.array([4., 5., 6.]), 0.00000001)
+        assert_rel_error(self, prob.root.inner.cube1.params['x'],
+                         np.array([6., 7., 8.]), 0.00000001)
 
+        assert_rel_error(self, prob.root.inner.cube2.params['x'],
+                         np.array([6., 7.]), 0.00000001)
 
 
 if __name__ == "__main__":

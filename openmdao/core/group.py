@@ -230,14 +230,14 @@ class Group(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        # transfer _src_indices to any 'sideways' connections
-        if self._src_idxs:
-            for p, idxs in self._src_idxs.items():
-                # if p is connected to anything, that target also needs src_idxs
-                for tgt in self._src:
-                    for src in self._src[tgt]:
-                        if src == p:
-                            self._src_idxs[tgt] = idxs
+        ## transfer _src_indices to any 'sideways' connections
+        #if self._src_idxs:
+            #for p, idxs in self._src_idxs.items():
+                ## if p is connected to anything, that target also needs src_idxs
+                #for tgt in self._src:
+                    #for src in self._src[tgt]:
+                        #if src == p:
+                            #self._src_idxs[tgt] = idxs
 
         # set any src_indices metadata down at Component level so it will
         # percolate up to all levels above
@@ -511,8 +511,10 @@ class Group(System):
         connections = {}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
+        print(self.pathname, '_get_explicit_connections()', connections)
 
         for tgt, srcs in iteritems(self._src):
+            print(tgt, srcs)
             for src in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
@@ -524,7 +526,10 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
+                        print('tgt_pathname:', tgt_pathname)
+                        print('_src_idxs:', self._src_idxs)
+                        connection = (src_pathnames, self._src_idxs.get(tgt, None))
+                        connections.setdefault(tgt_pathname, []).extend(connection)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]

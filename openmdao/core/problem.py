@@ -29,6 +29,8 @@ from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 from openmdao.devtools.debug import debug
 
+from pprint import pprint
+
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -121,46 +123,83 @@ class Problem(System):
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
-        # go through promoted names of all top level params/unknowns
-        # if promoted name in unknowns matches promoted name in params
-        # that indicates an implicit connection. All connections are returned
-        # in absolute form.
-        implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict,
-                                                                 unknowns_dict)
+        print('explicit connections:')
+        pprint(connections)
+        print()
+
+        # get dictionary of implicit connections {param: [unkowns]}
+        # and dictionary of params that are not implicitly connected
+        # to anything {promoted_name: pathname}
+        implicit_conns, prom_noconns = self._get_implicit_connections()
+
+        print('implicit conns:')
+        pprint(implicit_conns)
+        print()
+        print('prom_noconns:')
+        pprint(prom_noconns)
+        print()
 
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
+        print('connections:')
+        pprint(connections)
+        print()
+
         input_graph = nx.Graph()
 
         # resolve any input to input connections
-        for tgt, srcs in iteritems(connections):
+        for tgt, (srcs, idxs) in iteritems(connections):
+            print('processing conn', tgt, srcs, idxs)
             for src in srcs:
                 if src in params_dict:
+                    print('  adding input to input conn:', src, tgt)
                     input_graph.add_edge(src, tgt)
+
+        print()
 
         # find any promoted but not connected inputs
         for p, meta in iteritems(params_dict):
             prom = meta['promoted_name']
+            print('processing prom_noconn', p, '->', prom)
             if prom in prom_noconns:
                 for n in prom_noconns[prom]:
+                    print('  adding promoted but not conn:', p, n)
                     input_graph.add_edge(p, n)
 
+        print()
+        print('input_graph:')
+        pprint(input_graph.edges())
+        print()
+
         to_add = []
-        for tgt, srcs in iteritems(connections):
+        for tgt, (srcs, idxs) in iteritems(connections):
             if tgt in input_graph:
                 conn_inputs = nx.node_connected_component(input_graph, tgt)
+                print('tgt:', tgt, 'srcs:', srcs, 'conn_inputs:', conn_inputs)
                 for s in srcs:
                     if s in unknowns_dict:
                         for t in conn_inputs:
-                            to_add.append((t, s))
+                            to_add.append((t, (s, idxs)))
 
-        for t, s in to_add:
-            connections.setdefault(t, []).append(s)
+        for t, (s, i) in to_add:
+            print('adding connection to %s:' % t, s, i)
+            if t in connections:
+                srcs, idxs = connections[t]
+                if s not in srcs:
+                    srcs.append(s)
+                print('  should idxs match?', idxs, i)
+            else:
+                connections[t] = (s, i)
+
+        print()
+        print('connections:')
+        pprint(connections)
+        print()
 
         newconns = {}
-        for tgt, srcs in iteritems(connections):
+        for tgt, (srcs, idxs) in iteritems(connections):
             unknown_srcs = set((s for s in srcs if s in unknowns_dict))
             if len(unknown_srcs) > 1:
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
@@ -1361,6 +1400,53 @@ class Problem(System):
                 self._unit_diffs[(source, target)] = (smeta.get('units'),
                                                       tmeta.get('units'))
 
+    def _get_implicit_connections(self):
+        """
+        Finds all matches between promoted names of parameters and unknowns
+        in this `Problem`.  Any matches imply an implicit connection.
+        All connections are expressed using absolute pathnames.
+
+        Returns
+        -------
+        dict
+            implicit connections in this `Problem`, represented as a mapping
+            from the pathname of the target to the pathname of the source
+
+        dict
+            parameters in this `Problem` that are not implicitly connected,
+            represented as a mapping from the promoted name of the parameter
+            to it's pathname
+
+        Raises
+        ------
+        RuntimeError
+            if a a promoted variable name matches multiple unknowns
+        """
+
+        # check if any promoted names correspond to mutiple unknowns
+        for name, lst in iteritems(self.root._to_abs_unames):
+            if len(lst) > 1:
+                raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
+                                   (name, lst))
+
+        connections = {}
+        dangling = {}
+
+        print('_to_abs_pnames:')
+        pprint(self.root._to_abs_pnames)
+        print()
+        print('_to_abs_unames:')
+        pprint(self.root._to_abs_unames)
+
+        for prom_name, pabs_list in iteritems(self.root._to_abs_pnames):
+            if prom_name in self.root._to_abs_unames:  # param has a src in unknowns
+                uprom = self.root._to_abs_unames[prom_name]
+                for pabs in pabs_list:
+                    connections[pabs] = set(uprom)
+            else:
+                dangling.setdefault(prom_name, set()).update(pabs_list)
+
+        return connections, dangling
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -1473,50 +1559,3 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
 
-def _get_implicit_connections(root, params_dict, unknowns_dict):
-    """
-    Finds all matches between promoted names of parameters and
-    unknowns.  Any matches imply an implicit connection.  All
-    connections are expressed using absolute pathnames.
-
-    This should only be called using params and unknowns from the
-    top level `Group` in the system tree.
-
-    Args
-    ----
-    params_dict : dict
-        dictionary of metadata for all parameters in this `Group`
-
-    unknowns_dict : dict
-        dictionary of metadata for all unknowns in this `Group`
-
-    Returns
-    -------
-    dict
-        implicit connections in this `Group`, represented as a mapping
-        from the pathname of the target to the pathname of the source
-
-    Raises
-    ------
-    RuntimeError
-        if a a promoted variable name matches multiple unknowns
-    """
-
-    # check if any promoted names correspond to mutiple unknowns
-    for name, lst in iteritems(root._to_abs_unames):
-        if len(lst) > 1:
-            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
-                               (name, lst))
-
-    connections = {}
-    dangling = {}
-
-    for prom_name, pabs_list in iteritems(root._to_abs_pnames):
-        if prom_name in root._to_abs_unames:  # param has a src in unknowns
-            uprom = root._to_abs_unames[prom_name]
-            for pabs in pabs_list:
-                connections[pabs] = set(uprom)
-        else:
-            dangling.setdefault(prom_name, set()).update(pabs_list)
-
-    return connections, dangling
