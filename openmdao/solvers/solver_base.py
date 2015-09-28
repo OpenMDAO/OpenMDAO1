@@ -79,6 +79,48 @@ class SolverBase(object):
         form = indent + '[%s] %s: %s   %d | %.9g %.9g'
         print(form % (name, solver, solver_string, iteration, res, res/res0))
 
+    def generate_docstring(self):
+        """
+        Generates a numpy-style docstring for a user-created System class.
+
+        Returns
+        -------
+        docstring : str
+                string that contains a basic numpy docstring.
+
+        """
+        #start the docstring off
+        docstring = '    \"\"\"\n'
+
+        #Put options into docstring
+        from openmdao.core.options import OptionsDictionary
+        firstTime = 1
+        #for py3.4, items from vars must come out in same order.
+        from collections import OrderedDict
+        v = OrderedDict(sorted(vars(self).items()))
+        for key, value in v.items():
+            if type(value)==OptionsDictionary:
+                if firstTime:  #start of Options docstring
+                    docstring += '\n    Options\n    -------\n'
+                    firstTime = 0
+                for (name, val) in sorted(value.items()):
+                    docstring += "    " + key + "['"
+                    docstring += name + "']"
+                    docstring += " :  " + type(val).__name__
+                    docstring += "("
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += str(val)
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += ")\n"
+
+                    desc = value._options[name]['desc']
+                    if(desc):
+                        docstring += "        " + desc + "\n"
+
+        #finish up docstring
+        docstring += '\n    \"\"\"\n'
+        return docstring
+
 
 class LinearSolver(SolverBase):
     """ Base class for all linear solvers. Inherit from this class to create a
@@ -155,5 +197,3 @@ class NonLinearSolver(SolverBase):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         pass
-
-
