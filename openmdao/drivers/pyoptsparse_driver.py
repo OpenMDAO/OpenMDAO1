@@ -23,8 +23,11 @@ class pyOptSparseDriver(Driver):
 
     pyOptSparseDriver supports the following:
         equality_constraints
+
         inequality_constraints
+
         two_sided_constraints
+
 
     Options
     -------
