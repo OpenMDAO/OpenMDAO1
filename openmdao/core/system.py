@@ -731,7 +731,7 @@ class System(object):
         # We should never need more memory than the largest sized collection of parallel
         # vecs.
         metas = [m for m in itervalues(vdict)
-                      if not m.get('pass_by_obj')]# and not m.get('remote')]
+                      if not m.get('pass_by_obj')]
 
         # for params, we only include 'owned' vars in the vector
         if my_params is not None:
@@ -747,7 +747,8 @@ class System(object):
             vec_size = 0
             for voi in vois:
                 sz = sum([m['size'] for m in metas
-                                 if relevance.is_relevant(voi, m['top_promoted_name'])])
+                                 if m['pathname'] in vdict and
+                                    relevance.is_relevant(voi, m['top_promoted_name'])])
                 offsets[voi] = vec_size
                 vec_size += sz
 

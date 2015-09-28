@@ -743,10 +743,7 @@ class Group(System):
 
         for voi in vois:
             if not self._relevance.is_relevant_system(voi, system):
-                #print ("skipping",system.pathname,"for",voi)
                 continue
-            # else:
-            #     print("keeping",system.pathname,"for",voi)
 
             dresids = system.drmat[voi]
             dunknowns = system.dumat[voi]
@@ -788,8 +785,6 @@ class Group(System):
                 # Clear out our inputs.
                 for val in itervalues(dparams.flat):
                     val[:] = 0.0
-                #for val in itervalues(dunknowns.flat):
-                #    val[:] = 0.0
                 dunknowns.vec[:] = 0.0
 
                 # Sign on the local Jacobian needs to be -1 before
@@ -1386,21 +1381,14 @@ class Group(System):
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
-        if var_of_interest is None:
-            uvec = self.unknowns
-            pvec = self.params
-        else:
-            uvec = self.dumat[var_of_interest]
-            pvec = self.dpmat[var_of_interest]
-
         for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
             src_idxs = self.unknowns.merge_idxs(srcs)
             tgt_idxs = self.unknowns.merge_idxs(tgts)
 
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
-                    self._impl.create_data_xfer(uvec, #self.dumat[var_of_interest],
-                                                pvec, #self.dpmat[var_of_interest],
+                    self._impl.create_data_xfer(self.dumat[var_of_interest],
+                                                self.dpmat[var_of_interest],
                                                 src_idxs, tgt_idxs,
                                                 vec_conns, byobj_conns,
                                                 mode)
@@ -1425,8 +1413,8 @@ class Group(System):
             src_idxs = self.unknowns.merge_idxs(full_srcs)
             tgt_idxs = self.unknowns.merge_idxs(full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl.create_data_xfer(uvec,#self.dumat[var_of_interest],
-                                            pvec,#self.dpmat[var_of_interest],
+                self._impl.create_data_xfer(self.dumat[var_of_interest],
+                                            self.dpmat[var_of_interest],
                                             src_idxs, tgt_idxs,
                                             full_flats, full_byobjs,
                                             mode)

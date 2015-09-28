@@ -59,7 +59,6 @@ class LinearGaussSeidel(LinearSolver):
         system.clear_dparams()
         for name in rhs_mat:
             dumat[name].vec[:] = 0.0
-        #dumat[None].vec[:] = 0.0
 
         vois = rhs_mat.keys()
         # John starts with the following. It is not necessary, but

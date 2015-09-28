@@ -819,11 +819,11 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        for names in root._relevance.vars_of_interest(mode):
-            for name in names:
-                if name in root.dumat:
-                    root.dumat[name].vec[:] = 0.0
-                    root.drmat[name].vec[:] = 0.0
+        #for names in root._relevance.vars_of_interest(mode):
+        #    for name in names:
+        #        if name in root.dumat:
+        #            root.dumat[name].vec[:] = 0.0
+        #            root.drmat[name].vec[:] = 0.0
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
