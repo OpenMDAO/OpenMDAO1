@@ -14,7 +14,7 @@ from openmdao.recorders import BaseRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core import BasicImpl as impl

@@ -26,7 +26,20 @@ from openmdao.core.checks import ConnectError
 trace = os.environ.get('TRACE_PETSC')
 
 class Group(System):
-    """A system that contains other systems."""
+    """A system that contains other systems.
+
+    Options
+    -------
+    fd_options['force_fd'] :  bool(False)
+        Set to True to finite difference this system.
+    fd_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+
+    """
 
     def __init__(self):
         super(Group, self).__init__()
@@ -1445,7 +1458,7 @@ class Group(System):
         local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
         local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
-        if MPI:
+        if MPI: # pragma: no cover
             if trace:
                 debug("allgathering local varnames: locals = ",local_vars)
             all_locals = self.comm.allgather(local_vars)

@@ -70,7 +70,7 @@ class Driver(object):
             for name, meta in iteritems(item):
                 rootmeta = root.unknowns.metadata(name)
 
-                if MPI and 'src_indices' in rootmeta:
+                if MPI and 'src_indices' in rootmeta: # pragma: no cover
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
@@ -182,7 +182,7 @@ class Driver(object):
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
 
-        if MPI:
+        if MPI: # pragma: no cover
             self._voi_sets.append(tuple(vnames))
         else:
             warnings.warn("parallel derivs %s specified but not running under MPI")
@@ -603,23 +603,27 @@ class Driver(object):
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
         firstTime = 1
-        v = vars(self)
+        #for py3.4, items from vars must come out in same order.
+        v = OrderedDict(sorted(vars(self).items()))
         for key, value in v.items():
             if type(value)==OptionsDictionary:
+                if key == "supports": continue
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
-                        docstring += "    "+name
-                        docstring += " :  " + type(val).__name__
-                        docstring += "("
-                        if type(val).__name__ == 'str': docstring += "'"
-                        docstring += str(val)
-                        if type(val).__name__ == 'str': docstring += "'"
-                        docstring += ")\n"
-                        desc = value._options[name]['desc']
-                        if(desc):
-                            docstring += "        " + desc + "\n"
+                    docstring += "    " + key + "['"
+                    docstring += name + "']"
+                    docstring += " :  " + type(val).__name__
+                    docstring += "("
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += str(val)
+                    if type(val).__name__ == 'str': docstring += "'"
+                    docstring += ")\n"
+
+                    desc = value._options[name]['desc']
+                    if(desc):
+                        docstring += "        " + desc + "\n"
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring

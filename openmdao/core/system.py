@@ -256,7 +256,7 @@ class System(object):
             The communicator being offered by the parent system.
         """
         minp, maxp = self.get_req_procs()
-        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp: # pragma: no cover
             raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
                               (self.pathname, minp, comm.size))
 
@@ -460,7 +460,7 @@ class System(object):
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
-        if MPI and gather_jac:
+        if MPI and gather_jac: # pragma: no cover
             jac = self.get_combined_jac(jac)
 
         return jac
@@ -696,14 +696,16 @@ class System(object):
         #Put options into docstring
         from openmdao.core.options import OptionsDictionary
         firstTime = 1
-        v = vars(self)
+        #for py3.4, items from vars must come out in same order.
+        v = OrderedDict(sorted(vars(self).items()))
         for key, value in v.items():
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
                 for (name, val) in sorted(value.items()):
-                    docstring += "    "+name
+                    docstring += "    " + key + "['"
+                    docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
                     if type(val).__name__ == 'str': docstring += "'"

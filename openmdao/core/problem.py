@@ -33,13 +33,25 @@ from openmdao.devtools.debug import debug
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
+
+    Options
+    -------
+    fd_options['force_fd'] :  bool(False)
+        Set to True to finite difference this system.
+    fd_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+
     """
 
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
 
-        if MPI:
+        if MPI: # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
                 raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
@@ -235,7 +247,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI:
+        if MPI: # pragma: no cover
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -419,7 +431,7 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun():
+        if under_mpirun(): # pragma: no cover
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if MPI.COMM_WORLD.rank == 0:
@@ -498,7 +510,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun():
+        if under_mpirun(): # pragma: no cover
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -1278,7 +1290,7 @@ class Problem(System):
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI:
+        if MPI: # pragma: no cover
             if not (maxproc is None or maxproc >= comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
