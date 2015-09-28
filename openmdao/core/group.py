@@ -767,11 +767,11 @@ class Group(System):
                                             dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
-                for var in dunknowns:
+                for var, val in iteritems(dunknowns.flat):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids.flat[var] += dunknowns.flat[var]
+                        dresids.flat[var] += val
 
             # Adjoint Mode
             elif mode == 'rev':
@@ -807,11 +807,11 @@ class Group(System):
 
                 dresids.vec *= -1.0
 
-                for var in dunknowns:
+                for var, val in iteritems(dresids.flat):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns.flat[var] += dresids.flat[var]
+                        dunknowns.flat[var] += val
 
     def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
         """
