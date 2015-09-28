@@ -797,17 +797,16 @@ class Group(System):
                 if do_apply:
 
                     #if np.any(dresids.vec):
-                    try:
-                        if force_fd:
-                            system._apply_linear_jac(system.params,
-                                                     system.unknowns, dparams,
-                                                     dunknowns, dresids, mode)
-                        else:
-                            system.apply_linear(system.params, system.unknowns,
-                                                dparams, dunknowns, dresids, mode)
-                    finally:
-                        # Process incoming unit conversions
-                        dparams._apply_unit_derivatives(iterkeys(dparams))
+                    if force_fd:
+                        system._apply_linear_jac(system.params,
+                                                 system.unknowns, dparams,
+                                                 dunknowns, dresids, mode)
+                    else:
+                        system.apply_linear(system.params, system.unknowns,
+                                            dparams, dunknowns, dresids, mode)
+
+                    # Process incoming unit conversions
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
 
                 dresids.vec *= -1.0
 

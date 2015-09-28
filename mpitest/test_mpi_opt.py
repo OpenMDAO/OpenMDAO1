@@ -11,6 +11,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error
 from openmdao.test.simple_comps import SimpleArrayComp
+from openmdao.test.exec_comp_for_test import ExecComp4Test
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
@@ -189,19 +190,24 @@ class ParallelMPIOptAsym(MPITestCase):
         par.ln_solver = LinearGaussSeidel()
 
         ser1 = par.add('ser1', Group())
+        ser1.ln_solver = LinearGaussSeidel()
 
         ser1.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser1.add('comp', SimpleArrayComp(), promotes=['*'])
-        ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
-                                  y=np.array([0.0, 0.0])), promotes=['*'])
-        ser1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                 promotes=['*'])
+        ser1.add('con', ExecComp4Test('c = y - 20.0', #lin_delay=.1,
+                                        c=np.array([0.0, 0.0]),
+                                        y=np.array([0.0, 0.0])),
+                                        promotes=['c', 'y'])
+        ser1.add('obj', ExecComp4Test('o = y[0]', #lin_delay=.1,
+                                        y=np.array([0.0, 0.0])),
+                                        promotes=['y', 'o'])
 
         ser2 = par.add('ser2', Group())
+        ser2.ln_solver = LinearGaussSeidel()
         ser2.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
         ser2.add('comp', SimpleArrayComp(), promotes=['*'])
         ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                  promotes=['*'])
+                                  promotes=['y', 'o'])
 
         root.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
                                  y=np.array([0.0, 0.0])))
@@ -269,22 +275,22 @@ class ParallelMPIOptPromoted(MPITestCase):
         ser1 = par.add('ser1', Group())
         ser1.ln_solver = LinearGaussSeidel()
 
-        ser1.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
-        ser1.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser1.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['x'])
+        ser1.add('comp', SimpleArrayComp(), promotes=['x', 'y'])
         ser1.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]),
-                                  y=np.array([0.0, 0.0])), promotes=['*'])
+                                  y=np.array([0.0, 0.0])), promotes=['c', 'y'])
         ser1.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                 promotes=['*'])
+                                 promotes=['y','o'])
 
         ser2 = par.add('ser2', Group())
         ser2.ln_solver = LinearGaussSeidel()
 
-        ser2.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
-        ser2.add('comp', SimpleArrayComp(), promotes=['*'])
+        ser2.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['x'])
+        ser2.add('comp', SimpleArrayComp(), promotes=['x', 'y'])
         ser2.add('con', ExecComp('c = y - 30.0', c=np.array([0.0, 0.0]),
-                                 y=np.array([0.0, 0.0])), promotes=['*'])
+                                 y=np.array([0.0, 0.0])), promotes=['c', 'y'])
         ser2.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])),
-                                  promotes=['*'])
+                                  promotes=['o', 'y'])
 
         root.add('total', ExecComp('obj = x1 + x2'))
 

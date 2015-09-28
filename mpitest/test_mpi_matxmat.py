@@ -193,10 +193,10 @@ class MatMatIndicesTestCase(MPITestCase):
         G1.ln_solver = LinearGaussSeidel()
         G1.ln_solver.options['mode'] = 'rev'
 
-        c2 = G1.add('c2', ExecComp4Test('y = x * 2.0', lin_delay=1.0, trace=True,
+        c2 = G1.add('c2', ExecComp4Test('y = x * 2.0', lin_delay=1.0,
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c3 = G1.add('c3', ExecComp4Test('y = numpy.ones(3).T*x.dot(numpy.arange(3.,6.))',
-                                   lin_delay=1.0, trace=True,
+                                   lin_delay=1.0,
                                    x=np.zeros(asize), y=np.zeros(asize)))
         c4 = root.add('c4', ExecComp4Test('y = x * 4.0',
                                    x=np.zeros(asize), y=np.zeros(asize)))
@@ -216,17 +216,13 @@ class MatMatIndicesTestCase(MPITestCase):
 
         start = time.time()
         prob.setup(check=False)
-        print("setup took",time.time()-start)
         start = time.time()
         prob.run()
-        print("run took",time.time()-start)
 
         start = time.time()
         J = prob.calc_gradient(['p.x'],
                               ['c4.y','c5.y'],
                               mode='fwd', return_format='dict')
-        print("fwd took",time.time()-start)
-        print("fwd J",J)
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
@@ -234,10 +230,6 @@ class MatMatIndicesTestCase(MPITestCase):
         start = time.time()
         J = prob.calc_gradient(['p.x'], ['c4.y','c5.y'],
                                mode='rev', return_format='dict')
-        print("rev took",time.time()-start)
-        print("rev J",J)
-        for out in ['c4.y','c5.y']:
-            print(out,"relevant systems:",prob.root._relevance._relevant_systems[out])
 
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)

@@ -23,6 +23,7 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
@@ -819,11 +820,6 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        #for names in root._relevance.vars_of_interest(mode):
-        #    for name in names:
-        #        if name in root.dumat:
-        #            root.dumat[name].vec[:] = 0.0
-        #            root.drmat[name].vec[:] = 0.0
 
         # Linearize Model
         root.jacobian(params, unknowns, root.resids)
@@ -910,7 +906,7 @@ class Problem(System):
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                vkey = voi if voi in self._driver_vois else None
+                vkey = self._get_voi_key(voi)
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -938,7 +934,7 @@ class Problem(System):
             # of interest.
             for i in range(len(in_idxs)):
                 for voi in params:
-                    vkey = voi if voi in self._driver_vois else None
+                    vkey = self._get_voi_key(voi)
                     rhs[vkey][:] = 0.0
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
@@ -948,10 +944,8 @@ class Problem(System):
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
                 for param, dx in iteritems(dx_mat):
-                    if param in self._driver_vois:
-                        vkey = param
-                    else:
-                        vkey = None
+                    vkey = self._get_voi_key(param)
+                    if vkey is None:
                         param = params[0] # if voi is None, params has only one serial entry
 
                     for item in output_list:
@@ -992,6 +986,17 @@ class Problem(System):
         root.clear_dparams()
 
         return J
+
+    def _get_voi_key(self, voi):
+        """Return the voi name, which allows for parallel derivative calculations
+        (currently only works with LinearGaussSeidel), or None for those
+        solvers that can only do a single linear solve at a time.
+        """
+        if voi in self._driver_vois and \
+                  isinstance(self.root.ln_solver, LinearGaussSeidel):
+            return voi
+
+        return None
 
     def check_partial_derivatives(self, out_stream=sys.stdout):
         """ Checks partial derivatives comprehensively for all components in
