@@ -1134,7 +1134,7 @@ class Problem(System):
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
                     finally:
-                        dparams._apply_unit_derivatives(iterkeys(dparams))
+                        dparams._apply_unit_derivatives()
 
                     for p_name in chain(dparams, states):
 
@@ -1154,7 +1154,7 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dinputs.flat[p_name][idx] = 1.0
-                    dparams._apply_unit_derivatives(iterkeys(dparams))
+                    dparams._apply_unit_derivatives()
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
