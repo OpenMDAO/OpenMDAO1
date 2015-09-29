@@ -206,10 +206,9 @@ class Relevance(object):
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()
-                succs[node] = set()
+                succs[node] = set((node,))
                 if node in g:
                     succs[node].update([v for u, v in nx.dfs_edges(g, node)])
-                succs[node].add(node)
 
         grev = g.reverse()
         self._outset = set()

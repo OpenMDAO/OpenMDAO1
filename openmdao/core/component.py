@@ -24,6 +24,8 @@ namecheck_rgx = re.compile(
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
+empty_arr = np.zeros(0)
+
 class Component(System):
     """ Base class for a Component system. The Component can declare
     variables and operates on its params to produce unknowns, which can be
@@ -352,10 +354,11 @@ class Component(System):
         # create map of relative name in parent to relative name in child
         self._relname_map = self._get_relname_map(parent.unknowns)
 
-        max_psize, self._shared_p_offsets = \
-                           self._get_shared_vec_info(self._params_dict,
-                                                     my_params={})
-        self._shared_dp_vec = np.zeros(max_psize)
+        self._shared_dp_vec = empty_arr
+        self._shared_p_offsets = { None:0 }
+        for vois in chain(relevance.inputs, relevance.outputs):
+            for voi in vois:
+                self._shared_p_offsets[voi] = 0
 
         # we don't get non-deriv vecs (u, p, r) unless we have a None group,
         # so force their creation here
@@ -364,7 +367,7 @@ class Component(System):
         # create storage for the relevant vecwrappers, keyed by
         # variable_of_interest
         all_vois = set([None])
-        for vois in chain(relevance.inputs, relevance.outputs):
+        for vois in relevance.groups:
             all_vois.update(vois)
             for voi in vois:
                 self._create_views(top_unknowns, parent, [], voi)

@@ -350,7 +350,6 @@ class Group(System):
         max_psize, self._shared_p_offsets = \
                            self._get_shared_vec_info(self._params_dict,
                                                      my_params=my_params)
-
         if parent is None:
             # determine the size of the largest grouping of parallel subvecs, allocate
             # an array of that size, and sub-allocate from that for all relevant subvecs
@@ -383,7 +382,7 @@ class Group(System):
         # create storage for the relevant vecwrappers,
         # keyed by variable_of_interest
         all_vois = set([None])
-        for vois in chain(relevance.inputs, relevance.outputs):
+        for vois in relevance.groups:
             all_vois.update(vois)
             for voi in vois:
                 if parent is None:
