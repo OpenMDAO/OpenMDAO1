@@ -28,7 +28,6 @@ class pyOptSparseDriver(Driver):
 
         two_sided_constraints
 
-
     Options
     -------
     options['exit_flag'] :  int(0)
