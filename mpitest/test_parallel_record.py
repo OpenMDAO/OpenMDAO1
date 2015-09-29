@@ -9,7 +9,7 @@ from openmdao.recorders import DumpRecorder
 from openmdao.test.simple_comps import FanInGrouped
 from openmdao.test.mpi_util import MPITestCase
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core import BasicImpl as impl
@@ -20,7 +20,7 @@ class TestDumpRecorder(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if MPI:
+        if MPI: # pragma: no cover
             if MPI.COMM_WORLD.rank == 0:
                 self.filename = 'data_0.dmp'
             elif MPI.COMM_WORLD.rank == 1:

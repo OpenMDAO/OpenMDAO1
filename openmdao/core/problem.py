@@ -34,13 +34,25 @@ from openmdao.devtools.debug import debug
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
+
+    Options
+    -------
+    fd_options['force_fd'] :  bool(False)
+        Set to True to finite difference this system.
+    fd_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+
     """
 
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
 
-        if MPI:
+        if MPI: # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
                 raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
@@ -236,7 +248,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI:
+        if MPI: # pragma: no cover
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -424,7 +436,7 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun():
+        if under_mpirun(): # pragma: no cover
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if MPI.COMM_WORLD.rank == 0:
@@ -503,7 +515,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun():
+        if under_mpirun(): # pragma: no cover
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -1036,7 +1048,6 @@ class Problem(System):
             out_stream.write('Partial Derivatives Check\n\n')
 
         data = {}
-        skip_keys = set()
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1066,7 +1077,7 @@ class Problem(System):
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
 
-            # Skip if our inputs are unconnected.
+            # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 continue
 
@@ -1090,22 +1101,20 @@ class Problem(System):
                     u_size = np.size(dunknowns[u_name])
                     if comp._jacobian_cache:
 
-                        # Go no further if we aren't defined.
-                        if (u_name, p_name) not in comp._jacobian_cache:
-                            skip_keys.add((u_name, p_name))
-                            continue
+                        # We can perform some additional helpful checks.
+                        if (u_name, p_name) in comp._jacobian_cache:
 
-                        user = comp._jacobian_cache[(u_name, p_name)].shape
+                            user = comp._jacobian_cache[(u_name, p_name)].shape
 
-                        # User may use floats for scalar jacobians
-                        if len(user) < 2:
-                            user = (user[0], 1)
+                            # User may use floats for scalar jacobians
+                            if len(user) < 2:
+                                user = (user[0], 1)
 
-                        if user[0] != u_size or user[1] != p_size:
-                            msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
-                            "It should be {}, but got {}"
-                            msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
-                            raise ValueError(msg)
+                            if user[0] != u_size or user[1] != p_size:
+                                msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
+                                "It should be {}, but got {}"
+                                msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
+                                raise ValueError(msg)
 
                     jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
@@ -1128,11 +1137,8 @@ class Problem(System):
                         dparams._apply_unit_derivatives(iterkeys(dparams))
 
                     for p_name in chain(dparams, states):
-                        if (u_name, p_name) in skip_keys:
-                            continue
 
                         dinputs = dunknowns if p_name in states else dparams
-
                         jac_rev[(u_name, p_name)][idx, :] = dinputs.flat[p_name]
 
             # Forward derivatives second
@@ -1152,11 +1158,8 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for u_name in dresids:
-                        if (u_name, p_name) in skip_keys:
-                            continue
-
-                        jac_fwd[(u_name, p_name)][:, idx] = dresids.flat[u_name]
+                    for u_name, u_val in iteritems(dresids.flat):
+                        jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
             dresids.vec[:] = 0.0
@@ -1167,7 +1170,7 @@ class Problem(System):
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
-                                 skip_keys, c_name=cname)
+                                 c_name=cname)
 
         return data
 
@@ -1297,7 +1300,7 @@ class Problem(System):
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI:
+        if MPI: # pragma: no cover
             if not (maxproc is None or maxproc >= comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
@@ -1402,7 +1405,7 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, skip_keys=(None, ), c_name='root'):
+                         out_stream, c_name='root'):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""
@@ -1410,15 +1413,19 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
     for p_name in params:
         for u_name in resids:
-            if (u_name, p_name) in skip_keys:
+
+            key = (u_name, p_name)
+
+            # Ignore non-differentiables
+            if key not in jac_fd:
                 continue
 
-            ldata = cdata[(u_name, p_name)] = {}
+            ldata = cdata[key] = {}
 
-            Jsub_fd = jac_fd[(u_name, p_name)]
+            Jsub_fd = jac_fd[key]
 
-            Jsub_for = jac_fwd[(u_name, p_name)]
-            Jsub_rev = jac_rev[(u_name, p_name)]
+            Jsub_for = jac_fwd[key]
+            Jsub_rev = jac_rev[key]
 
             ldata['J_fd'] = Jsub_fd
             ldata['J_fwd'] = Jsub_for

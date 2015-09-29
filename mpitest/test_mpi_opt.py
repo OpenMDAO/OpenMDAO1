@@ -13,7 +13,7 @@ from openmdao.test.util import assert_rel_error
 from openmdao.test.simple_comps import SimpleArrayComp
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
     from openmdao.solvers.petsc_ksp import PetscKSP as lin_solver
 else:

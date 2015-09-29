@@ -28,6 +28,18 @@ class Component(System):
     """ Base class for a Component system. The Component can declare
     variables and operates on its params to produce unknowns, which can be
     explicit outputs or implicit states.
+
+    Options
+    -------
+    fd_options['force_fd'] :  bool(False)
+        Set to True to finite difference this system.
+    fd_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+    fd_options['step_size'] :  float(1e-06)
+        Default finite difference stepsize
+    fd_options['step_type'] :  str('absolute')
+        Set to absolute, relative
+
     """
 
     def __init__(self):
@@ -268,7 +280,7 @@ class Component(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        if MPI and compute_indices and self.is_active():
+        if MPI and compute_indices and self.is_active(): # pragma: no cover
             self.setup_distrib_idxs()
             # now update our distrib_size metadata for any distributed
             # unknowns

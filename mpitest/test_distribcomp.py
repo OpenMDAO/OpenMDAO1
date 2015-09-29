@@ -13,7 +13,7 @@ from openmdao.components.exec_comp import ExecComp
 from openmdao.util.array_util import evenly_distrib_idxs
 from openmdao.test.mpi_util import MPITestCase
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
     rank = MPI.COMM_WORLD.rank
 else:
@@ -63,7 +63,7 @@ class DistribCompSimple(Component):
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        if MPI and self.comm != MPI.COMM_NULL:
+        if MPI and self.comm != MPI.COMM_NULL: # pragma: no cover
             if rank == 0:
                 outvec = params['invec'] * 0.25
             elif rank == 1:
@@ -91,7 +91,7 @@ class DistribInputComp(Component):
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        if MPI:
+        if MPI: # pragma: no cover
             self.comm.Allgatherv(params['invec']*2.0,
                                     [unknowns['outvec'], self.sizes,
                                      self.offsets, MPI.DOUBLE])
@@ -126,7 +126,7 @@ class DistribOverlappingInputComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['outvec'][:] = 0
-        if MPI:
+        if MPI: # pragma: no cover
             outs = self.comm.allgather(params['invec'] * 2.0)
             unknowns['outvec'][:8] = outs[0]
             unknowns['outvec'][4:11] += outs[1]
@@ -235,7 +235,7 @@ class DistribGatherComp(Component):
         self.add_output('outvec', np.ones(arr_size, float))
 
     def solve_nonlinear(self, params, unknowns, resids):
-        if MPI:
+        if MPI: # pragma: no cover
             self.comm.Allgatherv(params['invec'],
                                  [unknowns['outvec'], self.sizes,
                                      self.offsets, MPI.DOUBLE])
@@ -347,7 +347,7 @@ class MPITests(MPITestCase):
 
         p.run()
 
-        if MPI:
+        if MPI:  # pragma: no cover
             if self.comm.rank == 0:
                 self.assertTrue(all(top.C2.unknowns['outvec'] == np.array(list(take_nth(0, 2, range(size))), 'f')*4))
             else:

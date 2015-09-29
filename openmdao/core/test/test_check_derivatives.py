@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.group import Group
+from openmdao.core.group import Group, Component
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
@@ -114,6 +114,46 @@ class TestProblemCheckPartials(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_big_boy_Jacobian(self):
+
+        class MyComp(Component):
+
+            def __init__(self, multiplier=2.0):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 5.0)
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 3.0*params['x1'] + 4.0*params['x2']
+
+            def jacobian(self, params, unknowns, resids):
+                """Intentionally left out x2 derivative."""
+
+                J = {}
+                J[('y', 'x1')] = np.array([[3.0]])
+                return J
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp('x1', 3.0))
+        prob.root.add('p2', IndepVarComp('x2', 5.0))
+
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p2.x2', 'comp.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+        self.assertTrue(('y', 'x1') in data['comp'])
+        self.assertTrue(('y', 'x2') in data['comp'])
 
 class TestProblemFullFD(unittest.TestCase):
 
