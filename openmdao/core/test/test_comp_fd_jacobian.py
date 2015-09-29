@@ -242,6 +242,120 @@ class CompFDinSystemTestCase(unittest.TestCase):
         J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         self.assertGreater(J['comp.f_xy']['p1.x'][0][0], 1000.0)
 
+    def test_fd_options_step_size_precedence(self):
+
+        class MyComp(Component):
+
+            def __init__(self):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 3.0, step_size = 1e-6)
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 7.0*params['x1']**2 + 7.0*params['x2']**2
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p1.x2', 'comp.x2')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_size'] = 1.0e-4
+
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['p1.x1', 'p1.x2'], ['comp.y'], return_format='dict')
+        x1_err = J['comp.y']['p1.x1'] - 42.0
+        x2_err = J['comp.y']['p1.x2'] - 42.0
+
+        assert_rel_error(self, x1_err, 7e-4, 1e-1)
+        assert_rel_error(self, x2_err, 7e-6, 1e-1)
+
+    def test_fd_options_step_type_precedence(self):
+
+        class MyComp(Component):
+
+            def __init__(self):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 3.0, step_type = 'absolute')
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 7.0*params['x1']**2 + 7.0*params['x2']**2
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p1.x2', 'comp.x2')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_type'] = 'relative'
+
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['p1.x1', 'p1.x2'], ['comp.y'], return_format='dict')
+        x1_err = J['comp.y']['p1.x1'] - 42.0
+        x2_err = J['comp.y']['p1.x2'] - 42.0
+
+        assert_rel_error(self, x1_err, 2.1e-5, 1e-1)
+        assert_rel_error(self, x2_err, 7e-6, 1e-1)
+
+    def test_fd_options_form_precedence(self):
+
+        class MyComp(Component):
+
+            def __init__(self):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 3.0, form = 'central')
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 7.0*params['x1']**2 + 7.0*params['x2']**2
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p1.x2', 'comp.x2')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['form'] = 'forward'
+
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['p1.x1', 'p1.x2'], ['comp.y'], return_format='dict')
+        x1_err = J['comp.y']['p1.x1'] - 42.0
+        x2_err = J['comp.y']['p1.x2'] - 42.0
+
+        assert_rel_error(self, x1_err, 7e-6, 1e-1)
+        assert_rel_error(self, x2_err, 5.4e-10, 1e-1)
+
     def test_fd_options_form(self):
 
         prob = Problem()
@@ -363,8 +477,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(MetaParaboloid, self).__init__()
 
                 # Params
-                self.add_param('x', 1.0, fd_step_size = 1.0e5)
-                self.add_param('y', 1.0, fd_step_size = 1.0e5)
+                self.add_param('x', 1.0, step_size = 1.0e5)
+                self.add_param('y', 1.0, step_size = 1.0e5)
 
                 # Unknowns
                 self.add_output('f_xy', 0.0)
@@ -420,8 +534,8 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 super(MetaParaboloid, self).__init__()
 
                 # Params
-                self.add_param('x1', 1.0, fd_form = 'forward')
-                self.add_param('x2', 1.0, fd_form = 'backward')
+                self.add_param('x1', 1.0, form = 'forward')
+                self.add_param('x2', 1.0, form = 'backward')
                 self.add_param('y', 1.0)
 
                 # Unknowns

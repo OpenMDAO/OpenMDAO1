@@ -374,9 +374,9 @@ class System(object):
                         break
 
             # Local settings for this var trump all
-            fdstep = mydict.get('fd_step_size', step_size)
-            fdtype = mydict.get('fd_step_type', step_type)
-            fdform = mydict.get('fd_form', form)
+            fdstep = mydict.get('step_size', step_size)
+            fdtype = mydict.get('step_type', step_type)
+            fdform = mydict.get('form', form)
 
             # Size our Inputs
             if desvar_indices is not None and param_src in desvar_indices:
