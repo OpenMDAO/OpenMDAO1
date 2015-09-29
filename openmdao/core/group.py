@@ -511,13 +511,13 @@ class Group(System):
         connections = {}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
-        print()
+        print('---------------------')
         print(self.pathname, '_get_explicit_connections(), subgroup connections:')
         pprint(connections)
         print(self.pathname, '_src:', self._src)
 
         for tgt, srcs in iteritems(self._src):
-            print(tgt, srcs)
+            print(' ', tgt, srcs)
             for src, idxs in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
@@ -527,11 +527,11 @@ class Group(System):
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
-                print('src_pathnames:', src_pathnames)
+                print('    src_pathnames:', src_pathnames)
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        print('tgt_pathname:', tgt_pathname, 'idxs:', idxs)
+                        print('    tgt_pathname:', tgt_pathname, 'idxs:', idxs)
                         for src_pathname in src_pathnames:
                             connection = (src_pathname, idxs)
                             connections.setdefault(tgt_pathname, []).append(connection)
@@ -545,7 +545,7 @@ class Group(System):
 
         print(self.pathname, '_get_explicit_connections() RETURNING')
         pprint(connections)
-        print()
+        print('---------------------')
         return connections
 
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):

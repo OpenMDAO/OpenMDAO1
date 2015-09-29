@@ -351,10 +351,10 @@ class System(object):
 
             # If our input is connected to a IndepVarComp, then we need to twiddle
             # the unknowns vector instead of the params vector.
-            param_src = self.connections.get(p_name)
-            print('p_name:', p_name, 'param_src:', param_src)
-            if param_src is not None:
-                param_src, idxs = params_src  # only need the source name
+            src = self.connections.get(p_name)
+            print('p_name:', p_name, 'src:', src)
+            if src is not None:
+                param_src, idxs = src
 
                 # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:

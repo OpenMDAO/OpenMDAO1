@@ -181,18 +181,21 @@ class Problem(System):
         to_add = []
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
-                connected_inputs = nx.neighbors(input_graph, tgt)
+                connected_inputs = nx.node_connected_component(input_graph, tgt)
                 print('tgt:', tgt, 'srcs:', srcs, 'connected_inputs:', connected_inputs)
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
-                            new_idxs = input_graph[tgt][new_tgt]['idxs']
-                            if idxs is not None:
-                                if new_idxs is not None:
-                                    print('need to map new_idxs', new_idxs, 'onto', idxs)
-                                    new_idxs = np.array(idxs)[new_idxs]
-                                else:
-                                    new_idxs = idxs
+                            # follow path to new target, apply src_idxs along the way
+                            path = nx.shortest_path(input_graph, tgt, new_tgt)
+                            new_idxs = idxs
+                            x = 0
+                            while x < len(path)-1:
+                                next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                if next_idxs is not None and new_idxs is not None:
+                                    print('mapping next_idxs', next_idxs, 'onto', new_idxs)
+                                    new_idxs = np.array(new_idxs)[next_idxs]
+                                x = x + 1
                             print('need to add source for %s:' % new_tgt, (src, new_idxs))
                             to_add.append((new_tgt, (src, new_idxs)))
                     else:
@@ -212,10 +215,12 @@ class Problem(System):
                 print('adding first connection to %s: %s' % (tgt, src))
                 connections[tgt] = [(src, idxs)]
 
-        print()
-        print('connections:')
+        print('---------------------')
+        print('connections after adding input-input conns:')
         pprint(connections)
-        print()
+        print('---------------------')
+
+        print('unknowns:', unknowns_dict.keys())
 
         # remove all the input to input connections, leaving just one unknown
         # connection to each param
@@ -227,15 +232,16 @@ class Problem(System):
                 src_names = (name for name, idx in unknown_srcs)
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(src_names)))
+            print('unknown_srcs:', unknown_srcs)
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs.pop()
 
         connections = newconns
 
-        print()
-        print('connections:')
+        print('-------------------')
+        print('connections after removing input-input conns:')
         pprint(connections)
-        print()
+        print('-------------------')
 
         self._dangling = {}
         prom_unknowns = self.root._to_abs_unames
@@ -330,7 +336,10 @@ class Problem(System):
         for tgt, (src, idxs) in iteritems(connections):
             if idxs is not None:
                 params_dict[tgt]['src_indices'] = idxs
+        print()        
+        print('setup() params after populating src_indices:')
         pprint(dict(params_dict))
+        print()
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -482,9 +491,12 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.', 1)[0] for t in iterkeys(self.root.connections)])
-        conn_comps.update([s.rsplit('.', 1)[0] for s, i in itervalues(self.root.connections)])
-        noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+        conn_comps = set([t.rsplit('.', 1)[0] 
+                          for t in iterkeys(self.root.connections)])
+        conn_comps.update([s.rsplit('.', 1)[0] 
+                           for s, i in itervalues(self.root.connections)])
+        noconn_comps = sorted([c.pathname 
+                               for c in self.root.components(recurse=True, local=True)
                                if c.pathname not in conn_comps])
         if noconn_comps:
             print("\nThe following components have no connections:", file=out_stream)
@@ -758,9 +770,9 @@ class Problem(System):
             if name in unknowns:
                 name = unknowns.metadata(name)['pathname']
 
-            for target, src in iteritems(root.connections):
+            for tgt, (src, idxs) in iteritems(root.connections):
                 if name == src:
-                    name = target
+                    name = tgt
                     break
 
             abs_params.append(name)
@@ -780,9 +792,9 @@ class Problem(System):
                 # The user sometimes specifies the parameter output
                 # name instead of its target because it is more
                 # convenient
-                for key, val in iteritems(root.connections):
-                    if val == ikey:
-                        fd_ikey = key
+                for tgt, (src, idxs) in iteritems(root.connections):
+                    if src == ikey:
+                        fd_ikey = tgt
                         break
 
                 # We need the absolute name, but the fd Jacobian
@@ -1267,7 +1279,8 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        indep_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
+        indep_list = [self.root._unknowns_dict[p]['promoted_name'] 
+                          for p, idxs in param_srcs]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
