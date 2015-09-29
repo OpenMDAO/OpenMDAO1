@@ -2,7 +2,7 @@
 import unittest
 from six import text_type, StringIO, itervalues
 
-from openmdao.core.problem import Problem, _get_implicit_connections
+from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.problem import Relevance
 from openmdao.components.indep_var_comp import IndepVarComp

@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from pprint import pprint
+
 import sys
 import os
 from collections import Counter, OrderedDict
@@ -132,9 +134,7 @@ class Group(System):
             targets = (targets,)
 
         for target in targets:
-            self._src.setdefault(target, []).append(source)
-            if src_indices is not None:
-                self._src_idxs[target] = src_indices
+            self._src.setdefault(target, []).append((source, src_indices))
 
     def subsystems(self, local=False, recurse=False, typ=System, include_self=False):
         """
@@ -239,18 +239,18 @@ class Group(System):
                         #if src == p:
                             #self._src_idxs[tgt] = idxs
 
-        # set any src_indices metadata down at Component level so it will
-        # percolate up to all levels above
-        if self._src_idxs:
-            for sub in self.subsystems(recurse=True):
-                for p, idxs in iteritems(self._src_idxs):
-                    ppath = p.rsplit('.',1)[0]
-                    if ppath == sub.pathname:
-                        pname = p.rsplit('.',1)[1]
-                        if isinstance(sub, Component):
-                            sub._params_dict[pname]['src_indices'] = idxs
-                        elif isinstance(sub, Group):
-                            sub._src_idxs[pname] = idxs
+        ## set any src_indices metadata down at Component level so it will
+        ## percolate up to all levels above
+        #if self._src_idxs:
+            #for sub in self.subsystems(recurse=True):
+                #for p, idxs in iteritems(self._src_idxs):
+                    #ppath = p.rsplit('.',1)[0]
+                    #if ppath == sub.pathname:
+                        #pname = p.rsplit('.',1)[1]
+                        #if isinstance(sub, Component):
+                            #sub._params_dict[pname]['src_indices'] = idxs
+                        #elif isinstance(sub, Group):
+                            #sub._src_idxs[pname] = idxs
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
@@ -269,10 +269,10 @@ class Group(System):
             # check for any promotes that didn't match a variable
             sub._check_promotes()
 
-        # set src_indices for promoted vars (needed to setup dicts first to find them)
-        for p, idxs in self._src_idxs.items():
-            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
-                self._params_dict[p_abs]['src_indices'] = idxs
+        ## set src_indices for promoted vars (needed to setup dicts first to find them)
+        #for p, idxs in self._src_idxs.items():
+            #for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
+                #self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -466,7 +466,7 @@ class Group(System):
             mplen = len(mypath)
 
             params = self._fd_params = []
-            for tgt, src in iteritems(conns):
+            for tgt, (src, idxs) in iteritems(conns):
                 if mypath == tgt[:mplen]:
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
@@ -511,11 +511,14 @@ class Group(System):
         connections = {}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
-        print(self.pathname, '_get_explicit_connections()', connections)
+        print()
+        print(self.pathname, '_get_explicit_connections(), subgroup connections:')
+        pprint(connections)
+        print(self.pathname, '_src:', self._src)
 
         for tgt, srcs in iteritems(self._src):
             print(tgt, srcs)
-            for src in srcs:
+            for src, idxs in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
                 except KeyError as error:
@@ -524,12 +527,14 @@ class Group(System):
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
+                print('src_pathnames:', src_pathnames)
+
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        print('tgt_pathname:', tgt_pathname)
-                        print('_src_idxs:', self._src_idxs)
-                        connection = (src_pathnames, self._src_idxs.get(tgt, None))
-                        connections.setdefault(tgt_pathname, []).extend(connection)
+                        print('tgt_pathname:', tgt_pathname, 'idxs:', idxs)
+                        for src_pathname in src_pathnames:
+                            connection = (src_pathname, idxs)
+                            connections.setdefault(tgt_pathname, []).append(connection)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -538,6 +543,9 @@ class Group(System):
                     else:
                         raise ConnectError.invalid_target_error(src, tgt)
 
+        print(self.pathname, '_get_explicit_connections() RETURNING')
+        pprint(connections)
+        print()
         return connections
 
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
@@ -1049,7 +1057,7 @@ class Group(System):
         for comp in self.components(local=True, recurse=True):
             for intinp_rel, meta in iteritems(comp.dpmat[voi]):
                 intinp_abs = meta['pathname']
-                src = self.connections.get(intinp_abs)
+                src, idxs = self.connections.get(intinp_abs)
 
                 if src in abs_uvec:
                     ls_inputs.add(intinp_abs)
@@ -1341,8 +1349,9 @@ class Group(System):
         self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
-        for param, unknown in iteritems(self.connections):
+        for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
+                print(self.pathname, '_setup_data_transfer() param:', param, 'unknown:', unknown)
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)
 

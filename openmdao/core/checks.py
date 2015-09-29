@@ -164,7 +164,10 @@ def check_connections(connections, params_dict, unknowns_dict):
     """
 
     # Get metadata for all sources
-    sources = __get_metadata(itervalues(connections), unknowns_dict)
+    print('connections', connections)
+    srcs = (src for src, idxs in itervalues(connections))
+    print('srcs:', srcs)
+    sources = __get_metadata(srcs, unknowns_dict)
 
     #Get metadata for all targets
     targets = __get_metadata(iterkeys(connections), params_dict)
@@ -184,6 +187,8 @@ def _check_shapes_match(source, target):
 
 
 def __check_shapes_match(src, target):
+    print('source:', src)
+    print('target:', target)
     if src['shape'] != target['shape']:
         if 'src_indices' in target:
             if len(target['src_indices']) != target['size']:

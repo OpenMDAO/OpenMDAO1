@@ -178,12 +178,12 @@ class TestIndices(unittest.TestCase):
                 self.add('square1', Squarer(5))
                 self.add('square2', Squarer(3), promotes=['input:x'])
 
-                # the following connection should result in 'cuber.x' using the
+                # the following connection should result in 'cube1.x' using the
                 # same src_indices as 'input:x' ([3,4,5] from the outer connection)
                 self.add('cube1', Cuber(3))
                 self.connect('input:x', 'cube1.x')
 
-                # the following connection should result in 'cuber2.x' using
+                # the following connection should result in 'cube2.x' using
                 # src_indices [0,1] of 'input:x' (which corresponds to the
                 # src_indices [3,4] from the outer connection)
                 self.add('cube2', Cuber(2))
@@ -198,7 +198,7 @@ class TestIndices(unittest.TestCase):
 
                 self.add('inner', InnerGroup())
                 self.connect('input:x', 'inner.square1.input:x')
-                self.connect('input:x', 'inner.input:x', src_indices=[3,4,5])
+                self.connect('input:x', 'inner.input:x', src_indices=[2,3,4])
 
         prob = Problem(root=OuterGroup())
         prob.setup()
@@ -207,7 +207,7 @@ class TestIndices(unittest.TestCase):
         prob.run()
 
         assert_rel_error(self, prob.root.inner.square1.params['input:x'],
-                         np.array([6., 7., 8.]), 0.00000001)
+                         np.array([4., 5., 6., 7., 8.]), 0.00000001)
 
         assert_rel_error(self, prob.root.inner.cube1.params['x'],
                          np.array([6., 7., 8.]), 0.00000001)
