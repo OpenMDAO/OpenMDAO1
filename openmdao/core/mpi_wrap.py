@@ -55,7 +55,7 @@ def under_mpirun():
     return False
 
 
-if under_mpirun():
+if under_mpirun(): # pragma: no cover
     from mpi4py import MPI
 else:
     MPI = None

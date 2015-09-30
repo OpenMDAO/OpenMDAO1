@@ -14,7 +14,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 
 from openmdao.test.mpi_util import MPITestCase
 
-if MPI:
+if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core import BasicImpl as impl
@@ -109,7 +109,7 @@ class MPITests2(MPITestCase):
                              "This problem was given 2 MPI processes, "
                              "but it requires between 1 and 1.")
         else:
-            if MPI:
+            if MPI: # pragma: no cover
                 self.fail("Exception expected")
 
     def test_parallel_fan_in(self):
@@ -171,7 +171,7 @@ class MPITests2(MPITestCase):
                              np.ones(size)*-.1, 1.e-10)
 
     def test_wrong_impl(self):
-        if MPI:
+        if MPI: # pragma: no cover
             try:
                 prob = Problem(Group())
             except Exception as err:

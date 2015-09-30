@@ -36,7 +36,7 @@ class DumpRecorder(BaseRecorder):
             else:
                 # Dump out to a separate file for each process if we are under
                 # MPI
-                if MPI:
+                if MPI: # pragma: no cover
                     if '.' in out:
                         parts = out.split('.')
                         parts[-2] += '_' + str(MPI.COMM_WORLD.rank)

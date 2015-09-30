@@ -68,12 +68,12 @@ by demonstrating how to save the data generated for future use. Consider the cod
         top.driver.add_objective('p.f_xy')
 
         recorder = SqliteRecorder('paraboloid')
-        driver.add_recorder(recorder)
+        top.driver.add_recorder(recorder)
 
         top.setup()
         top.run()
 
-        driver.recorders[0].close()
+        top.driver.recorders[0].close()
 
         print('\n')
         print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))

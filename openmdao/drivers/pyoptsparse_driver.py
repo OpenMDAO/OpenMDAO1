@@ -23,21 +23,15 @@ class pyOptSparseDriver(Driver):
 
     Options
     -------
-    equality_constraints :  bool(True)
-    inequality_constraints :  bool(True)
-    integer_design_vars :  bool(False)
-    linear_constraints :  bool(False)
-    multiple_objectives :  bool(False)
-    two_sided_constraints :  bool(True)
-    exit_flag :  int(0)
+    options['exit_flag'] :  int(0)
         0 for fail, 1 for ok
-    optimizer :  str('SNOPT')
+    options['optimizer'] :  str('SNOPT')
         Name of optimizers to use
-    print_results :  bool(True)
+    options['print_results'] :  bool(True)
         Print pyOpt results if True
-    pyopt_diff :  bool(True)
+    options['pyopt_diff'] :  bool(True)
         Set to True to let pyOpt calculate the gradient
-    title :  str('Optimization using pyOpt_sparse')
+    options['title'] :  str('Optimization using pyOpt_sparse')
         Title of this optimization run
 
     """

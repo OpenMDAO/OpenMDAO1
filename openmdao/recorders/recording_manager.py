@@ -35,7 +35,7 @@ class RecordingManager(object):
 
     def _gather_vars(self, root, local_vars):
         '''
-        Gathers and returns only variables listed in 
+        Gathers and returns only variables listed in
         `varnames` from the vector `vec`
         '''
 
@@ -51,7 +51,7 @@ class RecordingManager(object):
             if not recorder._parallel:
                 self.__has_serial_recorders = True
                 pnames, unames, rnames = recorder._filtered[root.pathname]
-                
+
                 self._vars_to_record['pnames'].update(pnames)
                 self._vars_to_record['unames'].update(unames)
                 self._vars_to_record['rnames'].update(rnames)
@@ -71,7 +71,7 @@ class RecordingManager(object):
         unknowns = root.unknowns
         resids = root.resids
 
-        if MPI and self.__has_serial_recorders:
+        if MPI and self.__has_serial_recorders: # pragma: no cover
             pnames = self._vars_to_record['pnames']
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']
