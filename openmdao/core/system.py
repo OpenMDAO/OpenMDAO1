@@ -343,16 +343,12 @@ class System(object):
 
         gather_jac = False
 
-        print('params:', params.keys())
-        print('unknowns:', unknowns.keys())
-        print('connections:', self.connections)
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
             # If our input is connected to a IndepVarComp, then we need to twiddle
             # the unknowns vector instead of the params vector.
             src = self.connections.get(p_name)
-            print('p_name:', p_name, 'src:', src)
             if src is not None:
                 param_src, idxs = src
 

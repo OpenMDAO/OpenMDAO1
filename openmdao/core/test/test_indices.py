@@ -201,7 +201,7 @@ class TestIndices(unittest.TestCase):
                 self.connect('input:x', 'inner.input:x', src_indices=[2,3,4])
 
         prob = Problem(root=OuterGroup())
-        prob.setup()
+        prob.setup(check=False)
 
         prob['input:x'] = np.array([4., 5., 6., 7., 8.])
         prob.run()
