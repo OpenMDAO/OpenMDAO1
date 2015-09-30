@@ -145,10 +145,24 @@ class Problem(System):
         else:
             raise KeyError("Variable '%s' not found." % name)
 
-    def _setup_connections(self, params_dict, unknowns_dict, translate_indices=True):
+    def _setup_connections(self, params_dict, unknowns_dict, compute_indices=True):
         """Generate a mapping of absolute param pathname to the pathname
         of its unknown.
+
+        Args
+        ----
+
+        params_dict : OrderedDict
+            A dict of parameter metadata for the whole `Problem`.
+
+        unknowns_dict : OrderedDict
+            A dict of unknowns metadata for the whole `Problem`.
+
+        compute_indices : bool, optional
+            If True, perform mapping of src_indices for input to input
+            connections.
         """
+
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
@@ -188,7 +202,7 @@ class Problem(System):
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
                             new_idxs = idxs
-                            if translate_indices:
+                            if compute_indices:
                                 # follow path to new target, apply src_idxs along the way
                                 path = nx.shortest_path(input_graph, tgt, new_tgt)
                                 x = 0
@@ -281,17 +295,17 @@ class Problem(System):
         connections = self._setup_connections(params_dict, unknowns_dict)
 
         # push connection src_indices down into the metadata for all target
-        # params in all systems
+        # params in all component level systems, then flag meta_changed so
+        # it will get percolated back up to all groups in next setup_vars()
         for tgt, (src, idxs) in iteritems(connections):
             if idxs is not None:
-                params_dict[tgt]['src_indices'] = idxs
-                for sub in self.root.subsystems(recurse=True):
-                    if tgt in sub._params_dict:
-                        print('updating src_indices for %s in subsystem: %s' % (tgt, sub.pathname))
-                        print(sub._params_dict[tgt])
-                        sub._params_dict[tgt]['src_indices'] = idxs
-                        print(sub._params_dict[tgt])
-                #meta_changed = True
+                for comp in self.root.components(recurse=True):
+                    # component dicts are keyed on the var name, not the pathname
+                    path, name = tgt.rsplit('.', 1)
+                    meta = comp._params_dict.get(name)
+                    if meta and meta['pathname'] == tgt:
+                        meta['src_indices'] = idxs
+                meta_changed = True
 
         # TODO: handle any automatic grouping of systems here...
 
@@ -321,7 +335,7 @@ class Problem(System):
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict,
-                                                  translate_indices=False)
+                                                  compute_indices=False)
         elif meta_changed:
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
@@ -1378,7 +1392,8 @@ class Problem(System):
         ----
         connections : dict
             A dict of target variables (absolute name) mapped
-            to the absolute name of their source variable.
+            to the absolute name of their source variable and the
+            relevant indices of that source if applicable.
 
         params_dict : OrderedDict
             A dict of parameter metadata for the whole `Problem`.
