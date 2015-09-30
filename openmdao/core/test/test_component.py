@@ -69,6 +69,7 @@ class TestComponent(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), "Shape of param 'w' must be specified because 'val' is not set")
 
+        self.comp._setup_paths('')
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["x", "y", "z", "t", "u"], list(params.keys()))
@@ -91,6 +92,7 @@ class TestComponent(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), "Shape of output 'w' must be specified because 'val' is not set")
 
+        self.comp._setup_paths('')
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["x", "y", "z", "t", "u"], list(unknowns.keys()))
@@ -118,6 +120,7 @@ class TestComponent(unittest.TestCase):
             self.comp.add_state("s6")
 
         self.assertEqual(str(cm.exception), "Shape of state 's6' must be specified because 'val' is not set")
+        self.comp._setup_paths('')
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["s1", "s2", "s3", "s4", "s5"], list(unknowns.keys()))

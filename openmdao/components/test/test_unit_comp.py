@@ -12,6 +12,7 @@ class TestUnitComp(unittest.TestCase):
     def test_instantiation(self):
         u_comp = UnitComp(1, param_name="x", out_name="x_out", units="ft**2/furlong")
 
+        u_comp._setup_paths('')
         params, unknowns = u_comp._setup_variables()
 
         self.assertEqual(['x'], list(params.keys()))

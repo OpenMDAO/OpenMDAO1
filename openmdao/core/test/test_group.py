@@ -77,8 +77,6 @@ class TestGroup(unittest.TestCase):
 
         prob.setup(check=False)
 
-        #root._setup_paths('')
-
         self.assertEqual(root.pathname, '')
         self.assertEqual(root.G3.pathname, 'G3')
         self.assertEqual(root.G2.pathname, 'G2')

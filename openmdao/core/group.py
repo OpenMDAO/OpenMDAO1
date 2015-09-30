@@ -236,8 +236,15 @@ class Group(System):
             A dictionary of metadata for parameters and for unknowns
             for all subsystems.
         """
-        self._params_dict = OrderedDict()
-        self._unknowns_dict = OrderedDict()
+        params_dict = OrderedDict()
+        unknowns_dict = OrderedDict()
+
+        self._params_dict = params_dict
+        self._unknowns_dict = unknowns_dict
+
+        self._sysdata._params_dict = params_dict
+        self._sysdata._unknowns_dict = unknowns_dict
+
         self._data_xfer = {}
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
@@ -260,13 +267,13 @@ class Group(System):
             for p, meta in iteritems(subparams):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
-                self._params_dict[p] = meta
+                params_dict[p] = meta
                 self._to_abs_pnames.setdefault(meta['promoted_name'], []).append(p)
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
-                self._unknowns_dict[u] = meta
+                unknowns_dict[u] = meta
                 self._to_abs_unames.setdefault(meta['promoted_name'], []).append(u)
 
             # check for any promotes that didn't match a variable
@@ -274,10 +281,10 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
-                self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, params_dict, 'params'):
+                params_dict[p_abs]['src_indices'] = idxs
 
-        return self._params_dict, self._unknowns_dict
+        return params_dict, unknowns_dict
 
     def _promoted_name(self, name, subsystem):
         """
@@ -431,10 +438,13 @@ class Group(System):
 
         # create implementation specific VecWrappers
         if voi is None:
-            self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.unknowns = impl.create_src_vecwrapper(sys_pathname,
+                                                       self._sysdata, comm)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
-            self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
+            self.resids = impl.create_src_vecwrapper(sys_pathname,
+                                                     self._sysdata, comm)
+            self.params = impl.create_tgt_vecwrapper(sys_pathname,
+                                                     self._sysdata, comm)
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
@@ -448,9 +458,12 @@ class Group(System):
                               relevance=self._relevance,
                               var_of_interest=None, store_byobjs=True)
 
-        dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
-        dresids = impl.create_src_vecwrapper(sys_pathname, comm)
-        dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
+        dunknowns = impl.create_src_vecwrapper(sys_pathname,
+                                               self._sysdata, comm)
+        dresids = impl.create_src_vecwrapper(sys_pathname,
+                                             self._sysdata, comm)
+        dparams = impl.create_tgt_vecwrapper(sys_pathname,
+                                             self._sysdata, comm)
 
         dunknowns.setup(unknowns_dict, relevance=self._relevance,
                         var_of_interest=voi,
@@ -1329,11 +1342,11 @@ class Group(System):
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
                            if relevance.is_relevant(var_of_interest,
-                                          self.unknowns._to_top_prom_name[n]))
+                                          self.unknowns._sysdata._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
                         if relevance.is_relevant(var_of_interest,
-                                            self.params._to_top_prom_name[n]))
+                                            self.params._sysdata._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []

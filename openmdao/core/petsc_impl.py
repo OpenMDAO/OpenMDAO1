@@ -30,7 +30,7 @@ class PetscImpl(object):
         return MPI.COMM_WORLD
 
     @staticmethod
-    def create_src_vecwrapper(pathname, comm):
+    def create_src_vecwrapper(pathname, sysdata, comm):
         """
         Create a`PetscSrcVecWrapper`.
 
@@ -38,10 +38,10 @@ class PetscImpl(object):
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper(pathname, comm)
+        return PetscSrcVecWrapper(pathname, sysdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(pathname, comm):
+    def create_tgt_vecwrapper(pathname, sysdata, comm):
         """
         Create a `PetscTgtVecWrapper`.
 
@@ -49,7 +49,7 @@ class PetscImpl(object):
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper(pathname, comm)
+        return PetscTgtVecWrapper(pathname, sysdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,

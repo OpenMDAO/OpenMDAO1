@@ -13,6 +13,15 @@ from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 
+class _SysData(object):
+    """A container for System level data that is shared with
+    VecWrappers in this System.
+    """
+    def __init__(self, pathname):
+        self.pathname = pathname
+        self._to_prom_name = {}
+        self._to_top_prom_name = {}
+
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
     inherit from `Group` or `Component`"""
@@ -64,6 +73,7 @@ class System(object):
         self.dumat = {}
         self.dpmat = {}
         self.drmat = {}
+
         self._local_subsystems = []
         self._relevance = None
         self._fd_params = None
@@ -202,6 +212,8 @@ class System(object):
             self.pathname = '.'.join((parent_path, self.name))
         else:
             self.pathname = self.name
+
+        self._sysdata = _SysData(self.pathname)
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -552,17 +564,19 @@ class System(object):
         umap = self._relname_map
 
         if voi is None:
-            self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
+            self.unknowns = parent.unknowns.get_view(self, comm, umap)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
-            self.resids = parent.resids.get_view(self.pathname, comm, umap)
-            self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
+            self.resids = parent.resids.get_view(self, comm, umap)
+            self.params = parent._impl.create_tgt_vecwrapper(self.pathname,
+                                                             self._sysdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
                               store_byobjs=True)
 
-        self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
-        self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
-        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
+        self.dumat[voi] = parent.dumat[voi].get_view(self, comm, umap)
+        self.drmat[voi] = parent.drmat[voi].get_view(self, comm, umap)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname,
+                                                             self._sysdata, comm)
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                   my_params, self.connections,
@@ -745,7 +759,7 @@ class System(object):
         offsets = { None: 0 }
 
         relevance = self._relevance
-        for vois in chain(relevance.inputs, relevance.outputs):
+        for vois in relevance.groups:
             vec_size = 0
             for voi in vois:
                 sz = sum([m['size'] for m in metas

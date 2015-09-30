@@ -51,7 +51,7 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, pathname='', comm=None):
+    def __init__(self, pathname, sysdata, comm=None):
         self.pathname = pathname
         self.comm = comm
         self.vec = None
@@ -61,6 +61,8 @@ class VecWrapper(object):
 
         # Automatic unit conversion in target vectors
         self.deriv_units = False
+
+        self._sysdata = sysdata
 
     def _flat(self, name):
         """
@@ -99,11 +101,12 @@ class VecWrapper(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        self._to_prom_name = {}
-        self._to_top_prom_name = {}
+        to_prom_name = self._sysdata._to_prom_name
+        to_top = self._sysdata._to_top_prom_name
+
         for prom_name, meta in iteritems(self):
-            self._to_prom_name[meta['pathname']] = prom_name
-            self._to_top_prom_name[prom_name] = meta['top_promoted_name']
+            to_prom_name[meta['pathname']] = prom_name
+            to_top[prom_name] = meta['top_promoted_name']
 
     def __getitem__(self, name):
         """
@@ -266,14 +269,14 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, sys_pathname, comm, varmap):
+    def get_view(self, system, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one.
 
         Args
         ----
-        sys_pathname : str
-            pathname of the system for which the view is being created.
+        system : `System`
+            System for which the view is being created.
 
         comm : an MPI communicator (real or fake)
             A communicator that is used in the creation of the view.
@@ -287,7 +290,7 @@ class VecWrapper(object):
         `VecWrapper`
             A new `VecWrapper` that is a view into this one.
         """
-        view = self.__class__(sys_pathname, comm)
+        view = self.__class__(system.pathname, system._sysdata, comm)
         view_size = 0
 
         vardict = self._vardict
@@ -398,7 +401,7 @@ class VecWrapper(object):
             Relative name mapped to the given absolute pathname.
         """
         try:
-            return self._to_prom_name[abs_name]
+            return self._sysdata._to_prom_name[abs_name]
         except KeyError:
             raise KeyError("Relative name not found for variable '%s'" % abs_name)
 
@@ -612,6 +615,7 @@ class SrcVecWrapper(VecWrapper):
         shared_vec : ndarray, optional
             If not None, create vec as a subslice of this array.
         """
+
         vec_size = 0
         for meta in itervalues(unknowns_dict):
             promname = meta['promoted_name']

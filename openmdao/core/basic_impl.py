@@ -15,12 +15,15 @@ class BasicImpl(object):
         return FakeComm()
 
     @staticmethod
-    def create_src_vecwrapper(pathname, comm):
+    def create_src_vecwrapper(pathname, sysdata, comm):
         """
         Create a vecwrapper for source variables.
 
         Args
         ----
+        sysdata : _SysData
+            A data object for System level data.
+
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -28,15 +31,18 @@ class BasicImpl(object):
         -------
         `SrcVecWrapper`
         """
-        return SrcVecWrapper(pathname, comm)
+        return SrcVecWrapper(pathname, sysdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(pathname, comm):
+    def create_tgt_vecwrapper(pathname, sysdata, comm):
         """
         Create a vecwrapper for target variables.
 
         Args
         -----
+        sysdata : _SysData
+            A data object for system level data
+
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -44,7 +50,7 @@ class BasicImpl(object):
         -------
         `TgtVecWrapper`
         """
-        return TgtVecWrapper(pathname, comm)
+        return TgtVecWrapper(pathname, sysdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
