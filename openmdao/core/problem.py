@@ -29,8 +29,6 @@ from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 from openmdao.devtools.debug import debug
 
-from pprint import pprint
-
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -123,57 +121,30 @@ class Problem(System):
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
-        print('explicit connections:')
-        pprint(connections)
-        print()
-
         # get dictionary of implicit connections {param: [unknowns]}
         # and dictionary of params that are not implicitly connected
         # to anything {promoted_name: pathname}
         implicit_conns, prom_noconns = self._get_implicit_connections()
 
-        print('implicit conns:')
-        pprint(implicit_conns)
-        print()
-        #print('prom_noconns:')
-        #pprint(prom_noconns)
-        #print()
-
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
-
-        print('explicit AND implicit connections:')
-        pprint(connections)
-        print()
 
         input_graph = nx.Graph()
 
         # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
-            print('processing conn', tgt, srcs)
             for src, idxs in srcs:
                 if src in params_dict:
-                    print('  adding input to input conn:', tgt, '<-', src)
                     input_graph.add_edge(src, tgt, idxs=idxs)
-
-        print()
 
         # find any promoted but not connected inputs
         for p, meta in iteritems(params_dict):
             prom = meta['promoted_name']
-            print('processing prom_noconn', p, '->', prom)
             if prom in prom_noconns:
                 for n in prom_noconns[prom]:
                     if p != n:
-                        print('  adding promoted but not conn:', p, n)
                         input_graph.add_edge(p, n, idxs=None)
-
-        print()
-        print('input_graph:')
-        pprint(input_graph.nodes())
-        pprint(input_graph.edges())
-        print()
 
         # for all connections where the target is an input, we want to connect
         # the 'unknown' sources for that target to all other inputs that are
@@ -182,7 +153,6 @@ class Problem(System):
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
                 connected_inputs = nx.node_connected_component(input_graph, tgt)
-                print('tgt:', tgt, 'srcs:', srcs, 'connected_inputs:', connected_inputs)
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
@@ -193,55 +163,31 @@ class Problem(System):
                             while x < len(path)-1:
                                 next_idxs = input_graph[path[x]][path[x+1]]['idxs']
                                 if next_idxs is not None and new_idxs is not None:
-                                    print('mapping next_idxs', next_idxs, 'onto', new_idxs)
                                     new_idxs = np.array(new_idxs)[next_idxs]
                                 x = x + 1
-                            print('need to add source for %s:' % new_tgt, (src, new_idxs))
                             to_add.append((new_tgt, (src, new_idxs)))
-                    else:
-                        print('  %s is not an unknown' % src)
 
-        print()
         for tgt, (src, idxs) in to_add:
-            print('adding connection to %s:' % tgt, src, idxs)
             if tgt in connections:
                 srcs = connections[tgt]
                 if (src, idxs) not in srcs:
-                    print('adding another connection to %s: %s' % (tgt, src))
                     srcs.append((src, idxs))
-                else:
-                    print('there is already a connection to %s from %s' % (tgt, src))
             else:
-                print('adding first connection to %s: %s' % (tgt, src))
                 connections[tgt] = [(src, idxs)]
-
-        print('---------------------')
-        print('connections after adding input-input conns:')
-        pprint(connections)
-        print('---------------------')
-
-        print('unknowns:', unknowns_dict.keys())
 
         # remove all the input to input connections, leaving just one unknown
         # connection to each param
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            print('tgt:', tgt, 'srcs:', srcs)
             unknown_srcs = list(src for src in srcs if src[0] in unknowns_dict)
             if len(unknown_srcs) > 1:
                 src_names = (name for name, idx in unknown_srcs)
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(src_names)))
-            print('unknown_srcs:', unknown_srcs)
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs.pop()
 
         connections = newconns
-
-        print('-------------------')
-        print('connections after removing input-input conns:')
-        pprint(connections)
-        print('-------------------')
 
         self._dangling = {}
         prom_unknowns = self.root._to_abs_unames
@@ -336,10 +282,6 @@ class Problem(System):
         for tgt, (src, idxs) in iteritems(connections):
             if idxs is not None:
                 params_dict[tgt]['src_indices'] = idxs
-        print()        
-        print('setup() params after populating src_indices:')
-        pprint(dict(params_dict))
-        print()
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -491,11 +433,11 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.', 1)[0] 
+        conn_comps = set([t.rsplit('.', 1)[0]
                           for t in iterkeys(self.root.connections)])
-        conn_comps.update([s.rsplit('.', 1)[0] 
+        conn_comps.update([s.rsplit('.', 1)[0]
                            for s, i in itervalues(self.root.connections)])
-        noconn_comps = sorted([c.pathname 
+        noconn_comps = sorted([c.pathname
                                for c in self.root.components(recurse=True, local=True)
                                if c.pathname not in conn_comps])
         if noconn_comps:
@@ -1279,7 +1221,7 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        indep_list = [self.root._unknowns_dict[p]['promoted_name'] 
+        indep_list = [self.root._unknowns_dict[p]['promoted_name']
                           for p, idxs in param_srcs]
 
         # Calculate all our Total Derivatives
@@ -1478,12 +1420,6 @@ class Problem(System):
 
         connections = {}
         dangling = {}
-
-        print('_to_abs_pnames:')
-        pprint(self.root._to_abs_pnames)
-        print()
-        print('_to_abs_unames:')
-        pprint(self.root._to_abs_unames)
 
         for prom_name, pabs_list in iteritems(self.root._to_abs_pnames):
             if prom_name in self.root._to_abs_unames:  # param has a src in unknowns

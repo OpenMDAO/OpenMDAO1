@@ -2,8 +2,6 @@
 
 from __future__ import print_function
 
-from pprint import pprint
-
 import sys
 import os
 from collections import Counter, OrderedDict
@@ -230,28 +228,6 @@ class Group(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        ## transfer _src_indices to any 'sideways' connections
-        #if self._src_idxs:
-            #for p, idxs in self._src_idxs.items():
-                ## if p is connected to anything, that target also needs src_idxs
-                #for tgt in self._src:
-                    #for src in self._src[tgt]:
-                        #if src == p:
-                            #self._src_idxs[tgt] = idxs
-
-        ## set any src_indices metadata down at Component level so it will
-        ## percolate up to all levels above
-        #if self._src_idxs:
-            #for sub in self.subsystems(recurse=True):
-                #for p, idxs in iteritems(self._src_idxs):
-                    #ppath = p.rsplit('.',1)[0]
-                    #if ppath == sub.pathname:
-                        #pname = p.rsplit('.',1)[1]
-                        #if isinstance(sub, Component):
-                            #sub._params_dict[pname]['src_indices'] = idxs
-                        #elif isinstance(sub, Group):
-                            #sub._src_idxs[pname] = idxs
-
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
@@ -268,11 +244,6 @@ class Group(System):
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
-
-        ## set src_indices for promoted vars (needed to setup dicts first to find them)
-        #for p, idxs in self._src_idxs.items():
-            #for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
-                #self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -511,13 +482,8 @@ class Group(System):
         connections = {}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
-        print('---------------------')
-        print(self.pathname, '_get_explicit_connections(), subgroup connections:')
-        pprint(connections)
-        print(self.pathname, '_src:', self._src)
 
         for tgt, srcs in iteritems(self._src):
-            print(' ', tgt, srcs)
             for src, idxs in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
@@ -527,11 +493,8 @@ class Group(System):
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
-                print('    src_pathnames:', src_pathnames)
-
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        print('    tgt_pathname:', tgt_pathname, 'idxs:', idxs)
                         for src_pathname in src_pathnames:
                             connection = (src_pathname, idxs)
                             connections.setdefault(tgt_pathname, []).append(connection)
@@ -543,9 +506,6 @@ class Group(System):
                     else:
                         raise ConnectError.invalid_target_error(src, tgt)
 
-        print(self.pathname, '_get_explicit_connections() RETURNING')
-        pprint(connections)
-        print('---------------------')
         return connections
 
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
@@ -1351,7 +1311,6 @@ class Group(System):
         xfer_dict = {}
         for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
-                print(self.pathname, '_setup_data_transfer() param:', param, 'unknown:', unknown)
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)
 
