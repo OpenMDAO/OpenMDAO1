@@ -34,6 +34,25 @@ class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
 
+    Args
+    ----
+    root : `Group`, optional
+        The top-level `Group` for the `Problem`.  If not specified, a default
+        `Group` will be created
+
+    driver : `Driver`, optional
+        The top-level `Driver` for the `Problem`.  If not specified, a default
+        "Run Once" `Driver` will be used
+
+    impl : `BasicImpl` or `PetscImpl`, optional
+        The vector and data transfer implementation for the `Problem`.
+        For parallel processing support using MPI, `PetscImpl` is required.
+        If not specified, the default `BasicImpl` will be used.
+
+    comm : an MPI communicator (real or fake), optional
+        A communicator that can be used for distributed operations when running
+        under MPI. If not specified, the default "COMM_WORLD" will be used.
+
     Options
     -------
     fd_options['force_fd'] :  bool(False)
@@ -1325,20 +1344,19 @@ class Problem(System):
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI:
-            comm_size = self._comm.size
-            if not (maxproc is None or maxproc >= comm_size):
+        if MPI:  # pragma: no cover
+            if not (maxproc is None or maxproc >= self._comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %d and %d." %
-                                   (comm_size, minproc, maxproc))
-            elif comm_size < minproc:
+                                   (self._comm.size, minproc, maxproc))
+            elif self._comm.size < minproc:
                 if maxproc is None:
                     maxproc = '(any)'
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %s and %s." %
-                                   (comm_size, minproc, maxproc))
+                                   (self._comm.size, minproc, maxproc))
 
         self.root._setup_communicators(self._comm)
 
