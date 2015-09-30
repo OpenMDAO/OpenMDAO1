@@ -7,7 +7,6 @@ from openmdao.surrogate_models import NearestNeighbor
 from openmdao.test.util import assert_rel_error
 
 import numpy as np
-
 import unittest
 
 class CompressorMap(Group):
