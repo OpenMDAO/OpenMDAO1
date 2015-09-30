@@ -145,7 +145,7 @@ class Problem(System):
         else:
             raise KeyError("Variable '%s' not found." % name)
 
-    def _setup_connections(self, params_dict, unknowns_dict):
+    def _setup_connections(self, params_dict, unknowns_dict, translate_indices=True):
         """Generate a mapping of absolute param pathname to the pathname
         of its unknown.
         """
@@ -187,18 +187,19 @@ class Problem(System):
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
-                            # follow path to new target, apply src_idxs along the way
-                            path = nx.shortest_path(input_graph, tgt, new_tgt)
                             new_idxs = idxs
-                            x = 0
-                            while x < len(path)-1:
-                                next_idxs = input_graph[path[x]][path[x+1]]['idxs']
-                                if next_idxs is not None:
-                                    if new_idxs is not None:
-                                        new_idxs = np.array(new_idxs)[next_idxs]
-                                    else:
-                                        new_idxs = next_idxs
-                                x = x + 1
+                            if translate_indices:
+                                # follow path to new target, apply src_idxs along the way
+                                path = nx.shortest_path(input_graph, tgt, new_tgt)
+                                x = 0
+                                while x < len(path)-1:
+                                    next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                    if next_idxs is not None:
+                                        if new_idxs is not None:
+                                            new_idxs = np.array(new_idxs)[next_idxs]
+                                        else:
+                                            new_idxs = next_idxs
+                                    x = x + 1
                             to_add.append((new_tgt, (src, new_idxs)))
 
         for tgt, (src, idxs) in to_add:
@@ -279,6 +280,19 @@ class Problem(System):
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
 
+        # push connection src_indices down into the metadata for all target
+        # params in all systems
+        for tgt, (src, idxs) in iteritems(connections):
+            if idxs is not None:
+                params_dict[tgt]['src_indices'] = idxs
+                for sub in self.root.subsystems(recurse=True):
+                    if tgt in sub._params_dict:
+                        print('updating src_indices for %s in subsystem: %s' % (tgt, sub.pathname))
+                        print(sub._params_dict[tgt])
+                        sub._params_dict[tgt]['src_indices'] = idxs
+                        print(sub._params_dict[tgt])
+                #meta_changed = True
+
         # TODO: handle any automatic grouping of systems here...
 
         # divide MPI communicators among subsystems
@@ -306,16 +320,11 @@ class Problem(System):
             self.root._setup_paths(self.pathname)
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
-            connections = self._setup_connections(params_dict, unknowns_dict)
+            connections = self._setup_connections(params_dict, unknowns_dict,
+                                                  translate_indices=False)
         elif meta_changed:
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
-
-        # once vars and connections are settled, update the src_indices in the
-        # metadata for all target params that have src_indices
-        for tgt, (src, idxs) in iteritems(connections):
-            if idxs is not None:
-                params_dict[tgt]['src_indices'] = idxs
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
