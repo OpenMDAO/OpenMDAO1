@@ -16,7 +16,7 @@ from openmdao.core.data_transfer import DataTransfer
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:
-    from openmdao.devtools.debug import debug
+    from openmdao.core.mpi_wrap import debug
 
 from mpi4py import MPI
 

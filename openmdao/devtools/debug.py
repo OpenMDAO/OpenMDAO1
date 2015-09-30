@@ -2,21 +2,7 @@
 
 import sys
 from pprint import pformat
-
-from openmdao.core.mpi_wrap import MPI, under_mpirun
-
-def debug(*msg):
-    for m in msg:
-        sys.stdout.write("%s " % str(m))
-    sys.stdout.write('\n')
-
-if under_mpirun(): # pragma: no cover
-    def debug(*msg):
-        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
-        for m in newmsg:
-            sys.stdout.write("%s " % m)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
 
 
 def dump_meta(system, nest=0, out_stream=sys.stdout):
@@ -72,3 +58,16 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
         sub.dump_meta(nest, out_stream=out_stream)
 
     out_stream.flush()
+
+def max_mem_usage():
+    """
+    Returns
+    -------
+    The max memory used by this process and its children, in MB.
+    """
+    denom = 1024.
+    if sys.platform == 'darwin':
+        denom = denom * denom
+    total = getrusage(RUSAGE_SELF).ru_maxrss / denom
+    total += getrusage(RUSAGE_CHILDREN).ru_maxrss / denom
+    return total

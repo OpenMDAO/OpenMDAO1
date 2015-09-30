@@ -5,7 +5,7 @@ from __future__ import print_function
 import time
 import numpy as np
 
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck, debug
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.problem import Problem
@@ -15,7 +15,6 @@ from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.test.util import assert_rel_error
-from openmdao.devtools.debug import debug
 
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl

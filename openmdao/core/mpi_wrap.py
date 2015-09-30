@@ -57,8 +57,19 @@ def under_mpirun():
 
 if under_mpirun(): # pragma: no cover
     from mpi4py import MPI
+
+    def debug(*msg):
+        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
+        for m in newmsg:
+            sys.stdout.write("%s " % m)
+        sys.stdout.write('\n')
+        sys.stdout.flush()
 else:
     MPI = None
+    def debug(*msg):
+        for m in msg:
+            sys.stdout.write("%s " % str(m))
+        sys.stdout.write('\n')
 
 class FakeComm(object):
     """ Who needs a real Comm when you have a fake one."""

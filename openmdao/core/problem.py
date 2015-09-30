@@ -18,7 +18,7 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpi_wrap import MPI, under_mpirun
+from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
@@ -28,7 +28,6 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
-from openmdao.devtools.debug import debug
 
 
 class Problem(System):

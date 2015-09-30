@@ -15,11 +15,10 @@ import networkx as nx
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
-from openmdao.core.mpi_wrap import MPI
+from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
-from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
