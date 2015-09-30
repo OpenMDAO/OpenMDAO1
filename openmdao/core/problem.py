@@ -176,6 +176,8 @@ class Problem(System):
                                 next_idxs = input_graph[path[x]][path[x+1]]['idxs']
                                 if next_idxs is not None and new_idxs is not None:
                                     new_idxs = np.array(new_idxs)[next_idxs]
+                                elif next_idxs is not None:
+                                    new_idxs = next_idxs
                                 x = x + 1
                             to_add.append((new_tgt, (src, new_idxs)))
 
