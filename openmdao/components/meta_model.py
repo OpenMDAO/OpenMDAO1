@@ -56,7 +56,7 @@ class MetaModel(Component):
 
         self._input_size = 0
 
-    def add_param(self, name, val=_NotSet, **kwargs):
+    def add_param(self, name, val=_NotSet, training_data=list(), **kwargs):
         """ Add a `param` input to this component and a corresponding
         training parameter.
 
@@ -67,16 +67,20 @@ class MetaModel(Component):
 
         val : float or ndarray or object
             Initial value for the input.
+
+        training_data : float or ndarray
+            training data for this variable. Optional, can be set 
+            by the problem later.
         """
         super(MetaModel, self).add_param(name, val, **kwargs)
-        super(MetaModel, self).add_param('train:'+name, val=list(), pass_by_obj=True)
+        super(MetaModel, self).add_param('train:'+name, val=training_data, pass_by_obj=True)
 
         input_size = self._params_dict[name]['size']
 
         self._surrogate_param_names.append((name, input_size))
         self._input_size += input_size
 
-    def add_output(self, name, val=_NotSet, **kwargs):
+    def add_output(self, name, val=_NotSet, training_data=list(), **kwargs):
         """ Add an output to this component and a corresponding
         training output.
 
@@ -88,9 +92,13 @@ class MetaModel(Component):
         val : float or ndarray
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
+
+        training_data : float or ndarray
+            training data for this variable. Optional, can be set 
+            by the problem later.
         """
         super(MetaModel, self).add_output(name, val, **kwargs)
-        super(MetaModel, self).add_output('train:'+name, val=list(), pass_by_obj=True)
+        super(MetaModel, self).add_output('train:'+name, val=training_data, pass_by_obj=True)
 
         try:
             output_shape = self._unknowns_dict[name]['shape']
