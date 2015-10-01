@@ -56,7 +56,7 @@ class MetaModel(Component):
 
         self._input_size = 0
 
-    def add_param(self, name, val=_NotSet, training_data=list(), **kwargs):
+    def add_param(self, name, val=_NotSet, training_data=(), **kwargs):
         """ Add a `param` input to this component and a corresponding
         training parameter.
 
@@ -80,7 +80,7 @@ class MetaModel(Component):
         self._surrogate_param_names.append((name, input_size))
         self._input_size += input_size
 
-    def add_output(self, name, val=_NotSet, training_data=list(), **kwargs):
+    def add_output(self, name, val=_NotSet, training_data=(), **kwargs):
         """ Add an output to this component and a corresponding
         training output.
 
