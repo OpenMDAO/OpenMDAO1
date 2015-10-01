@@ -1,4 +1,4 @@
-""" Test out some crucial linear GS tests in parallel."""
+""" Test out some specialized parallel derivatives features"""
 
 from __future__ import print_function
 
@@ -12,7 +12,7 @@ from openmdao.core.problem import Problem
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
+from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped, FanOut3Grouped
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.test.util import assert_rel_error
 
@@ -278,6 +278,54 @@ class MatMatTestCase(MPITestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
+
+
+class ParDeriv3TestCase(MPITestCase):
+
+    N_PROCS = 3
+
+    def test_fan_out_parallel_sets(self):
+
+        prob = Problem(impl=impl)
+        prob.root = FanOut3Grouped()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.sub.ln_solver = LinearGaussSeidel()
+
+        # need to set mode to rev before setup. Otherwise the sub-vectors
+        # for the parallel set vars won't get allocated.
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.sub.ln_solver.options['mode'] = 'rev'
+
+        # Parallel Groups
+        prob.driver.add_desvar('p.x')
+        prob.driver.add_constraint('c2.y', upper=0.0)
+        prob.driver.add_constraint('c3.y', upper=0.0)
+        prob.driver.add_constraint('c4.y', upper=0.0)
+        prob.driver.parallel_derivs(['c2.y', 'c3.y', 'c4.y'])
+
+        if MPI: # pragma: no cover
+            expected = [('c2.y','c3.y', 'c4.y')]
+        else:
+            expected = [('c2.y',),('c3.y',), ('c4.y', )]
+
+        self.assertEqual(prob.driver.outputs_of_interest(),
+                         expected)
+
+        prob.setup(check=False)
+        prob.run()
+
+        unknown_list = ['c2.y', 'c3.y', 'c4.y']
+        indep_list = ['p.x']
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0][0], 33.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
+        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0][0], 33.0, 1e-6)
 
 
 class MatMatIndicesTestCase(MPITestCase):
