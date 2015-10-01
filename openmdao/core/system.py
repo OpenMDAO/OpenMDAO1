@@ -197,7 +197,7 @@ class System(object):
         if include_self:
             yield self
 
-    def _setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Parameter
@@ -205,6 +205,9 @@ class System(object):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
+
+        probdata : `_ProbData`
+            Problem level data container.
         """
         self._reset()
 
@@ -214,6 +217,7 @@ class System(object):
             self.pathname = self.name
 
         self._sysdata = _SysData(self.pathname)
+        self._probdata = probdata
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """

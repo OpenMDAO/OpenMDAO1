@@ -29,6 +29,13 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
+class _ProbData(object):
+    """
+    A container for Problem level data that is needed by subsystems.
+    """
+    def __init__(self):
+        self.top_lin_gs = False
+
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -50,6 +57,7 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+        self._probdata = _ProbData()
 
         if MPI: # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
@@ -212,8 +220,12 @@ class Problem(System):
         # call _setup_variables again if we change metadata
         meta_changed = False
 
+        self._probdata = _ProbData()
+        if isinstance(self.root.ln_solver, LinearGaussSeidel):
+            self._probdata.top_lin_gs = True
+
         # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname)
+        self.root._setup_paths(self.pathname, self._probdata)
 
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
@@ -260,7 +272,7 @@ class Problem(System):
         # if the system tree has changed, we need to recompute pathnames,
         # variable metadata, and connections
         if tree_changed:
-            self.root._setup_paths(self.pathname)
+            self.root._setup_paths(self.pathname, probdata)
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict)

@@ -10,9 +10,10 @@ from openmdao.test.util import assert_rel_error
 class TestUnitComp(unittest.TestCase):
 
     def test_instantiation(self):
+        prob = Problem()
         u_comp = UnitComp(1, param_name="x", out_name="x_out", units="ft**2/furlong")
 
-        u_comp._setup_paths('')
+        u_comp._setup_paths('', prob._probdata)
         params, unknowns = u_comp._setup_variables()
 
         self.assertEqual(['x'], list(params.keys()))

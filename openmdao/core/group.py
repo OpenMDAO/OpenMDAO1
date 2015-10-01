@@ -204,7 +204,7 @@ class Group(System):
         return self.subsystems(local=local, recurse=recurse, typ=Component,
                                include_self=include_self)
 
-    def _setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
@@ -212,10 +212,13 @@ class Group(System):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
+
+        probdata : `_ProbData`
+            Problem level data container.
         """
-        super(Group, self)._setup_paths(parent_path)
+        super(Group, self)._setup_paths(parent_path, probdata)
         for sub in itervalues(self._subsystems):
-            sub._setup_paths(self.pathname)
+            sub._setup_paths(self.pathname, probdata)
 
     def _setup_variables(self, compute_indices=False):
         """
