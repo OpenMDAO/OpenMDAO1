@@ -90,6 +90,6 @@ def diff_max_mem(fn):
         finalmem = max_mem_usage()
         diff = finalmem-startmem
         if diff > 0.0:
-            print("%s.%s added %s MB" % (args[0].pathname,fn.__name__,diff))
+            print("%s added %s MB" % (fn.__name__, diff))
         return ret
     return wrapper

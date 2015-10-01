@@ -1221,7 +1221,7 @@ class Group(System):
         return (min_procs, max_procs)
 
     def _get_global_idxs(self, uname, pname, top_uname, top_pname, u_var_idxs,
-                         u_sizes, p_var_idxs, p_sizes, var_of_interest, mode):
+                         u_sizes, p_var_idxs, p_sizes, mode):
         """
         Return the global indices into the distributed unknowns and params vectors
         for the given unknown and param.  The given unknown and param have already
@@ -1248,9 +1248,6 @@ class Group(System):
 
         p_sizes : ndarray
             (rank x var) array of parameter sizes.
-
-        var_of_interest : str or None
-            Name of variable of interest used to determine relevance.
 
         mode : str
             Solution mode, either 'fwd' or 'rev'
@@ -1389,7 +1386,7 @@ class Group(System):
                 tgt_sys = name_relative_to(self.pathname, param)
                 src_sys = name_relative_to(self.pathname, unknown)
 
-                for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
+                for sname, mode in ((tgt_sys, 'fwd'), (src_sys, 'rev')):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                         xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
@@ -1401,8 +1398,7 @@ class Group(System):
                         sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                              top_urelname, top_prelname,
                                                              vec_unames, unknown_sizes,
-                                                             vec_pnames, param_sizes,
-                                                             var_of_interest, mode)
+                                                             vec_pnames, param_sizes,mode)
                         vec_conns.append((prelname, urelname))
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
