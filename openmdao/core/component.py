@@ -427,7 +427,9 @@ class Component(System):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        raise NotImplementedError("solve_nonlinear")
+
+        msg = "Class '%s' does not implement 'solve_nonlinear'"
+        raise NotImplementedError(msg  % self.__class__.__name__)
 
     def jacobian(self, params, unknowns, resids):
         """
