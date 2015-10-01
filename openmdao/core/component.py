@@ -368,13 +368,14 @@ class Component(System):
         # so force their creation here
         self._create_views(top_unknowns, parent, [], None)
 
-        # create storage for the relevant vecwrappers, keyed by
-        # variable_of_interest
         all_vois = set([None])
-        for vois in relevance.groups:
-            all_vois.update(vois)
-            for voi in vois:
-                self._create_views(top_unknowns, parent, [], voi)
+        if self._probdata.top_lin_gs: # only need voi vecs for lings
+            # create storage for the relevant vecwrappers, keyed by
+            # variable_of_interest
+            for vois in relevance.groups:
+                all_vois.update(vois)
+                for voi in vois:
+                    self._create_views(top_unknowns, parent, [], voi)
 
         # create params vec entries for any unconnected params
         for meta in itervalues(self._params_dict):

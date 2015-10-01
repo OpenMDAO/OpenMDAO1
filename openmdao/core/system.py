@@ -762,6 +762,11 @@ class System(object):
 
         offsets = { None: 0 }
 
+        # no parallel rhs vecs, so biggest one will just be the one containing all
+        # vars.
+        if not self._probdata.top_lin_gs:
+            return max_size, offsets
+
         relevance = self._relevance
         for vois in relevance.groups:
             vec_size = 0

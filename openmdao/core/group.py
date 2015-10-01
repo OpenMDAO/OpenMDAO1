@@ -19,7 +19,7 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
-
+from openmdao.devtools.debug import diff_max_mem
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -321,6 +321,7 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
+    @diff_max_mem
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
@@ -388,19 +389,20 @@ class Group(System):
 
         self._setup_data_transfer(my_params, None)
 
-        # create storage for the relevant vecwrappers,
-        # keyed by variable_of_interest
         all_vois = set([None])
-        for vois in relevance.groups:
-            all_vois.update(vois)
-            for voi in vois:
-                if parent is None:
-                    self._create_vecs(my_params, voi, impl)
-                else:
-                    self._create_views(top_unknowns, parent, my_params,
-                                       voi)
+        if self._probdata.top_lin_gs:
+            # create storage for the relevant vecwrappers,
+            # keyed by variable_of_interest
+            for vois in relevance.groups:
+                all_vois.update(vois)
+                for voi in vois:
+                    if parent is None:
+                        self._create_vecs(my_params, voi, impl)
+                    else:
+                        self._create_views(top_unknowns, parent, my_params,
+                                           voi)
 
-                self._setup_data_transfer(my_params, voi)
+                    self._setup_data_transfer(my_params, voi)
 
         self._setup_gs_outputs(all_vois)
 
@@ -461,27 +463,28 @@ class Group(System):
                               relevance=self._relevance,
                               var_of_interest=None, store_byobjs=True)
 
-        dunknowns = impl.create_src_vecwrapper(sys_pathname,
-                                               self._sysdata, comm)
-        dresids = impl.create_src_vecwrapper(sys_pathname,
-                                             self._sysdata, comm)
-        dparams = impl.create_tgt_vecwrapper(sys_pathname,
-                                             self._sysdata, comm)
+        if voi is None or self._probdata.top_lin_gs:
+            dunknowns = impl.create_src_vecwrapper(sys_pathname,
+                                                   self._sysdata, comm)
+            dresids = impl.create_src_vecwrapper(sys_pathname,
+                                                 self._sysdata, comm)
+            dparams = impl.create_tgt_vecwrapper(sys_pathname,
+                                                 self._sysdata, comm)
 
-        dunknowns.setup(unknowns_dict, relevance=self._relevance,
-                        var_of_interest=voi,
-                        shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
-        dresids.setup(unknowns_dict, relevance=self._relevance,
-                      var_of_interest=voi,
-                      shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
-        dparams.setup(None, params_dict, self.unknowns, my_params,
-                      self.connections, relevance=self._relevance,
-                      var_of_interest=voi,
-                      shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
+            dunknowns.setup(unknowns_dict, relevance=self._relevance,
+                            var_of_interest=voi,
+                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
+            dresids.setup(unknowns_dict, relevance=self._relevance,
+                          var_of_interest=voi,
+                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
+            dparams.setup(None, params_dict, self.unknowns, my_params,
+                          self.connections, relevance=self._relevance,
+                          var_of_interest=voi,
+                          shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
-        self.dumat[voi] = dunknowns
-        self.drmat[voi] = dresids
-        self.dpmat[voi] = dparams
+            self.dumat[voi] = dunknowns
+            self.drmat[voi] = dresids
+            self.dpmat[voi] = dparams
 
     def _get_fd_params(self):
         """
@@ -1273,10 +1276,6 @@ class Group(System):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
-        if not self._relevance.is_relevant(var_of_interest, top_uname) or \
-           not self._relevance.is_relevant(var_of_interest, top_pname):
-            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
-
         if pdist:
             arg_idxs = self.params.to_idx_array(pmeta['src_indices'])
         else:
@@ -1322,6 +1321,7 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
+    @diff_max_mem
     def _setup_data_transfer(self, my_params, var_of_interest):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
@@ -1377,8 +1377,8 @@ class Group(System):
                 top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
                 top_prelname = self._params_dict[param]['top_promoted_name']
 
-                if not (relevance.is_relevant(var_of_interest, top_prelname) or
-                        relevance.is_relevant(var_of_interest, top_urelname)):
+                if not relevance.is_relevant(var_of_interest, top_urelname) or \
+                   not relevance.is_relevant(var_of_interest, top_prelname):
                     continue
 
                 umeta = self.unknowns.metadata(urelname)

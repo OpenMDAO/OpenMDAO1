@@ -1,12 +1,9 @@
 """ Class definition for the DataTransfer object."""
 
-import os
 import numpy as np
 
 from openmdao.util import to_slices
 from openmdao.core.mpi_wrap import MPI
-
-trace = os.environ.get('OPENMDAO_TRACE')
 
 class DataTransfer(object):
     """
@@ -54,7 +51,6 @@ class DataTransfer(object):
                     # check uniqueness of src_idxs to see if we can avoid calling np.add.at
                     self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
 
-
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
         Performs data transfer between a source vector and a target vector.
@@ -78,11 +74,6 @@ class DataTransfer(object):
             variables will be transferred.
         """
         if mode == 'rev':
-            if trace:
-                print("%s <-- %s  %s <-- %s" %
-                      ([v[1] for v in self.vec_conns],
-                       [v[0] for v in self.vec_conns],
-                       srcvec.vec[self.src_idxs], tgtvec.vec[self.tgt_idxs]))
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. byobjs are never scattered in reverse
@@ -91,11 +82,6 @@ class DataTransfer(object):
             else:
                 np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
         else:
-            if trace:
-                print("%s --> %s  %s --> %s" %
-                      ([v[1] for v in self.vec_conns],
-                       [v[0] for v in self.vec_conns],
-                       srcvec.vec[self.src_idxs], tgtvec.vec[self.tgt_idxs]))
             tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
             # forward, include byobjs if not a deriv scatter
             if not deriv:

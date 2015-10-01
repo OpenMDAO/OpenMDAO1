@@ -972,20 +972,20 @@ class Problem(System):
                         param = params[0] # if voi is None, params has only one serial entry
 
                     for item in output_list:
-                        if not relevance.is_relevant(param, item):
-                            continue
-
-                        if fwd or owned[item] == iproc:
-                            out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
-                                                               qoi_indices,
-                                                               get_slice=True)
-                            dxval = dx[out_idxs]
-                            if dxval.size == 0:
+                        if relevance.is_relevant(param, item):
+                            if fwd or owned[item] == iproc:
+                                out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
+                                                                                 qoi_indices,
+                                                                                 get_slice=True)
+                                dxval = dx[out_idxs]
+                                if dxval.size == 0:
+                                    dxval = None
+                            else:
                                 dxval = None
-                        else:
-                            dxval = None
-                        if nproc > 1:
-                            dxval = comm.bcast(dxval, root=owned[item])
+                            if nproc > 1:
+                                dxval = comm.bcast(dxval, root=owned[item])
+                        else: # irrelevant variable.  just give'em zeros
+                            dxval = np.zeros(self.root.unknowns.metadata(item)['size'])
 
                         if dxval is not None:
                             nk = len(dxval)
