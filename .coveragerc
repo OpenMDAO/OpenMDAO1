@@ -10,4 +10,3 @@ omit =
     */python?.?/*
     */site-packages/nose/*
     */test/*
-    */constraint.py
