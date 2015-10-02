@@ -381,7 +381,7 @@ class Problem(System):
         side)"""
         if self._unit_diffs:
             tuples = sorted(iteritems(self._unit_diffs))
-            print("\nUnit Conversions")
+            print("\nUnit Conversions", file=out_stream)
             for (src, tgt), (sunit, tunit) in tuples:
                 print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
                         file=out_stream)
