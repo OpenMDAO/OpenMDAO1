@@ -12,7 +12,7 @@ import networkx as nx
 import numpy as np
 
 from openmdao.core.system import System
-from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl

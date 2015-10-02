@@ -1084,7 +1084,7 @@ class Group(System):
                                          commsz))
         out_stream.write("\n")
 
-        if verbose:
+        if verbose:  # pragma: no cover
             vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
             byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
@@ -1478,7 +1478,7 @@ class Group(System):
 
         return umap
 
-    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):
+    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):  # pragma: no cover
         """For debugging.  prints out the distributed idxs along with the
         variables they correspond to for the u and p vectors, for example:
 
@@ -1558,30 +1558,3 @@ class Group(System):
                     _dump(s, stream)
         else:
             _dump(self, stream)
-
-def get_absvarpathnames(var_name, var_dict, dict_name):
-    """
-    Args
-    ----
-    var_name : str
-        Promoted name of a variable.
-
-    var_dict : dict
-        Dictionary of variable metadata, keyed on absolute name.
-
-    dict_name : str
-        Name of var_dict (used for error reporting).
-
-    Returns
-    -------
-    list of str
-        The absolute pathnames for the given variables in the
-        variable dictionary that map to the given promoted name.
-    """
-
-    pnames = [n for n, m in iteritems(var_dict)
-                   if m['promoted_name'] == var_name]
-    if not pnames:
-        raise KeyError("'%s' not found in %s" % (var_name, dict_name))
-
-    return pnames

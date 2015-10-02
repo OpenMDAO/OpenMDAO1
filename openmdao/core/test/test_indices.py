@@ -181,15 +181,22 @@ class TestIndices(unittest.TestCase):
                 self.add('square2', Squarer(3), promotes=['input:x'])
 
                 # the following connection should result in 'cube1.x' using the
-                # same src_indices as 'input:x' ([3,4,5] from the outer connection)
+                # same src_indices as 'input:x', which is [3,4,5] from the outer
+                # connection
                 self.add('cube1', Cuber(3))
                 self.connect('input:x', 'cube1.x')
 
                 # the following connection should result in 'cube2.x' using
-                # src_indices [0,1] of 'input:x' (which corresponds to the
-                # src_indices [3,4] from the outer connection)
+                # src_indices [0,1] of 'input:x', which corresponds to the
+                # src_indices [3,4] from the outer connection
                 self.add('cube2', Cuber(2))
                 self.connect('input:x', 'cube2.x', src_indices=[0,1])
+
+                # the following connection should result in 'cube3.x' using
+                # src_indices [1,2] of 'square1.input:x', which corresponds to the
+                # src_indices [1,2] from the outer connection
+                self.add('cube3', Cuber(2))
+                self.connect('square1.input:x', 'cube3.x', src_indices=[1,2])
 
         class OuterGroup(Group):
             def __init__(self):
@@ -216,6 +223,9 @@ class TestIndices(unittest.TestCase):
 
         assert_rel_error(self, prob.root.inner.cube2.params['x'],
                          np.array([6., 7.]), 0.00000001)
+
+        assert_rel_error(self, prob.root.inner.cube3.params['x'],
+                         np.array([5., 6.]), 0.00000001)
 
     def test_cannonball_src_indices(self):
         # this test replicates the structure of a problem in pointer. The bug was that
