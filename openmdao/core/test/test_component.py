@@ -12,6 +12,14 @@ class TestComponent(unittest.TestCase):
     def setUp(self):
         self.comp = Component()
 
+    def test_not_impl(self):
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.solve_nonlinear({}, {}, {})
+
+        expected_msg = "Class 'Component' does not implement 'solve_nonlinear'"
+
+        self.assertEqual(str(cm.exception), expected_msg)
+
     def test_promotes(self):
         self.comp.add_param("xxyyzz", 0.0)
         self.comp.add_param("foobar", 0.0)
