@@ -429,6 +429,14 @@ class Component(System):
         """
         raise NotImplementedError("solve_nonlinear")
 
+    def sys_jacobian(self, params, unknowns, resids): 
+        # TODO: JSG Doc string
+
+        if self.fd_options['force_fd']: 
+            return self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+        else: 
+            return self.jacobian(params, unknowns, resids)
+
     def jacobian(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides this method

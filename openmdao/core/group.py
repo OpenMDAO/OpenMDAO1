@@ -613,6 +613,14 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
+    def sys_jacobian(self, params, unknowns, resids): 
+        # TODO: JSG Doc string
+
+        if self.fd_options['force_fd']: 
+            return self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+        else: 
+            return self.jacobian(params, unknowns, resids)
+
     def jacobian(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
@@ -632,19 +640,7 @@ class Group(System):
         for sub in self._local_subsystems:
 
             # Instigate finite difference on child if user requests.
-            if sub.fd_options['force_fd']:
-                # Groups need total derivatives
-                if isinstance(sub, Group):
-                    total_derivs = True
-                else:
-                    total_derivs = False
-                jacobian_cache = sub.fd_jacobian(sub.params, sub.unknowns,
-                                                 sub.resids,
-                                                 total_derivs=total_derivs)
-            else:
-                jacobian_cache = sub.jacobian(sub.params, sub.unknowns,
-                                              sub.resids)
-
+            jacobian_cache = sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
             # Cache the Jacobian for Components that aren't IndepVarComps.
             # Also cache it for systems that are finite differenced.
             if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
