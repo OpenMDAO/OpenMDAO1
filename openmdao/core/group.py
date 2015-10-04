@@ -688,9 +688,6 @@ class Group(System):
 
         else: 
             for sub in self._local_subsystems:
-                # Components that are not IndepVarComps perform a matrix-vector
-                # product on their variables. Any group where the user requests
-                # a finite difference is also treated as a component.
                 sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
                                      gs_outputs=gs_outputs)
 
