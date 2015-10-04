@@ -518,6 +518,16 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
+    def sys_jacobian(self, params, unknowns, resids): 
+        # TODO: JSG Doc string
+
+        if self.fd_options['force_fd']: 
+            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+        else: 
+            self._jacobian_cache = self.jacobian(params, unknowns, resids)
+        
+        return self._jacobian_cache
+
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """ See apply_linear. This method allows the framework to override
         any derivative specification in any `Component` or `Group` to perform

@@ -617,9 +617,11 @@ class Group(System):
         # TODO: JSG Doc string
 
         if self.fd_options['force_fd']: 
-            return self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
         else: 
-            return self.jacobian(params, unknowns, resids)
+            self._jacobian_cache = self.jacobian(params, unknowns, resids)
+        
+        return self._jacobian_cache
 
     def jacobian(self, params, unknowns, resids):
         """
