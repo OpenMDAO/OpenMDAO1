@@ -521,7 +521,25 @@ class System(object):
                         dunknowns.flat[var] += val
 
     def sys_jacobian(self, params, unknowns, resids, total_derivs=False): 
-        # TODO: JSG Doc string
+        """
+        Entry point for all callers to cause linearization 
+        of system and all children of system
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        total_derivs: bool
+            flag indicating if total or partial derivatives are being requested
+            
+        """
         if self.fd_options['force_fd']: 
             if total_derivs: 
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
