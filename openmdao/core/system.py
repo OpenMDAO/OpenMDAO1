@@ -520,10 +520,10 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def sys_jacobian(self, params, unknowns, resids): 
+    def sys_jacobian(self, params, unknowns, resids, total_derivs=False): 
         # TODO: JSG Doc string
         if self.fd_options['force_fd']: 
-            if list(self.subsystems()): 
+            if total_derivs: 
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
             else:
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)

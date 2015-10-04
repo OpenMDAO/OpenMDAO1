@@ -86,7 +86,7 @@ class Newton(NonLinearSolver):
                 f_norm/f_norm0 > rtol:
 
             # Linearize Model
-            system.jacobian(params, unknowns, resids)
+            system.sys_jacobian(params, unknowns, resids, total_derivs=False)
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec

@@ -613,6 +613,9 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
+    def sys_jacobian(self, params, unknowns, resids, total_derivs=True): 
+        super(Group, self).sys_jacobian(params, unknowns, resids, total_derivs)
+
     def jacobian(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
@@ -629,9 +632,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
         for sub in self._local_subsystems:
-            jacobian_cache = sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
-
-
+            sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
 
     def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -662,16 +663,15 @@ class Group(System):
         if mode == 'fwd':
             self._transfer_data(deriv=True) # Full Scatter
 
-        for sub in self._local_subsystems:
-            # Components that are not IndepVarComps perform a matrix-vector
-            # product on their variables. Any group where the user requests
-            # a finite difference is also treated as a component.
-            
-            if sub.fd_options['force_fd']: 
-                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
-                                               gs_outputs=gs_outputs)
-                # pass
-            else: 
+        if self.fd_options['force_fd']: 
+            # parent class has the code to do the fd
+            super(Group, self).sys_apply_linear(mode, ls_inputs, vois, gs_outputs)
+
+        else: 
+            for sub in self._local_subsystems:
+                # Components that are not IndepVarComps perform a matrix-vector
+                # product on their variables. Any group where the user requests
+                # a finite difference is also treated as a component.
                 sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
                                      gs_outputs=gs_outputs)
 
