@@ -53,7 +53,7 @@ class IndepVarComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    def apply_linear(self, mode, ls_inputs=None, vois=(None, ), gs_outputs=None):
+    def sys_apply_linear(self, mode, ls_inputs=None, vois=(None, ), gs_outputs=None):
         """For `IndepVarComp`, just pass on the incoming values.
 
         Args
