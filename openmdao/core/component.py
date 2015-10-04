@@ -453,60 +453,6 @@ class Component(System):
             and whose values are ndarrays.
         """
         return None
-
-    def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None): 
-        for voi in vois: 
-            states = self.states
-
-            dresids = self.drmat[voi]
-            dunknowns = self.dumat[voi]
-            dparams = self.dpmat[voi]
-            gsouts = None if gs_outputs is None else gs_outputs[voi]
-
-            force_fd = self.fd_options['force_fd']
-
-            if mode == "fwd": 
-                dresids.vec[:] = 0.0
-                dparams._apply_unit_derivatives(iterkeys(dparams))
-                if force_fd:
-                    self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                else: 
-                    self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                dresids.vec *= -1.0
-
-                for var, val in iteritems(dunknowns.flat):
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                           var not in states:
-                        dresids.flat[var] += val
-
-            else: 
-                for val in itervalues(dparams.flat):
-                    val[:] = 0.0
-                for val in itervalues(dunknowns.flat):
-                    val[:] = 0.0
-
-                # Sign on the local Jacobian needs to be -1 before
-                # we add in the fake residual. Since we can't modify
-                # the 'du' vector at this point without stomping on the
-                # previous component's contributions, we can multiply
-                # our local 'arg' by -1, and then revert it afterwards.
-                dresids.vec *= -1.0
-                try: 
-                    if force_fd:
-                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    else: 
-                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                finally: 
-                    dparams._apply_unit_derivatives(iterkeys(dparams))
-
-                dresids.vec *= -1.0 
-                for var, val in iteritems(dresids.flat):
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                            var not in states:
-                        dunknowns.flat[var] += val
-
             
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """

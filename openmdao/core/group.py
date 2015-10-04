@@ -694,16 +694,13 @@ class Group(System):
             # Components that are not IndepVarComps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if isinstance(sub, Component): 
+            
+            if sub.fd_options['force_fd']: 
+                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
+                                               gs_outputs=gs_outputs)
+                # pass
+            else: 
                 sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
-                                     gs_outputs=gs_outputs)
-            # Groups and all other systems just call their own apply_linear.
-            else:
-                if sub.fd_options['force_fd']: 
-                    self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
-                                                   gs_outputs=gs_outputs)
-                else: 
-                    sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
                                      gs_outputs=gs_outputs)
 
         if mode == 'rev':
