@@ -523,7 +523,10 @@ class System(object):
     def sys_jacobian(self, params, unknowns, resids): 
         # TODO: JSG Doc string
         if self.fd_options['force_fd']: 
-            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+            if list(self.subsystems()): 
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+            else:
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
         else: 
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
         

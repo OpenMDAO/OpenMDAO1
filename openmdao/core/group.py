@@ -613,25 +613,6 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
-    def sys_jacobian(self, params, unknowns, resids): 
-        # TODO: JSG Doc string
-
-        if self.fd_options['force_fd']: 
-            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
-        else: 
-            self._jacobian_cache = self.jacobian(params, unknowns, resids)
-        
-        if self._jacobian_cache is not None:
-            jc = self._jacobian_cache
-            for key, J in iteritems(jc):
-                if isinstance(J, real_types):
-                    jc[key] = np.array([[J]])
-                shape = jc[key].shape
-                if len(shape) < 2:
-                    jc[key] = jc[key].reshape((shape[0], 1))
-
-        return self._jacobian_cache
-
     def jacobian(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
@@ -647,21 +628,10 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
-
         for sub in self._local_subsystems:
-
-            # Instigate finite difference on child if user requests.
             jacobian_cache = sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
 
-            # The user might submit a scalar Jacobian as a float.
-            # It is really inconvenient if we don't allow it.
-            # if jacobian_cache is not None:
-            #     for key, J in iteritems(jacobian_cache):
-            #         if isinstance(J, real_types):
-            #             jacobian_cache[key] = np.array([[J]])
-            #         shape = jacobian_cache[key].shape
-            #         if len(shape) < 2:
-            #             jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
+
 
     def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
