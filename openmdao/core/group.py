@@ -661,7 +661,7 @@ class Group(System):
                     if len(shape) < 2:
                         jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
-    def apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -694,16 +694,17 @@ class Group(System):
             # Components that are not IndepVarComps perform a matrix-vector
             # product on their variables. Any group where the user requests
             # a finite difference is also treated as a component.
-            if sub.fd_options['force_fd']:
-                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
-                                               gs_outputs=gs_outputs)
-            elif isinstance(sub, Component): 
+            if isinstance(sub, Component): 
                 sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
-                                 gs_outputs=gs_outputs)
+                                     gs_outputs=gs_outputs)
             # Groups and all other systems just call their own apply_linear.
             else:
-                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
-                                 gs_outputs=gs_outputs)
+                if sub.fd_options['force_fd']: 
+                    self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
+                                                   gs_outputs=gs_outputs)
+                else: 
+                    sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                                     gs_outputs=gs_outputs)
 
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter

@@ -463,11 +463,15 @@ class Component(System):
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
+            force_fd = self.fd_options['force_fd']
 
             if mode == "fwd": 
                 dresids.vec[:] = 0.0
                 dparams._apply_unit_derivatives(iterkeys(dparams))
-                self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                if force_fd:
+                    self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                else: 
+                    self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
                 for var, val in iteritems(dunknowns.flat):
@@ -489,7 +493,10 @@ class Component(System):
                 # our local 'arg' by -1, and then revert it afterwards.
                 dresids.vec *= -1.0
                 try: 
-                    self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    if force_fd:
+                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    else: 
+                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                 finally: 
                     dparams._apply_unit_derivatives(iterkeys(dparams))
 

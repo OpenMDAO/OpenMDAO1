@@ -104,7 +104,7 @@ class LinearGaussSeidel(LinearSolver):
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                        sub.sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
                     #for voi in vois:
@@ -162,7 +162,7 @@ class LinearGaussSeidel(LinearSolver):
                     else:
                         # Groups and all other systems just call their own
                         # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                        sub.sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['rev'][sub.name])
 
                     #for voi in vois:
@@ -216,7 +216,7 @@ class LinearGaussSeidel(LinearSolver):
 
         # we used to build gs_outputs up using dumat, but dumat is already
         # identical to gs_outputs in the vois we care about, so just use it.
-        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
+        system.sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
                             gs_outputs=system.dumat)
 
         norm = 0.0
