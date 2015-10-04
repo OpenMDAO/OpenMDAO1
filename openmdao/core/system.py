@@ -12,6 +12,8 @@ from openmdao.core.options import OptionsDictionary
 from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
+from openmdao.util.type_util import real_types
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -520,12 +522,20 @@ class System(object):
 
     def sys_jacobian(self, params, unknowns, resids): 
         # TODO: JSG Doc string
-
         if self.fd_options['force_fd']: 
             self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
         else: 
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
         
+        if self._jacobian_cache is not None:
+            jc = self._jacobian_cache
+            for key, J in iteritems(jc):
+                if isinstance(J, real_types):
+                    jc[key] = np.array([[J]])
+                shape = jc[key].shape
+                if len(shape) < 2:
+                    jc[key] = jc[key].reshape((shape[0], 1))
+
         return self._jacobian_cache
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):

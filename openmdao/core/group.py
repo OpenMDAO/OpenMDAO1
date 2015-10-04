@@ -621,6 +621,15 @@ class Group(System):
         else: 
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
         
+        if self._jacobian_cache is not None:
+            jc = self._jacobian_cache
+            for key, J in iteritems(jc):
+                if isinstance(J, real_types):
+                    jc[key] = np.array([[J]])
+                shape = jc[key].shape
+                if len(shape) < 2:
+                    jc[key] = jacobian_cache[key].reshape((shape[0], 1))
+
         return self._jacobian_cache
 
     def jacobian(self, params, unknowns, resids):
@@ -645,9 +654,9 @@ class Group(System):
             jacobian_cache = sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
             # Cache the Jacobian for Components that aren't IndepVarComps.
             # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-               and not isinstance(sub, IndepVarComp):
-                sub._jacobian_cache = jacobian_cache
+            # if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
+            #    and not isinstance(sub, IndepVarComp):
+            #     sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
             # It is really inconvenient if we don't allow it.
