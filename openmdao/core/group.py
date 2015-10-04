@@ -628,7 +628,7 @@ class Group(System):
                     jc[key] = np.array([[J]])
                 shape = jc[key].shape
                 if len(shape) < 2:
-                    jc[key] = jacobian_cache[key].reshape((shape[0], 1))
+                    jc[key] = jc[key].reshape((shape[0], 1))
 
         return self._jacobian_cache
 
@@ -652,21 +652,16 @@ class Group(System):
 
             # Instigate finite difference on child if user requests.
             jacobian_cache = sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
-            # Cache the Jacobian for Components that aren't IndepVarComps.
-            # Also cache it for systems that are finite differenced.
-            # if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-            #    and not isinstance(sub, IndepVarComp):
-            #     sub._jacobian_cache = jacobian_cache
 
             # The user might submit a scalar Jacobian as a float.
             # It is really inconvenient if we don't allow it.
-            if jacobian_cache is not None:
-                for key, J in iteritems(jacobian_cache):
-                    if isinstance(J, real_types):
-                        jacobian_cache[key] = np.array([[J]])
-                    shape = jacobian_cache[key].shape
-                    if len(shape) < 2:
-                        jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
+            # if jacobian_cache is not None:
+            #     for key, J in iteritems(jacobian_cache):
+            #         if isinstance(J, real_types):
+            #             jacobian_cache[key] = np.array([[J]])
+            #         shape = jacobian_cache[key].shape
+            #         if len(shape) < 2:
+            #             jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
 
     def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
