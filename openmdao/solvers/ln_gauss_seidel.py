@@ -5,8 +5,8 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
-from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
+
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
@@ -23,8 +23,8 @@ class LinearGaussSeidel(LinearSolver):
         opt.add_option('maxiter', 1,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
-                       desc="Derivative calculation mode, set to 'fwd' for " + \
-                       "forward mode, 'rev' for reverse mode, or 'auto' to " + \
+                       desc="Derivative calculation mode, set to 'fwd' for " + 
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " + 
                        "let OpenMDAO determine the best mode.")
 
     def solve(self, rhs_mat, system, mode):
@@ -147,7 +147,7 @@ class LinearGaussSeidel(LinearSolver):
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub.sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
-                                     gs_outputs=gs_outputs['rev'][sub.name])
+                                         gs_outputs=gs_outputs['rev'][sub.name])
 
                     # for voi in vois:
                     #     print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -201,7 +201,7 @@ class LinearGaussSeidel(LinearSolver):
         # we used to build gs_outputs up using dumat, but dumat is already
         # identical to gs_outputs in the vois we care about, so just use it.
         system.sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
-                            gs_outputs=system.dumat)
+                                gs_outputs=system.dumat)
 
         norm = 0.0
         for voi, rhs in iteritems(rhs_mat):

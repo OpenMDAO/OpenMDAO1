@@ -86,6 +86,10 @@ class IndepVarComp(Component):
                     if var in gs_outputs[voi]:
                         rhs_vec[voi][var] += sol_vec[voi][var]
 
+    def sys_jacobian(self, params, unknowns, resids, force_fd=False): 
+        """ No linearization needed for this one""" 
+        pass
+
     def solve_nonlinear(self, params, unknowns, resids):
         """ Performs no operation. """
         pass
