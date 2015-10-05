@@ -317,11 +317,6 @@ class ParDeriv3TestCase(MPITestCase):
         unknown_list = ['c2.y', 'c3.y', 'c4.y']
         indep_list = ['p.x']
 
-        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
-        assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
-        assert_rel_error(self, J['c4.y']['p.x'][0][0], 33.0, 1e-6)
-
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['c2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['c3.y']['p.x'][0][0], 15.0, 1e-6)
