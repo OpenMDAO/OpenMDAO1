@@ -468,6 +468,23 @@ class System(object):
         return jac
 
     def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None): 
+        """
+        Entry point method for all parent classes to access the apply_linear method. 
+        This method handles the functionality for self-fd, or otherwise passes the call 
+        down to the apply_linear method. 
+
+        Args
+        ----
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
+        vois: list of strings
+            List of all quantities of interest to key into the mats.
+        ls_inputs : dict
+            We can only solve derivatives for the inputs the instigating
+            system has access to.
+        gs_outputs : dict, optional
+            Linear Gauss-Siedel can limit the outputs when calling apply.
+        """
         for voi in vois: 
             states = self.states
 
