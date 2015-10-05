@@ -541,10 +541,7 @@ class System(object):
             
         """
         if self.fd_options['force_fd']: 
-            if total_derivs: 
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
-            else:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs)
         else: 
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
         
