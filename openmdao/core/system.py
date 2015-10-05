@@ -520,7 +520,7 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def sys_jacobian(self, params, unknowns, resids, total_derivs=False): 
+    def sys_jacobian(self, params, unknowns, resids, total_derivs=None): 
         """
         Entry point for all callers to cause linearization 
         of system and all children of system
@@ -537,11 +537,15 @@ class System(object):
             `VecWrapper` containing residuals. (r)
 
         total_derivs: bool
-            flag indicating if total or partial derivatives are being requested
+            flag indicating if total or partial derivatives are being forced.
+            None allows the system to choose whats appropriate for itself
             
         """
         if self.fd_options['force_fd']: 
-            self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs)
+            if self._local_subsystems and total_derivs is None: 
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+            else: 
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
         else: 
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
         

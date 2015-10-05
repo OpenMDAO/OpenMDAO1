@@ -613,28 +613,6 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
-    def sys_jacobian(self, params, unknowns, resids, total_derivs=True): 
-        """
-        Entry point for all callers to cause linearization 
-        of system and all children of system
-
-        Args
-        ----
-        params : `VecWrapper`
-            `VecWrapper` containing parameters. (p)
-
-        unknowns : `VecWrapper`
-            `VecWrapper` containing outputs and states. (u)
-
-        resids : `VecWrapper`
-            `VecWrapper` containing residuals. (r)
-
-        total_derivs: bool
-            flag indicating if total or partial derivatives are being requested
-            
-        """
-        super(Group, self).sys_jacobian(params, unknowns, resids, total_derivs)
-
     def jacobian(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
