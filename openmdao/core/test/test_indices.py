@@ -181,14 +181,14 @@ class TestIndices(unittest.TestCase):
                 self.add('square2', Squarer(3), promotes=['input:x'])
 
                 # the following connection should result in 'cube1.x' using the
-                # same src_indices as 'input:x', which is [3,4,5] from the outer
+                # same src_indices as 'input:x', which is [2,3,4] from the outer
                 # connection
                 self.add('cube1', Cuber(3))
                 self.connect('input:x', 'cube1.x')
 
                 # the following connection should result in 'cube2.x' using
                 # src_indices [0,1] of 'input:x', which corresponds to the
-                # src_indices [3,4] from the outer connection
+                # src_indices [2,3] from the outer connection
                 self.add('cube2', Cuber(2))
                 self.connect('input:x', 'cube2.x', src_indices=[0,1])
 
