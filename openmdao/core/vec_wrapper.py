@@ -754,9 +754,10 @@ class TgtVecWrapper(VecWrapper):
                                                           meta['top_promoted_name']):
                 if pathname in my_params:
                     # if connected, get metadata from the source
-                    src_pathname = connections.get(pathname)
-                    if src_pathname is None:
+                    src = connections.get(pathname)
+                    if src is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
+                    src_pathname, idxs = src
                     src_rel_name = srcvec.get_promoted_varname(src_pathname)
                     src_meta = srcvec.metadata(src_rel_name)
 
@@ -772,6 +773,7 @@ class TgtVecWrapper(VecWrapper):
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
                         if src:
+                            src, idxs = src
                             common = get_common_ancestor(src, pathname)
                             if common == self.pathname or (self.pathname+'.') not in common:
                                 missing.append(meta)

@@ -153,7 +153,7 @@ class Relevance(object):
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
 
-        for target, source in iteritems(connections):
+        for target, (source, idxs) in iteritems(connections):
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 

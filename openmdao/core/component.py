@@ -217,10 +217,10 @@ class Component(System):
         """ Verifies that a system name is valid. Also checks for
         duplicates."""
         if self._post_setup_vars:
-            raise RuntimeError("%s: can't add variable '%s' because setup has already been called",
+            raise RuntimeError("%s: can't add variable '%s' because setup has already been called." %
                                (self.pathname, name))
         if name in self._params_dict or name in self._unknowns_dict:
-            raise RuntimeError("%s: variable '%s' already exists" %
+            raise RuntimeError("%s: variable '%s' already exists." %
                                (self.pathname, name))
 
         match = namecheck_rgx.match(name)
@@ -427,7 +427,9 @@ class Component(System):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        raise NotImplementedError("solve_nonlinear")
+
+        msg = "Class '%s' does not implement 'solve_nonlinear'"
+        raise NotImplementedError(msg  % self.__class__.__name__)
 
     def jacobian(self, params, unknowns, resids):
         """
@@ -567,7 +569,7 @@ class Component(System):
                                          commsz))
         out_stream.write("\n")
 
-        if verbose:
+        if verbose:  # pragma: no cover
             lens = [len(n) for n in iterkeys(uvec)]
             nwid = max(lens) if lens else 12
 

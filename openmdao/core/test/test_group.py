@@ -2,7 +2,7 @@
 import unittest
 from six import text_type, StringIO, itervalues
 
-from openmdao.core.problem import Problem, _get_implicit_connections
+from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.problem import Relevance
 from openmdao.components.indep_var_comp import IndepVarComp
@@ -66,8 +66,8 @@ class TestGroup(unittest.TestCase):
         # verify we get correct connection information
         connections = root._get_explicit_connections()
         expected_connections = {
-            'C2.x': ['C1.y'],
-            'C3.x': ['C1.y']
+            'C2.x': [('C1.y', None)],
+            'C3.x': [('C1.y', None)]
         }
         self.assertEqual(connections, expected_connections)
 
@@ -141,9 +141,9 @@ class TestGroup(unittest.TestCase):
         # verify we get correct connection information
         #connections = root._get_explicit_connections()
         expected_connections = {
-            'G2.G1.C2.x': 'G2.C1.x',
-            'G3.C3.x':    'G2.G1.C2.y',
-            'G3.C4.x':    'G3.C3.y'
+            'G2.G1.C2.x': ('G2.C1.x', None),
+            'G3.C3.x':    ('G2.G1.C2.y', None),
+            'G3.C4.x':    ('G3.C3.y', None)
         }
         self.assertEqual(root.connections, expected_connections)
 

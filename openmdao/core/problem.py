@@ -12,7 +12,7 @@ import networkx as nx
 import numpy as np
 
 from openmdao.core.system import System
-from openmdao.core.group import Group, get_absvarpathnames
+from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
@@ -34,6 +34,25 @@ class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
     model.
 
+    Args
+    ----
+    root : `Group`, optional
+        The top-level `Group` for the `Problem`.  If not specified, a default
+        `Group` will be created
+
+    driver : `Driver`, optional
+        The top-level `Driver` for the `Problem`.  If not specified, a default
+        "Run Once" `Driver` will be used
+
+    impl : `BasicImpl` or `PetscImpl`, optional
+        The vector and data transfer implementation for the `Problem`.
+        For parallel processing support using MPI, `PetscImpl` is required.
+        If not specified, the default `BasicImpl` will be used.
+
+    comm : an MPI communicator (real or fake), optional
+        A communicator that can be used for distributed operations when running
+        under MPI. If not specified, the default "COMM_WORLD" will be used.
+
     Options
     -------
     fd_options['force_fd'] :  bool(False)
@@ -47,7 +66,7 @@ class Problem(System):
 
     """
 
-    def __init__(self, root=None, driver=None, impl=None):
+    def __init__(self, root=None, driver=None, impl=None, comm=None):
         super(Problem, self).__init__()
         self.root = root
 
@@ -60,6 +79,9 @@ class Problem(System):
             self._impl = BasicImpl
         else:
             self._impl = impl
+
+        self._comm = comm
+
         if driver is None:
             self.driver = Driver()
         else:
@@ -123,19 +145,31 @@ class Problem(System):
         else:
             raise KeyError("Variable '%s' not found." % name)
 
-    def _setup_connections(self, params_dict, unknowns_dict):
+    def _setup_connections(self, params_dict, unknowns_dict, compute_indices=True):
         """Generate a mapping of absolute param pathname to the pathname
         of its unknown.
+
+        Args
+        ----
+
+        params_dict : OrderedDict
+            A dict of parameter metadata for the whole `Problem`.
+
+        unknowns_dict : OrderedDict
+            A dict of unknowns metadata for the whole `Problem`.
+
+        compute_indices : bool, optional
+            If True, perform mapping of src_indices for input to input
+            connections.
         """
+
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
-        # go through promoted names of all top level params/unknowns
-        # if promoted name in unknowns matches promoted name in params
-        # that indicates an implicit connection. All connections are returned
-        # in absolute form.
-        implicit_conns, prom_noconns = _get_implicit_connections(self.root, params_dict,
-                                                                 unknowns_dict)
+        # get dictionary of implicit connections {param: [unknowns]}
+        # and dictionary of params that are not implicitly connected
+        # to anything {promoted_name: pathname}
+        implicit_conns, prom_noconns = self._get_implicit_connections()
 
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
@@ -145,36 +179,60 @@ class Problem(System):
 
         # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
-            for src in srcs:
+            for src, idxs in srcs:
                 if src in params_dict:
-                    input_graph.add_edge(src, tgt)
+                    input_graph.add_edge(src, tgt, idxs=idxs)
 
         # find any promoted but not connected inputs
         for p, meta in iteritems(params_dict):
             prom = meta['promoted_name']
             if prom in prom_noconns:
                 for n in prom_noconns[prom]:
-                    input_graph.add_edge(p, n)
+                    if p != n:
+                        input_graph.add_edge(p, n, idxs=None)
 
+        # for all connections where the target is an input, we want to connect
+        # the 'unknown' sources for that target to all other inputs that are
+        # connected to it
         to_add = []
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
-                conn_inputs = nx.node_connected_component(input_graph, tgt)
-                for s in srcs:
-                    if s in unknowns_dict:
-                        for t in conn_inputs:
-                            to_add.append((t, s))
+                connected_inputs = nx.node_connected_component(input_graph, tgt)
+                for src, idxs in srcs:
+                    if src in unknowns_dict:
+                        for new_tgt in connected_inputs:
+                            new_idxs = idxs
+                            if compute_indices:
+                                # follow path to new target, apply src_idxs along the way
+                                path = nx.shortest_path(input_graph, tgt, new_tgt)
+                                x = 0
+                                while x < len(path)-1:
+                                    next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                    if next_idxs is not None:
+                                        if new_idxs is not None:
+                                            new_idxs = np.array(new_idxs)[next_idxs]
+                                        else:
+                                            new_idxs = next_idxs
+                                    x = x + 1
+                            to_add.append((new_tgt, (src, new_idxs)))
 
-        for t, s in to_add:
-            connections.setdefault(t, []).append(s)
+        for tgt, (src, idxs) in to_add:
+            if tgt in connections:
+                srcs = connections[tgt]
+                if (src, idxs) not in srcs:
+                    srcs.append((src, idxs))
+            else:
+                connections[tgt] = [(src, idxs)]
 
+        # remove all the input to input connections, leaving just one unknown
+        # connection to each param
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = set((s for s in srcs if s in unknowns_dict))
+            unknown_srcs = list(src for src in srcs if src[0] in unknowns_dict)
             if len(unknown_srcs) > 1:
+                src_names = (name for name, idx in unknown_srcs)
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                   (tgt, sorted(unknown_srcs)))
-
+                                   (tgt, sorted(src_names)))
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs.pop()
 
@@ -236,6 +294,19 @@ class Problem(System):
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
 
+        # push connection src_indices down into the metadata for all target
+        # params in all component level systems, then flag meta_changed so
+        # it will get percolated back up to all groups in next setup_vars()
+        for tgt, (src, idxs) in iteritems(connections):
+            if idxs is not None:
+                for comp in self.root.components(recurse=True):
+                    # component dicts are keyed on the var name, not the pathname
+                    path, name = tgt.rsplit('.', 1)
+                    meta = comp._params_dict.get(name)
+                    if meta and meta['pathname'] == tgt:
+                        meta['src_indices'] = idxs
+                meta_changed = True
+
         # TODO: handle any automatic grouping of systems here...
 
         # divide MPI communicators among subsystems
@@ -263,7 +334,8 @@ class Problem(System):
             self.root._setup_paths(self.pathname)
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
-            connections = self._setup_connections(params_dict, unknowns_dict)
+            connections = self._setup_connections(params_dict, unknowns_dict,
+                                                  compute_indices=False)
         elif meta_changed:
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
@@ -418,9 +490,12 @@ class Problem(System):
 
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
-        conn_comps = set([t.rsplit('.', 1)[0] for t in iterkeys(self.root.connections)])
-        conn_comps.update([s.rsplit('.', 1)[0] for s in itervalues(self.root.connections)])
-        noconn_comps = sorted([c.pathname for c in self.root.components(recurse=True, local=True)
+        conn_comps = set([t.rsplit('.', 1)[0]
+                          for t in iterkeys(self.root.connections)])
+        conn_comps.update([s.rsplit('.', 1)[0]
+                           for s, i in itervalues(self.root.connections)])
+        noconn_comps = sorted([c.pathname
+                               for c in self.root.components(recurse=True, local=True)
                                if c.pathname not in conn_comps])
         if noconn_comps:
             print("\nThe following components have no connections:", file=out_stream)
@@ -434,7 +509,7 @@ class Problem(System):
         if under_mpirun(): # pragma: no cover
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
-            if MPI.COMM_WORLD.rank == 0:
+            if self._comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if isinstance(grp, ParallelGroup):
                         break
@@ -444,11 +519,11 @@ class Problem(System):
                           file=out_stream)
 
                 mincpu, maxcpu = self.root.get_req_procs()
-                if maxcpu is not None and MPI.COMM_WORLD.size > maxcpu:
+                if maxcpu is not None and self._comm.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
-                          (MPI.COMM_WORLD.size, maxcpu))
+                          (self._comm.size, maxcpu))
 
-                return (MPI.COMM_WORLD.size, maxcpu, parr)
+                return (self._comm.size, maxcpu, parr)
         # or any ParalleGroups found when not running under MPI
         else:
             pargrps = []
@@ -694,9 +769,9 @@ class Problem(System):
             if name in unknowns:
                 name = unknowns.metadata(name)['pathname']
 
-            for target, src in iteritems(root.connections):
+            for tgt, (src, idxs) in iteritems(root.connections):
                 if name == src:
-                    name = target
+                    name = tgt
                     break
 
             abs_params.append(name)
@@ -716,9 +791,9 @@ class Problem(System):
                 # The user sometimes specifies the parameter output
                 # name instead of its target because it is more
                 # convenient
-                for key, val in iteritems(root.connections):
-                    if val == ikey:
-                        fd_ikey = key
+                for tgt, (src, idxs) in iteritems(root.connections):
+                    if src == ikey:
+                        fd_ikey = tgt
                         break
 
                 # We need the absolute name, but the fd Jacobian
@@ -1194,7 +1269,8 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        indep_list = [self.root._unknowns_dict[p]['promoted_name'] for p in param_srcs]
+        indep_list = [self.root._unknowns_dict[p]['promoted_name']
+                          for p, idxs in param_srcs]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
@@ -1286,25 +1362,26 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
     def _setup_communicators(self):
-        comm = self._impl.world_comm()
+        if self._comm is None:
+            self._comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI: # pragma: no cover
-            if not (maxproc is None or maxproc >= comm.size):
+        if MPI:  # pragma: no cover
+            if not (maxproc is None or maxproc >= self._comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %d and %d." %
-                                   (comm.size, minproc, maxproc))
-            elif comm.size < minproc:
+                                   (self._comm.size, minproc, maxproc))
+            elif self._comm.size < minproc:
                 if maxproc is None:
                     maxproc = '(any)'
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %s and %s." %
-                                   (comm.size, minproc, maxproc))
+                                   (self._comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(comm)
+        self.root._setup_communicators(self._comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
@@ -1315,7 +1392,8 @@ class Problem(System):
         ----
         connections : dict
             A dict of target variables (absolute name) mapped
-            to the absolute name of their source variable.
+            to the absolute name of their source variable and the
+            relevant indices of that source if applicable.
 
         params_dict : OrderedDict
             A dict of parameter metadata for the whole `Problem`.
@@ -1325,7 +1403,7 @@ class Problem(System):
         """
 
         self._unit_diffs = {}
-        for target, source in iteritems(connections):
+        for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
 
@@ -1359,6 +1437,48 @@ class Problem(System):
                 self._unit_diffs[(source, target)] = (smeta.get('units'),
                                                       tmeta.get('units'))
 
+    def _get_implicit_connections(self):
+        """
+        Finds all matches between promoted names of parameters and unknowns
+        in this `Problem`.  Any matches imply an implicit connection.
+        All connections are expressed using absolute pathnames.
+
+        Returns
+        -------
+        dict
+            implicit connections in this `Problem`, represented as a mapping
+            from the pathname of the target to the pathname of the source
+
+        dict
+            parameters in this `Problem` that are not implicitly connected,
+            represented as a mapping from the promoted name of the parameter
+            to it's pathname
+
+        Raises
+        ------
+        RuntimeError
+            if a a promoted variable name matches multiple unknowns
+        """
+
+        # check if any promoted names correspond to mutiple unknowns
+        for name, lst in iteritems(self.root._to_abs_unames):
+            if len(lst) > 1:
+                raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
+                                   (name, lst))
+
+        connections = {}
+        dangling = {}
+
+        for prom_name, pabs_list in iteritems(self.root._to_abs_pnames):
+            if prom_name in self.root._to_abs_unames:  # param has a src in unknowns
+                uprom = self.root._to_abs_unames[prom_name]
+                for pabs in pabs_list:
+                    uprom = set(uprom)
+                    connections[pabs] = ((u, None) for u in uprom)
+            else:
+                dangling.setdefault(prom_name, set()).update(pabs_list)
+
+        return connections, dangling
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -1366,7 +1486,7 @@ def _assign_parameters(connections):
     """
     param_owners = {}
 
-    for par, unk in iteritems(connections):
+    for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
 
     return param_owners
@@ -1475,50 +1595,3 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
 
-def _get_implicit_connections(root, params_dict, unknowns_dict):
-    """
-    Finds all matches between promoted names of parameters and
-    unknowns.  Any matches imply an implicit connection.  All
-    connections are expressed using absolute pathnames.
-
-    This should only be called using params and unknowns from the
-    top level `Group` in the system tree.
-
-    Args
-    ----
-    params_dict : dict
-        dictionary of metadata for all parameters in this `Group`
-
-    unknowns_dict : dict
-        dictionary of metadata for all unknowns in this `Group`
-
-    Returns
-    -------
-    dict
-        implicit connections in this `Group`, represented as a mapping
-        from the pathname of the target to the pathname of the source
-
-    Raises
-    ------
-    RuntimeError
-        if a a promoted variable name matches multiple unknowns
-    """
-
-    # check if any promoted names correspond to mutiple unknowns
-    for name, lst in iteritems(root._to_abs_unames):
-        if len(lst) > 1:
-            raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
-                               (name, lst))
-
-    connections = {}
-    dangling = {}
-
-    for prom_name, pabs_list in iteritems(root._to_abs_pnames):
-        if prom_name in root._to_abs_unames:  # param has a src in unknowns
-            uprom = root._to_abs_unames[prom_name]
-            for pabs in pabs_list:
-                connections[pabs] = set(uprom)
-        else:
-            dangling.setdefault(prom_name, set()).update(pabs_list)
-
-    return connections, dangling
