@@ -468,11 +468,11 @@ class System(object):
 
         return jac
 
-    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None): 
+    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """
-        Entry point method for all parent classes to access the apply_linear method. 
-        This method handles the functionality for self-fd, or otherwise passes the call 
-        down to the apply_linear method. 
+        Entry point method for all parent classes to access the apply_linear method.
+        This method handles the functionality for self-fd, or otherwise passes the call
+        down to the apply_linear method.
 
         Args
         ----
@@ -486,22 +486,27 @@ class System(object):
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
-        for voi in vois: 
-            states = self.states
+        force_fd = self.fd_options['force_fd']
+        states = self.states
+        is_relevant = self._relevance.is_relevant_system
+        fwd = mode == "fwd"
+
+        for voi in vois:
+            # don't call apply_linear if this system is irrelevant
+            if not is_relevant(voi, self):
+                continue
 
             dresids = self.drmat[voi]
             dunknowns = self.dumat[voi]
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
-            force_fd = self.fd_options['force_fd']
-
-            if mode == "fwd": 
+            if fwd:
                 dresids.vec[:] = 0.0
                 dparams._apply_unit_derivatives(iterkeys(dparams))
                 if force_fd:
                     self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                else: 
+                else:
                     self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                 dresids.vec *= -1.0
 
@@ -510,8 +515,7 @@ class System(object):
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
                         dresids.flat[var] += val
-
-            else: 
+            else:
                 for val in itervalues(dparams.flat):
                     val[:] = 0.0
                 for val in itervalues(dunknowns.flat):
@@ -523,24 +527,24 @@ class System(object):
                 # previous component's contributions, we can multiply
                 # our local 'arg' by -1, and then revert it afterwards.
                 dresids.vec *= -1.0
-                try: 
+                try:
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    else: 
+                    else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                finally: 
+                finally:
                     dparams._apply_unit_derivatives(iterkeys(dparams))
 
-                dresids.vec *= -1.0 
+                dresids.vec *= -1.0
                 for var, val in iteritems(dresids.flat):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def _sys_jacobian(self, params, unknowns, resids, total_derivs=None): 
+    def _sys_jacobian(self, params, unknowns, resids, total_derivs=None):
         """
-        Entry point for all callers to cause linearization 
+        Entry point for all callers to cause linearization
         of system and all children of system
 
         Args
@@ -557,18 +561,18 @@ class System(object):
         total_derivs: bool
             flag indicating if total or partial derivatives are being forced.
             None allows the system to choose whats appropriate for itself
-            
+
         """
-        if self.fd_options['force_fd']: 
-            #force_fd should compute semi-totals across all children, 
+        if self.fd_options['force_fd']:
+            #force_fd should compute semi-totals across all children,
             #    unless total_derivs=False is specifically requested
-            if self._local_subsystems and total_derivs is None: 
+            if self._local_subsystems and total_derivs is None:
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
-            else: 
+            else:
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
-        else: 
+        else:
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
-        
+
         if self._jacobian_cache is not None:
             jc = self._jacobian_cache
             for key, J in iteritems(jc):
