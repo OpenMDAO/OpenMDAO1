@@ -107,8 +107,8 @@ class Newton(NonLinearSolver):
         while self.iter_count < maxiter and f_norm > atol and \
                 f_norm/f_norm0 > rtol:
 
-            # Linearize Model
-            system.jacobian(params, unknowns, resids)
+            # Linearize Model with partial derivatives
+            system._sys_jacobian(params, unknowns, resids, total_derivs=False)
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec

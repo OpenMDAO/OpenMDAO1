@@ -455,7 +455,7 @@ class Component(System):
             and whose values are ndarrays.
         """
         return None
-
+            
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """
         Multiplies incoming vector by the Jacobian (fwd mode) or the
