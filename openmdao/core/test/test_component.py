@@ -1,7 +1,14 @@
 """ Test for the Component class"""
 
 import unittest
-from six import text_type
+from six import text_type, PY3
+
+if PY3:
+    def py3fix(s):
+        return s.replace('<type', '<class')
+else:
+    def py3fix(s):
+        return s
 
 import numpy as np
 
@@ -12,6 +19,59 @@ class TestComponent(unittest.TestCase):
 
     def setUp(self):
         self.comp = Component()
+
+    def test_not_impl(self):
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.solve_nonlinear({}, {}, {})
+
+        expected_msg = py3fix("Class 'Component' does not implement 'solve_nonlinear'")
+        self.assertEqual(str(cm.exception), expected_msg)
+
+    def test_param_name_errors(self):
+        self.comp.add_param("xxyyzz", 0.0)
+
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.add_param("xxyyzz", 0.0)
+
+        expected_msg = py3fix(": variable 'xxyyzz' already exists.")
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        with self.assertRaises(NameError) as cm:
+            self.comp.add_param("xx/yy/zz", 0.0)
+
+        expected_msg = py3fix(": 'xx/yy/zz' is not a valid variable name.")
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        self.comp._setup_variables()
+
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.add_param("latefortheparty", 0.0)
+
+        expected_msg = ": can't add variable 'latefortheparty' because setup has already been called."
+        self.assertEqual(str(cm.exception), expected_msg)
+
+    def test_output_name_errors(self):
+        self.comp.add_output("xxyyzz", 0.0)
+
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.add_output("xxyyzz", 0.0)
+
+        expected_msg = py3fix(": variable 'xxyyzz' already exists.")
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        with self.assertRaises(NameError) as cm:
+            self.comp.add_output("xx/yy/zz", 0.0)
+
+        expected_msg = py3fix(": 'xx/yy/zz' is not a valid variable name.")
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        self.comp._setup_variables()
+
+        with self.assertRaises(RuntimeError) as cm:
+            self.comp.add_output("latefortheparty", 0.0)
+
+        expected_msg = ": can't add variable 'latefortheparty' because setup has already been called."
+        self.assertEqual(str(cm.exception), expected_msg)
 
     def test_promotes(self):
         self.comp.add_param("xxyyzz", 0.0)

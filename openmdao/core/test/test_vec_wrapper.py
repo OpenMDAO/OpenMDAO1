@@ -72,7 +72,7 @@ class TestVecWrapper(unittest.TestCase):
 
         connections = {}
         for p in params:
-            connections[p] = p
+            connections[p] = (p, None)
 
         s = _SysData('')
         s._unknowns_dict = u._vardict

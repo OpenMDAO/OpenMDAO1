@@ -66,7 +66,22 @@ class Monitor(object):
 
 class PetscKSP(LinearSolver):
     """ OpenMDAO LinearSolver that uses PetSC KSP to solve for a system's
-    derivatives. This solver can be used under MPI."""
+    derivatives. This solver can be used under MPI.
+
+    Options
+    -------
+    options['atol'] :  float(1e-12)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] :  int(100)
+        Maximum number of iterations.
+    options['mode'] :  str('auto')
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+    options['rtol'] :  float(1e-12)
+        Relative convergence tolerance.
+
+    """
 
     def __init__(self):
         super(PetscKSP, self).__init__()
@@ -216,7 +231,7 @@ class PetscKSP(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
+        system._sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
 
         result.array[:] = rhs_vec.vec
 

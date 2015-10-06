@@ -13,15 +13,14 @@ import numpy as np
 import networkx as nx
 
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
-from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
+
 
 class Group(System):
     """A system that contains other systems.
@@ -143,9 +142,7 @@ class Group(System):
             targets = (targets,)
 
         for target in targets:
-            self._src.setdefault(target, []).append(source)
-            if src_indices is not None:
-                self._src_idxs[target] = src_indices
+            self._src.setdefault(target, []).append((source, src_indices))
 
     def subsystems(self, local=False, recurse=False, typ=System, include_self=False):
         """
@@ -251,19 +248,6 @@ class Group(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        # set any src_indices metadata down at Component level so it will
-        # percolate up to all levels above
-        if self._src_idxs:
-            for sub in self.subsystems(recurse=True):
-                for p, idxs in iteritems(self._src_idxs):
-                    ppath = p.rsplit('.',1)[0]
-                    if ppath == sub.pathname:
-                        pname = p.rsplit('.',1)[1]
-                        if isinstance(sub, Component):
-                            sub._params_dict[pname]['src_indices'] = idxs
-                        elif isinstance(sub, Group):
-                            sub._src_idxs[pname] = idxs
-
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
@@ -281,12 +265,7 @@ class Group(System):
             # check for any promotes that didn't match a variable
             sub._check_promotes()
 
-        # set src_indices for promoted vars (needed to setup dicts first to find them)
-        for p, idxs in self._src_idxs.items():
-            for p_abs in get_absvarpathnames(p, params_dict, 'params'):
-                params_dict[p_abs]['src_indices'] = idxs
-
-        return params_dict, unknowns_dict
+        return self._params_dict, self._unknowns_dict
 
     def _promoted_name(self, name, subsystem):
         """
@@ -424,7 +403,7 @@ class Group(System):
         self._abs_inputs = {}
         for voi, vec in iteritems(self.dpmat):
             self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
-                                         if not meta.get('pass_by_obj')}
+                                     if not meta.get('pass_by_obj')}
 
         self._relname_map = None # reclaim some memory
 
@@ -501,7 +480,7 @@ class Group(System):
             mplen = len(mypath)
 
             params = self._fd_params = []
-            for tgt, src in iteritems(conns):
+            for tgt, (src, idxs) in iteritems(conns):
                 if mypath == tgt[:mplen]:
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
@@ -548,7 +527,7 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, srcs in iteritems(self._src):
-            for src in srcs:
+            for src, idxs in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
                 except KeyError as error:
@@ -559,7 +538,9 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
+                        for src_pathname in src_pathnames:
+                            connection = (src_pathname, idxs)
+                            connections.setdefault(tgt_pathname, []).append(connection)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -659,40 +640,10 @@ class Group(System):
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
-
         for sub in self._local_subsystems:
+            sub._sys_jacobian(sub.params, sub.unknowns, sub.resids)
 
-            # Instigate finite difference on child if user requests.
-            if sub.fd_options['force_fd']:
-                # Groups need total derivatives
-                if isinstance(sub, Group):
-                    total_derivs = True
-                else:
-                    total_derivs = False
-                jacobian_cache = sub.fd_jacobian(sub.params, sub.unknowns,
-                                                 sub.resids,
-                                                 total_derivs=total_derivs)
-            else:
-                jacobian_cache = sub.jacobian(sub.params, sub.unknowns,
-                                              sub.resids)
-
-            # Cache the Jacobian for Components that aren't IndepVarComps.
-            # Also cache it for systems that are finite differenced.
-            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-               and not isinstance(sub, IndepVarComp):
-                sub._jacobian_cache = jacobian_cache
-
-            # The user might submit a scalar Jacobian as a float.
-            # It is really inconvenient if we don't allow it.
-            if jacobian_cache is not None:
-                for key, J in iteritems(jacobian_cache):
-                    if isinstance(J, real_types):
-                        jacobian_cache[key] = np.array([[J]])
-                    shape = jacobian_cache[key].shape
-                    if len(shape) < 2:
-                        jacobian_cache[key] = jacobian_cache[key].reshape((shape[0], 1))
-
-    def apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -722,127 +673,18 @@ class Group(System):
             for voi in vois:
                 self._transfer_data(deriv=True, var_of_interest=voi) # Full Scatter
 
-        for sub in self._local_subsystems:
-            # Components that are not IndepVarComps perform a matrix-vector
-            # product on their variables. Any group where the user requests
-            # a finite difference is also treated as a component.
-            if (isinstance(sub, Component) or sub.fd_options['force_fd']) \
-               and not isinstance(sub, IndepVarComp):
-                self._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs,
-                                               gs_outputs=gs_outputs)
-            # Groups and all other systems just call their own apply_linear.
-            else:
-                sub.apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
-                                 gs_outputs=gs_outputs)
+        if self.fd_options['force_fd']:
+            # parent class has the code to do the fd
+            super(Group, self)._sys_apply_linear(mode, ls_inputs, vois, gs_outputs)
+
+        else:
+            for sub in self._local_subsystems:
+                sub._sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                                      gs_outputs=gs_outputs)
 
         if mode == 'rev':
             for voi in vois:
                 self._transfer_data(mode='rev', deriv=True, var_of_interest=voi) # Full Scatter
-
-    def _sub_apply_linear_wrapper(self, system, mode, vois, ls_inputs=None,
-                                  gs_outputs=None):
-        """
-        Calls apply_linear on any Component-like subsystem. This
-        basically does two things: 1) multiplies the user Jacobian by -1, and
-        2) puts a 1 on the diagonal for all explicit outputs.
-
-        Args
-        ----
-
-        system : `System`
-            Subsystem of interest, either a `Component` or a `Group` that is
-            being finite differenced.
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev'.
-
-        vois: list of strings
-            List of all quantities of interest to key into the mats.
-
-        ls_inputs : dict
-            We can only solve derivatives for the inputs the instigating
-            system has access to.
-
-        gs_outputs : dict, optional
-            Linear Gauss-Siedel can limit the outputs when calling apply.
-        """
-        states = system.states
-        force_fd = system.fd_options['force_fd']
-
-        for voi in vois:
-            if not self._relevance.is_relevant_system(voi, system):
-                continue
-
-            dresids = system.drmat[voi]
-            dunknowns = system.dumat[voi]
-            dparams = system.dpmat[voi]
-            gsouts = None if gs_outputs is None else gs_outputs[voi]
-
-            # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = system._abs_inputs[voi]
-            do_apply = ls_inputs[voi] is None or (abs_inputs and
-                                                  len(abs_inputs.intersection(ls_inputs[voi])))
-
-            # Forward Mode
-            if mode == 'fwd':
-
-                dresids.vec[:] = 0.0
-
-                if do_apply:
-
-                    # Process incoming unit conversions
-                    dparams._apply_unit_derivatives()
-
-                    if force_fd:
-                        system._apply_linear_jac(system.params, system.unknowns, dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns, dparams,
-                                            dunknowns, dresids, mode)
-                dresids.vec *= -1.0
-
-                for var, val in iteritems(dunknowns.flat):
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                           var not in states:
-                        dresids.flat[var] += val
-
-            # Adjoint Mode
-            elif mode == 'rev':
-
-                # Clear out our inputs.
-                for val in itervalues(dparams.flat):
-                    val[:] = 0.0
-                dunknowns.vec[:] = 0.0
-
-                # Sign on the local Jacobian needs to be -1 before
-                # we add in the fake residual. Since we can't modify
-                # the 'du' vector at this point without stomping on the
-                # previous component's contributions, we can multiply
-                # our local 'arg' by -1, and then revert it afterwards.
-                dresids.vec *= -1.0
-
-                if do_apply:
-
-                    #if np.any(dresids.vec):
-                    if force_fd:
-                        system._apply_linear_jac(system.params,
-                                                 system.unknowns, dparams,
-                                                 dunknowns, dresids, mode)
-                    else:
-                        system.apply_linear(system.params, system.unknowns,
-                                            dparams, dunknowns, dresids, mode)
-
-                    # Process incoming unit conversions
-                    dparams._apply_unit_derivatives()
-
-                dresids.vec *= -1.0
-
-                for var, val in iteritems(dresids.flat):
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                            var not in states:
-                        dunknowns.flat[var] += val
 
     def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
         """
@@ -1005,7 +847,7 @@ class Group(System):
             start = self.pathname + '.'
             slen = len(start)
             graph = sgraph.subgraph((n for n in sgraph
-                                      if start==n[:slen]))
+                                    if start==n[:slen]))
         else:
             path = []
             graph = sgraph.subgraph(sgraph.nodes_iter())
@@ -1030,7 +872,7 @@ class Group(System):
         """Keep breaking cycles until the graph is a DAG.
         """
         strong = [s for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
+                  if len(s) > 1]
         while strong:
             # First of all, see if the cycle has in edges
             in_edges = []
@@ -1038,7 +880,7 @@ class Group(System):
             if len(strong[0]) < len(graph):
                 for s in strong[0]:
                     count = len([u for u,v in graph.in_edges(s)
-                                      if u not in strong[0]])
+                                if u not in strong[0]])
                     in_edges.append((count, s))
                 in_edges = sorted(in_edges)
                 if in_edges[-1][0] > 0:
@@ -1076,12 +918,19 @@ class Group(System):
         ls_inputs = set(iterkeys(self.dpmat[voi]))
         abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
 
-        for initp_abs, meta in iteritems(self._params_dict):
-            if meta.get('pass_by_obj') or meta.get('remote'):
-                continue
-            src = self.connections.get(initp_abs)
-            if src in abs_uvec:
-                ls_inputs.add(initp_abs)
+        # for initp_abs, meta in iteritems(self._params_dict):
+        #     if meta.get('pass_by_obj') or meta.get('remote'):
+        #         continue
+        #     src = self.connections.get(initp_abs)
+        #     if src in abs_uvec:
+        #         ls_inputs.add(initp_abs)
+        for comp in self.components(local=True, recurse=True):
+            for intinp_rel, meta in iteritems(comp.dpmat[voi]):
+                intinp_abs = meta['pathname']
+                src, idxs = self.connections.get(intinp_abs)
+
+                if src in abs_uvec:
+                    ls_inputs.add(intinp_abs)
 
         return ls_inputs
 
@@ -1132,7 +981,7 @@ class Group(System):
                                          commsz))
         out_stream.write("\n")
 
-        if verbose:
+        if verbose:  # pragma: no cover
             vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
             byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
@@ -1267,7 +1116,7 @@ class Group(System):
         # FIXME: if we switch to push scatters, this check will flip
         if ((not rev and pmeta.get('remote')) or
             (rev and not pdist and umeta.get('remote')) or
-            (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
+                (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1283,8 +1132,7 @@ class Group(System):
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
                 end = start + u_sizes[irank, ivar]
-                on_irank = np.logical_and(start <= arg_idxs,
-                                             arg_idxs < end)
+                on_irank = np.logical_and(start <= arg_idxs, arg_idxs < end)
 
                 # Compute conversion to new ordering
 
@@ -1339,20 +1187,20 @@ class Group(System):
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
                            if relevance.is_relevant(var_of_interest,
-                                          self.unknowns._sysdata._to_top_prom_name[n]))
+                                  self.unknowns._sysdata._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
                         if relevance.is_relevant(var_of_interest,
-                                            self.params._sysdata._to_top_prom_name[n]))
+                                    self.params._sysdata._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
         param_sizes = []
         for iproc in range(self.comm.size):
             unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
-                                               if n in vec_unames])
+                                  if n in vec_unames])
             param_sizes.append([sz for n, sz in self._p_size_lists[iproc]
-                                               if n in vec_pnames])
+                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
                                  dtype=self._impl.idx_arr_type)
@@ -1363,7 +1211,7 @@ class Group(System):
         self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
-        for param, unknown in iteritems(self.connections):
+        for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)
@@ -1518,7 +1366,7 @@ class Group(System):
 
         return umap
 
-    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):
+    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):  # pragma: no cover
         """For debugging.  prints out the distributed idxs along with the
         variables they correspond to for the u and p vectors, for example:
 
@@ -1598,30 +1446,3 @@ class Group(System):
                     _dump(s, stream)
         else:
             _dump(self, stream)
-
-def get_absvarpathnames(var_name, var_dict, dict_name):
-    """
-    Args
-    ----
-    var_name : str
-        Promoted name of a variable.
-
-    var_dict : dict
-        Dictionary of variable metadata, keyed on absolute name.
-
-    dict_name : str
-        Name of var_dict (used for error reporting).
-
-    Returns
-    -------
-    list of str
-        The absolute pathnames for the given variables in the
-        variable dictionary that map to the given promoted name.
-    """
-
-    pnames = [n for n, m in iteritems(var_dict)
-                   if m['promoted_name'] == var_name]
-    if not pnames:
-        raise KeyError("'%s' not found in %s" % (var_name, dict_name))
-
-    return pnames
