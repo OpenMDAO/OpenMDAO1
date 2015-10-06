@@ -9,6 +9,28 @@ from openmdao.util.record_util import update_local_meta, create_local_meta
 class Newton(NonLinearSolver):
     """A python Newton solver with line-search adapation of the relaxation
     parameter.
+    
+    Options
+    -------
+    options['alpha'] :  float(1.0)
+        Initial over-relaxation factor.
+    options['atol'] :  float(1e-12)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['ls_atol'] :  float(1e-10)
+        Absolute convergence tolerancee for line search.
+    options['ls_maxiter'] :  int(10)
+        Maximum number of line searches.
+    options['ls_rtol'] :  float(0.9)
+        Relative convergence tolerancee for line search.
+    options['maxiter'] :  int(20)
+        Maximum number of iterations.
+    options['rtol'] :  float(1e-10)
+        Relative convergence tolerance.
+    options['solve_subsystems'] :  bool(True)
+        Set to True to solve subsystems. You may need this for solvers nested under Newton.
+
     """
 
     def __init__(self):

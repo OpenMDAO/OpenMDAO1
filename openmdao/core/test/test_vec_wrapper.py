@@ -71,7 +71,7 @@ class TestVecWrapper(unittest.TestCase):
 
         connections = {}
         for p in params:
-            connections[p] = p
+            connections[p] = (p, None)
 
         p = TgtVecWrapper()
         p.setup(None, params, u, params.keys(),

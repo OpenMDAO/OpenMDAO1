@@ -144,9 +144,7 @@ class Group(System):
             targets = (targets,)
 
         for target in targets:
-            self._src.setdefault(target, []).append(source)
-            if src_indices is not None:
-                self._src_idxs[target] = src_indices
+            self._src.setdefault(target, []).append((source, src_indices))
 
     def subsystems(self, local=False, recurse=False, typ=System, include_self=False):
         """
@@ -242,19 +240,6 @@ class Group(System):
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
 
-        # set any src_indices metadata down at Component level so it will
-        # percolate up to all levels above
-        if self._src_idxs:
-            for sub in self.subsystems(recurse=True):
-                for p, idxs in iteritems(self._src_idxs):
-                    ppath = p.rsplit('.',1)[0]
-                    if ppath == sub.pathname:
-                        pname = p.rsplit('.',1)[1]
-                        if isinstance(sub, Component):
-                            sub._params_dict[pname]['src_indices'] = idxs
-                        elif isinstance(sub, Group):
-                            sub._src_idxs[pname] = idxs
-
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
@@ -271,11 +256,6 @@ class Group(System):
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
-
-        # set src_indices for promoted vars (needed to setup dicts first to find them)
-        for p, idxs in self._src_idxs.items():
-            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
-                self._params_dict[p_abs]['src_indices'] = idxs
 
         return self._params_dict, self._unknowns_dict
 
@@ -469,7 +449,7 @@ class Group(System):
             mplen = len(mypath)
 
             params = self._fd_params = []
-            for tgt, src in iteritems(conns):
+            for tgt, (src, idxs) in iteritems(conns):
                 if mypath == tgt[:mplen]:
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
@@ -516,7 +496,7 @@ class Group(System):
             connections.update(sub._get_explicit_connections())
 
         for tgt, srcs in iteritems(self._src):
-            for src in srcs:
+            for src, idxs in srcs:
                 try:
                     src_pathnames = self._to_abs_unames[src]
                 except KeyError as error:
@@ -527,7 +507,9 @@ class Group(System):
 
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
-                        connections.setdefault(tgt_pathname, []).extend(src_pathnames)
+                        for src_pathname in src_pathnames:
+                            connection = (src_pathname, idxs)
+                            connections.setdefault(tgt_pathname, []).append(connection)
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -906,7 +888,7 @@ class Group(System):
         for comp in self.components(local=True, recurse=True):
             for intinp_rel, meta in iteritems(comp.dpmat[voi]):
                 intinp_abs = meta['pathname']
-                src = self.connections.get(intinp_abs)
+                src, idxs = self.connections.get(intinp_abs)
 
                 if src in abs_uvec:
                     ls_inputs.add(intinp_abs)
@@ -960,7 +942,7 @@ class Group(System):
                                          commsz))
         out_stream.write("\n")
 
-        if verbose:
+        if verbose:  # pragma: no cover
             vec_conns = dict(self._data_xfer[('', 'fwd', None)].vec_conns)
             byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
@@ -1197,7 +1179,7 @@ class Group(System):
         self._local_param_sizes[var_of_interest] = param_sizes
 
         xfer_dict = {}
-        for param, unknown in iteritems(self.connections):
+        for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
                 urelname = self.unknowns.get_promoted_varname(unknown)
                 prelname = self.params.get_promoted_varname(param)
@@ -1353,7 +1335,7 @@ class Group(System):
 
         return umap
 
-    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):
+    def _dump_dist_idxs(self, stream=sys.stdout, recurse=True):  # pragma: no cover
         """For debugging.  prints out the distributed idxs along with the
         variables they correspond to for the u and p vectors, for example:
 
@@ -1434,30 +1416,3 @@ class Group(System):
         else:
             _dump(self, stream)
 
-
-def get_absvarpathnames(var_name, var_dict, dict_name):
-    """
-    Args
-    ----
-    var_name : str
-        Promoted name of a variable.
-
-    var_dict : dict
-        Dictionary of variable metadata, keyed on absolute name.
-
-    dict_name : str
-        Name of var_dict (used for error reporting).
-
-    Returns
-    -------
-    list of str
-        The absolute pathnames for the given variables in the
-        variable dictionary that map to the given promoted name.
-    """
-
-    pnames = [n for n, m in iteritems(var_dict)
-              if m['promoted_name'] == var_name]
-    if not pnames:
-        raise KeyError("'%s' not found in %s" % (var_name, dict_name))
-
-    return pnames

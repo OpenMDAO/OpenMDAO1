@@ -8,6 +8,12 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 class RunOnce(NonLinearSolver):
     """ The RunOnce solver just performs solve_nonlinear on the system hierarchy
     with no iteration.
+
+    Options
+    -------
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+
     """
 
     def __init__(self):

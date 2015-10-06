@@ -18,8 +18,15 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
-    constrained optimization problems, with additional MPI capability. Note:
-    only SNOPT is supported right now.
+    constrained optimization problems, with additional MPI capability.
+    Note: only SNOPT is supported right now.
+
+    pyOptSparseDriver supports the following:
+        equality_constraints
+
+        inequality_constraints
+
+        two_sided_constraints
 
     Options
     -------

@@ -10,6 +10,20 @@ from openmdao.solvers.solver_base import LinearSolver
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
+
+    Options
+    -------
+    options['atol'] :  float(1e-12)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] :  int(1)
+        Maximum number of iterations.
+    options['mode'] :  str('auto')
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+    options['rtol'] :  float(1e-10)
+        Absolute convergence tolerance.
+
     """
 
     def __init__(self):
