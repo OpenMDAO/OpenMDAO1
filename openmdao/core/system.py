@@ -512,16 +512,21 @@ class System(object):
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
         force_fd = self.fd_options['force_fd']
+        states = self.states
+        is_relevant = self._relevance.is_relevant_system
+        fwd = mode == "fwd"
 
         for voi in vois:
-            states = self.states
+            # don't call apply_linear if this system is irrelevant
+            if not is_relevant(voi, self):
+                continue
 
             dresids = self.drmat[voi]
             dunknowns = self.dumat[voi]
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
-            if mode == "fwd":
+            if fwd:
                 dresids.vec[:] = 0.0
                 dparams._apply_unit_derivatives()
                 if force_fd:
