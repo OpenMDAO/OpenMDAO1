@@ -216,7 +216,7 @@ class PetscKSP(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
+        system._sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
 
         result.array[:] = rhs_vec.vec
 

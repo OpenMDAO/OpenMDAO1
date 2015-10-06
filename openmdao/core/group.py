@@ -629,9 +629,9 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
         for sub in self._local_subsystems:
-            sub.sys_jacobian(sub.params, sub.unknowns, sub.resids)
+            sub._sys_jacobian(sub.params, sub.unknowns, sub.resids)
 
-    def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -662,11 +662,11 @@ class Group(System):
 
         if self.fd_options['force_fd']: 
             # parent class has the code to do the fd
-            super(Group, self).sys_apply_linear(mode, ls_inputs, vois, gs_outputs)
+            super(Group, self)._sys_apply_linear(mode, ls_inputs, vois, gs_outputs)
 
         else: 
             for sub in self._local_subsystems:
-                sub.sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                sub._sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
                                      gs_outputs=gs_outputs)
 
         if mode == 'rev':

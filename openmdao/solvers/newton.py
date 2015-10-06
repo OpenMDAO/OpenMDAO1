@@ -86,7 +86,7 @@ class Newton(NonLinearSolver):
                 f_norm/f_norm0 > rtol:
 
             # Linearize Model with partial derivatives
-            system.sys_jacobian(params, unknowns, resids, total_derivs=False)
+            system._sys_jacobian(params, unknowns, resids, total_derivs=False)
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec

@@ -835,7 +835,7 @@ class Problem(System):
         root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
-        root.sys_jacobian(params, unknowns, root.resids)
+        root._sys_jacobian(params, unknowns, root.resids)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -1032,7 +1032,7 @@ class Problem(System):
         root = self.root
 
         # Linearize the model
-        root.sys_jacobian(root.params, root.unknowns, root.resids)
+        root._sys_jacobian(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')

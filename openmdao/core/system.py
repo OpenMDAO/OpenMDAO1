@@ -467,7 +467,7 @@ class System(object):
 
         return jac
 
-    def sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None): 
+    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None): 
         """
         Entry point method for all parent classes to access the apply_linear method. 
         This method handles the functionality for self-fd, or otherwise passes the call 
@@ -537,7 +537,7 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def sys_jacobian(self, params, unknowns, resids, total_derivs=None): 
+    def _sys_jacobian(self, params, unknowns, resids, total_derivs=None): 
         """
         Entry point for all callers to cause linearization 
         of system and all children of system
