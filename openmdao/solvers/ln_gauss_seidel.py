@@ -98,7 +98,7 @@ class LinearGaussSeidel(LinearSolver):
                 for sub in itervalues(system._subsystems):
 
                     for voi in vois:
-                        # print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
+                        #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
                         system._transfer_data(sub.name, deriv=True,
                                               var_of_interest=voi)
@@ -144,9 +144,9 @@ class LinearGaussSeidel(LinearSolver):
                         if active:
                             dumat[voi].vec *= 0.0
 
-                        # print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, mode='rev', deriv=True, var_of_interest=voi)
-                        # print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                         if active:
                             dumat[voi].vec *= -1.0
@@ -159,18 +159,18 @@ class LinearGaussSeidel(LinearSolver):
                         continue
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                    # for voi in vois:
-                    #     print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                    # print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
+                    #print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
 
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['rev'][sub.name])
 
-                    # for voi in vois:
-                    #     print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = drmat[voi].vec

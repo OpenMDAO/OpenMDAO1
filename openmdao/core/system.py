@@ -511,6 +511,8 @@ class System(object):
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
+        force_fd = self.fd_options['force_fd']
+
         for voi in vois:
             states = self.states
 
@@ -518,8 +520,6 @@ class System(object):
             dunknowns = self.dumat[voi]
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
-
-            force_fd = self.fd_options['force_fd']
 
             if mode == "fwd":
                 dresids.vec[:] = 0.0
