@@ -14,6 +14,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
+from openmdao.core.vec_wrapper import _ByObjWrapper
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -279,8 +280,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        self._to_abs_unames = {}
-        self._to_abs_pnames = {}
+        self._to_abs_unames = self._sysdata._to_abs_unames = {}
+        self._to_abs_pnames = self._sysdata._to_abs_pnames = {}
 
         if MPI and compute_indices and self.is_active(): # pragma: no cover
             self.setup_distrib_idxs()
@@ -319,6 +320,9 @@ class Component(System):
             self._to_abs_unames[name] = (pathname,)
 
         self._post_setup_vars = True
+
+        self._sysdata._params_dict = _new_params
+        self._sysdata._unknowns_dict = _new_unknowns
 
         return _new_params, _new_unknowns
 
@@ -364,13 +368,14 @@ class Component(System):
         # so force their creation here
         self._create_views(top_unknowns, parent, [], None)
 
-        # create storage for the relevant vecwrappers, keyed by
-        # variable_of_interest
         all_vois = set([None])
-        for vois in relevance.groups:
-            all_vois.update(vois)
-            for voi in vois:
-                self._create_views(top_unknowns, parent, [], voi)
+        if self._probdata.top_lin_gs: # only need voi vecs for lings
+            # create storage for the relevant vecwrappers, keyed by
+            # variable_of_interest
+            for vois in relevance.groups:
+                all_vois.update(vois)
+                for voi in vois:
+                    self._create_views(top_unknowns, parent, [], voi)
 
         # create params vec entries for any unconnected params
         for meta in itervalues(self._params_dict):

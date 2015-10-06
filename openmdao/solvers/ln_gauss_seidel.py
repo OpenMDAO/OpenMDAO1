@@ -26,6 +26,12 @@ class LinearGaussSeidel(LinearSolver):
                        desc="Derivative calculation mode, set to 'fwd' for " + \
                        "forward mode, 'rev' for reverse mode, or 'auto' to " + \
                        "let OpenMDAO determine the best mode.")
+        opt.add_option('single_voi_relevance_reduction',
+                        False, values=[True, False],
+                        desc="If True, use relevance reduction even for"
+                              " individual variables of interest. This "
+                              "may increase performance but will use "
+                              "more memory.")
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The

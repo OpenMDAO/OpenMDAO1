@@ -19,7 +19,7 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
-
+from openmdao.devtools.debug import diff_max_mem
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -204,7 +204,7 @@ class Group(System):
         return self.subsystems(local=local, recurse=recurse, typ=Component,
                                include_self=include_self)
 
-    def _setup_paths(self, parent_path):
+    def _setup_paths(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
@@ -212,10 +212,13 @@ class Group(System):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System` and all subsystems.
+
+        probdata : `_ProbData`
+            Problem level data container.
         """
-        super(Group, self)._setup_paths(parent_path)
+        super(Group, self)._setup_paths(parent_path, probdata)
         for sub in itervalues(self._subsystems):
-            sub._setup_paths(self.pathname)
+            sub._setup_paths(self.pathname, probdata)
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -236,8 +239,15 @@ class Group(System):
             A dictionary of metadata for parameters and for unknowns
             for all subsystems.
         """
-        self._params_dict = OrderedDict()
-        self._unknowns_dict = OrderedDict()
+        params_dict = OrderedDict()
+        unknowns_dict = OrderedDict()
+
+        self._params_dict = params_dict
+        self._unknowns_dict = unknowns_dict
+
+        self._sysdata._params_dict = params_dict
+        self._sysdata._unknowns_dict = unknowns_dict
+
         self._data_xfer = {}
         self._to_abs_unames = {}
         self._to_abs_pnames = {}
@@ -260,13 +270,13 @@ class Group(System):
             for p, meta in iteritems(subparams):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
-                self._params_dict[p] = meta
+                params_dict[p] = meta
                 self._to_abs_pnames.setdefault(meta['promoted_name'], []).append(p)
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
-                self._unknowns_dict[u] = meta
+                unknowns_dict[u] = meta
                 self._to_abs_unames.setdefault(meta['promoted_name'], []).append(u)
 
             # check for any promotes that didn't match a variable
@@ -274,10 +284,10 @@ class Group(System):
 
         # set src_indices for promoted vars (needed to setup dicts first to find them)
         for p, idxs in self._src_idxs.items():
-            for p_abs in get_absvarpathnames(p, self._params_dict, 'params'):
-                self._params_dict[p_abs]['src_indices'] = idxs
+            for p_abs in get_absvarpathnames(p, params_dict, 'params'):
+                params_dict[p_abs]['src_indices'] = idxs
 
-        return self._params_dict, self._unknowns_dict
+        return params_dict, unknowns_dict
 
     def _promoted_name(self, name, subsystem):
         """
@@ -311,6 +321,7 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
+    @diff_max_mem
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
@@ -378,19 +389,20 @@ class Group(System):
 
         self._setup_data_transfer(my_params, None)
 
-        # create storage for the relevant vecwrappers,
-        # keyed by variable_of_interest
         all_vois = set([None])
-        for vois in relevance.groups:
-            all_vois.update(vois)
-            for voi in vois:
-                if parent is None:
-                    self._create_vecs(my_params, voi, impl)
-                else:
-                    self._create_views(top_unknowns, parent, my_params,
-                                       voi)
+        if self._probdata.top_lin_gs:
+            # create storage for the relevant vecwrappers,
+            # keyed by variable_of_interest
+            for vois in relevance.groups:
+                all_vois.update(vois)
+                for voi in vois:
+                    if parent is None:
+                        self._create_vecs(my_params, voi, impl)
+                    else:
+                        self._create_views(top_unknowns, parent, my_params,
+                                           voi)
 
-                self._setup_data_transfer(my_params, voi)
+                    self._setup_data_transfer(my_params, voi)
 
         self._setup_gs_outputs(all_vois)
 
@@ -431,10 +443,13 @@ class Group(System):
 
         # create implementation specific VecWrappers
         if voi is None:
-            self.unknowns = impl.create_src_vecwrapper(sys_pathname, comm)
+            self.unknowns = impl.create_src_vecwrapper(sys_pathname,
+                                                       self._sysdata, comm)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
-            self.resids = impl.create_src_vecwrapper(sys_pathname, comm)
-            self.params = impl.create_tgt_vecwrapper(sys_pathname, comm)
+            self.resids = impl.create_src_vecwrapper(sys_pathname,
+                                                     self._sysdata, comm)
+            self.params = impl.create_tgt_vecwrapper(sys_pathname,
+                                                     self._sysdata, comm)
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
@@ -448,24 +463,28 @@ class Group(System):
                               relevance=self._relevance,
                               var_of_interest=None, store_byobjs=True)
 
-        dunknowns = impl.create_src_vecwrapper(sys_pathname, comm)
-        dresids = impl.create_src_vecwrapper(sys_pathname, comm)
-        dparams = impl.create_tgt_vecwrapper(sys_pathname, comm)
+        if voi is None or self._probdata.top_lin_gs:
+            dunknowns = impl.create_src_vecwrapper(sys_pathname,
+                                                   self._sysdata, comm)
+            dresids = impl.create_src_vecwrapper(sys_pathname,
+                                                 self._sysdata, comm)
+            dparams = impl.create_tgt_vecwrapper(sys_pathname,
+                                                 self._sysdata, comm)
 
-        dunknowns.setup(unknowns_dict, relevance=self._relevance,
-                        var_of_interest=voi,
-                        shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
-        dresids.setup(unknowns_dict, relevance=self._relevance,
-                      var_of_interest=voi,
-                      shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
-        dparams.setup(None, params_dict, self.unknowns, my_params,
-                      self.connections, relevance=self._relevance,
-                      var_of_interest=voi,
-                      shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
+            dunknowns.setup(unknowns_dict, relevance=self._relevance,
+                            var_of_interest=voi,
+                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
+            dresids.setup(unknowns_dict, relevance=self._relevance,
+                          var_of_interest=voi,
+                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
+            dparams.setup(None, params_dict, self.unknowns, my_params,
+                          self.connections, relevance=self._relevance,
+                          var_of_interest=voi,
+                          shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
-        self.dumat[voi] = dunknowns
-        self.drmat[voi] = dresids
-        self.dpmat[voi] = dparams
+            self.dumat[voi] = dunknowns
+            self.drmat[voi] = dresids
+            self.dpmat[voi] = dparams
 
     def _get_fd_params(self):
         """
@@ -1202,7 +1221,7 @@ class Group(System):
         return (min_procs, max_procs)
 
     def _get_global_idxs(self, uname, pname, top_uname, top_pname, u_var_idxs,
-                         u_sizes, p_var_idxs, p_sizes, var_of_interest, mode):
+                         u_sizes, p_var_idxs, p_sizes, mode):
         """
         Return the global indices into the distributed unknowns and params vectors
         for the given unknown and param.  The given unknown and param have already
@@ -1230,9 +1249,6 @@ class Group(System):
         p_sizes : ndarray
             (rank x var) array of parameter sizes.
 
-        var_of_interest : str or None
-            Name of variable of interest used to determine relevance.
-
         mode : str
             Solution mode, either 'fwd' or 'rev'
 
@@ -1255,10 +1271,6 @@ class Group(System):
             (rev and not pdist and umeta.get('remote')) or
             (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
-            return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
-
-        if not self._relevance.is_relevant(var_of_interest, top_uname) or \
-           not self._relevance.is_relevant(var_of_interest, top_pname):
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
         if pdist:
@@ -1306,6 +1318,7 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
+    @diff_max_mem
     def _setup_data_transfer(self, my_params, var_of_interest):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
@@ -1329,11 +1342,11 @@ class Group(System):
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
                            if relevance.is_relevant(var_of_interest,
-                                          self.unknowns._to_top_prom_name[n]))
+                                          self.unknowns._sysdata._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
                         if relevance.is_relevant(var_of_interest,
-                                            self.params._to_top_prom_name[n]))
+                                            self.params._sysdata._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
@@ -1361,8 +1374,8 @@ class Group(System):
                 top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
                 top_prelname = self._params_dict[param]['top_promoted_name']
 
-                if not (relevance.is_relevant(var_of_interest, top_prelname) or
-                        relevance.is_relevant(var_of_interest, top_urelname)):
+                if not relevance.is_relevant(var_of_interest, top_urelname) or \
+                   not relevance.is_relevant(var_of_interest, top_prelname):
                     continue
 
                 umeta = self.unknowns.metadata(urelname)
@@ -1373,7 +1386,7 @@ class Group(System):
                 tgt_sys = name_relative_to(self.pathname, param)
                 src_sys = name_relative_to(self.pathname, unknown)
 
-                for mode, sname in (('fwd', tgt_sys), ('rev', src_sys)):
+                for sname, mode in ((tgt_sys, 'fwd'), (src_sys, 'rev')):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                         xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
@@ -1385,8 +1398,7 @@ class Group(System):
                         sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                              top_urelname, top_prelname,
                                                              vec_unames, unknown_sizes,
-                                                             vec_pnames, param_sizes,
-                                                             var_of_interest, mode)
+                                                             vec_pnames, param_sizes,mode)
                         vec_conns.append((prelname, urelname))
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)

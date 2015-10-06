@@ -29,6 +29,13 @@ from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
+class _ProbData(object):
+    """
+    A container for Problem level data that is needed by subsystems.
+    """
+    def __init__(self):
+        self.top_lin_gs = False
+
 
 class Problem(System):
     """ The Problem is always the top object for running an OpenMDAO
@@ -50,6 +57,7 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None):
         super(Problem, self).__init__()
         self.root = root
+        self._probdata = _ProbData()
 
         if MPI: # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
@@ -212,8 +220,12 @@ class Problem(System):
         # call _setup_variables again if we change metadata
         meta_changed = False
 
+        self._probdata = _ProbData()
+        if isinstance(self.root.ln_solver, LinearGaussSeidel):
+            self._probdata.top_lin_gs = True
+
         # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname)
+        self.root._setup_paths(self.pathname, self._probdata)
 
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
@@ -260,7 +272,7 @@ class Problem(System):
         # if the system tree has changed, we need to recompute pathnames,
         # variable metadata, and connections
         if tree_changed:
-            self.root._setup_paths(self.pathname)
+            self.root._setup_paths(self.pathname, probdata)
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict)
@@ -307,17 +319,23 @@ class Problem(System):
         #      the unknowns dict
         promoted_unknowns = self.root._to_abs_unames
 
+        parallel_p = False
         for vnames in pois:
+            if len(vnames) > 1:
+                parallel_p = True
             for v in vnames:
                 if v not in promoted_unknowns:
                     raise NameError("Can't find param of interest '%s'." % v)
 
+        parallel_u = False
         for vnames in oois:
+            if len(vnames) > 1:
+                parallel_u = True
             for v in vnames:
                 if v not in promoted_unknowns:
                     raise NameError("Can't find quantity of interest '%s'." % v)
 
-        mode = self._check_for_matrix_matrix(pois, oois)
+        mode = self._check_for_parallel_derivs(pois, oois, parallel_u, parallel_p)
 
         relevance = Relevance(self.root, params_dict, unknowns_dict, connections,
                               pois, oois, mode)
@@ -831,6 +849,8 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
+        root._shared_du_vec[:] = 0.0
+        root._shared_dr_vec[:] = 0.0
 
         # if we don't clear these out, we get small differences in derivs
         # in CADRE
@@ -922,7 +942,7 @@ class Problem(System):
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                vkey = self._get_voi_key(voi)
+                vkey = self._get_voi_key(voi, params)
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -950,7 +970,7 @@ class Problem(System):
             # of interest.
             for i in range(len(in_idxs)):
                 for voi in params:
-                    vkey = self._get_voi_key(voi)
+                    vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
@@ -960,9 +980,9 @@ class Problem(System):
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
                 for param, dx in iteritems(dx_mat):
-                    vkey = self._get_voi_key(param)
-                    if vkey is None:
-                        param = params[0] # if voi is None, params has only one serial entry
+                    vkey = self._get_voi_key(param, params)
+                    if param is None:
+                        param = params[0]
 
                     for item in output_list:
                         if relevance.is_relevant(param, item):
@@ -1003,14 +1023,16 @@ class Problem(System):
 
         return J
 
-    def _get_voi_key(self, voi):
+    def _get_voi_key(self, voi, grp):
         """Return the voi name, which allows for parallel derivative calculations
         (currently only works with LinearGaussSeidel), or None for those
         solvers that can only do a single linear solve at a time.
         """
-        if voi in self._driver_vois and \
-                  isinstance(self.root.ln_solver, LinearGaussSeidel):
-            return voi
+        if (voi in self._driver_vois and
+                  isinstance(self.root.ln_solver, LinearGaussSeidel)):
+            if (self.root.ln_solver.options['single_voi_relevance_reduction'] or
+                      len(grp) > 1):
+                return voi
 
         return None
 
@@ -1237,27 +1259,35 @@ class Problem(System):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
 
-    def _check_for_matrix_matrix(self, params, unknowns):
+    def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the
-        assumptions needed for matrix-matrix calculation. Returns the mode that
-        the system needs to use.
+        assumptions needed for parallel dervivative calculation. Returns the
+        mode that the system needs to use.
         """
 
         mode = self._mode('auto', params, unknowns)
 
-        # TODO : Only Linear GS is supported on system
+        if mode == 'fwd':
+            has_parallel_derivs = par_p
+        else:
+            has_parallel_derivs = par_u
 
-        for sub in self.root.subgroups(recurse=True):
-            sub_mode = sub.ln_solver.options['mode']
+        # the type of the root linear solver determines whether we solve
+        # multiple RHS in parallel. Currently only LinearGaussSeidel can
+        # support this.
+        if (isinstance(self.root.ln_solver, LinearGaussSeidel) and
+               self.root.ln_solver.options['single_voi_relevance_reduction']) \
+               and has_parallel_derivs:
 
-            # Modes must match root for all subs
-            if sub_mode not in (mode, 'auto'):
-                msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
-                        " Modes must match to use Matrix Matrix."
-                msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
-                raise RuntimeError(msg)
+            for sub in self.root.subgroups(recurse=True):
+                sub_mode = sub.ln_solver.options['mode']
 
-            # TODO : Only Linear GS is supported on sub
+                # Modes must match root for all subs
+                if isinstance(sub.ln_solver, LinearGaussSeidel) and sub_mode not in (mode, 'auto'):
+                    msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                            " Modes must match to use parallel derivative groups."
+                    msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                    raise RuntimeError(msg)
 
         return mode
 

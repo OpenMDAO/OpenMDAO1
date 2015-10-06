@@ -42,8 +42,9 @@ class TestGroup(unittest.TestCase):
         group.add('C1', ExecComp('y=x*2.0'), promotes=['x'])
         group.add("C2", ExecComp('y=x*2.0'), promotes=['y'])
 
+        prob = Problem()
         # paths must be initialized prior to calling _setup_variables
-        group._setup_paths('')
+        group._setup_paths('', prob._probdata)
         params_dict, unknowns_dict = group._setup_variables()
 
         self.assertEqual(list(params_dict.keys()), ['C1.x', 'C2.x'])
@@ -60,7 +61,8 @@ class TestGroup(unittest.TestCase):
 
         root.connect('C1.y',['C2.x', 'C3.x'])
 
-        root._setup_paths('')
+        prob = Problem()
+        root._setup_paths('', prob._probdata)
         params_dict, unknowns_dict = root._setup_variables()
 
         # verify we get correct connection information
@@ -76,8 +78,6 @@ class TestGroup(unittest.TestCase):
         prob = Problem(root=root)
 
         prob.setup(check=False)
-
-        #root._setup_paths('')
 
         self.assertEqual(root.pathname, '')
         self.assertEqual(root.G3.pathname, 'G3')

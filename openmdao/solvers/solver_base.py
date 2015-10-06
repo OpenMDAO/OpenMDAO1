@@ -155,5 +155,3 @@ class NonLinearSolver(SolverBase):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         pass
-
-

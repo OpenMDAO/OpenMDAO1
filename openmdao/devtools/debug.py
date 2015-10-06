@@ -1,7 +1,9 @@
 """functions useful for debugging openmdao"""
+from __future__ import print_function
 
 import sys
 from pprint import pformat
+from functools import wraps
 from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
 
 
@@ -71,3 +73,23 @@ def max_mem_usage():
     total = getrusage(RUSAGE_SELF).ru_maxrss / denom
     total += getrusage(RUSAGE_CHILDREN).ru_maxrss / denom
     return total
+
+
+def diff_max_mem(fn):
+    """
+    This gives the difference in max memory before and after the
+    decorated function is called.  Results can sometimes be
+    deceptive since it only deals with max memory, i.e., the
+    value coming back from getrusage never goes down, even if
+    memory is freed up.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        startmem = max_mem_usage()
+        ret = fn(*args, **kwargs)
+        finalmem = max_mem_usage()
+        diff = finalmem-startmem
+        if diff > 0.0:
+            print("%s added %s MB" % (fn.__name__, diff))
+        return ret
+    return wrapper
