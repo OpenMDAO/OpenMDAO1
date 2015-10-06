@@ -849,8 +849,6 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        root._shared_du_vec[:] = 0.0
-        root._shared_dr_vec[:] = 0.0
 
         # if we don't clear these out, we get small differences in derivs
         # in CADRE
@@ -1030,8 +1028,8 @@ class Problem(System):
         """
         if (voi in self._driver_vois and
                   isinstance(self.root.ln_solver, LinearGaussSeidel)):
-            if (self.root.ln_solver.options['single_voi_relevance_reduction'] or
-                      len(grp) > 1):
+            if (len(grp) > 1 or 
+                   self.root.ln_solver.options['single_voi_relevance_reduction']):
                 return voi
 
         return None

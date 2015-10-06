@@ -19,7 +19,6 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
-from openmdao.devtools.debug import diff_max_mem
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -321,7 +320,6 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
-    @diff_max_mem
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
@@ -1318,7 +1316,6 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
-    @diff_max_mem
     def _setup_data_transfer(self, my_params, var_of_interest):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
