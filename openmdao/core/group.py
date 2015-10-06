@@ -13,17 +13,16 @@ import numpy as np
 import networkx as nx
 
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.system import System
-from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
 from openmdao.devtools.debug import debug
 
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('TRACE_PETSC')
+
 
 class Group(System):
     """A system that contains other systems.
@@ -403,7 +402,7 @@ class Group(System):
         self._abs_inputs = {}
         for voi, vec in iteritems(self.dpmat):
             self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
-                                         if not meta.get('pass_by_obj')}
+                                     if not meta.get('pass_by_obj')}
 
         self._relname_map = None # reclaim some memory
 
@@ -667,7 +666,7 @@ class Group(System):
         else: 
             for sub in self._local_subsystems:
                 sub._sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
-                                     gs_outputs=gs_outputs)
+                                      gs_outputs=gs_outputs)
 
         if mode == 'rev':
             self._transfer_data(mode='rev', deriv=True) # Full Scatter
@@ -833,7 +832,7 @@ class Group(System):
             start = self.pathname + '.'
             slen = len(start)
             graph = sgraph.subgraph((n for n in sgraph
-                                      if start==n[:slen]))
+                                    if start==n[:slen]))
         else:
             path = []
             graph = sgraph.subgraph(sgraph.nodes_iter())
@@ -858,7 +857,7 @@ class Group(System):
         """Keep breaking cycles until the graph is a DAG.
         """
         strong = [s for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
+                  if len(s) > 1]
         while strong:
             # First of all, see if the cycle has in edges
             in_edges = []
@@ -866,7 +865,7 @@ class Group(System):
             if len(strong[0]) < len(graph):
                 for s in strong[0]:
                     count = len([u for u,v in graph.in_edges(s)
-                                      if u not in strong[0]])
+                                if u not in strong[0]])
                     in_edges.append((count, s))
                 in_edges = sorted(in_edges)
                 if in_edges[-1][0] > 0:
@@ -1099,7 +1098,7 @@ class Group(System):
         # FIXME: if we switch to push scatters, this check will flip
         if ((not rev and pmeta.get('remote')) or
             (rev and not pdist and umeta.get('remote')) or
-            (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
+                (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
 
@@ -1119,8 +1118,7 @@ class Group(System):
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])
                 end = start + u_sizes[irank, ivar]
-                on_irank = np.logical_and(start <= arg_idxs,
-                                             arg_idxs < end)
+                on_irank = np.logical_and(start <= arg_idxs, arg_idxs < end)
 
                 # Compute conversion to new ordering
 
@@ -1174,21 +1172,21 @@ class Group(System):
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
-                           if relevance.is_relevant(var_of_interest,
-                                          self.unknowns._to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest,
+                      self.unknowns._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
-                        if relevance.is_relevant(var_of_interest,
-                                            self.params._to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest,
+                      self.params._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
         param_sizes = []
         for iproc in range(self.comm.size):
             unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
-                                               if n in vec_unames])
+                                  if n in vec_unames])
             param_sizes.append([sz for n, sz in self._p_size_lists[iproc]
-                                               if n in vec_pnames])
+                                if n in vec_pnames])
 
         unknown_sizes = np.array(unknown_sizes,
                                  dtype=self._impl.idx_arr_type)
@@ -1244,10 +1242,10 @@ class Group(System):
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
                     self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                        self.dpmat[var_of_interest],
-                                                        src_idxs, tgt_idxs,
-                                                        vec_conns, byobj_conns,
-                                                        mode)
+                                                self.dpmat[var_of_interest],
+                                                src_idxs, tgt_idxs,
+                                                vec_conns, byobj_conns,
+                                                mode)
 
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
@@ -1270,10 +1268,10 @@ class Group(System):
             tgt_idxs = self.unknowns.merge_idxs(full_tgts)
             self._data_xfer[('', mode, var_of_interest)] = \
                 self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                    self.dpmat[var_of_interest],
-                                                    src_idxs, tgt_idxs,
-                                                    full_flats, full_byobjs,
-                                                    mode)
+                                            self.dpmat[var_of_interest],
+                                            src_idxs, tgt_idxs,
+                                            full_flats, full_byobjs,
+                                            mode)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
@@ -1436,6 +1434,7 @@ class Group(System):
         else:
             _dump(self, stream)
 
+
 def get_absvarpathnames(var_name, var_dict, dict_name):
     """
     Args
@@ -1457,7 +1456,7 @@ def get_absvarpathnames(var_name, var_dict, dict_name):
     """
 
     pnames = [n for n, m in iteritems(var_dict)
-                   if m['promoted_name'] == var_name]
+              if m['promoted_name'] == var_name]
     if not pnames:
         raise KeyError("'%s' not found in %s" % (var_name, dict_name))
 
