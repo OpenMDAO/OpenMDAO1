@@ -325,6 +325,7 @@ class TestProblem(unittest.TestCase):
         root.connect('parm.x', 'comp.x', src_indices=[0,1,2,3])
 
         prob = Problem(root)
+        prob.driver.add_desvar('parm.x', indices=[0,1,2,3])
         prob.setup(check=False)
         prob.run()
 
@@ -333,8 +334,6 @@ class TestProblem(unittest.TestCase):
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        from pprint import pprint
-        pprint(J)
         np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
             [ -3., -3., -17.,  9.],
         ]))
