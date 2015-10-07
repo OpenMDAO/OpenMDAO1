@@ -588,6 +588,58 @@ class Driver(object):
 
         self.recorders.record(system, metadata)
 
+    def calc_gradient(self, indep_list, unknown_list, mode='auto',
+                      return_format='array'):
+        """ Returns the scaled gradient for the system that is slotted in
+        self.root, scaled by all scalers that were specified when the desvars
+        and constraints were added.
+
+        Args
+        ----
+        indep_list : list of strings
+            List of independent variable names that derivatives are to
+            be calculated with respect to. All params must have a IndepVarComp.
+
+        unknown_list : list of strings
+            List of output or state names that derivatives are to
+            be calculated for. All must be valid unknowns in OpenMDAO.
+
+        mode : string, optional
+            Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
+            Default is 'auto', which uses mode specified on the linear solver
+            in root.
+
+        return_format : string, optional
+            Format for the derivatives, can be 'array' or 'dict'.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params.
+        """
+
+        dv_conversions = {}
+        for dvname in indep_list:
+            scaler = self._desvars[dvname].get('scaler')
+            if scaler is not None:
+                dv_conversions[dvname] = 1.0/scaler
+
+        cn_conversions = {}
+        for cnname in unknown_list:
+
+            # No scaling for objective
+            if cnname in self._objs:
+                continue
+
+            scaler = self._cons[cnname].get('scaler')
+            if scaler is not None:
+                cn_conversions[cnname] = 1.0/scaler
+
+        jac = self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                          return_format=return_format)
+
+        return jac
+
     def generate_docstring(self):
         """
         Generates a numpy-style docstring for a user-created Driver class.
