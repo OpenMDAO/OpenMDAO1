@@ -637,9 +637,11 @@ class Driver(object):
 
             # No scaling for objective
             if cnname in self._objs:
-                continue
+                meta = self._objs
+            else:
+                meta = self._cons
 
-            scaler = self._cons[cnname].get('scaler')
+            scaler = meta[cnname].get('scaler')
             if scaler != 1.0:
                 cn_conversions[cnname] = scaler
 
