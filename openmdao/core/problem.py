@@ -872,7 +872,7 @@ class Problem(System):
                         cols = len(idx)
                     for row in range(0, rows):
                         for col in range(0, cols):
-                            J[ui+row, pi+col] = pd[row, col]
+                            J[ui+row][pi+col] = pd[row][col]
                     pi += cols
                 ui += rows
         return J
