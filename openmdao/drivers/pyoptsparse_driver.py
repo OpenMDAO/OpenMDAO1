@@ -103,7 +103,7 @@ class pyOptSparseDriver(Driver):
         # Initial Run
         problem.root.solve_nonlinear(metadata=self.metadata)
 
-        opt_prob = Optimization(self.options['title'], self.objfunc)
+        opt_prob = Optimization(self.options['title'], self._objfunc)
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
@@ -196,7 +196,7 @@ class pyOptSparseDriver(Driver):
             sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
         else:
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self.gradfunc, storeHistory=self.hist_file)
+            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)
 
         self._problem = None
 
@@ -223,7 +223,7 @@ class pyOptSparseDriver(Driver):
         except KeyError: #nothing is here, so something bad happened!
             self.exit_flag = 0
 
-    def objfunc(self, dv_dict):
+    def _objfunc(self, dv_dict):
         """ Function that evaluates and returns the objective function and
         constraints. This function is passed to pyOpt's Optimization object
         and is called from its optimizers.
@@ -311,7 +311,7 @@ class pyOptSparseDriver(Driver):
         #print(func_dict)
         return func_dict, fail
 
-    def gradfunc(self, dv_dict, func_dict):
+    def _gradfunc(self, dv_dict, func_dict):
         """ Function that evaluates and returns the gradient of the objective
         function and constraints. This function is passed to pyOpt's
         Optimization object and is called from its optimizers.
