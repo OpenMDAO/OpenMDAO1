@@ -180,6 +180,39 @@ class MPITests2(MPITestCase):
             else:
                 self.fail("Exception expected")
 
+    def test_multiple_problems(self):
+        if MPI: # pragma: no cover
+            # split the comm and run an instance of the Problem in each subcomm
+            subcomm = self.comm.Split(self.comm.rank)
+            prob = Problem(Group(), impl=impl, comm=subcomm)
+
+            size = 5
+            value = self.comm.rank + 1
+            values = np.ones(size)*value
+
+            A1 = prob.root.add('A1', IndepVarComp('x', values))
+            C1 = prob.root.add('C1', ABCDArrayComp(size))
+
+            prob.root.connect('A1.x', 'C1.a')
+            prob.root.connect('A1.x', 'C1.b')
+
+            prob.setup(check=False)
+            prob.run()
+
+            # check the first output array and store in result
+            self.assertTrue(all(prob['C1.c']==np.ones(size)*(value*2)))
+            result = prob['C1.c']
+
+            # gather the results from the separate processes/problems and check
+            # for expected values
+            results = self.comm.allgather(result)
+            self.assertEqual(len(results), self.comm.size)
+
+            for n in range(self.comm.size):
+                expected = np.ones(size)*2*(n+1)
+                self.assertTrue(all(results[n]==expected))
+
+
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
     mpirun_tests()
