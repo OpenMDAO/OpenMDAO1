@@ -504,16 +504,18 @@ class System(object):
             # Linear GS imposes a stricter requirement on whether or not to run.
             abs_inputs = self._abs_inputs[voi]
             do_apply = ls_inputs[voi] is None or (abs_inputs and
-                                                  len(abs_inputs.intersection(ls_inputs[voi])))
+                                  len(abs_inputs.intersection(ls_inputs[voi])))
 
             if fwd:
                 dresids.vec[:] = 0.0
-                dparams._apply_unit_derivatives(iterkeys(dparams))
-                if force_fd:
-                    self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                else:
-                    self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                dresids.vec *= -1.0
+
+                if do_apply:
+                    dparams._apply_unit_derivatives(iterkeys(dparams))
+                    if force_fd:
+                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    else:
+                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    dresids.vec *= -1.0
 
                 for var, val in iteritems(dunknowns.flat):
                     # Skip all states
@@ -531,16 +533,17 @@ class System(object):
                 # the 'du' vector at this point without stomping on the
                 # previous component's contributions, we can multiply
                 # our local 'arg' by -1, and then revert it afterwards.
-                dresids.vec *= -1.0
-                try:
+
+                if do_apply:
+                    dresids.vec *= -1.0
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                finally:
+                    dresids.vec *= -1.0
+
                     dparams._apply_unit_derivatives(iterkeys(dparams))
 
-                dresids.vec *= -1.0
                 for var, val in iteritems(dresids.flat):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
