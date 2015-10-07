@@ -635,7 +635,7 @@ class Driver(object):
         cn_conversions = {}
         for cnname in unknown_list:
 
-            # No scaling for objective
+            # We scale objective and constraint
             if cnname in self._objs:
                 meta = self._objs
             else:
