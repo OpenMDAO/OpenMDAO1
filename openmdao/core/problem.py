@@ -826,8 +826,8 @@ class Problem(System):
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
-                idx = self._poi_indices
-                if p in idx:
+                if p in self._poi_indices:
+                    idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
                     psize += self.root.unknowns.metadata(p)['size']
@@ -846,7 +846,8 @@ class Problem(System):
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
-                    if p in idx:
+                    if p in self._poi_indices:
+                        idx = self._poi_indices[p]
                         cols = len(idx)
                     for row in range(0, rows):
                         for col in range(0, cols):
@@ -931,8 +932,8 @@ class Problem(System):
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
-                idx = self._poi_indices
-                if p in idx:
+                if p in self._poi_indices:
+                    idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
                     psize += self.root.unknowns.metadata(p)['size']

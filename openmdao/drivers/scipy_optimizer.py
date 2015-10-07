@@ -71,6 +71,8 @@ class ScipyOptimizer(Driver):
         self.options.add_option('disp', True,
                                 desc='Set to False to prevent printing of Scipy '
                                 'convergence messages')
+        self.options.add_option('exit_flag', 0,
+                                desc='0 for fail, 1 for ok')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
@@ -78,6 +80,7 @@ class ScipyOptimizer(Driver):
         self.metadata = None
         self._problem = None
         self.result = None
+        self.exit_flag = 0
         self.grad_cache = None
         self.con_cache = None
         self.con_idx = {}
@@ -191,6 +194,7 @@ class ScipyOptimizer(Driver):
 
         self._problem = None
         self.result = result
+        self.exit_flag = 1 if self.result.success else 0
 
         print('Optimization Complete')
         print('-'*35)
