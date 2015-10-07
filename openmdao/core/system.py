@@ -535,14 +535,15 @@ class System(object):
                 # our local 'arg' by -1, and then revert it afterwards.
 
                 if do_apply:
-                    dresids.vec *= -1.0
-                    if force_fd:
-                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    else:
-                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids.vec *= -1.0
-
-                    dparams._apply_unit_derivatives(iterkeys(dparams))
+                    try:
+                        dresids.vec *= -1.0
+                        if force_fd:
+                            self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                        else:
+                            self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                        dresids.vec *= -1.0
+                    finally:
+                        dparams._apply_unit_derivatives(iterkeys(dparams))
 
                 for var, val in iteritems(dresids.flat):
                     # Skip all states
