@@ -528,14 +528,13 @@ class System(object):
                 for val in itervalues(dunknowns.flat):
                     val[:] = 0.0
 
-                # Sign on the local Jacobian needs to be -1 before
-                # we add in the fake residual. Since we can't modify
-                # the 'du' vector at this point without stomping on the
-                # previous component's contributions, we can multiply
-                # our local 'arg' by -1, and then revert it afterwards.
-
                 if do_apply:
                     try:
+                        # Sign on the local Jacobian needs to be -1 before
+                        # we add in the fake residual. Since we can't modify
+                        # the 'du' vector at this point without stomping on the
+                        # previous component's contributions, we can multiply
+                        # our local 'arg' by -1, and then revert it afterwards.
                         dresids.vec *= -1.0
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
