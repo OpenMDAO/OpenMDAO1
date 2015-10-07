@@ -494,16 +494,19 @@ class Driver(object):
             scaler = scaler.flatten()
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
-
-        # Flatten AND scale/offset
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
-            lower = (lower + adder)*scaler
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
-            upper = (upper + adder)*scaler
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
+
+        # Scale the low and high values
+        if lower is not None:
+            lower = (lower + adder)*scaler
+        if upper is not None:
+            upper = (upper + adder)*scaler
+        if equals is not None:
             equals = (equals + adder)*scaler
 
         con = {}

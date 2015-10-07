@@ -746,7 +746,8 @@ class Problem(System):
                                                  dv_scale=dv_scale,
                                                  cn_scale=cn_scale)
 
-    def _calc_gradient_fd(self, indep_list, unknown_list, return_format):
+    def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
+                                 dv_scale=None, cn_scale=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -763,6 +764,12 @@ class Problem(System):
         return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -771,6 +778,11 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
+
+        if dv_scale is None:
+            dv_scale = {}
+        if cn_scale is None:
+            cn_scale = {}
 
         abs_params = []
         for name in indep_list:
@@ -829,6 +841,13 @@ class Problem(System):
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
+
+                    # Driver scaling
+                    if ikey in dv_scale:
+                        J[okey][ikey] *= dv_scale[ikey]
+                    if okey in cn_scale:
+                        J[okey][ikey] *= cn_scale[okey]
+
         else:
             usize = 0
             psize = 0
@@ -861,6 +880,13 @@ class Problem(System):
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
+
+                            # Driver scaling
+                            if p in dv_scale:
+                                J[ui+row][pi+col] *= dv_scale[p]
+                            if u in cn_scale:
+                                J[ui+row][pi+col]*= cn_scale[u]
+
                     pi += cols
                 ui += rows
         return J
@@ -1096,9 +1122,9 @@ class Problem(System):
 
                                     # Driver scaling
                                     if param in in_scale:
-                                        J[item][param][j-jbase, :] *= in_scale[param]
+                                        J[param][item][j-jbase, :] *= in_scale[param]
                                     if item in un_scale:
-                                        J[item][param][j-jbase, :] *= un_scale[item]
+                                        J[param][item][j-jbase, :] *= un_scale[item]
 
                             else:
                                 if mode == 'fwd':

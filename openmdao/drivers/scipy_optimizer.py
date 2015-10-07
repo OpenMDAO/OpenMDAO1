@@ -293,8 +293,8 @@ class ScipyOptimizer(Driver):
             Gradient of objective with respect to parameter array.
         """
 
-        grad = self._problem.calc_gradient(self.params, self.objs+self.cons,
-                                           return_format='array')
+        grad = self.calc_gradient(self.params, self.objs+self.cons,
+                                  return_format='array')
         self.grad_cache = grad
 
         #print("Gradients calculated")
