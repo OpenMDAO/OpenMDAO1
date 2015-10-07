@@ -494,12 +494,17 @@ class Driver(object):
             scaler = scaler.flatten()
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
+
+        # Flatten AND scale/offset
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
+            lower = (lower + adder)*scaler
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
+            upper = (upper + adder)*scaler
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
+            equals = (equals + adder)*scaler
 
         con = {}
         con['lower'] = lower
@@ -621,7 +626,7 @@ class Driver(object):
         dv_conversions = {}
         for dvname in indep_list:
             scaler = self._desvars[dvname].get('scaler')
-            if scaler is not None:
+            if scaler != 1.0:
                 dv_conversions[dvname] = 1.0/scaler
 
         cn_conversions = {}
@@ -632,13 +637,13 @@ class Driver(object):
                 continue
 
             scaler = self._cons[cnname].get('scaler')
-            if scaler is not None:
-                cn_conversions[cnname] = 1.0/scaler
+            if scaler != 1.0:
+                cn_conversions[cnname] = scaler
 
-        jac = self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
-                                          return_format=return_format)
-
-        return jac
+        return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                           return_format=return_format,
+                                           dv_scale=dv_conversions,
+                                           cn_scale=cn_conversions)
 
     def generate_docstring(self):
         """
