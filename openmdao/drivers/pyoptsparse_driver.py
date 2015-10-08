@@ -338,9 +338,8 @@ class pyOptSparseDriver(Driver):
         sens_dict = {}
 
         try:
-            sens_dict = self._problem.calc_gradient(dv_dict.keys(),
-                                                    self.quantities,
-                                                    return_format='dict')
+            sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
+                                           return_format='dict')
             #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 
