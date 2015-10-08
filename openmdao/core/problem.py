@@ -821,7 +821,7 @@ class Problem(System):
 
                     if okey in self._qoi_indices:
                         idx = self._qoi_indices[okey]
-                        J[okey][ikey] = Jfd[(okey, fd_ikey)][idx]
+                        J[okey][ikey] = Jfd[(okey, fd_ikey)][idx, :]
                     else:
                         J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
