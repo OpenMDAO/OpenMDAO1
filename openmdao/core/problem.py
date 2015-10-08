@@ -27,7 +27,6 @@ from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
-from openmdao.devtools.debug import debug
 
 
 class Problem(System):
@@ -828,7 +827,11 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns.metadata(u)['size']
+                if u in self._qoi_indices:
+                    idx = self._qoi_indices[u]
+                    usize += len(idx)
+                else:
+                    usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
                 if p in self._poi_indices:
                     idx = self._poi_indices[p]
@@ -849,15 +852,27 @@ class Problem(System):
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     pd = Jfd[u, fd_ikey]
+
                     rows, cols = pd.shape
                     if p in self._poi_indices:
-                        idx = self._poi_indices[p]
-                        cols = len(idx)
-                    for row in range(0, rows):
-                        for col in range(0, cols):
-                            J[ui+row][pi+col] = pd[row][col]
-                    pi += cols
-                ui += rows
+                        cols = self._poi_indices[p]
+                    else:
+                        cols = range(0, cols)
+                    if u in self._qoi_indices:
+                        rows = self._qoi_indices[u]
+                    else:
+                        rows = range(0, rows)
+
+                    r = c = 0
+                    for row in rows:
+                        c = 0
+                        for col in cols:
+                            J[ui+r][pi+c] = pd[row][col]
+                            c += 1
+                        r += 1
+
+                    pi += c
+                ui += r
         return J
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode):
@@ -1182,7 +1197,7 @@ class Problem(System):
 
                             if user[0] != u_size or user[1] != p_size:
                                 msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
-                                "It should be {}, but got {}"
+                                      "It should be {}, but got {}"
                                 msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
                                 raise ValueError(msg)
 
@@ -1599,4 +1614,3 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
-
