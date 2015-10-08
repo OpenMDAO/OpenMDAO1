@@ -48,6 +48,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
+        self.dv_conversions = {}
+        self.fn_conversions = {}
 
     def _setup(self, root):
         """ Updates metadata for params, constraints and objectives, and
@@ -92,6 +94,38 @@ class Driver(object):
         self._desvars = desvars
         self._objs = objs
         self._cons = cons
+
+        # Cache scalers for derivative calculation
+
+        for name, meta in iteritems(desvars):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.dv_conversions[name] = np.reciprocal(scaler)
+
+        for name, meta in iteritems(objs):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.fn_conversions[name] = scaler
+
+        for name, meta in iteritems(cons):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.fn_conversions[name] = scaler
 
     def _map_voi_indices(self):
         poi_indices = {}
@@ -626,29 +660,10 @@ class Driver(object):
             Jacobian of unknowns with respect to params.
         """
 
-        dv_conversions = {}
-        for dvname in indep_list:
-            scaler = self._desvars[dvname].get('scaler')
-            if scaler != 1.0:
-                dv_conversions[dvname] = 1.0/scaler
-
-        cn_conversions = {}
-        for cnname in unknown_list:
-
-            # We scale objective and constraint
-            if cnname in self._objs:
-                meta = self._objs
-            else:
-                meta = self._cons
-
-            scaler = meta[cnname].get('scaler')
-            if scaler != 1.0:
-                cn_conversions[cnname] = scaler
-
         return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
                                            return_format=return_format,
-                                           dv_scale=dv_conversions,
-                                           cn_scale=cn_conversions)
+                                           dv_scale=self.dv_conversions,
+                                           cn_scale=self.fn_conversions)
 
     def generate_docstring(self):
         """
