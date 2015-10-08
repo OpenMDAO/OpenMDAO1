@@ -304,7 +304,7 @@ input parameter to the custom `MultiplyByTwoComponent`.
     prob.setup()
     prob.run()
 
-    result = root.unknowns['my_comp.y_output']
-    count = root.unknowns['my_comp.counter']
+    result = prob['my_comp.y_output']
+    count = prob['my_comp.counter']
     print result
     print count
