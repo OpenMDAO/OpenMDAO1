@@ -268,15 +268,24 @@ class ScipyOptimizer(Driver):
         meta = self._cons[name]
 
         # Equality constraints
-        if meta['equals'] is not None:
-            return meta['equals'] - cons[name][idx]
+        bound = meta['equals']
+        if bound is not None:
+            if isinstance(bound, np.ndarray):
+                bound = bound[idx]
+            return bound - cons[name][idx]
 
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        if meta['upper'] is not None:
-            return meta['upper'] - cons[name][idx]
+        bound = meta['upper']
+        if bound is not None:
+            if isinstance(bound, np.ndarray):
+                bound = bound[idx]
+            return bound - cons[name][idx]
         else:
-            return cons[name][idx] - meta['lower']
+            bound = meta['lower']
+            if isinstance(bound, np.ndarray):
+                bound = bound[idx]
+            return cons[name][idx] - bound
 
     def _gradfunc(self, x_new):
         """ Function that evaluates and returns the objective function.
