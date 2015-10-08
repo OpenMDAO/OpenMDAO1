@@ -97,6 +97,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
+        self.dv_conversions = {}
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -107,6 +108,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
+        self.fn_conversions = {}
         for name, meta in iteritems(objs):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
