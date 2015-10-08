@@ -819,7 +819,11 @@ class Problem(System):
                     if (okey, fd_ikey) not in Jfd:
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
-                    J[okey][ikey] = Jfd[(okey, fd_ikey)]
+                    if okey in self._qoi_indices:
+                        idx = self._qoi_indices[okey]
+                        J[okey][ikey] = Jfd[(okey, fd_ikey)][idx]
+                    else:
+                        J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
             usize = 0
             psize = 0
