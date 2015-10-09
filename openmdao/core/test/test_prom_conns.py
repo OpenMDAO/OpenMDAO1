@@ -17,19 +17,24 @@ class TestPromConns(unittest.TestCase):
 
         prob = Problem(root=Group())
         root = prob.root
-        desVars = root.add("desVars", IndepVarComp('Ps_exhaust', 1.0), promotes=('Ps_exhaust',))
-        nozzle = root.add("nozzle", Group())
-        press_calcs = nozzle.add('press_calcs', ExecComp('out=Ps_exhaust'), promotes=('Ps_exhaust',))
-        ideal_flow = nozzle.add("ideal_flow", Group())
-        chem_eq = ideal_flow.add('chem_eq', Group(), promotes=('P',))
-        n2ls = chem_eq.add("n2ls", ExecComp('out=P'), promotes=('P',))
-        props = ideal_flow.add("props", Group(), promotes=('P',))
-        tp2props = props.add("tp2props", ExecComp('out=P'), promotes=('P',))
-        mach_calc = ideal_flow.add("mach_calc", ExecComp('out=Ps'), promotes=('Ps',))
 
+        desVars = root.add('desVars', IndepVarComp('Ps_exhaust', 1.0), promotes=('Ps_exhaust',))
+        nozzle  = root.add('nozzle', Group())
+
+        press_calcs = nozzle.add('press_calcs', ExecComp('out=Ps_exhaust'), promotes=('Ps_exhaust',))
+        ideal_flow  = nozzle.add('ideal_flow', Group())
+
+        chem_eq     = ideal_flow.add('chem_eq', Group(), promotes=('P',))
+        props       = ideal_flow.add('props', Group(), promotes=('P',))
+        mach_calc   = ideal_flow.add('mach_calc', ExecComp('out=Ps'), promotes=('Ps',))
+
+        n2ls        = chem_eq.add('n2ls', ExecComp('out=P'), promotes=('P',))
+
+        tp2props    = props.add('tp2props', ExecComp('out=P'), promotes=('P',))
+
+        ideal_flow.connect('Ps', 'P')
         nozzle.connect('Ps_exhaust', 'ideal_flow.Ps')
         root.connect('Ps_exhaust', 'nozzle.Ps_exhaust')
-        ideal_flow.connect('Ps', 'P')
 
         prob.setup(check=False)
 
@@ -42,5 +47,5 @@ class TestPromConns(unittest.TestCase):
         for tgt in expected_targets:
             self.assertTrue('desVars.Ps_exhaust' in prob.root.connections[tgt])
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

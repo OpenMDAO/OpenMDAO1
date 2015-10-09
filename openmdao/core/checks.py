@@ -164,7 +164,8 @@ def check_connections(connections, params_dict, unknowns_dict):
     """
 
     # Get metadata for all sources
-    sources = __get_metadata(itervalues(connections), unknowns_dict)
+    srcs = (src for src, idxs in itervalues(connections))
+    sources = __get_metadata(srcs, unknowns_dict)
 
     #Get metadata for all targets
     targets = __get_metadata(iterkeys(connections), params_dict)

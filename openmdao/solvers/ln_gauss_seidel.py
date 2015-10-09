@@ -5,11 +5,25 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
-from openmdao.core.component import Component
 from openmdao.solvers.solver_base import LinearSolver
+
 
 class LinearGaussSeidel(LinearSolver):
     """ LinearSolver that uses linear Gauss Seidel.
+
+    Options
+    -------
+    options['atol'] :  float(1e-12)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] :  int(1)
+        Maximum number of iterations.
+    options['mode'] :  str('auto')
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+    options['rtol'] :  float(1e-10)
+        Absolute convergence tolerance.
+
     """
 
     def __init__(self):
@@ -23,8 +37,8 @@ class LinearGaussSeidel(LinearSolver):
         opt.add_option('maxiter', 1,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
-                       desc="Derivative calculation mode, set to 'fwd' for " + \
-                       "forward mode, 'rev' for reverse mode, or 'auto' to " + \
+                       desc="Derivative calculation mode, set to 'fwd' for " + 
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " + 
                        "let OpenMDAO determine the best mode.")
 
     def solve(self, rhs_mat, system, mode):
@@ -64,7 +78,7 @@ class LinearGaussSeidel(LinearSolver):
         vois = rhs_mat.keys()
         # John starts with the following. It is not necessary, but
         # uncommenting it helps to debug when comparing print outputs to his.
-        #for voi in vois:
+        # for voi in vois:
         #    drmat[voi].vec[:] = -rhs_mat[voi]
 
         sol_buf = OrderedDict()
@@ -72,19 +86,17 @@ class LinearGaussSeidel(LinearSolver):
         f_norm0, f_norm = 1.0, 1.0
         self.iter_count = 0
         maxiter = self.options['maxiter']
-        while self.iter_count < maxiter and \
-              f_norm > self.options['atol'] and \
-              f_norm/f_norm0 > self.options['rtol']:
+        while self.iter_count < maxiter and f_norm > self.options['atol'] and f_norm/f_norm0 > self.options['rtol']:
 
             if mode == 'fwd':
 
                 for sub in itervalues(system._subsystems):
 
                     for voi in vois:
-                        #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
+                        # print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
                         system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
-                        #print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
+                        # print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
 
                     # we need to loop over all subsystems in order to make
@@ -93,21 +105,14 @@ class LinearGaussSeidel(LinearSolver):
                     if not sub.is_active():
                         continue
 
-                    #print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
-                    if isinstance(sub, Component):
-
-                        # Components need to reverse sign and add 1 on diagonal
-                        # for explicit unknowns
-                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
-                                                         gs_outputs=gs_outputs['fwd'][sub.name])
-
-                    else:
-                        # Groups and all other systems just call their own
-                        # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                    # print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
+                  
+                    # Groups and all other systems just call their own
+                    # apply_linear.
+                    sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
-                    #for voi in vois:
+                    # for voi in vois:
                     #    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                     for voi in vois:
@@ -117,7 +122,7 @@ class LinearGaussSeidel(LinearSolver):
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
 
-                    #for voi in vois:
+                    # for voi in vois:
                     #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
@@ -133,9 +138,9 @@ class LinearGaussSeidel(LinearSolver):
                         if active:
                             dumat[voi].vec *= 0.0
 
-                        #print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        # print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, mode='rev', deriv=True, var_of_interest=voi)
-                        #print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        # print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                         if active:
                             dumat[voi].vec *= -1.0
@@ -148,25 +153,18 @@ class LinearGaussSeidel(LinearSolver):
                         continue
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                    #for voi in vois:
-                        #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    # for voi in vois:
+                    #     print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                    #print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
-                    if isinstance(sub, Component):
+                    # print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
 
-                        # Components need to reverse sign and add 1 on diagonal
-                        # for explicit unknowns
-                        system._sub_apply_linear_wrapper(sub, mode, vois, ls_inputs=system._ls_inputs,
-                                                         gs_outputs=gs_outputs['rev'][sub.name])
-
-                    else:
-                        # Groups and all other systems just call their own
-                        # apply_linear.
-                        sub.apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                    # Groups and all other systems just call their own
+                    # apply_linear.
+                    sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['rev'][sub.name])
 
-                    #for voi in vois:
-                        #print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    # for voi in vois:
+                    #     print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = drmat[voi].vec
@@ -216,8 +214,8 @@ class LinearGaussSeidel(LinearSolver):
 
         # we used to build gs_outputs up using dumat, but dumat is already
         # identical to gs_outputs in the vois we care about, so just use it.
-        system.apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
-                            gs_outputs=system.dumat)
+        system._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
+                                gs_outputs=system.dumat)
 
         norm = 0.0
         for voi, rhs in iteritems(rhs_mat):

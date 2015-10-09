@@ -13,6 +13,20 @@ from openmdao.solvers.solver_base import LinearSolver
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
     it should never be used in an MPI setting.
+
+    Options
+    -------
+    options['atol'] :  float(1e-12)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] :  int(1000)
+        Maximum number of iterations.
+    options['mode'] :  str('auto')
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+    options['precondition'] :  bool(False)
+        Set to True to turn on preconditioning.
+
     """
 
     def __init__(self):
@@ -145,7 +159,7 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system.apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
+        system._sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
 
         #print("arg", arg)
         #print("result", rhs_vec.vec)
@@ -210,4 +224,3 @@ class ScipyGMRES(LinearSolver):
             self.print_norm('GMRES', self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
             self.iter_count += 1
-

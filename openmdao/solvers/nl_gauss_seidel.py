@@ -11,6 +11,18 @@ class NLGaussSeidel(NonLinearSolver):
     `Group`. If there are no cycles, then the system will solve its
     subsystems once and terminate. Equivalent to fixed point iteration in
     cases with cycles.
+
+    Options
+    -------
+    options['atol'] :  float(1e-06)
+        Absolute convergence tolerance.
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] :  int(100)
+        Maximum number of iterations.
+    options['rtol'] :  float(1e-06)
+        Relative convergence tolerance.
+        
     """
 
     def __init__(self):

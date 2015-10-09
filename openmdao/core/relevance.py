@@ -153,7 +153,7 @@ class Relevance(object):
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
 
-        for target, source in iteritems(connections):
+        for target, (source, idxs) in iteritems(connections):
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
@@ -212,19 +212,22 @@ class Relevance(object):
             Dictionary that maps a variable name to all other variables in the
             graph that are relevant to it.
         """
+        relevant = {}
         succs = {}
         for nodes in self.inputs:
             for node in nodes:
+                relevant[node] = set()
+                succs[node] = set((node,))
                 if node in g:
-                    succs[node] = set([v for u, v in nx.dfs_edges(g, node)])
-                    succs[node].add(node)
+                    succs[node].update([v for u, v in nx.dfs_edges(g, node)])
 
-        relevant = {}
         grev = g.reverse()
+        self._outset = set()
         for nodes in self.outputs:
             for node in nodes:
+                relevant[node] = set()
+                self._outset.add(node)
                 if node in g:
-                    relevant[node] = set()
                     preds = set([v for u, v in nx.dfs_edges(grev, node)])
                     preds.add(node)
                     for inps in self.inputs:
@@ -232,7 +235,7 @@ class Relevance(object):
                             if inp in g:
                                 common = preds.intersection(succs[inp])
                                 relevant[node].update(common)
-                                relevant.setdefault(inp, set()).update(common)
+                                relevant[inp].update(common)
 
         return relevant
 
@@ -242,13 +245,25 @@ class Relevance(object):
         of each VOI to the set of systems that need to run.
         """
         relevant_systems = {}
+        grev = self._sgraph.reverse()
         for voi, relvars in iteritems(self.relevant):
+            rev = True if voi in self._outset else False
+            if rev:
+                voicomp = self._prom_to_abs[voi][0].rsplit('.', 1)[0]
+                gpath = set([voicomp])
+                gpath.update([v for u,v in nx.dfs_edges(grev, voicomp)])
             comps = set()
             for relvar in relvars:
                 for absvar in self._prom_to_abs[relvar]:
                     parts = absvar.split('.')
                     for i in range(len(parts)-1):
-                        comps.add('.'.join(parts[:i+1]))
+                        cname = '.'.join(parts[:i+1])
+                        # in rev mode, need to eliminate irrelevant systems that have shared promoted vars
+                        if rev:  
+                            if cname in gpath:
+                                comps.add(cname)
+                        else:
+                            comps.add(cname)
             relevant_systems[voi] = tuple(comps)
 
         return relevant_systems
