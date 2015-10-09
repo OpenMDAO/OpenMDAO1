@@ -7,7 +7,6 @@ from tempfile import mkdtemp
 import unittest
 import time
 
-import h5py
 from six.moves import zip
 from six import iteritems
 
@@ -28,6 +27,7 @@ def run_problem(problem):
 
 try:
     from openmdao.recorders.hdf5_recorder import HDF5Recorder
+    import h5py
 except ImportError:
     # Necessary for the file to parse
     from openmdao.recorders.base_recorder import BaseRecorder
