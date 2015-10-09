@@ -852,7 +852,7 @@ class Problem(System):
                     rows, cols = pd.shape
 
                     for row in range(0, rows):
-                        for col in  range(0, cols):
+                        for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
 
                     pi += cols
