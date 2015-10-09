@@ -1,5 +1,6 @@
 import itertools
 import time
+from collections import defaultdict
 from openmdao.core.mpi_wrap import MPI
 
 class RecordingManager(object):
@@ -12,6 +13,7 @@ class RecordingManager(object):
             }
 
         self._recorders = []
+        self._by_method = defaultdict(list)
         self.__has_serial_recorders = False
 
 
@@ -23,6 +25,15 @@ class RecordingManager(object):
 
     def __iter__(self):
         return iter(self._recorders)
+
+    def _local_metadata(self, root, vec, varnames):
+        local_vars = []
+
+        for name in varnames:
+            if root.comm.rank == root._owning_ranks[name]:
+                local_vars.append((name, vec.metadata(name)))
+
+        return local_vars
 
     def _local_vars(self, root, vec, varnames):
         local_vars = []
@@ -44,9 +55,28 @@ class RecordingManager(object):
         if root.comm.rank == 0:
             return dict(itertools.chain(*all_vars))
 
+    def record_metadata(self, root, exclude=None):
+
+        for recorder in self._by_method['record_metadata']:
+            metadata_option = recorder.options['record_metadata']
+
+            if metadata_option == False:
+                continue
+
+            if exclude is not None:
+                if recorder in exclude:
+                    continue
+                
+                exclude.add(recorder)
+            
+            recorder.record_metadata(root)
+
     def startup(self, root):
         for recorder in self._recorders:
             recorder.startup(root)
+        
+            for method in recorder.supported_methods():
+                self._by_method[method].append(recorder)
 
             if not recorder._parallel:
                 self.__has_serial_recorders = True
@@ -56,7 +86,7 @@ class RecordingManager(object):
                 self._vars_to_record['unames'].update(unames)
                 self._vars_to_record['rnames'].update(rnames)
 
-    def record(self, root, metadata):
+    def record_iteration(self, root, metadata):
         '''
         Gathers variables for non-parallel case recorders and
         calls record for all recorders
@@ -82,6 +112,6 @@ class RecordingManager(object):
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
-        for recorder in self._recorders:
+        for recorder in self._by_method['record_iteration']:
             if recorder._parallel or root.comm.rank == 0:
-                recorder.record(params, unknowns, resids, metadata)
+                recorder.record_iteration(params, unknowns, resids, metadata)
