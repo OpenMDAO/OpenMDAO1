@@ -777,7 +777,8 @@ class Problem(System):
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
                                fd_params=abs_params, fd_unknowns=unknown_list,
-                               desvar_indices=self._poi_indices)
+                               poi_indices=self._poi_indices,
+                               qoi_indices=self._qoi_indices)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -820,7 +821,7 @@ class Problem(System):
 
                     if okey in self._qoi_indices:
                         idx = self._qoi_indices[okey]
-                        J[okey][ikey] = Jfd[(okey, fd_ikey)][idx, :]
+                        J[okey][ikey] = Jfd[(okey, fd_ikey)]
                     else:
                         J[okey][ikey] = Jfd[(okey, fd_ikey)]
         else:
@@ -852,27 +853,14 @@ class Problem(System):
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     pd = Jfd[u, fd_ikey]
-
                     rows, cols = pd.shape
-                    if p in self._poi_indices:
-                        cols = self._poi_indices[p]
-                    else:
-                        cols = range(0, cols)
-                    if u in self._qoi_indices:
-                        rows = self._qoi_indices[u]
-                    else:
-                        rows = range(0, rows)
 
-                    r = c = 0
-                    for row in rows:
-                        c = 0
-                        for col in cols:
-                            J[ui+r][pi+c] = pd[row][col]
-                            c += 1
-                        r += 1
+                    for row in range(0, rows):
+                        for col in  range(0, cols):
+                            J[ui+row][pi+col] = pd[row][col]
 
-                    pi += c
-                ui += r
+                    pi += cols
+                ui += rows
         return J
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode):
