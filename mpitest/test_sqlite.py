@@ -6,12 +6,12 @@ import shelve
 import unittest
 from sqlitedict import SqliteDict
 from openmdao.core.vec_wrapper import _ByObjWrapper
-import recorder_tests as parallel_iteration
+import iteration_data_tests
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.recorders import SqliteRecorder
 from openmdao.test.record_util import create_testcase
 from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
-import metadata_tests as parallel_metadata
+import metadata_tests
 from pickle import HIGHEST_PROTOCOL
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -50,7 +50,7 @@ class TestSqliteRecorder(MPITestCase):
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
-TestSqliteRecorder = create_testcase(TestSqliteRecorder, [parallel_iteration, parallel_metadata])
+TestSqliteRecorder = create_testcase(TestSqliteRecorder, [iteration_data_tests, metadata_tests])
 
 if __name__ == "__main__":
     from openmdao.test.mpi_util import mpirun_tests

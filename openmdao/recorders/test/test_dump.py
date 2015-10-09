@@ -8,7 +8,7 @@ import unittest
 import re
 from six import StringIO
 from openmdao.recorders import DumpRecorder
-import openmdao.recorders.test.recorder_tests as iteration_testcase
+from openmdao.recorders.test import iteration_data_tests 
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.record_util import create_testcase
 
@@ -61,7 +61,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         sout.close()
 
-TestDumpRecorder = create_testcase(TestDumpRecorder, [iteration_testcase])
+TestDumpRecorder = create_testcase(TestDumpRecorder, [iteration_data_tests])
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,8 @@ import unittest
 
 from sqlitedict import SqliteDict
 from openmdao.recorders import SqliteRecorder
-import openmdao.recorders.test.recorder_tests as IterationTestCase
+from openmdao.recorders.test import iteration_data_tests
+from openmdao.recorders.test import metadata_tests
 import openmdao.recorders.test.metadata_tests as MetadataTestCase
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import _ByObjWrapper
@@ -132,7 +133,7 @@ class TestSqliteRecorder(unittest.TestCase):
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
-TestSqliteRecorder = create_testcase(TestSqliteRecorder, [IterationTestCase, MetadataTestCase])
+TestSqliteRecorder = create_testcase(TestSqliteRecorder, [iteration_data_tests, metadata_tests])
 
 if __name__ == "__main__":
     unittest.main()

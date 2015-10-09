@@ -7,8 +7,8 @@ from tempfile import mkdtemp
 import unittest
 import h5py
 from openmdao.test.util import assert_rel_error
-import openmdao.recorders.test.recorder_tests as iteration_testcase
-import openmdao.recorders.test.metadata_tests as metadata_testcase
+from openmdao.recorders.test import iteration_data_tests
+from openmdao.recorders.test import metadata_tests
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.record_util import create_testcase
 from six.moves import zip
@@ -120,7 +120,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf.close()
 
-TestHDF5Recorder = create_testcase(TestHDF5Recorder, [iteration_testcase, metadata_testcase])
+TestHDF5Recorder = create_testcase(TestHDF5Recorder, [iteration_data_tests, metadata_tests])
 
 if __name__ == "__main__":
     unittest.main()
