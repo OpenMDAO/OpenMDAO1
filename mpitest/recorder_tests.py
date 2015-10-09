@@ -9,8 +9,6 @@ from openmdao.core.component import Component
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 
-from openmdao.test.mpi_util import MPITestCase
-from openmdao.recorders import BaseRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 
@@ -18,6 +16,16 @@ if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core import BasicImpl as impl
+
+def run(problem):
+    t0 = time.time()
+    problem.run()
+    t1 = time.time()
+
+    return t0, t1
+
+def assertIterationDataRecorded(self, expected, tolerance, root):
+    raise NotImplementedError()
 
 class ABCDArrayComp(Component):
 
@@ -44,198 +52,188 @@ class ABCDArrayComp(Component):
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
 
-class RecorderTests(object):
-    class Tests(MPITestCase):
-        N_PROCS = 2
-        recorder = BaseRecorder()
-        eps = 1e-5
-        t0 = None
-        t1 = None
+def test_basic(self):
+    size = 3
 
-        def run(self, problem):
-            self.t0 = time.time()
-            problem.run()
-            self.t1 = time.time()
+    prob = Problem(Group(), impl=impl)
 
-        def assertDatasetEquals(self, expected, tolerance):
-            self.fail("assertDatasetEquals not implemented!")
+    G1 = prob.root.add('G1', ParallelGroup())
+    G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+    G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
-        def tearDown(self):
-            self.recorder.close()
+    prob.root.add('C1', ABCDArrayComp(size))
 
-        def test_basic(self):
-            size = 3
+    prob.root.connect('G1.P1.x', 'C1.a')
+    prob.root.connect('G1.P2.x', 'C1.b')
 
-            prob = Problem(Group(), impl=impl)
+    prob.driver.add_recorder(self.recorder)
 
-            G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+    self.recorder.options['record_params'] = True
+    self.recorder.options['record_resids'] = True
 
-            prob.root.add('C1', ABCDArrayComp(size))
+    prob.setup(check=False)
 
-            prob.root.connect('G1.P1.x', 'C1.a')
-            prob.root.connect('G1.P2.x', 'C1.b')
-            prob.driver.add_recorder(self.recorder)
-            prob.setup(check=False)
-            self.run(prob)
+    t0, t1 = run(prob)
+    self.recorder.close()
+   
 
-            if not MPI or prob.root.comm.rank == 0:
+    coordinate = ['Driver', (1, )]
 
-                expected_params = [
-                    ("C1.a", [1.0, 1.0, 1.0]),
-                    ("C1.b", [2.0, 2.0, 2.0]),
-                ]
-                expected_unknowns = [
-                    ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
-                    ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
-                    ("C1.c",  np.array([3.0, 3.0, 3.0])),
-                    ("C1.d",  np.array([-1.0, -1.0, -1.0])),
-                    ("C1.out_string", "_C1"),
-                    ("C1.out_list", [1.5]),
-                ]
-                expected_resids = [
-                    ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
-                    ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
-                    ("C1.c",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.d",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.out_string", ""),
-                    ("C1.out_list", []),
-                ]
+    expected_params = [
+        ("C1.a", [1.0, 1.0, 1.0]),
+        ("C1.b", [2.0, 2.0, 2.0]),
+    ]
 
-                expected = (expected_params, expected_unknowns, expected_resids)
+    expected_unknowns = [
+        ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
+        ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
+        ("C1.c",  np.array([3.0, 3.0, 3.0])),
+        ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+        ("C1.out_string", "_C1"),
+        ("C1.out_list", [1.5]),
+    ]
+    expected_resids = [
+        ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
+        ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
+        ("C1.c",  np.array([0.0, 0.0, 0.0])),
+        ("C1.d",  np.array([0.0, 0.0, 0.0])),
+        ("C1.out_string", ""),
+        ("C1.out_list", []),
+    ]
+    
+    self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-                self.assertDatasetEquals(
-                    [(['Driver', (1,)], expected)],
-                    self.eps
-                )
+def test_includes(self):
+    size = 3
 
-        def test_includes(self):
-            size = 3
+    prob = Problem(Group(), impl=impl)
 
-            prob = Problem(Group(), impl=impl)
+    G1 = prob.root.add('G1', ParallelGroup())
+    G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+    G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
-            G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+    prob.root.add('C1', ABCDArrayComp(size))
 
-            prob.root.add('C1', ABCDArrayComp(size))
+    prob.root.connect('G1.P1.x', 'C1.a')
+    prob.root.connect('G1.P2.x', 'C1.b')
 
-            prob.root.connect('G1.P1.x', 'C1.a')
-            prob.root.connect('G1.P2.x', 'C1.b')
-            prob.driver.add_recorder(self.recorder)
-            self.recorder.options['includes'] = ['C1.*']
-            prob.setup(check=False)
-            self.run(prob)
+    prob.driver.add_recorder(self.recorder)
+    self.recorder.options['record_params'] = True
+    self.recorder.options['record_resids'] = True
 
-            if not MPI or prob.root.comm.rank == 0:
-                expected_params = [
-                    ("C1.a", [1.0, 1.0, 1.0]),
-                    ("C1.b", [2.0, 2.0, 2.0]),
-                ]
-                expected_unknowns = [
-                    ("C1.c",  np.array([3.0, 3.0, 3.0])),
-                    ("C1.d",  np.array([-1.0, -1.0, -1.0])),
-                    ("C1.out_string", "_C1"),
-                    ("C1.out_list", [1.5]),
-                ]
-                expected_resids = [
-                    ("C1.c",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.d",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.out_string", ""),
-                    ("C1.out_list", []),
-                ]
+    self.recorder.options['includes'] = ['C1.*']
+    prob.setup(check=False)
 
-                expected = (expected_params, expected_unknowns, expected_resids)
+    t0, t1 = run(prob)
+    self.recorder.close()
 
-                self.assertDatasetEquals(
-                    [(['Driver', (1,)], expected)],
-                    self.eps
-                )
+    coordinate = ['Driver', (1, )]
 
-        def test_includes_and_excludes(self):
-            size = 3
+    expected_params = [
+        ("C1.a", [1.0, 1.0, 1.0]),
+        ("C1.b", [2.0, 2.0, 2.0]),
+    ]
+    expected_unknowns = [
+        ("C1.c",  np.array([3.0, 3.0, 3.0])),
+        ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+        ("C1.out_string", "_C1"),
+        ("C1.out_list", [1.5]),
+    ]
+    expected_resids = [
+        ("C1.c",  np.array([0.0, 0.0, 0.0])),
+        ("C1.d",  np.array([0.0, 0.0, 0.0])),
+        ("C1.out_string", ""),
+        ("C1.out_list", []),
+    ]
+    
+    self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-            prob = Problem(Group(), impl=impl)
+def test_includes_and_excludes(self):
+    size = 3
 
-            G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+    prob = Problem(Group(), impl=impl)
 
-            prob.root.add('C1', ABCDArrayComp(size))
+    G1 = prob.root.add('G1', ParallelGroup())
+    G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+    G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
 
-            prob.root.connect('G1.P1.x', 'C1.a')
-            prob.root.connect('G1.P2.x', 'C1.b')
-            prob.driver.add_recorder(self.recorder)
-            self.recorder.options['includes'] = ['C1.*']
-            self.recorder.options['excludes'] = ['*.out*']
-            prob.setup(check=False)
-            self.run(prob)
+    prob.root.add('C1', ABCDArrayComp(size))
 
-            if not MPI or prob.root.comm.rank == 0:
-                expected_params = [
-                    ("C1.a", [1.0, 1.0, 1.0]),
-                    ("C1.b", [2.0, 2.0, 2.0]),
-                ]
-                expected_unknowns = [
-                    ("C1.c",  np.array([3.0, 3.0, 3.0])),
-                    ("C1.d",  np.array([-1.0, -1.0, -1.0])),
-                ]
-                expected_resids = [
-                    ("C1.c",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.d",  np.array([0.0, 0.0, 0.0])),
-                ]
+    prob.root.connect('G1.P1.x', 'C1.a')
+    prob.root.connect('G1.P2.x', 'C1.b')
 
-                expected = (expected_params, expected_unknowns, expected_resids)
+    prob.driver.add_recorder(self.recorder)
 
-                self.assertDatasetEquals(
-                    [(['Driver', (1,)], expected)],
-                    self.eps
-                )
+    self.recorder.options['includes'] = ['C1.*']
+    self.recorder.options['excludes'] = ['*.out*']
+    self.recorder.options['record_params'] = True
+    self.recorder.options['record_resids'] = True
 
-        def test_solver_record(self):
-            size = 3
+    prob.setup(check=False)
 
-            prob = Problem(Group(), impl=impl)
+    t0, t1 = run(prob)
+    self.recorder.close()
+   
+    coordinate = ['Driver', (1, )]
 
-            G1 = prob.root.add('G1', ParallelGroup())
-            G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
-            G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+    expected_params = [
+        ("C1.a", [1.0, 1.0, 1.0]),
+        ("C1.b", [2.0, 2.0, 2.0]),
+    ]
 
-            prob.root.add('C1', ABCDArrayComp(size))
+    expected_unknowns = [
+        ("C1.c",  np.array([3.0, 3.0, 3.0])),
+        ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+    ]
 
-            prob.root.connect('G1.P1.x', 'C1.a')
-            prob.root.connect('G1.P2.x', 'C1.b')
-            prob.root.nl_solver.add_recorder(self.recorder)
-            prob.setup(check=False)
-            self.run(prob)
+    expected_resids = [
+        ("C1.c",  np.array([0.0, 0.0, 0.0])),
+        ("C1.d",  np.array([0.0, 0.0, 0.0])),
+    ]
 
-            if not MPI or prob.root.comm.rank == 0:
+    self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-                expected_params = [
-                    ("C1.a", [1.0, 1.0, 1.0]),
-                    ("C1.b", [2.0, 2.0, 2.0]),
-                ]
-                expected_unknowns = [
-                    ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
-                    ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
-                    ("C1.c",  np.array([3.0, 3.0, 3.0])),
-                    ("C1.d",  np.array([-1.0, -1.0, -1.0])),
-                    ("C1.out_string", "_C1"),
-                    ("C1.out_list", [1.5]),
-                ]
-                expected_resids = [
-                    ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
-                    ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
-                    ("C1.c",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.d",  np.array([0.0, 0.0, 0.0])),
-                    ("C1.out_string", ""),
-                    ("C1.out_list", []),
-                ]
+def test_solver_record(self):
+    size = 3
 
-                expected = (expected_params, expected_unknowns, expected_resids)
+    prob = Problem(Group(), impl=impl)
 
-                self.assertDatasetEquals(
-                    [(['Driver', (1,), "root", (1,)], expected)],
-                    self.eps
-                )
+    G1 = prob.root.add('G1', ParallelGroup())
+    G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+    G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+    prob.root.add('C1', ABCDArrayComp(size))
+
+    prob.root.connect('G1.P1.x', 'C1.a')
+    prob.root.connect('G1.P2.x', 'C1.b')
+    prob.root.nl_solver.add_recorder(self.recorder)
+    self.recorder.options['record_params'] = True
+    self.recorder.options['record_resids'] = True
+    prob.setup(check=False)
+    t0, t1 = run(prob)
+    self.recorder.close()
+
+    coordinate = ['Driver', (1, ), "root", (1,)]
+
+    expected_params = [
+        ("C1.a", [1.0, 1.0, 1.0]),
+        ("C1.b", [2.0, 2.0, 2.0]),
+    ]
+    expected_unknowns = [
+        ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
+        ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
+        ("C1.c",  np.array([3.0, 3.0, 3.0])),
+        ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+        ("C1.out_string", "_C1"),
+        ("C1.out_list", [1.5]),
+    ]
+    expected_resids = [
+        ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
+        ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
+        ("C1.c",  np.array([0.0, 0.0, 0.0])),
+        ("C1.d",  np.array([0.0, 0.0, 0.0])),
+        ("C1.out_string", ""),
+        ("C1.out_list", []),
+    ]
+
+    self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)

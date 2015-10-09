@@ -38,6 +38,8 @@ class TestDumpRecorder(MPITestCase):
         prob.root = FanInGrouped()
 
         rec = DumpRecorder(out='data.dmp')
+        rec.options['record_params'] = True
+        rec.options['record_resids'] = True
         rec.options['includes'] = ['p1.x1', 'p2.x2', 'comp3.y']
         prob.driver.add_recorder(rec)
 
