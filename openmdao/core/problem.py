@@ -738,8 +738,8 @@ class Problem(System):
                                                  return_format, mode)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format):
-        """ Returns the finite differenced gradient for the system that is slotted in
-        self.root.
+        """ Returns the finite differenced gradient for the system that is
+        slotted in self.root.
 
         Args
         ----
@@ -1594,4 +1594,3 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
-

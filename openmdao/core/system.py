@@ -64,6 +64,10 @@ class System(object):
         self._relevance = None
         self._impl = None
 
+        self._num_par_fds = 1 # this will be >1 for ParallelFDGroup
+        self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
+                            # <= the number of parallel FDs
+
     def __getitem__(self, name):
         """
         Return the variable of the given name from this system.
@@ -304,7 +308,7 @@ class System(object):
             calculated. This is used by problem to limit the derivatives that
             are taken.
 
-        desvar_incides: dict of list of integers, optional
+        desvar_indices: dict of list of integers, optional
             This is a dict that contains the index values for each param that
             was declared, so that we only finite difference those
             indices.
@@ -332,18 +336,23 @@ class System(object):
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        if total_derivs is False:
+        if total_derivs:
+            run_model = self.solve_nonlinear
+            resultvec = unknowns
+            states = ()
+        else:
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
-        else:
-            run_model = self.solve_nonlinear
-            resultvec = unknowns
-            states = []
 
         cache1 = resultvec.vec.copy()
 
         gather_jac = False
+
+        my_fds = [] # list of (uname, pname, i) for those finit differences
+                    # that were performed in this process
+
+        fd_count = 0
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -371,9 +380,9 @@ class System(object):
 
             mydict = {}
             if p_name in self._to_abs_pnames:
-                for val in itervalues(self._params_dict):
-                    if val['promoted_name'] == p_name:
-                        mydict = val
+                for meta in itervalues(self._params_dict):
+                    if meta['promoted_name'] == p_name:
+                        mydict = meta
                         break
 
             # Local settings for this var trump all
@@ -399,11 +408,20 @@ class System(object):
             # in order to stay in sync with the other processes.
             if p_size == 0:
                 gather_jac = True
-                for i in range(self._params_dict[p_name]['size']):
-                    run_model(params, unknowns, resids)
+                idxes = range(self._params_dict[p_name]['size'])
 
             # Finite Difference each index in array
             for j, idx in enumerate(idxes):
+                # skip the current index if its done by some other
+                # parallel fd proc
+                if fd_count % self._num_par_fds != self._par_fd_id:
+                    fd_count += 1
+                    continue
+
+                if p_size == 0:
+                    run_model(params, unknowns, resids)
+                    fd_count += 1
+                    continue
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
@@ -462,6 +480,8 @@ class System(object):
 
                 # Restore old residual
                 resultvec.vec[:] = cache1
+
+                fd_count += 1
 
         if MPI and gather_jac: # pragma: no cover
             jac = self.get_combined_jac(jac)
@@ -575,9 +595,11 @@ class System(object):
             #force_fd should compute semi-totals across all children,
             #    unless total_derivs=False is specifically requested
             if self._local_subsystems and total_derivs is None:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
+                                                        total_derivs=True)
             else:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
+                                                        total_derivs=False)
         else:
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
 
