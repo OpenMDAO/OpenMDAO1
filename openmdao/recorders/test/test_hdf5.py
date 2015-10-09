@@ -5,14 +5,16 @@ import os
 from shutil import rmtree
 from tempfile import mkdtemp
 import unittest
+
 import h5py
-from openmdao.test.util import assert_rel_error
+from six.moves import zip
+from six import iteritems
+
 from openmdao.recorders.test import iteration_data_tests
 from openmdao.recorders.test import metadata_tests
 from openmdao.util.record_util import format_iteration_coordinate
+from openmdao.test.util import assert_rel_error
 from openmdao.test.record_util import create_testcase
-from six.moves import zip
-from six import iteritems
 
 SKIP = False
 

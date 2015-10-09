@@ -1,20 +1,23 @@
 """ Unit test for the SqliteRecorder. """
-import numpy as np
 import errno
 import os
 import shelve
 import unittest
-from sqlitedict import SqliteDict
-from openmdao.core.vec_wrapper import _ByObjWrapper
-import iteration_data_tests
-from openmdao.test.mpi_util import MPITestCase
-from openmdao.recorders import SqliteRecorder
-from openmdao.test.record_util import create_testcase
-from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
-import metadata_tests
 from pickle import HIGHEST_PROTOCOL
 from shutil import rmtree
 from tempfile import mkdtemp
+
+import numpy as np
+from sqlitedict import SqliteDict
+
+from openmdao.core.vec_wrapper import _ByObjWrapper
+from openmdao.recorders import SqliteRecorder
+from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
+from openmdao.test.record_util import create_testcase
+from openmdao.test.mpi_util import MPITestCase
+
+import iteration_data_tests
+import metadata_tests
 
 class TestSqliteRecorder(MPITestCase):
     filename = ""

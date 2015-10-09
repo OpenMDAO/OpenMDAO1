@@ -1,12 +1,10 @@
 import time
+
+import numpy as np
+
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
-from openmdao.core.mpi_wrap import MPI
-import numpy as np
-
-def get_local_vars(system, vec):
-    return filter(lambda x: MPI.COMM_WORLD.rank == system._owning_rank[x[0]], vec)
 
 def run_problem(problem):
     t0 = time.time()
@@ -151,13 +149,7 @@ def test_basic(self):
         ("p.x", 0.0)
     ]
 
-    if MPI and self.recorder._parallel:
-        expected_params = get_local_vars(prob.root, expected_params)
-        expected_unknowns  = get_local_vars(prob.root, expected_unknowns)
-        expected_resids = get_local_vars(prob.root, expected_resids)
-
-    if self.recorder._parallel or prob.root.comm.rank == 0:
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+    self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
 def test_includes(self):
     prob = Problem()

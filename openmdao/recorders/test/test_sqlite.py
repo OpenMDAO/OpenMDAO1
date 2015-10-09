@@ -3,21 +3,21 @@
 import errno
 import os
 import unittest
+from shutil import rmtree
+from tempfile import mkdtemp
 
+from numpy.testing import assert_allclose
+from six import iteritems
 from sqlitedict import SqliteDict
+
+from openmdao.core.mpi_wrap import MPI
+from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.recorders import SqliteRecorder
 from openmdao.recorders.test import iteration_data_tests
 from openmdao.recorders.test import metadata_tests
-import openmdao.recorders.test.metadata_tests as MetadataTestCase
-from openmdao.core.mpi_wrap import MPI
-from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.record_util import create_testcase
 from openmdao.test.util import assert_rel_error
-from shutil import rmtree
-from tempfile import mkdtemp
-from six import iteritems
-from numpy.testing import assert_allclose
 
 def _assertIterationDataRecorded(test, db, expected, tolerance):
     sentinel = object()

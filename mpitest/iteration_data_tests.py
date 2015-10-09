@@ -1,16 +1,13 @@
-import unittest
-import sys
 import time
+
 import numpy as np
+
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.component import Component
+from openmdao.core.mpi_wrap import MPI
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
-
-from openmdao.test.converge_diverge import ConvergeDiverge
-from openmdao.test.example_groups import ExampleGroup
 
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl

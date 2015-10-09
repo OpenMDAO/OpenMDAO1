@@ -5,8 +5,9 @@ from tempfile import mkdtemp
 import errno
 import os
 import unittest
-import re
+
 from six import StringIO
+
 from openmdao.recorders import DumpRecorder
 from openmdao.recorders.test import iteration_data_tests 
 from openmdao.util.record_util import format_iteration_coordinate

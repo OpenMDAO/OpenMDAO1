@@ -1,10 +1,10 @@
 import time
+
+import numpy as np
+
 from openmdao.core.problem import Problem
-from openmdao.recorders import BaseRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
-from openmdao.test.util import assert_rel_error
-import numpy as np
 
 def assertMetadataRecorded(self, expected):
     raise NotImplementedError()
