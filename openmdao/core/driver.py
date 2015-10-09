@@ -586,7 +586,7 @@ class Driver(object):
         # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
 
-        self.recorders.record(system, metadata)
+        self.recorders.record_iteration(system, metadata)
 
     def generate_docstring(self):
         """
