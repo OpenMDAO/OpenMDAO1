@@ -1,7 +1,6 @@
 """ OptionsDictionary class definition. """
-
+from copy import deepcopy
 from six import iteritems
-
 
 class OptionsDictionary(object):
     """ A dictionary for storing options for components/drivers/solvers. It
@@ -44,8 +43,8 @@ class OptionsDictionary(object):
         desc : str, optional
             String containing documentation of this option.
         """
-
         if name in self._options:
+            print("raising an error")
             raise ValueError("Option '{}' already exists".format(name))
 
         self._options[name] = {
@@ -90,6 +89,15 @@ class OptionsDictionary(object):
             return self._options[name]['val']
         return default
 
+    def update(self, options):
+        self._options.update(deepcopy(options._options))
+
+        for name in self._options:
+            self._check(name, self._options[name]['val'])
+
+    def iteritems(self):
+        return self.items()
+
     def items(self):
         """
         Returns
@@ -98,6 +106,9 @@ class OptionsDictionary(object):
             Iterator returning the name and option for each option.
         """
         return ((name, opt['val']) for name, opt in iteritems(self._options))
+
+    def get_desc(self, name):
+        return self._options[name]['desc']
 
     def _check(self, name, value):
         """ Type checking happens here. """
