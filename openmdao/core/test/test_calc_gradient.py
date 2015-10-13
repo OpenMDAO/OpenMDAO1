@@ -117,10 +117,10 @@ class TestCalcGradient(unittest.TestCase):
         assert_almost_equal(J, expectedJ_array, decimal=5)
 
     def test_calc_gradient_with_poi_indices(self):
-        p_idxs = [0, 1, 2, 3]  # FIXME: try [0, 1, 2, 4]
+        p_idxs = [0, 1, 2, 4]
 
         root = Group()
-        root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 1., 2.])))
+        root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 2., 1.])))
         root.add('comp', RosenSuzuki())
 
         root.connect('parm.x', 'comp.x', src_indices=p_idxs)
