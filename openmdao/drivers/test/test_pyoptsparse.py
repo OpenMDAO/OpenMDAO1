@@ -1,4 +1,4 @@
-""" Testing pyoptsparse SNOPT."""
+""" Testing pyoptsparse with SLSQP."""
 
 from pprint import pformat
 import os
@@ -13,6 +13,7 @@ from openmdao.core.problem import Problem
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
+ 
 
 SKIP = False
 try:
@@ -23,6 +24,9 @@ except ImportError:
     pyOptSparseDriver = Driver
     SKIP = True
 
+# optimizer to test, default to SLSQP since SNOPT is not readily available
+OPTIMIZER = 'SLSQP'
+
 
 class TestPyoptSparse(unittest.TestCase):
 
@@ -32,6 +36,11 @@ class TestPyoptSparse(unittest.TestCase):
                                     "Is pyoptsparse installed?")
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -49,6 +58,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -59,8 +69,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
 
     def test_simple_paraboloid_lower(self):
 
@@ -73,6 +83,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -83,32 +94,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
-
-    def test_simple_paraboloid_lower(self):
-
-        prob = Problem()
-        root = prob.root = Group()
-
-        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
-        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = x - y'), promotes=['*'])
-
-        prob.driver = pyOptSparseDriver()
-        prob.driver.add_desvar('x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('y', low=-50.0, high=50.0)
-
-        prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', lower=15.0)
-
-        prob.setup(check=False)
-        prob.run()
-
-        # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
 
     def test_simple_paraboloid_equality(self):
 
@@ -121,6 +108,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -131,8 +119,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
 
     def test_simple_paraboloid_double_sided_low(self):
 
@@ -145,6 +133,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -168,6 +157,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -495,6 +485,7 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertEqual(con1.wrt, ['p1.x'])
         con2 = prob.driver.pyopt_solution.constraints['con2.c']
         self.assertEqual(con2.wrt, ['p2.x'])
+
 
 if __name__ == "__main__":
     unittest.main()

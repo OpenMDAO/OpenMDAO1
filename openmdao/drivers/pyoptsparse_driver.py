@@ -60,7 +60,7 @@ class pyOptSparseDriver(Driver):
         self.supports['integer_design_vars'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],
+        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT', 'SLSQP'],
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
