@@ -423,7 +423,7 @@ namelist called `MAIN` would look like this:
             # Add an internal variable
             sb.add_newvar("Py", 3.14)
 
-            # Generate the input file for FLOPS
+            # Generate the input file
             sb.generate()
 
 Note that this component is derived from ``ExternalCode`` and uses a few of its
