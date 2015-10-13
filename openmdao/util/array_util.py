@@ -63,7 +63,8 @@ def to_slices(sidxs, didxs):
 
 def _to_slice(idxs):
     """Convert an index array to a slice if possible. Otherwise,
-    return the index array. Indices are assumed to be sorted.
+    return the index array. Indices are assumed to be sorted in
+    ascending order.
     """
     if len(idxs) == 1:
         return slice(idxs[0], idxs[0]+1)

@@ -15,9 +15,8 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                         FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck, debug
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.devtools.debug import debug
 
 try:
     from mpi4py import MPI

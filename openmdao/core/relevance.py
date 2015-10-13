@@ -19,34 +19,23 @@ class Relevance(object):
         self.unknowns_dict = unknowns_dict
         self.mode = mode
 
-        param_groups = {}
-        output_groups = {}
-        g_id = 0
+        param_groups = []
+        output_groups = []
 
         # turn all inputs and outputs, even singletons, into tuples
         self.inputs = []
         for inp in inputs:
             if isinstance(inp, string_types):
                 inp = (inp,)
-            if len(inp) == 1:
-                param_groups.setdefault(None, []).append(inp[0])
-            else:
-                param_groups[g_id] = tuple(inp)
-                g_id += 1
-
+            param_groups.append(tuple(inp))
             self.inputs.append(tuple(inp))
 
         self.outputs = []
         for out in outputs:
             if isinstance(out, string_types):
                 out = (out,)
-            if len(out) == 1:
-                output_groups.setdefault(None, []).append(out)
-            else:
-                output_groups[g_id] = tuple(out)
-                g_id += 1
-
-            self.outputs.append(out)
+            output_groups.append(tuple(out))
+            self.outputs.append(tuple(out))
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
@@ -82,7 +71,7 @@ class Relevance(object):
         -------
         bool: True if varname is in the relevant path of var_of_interest
         """
-        if var_of_interest is None:
+        if var_of_interest is None or var_of_interest not in self.relevant:
             return True
         return varname in self.relevant[var_of_interest]
 

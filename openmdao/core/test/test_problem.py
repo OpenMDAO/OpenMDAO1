@@ -14,7 +14,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.exec_comp import ExecComp
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
-
+from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 if PY3:
     def py3fix(s):
@@ -853,7 +853,7 @@ class TestProblem(unittest.TestCase):
         # make sure _check function does it too
 
         #try:
-            #mode = prob._check_for_matrix_matrix(['a'], ['x'])
+            #mode = prob._check_for_parallel_derivs(['a'], ['x'], False, False)
         #except Exception as err:
             #msg  = "Group '' must have the same mode as root to use Matrix Matrix."
             #self.assertEqual(text_type(err), msg)
@@ -861,10 +861,10 @@ class TestProblem(unittest.TestCase):
             #self.fail('Exception expected')
 
         root.ln_solver.options['mode'] = 'fwd'
-        mode = prob._check_for_matrix_matrix(['a', 'b'], ['x'])
+        mode = prob._check_for_parallel_derivs(['a', 'b'], ['x'], False, False)
         self.assertEqual(mode, 'fwd')
 
-    def test_check_matrix_matrix(self):
+    def test_check_parallel_derivs(self):
 
         prob = Problem()
         root = prob.root = Group()
@@ -872,8 +872,10 @@ class TestProblem(unittest.TestCase):
         root.add('p1', IndepVarComp('a', 1.0), promotes=['*'])
         root.add('p2', IndepVarComp('b', 1.0), promotes=['*'])
         sub1 = root.add('sub1', Group(), promotes=['*'])
+        sub1.ln_solver = LinearGaussSeidel()
         sub2 = sub1.add('sub2', Group(), promotes=['*'])
         sub2.add('comp', ExecComp(['x = 2.0*a + 3.0*b', 'y=4.0*a - 1.0*b']), promotes=['*'])
+        sub2.ln_solver = LinearGaussSeidel()
 
         root.ln_solver.options['mode'] = 'fwd'
         sub1.ln_solver.options['mode'] = 'fwd'
@@ -882,17 +884,20 @@ class TestProblem(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        # NOTE: this call won't actually calculate mode because default ln_solver
-        # is ScipyGMRES and its default mode is 'fwd', not 'auto'.
-        mode = prob._check_for_matrix_matrix(['a'], ['x'])
+        root.ln_solver = LinearGaussSeidel()
+        root.ln_solver.options['single_voi_relevance_reduction'] = True
+        prob.driver.add_desvar('p1.a', 1.0)
+        prob.driver.add_constraint('x', upper=0.0)
+        prob.driver.add_constraint('y', upper=0.0)
+        prob.driver.parallel_derivs(['x','y'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = prob._check_for_matrix_matrix(['a'], ['x'])
+            mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
         except Exception as err:
-            msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
+            msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -901,15 +906,15 @@ class TestProblem(unittest.TestCase):
         sub2.ln_solver.options['mode'] = 'rev'
 
         try:
-            mode = prob._check_for_matrix_matrix(['a'], ['x'])
+            mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
         except Exception as err:
-            msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use Matrix Matrix."
+            msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
 
         sub1.ln_solver.options['mode'] = 'rev'
-        mode = prob._check_for_matrix_matrix(['a'], ['x'])
+        mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
 
 class TestCheckSetup(unittest.TestCase):
 
