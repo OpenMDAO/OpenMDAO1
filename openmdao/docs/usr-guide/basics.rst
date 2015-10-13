@@ -90,10 +90,9 @@ Variables are added to the class in the constructor (*__init__* method) via the
 
     class MyComp(Component):
         def __init__(self):
+            super(MyComp, self).__init__()
             self.add_param('x', val=0.)
-
             self.add_output('y', shape=1)
-
             self.add_state('z', val=[0., 1.])
 
 .. note::
@@ -277,22 +276,35 @@ The general procedure for defining and solving a `Problem` in OpenMDAO is:
     - perform *setup* on the `Problem` to initialize all vectors and data transfers
     - perform *run* on the Problem
 
-A very basic example of defining and running a `Problem` as discussed here is shown below.
-This example makes use of a couple of convenience components to provide a source for the
-parameter (`IndepVarComp`) and to quickly define a `Component` for an equation (`ExecComp`).
+A very basic example of defining and running a `Problem` with a custom `Component` is shown below.
+This example makes use of the convenience component `IndepVarComp` to provide a source for the
+input parameter to the custom `MultiplyByTwoComponent`.
 
 ::
 
-    from openmdao.core import Group, Problem
-    from openmdao.components import IndepVarComp, ExecComp
+    from openmdao.core import Group, Problem, Component
+    from openmdao.components import IndepVarComp
+
+    class MultiplyByTwoComponent(Component):
+        def __init__(self):
+            super(MultiplyByTwoComponent, self).__init__() # always call the base class constructor first
+            self.add_param('x_input', val=0.) # the input that will be multiplied by 2
+            self.add_output('y_output', shape=1) # shape=1 => a one dimensional array of length 1 (a scalar)
+            self.add_state('counter', val=0) # an internal variable that counts the number of times this component was executed
+        def solve_nonlinear(self, params, unknowns, resids):
+            unknowns['y_output'] = params['x_input']*2
+            unknowns['counter'] = unknowns['counter']+1
 
     root = Group()
-    root.add('x_param', IndepVarComp('x', 7.0))
-    root.add('mycomp', ExecComp('y=x*2.0'))
-    root.connect('x_param.x', 'mycomp.x')
+    root.add('indep_var', IndepVarComp('x', 7.0))
+    root.add('my_comp', MultiplyByTwoComponent())
+    root.connect('indep_var.x', 'my_comp.x_input')
 
     prob = Problem(root)
     prob.setup()
     prob.run()
 
-    result = root.unknowns['mycomp.y']
+    result = prob['my_comp.y_output']
+    count = prob['my_comp.counter']
+    print result
+    print count

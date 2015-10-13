@@ -68,8 +68,6 @@ class pyOptSparseDriver(Driver):
                                 desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
                                 desc='Set to True to let pyOpt calculate the gradient')
-        self.options.add_option('exit_flag', 0,
-                                desc='0 for fail, 1 for ok')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}

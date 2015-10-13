@@ -309,15 +309,17 @@ class Problem(System):
         # push connection src_indices down into the metadata for all target
         # params in all component level systems, then flag meta_changed so
         # it will get percolated back up to all groups in next setup_vars()
-        for tgt, (src, idxs) in iteritems(connections):
-            if idxs is not None:
-                for comp in self.root.components(recurse=True):
-                    # component dicts are keyed on the var name, not the pathname
+        src_idx_conns = [(tgt, src, idxs) for tgt, (src, idxs) in
+                             iteritems(connections) if idxs is not None]
+        if src_idx_conns:
+            meta_changed = True
+            for comp in self.root.components(recurse=True):
+                for tgt, src, idxs in src_idx_conns:
+                    # component dicts are keyed on var name, not pathname
                     path, name = tgt.rsplit('.', 1)
                     meta = comp._params_dict.get(name)
                     if meta and meta['pathname'] == tgt:
                         meta['src_indices'] = idxs
-                meta_changed = True
 
         # TODO: handle any automatic grouping of systems here...
 
@@ -953,7 +955,6 @@ class Problem(System):
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
         to_abs_unames = root._to_abs_unames
-        params = root.params
         comm = root.comm
         iproc = comm.rank
         nproc = comm.size
@@ -981,7 +982,7 @@ class Problem(System):
         root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
-        root._sys_jacobian(params, unknowns, root.resids)
+        root._sys_jacobian(root.params, unknowns, root.resids)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -1002,7 +1003,7 @@ class Problem(System):
             Jslices = {}
             for u in unknown_list:
                 start = usize
-                usize += self.root.unknowns.metadata(u)['size']
+                usize += unknowns.metadata(u)['size']
                 Jslices[u] = slice(start, usize)
 
             for p in indep_list:
@@ -1011,7 +1012,7 @@ class Problem(System):
                     idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
-                    psize += self.root.unknowns.metadata(p)['size']
+                    psize += unknowns.metadata(p)['size']
                 Jslices[p] = slice(start, psize)
             J = np.zeros((usize, psize))
 
@@ -1110,7 +1111,7 @@ class Problem(System):
                         param = params[0]
 
                     for item in output_list:
-                        if relevance.is_relevant(param, item):
+                        if relevance.is_relevant(vkey, item):
                             if fwd or owned[item] == iproc:
                                 out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
                                                                                  qoi_indices,
@@ -1123,7 +1124,7 @@ class Problem(System):
                             if nproc > 1:
                                 dxval = comm.bcast(dxval, root=owned[item])
                         else: # irrelevant variable.  just give'em zeros
-                            dxval = np.zeros(self.root.unknowns.metadata(item)['size'])
+                            dxval = np.zeros(unknowns.metadata(item)['size'])
 
                         if dxval is not None:
                             nk = len(dxval)
