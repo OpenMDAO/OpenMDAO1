@@ -13,7 +13,7 @@ from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
                       TokenConverter, Word, nums, oneOf, printables, \
                       ParserElement, alphanums
 
-from numpy import append, array, zeros
+import numpy as np
 
 #public symbols
 __all__ = ['InputFileGenerator', 'FileParser']
@@ -711,7 +711,7 @@ class FileParser(object):
 
         lines = self.data[j1:j2]
 
-        data = zeros(shape=(0, 0))
+        data = np.zeros(shape=(0, 0))
 
         for i, line in enumerate(lines):
             if self.delimiter == "columns":
@@ -724,20 +724,20 @@ class FileParser(object):
                 # as a float or int as appropriate
                 parsed = self._parse_line().parseString(line)
 
-                newdata = array(parsed[:])
+                newdata = np.array(parsed[:])
                 # data might have been split if it contains whitespace. If the
                 # data is string, we probably didn't want this.
-                if '|S' in str(newdata.dtype):
-                    newdata = array(line)
+                if newdata.dtype.type is np.string_:
+                    newdata = np.array(line)
 
-                data = append(data, newdata)
+                data = np.append(data, newdata)
 
             else:
                 parsed = self._parse_line().parseString(line)
                 if i == j2-j1-1:
-                    data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                    data = np.append(data, np.array(parsed[(fieldstart-1):fieldend]))
                 else:
-                    data = append(data, array(parsed[(fieldstart-1):]))
+                    data = np.append(data, np.array(parsed[(fieldstart-1):]))
                 fieldstart = 1
 
         return data
@@ -790,8 +790,8 @@ class FileParser(object):
                 line = lines[0][(fieldstart-1):]
 
             parsed = self._parse_line().parseString(line)
-            row = array(parsed[:])
-            data = zeros(shape=(abs(j2-j1), len(row)))
+            row = np.array(parsed[:])
+            data = np.zeros(shape=(abs(j2-j1), len(row)))
             data[0, :] = row
 
             for i, line in enumerate(list(lines[1:])):
@@ -801,16 +801,16 @@ class FileParser(object):
                     line = line[(fieldstart-1):]
 
                 parsed = self._parse_line().parseString(line)
-                data[i+1, :] = array(parsed[:])
+                data[i+1, :] = np.array(parsed[:])
 
         else:
             parsed = self._parse_line().parseString(lines[0])
             if fieldend:
-                row = array(parsed[(fieldstart-1):fieldend])
+                row = np.array(parsed[(fieldstart-1):fieldend])
             else:
-                row = array(parsed[(fieldstart-1):])
+                row = np.array(parsed[(fieldstart-1):])
 
-            data = zeros(shape=(abs(j2-j1), len(row)))
+            data = np.zeros(shape=(abs(j2-j1), len(row)))
             data[0, :] = row
 
             for i, line in enumerate(list(lines[1:])):
@@ -818,11 +818,11 @@ class FileParser(object):
 
                 if fieldend:
                     try:
-                        data[i+1, :] = array(parsed[(fieldstart-1):fieldend])
+                        data[i+1, :] = np.array(parsed[(fieldstart-1):fieldend])
                     except:
                         print(data)
                 else:
-                    data[i+1, :] = array(parsed[(fieldstart-1):])
+                    data[i+1, :] = np.array(parsed[(fieldstart-1):])
 
         return data
 
