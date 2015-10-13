@@ -69,7 +69,7 @@ def max_mem_usage():
     """
     denom = 1024.
     if sys.platform == 'darwin':
-        denom = denom * denom
+        denom *= denom
     total = getrusage(RUSAGE_SELF).ru_maxrss / denom
     total += getrusage(RUSAGE_CHILDREN).ru_maxrss / denom
     return total
@@ -87,8 +87,7 @@ def diff_max_mem(fn):
     def wrapper(*args, **kwargs):
         startmem = max_mem_usage()
         ret = fn(*args, **kwargs)
-        finalmem = max_mem_usage()
-        diff = finalmem-startmem
+        diff = max_mem_usage()-startmem
         if diff > 0.0:
             print("%s added %s MB" % (fn.__name__, diff))
         return ret

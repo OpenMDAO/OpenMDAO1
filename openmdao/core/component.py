@@ -392,6 +392,9 @@ class Component(System):
 
         self._setup_gs_outputs(all_vois)
 
+        for p in self.params.keys():
+            print(self.pathname, ",", p)
+
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit
@@ -467,7 +470,7 @@ class Component(System):
             and whose values are ndarrays.
         """
         return None
-            
+
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """
         Multiplies incoming vector by the Jacobian (fwd mode) or the
