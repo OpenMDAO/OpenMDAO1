@@ -81,7 +81,7 @@ class TestCase(unittest.TestCase):
         # Test some errors
         try:
             gen.mark_anchor('C 77', 3.14)
-        except ValueError, err:
+        except ValueError as err:
             msg = "The value for occurrence must be an integer"
             self.assertEqual(str(err), msg)
         else:
@@ -89,7 +89,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.mark_anchor('C 77', 0)
-        except ValueError, err:
+        except ValueError as err:
             msg = "0 is not valid for an anchor occurrence."
             self.assertEqual(str(err), msg)
         else:
@@ -97,7 +97,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.mark_anchor('ZZZ')
-        except RuntimeError, err:
+        except RuntimeError as err:
             msg = "Could not find pattern ZZZ in template file template.dat"
             self.assertEqual(str(err), msg)
         else:
@@ -248,7 +248,7 @@ class TestCase(unittest.TestCase):
         # Test some errors
         try:
             gen.mark_anchor('C 77', 3.14)
-        except ValueError, err:
+        except ValueError as err:
             msg = "The value for occurrence must be an integer"
             self.assertEqual(str(err), msg)
         else:
@@ -256,7 +256,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.mark_anchor('C 77', 0)
-        except ValueError, err:
+        except ValueError as err:
             msg = "0 is not valid for an anchor occurrence."
             self.assertEqual(str(err), msg)
         else:
@@ -264,7 +264,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.mark_anchor('ZZZ')
-        except RuntimeError, err:
+        except RuntimeError as err:
             msg = "Could not find pattern ZZZ in output file filename.dat"
             self.assertEqual(str(err), msg)
         else:
@@ -336,7 +336,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.transfer_keyvar('Key1', 4, 0)
-        except ValueError, err:
+        except ValueError as err:
             msg = "The value for occurrence must be a nonzero integer"
             self.assertEqual(str(err), msg)
         else:
@@ -344,7 +344,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.transfer_keyvar('Key1', 4, -3.4)
-        except ValueError, err:
+        except ValueError as err:
             msg = "The value for occurrence must be a nonzero integer"
             self.assertEqual(str(err), msg)
         else:
@@ -394,7 +394,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.transfer_array(1, 7, 1)
-        except ValueError, err:
+        except ValueError as err:
             msg = "fieldend is missing, currently required"
             self.assertEqual(str(err), msg)
         else:
@@ -490,7 +490,7 @@ class TestCase(unittest.TestCase):
         # Error messages for bad values
         try:
             gen.transfer_2Darray(7, 3, 9, 1)
-        except ValueError, err:
+        except ValueError as err:
             msg = "fieldend must be greater than fieldstart"
             self.assertEqual(str(err), msg)
         else:
@@ -498,7 +498,7 @@ class TestCase(unittest.TestCase):
 
         try:
             gen.transfer_2Darray(9, 2, 8, 4)
-        except ValueError, err:
+        except ValueError as err:
             msg = "rowend must be greater than rowstart"
             self.assertEqual(str(err), msg)
         else:

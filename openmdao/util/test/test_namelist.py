@@ -76,7 +76,7 @@ class TestCase(unittest.TestCase):
         sb = Namelist(my_comp)
         try:
             sb.load_model()
-        except RuntimeError, err:
+        except RuntimeError as err:
             msg = "Input file must be read with parse_file before " \
                   "load_model can be executed."
             self.assertEqual(str(err), msg)
@@ -507,7 +507,7 @@ class TestCase(unittest.TestCase):
 
         try:
             sb.generate()
-        except RuntimeError, err:
+        except RuntimeError as err:
             self.assertEqual(str(err),
                              "Don't know how to handle array of" + \
                                            " 3 dimensions")
