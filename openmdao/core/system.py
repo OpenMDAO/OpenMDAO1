@@ -300,7 +300,8 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None, desvar_indices=None):
+                    fd_params=None, fd_unknowns=None,
+                    poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -329,9 +330,13 @@ class System(object):
             calculated. This is used by problem to limit the derivatives that
             are taken.
 
-        desvar_incides: dict of list of integers, optional
-            This is a dict that contains the index values for each param that
-            was declared, so that we only finite difference those
+        poi_indices: dict of list of integers, optional
+            This is a dict that contains the index values for each parameter of
+            interest, so that we only finite difference those indices.
+
+        qoi_indices: dict of list of integers, optional
+            This is a dict that contains the index values for each quantity of
+            interest, so that the finite difference is returned only for those
             indices.
 
         Returns
@@ -377,14 +382,13 @@ class System(object):
             # the unknowns vector instead of the params vector.
             src = self.connections.get(p_name)
             if src is not None:
-                param_src, idxs = src
+                param_src = src[0]  # just the name
 
                 # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
                     param_src = self.unknowns.get_promoted_varname(param_src)
 
                 target_input = unknowns.flat[param_src]
-
             else:
                 # Cases where the IndepVarComp is somewhere above us.
                 if p_name in states:
@@ -407,16 +411,20 @@ class System(object):
             fdform = mydict.get('form', form)
 
             # Size our Inputs
-            if desvar_indices is not None and param_src in desvar_indices:
-                idxes = desvar_indices[param_src]
-                p_size = len(idxes)
+            if poi_indices is not None and param_src in poi_indices:
+                p_idxs = poi_indices[param_src]
+                p_size = len(p_idxs)
             else:
                 p_size = np.size(target_input)
-                idxes = range(p_size)
+                p_idxs = range(p_size)
 
             # Size our Outputs
             for u_name in fd_unknowns:
-                u_size = np.size(unknowns[u_name])
+                if qoi_indices is not None and u_name in qoi_indices:
+                    u_size = len(qoi_indices[u_name])
+                else:
+                    u_size = np.size(unknowns[u_name])
+
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
 
             # if a given param isn't present in this process, we need
@@ -428,7 +436,7 @@ class System(object):
                     run_model(params, unknowns, resids)
 
             # Finite Difference each index in array
-            for j, idx in enumerate(idxes):
+            for j, idx in enumerate(p_idxs):
 
                 # Relative or Absolute step size
                 if fdtype == 'relative':
@@ -482,8 +490,15 @@ class System(object):
 
                     target_input[idx] += step
 
+
                 for u_name in fd_unknowns:
-                    jac[u_name, p_name][:, j] = resultvec.flat[u_name]
+                    if qoi_indices is not None and u_name in qoi_indices:
+                        u_idxs = qoi_indices[u_name]
+                        result = resultvec.flat[u_name][u_idxs]
+                    else:
+                        result = resultvec.flat[u_name]
+                    jac[u_name, p_name][:, j] = result
+
 
                 # Restore old residual
                 resultvec.vec[:] = cache1

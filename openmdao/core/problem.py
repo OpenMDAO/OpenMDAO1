@@ -18,7 +18,7 @@ from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
+from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
@@ -28,6 +28,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
+
 
 class _ProbData(object):
     """
@@ -78,10 +79,10 @@ class Problem(System):
         self.root = root
         self._probdata = _ProbData()
 
-        if MPI: # pragma: no cover
+        if MPI:  # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
-                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl.")
 
         if impl is None:
             self._impl = BasicImpl
@@ -310,7 +311,7 @@ class Problem(System):
         # params in all component level systems, then flag meta_changed so
         # it will get percolated back up to all groups in next setup_vars()
         src_idx_conns = [(tgt, src, idxs) for tgt, (src, idxs) in
-                             iteritems(connections) if idxs is not None]
+                         iteritems(connections) if idxs is not None]
         if src_idx_conns:
             meta_changed = True
             for comp in self.root.components(recurse=True):
@@ -332,7 +333,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI: # pragma: no cover
+        if MPI:  # pragma: no cover
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -345,14 +346,14 @@ class Problem(System):
         # if the system tree has changed, we need to recompute pathnames,
         # variable metadata, and connections
         if tree_changed:
-            self.root._init_sys_data(self.pathname, probdata)
+            self.root._init_sys_data(self.pathname, self._probdata)
             params_dict, unknowns_dict = \
-                    self.root._setup_variables(compute_indices=True)
+                self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict,
                                                   compute_indices=False)
         elif meta_changed:
             params_dict, unknowns_dict = \
-                    self.root._setup_variables(compute_indices=True)
+                self.root._setup_variables(compute_indices=True)
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -449,9 +450,10 @@ class Problem(System):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
-        dangling_params = sorted(set([m['promoted_name']
-                             for p, m in iteritems(self.root._params_dict)
-                               if p not in self.root.connections]))
+        dangling_params = sorted(set([
+            m['promoted_name'] for p, m in iteritems(self.root._params_dict)
+            if p not in self.root.connections
+        ]))
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
                   file=out_stream)
@@ -480,7 +482,7 @@ class Problem(System):
             print("\nUnit Conversions", file=out_stream)
             for (src, tgt), (sunit, tunit) in tuples:
                 print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
-                        file=out_stream)
+                      file=out_stream)
 
             return tuples
         return []
@@ -530,7 +532,7 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun(): # pragma: no cover
+        if under_mpirun():  # pragma: no cover
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if self._comm.rank == 0:
@@ -594,10 +596,11 @@ class Problem(System):
             if out_of_order:
                 # scope ooo names to group
                 for name in out_of_order:
-                    out_of_order[name] = sorted([name_relative_to(grp.pathname, n)
-                                                   for n in out_of_order[name]])
+                    out_of_order[name] = sorted([
+                        name_relative_to(grp.pathname, n) for n in out_of_order[name]
+                    ])
                 print("Group '%s' has the following out-of-order subsystems:" %
-                        grp.pathname, file=out_stream)
+                      grp.pathname, file=out_stream)
                 for n, subs in iteritems(out_of_order):
                     print("   %s should run after %s" % (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(iteritems(out_of_order))))
@@ -609,7 +612,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun(): # pragma: no cover
+        if under_mpirun():  # pragma: no cover
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -633,7 +636,7 @@ class Problem(System):
         print("##############################################", file=out_stream)
         print("Setup: Checking for potential issues...", file=out_stream)
 
-        results = {} # dict of results for easier testing
+        results = {}  # dict of results for easier testing
         results['dangling_params'] = self._check_dangling_params(out_stream)
         results['mode'] = self._check_mode(out_stream)
         results['unit_diffs'] = self._list_unit_conversions(out_stream)
@@ -771,7 +774,7 @@ class Problem(System):
                                                  cn_scale=cn_scale)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
-                                 dv_scale=None, cn_scale=None):
+                          dv_scale=None, cn_scale=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -823,7 +826,8 @@ class Problem(System):
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
                                fd_params=abs_params, fd_unknowns=unknown_list,
-                               desvar_indices=self._poi_indices)
+                               poi_indices=self._poi_indices,
+                               qoi_indices=self._qoi_indices)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -876,7 +880,11 @@ class Problem(System):
             usize = 0
             psize = 0
             for u in unknown_list:
-                usize += self.root.unknowns.metadata(u)['size']
+                if u in self._qoi_indices:
+                    idx = self._qoi_indices[u]
+                    usize += len(idx)
+                else:
+                    usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
                 if p in self._poi_indices:
                     idx = self._poi_indices[p]
@@ -898,19 +906,15 @@ class Problem(System):
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
-                    if p in self._poi_indices:
-                        idx = self._poi_indices[p]
-                        cols = len(idx)
+
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
-
                             # Driver scaling
                             if p in dv_scale:
                                 J[ui+row][pi+col] *= dv_scale[p]
                             if u in cn_scale:
-                                J[ui+row][pi+col]*= cn_scale[u]
-
+                                J[ui+row][pi+col] *= cn_scale[u]
                     pi += cols
                 ui += rows
         return J
@@ -1003,7 +1007,11 @@ class Problem(System):
             Jslices = {}
             for u in unknown_list:
                 start = usize
-                usize += unknowns.metadata(u)['size']
+                if u in self._qoi_indices:
+                    idx = self._qoi_indices[u]
+                    usize += len(idx)
+                else:
+                    usize += self.root.unknowns.metadata(u)['size']
                 Jslices[u] = slice(start, usize)
 
             for p in indep_list:
@@ -1080,13 +1088,13 @@ class Problem(System):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'],dtype=int)
+                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
                 elif old_size != len(in_idxs):
                     raise RuntimeError("Indices within the same VOI group must be the same size, but"
-                                       " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
+                                       " in the group %s, %d != %d" % (params, old_size, len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
 
             # at this point, we know that for all vars in the current
@@ -1123,7 +1131,7 @@ class Problem(System):
                                 dxval = None
                             if nproc > 1:
                                 dxval = comm.bcast(dxval, root=owned[item])
-                        else: # irrelevant variable.  just give'em zeros
+                        else:  # irrelevant variable.  just give'em zeros
                             dxval = np.zeros(unknowns.metadata(item)['size'])
 
                         if dxval is not None:
@@ -1181,9 +1189,9 @@ class Problem(System):
         solvers that can only do a single linear solve at a time.
         """
         if (voi in self._driver_vois and
-                  isinstance(self.root.ln_solver, LinearGaussSeidel)):
+                isinstance(self.root.ln_solver, LinearGaussSeidel)):
             if (len(grp) > 1 or
-                   self.root.ln_solver.options['single_voi_relevance_reduction']):
+                    self.root.ln_solver.options['single_voi_relevance_reduction']):
                 return voi
 
         return None
@@ -1290,8 +1298,8 @@ class Problem(System):
 
                             if user[0] != u_size or user[1] != p_size:
                                 msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
-                                "It should be {}, but got {}"
-                                msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
+                                      "It should be {}, but got {}"
+                                msg = msg.format(cname, u_name, p_name, (u_size, p_size), user)
                                 raise ValueError(msg)
 
                     jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
@@ -1382,8 +1390,9 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        indep_list = [self.root._unknowns_dict[p]['promoted_name']
-                          for p, idxs in param_srcs]
+        indep_list = [
+            self.root._unknowns_dict[p]['promoted_name'] for p, idxs in param_srcs
+        ]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
@@ -1429,8 +1438,8 @@ class Problem(System):
         # multiple RHS in parallel. Currently only LinearGaussSeidel can
         # support this.
         if (isinstance(self.root.ln_solver, LinearGaussSeidel) and
-               self.root.ln_solver.options['single_voi_relevance_reduction']) \
-               and has_parallel_derivs:
+                self.root.ln_solver.options['single_voi_relevance_reduction']) \
+                and has_parallel_derivs:
 
             for sub in self.root.subgroups(recurse=True):
                 sub_mode = sub.ln_solver.options['mode']
@@ -1438,7 +1447,7 @@ class Problem(System):
                 # Modes must match root for all subs
                 if isinstance(sub.ln_solver, LinearGaussSeidel) and sub_mode not in (mode, 'auto'):
                     msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
-                            " Modes must match to use parallel derivative groups."
+                          " Modes must match to use parallel derivative groups."
                     msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
                     raise RuntimeError(msg)
 
@@ -1601,6 +1610,7 @@ class Problem(System):
 
         return connections, dangling
 
+
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
@@ -1634,6 +1644,7 @@ def _jac_to_flat_dict(jac):
             new_jac[(key1, key2)] = val2
 
     return new_jac
+
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root'):
@@ -1692,7 +1703,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 started = True
 
             # Optional file_like output
-            out_stream.write("  %s: '%s' wrt '%s'\n\n"% (c_name, u_name, p_name))
+            out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
             out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
             out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
