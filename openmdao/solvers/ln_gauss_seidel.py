@@ -77,8 +77,6 @@ class LinearGaussSeidel(LinearSolver):
         fwd = mode == 'fwd'
 
         system.clear_dparams()
-        # for name in rhs_mat:
-        #     dumat[name].vec[:] = 0.0
         for names in system._relevance.vars_of_interest():
             for name in names:
                 if name in dumat:

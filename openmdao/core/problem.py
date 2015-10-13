@@ -715,7 +715,7 @@ class Problem(System):
         return mode
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array'):
+                      return_format='array', dv_scale=None, cn_scale=None):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -738,6 +738,12 @@ class Problem(System):
         return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -754,12 +760,16 @@ class Problem(System):
         # Either analytic or finite difference
         if mode == 'fd' or self.root.fd_options['force_fd']:
             return self._calc_gradient_fd(indep_list, unknown_list,
-                                          return_format)
+                                          return_format, dv_scale=dv_scale,
+                                          cn_scale=cn_scale)
         else:
             return self._calc_gradient_ln_solver(indep_list, unknown_list,
-                                                 return_format, mode)
+                                                 return_format, mode,
+                                                 dv_scale=dv_scale,
+                                                 cn_scale=cn_scale)
 
-    def _calc_gradient_fd(self, indep_list, unknown_list, return_format):
+    def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
+                                 dv_scale=None, cn_scale=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -776,6 +786,12 @@ class Problem(System):
         return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -784,6 +800,11 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
+
+        if dv_scale is None:
+            dv_scale = {}
+        if cn_scale is None:
+            cn_scale = {}
 
         abs_params = []
         for name in indep_list:
@@ -842,14 +863,21 @@ class Problem(System):
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
+
+                    # Driver scaling
+                    if ikey in dv_scale:
+                        J[okey][ikey] *= dv_scale[ikey]
+                    if okey in cn_scale:
+                        J[okey][ikey] *= cn_scale[okey]
+
         else:
             usize = 0
             psize = 0
             for u in unknown_list:
                 usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
-                idx = self._poi_indices
-                if p in idx:
+                if p in self._poi_indices:
+                    idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
                     psize += self.root.unknowns.metadata(p)['size']
@@ -868,16 +896,25 @@ class Problem(System):
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
-                    if p in idx:
+                    if p in self._poi_indices:
+                        idx = self._poi_indices[p]
                         cols = len(idx)
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
+
+                            # Driver scaling
+                            if p in dv_scale:
+                                J[ui+row][pi+col] *= dv_scale[p]
+                            if u in cn_scale:
+                                J[ui+row][pi+col]*= cn_scale[u]
+
                     pi += cols
                 ui += rows
         return J
 
-    def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode):
+    def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
+                                 dv_scale=None, cn_scale=None):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
@@ -899,6 +936,12 @@ class Problem(System):
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -916,6 +959,11 @@ class Problem(System):
         nproc = comm.size
         owned = root._owning_ranks
 
+        if dv_scale is None:
+            dv_scale = {}
+        if cn_scale is None:
+            cn_scale = {}
+
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
         mode = self._mode(mode, indep_list, unknown_list)
@@ -924,11 +972,13 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-
-        # if we don't clear these out, we get small differences in derivs
-        # in CADRE
-        root._shared_du_vec[:] = 0.0
-        root._shared_dr_vec[:] = 0.0
+        for names in root._relevance.vars_of_interest(mode):
+            for name in names:
+                if name in root.dumat:
+                    root.dumat[name].vec[:] = 0.0
+                    root.drmat[name].vec[:] = 0.0
+        root.dumat[None].vec[:] = 0.0
+        root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
         root._sys_jacobian(params, unknowns, root.resids)
@@ -956,9 +1006,9 @@ class Problem(System):
                 Jslices[u] = slice(start, usize)
 
             for p in indep_list:
-                idx = self._poi_indices
                 start = psize
-                if p in idx:
+                if p in self._poi_indices:
+                    idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
                     psize += self.root.unknowns.metadata(p)['size']
@@ -968,9 +1018,11 @@ class Problem(System):
         if fwd:
             input_list, output_list = indep_list, unknown_list
             poi_indices, qoi_indices = self._poi_indices, self._qoi_indices
+            in_scale, un_scale = dv_scale, cn_scale
         else:
             input_list, output_list = unknown_list, indep_list
             qoi_indices, poi_indices = self._poi_indices, self._qoi_indices
+            in_scale, un_scale = cn_scale, dv_scale
 
         # Process our inputs/outputs of interest for parallel groups
         all_vois = self.root._relevance.vars_of_interest(mode)
@@ -1081,15 +1133,41 @@ class Problem(System):
                                     if J[item][param] is None:
                                         J[item][param] = np.zeros((nk, len(in_idxs)))
                                     J[item][param][:, i] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[item][param][:, i] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[item][param][:, i] *= un_scale[item]
                                 else:
                                     if J[param][item] is None:
                                         J[param][item] = np.zeros((len(in_idxs), nk))
                                     J[param][item][i, :] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[param][item][i, :] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[param][item][i, :] *= un_scale[item]
+
                             else:
                                 if fwd:
                                     J[Jslices[item], Jslices[param].start+i] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[Jslices[item], Jslices[param].start+i] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[Jslices[item], Jslices[param].start+i] *= un_scale[item]
+
                                 else:
                                     J[Jslices[param].start+i, Jslices[item]] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[Jslices[param].start+i, Jslices[item]] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[Jslices[param].start+i, Jslices[item]] *= un_scale[item]
 
         # Clean up after ourselves
         root.clear_dparams()

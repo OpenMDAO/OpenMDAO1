@@ -70,7 +70,6 @@ class VecWrapper(object):
         """
         acc = self._access[name]
         return acc.flat(acc.meta)
-        #return self._fastflat[name](self)
 
     def metadata(self, name):
         """
@@ -136,7 +135,6 @@ class VecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        #self._fastset[name](self, name, value)
         acc = self._access[name]
         acc.set(acc.meta, value)
 
