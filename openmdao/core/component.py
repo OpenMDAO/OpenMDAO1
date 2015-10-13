@@ -358,6 +358,10 @@ class Component(System):
         # create map of relative name in parent to relative name in child
         self._relname_map = self._get_relname_map(parent.unknowns)
 
+        # at the Group level, we create a set of arrays for each variable of
+        # interest, and we make them all subviews of the same shared array in
+        # order to conserve memory. Components don't actually own their params,
+        # so we just use an empty shared array for dp (with an offset of 0)
         self._shared_dp_vec = empty_arr
         self._shared_p_offsets = { None:0 }
         for vois in chain(relevance.inputs, relevance.outputs):

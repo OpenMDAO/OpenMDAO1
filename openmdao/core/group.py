@@ -338,10 +338,10 @@ class Group(System):
                            self._get_shared_vec_info(self._params_dict,
                                                      my_params=my_params)
         if parent is None:
-            # determine the size of the largest grouping of parallel subvecs, allocate
-            # an array of that size, and sub-allocate from that for all relevant subvecs
-            # We should never need more memory than the largest sized collection of parallel
-            # vecs.
+            # determine the size of the largest grouping of parallel subvecs,
+            # allocate an array of that size, and sub-allocate from that for all
+            # relevant subvecs. We should never need more memory than the
+            # largest sized collection of parallel vecs.
             max_usize, self._shared_u_offsets = \
                                self._get_shared_vec_info(self._unknowns_dict)
 
@@ -918,12 +918,6 @@ class Group(System):
         ls_inputs = set(iterkeys(self.dpmat[voi]))
         abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
 
-        # for initp_abs, meta in iteritems(self._params_dict):
-        #     if meta.get('pass_by_obj') or meta.get('remote'):
-        #         continue
-        #     src = self.connections.get(initp_abs)
-        #     if src in abs_uvec:
-        #         ls_inputs.add(initp_abs)
         for comp in self.components(local=True, recurse=True):
             for intinp_rel, meta in iteritems(comp.dpmat[voi]):
                 intinp_abs = meta['pathname']
