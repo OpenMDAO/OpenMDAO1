@@ -392,9 +392,6 @@ class Component(System):
 
         self._setup_gs_outputs(all_vois)
 
-        for p in self.params.keys():
-            print(self.pathname, ",", p)
-
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit
