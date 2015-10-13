@@ -13,6 +13,10 @@ from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
 
 from numpy import append, array, zeros
 
+#public symbols
+__all__ = ['InputFileGenerator', 'FileParser']
+
+
 def _getformat(val):
     # Returns the output format for a floating point number.
     # The general format is used with 16 places of accuracy, except for when
@@ -97,11 +101,13 @@ class ToInteger(TokenConverter):
         """Converter to make token into an integer."""
         return int(tokenlist[0])
 
+
 class ToFloat(TokenConverter):
     """Converter for PyParsing that is used to turn a token into a float."""
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a float."""
         return float(tokenlist[0].replace('D', 'E'))
+
 
 class ToNan(TokenConverter):
     """Converter for PyParsing that is used to turn a token into Python nan."""
@@ -109,12 +115,12 @@ class ToNan(TokenConverter):
         """Converter to make token into Python nan."""
         return float('nan')
 
+
 class ToInf(TokenConverter):
     """Converter for PyParsing that is used to turn a token into Python inf."""
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into Python inf."""
         return float('inf')
-
 
 
 class InputFileGenerator(object):
@@ -138,7 +144,9 @@ class InputFileGenerator(object):
         """Set the name of the template file to be used The template
         file is also read into memory when this method is called.
 
-        filename: str
+        Args
+        ----
+        filename : string
             Name of the template file to be used."""
 
         self.template_filename = filename
@@ -150,7 +158,9 @@ class InputFileGenerator(object):
     def set_generated_file(self, filename):
         """Set the name of the file that will be generated.
 
-        filename: str
+        Args
+        ----
+        filename : string
             Name of the input file to be generated."""
 
         self.output_filename = filename
@@ -159,7 +169,9 @@ class InputFileGenerator(object):
         """Lets you change the delimiter that is used to identify field
         boundaries.
 
-        delimiter: str
+        Args
+        ----
+        delimiter : str
             A string containing characters to be used as delimiters."""
 
         self.delimiter = delimiter
@@ -171,10 +183,12 @@ class InputFileGenerator(object):
         location. If you want to restart the search for the anchor at the file
         beginning, then call ``reset_anchor()`` before ``mark_anchor``.
 
-        anchor: str
+        Args
+        ----
+        anchor : string
             The text you want to search for.
 
-        occurrence: integer
+        occurrence : integer, optional
             Find nth instance of text; default is 1 (first). Use -1 to
             find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
@@ -241,10 +255,18 @@ class InputFileGenerator(object):
         """Changes a single variable in the template relative to the
         current anchor.
 
-        row - number of lines offset from anchor line (0 is anchor line).
-        This can be negative.
+        Args
+        ----
+        value : float, integer, bool, string
+            New value to set at the location.
 
-        field - which word in line to replace, as denoted by delimiter(s)"""
+        row : integer
+            Number of lines offset from anchor line (0 is anchor line).
+            This can be negative.
+
+        field : integer
+            Which word in line to replace, as denoted by delimiter(s)
+        """
 
         j = self.current_row + row
         line = self.data[j]
@@ -261,25 +283,27 @@ class InputFileGenerator(object):
         current anchor. This should generally be used for one-dimensional
         or free form arrays.
 
-        value: float, integer, bool, str
+        Args
+        ----
+        value : float, integer, bool, str
             Array of values to insert.
 
-        row_start: integer
+        row_start : integer
             Starting row for inserting the array. This is relative
             to the anchor, and can be negative.
 
-        field_start: integer
+        field_start : integer
             Starting field in the given row_start as denoted by
             delimiter(s).
 
-        field_end: integer
+        field_end : integer
             The final field the array uses in row_end.
             We need this to figure out if the template is too small or large
 
-        row_end: integer (optional)
+        row_end : integer, optional
             Use if the array wraps to cover additional lines.
 
-        sep: integer (optional)
+        sep : integer, optional
             Separator to use if we go beyond the template."""
 
         # Simplified input for single-line arrays
@@ -321,31 +345,31 @@ class InputFileGenerator(object):
         self.data[j] += "\n"
 
     def transfer_2Darray(self, value, row_start, row_end, field_start,
-                       field_end, sep=", "):
+                       field_end):
         """Changes the values of a 2D array in the template relative to the
         current anchor. This method is specialized for 2D arrays, where each
         row of the array is on its own line.
 
-        value: ndarray
+        Args
+        ----
+        value : ndarray
             Array of values to insert.
 
-        row_start: integer
+        row_start : integer
             Starting row for inserting the array. This is relative
             to the anchor, and can be negative.
 
-        row_end: integer
+        row_end : integer
             Final row for the array, relative to the anchor.
 
-        field_start: integer
+        field_start : integer
             starting field in the given row_start as denoted by
             delimiter(s).
 
-        field_end: integer
+        field_end : integer
             The final field the array uses in row_end.
             We need this to figure out if the template is too small or large.
-
-        sep: str (optional) (currently unsupported)
-            Separator to append between values if we go beyond the template."""
+        """
 
         sub = _SubHelper()
         i = 0
@@ -369,7 +393,9 @@ class InputFileGenerator(object):
     def clearline(self, row):
         """Replace the contents of a row with the newline character.
 
-        row: integer
+        Args
+        ----
+        row : integer
             Row number to clear, relative to current anchor."""
 
         self.data[self.current_row + row] = "\n"
@@ -383,7 +409,17 @@ class InputFileGenerator(object):
 
 
 class FileParser(object):
-    """Utility to locate and read data from a file."""
+    """Utility to locate and read data from a file.
+
+    Args
+    ----
+    end_of_line_comment_char : string, optional
+        Specify an end-of-line comment character to be ignored (e.g., Python
+        supports in-line comments with "#".)
+
+    full_line_comment_char : string, optional
+        Sepcify a comment character that signifies a line should be skipped.
+    """
 
     def __init__(self, end_of_line_comment_char=None, full_line_comment_char=None):
 
@@ -401,7 +437,9 @@ class FileParser(object):
     def set_file(self, filename):
         """Set the name of the file that will be generated.
 
-        filename: str
+        Args
+        ----
+        filename : string
             Name of the input file to be generated."""
 
         self.filename = filename
@@ -421,7 +459,9 @@ class FileParser(object):
         """Lets you change the delimiter that is used to identify field
         boundaries.
 
-        delimiter: str
+        Args
+        ----
+        delimiter : string
             A string containing characters to be used as delimiters. The
             default value is ' \t', which means that spaces and tabs are not
             taken as data but instead mark the boundaries. Note that the
@@ -439,10 +479,12 @@ class FileParser(object):
         location. If you want to restart the search for the anchor at the file
         beginning, then call ``reset_anchor()`` before ``mark_anchor``.
 
-        anchor: str
+        Args
+        ----
+        anchor : str
             The text you want to search for.
 
-        occurrence: integer
+        occurrence : integer
             Find nth instance of text; default is 1 (first). Use -1 to
             find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
@@ -508,38 +550,40 @@ class FileParser(object):
     def transfer_line(self, row):
         """Returns a whole line, relative to current anchor.
 
-        row: integer
+        Args
+        ----
+        row : integer
             Number of lines offset from anchor line (0 is anchor line).
-            This can be negative."""
+            This can be negative.
+
+        Returns
+        -------
+            string : line at the location requested"""
 
         return self.data[self.current_row + row].rstrip()
 
     def transfer_var(self, row, field, fieldend=None):
         """Grabs a single variable relative to the current anchor.
 
-        --- If the delimiter is a set of chars (e.g., ", ") ---
-
-        row: integer
+        Args
+        ----
+        row : integer
             Number of lines offset from anchor line (0 is anchor line).
             This can be negative.
 
-        field: integer
-            Which word in line to retrieve.
+        field : integer
+            If the delimiter is a set of chars: which word in line to retrieve.
+            If the delimiter is 'columns': character position to start.
 
-        fieldend - IGNORED
+        fieldend : integer (optional)
+            If the delimiter is a set of chars: IGNORED.
+            If the delimiter is 'columns': position of last character to return, or if
+            omitted, the end of the line is used.
 
-        --- If the delimiter is "columns" ---
-
-        row: integer
-            Number of lines offset from anchor line (0 is anchor line).
-            This can be negative.
-
-        field: integer
-            Character position to start.
-
-        fieldend: integer (optional)
-            Position of last character to return. If omitted, the end of
-            the line is used."""
+        Returns
+        -------
+            string : data from the requested location in the file
+        """
 
         j = self.current_row + row
         line = self.data[j]
@@ -569,20 +613,27 @@ class FileParser(object):
         """Searches for a key relative to the current anchor and then grabs
         a field from that line.
 
-        field: integer
+        You can do the same thing with a call to ``mark_anchor`` and ``transfer_var``.
+        This function just combines them for convenience.
+
+        Args
+        ----
+        field : integer
             Which field to transfer. Field 0 is the key.
 
-        occurrence: integer
+        occurrence : integer
             Find nth instance of text; default is 1 (first value
             field). Use -1 to find last occurance. Position 0 is the key
             field, so it should not be used as a value for occurrence.
 
-        rowoffset: integer (optional)
+        rowoffset : integer (optional)
             Optional row offset from the occurrence of key. This can
             also be negative.
 
-        You can do the same thing with a call to ``mark_anchor`` and ``transfer_var``.
-        This function just combines them for convenience."""
+        Returns
+        -------
+            string : data from the requested location in the file
+        """
 
         if not isinstance(occurrence, int) or occurrence==0:
             msg = "The value for occurrence must be a nonzero integer"
@@ -619,15 +670,6 @@ class FileParser(object):
     def transfer_array(self, rowstart, fieldstart, rowend=None, fieldend=None):
         """Grabs an array of variables relative to the current anchor.
 
-        rowstart: integer
-            Row number to start, relative to the current anchor.
-
-        fieldstart: integer
-            Field number to start.
-
-        rowend: integer (optional)
-            Row number to end. If not set, then only one row is grabbed.
-
         Setting the delimiter to 'columns' elicits some special behavior
         from this method. Normally, the extraction process wraps around
         at the end of a line and continues grabbing each field at the start of
@@ -635,6 +677,24 @@ class FileParser(object):
         (rowstart, fieldstart, rowend, fieldend) demark a box, and all
         values in that box are retrieved. Note that standard whitespace
         is the secondary delimiter in this case.
+
+        Args
+        ----
+        rowstart : integer
+            Row number to start, relative to the current anchor.
+
+        fieldstart : integer
+            Field number to start.
+
+        rowend : integer, optional
+            Row number to end. If not set, then only one row is grabbed.
+
+        fieldend : integer
+            Field number to end.
+
+        Returns
+        -------
+            string : data from the requested location in the file
         """
 
         j1 = self.current_row + rowstart
@@ -684,22 +744,28 @@ class FileParser(object):
         """Grabs a 2D array of variables relative to the current anchor. Each
         line of data is placed in a separate row.
 
-        rowstart: integer
-            Row number to start, relative to the current anchor.
-
-        fieldstart: integer
-            Field number to start.
-
-        rowend: integer
-            Row number to end relative to current anchor.
-
-        fieldend: integer (optional)
-            Field number to end. If not specified, grabs all fields up to the
-            end of the line.
-
         If the delimiter is set to 'columns', then the values contained in
         fieldstart and fieldend should be the column number instead of the
         field number.
+
+        Args
+        ----
+        rowstart : integer
+            Row number to start, relative to the current anchor.
+
+        fieldstart : integer
+            Field number to start.
+
+        rowend : integer
+            Row number to end relative to current anchor.
+
+        fieldend : integer (optional)
+            Field number to end. If not specified, grabs all fields up to the
+            end of the line.
+
+        Returns
+        -------
+            string : data from the requested location in the file
         """
 
         if fieldend and (fieldstart > fieldend):
@@ -766,7 +832,7 @@ class FileParser(object):
         return self.line_parse_token
 
     def _reset_tokens(self):
-        ''' Sets up the tokens for pyparsing '''
+        """Sets up the tokens for pyparsing."""
 
         # Somewhat of a hack, but we can only use printables if the delimiter is
         # just whitespace. Otherwise, some seprators (like ',' or '=') potentially

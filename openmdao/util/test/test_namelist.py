@@ -397,9 +397,9 @@ class TestCase(unittest.TestCase):
 
         # now test skipping
 
-        sb = Namelist(my_comp)
-        my_comp.varcontainer.boolvar = True
-        my_comp.varcontainer.textvar = "Skipme"
+        sb = Namelist(top.root.my_comp)
+        top['my_comp.varcontainer:boolvar'] = True
+        top['my_comp.varcontainer:textvar'] = "Skipme"
 
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -416,14 +416,20 @@ class TestCase(unittest.TestCase):
 
     def test_1Darray_write(self):
 
-        my_comp = VarComponent()
-        sb = Namelist(my_comp)
+        top = Problem()
+        top.root = Group()
+        top.root.add('my_comp', VarComponent())
 
-        my_comp.arrayvar = zeros(3, dtype=numpy_float32)
-        my_comp.arrayvar[2] = 3.7
-        my_comp.single = array(['a', 'b', 'c'])
-        my_comp.singleint = array([1, 2, 3])
-        my_comp.singlebool = array([False, True, False])
+        top.setup(check=False)
+        top.run()
+
+        sb = Namelist(top.root.my_comp)
+
+        top['my_comp.arrayvar'] = zeros(3, dtype=numpy_float32)
+        top['my_comp.arrayvar'][2] = 3.7
+        top['my_comp.single'] = array(['a', 'b', 'c'])
+        top['my_comp.singleint'] = array([1, 2, 3])
+        top['my_comp.singlebool'] = array([False, True, False])
 
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -451,12 +457,18 @@ class TestCase(unittest.TestCase):
 
     def test_2Darray_write(self):
 
-        my_comp = VarComponent()
-        sb = Namelist(my_comp)
+        top = Problem()
+        top.root = Group()
+        top.root.add('my_comp', VarComponent())
 
-        my_comp.arrayvar = zeros([3, 2], dtype=numpy_float32)
-        my_comp.arrayvar[0, 1] = 3.7
-        my_comp.arrayvar[2, 0] = 7.88
+        top.setup(check=False)
+        top.run()
+
+        sb = Namelist(top.root.my_comp)
+
+        top['my_comp.arrayvar'] = zeros([3, 2], dtype=numpy_float32)
+        top['my_comp.arrayvar'][0, 1] = 3.7
+        top['my_comp.arrayvar'][2, 0] = 7.88
 
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -478,10 +490,16 @@ class TestCase(unittest.TestCase):
 
     def test_unsupported_array(self):
 
-        my_comp = VarComponent()
-        sb = Namelist(my_comp)
+        top = Problem()
+        top.root = Group()
+        top.root.add('my_comp', VarComponent())
 
-        my_comp.arrayvar = zeros([2, 2, 2], dtype=numpy_float32)
+        top.setup(check=False)
+        top.run()
+
+        sb = Namelist(top.root.my_comp)
+
+        top['my_comp.arrayvar'] = zeros([2, 2, 2], dtype=numpy_float32)
 
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -493,26 +511,6 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err),
                              "Don't know how to handle array of" + \
                                            " 3 dimensions")
-        else:
-            self.fail('RuntimeError expected')
-
-    def test_unsupported_traits(self):
-
-        my_comp = VarComponent()
-        my_comp.add('unsupported', File(iotype='in'))
-        sb = Namelist(my_comp)
-
-        sb.set_filename(self.filename)
-        sb.add_group('Test')
-        sb.add_var("unsupported")
-
-        try:
-            sb.generate()
-        except RuntimeError, err:
-            self.assertEqual(str(err),
-                             "Error generating input file. Don't" + \
-                             " know how to handle data in variable" + \
-                             " unsupported in group Test.")
         else:
             self.fail('RuntimeError expected')
 

@@ -4,7 +4,7 @@ Utilities for reading and writing Fortran namelists.
 
 # pylint: disable-msg=E0611,F0401
 from collections import OrderedDict
-from six import iteritems
+from six import iteritems, iterkeys
 from six.moves import range
 
 
@@ -16,6 +16,10 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       oneOf, nums, TokenConverter, Group
 
 from openmdao.util.file_wrap import ToFloat, ToInteger
+
+#public symbols
+__all__ = ['Namelist']
+
 
 def _floatfmt(val):
     """ Returns the output format for a floating point number.
@@ -104,7 +108,13 @@ class ToBool(TokenConverter):
                                ' Boolean value in the namelist.')
 
 class Namelist(object):
-    """Utility to ease the task of constructing a formatted output file."""
+    """Utility to ease the task of constructing a formatted output file.
+
+    Args
+    ----
+    comp: Component
+        Component instance who owns this namelist.
+    """
 
     def __init__(self, comp):
 
@@ -122,7 +132,9 @@ class Namelist(object):
     def set_filename(self, filename):
         """Set the name of the file that will be generated or parsed.
 
-        filename: string
+        Args
+        ----
+        filename : string
             Name of the file to be written."""
 
         self.filename = filename
@@ -131,7 +143,9 @@ class Namelist(object):
         """Sets the title for the namelist Note that a title is not
         required.
 
-        title: string
+        Args
+        ----
+        title : string
             The title card in the namelist - generally optional."""
 
         self.title = title
@@ -140,7 +154,9 @@ class Namelist(object):
         """Add a new group to the namelist. Any variables added after this are
         added to this new group.
 
-        name: string
+        Args
+        ----
+        name : string
             Group name to be added."""
 
         self.groups.append(name)
@@ -150,8 +166,11 @@ class Namelist(object):
     def add_var(self, name):
         """Add an openmdao variable to the namelist.
 
-        varpath: string
-        varpath is the dotted path (e.g., container1:var1)."""
+        Args
+        ----
+        varpath : string
+            Variable name being added. For variable trees, include the colon
+            between each level."""
 
         value = self.comp.params[name]
 
@@ -160,37 +179,46 @@ class Namelist(object):
     def add_newvar(self, name, value):
         """Add a new variable to the namelist.
 
-        name: string
+        Args
+        ----
+        name : string
             Name of the variable to be added.
 
-        value: int, float, string, ndarray, list, bool
+        value : int, float, string, ndarray, list, bool
             Value of the variable to be added."""
 
         self.cards[self.currentgroup].append(Card(name, value))
 
     def add_container(self, varpath='', skip=None):
-        """Add every variable in an OpenMDAO container to the namelist. This
-        can be used it your component has containers of variables.
+        """Add every variable from a given variable tree path to the
+        namelist. For multi-level trees, this should be colon-delimited.
 
-        varpath: string
-            Dotted path of container in the data hierarchy.
+        Args
+        ----
+        varpath : string
+            Vartree name, colon-delimited for multi-level trees.
 
-        skip: list of str
-            List of variables to skip printing to the file."""
+        skip : list of str
+            List of variables to skip printing to the file. No need to include
+            the vartree path in the names."""
 
-        target_container = self.comp.get(varpath)
-
+        print skip
         if not skip:
             skip = []
 
-        for name in sorted(target_container.list_vars()):
-            if name not in skip:
-                self.add_var("%s.%s" % (varpath, name))
+        for name in iterkeys(self.comp._params_dict):
+            if name.startswith(varpath):
+                sub_name = name.lstrip(varpath + ':')
+                print name, sub_name, skip
+                if sub_name not in skip:
+                    self.add_var(name)
 
     def add_comment(self, comment):
         """Add a comment in the namelist.
 
-        comment: string
+        Args
+        ----
+        comment : string
             Comment text to be added. Text should include comment character
             if one is desired. (Note that a comment character isn't always
             needed in a Namelist. It seems to figure out whether something
@@ -489,19 +517,24 @@ class Namelist(object):
     def load_model(self, rules=None, ignore=None, single_group=-1):
         """Loads the current deck into an OpenMDAO component.
 
-        rules : dict of lists of strings (optional)
+        Args
+        ----
+        rules : dict of lists of strings, optional
              An optional dictionary of rules can be passed if the component has a
              hierarchy of variable trees for its input variables. If no rules dictionary
              is passed, ``load_model`` will attempt to find each namelist variable in the
              top level of the model hierarchy.
 
-        ignore : list of strings (optional)
+        ignore : list of strings, optional
              List of variable names that can safely be ignored.
 
-        single_group : integer (optional)
+        single_group : integer, optional
              Group id number to use for processing one single namelist group. Useful
              if extra processing is needed or if multiple groups have the same name.
 
+        Returns
+        -------
+        tuple
              Returns a tuple containing the following values:
              (empty_groups, unlisted_groups, unlinked_vars). These need to be
              examined after calling ``load_model`` to make sure you loaded every
@@ -518,9 +551,8 @@ class Namelist(object):
              variables that couldn't be loaded because the group wasn't mentioned
              in the rules dictionary.
 
-        unlinked_vars: list containing all variable names that weren't found
+        unlinked_vars : list containing all variable names that weren't found
         in the component.
-
         """
 
         # See Pylint W0102 for why we do this
@@ -619,6 +651,8 @@ class Namelist(object):
     def find_card(self, group, name):
         """Returns the value for a given namelist variable in a given group.
 
+        Args
+        ----
         group: string
             namelist group name.
 
