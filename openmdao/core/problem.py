@@ -1007,7 +1007,11 @@ class Problem(System):
             Jslices = {}
             for u in unknown_list:
                 start = usize
-                usize += unknowns.metadata(u)['size']
+                if u in self._qoi_indices:
+                    idx = self._qoi_indices[u]
+                    usize += len(idx)
+                else:
+                    usize += self.root.unknowns.metadata(u)['size']
                 Jslices[u] = slice(start, usize)
 
             for p in indep_list:

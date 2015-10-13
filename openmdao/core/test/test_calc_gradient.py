@@ -3,7 +3,11 @@
 from __future__ import print_function
 
 import unittest
+
 import numpy as np
+
+from numpy.testing import assert_almost_equal
+
 from six import text_type, PY3
 
 from openmdao.core.problem import Problem
@@ -21,10 +25,33 @@ else:
         return s
 
 
+#
+# expected jacobian
+#
+expectedJ = {
+    'comp.f': {
+        'parm.x': np.array([
+            [ -3., -3., -17.,  9.]
+        ])
+    },
+    'comp.g': {
+        'parm.x': np.array([
+            [ 3.,   1.,   3.,  1.],
+            [ 1.,   4.,   2.,  3.],
+            [ 6.,   1.,   2., -1.],
+        ])
+    }
+}
+
+expectedJ_array = np.concatenate((
+    expectedJ['comp.f']['parm.x'],
+    expectedJ['comp.g']['parm.x']
+))
+
+
 class TestCalcGradient(unittest.TestCase):
 
     def test_calc_gradient_interface_errors(self):
-
         root = Group()
         prob = Problem(root=root)
         root.add('comp', ExecComp('y=x*2.0'))
@@ -64,73 +91,42 @@ class TestCalcGradient(unittest.TestCase):
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'])
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'])
 
         # check that calc_gradient returns proper array value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]), decimal=5)
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'], decimal=5)
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'], decimal=5)
 
         # check that calc_gradient returns proper array value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J, expectedJ_array, decimal=5)
 
     def test_calc_gradient_with_poi_indices(self):
+        p_idxs = [0, 1, 2, 3]  # FIXME: try [0, 1, 2, 4]
+
         root = Group()
         root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 1., 2.])))
         root.add('comp', RosenSuzuki())
 
-        root.connect('parm.x', 'comp.x', src_indices=[0,1,2,3])
+        root.connect('parm.x', 'comp.x', src_indices=p_idxs)
 
         prob = Problem(root)
-        prob.driver.add_desvar('parm.x', indices=[0,1,2,3], low=-10, high=99)   # FIXME: try [0, 1, 2, 4]
+        prob.driver.add_desvar('parm.x', indices=p_idxs, low=-10, high=99)
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0.)
         prob.setup(check=False)
@@ -141,65 +137,34 @@ class TestCalcGradient(unittest.TestCase):
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'])
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'])
 
         # check that calc_gradient returns proper array value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]), decimal=5)
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'], decimal=5)
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'], decimal=5)
 
         # check that calc_gradient returns proper array value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 1.,   4.,   2.,  3.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J, expectedJ_array, decimal=5)
 
     def test_calc_gradient_with_qoi_indices(self):
+        q_idxs = [0, 2]
+
         root = Group()
         root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 1.])))
         root.add('comp', RosenSuzuki())
@@ -209,68 +174,45 @@ class TestCalcGradient(unittest.TestCase):
         prob = Problem(root)
         prob.driver.add_desvar('parm.x', low=-10, high=99)
         prob.driver.add_objective('comp.f')
-        prob.driver.add_constraint('comp.g', upper=0., indices=[0, 2])
+        prob.driver.add_constraint('comp.g', upper=0., indices=q_idxs)
         prob.setup(check=False)
         prob.run()
 
         indep_list = ['parm.x']
         unknown_list = ['comp.f', 'comp.g']
 
+        # override expected array value to reflect qoi indices
+        expectedJ_array = np.concatenate((
+            expectedJ['comp.f']['parm.x'],
+            expectedJ['comp.g']['parm.x'][q_idxs, :]
+        ))
+
         # check that calc_gradient returns proper dict value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'][q_idxs, :])
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
-        # FIXME: currently returns an extra row of zeros
-        # J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
-        # np.testing.assert_almost_equal(J, np.array([
-        #     [-3.,  -3., -17.,  9.],
-        #     [ 3.,   1.,   3.,  1.],
-        #     [ 6.,   1.,   2., -1.],
-        # ]))
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]))
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 6.,   1.,   2., -1.],
-        ]))
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'])
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'][q_idxs, :])
 
         # check that calc_gradient returns proper array value when mode is 'rev'
-        # FIXME: currently returns an extra row of zeros
-        # J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
-        # np.testing.assert_almost_equal(J, np.array([
-        #     [-3.,  -3., -17.,  9.],
-        #     [ 3.,   1.,   3.,  1.],
-        #     [ 6.,   1.,   2., -1.],
-        # ]))
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
+        assert_almost_equal(J, expectedJ_array)
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp.f']['parm.x'], np.array([
-            [ -3., -3., -17.,  9.],
-        ]), decimal=5)
-        np.testing.assert_almost_equal(J['comp.g']['parm.x'], np.array([
-            [ 3.,   1.,   3.,  1.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J['comp.f']['parm.x'], expectedJ['comp.f']['parm.x'],            decimal=5)
+        assert_almost_equal(J['comp.g']['parm.x'], expectedJ['comp.g']['parm.x'][q_idxs, :], decimal=5)
 
         # check that calc_gradient returns proper array value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([
-            [-3.,  -3., -17.,  9.],
-            [ 3.,   1.,   3.,  1.],
-            [ 6.,   1.,   2., -1.],
-        ]), decimal=5)
+        assert_almost_equal(J, expectedJ_array, decimal=5)
 
     def test_calc_gradient_multiple_params(self):
         prob = Problem()
@@ -283,30 +225,30 @@ class TestCalcGradient(unittest.TestCase):
 
         # check that calc_gradient returns proper dict value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
-        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+        assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[35.]]))
+        assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[-6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fwd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+        assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
-        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
-        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+        assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[35.]]))
+        assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[-6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'rev'
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+        assert_almost_equal(J, np.array([[-6., 35.]]))
 
         # check that calc_gradient returns proper dict value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
-        np.testing.assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[ 35.]]))
-        np.testing.assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[ -6.]]))
+        assert_almost_equal(J['comp3.y']['p2.x2'], np.array([[35.]]))
+        assert_almost_equal(J['comp3.y']['p1.x1'], np.array([[-6.]]))
 
         # check that calc_gradient returns proper array value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
-        np.testing.assert_almost_equal(J, np.array([[-6., 35.]]))
+        assert_almost_equal(J, np.array([[-6., 35.]]))
 
 
 if __name__ == "__main__":
