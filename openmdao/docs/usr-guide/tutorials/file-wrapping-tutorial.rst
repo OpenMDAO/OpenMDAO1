@@ -59,7 +59,7 @@ Quibbling over the 11th--15th decimal place may sound unnecessary,
 but some applications are sensitive to changes of this magnitude. Moreover, it
 is important to consider how your component may be used during optimization. A
 gradient optimizer will often use a finite-difference scheme to calculate the
-gradients for a model, and this means that some component inputs might be
+gradients for a model, and this means that some component params might be
 subjected to small increments and decrements. A loss of precision here can
 completely change the calculated gradient and prevent the optimizer from
 reaching a correct minimum value.
@@ -367,7 +367,7 @@ component's set of input variables. Other methods can parse a
 namelist file and load the variable data back into an OpenMDAO component's
 variables (which can be useful for populating a component with new values).
 
-For example, consider a component whose inputs include five variables of
+For example, consider a component whose parms include five variables of
 various types. A component that writes out an input file as a single
 namelist called `MAIN` would look like this:
 
@@ -387,7 +387,7 @@ namelist called `MAIN` would look like this:
             self.add_param('xreal', 35.6, desc='A floating point input')
             self.add_param('xint', 88, pass_by_obj=True, desc='An integer input')
             self.add_param('xchar', "Hello", pass_by_obj=True, desc='A string input')
-            self.add_param('xchar', True, pass_by_obj=True, desc='A boolean input')
+            self.add_param('xbool', True, pass_by_obj=True, desc='A boolean input')
             self.add_param('areal', array([1.0, 1.0, 2.0, 3.0]), pass_by_obj=True, desc='An array input')
 
         def solve_nonlinear(self, params, unknowns, resids):
