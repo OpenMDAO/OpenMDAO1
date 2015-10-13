@@ -200,7 +200,7 @@ class Group(System):
         return self.subsystems(local=local, recurse=recurse, typ=Component,
                                include_self=include_self)
 
-    def _setup_paths(self, parent_path, probdata):
+    def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
@@ -212,9 +212,9 @@ class Group(System):
         probdata : `_ProbData`
             Problem level data container.
         """
-        super(Group, self)._setup_paths(parent_path, probdata)
+        super(Group, self)._init_sys_data(parent_path, probdata)
         for sub in itervalues(self._subsystems):
-            sub._setup_paths(self.pathname, probdata)
+            sub._init_sys_data(self.pathname, probdata)
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -420,13 +420,10 @@ class Group(System):
 
         # create implementation specific VecWrappers
         if voi is None:
-            self.unknowns = impl.create_src_vecwrapper(sys_pathname,
-                                                       self._sysdata, comm)
+            self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
-            self.resids = impl.create_src_vecwrapper(sys_pathname,
-                                                     self._sysdata, comm)
-            self.params = impl.create_tgt_vecwrapper(sys_pathname,
-                                                     self._sysdata, comm)
+            self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
+            self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
@@ -441,12 +438,9 @@ class Group(System):
                               var_of_interest=None, store_byobjs=True)
 
         if voi is None or self._probdata.top_lin_gs:
-            dunknowns = impl.create_src_vecwrapper(sys_pathname,
-                                                   self._sysdata, comm)
-            dresids = impl.create_src_vecwrapper(sys_pathname,
-                                                 self._sysdata, comm)
-            dparams = impl.create_tgt_vecwrapper(sys_pathname,
-                                                 self._sysdata, comm)
+            dunknowns = impl.create_src_vecwrapper(self._sysdata, comm)
+            dresids = impl.create_src_vecwrapper(self._sysdata, comm)
+            dparams = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
             dunknowns.setup(unknowns_dict, relevance=self._relevance,
                             var_of_interest=voi,

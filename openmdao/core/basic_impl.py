@@ -15,7 +15,7 @@ class BasicImpl(object):
         return FakeComm()
 
     @staticmethod
-    def create_src_vecwrapper(pathname, sysdata, comm):
+    def create_src_vecwrapper(sysdata, comm):
         """
         Create a vecwrapper for source variables.
 
@@ -31,10 +31,10 @@ class BasicImpl(object):
         -------
         `SrcVecWrapper`
         """
-        return SrcVecWrapper(pathname, sysdata, comm)
+        return SrcVecWrapper(sysdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(pathname, sysdata, comm):
+    def create_tgt_vecwrapper(sysdata, comm):
         """
         Create a vecwrapper for target variables.
 
@@ -50,7 +50,7 @@ class BasicImpl(object):
         -------
         `TgtVecWrapper`
         """
-        return TgtVecWrapper(pathname, sysdata, comm)
+        return TgtVecWrapper(sysdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,

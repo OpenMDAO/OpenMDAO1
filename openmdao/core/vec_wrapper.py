@@ -51,8 +51,7 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, pathname, sysdata, comm=None):
-        self.pathname = pathname
+    def __init__(self, sysdata, comm=None):
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
@@ -288,7 +287,7 @@ class VecWrapper(object):
         `VecWrapper`
             A new `VecWrapper` that is a view into this one.
         """
-        view = self.__class__(system.pathname, system._sysdata, comm)
+        view = self.__class__(system._sysdata, comm)
         view_size = 0
 
         vardict = self._vardict
@@ -458,8 +457,8 @@ class VecWrapper(object):
             The given name as seen from the 'scope' of the `System` that
             contains this `VecWrapper`.
         """
-        if self.pathname:
-            start = len(self.pathname)+1
+        if self._sysdata.pathname:
+            start = len(self._sysdata.pathname)+1
         else:
             start = 0
         return name[start:]
@@ -767,7 +766,8 @@ class TgtVecWrapper(VecWrapper):
                         if src:
                             src, idxs = src
                             common = get_common_ancestor(src, pathname)
-                            if common == self.pathname or (self.pathname+'.') not in common:
+                            if (common == self._sysdata.pathname or
+                                 (self._sysdata.pathname+'.') not in common):
                                 missing.append(meta)
 
         if shared_vec is not None:

@@ -30,7 +30,7 @@ class PetscImpl(object):
         return MPI.COMM_WORLD
 
     @staticmethod
-    def create_src_vecwrapper(pathname, sysdata, comm):
+    def create_src_vecwrapper(sysdata, comm):
         """
         Create a`PetscSrcVecWrapper`.
 
@@ -38,10 +38,10 @@ class PetscImpl(object):
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper(pathname, sysdata, comm)
+        return PetscSrcVecWrapper(sysdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(pathname, sysdata, comm):
+    def create_tgt_vecwrapper(sysdata, comm):
         """
         Create a `PetscTgtVecWrapper`.
 
@@ -49,7 +49,7 @@ class PetscImpl(object):
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper(pathname, sysdata, comm)
+        return PetscTgtVecWrapper(sysdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
@@ -128,7 +128,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
                                               shared_vec=shared_vec)
         if trace:
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
-                  (self.pathname, len(self.vec), self.keys(), self.vec))
+                  (self._syspath.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -153,8 +153,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if trace:
-            debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
-                                                                        sizes))
+            debug("'%s': allgathering local unknown sizes: local=%s" %
+                     (self._sysdata.pathname, sizes))
         return self.comm.allgather(sizes)
 
     def norm(self):
@@ -227,7 +227,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                                               shared_vec=shared_vec)
         if trace:
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
-                  (self.pathname, len(self.vec), self.keys(), self.vec))
+                  (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -249,7 +249,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         if trace:
             msg = "'%s': allgathering param sizes.  local param sizes = %s"
-            debug(msg % (self.pathname, psizes))
+            debug(msg % (self._sysdata.pathname, psizes))
 
         return self.comm.allgather(psizes)
 
@@ -291,7 +291,7 @@ class PetscDataTransfer(object):
 
         uvec = src_vec.petsc_vec
         pvec = tgt_vec.petsc_vec
-        name = src_vec.pathname
+        name = src_vec._sysdata.pathname
 
         if trace:
             debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %

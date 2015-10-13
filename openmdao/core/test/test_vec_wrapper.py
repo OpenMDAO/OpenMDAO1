@@ -22,7 +22,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertEqual(u.vec.size, 10)
@@ -76,7 +76,7 @@ class TestVecWrapper(unittest.TestCase):
 
         s = _SysData('')
         s._unknowns_dict = u._vardict
-        p = TgtVecWrapper('', s)
+        p = TgtVecWrapper(s)
         p.setup(None, params, u, params.keys(),
                 connections, store_byobjs=True)
 
@@ -105,7 +105,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = OrderedDict([
@@ -147,7 +147,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
@@ -164,7 +164,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         unorm = u.norm()
@@ -180,10 +180,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
@@ -203,10 +203,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
-        u = SrcVecWrapper('', _SysData(''))
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:

@@ -202,7 +202,7 @@ class System(object):
         if include_self:
             yield self
 
-    def _setup_paths(self, parent_path, probdata):
+    def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Parameter
@@ -701,16 +701,14 @@ class System(object):
             self.unknowns = parent.unknowns.get_view(self, comm, umap)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
             self.resids = parent.resids.get_view(self, comm, umap)
-            self.params = parent._impl.create_tgt_vecwrapper(self.pathname,
-                                                             self._sysdata, comm)
+            self.params = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
                               store_byobjs=True)
 
         self.dumat[voi] = parent.dumat[voi].get_view(self, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self, comm, umap)
-        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname,
-                                                             self._sysdata, comm)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                   my_params, self.connections,

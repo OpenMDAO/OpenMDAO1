@@ -13,7 +13,7 @@ class TestUnitComp(unittest.TestCase):
         prob = Problem()
         u_comp = UnitComp(1, param_name="x", out_name="x_out", units="ft**2/furlong")
 
-        u_comp._setup_paths('', prob._probdata)
+        u_comp._init_sys_data('', prob._probdata)
         params, unknowns = u_comp._setup_variables()
 
         self.assertEqual(['x'], list(params.keys()))

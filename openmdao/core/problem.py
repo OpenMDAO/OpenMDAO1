@@ -271,7 +271,7 @@ class Problem(System):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
-        # if we modify the system tree, we'll need to call _setup_paths,
+        # if we modify the system tree, we'll need to call _init_sys_data,
         # _setup_variables and _setup_connections again
         tree_changed = False
 
@@ -283,7 +283,7 @@ class Problem(System):
             self._probdata.top_lin_gs = True
 
         # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname, self._probdata)
+        self.root._init_sys_data(self.pathname, self._probdata)
 
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
@@ -345,7 +345,7 @@ class Problem(System):
         # if the system tree has changed, we need to recompute pathnames,
         # variable metadata, and connections
         if tree_changed:
-            self.root._setup_paths(self.pathname, probdata)
+            self.root._init_sys_data(self.pathname, probdata)
             params_dict, unknowns_dict = \
                     self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict,

@@ -44,7 +44,7 @@ class TestGroup(unittest.TestCase):
 
         prob = Problem()
         # paths must be initialized prior to calling _setup_variables
-        group._setup_paths('', prob._probdata)
+        group._init_sys_data('', prob._probdata)
         params_dict, unknowns_dict = group._setup_variables()
 
         self.assertEqual(list(params_dict.keys()), ['C1.x', 'C2.x'])
@@ -62,7 +62,7 @@ class TestGroup(unittest.TestCase):
         root.connect('C1.y',['C2.x', 'C3.x'])
 
         prob = Problem()
-        root._setup_paths('', prob._probdata)
+        root._init_sys_data('', prob._probdata)
         params_dict, unknowns_dict = root._setup_variables()
 
         # verify we get correct connection information
