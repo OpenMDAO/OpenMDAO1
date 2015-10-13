@@ -374,7 +374,7 @@ component's set of input variables. Other methods can parse a
 namelist file and load the variable data back into an OpenMDAO component's
 variables (which can be useful for populating a component with new values).
 
-For example, consider a component whose parms include five variables of
+For example, consider a component whose parmeters include five variables of
 various types. A component that writes out an input file as a single
 namelist called `MAIN` would look like this:
 
