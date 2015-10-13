@@ -139,8 +139,6 @@ class TestCase(unittest.TestCase):
                    "CQUAD4 z\n"
 
         self.assertEqual(answer, result)
-        print result
-
 
     def test_templated_input_arrays(self):
 

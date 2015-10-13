@@ -31,21 +31,23 @@ precision. Consider a variable with 15 digits of precision.
 
 .. doctest:: precision
 
+    >>> # Python 3 compatibility
+    >>> from __future__ import print_function
     >>> val = 3.1415926535897932
     >>>
     >>> val
     3.141592653589793...
     >>>
-    >>> print val
+    >>> print(val)
     3.14159265359
     >>>
-    >>> print "%s" % str(val)
+    >>> print("%s" % str(val))
     3.14159265359
     >>>
-    >>> print "%f" % val
+    >>> print("%f" % val)
     3.141593
     >>>
-    >>> print "%.16f" % val
+    >>> print("%.16f" % val)
     3.141592653589793...
 
 If the variable's value in the input file is created using the ``print``
@@ -181,8 +183,9 @@ would look like this.
 .. testcode:: Parse_Input
     :hide:
 
+    from __future__ import print_function
     for datum in parser.data:
-        print datum
+        print(datum)
 
 .. testoutput:: Parse_Input
 
@@ -214,8 +217,9 @@ fragment ``"INPUT"``.
 .. testcode:: Parse_Input
     :hide:
 
+    from __future__ import print_function
     for datum in parser.data:
-        print datum
+        print(datum)
 
 .. testoutput:: Parse_Input
 
@@ -248,8 +252,9 @@ back to the first one.
 .. testcode:: Parse_Input
     :hide:
 
+    from __future__ import print_function
     for datum in parser.data:
-        print datum
+        print(datum)
 
 .. testoutput:: Parse_Input
 
@@ -275,8 +280,9 @@ replacing the set of three integers as follows:
 .. testcode:: Parse_Input
     :hide:
 
+    from __future__ import print_function
     for datum in parser.data:
-        print datum.rstrip()
+        print(datum.rstrip())
 
 .. testoutput:: Parse_Input
 
@@ -310,8 +316,9 @@ array in a template to add more terms.
 .. testcode:: Parse_Input
     :hide:
 
+    from __future__ import print_function
     for datum in parser.data:
-        print datum.rstrip()
+        print(datum.rstrip())
 
 .. testoutput:: Parse_Input
 
@@ -515,6 +522,8 @@ output file. (Note that this code must be placed in your component's
 .. testcode:: Parse_Output
     :hide:
 
+    from __future__ import print_function
+
     from openmdao.util.file_wrap import FileParser
     parser = FileParser()
     from openmdao.core.component import Component
@@ -538,7 +547,7 @@ statement is there only for display.)
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(1, 2)
 
-    print "%g is a %s" % (var, type(var))
+    print("%g is a %s" % (var, type(var)))
     self.xreal = var
 
 .. testoutput:: Parse_Output
@@ -560,7 +569,7 @@ this:
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(1, 4)
 
-    print "%g" % var
+    print("%g" % var)
 
 ::
 
@@ -575,7 +584,7 @@ underflows, etc., and take action. NumPy includes the functions ``isnan`` and ``
 
     from numpy import isnan, isinf
 
-    print isnan(var)
+    print(isnan(var))
 
 ::
 
@@ -590,7 +599,7 @@ word ``DISPLACEMENT``.
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(2, 1)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -606,7 +615,7 @@ start at the second instance of the text fragment ``"LOAD CASE"``.
     parser.mark_anchor("LOAD CASE", 2)
     var = parser.transfer_var(1, 2)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -628,7 +637,7 @@ back to the first one.
     parser.mark_anchor("LOAD CASE", -2)
     var = parser.transfer_var(1, 2)
 
-    print "%g" % var
+    print("%g" % var)
 
 .. testoutput:: Parse_Output
 
@@ -643,7 +652,7 @@ There is a shortcut for extracting data that is stored as ``Key Value`` or
     parser.mark_anchor("LOAD CASE 1")
     var = parser.transfer_keyvar("DISPLACEMENT", 1)
 
-    print "%g" % var
+    print("%g" % var)
 
 .. testoutput:: Parse_Output
 
@@ -682,7 +691,7 @@ them as an array. You can do this with the ``transfer_array`` method.
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_array(2, 2, 2, 5)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -701,7 +710,7 @@ last line is hit. The following extraction illustrates this:
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_array(1, 3, 2, 4)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -752,7 +761,7 @@ method.
     parser.mark_anchor("Hz")
     var = parser.transfer_2Darray(1, 3, 4, 12)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output2D
 
@@ -803,7 +812,7 @@ Try grabbing the first element without changing the delimiters:
     parser.mark_anchor("CASE")
     var = parser.transfer_var(1, 2)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -820,7 +829,7 @@ delimiters. Now specify commas as your delimiter.
     parser.set_delimiters(", ")
     var = parser.transfer_var(1, 2)
 
-    print var
+    print(var)
 
 .. testoutput:: Parse_Output
 
@@ -878,9 +887,9 @@ Let's parse this file to extract the third boolean flag and the two numbers.
     var2 = parser.transfer_var(2, 4, 10)
     var3 = parser.transfer_var(2, 11, 20)
 
-    print var1
-    print var2
-    print var3
+    print(var1)
+    print(var2)
+    print(var3)
 
 When the delimiters are in column mode, ``transfer_var`` takes the starting
 field and the ending field as its second and third arguments. Since we just
@@ -927,7 +936,7 @@ inside of the box are parsed assuming standard separator characters (``" \t"``).
     parser.set_delimiters("columns")
     var = parser.transfer_array(2, 6, 3, 13)
 
-    print var
+    print(var)
 
 So here we've called ``transfer_array`` with four arguments: `starting row,
 starting column, ending row, ending column`. This results in the following

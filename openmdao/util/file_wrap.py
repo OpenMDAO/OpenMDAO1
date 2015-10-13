@@ -4,6 +4,8 @@ A collection of utilities for file wrapping.
 Note: This is a work in progress.
 """
 
+from __future__ import print_function
+
 import re
 from six.moves import range
 
@@ -818,7 +820,7 @@ class FileParser(object):
                     try:
                         data[i+1, :] = array(parsed[(fieldstart-1):fieldend])
                     except:
-                        print data
+                        print(data)
                 else:
                     data[i+1, :] = array(parsed[(fieldstart-1):])
 

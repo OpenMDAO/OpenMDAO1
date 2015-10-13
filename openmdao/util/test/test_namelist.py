@@ -519,7 +519,7 @@ class TestCase(unittest.TestCase):
         try:
             token = ToBool('Junk')
             token.postParse(0, 0, ["Junk"])
-        except RuntimeError, err:
+        except RuntimeError as err:
             msg = "Unexpected error while trying to identify a Boolean value in the namelist."
             self.assertEqual(str(err), msg)
         else:

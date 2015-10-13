@@ -2,6 +2,8 @@
 Utilities for reading and writing Fortran namelists.
 """
 
+from __future__ import print_function
+
 # pylint: disable-msg=E0611,F0401
 from collections import OrderedDict
 from six import iteritems, iterkeys
@@ -202,14 +204,14 @@ class Namelist(object):
             List of variables to skip printing to the file. No need to include
             the vartree path in the names."""
 
-        print skip
+        print(skip)
         if not skip:
             skip = []
 
         for name in iterkeys(self.comp._params_dict):
             if name.startswith(varpath):
                 sub_name = name.lstrip(varpath + ':')
-                print name, sub_name, skip
+                print(name, sub_name, skip)
                 if sub_name not in skip:
                     self.add_var(name)
 
@@ -472,13 +474,13 @@ class Namelist(object):
 
                 # Everything else must be a pure comment
                 else:
-                    print "Comment ignored: %s" % line.rstrip('\n')
+                    print( "Comment ignored: %s" % line.rstrip('\n'))
 
                 # Group ending '/' can also conclude a data line.
                 if line[-1] == '/':
                     current_group = None
 
-                #print self.cards[-1][-1].name, self.cards[-1][-1].value
+                #print(self.cards[-1][-1].name, self.cards[-1][-1].value)
             else:
                 group_name = group_name_token.searchString(line)
 
@@ -604,7 +606,7 @@ class Namelist(object):
                         containers = rules[group_name]
                     except KeyError:
                         unlisted_groups[i] = group_name
-                        #print "Group not found: %s" % group_name
+                        #print("Group not found: %s" % group_name)
                         break
 
                     for container in containers:
@@ -628,8 +630,8 @@ class Namelist(object):
                 if not found:
                     if name not in ignore and name.lower() not in ignore:
                         unlinked_vars.append(name)
-                        print "Variable not found: " + \
-                              "%s in group %s." % (name, group_name)
+                        print("Variable not found: " + \
+                              "%s in group %s." % (name, group_name))
 
                 else:
 
@@ -644,7 +646,7 @@ class Namelist(object):
 
                     self.comp.params[varpath] = value
 
-                    #print varpath, value
+                    #print(varpath, value)
 
         return empty_groups, unlisted_groups, unlinked_vars
 
