@@ -15,6 +15,15 @@ from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
 
 
+class _SysData(object):
+    """A container for System level data that is shared with
+    VecWrappers in this System.
+    """
+    def __init__(self, pathname):
+        self.pathname = pathname
+        self._to_prom_name = {}
+        self._to_top_prom_name = {}
+
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
     inherit from `Group` or `Component`"""
@@ -24,7 +33,6 @@ class System(object):
         self.pathname = ''
 
         self._subsystems = OrderedDict()
-        self._local_subsystems = []
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
@@ -42,11 +50,6 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = {}
-        self.dpmat = {}
-        self.drmat = {}
-
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
                        desc="Set to True to finite difference this system.")
@@ -61,8 +64,24 @@ class System(object):
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
 
-        self._relevance = None
         self._impl = None
+
+        self._reset() # initialize some attrs that are set during setup
+
+    def _reset(self):
+        """This is called at the beginning of the problem setup."""
+        self.pathname = ''
+
+        self._sysdata = _SysData('')
+
+        # dicts of vectors used for parallel solution of multiple RHS
+        self.dumat = {}
+        self.dpmat = {}
+        self.drmat = {}
+
+        self._local_subsystems = []
+        self._relevance = None
+        self._fd_params = None
 
     def __getitem__(self, name):
         """
@@ -183,7 +202,7 @@ class System(object):
         if include_self:
             yield self
 
-    def _setup_paths(self, parent_path):
+    def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Parameter
@@ -191,13 +210,19 @@ class System(object):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
+
+        probdata : `_ProbData`
+            Problem level data container.
         """
-        self._fd_params = None
+        self._reset()
 
         if parent_path:
             self.pathname = '.'.join((parent_path, self.name))
         else:
             self.pathname = self.name
+
+        self._sysdata = _SysData(self.pathname)
+        self._probdata = probdata
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """
@@ -510,7 +535,7 @@ class System(object):
                 dresids.vec[:] = 0.0
 
                 if do_apply:
-                    dparams._apply_unit_derivatives(iterkeys(dparams))
+                    dparams._apply_unit_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
@@ -542,7 +567,7 @@ class System(object):
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         dresids.vec *= -1.0
                     finally:
-                        dparams._apply_unit_derivatives(iterkeys(dparams))
+                        dparams._apply_unit_derivatives()
 
                 for var, val in iteritems(dresids.flat):
                     # Skip all states
@@ -639,7 +664,7 @@ class System(object):
                          # didn't find unknown in dresids
 
     def _create_views(self, top_unknowns, parent, my_params,
-                      var_of_interest=None):
+                      voi=None):
         """
         A manager of the data transfer of a possibly distributed collection of
         variables.  The variables are based on views into an existing
@@ -660,35 +685,35 @@ class System(object):
         relevance : `Relevance`
             Object containing relevance info for each variable of interest.
 
-        var_of_interest : str
+        voi : str
             The name of a variable of interest.
 
         """
 
         comm = self.comm
         params_dict = self._params_dict
-        voi = var_of_interest
         relevance = self._relevance
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = self._relname_map
 
         if voi is None:
-            self.unknowns = parent.unknowns.get_view(self.pathname, comm, umap)
+            self.unknowns = parent.unknowns.get_view(self, comm, umap)
             self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
-            self.resids = parent.resids.get_view(self.pathname, comm, umap)
-            self.params = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
+            self.resids = parent.resids.get_view(self, comm, umap)
+            self.params = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
                               store_byobjs=True)
 
-        self.dumat[voi] = parent.dumat[voi].get_view(self.pathname, comm, umap)
-        self.drmat[voi] = parent.drmat[voi].get_view(self.pathname, comm, umap)
-        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self.pathname, comm)
+        self.dumat[voi] = parent.dumat[voi].get_view(self, comm, umap)
+        self.drmat[voi] = parent.drmat[voi].get_view(self, comm, umap)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
-                              my_params, self.connections,
-                              relevance=relevance, var_of_interest=voi)
+                  my_params, self.connections,
+                  relevance=relevance, var_of_interest=voi,
+                  shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
     def _setup_gs_outputs(self, vois):
         self.gs_outputs = { 'fwd': {}, 'rev': {}}
@@ -847,6 +872,43 @@ class System(object):
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring
+
+    def _get_shared_vec_info(self, vdict, my_params=None):
+        # determine the size of the largest grouping of parallel subvecs and the
+        # offsets within those vecs for each voi in a parallel set.
+        # We should never need more memory than the largest sized collection of parallel
+        # vecs.
+        metas = [m for m in itervalues(vdict)
+                      if not m.get('pass_by_obj')]
+
+        # for params, we only include 'owned' vars in the vector
+        if my_params is not None:
+            metas = [m for m in metas if m['pathname'] in my_params]
+
+        full_size = sum([m['size'] for m in metas])  # 'None' vecs are this size
+        max_size = full_size
+
+        offsets = { None: 0 }
+
+        # no parallel rhs vecs, so biggest one will just be the one containing all
+        # vars.
+        if not self._probdata.top_lin_gs:
+            return max_size, offsets
+
+        relevance = self._relevance
+        for vois in relevance.groups:
+            vec_size = 0
+            for voi in vois:
+                sz = sum([m['size'] for m in metas
+                                 if m['pathname'] in vdict and
+                                    relevance.is_relevant(voi, m['top_promoted_name'])])
+                offsets[voi] = vec_size
+                vec_size += sz
+
+            if vec_size > max_size:
+                max_size = vec_size
+
+        return max_size, offsets
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):

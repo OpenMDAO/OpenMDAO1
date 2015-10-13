@@ -10,6 +10,7 @@ import networkx as nx
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.group import Group
 from openmdao.util.string_util import name_relative_to
+from six import itervalues
 
 def plot_sys_tree(system, outfile=None, fmt='pdf'):
     """
