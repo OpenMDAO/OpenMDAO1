@@ -5,6 +5,7 @@ import sys
 import os
 import re
 from six import iteritems, itervalues, iterkeys
+from itertools import chain
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
 from collections import OrderedDict
 from openmdao.util.type_util import is_differentiable
+from openmdao.core.vec_wrapper import _ByObjWrapper
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -21,7 +23,9 @@ _NotSet = object()
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\:[_a-zA-Z][_a-zA-Z0-9]*)*')
 
-trace = os.environ.get('TRACE_PETSC')
+trace = os.environ.get('OPENMDAO_TRACE')
+
+empty_arr = np.zeros(0)
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -276,8 +280,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        self._to_abs_unames = {}
-        self._to_abs_pnames = {}
+        self._to_abs_unames = self._sysdata._to_abs_unames = {}
+        self._to_abs_pnames = self._sysdata._to_abs_pnames = {}
 
         if MPI and compute_indices and self.is_active(): # pragma: no cover
             self.setup_distrib_idxs()
@@ -317,6 +321,9 @@ class Component(System):
 
         self._post_setup_vars = True
 
+        self._sysdata._params_dict = _new_params
+        self._sysdata._unknowns_dict = _new_unknowns
+
         return _new_params, _new_unknowns
 
     def _setup_vectors(self, param_owners, parent,
@@ -351,19 +358,28 @@ class Component(System):
         # create map of relative name in parent to relative name in child
         self._relname_map = self._get_relname_map(parent.unknowns)
 
-        # create storage for the relevant vecwrappers, keyed by
-        # variable_of_interest
-        all_vois = set([None])
-        for group, vois in iteritems(relevance.groups):
-            if group is not None:
-                all_vois.update(vois)
-                for voi in vois:
-                    self._create_views(top_unknowns, parent, [],
-                                       voi)
+        # at the Group level, we create a set of arrays for each variable of
+        # interest, and we make them all subviews of the same shared array in
+        # order to conserve memory. Components don't actually own their params,
+        # so we just use an empty shared array for dp (with an offset of 0)
+        self._shared_dp_vec = empty_arr
+        self._shared_p_offsets = { None:0 }
+        for vois in chain(relevance.inputs, relevance.outputs):
+            for voi in vois:
+                self._shared_p_offsets[voi] = 0
 
         # we don't get non-deriv vecs (u, p, r) unless we have a None group,
         # so force their creation here
         self._create_views(top_unknowns, parent, [], None)
+
+        all_vois = set([None])
+        if self._probdata.top_lin_gs: # only need voi vecs for lings
+            # create storage for the relevant vecwrappers, keyed by
+            # variable_of_interest
+            for vois in relevance.groups:
+                all_vois.update(vois)
+                for voi in vois:
+                    self._create_views(top_unknowns, parent, [], voi)
 
         # create params vec entries for any unconnected params
         for meta in itervalues(self._params_dict):
@@ -455,7 +471,7 @@ class Component(System):
             and whose values are ndarrays.
         """
         return None
-            
+
     def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
         """
         Multiplies incoming vector by the Jacobian (fwd mode) or the

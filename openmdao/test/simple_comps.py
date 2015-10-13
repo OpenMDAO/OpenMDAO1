@@ -345,6 +345,33 @@ class FanOutGrouped(Group):
         self.connect("p.x", "comp1.x")
 
 
+class FanOut3Grouped(Group):
+    """ Topology where one comp broadcasts an output to two target
+    components. 3 Nodes in this one."""
+
+    def __init__(self):
+        super(FanOut3Grouped, self).__init__()
+
+        self.add('p', IndepVarComp('x', 1.0))
+        self.add('comp1', ExecComp(['y=3.0*x']))
+        sub = self.add('sub', ParallelGroup())
+        sub.add('comp2', ExecComp(['y=-2.0*x']))
+        sub.add('comp3', ExecComp(['y=5.0*x']))
+        sub.add('comp4', ExecComp(['y=11.0*x']))
+
+        self.add('c2', ExecComp(['y=x']))
+        self.add('c3', ExecComp(['y=x']))
+        self.add('c4', ExecComp(['y=x']))
+        self.connect('sub.comp2.y', 'c2.x')
+        self.connect('sub.comp3.y', 'c3.x')
+        self.connect('sub.comp4.y', 'c4.x')
+
+        self.connect("comp1.y", "sub.comp2.x")
+        self.connect("comp1.y", "sub.comp3.x")
+        self.connect("comp1.y", "sub.comp4.x")
+        self.connect("p.x", "comp1.x")
+
+
 class FanOutAllGrouped(Group):
     """ Traditional FanOut with every comp in its own group to help test out preconditioning."""
 

@@ -13,9 +13,9 @@ import numpy as np
 
 from openmdao.solvers.solver_base import LinearSolver
 
-trace = os.environ.get("TRACE_PETSC")
+trace = os.environ.get("OPENMDAO_TRACE")
 if trace:
-    from openmdao.devtools.debug import debug
+    from openmdao.core.mpiwrap import debug
 
 
 def _get_petsc_vec_array_new(vec):
@@ -231,7 +231,7 @@ class PetscKSP(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system._sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=[voi])
+        system._sys_apply_linear(mode, ls_inputs=self.system._ls_inputs, vois=(voi,))
 
         result.array[:] = rhs_vec.vec
 

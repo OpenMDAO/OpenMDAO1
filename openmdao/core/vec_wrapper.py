@@ -6,10 +6,11 @@ from numpy.linalg import norm
 from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
+Accessor = namedtuple('Accessor', ['get', 'set', 'flat', 'meta'])
 
 class _ByObjWrapper(object):
     """
@@ -50,8 +51,7 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, pathname='', comm=None):
-        self.pathname = pathname
+    def __init__(self, sysdata, comm=None):
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
@@ -61,11 +61,14 @@ class VecWrapper(object):
         # Automatic unit conversion in target vectors
         self.deriv_units = False
 
+        self._sysdata = sysdata
+
     def _flat(self, name):
         """
         Return a flat version of the named variable, including any necessary conversions.
         """
-        return self._fastflat[name](self)
+        acc = self._access[name]
+        return acc.flat(acc.meta)
 
     def metadata(self, name):
         """
@@ -96,11 +99,12 @@ class VecWrapper(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        self._to_prom_name = {}
-        self._to_top_prom_name = {}
+        to_prom_name = self._sysdata._to_prom_name
+        to_top = self._sysdata._to_top_prom_name
+
         for prom_name, meta in iteritems(self):
-            self._to_prom_name[meta['pathname']] = prom_name
-            self._to_top_prom_name[prom_name] = meta['top_promoted_name']
+            to_prom_name[meta['pathname']] = prom_name
+            to_top[prom_name] = meta['top_promoted_name']
 
     def __getitem__(self, name):
         """
@@ -115,7 +119,8 @@ class VecWrapper(object):
         -------
             The unflattened value of the named variable.
         """
-        return self._fastget[name](self)
+        acc = self._access[name]
+        return acc.get(acc.meta)
 
     def __setitem__(self, name, value):
         """
@@ -129,7 +134,8 @@ class VecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        self._fastset[name](self, name, value)
+        acc = self._access[name]
+        acc.set(acc.meta, value)
 
     def __len__(self):
         """
@@ -260,14 +266,14 @@ class VecWrapper(object):
         """
         return norm(self.vec)
 
-    def get_view(self, sys_pathname, comm, varmap):
+    def get_view(self, system, comm, varmap):
         """
         Return a new `VecWrapper` that is a view into this one.
 
         Args
         ----
-        sys_pathname : str
-            pathname of the system for which the view is being created.
+        system : `System`
+            System for which the view is being created.
 
         comm : an MPI communicator (real or fake)
             A communicator that is used in the creation of the view.
@@ -281,7 +287,7 @@ class VecWrapper(object):
         `VecWrapper`
             A new `VecWrapper` that is a view into this one.
         """
-        view = self.__class__(sys_pathname, comm)
+        view = self.__class__(system._sysdata, comm)
         view_size = 0
 
         vardict = self._vardict
@@ -392,7 +398,7 @@ class VecWrapper(object):
             Relative name mapped to the given absolute pathname.
         """
         try:
-            return self._to_prom_name[abs_name]
+            return self._sysdata._to_prom_name[abs_name]
         except KeyError:
             raise KeyError("Relative name not found for variable '%s'" % abs_name)
 
@@ -451,8 +457,8 @@ class VecWrapper(object):
             The given name as seen from the 'scope' of the `System` that
             contains this `VecWrapper`.
         """
-        if self.pathname:
-            start = len(self.pathname)+1
+        if self._sysdata.pathname:
+            start = len(self._sysdata.pathname)+1
         else:
             start = 0
         return name[start:]
@@ -514,12 +520,13 @@ class VecWrapper(object):
         Returns a tuple of efficient closures (nonflat and flat) to access
         the named value.
         """
+
         meta = self._vardict[name]
         val = meta['val']
         flatfunc = None
 
         if meta.get('pass_by_obj'):
-            return lambda s: val.val, flatfunc
+            return _get_pbo, flatfunc
 
         shape = meta['shape']
         scale, offset = meta.get('unit_conv', (None, None))
@@ -534,78 +541,53 @@ class VecWrapper(object):
         # No unit conversion.
         # dparams vector does no unit conversion.
         if scale is None or self.deriv_units is True:
-            flatfunc = lambda s: val
+            flatfunc = _get_arr
             if is_scalar:
-                func = lambda s: val[0]
+                func = _get_scalar
             elif shapes_same:
                 func = flatfunc
             else:
-                func = lambda s: val.reshape(shape)
+                func = _get_arr_diff_shape
 
         # We have a unit conversion
         else:
-            flatfunc = lambda s: scale*(val + offset)
+            flatfunc = _get_arr_units
             if is_scalar:
-                func = lambda s: scale*(val[0] + offset)
+                func = _get_scalar_units
             elif shapes_same:
                 func = flatfunc
             else:
-                func = lambda s: scale*(val.reshape(shape) + offset)
+                func = _get_arr_units_diff_shape
 
         return func, flatfunc
 
     def _setup_set_funct(self, name):
         """ Sets up our fast set functions."""
 
-        def _set_no_units_arr(self, name, value):
-            self.flat[name][:] = value.flat
-
-        def _set_no_units_scalar(self, name, value):
-            self.flat[name][0] = value
-
-        def _set_units_arr(self, name, value):
-            val = self.flat[name]
-            val[:] = value.flat
-            val *= self._vardict[name]['unit_conv'][0]
-
-        def _set_units_scalar(self, name, value):
-            self.flat[name][0] = self._vardict[name]['unit_conv'][0]*value
-
-        def _set_pbo(self, name, value):
-            self._vardict[name]['val'].val = value
-
         meta = self._vardict[name]
 
         if 'pass_by_obj' in meta and meta['pass_by_obj']:
             return _set_pbo
-        elif self.deriv_units or 'unit_conv' not in meta:
-            if meta['shape'] == 1:
-                return _set_no_units_scalar
-            else:
-                return _set_no_units_arr
         else:
             if meta['shape'] == 1:
-                return _set_units_scalar
+                return _set_scalar
             else:
-                return _set_units_arr
+                return _set_arr
 
     def _setup_access_functs(self):
-        self._fastget = {}
-        self._fastflat = {}
-        self._fastset = {}
+        self._access = {}
         for name in self:
             func, flatfunc = self._setup_get_funct(name)
-            self._fastget[name] = func
-            if flatfunc:
-                self._fastflat[name] = flatfunc
-            self._fastset[name] = self._setup_set_funct(name)
+            setfunc = self._setup_set_funct(name)
+            self._access[name] = Accessor(func, setfunc, flatfunc,
+                                          self._vardict[name])
 
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False):
+              store_byobjs=False, shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -627,7 +609,10 @@ class SrcVecWrapper(VecWrapper):
             If True, then store 'pass by object' variables.
             By default only 'pass by vector' variables will be stored.
 
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
+
         vec_size = 0
         for meta in itervalues(unknowns_dict):
             promname = meta['promoted_name']
@@ -640,7 +625,10 @@ class SrcVecWrapper(VecWrapper):
 
                 self._vardict[promname] = vmeta
 
-        self.vec = numpy.zeros(vec_size)
+        if shared_vec is not None:
+            self.vec = shared_vec[:vec_size]
+        else:
+            self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, meta in iteritems(self):
@@ -708,7 +696,8 @@ class TgtVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevance=None, var_of_interest=None, store_byobjs=False):
+              connections, relevance=None, var_of_interest=None,
+              store_byobjs=False, shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -740,8 +729,10 @@ class TgtVecWrapper(VecWrapper):
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
-        """
 
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
+        """
         # dparams vector has some additional behavior
         if not store_byobjs:
             self.deriv_units = True
@@ -775,9 +766,14 @@ class TgtVecWrapper(VecWrapper):
                         if src:
                             src, idxs = src
                             common = get_common_ancestor(src, pathname)
-                            if common == self.pathname or (self.pathname+'.') not in common:
+                            if (common == self._sysdata.pathname or
+                                 (self._sysdata.pathname+'.') not in common):
                                 missing.append(meta)
-        self.vec = numpy.zeros(vec_size)
+
+        if shared_vec is not None:
+            self.vec = shared_vec[:vec_size]
+        else:
+            self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, meta in iteritems(self._vardict):
@@ -875,10 +871,8 @@ class TgtVecWrapper(VecWrapper):
         vmeta['pass_by_obj'] = True
         self._vardict[sname] = vmeta
         func, flatfunc = self._setup_get_funct(sname)
-        self._fastget[sname] = func
-        if flatfunc:
-            self._fastflat[sname] = flatfunc
-        self._fastset[sname] = self._setup_set_funct(sname)
+        self._access[sname] = Accessor(func, self._setup_set_funct(sname),
+                                       flatfunc, self._vardict[sname])
 
     def _get_flattened_sizes(self):
         """
@@ -891,15 +885,26 @@ class TgtVecWrapper(VecWrapper):
         return [[(n, m['size']) for n, m in self._get_vecvars()
                     if m.get('owned')]]
 
-    def _apply_unit_derivatives(self, varnames):
+    def _apply_unit_derivatives(self):
         """ Applies derivative of the unit conversion factor to params
-        sitting in vector for names passed in varnames."""
+        sitting in vector.
+        """
         if self.deriv_units:
-            for name in varnames:
-                conv = self._vardict[name].get('unit_conv')
-                if conv is not None:
-                    self[name] *= conv[0]
+            for name, meta in iteritems(self._vardict):
+                if 'unit_conv' in meta:
+                    meta['val'] *= meta['unit_conv'][0]
 
+    # def _apply_units(self):
+    #     """ Applies the unit conversion factor to params
+    #     sitting in vector.
+    #     """
+    #     for name, meta in iteritems(self._vardict):
+    #         if 'unit_conv' in meta and 'owned' in meta:
+    #             scale, offset = meta['unit_conv']
+    #             val = meta['val']
+    #             if offset != 0.0:
+    #                 val += offset
+    #             val *= scale
 
 class _PlaceholderVecWrapper(object):
     """
@@ -957,3 +962,47 @@ class _PlaceholderVecWrapper(object):
         raise AttributeError("'%s' has not been initialized, "
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
+
+
+# accessor functions
+def _get_pbo(meta):
+    """pass by obj"""
+    return meta['val'].val
+
+def _get_arr(meta):
+    """Array with same shape"""
+    return meta['val']
+
+def _get_arr_diff_shape(meta):
+    """Array with different shape"""
+    return meta['val'].reshape(meta['shape'])
+
+def _get_scalar(meta):
+    return meta['val'][0]
+
+def _get_arr_units(meta):
+    """Array with same shape and unit conversion"""
+    scale, offset = meta['unit_conv']
+    vec = meta['val'] + offset
+    vec *= scale
+    return vec
+
+def _get_arr_units_diff_shape(meta):
+    """Array with diff shape and unit conversion"""
+    scale, offset = meta['unit_conv']
+    vec = meta['val'] + offset
+    vec *= scale
+    return vec.reshape(meta['shape'])
+
+def _get_scalar_units(meta):
+    scale, offset = meta['unit_conv']
+    return scale*(meta['val'][0] + offset)
+
+def _set_arr(meta, value):
+    meta['val'][:] = value.flat
+
+def _set_scalar(meta, value):
+    meta['val'][0] = value
+
+def _set_pbo(meta, value):
+    meta['val'].val = value

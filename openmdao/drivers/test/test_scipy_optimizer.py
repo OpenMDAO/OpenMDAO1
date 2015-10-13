@@ -271,6 +271,56 @@ class TestScipyOptimize(unittest.TestCase):
         obj = prob['o']
         assert_rel_error(self, obj, 20.0, 1e-6)
 
+    def test_simple_array_comp_SLSQP_scaler_unity_eq(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
+        root.add('comp', SimpleArrayComp(), promotes=['*'])
+        root.add('con', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=np.array([1.0, 1.0]))
+
+        prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
+        prob.driver.add_constraint('c', equals=0.0, scaler=np.array([1.0, 1.0]))
+        prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+        prob.run()
+
+        obj = prob['o']
+        assert_rel_error(self, obj, 20.0, 1e-6)
+
+    def test_simple_array_comp_SLSQP_scaler_unity_ineq(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
+        root.add('comp', SimpleArrayComp(), promotes=['*'])
+        root.add('con1', ExecComp('c1 = y - 20.0', c1=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con2', ExecComp('c2 = y - 20.0', c2=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=np.array([1.0, 1.0]))
+
+        prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
+        prob.driver.add_constraint('c1', lower=0.0, scaler=np.array([1.0, 1.0]))
+        prob.driver.add_constraint('c2', upper=0.0, scaler=np.array([1.0, 1.0]))
+        prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+        prob.run()
+
+        obj = prob['o']
+        assert_rel_error(self, obj, 20.0, 1e-6)
+
     def test_simple_array_comp2D(self):
 
         prob = Problem()
@@ -408,6 +458,174 @@ class TestScipyOptimize(unittest.TestCase):
         assert_rel_error(self, prob['z'][0], 0.1005, 1e-3)
         assert_rel_error(self, prob['z'][1], 5.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
+
+    def test_simple_paraboloid_scaled_desvars_fwd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0)
+
+        root.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_scaled_desvars_fd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0)
+
+        root.fd_options['force_fd'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_scaled_desvars_rev(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0)
+
+        root.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_scaled_constraint_fwd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
+
+        root.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_scaled_constraint_fd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
+
+        root.fd_options['force_fd'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_scaled_constraint_rev(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
+
+        root.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
 
     def test_generate_numpydocstring(self):
         prob = Problem()

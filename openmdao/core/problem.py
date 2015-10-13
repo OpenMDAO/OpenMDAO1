@@ -23,10 +23,19 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, name_relative_to
+
+
+class _ProbData(object):
+    """
+    A container for Problem level data that is needed by subsystems.
+    """
+    def __init__(self):
+        self.top_lin_gs = False
 
 
 class Problem(System):
@@ -68,11 +77,12 @@ class Problem(System):
     def __init__(self, root=None, driver=None, impl=None, comm=None):
         super(Problem, self).__init__()
         self.root = root
+        self._probdata = _ProbData()
 
-        if MPI: # pragma: no cover
+        if MPI:  # pragma: no cover
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
-                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl." )
+                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl.")
 
         if impl is None:
             self._impl = BasicImpl
@@ -262,15 +272,19 @@ class Problem(System):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
-        # if we modify the system tree, we'll need to call _setup_paths,
+        # if we modify the system tree, we'll need to call _init_sys_data,
         # _setup_variables and _setup_connections again
         tree_changed = False
 
         # call _setup_variables again if we change metadata
         meta_changed = False
 
+        self._probdata = _ProbData()
+        if isinstance(self.root.ln_solver, LinearGaussSeidel):
+            self._probdata.top_lin_gs = True
+
         # Give every system an absolute pathname
-        self.root._setup_paths(self.pathname)
+        self.root._init_sys_data(self.pathname, self._probdata)
 
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
@@ -296,15 +310,17 @@ class Problem(System):
         # push connection src_indices down into the metadata for all target
         # params in all component level systems, then flag meta_changed so
         # it will get percolated back up to all groups in next setup_vars()
-        for tgt, (src, idxs) in iteritems(connections):
-            if idxs is not None:
-                for comp in self.root.components(recurse=True):
-                    # component dicts are keyed on the var name, not the pathname
+        src_idx_conns = [(tgt, src, idxs) for tgt, (src, idxs) in
+                         iteritems(connections) if idxs is not None]
+        if src_idx_conns:
+            meta_changed = True
+            for comp in self.root.components(recurse=True):
+                for tgt, src, idxs in src_idx_conns:
+                    # component dicts are keyed on var name, not pathname
                     path, name = tgt.rsplit('.', 1)
                     meta = comp._params_dict.get(name)
                     if meta and meta['pathname'] == tgt:
                         meta['src_indices'] = idxs
-                meta_changed = True
 
         # TODO: handle any automatic grouping of systems here...
 
@@ -317,7 +333,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI: # pragma: no cover
+        if MPI:  # pragma: no cover
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -330,14 +346,14 @@ class Problem(System):
         # if the system tree has changed, we need to recompute pathnames,
         # variable metadata, and connections
         if tree_changed:
-            self.root._setup_paths(self.pathname)
+            self.root._init_sys_data(self.pathname, self._probdata)
             params_dict, unknowns_dict = \
-                    self.root._setup_variables(compute_indices=True)
+                self.root._setup_variables(compute_indices=True)
             connections = self._setup_connections(params_dict, unknowns_dict,
                                                   compute_indices=False)
         elif meta_changed:
             params_dict, unknowns_dict = \
-                    self.root._setup_variables(compute_indices=True)
+                self.root._setup_variables(compute_indices=True)
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -369,22 +385,32 @@ class Problem(System):
         pois = self.driver.desvars_of_interest()
         oois = self.driver.outputs_of_interest()
 
+        self._driver_vois = set()
+        for tup in chain(pois, oois):
+            self._driver_vois.update(tup)
+
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
         promoted_unknowns = self.root._to_abs_unames
 
+        parallel_p = False
         for vnames in pois:
+            if len(vnames) > 1:
+                parallel_p = True
             for v in vnames:
                 if v not in promoted_unknowns:
                     raise NameError("Can't find param of interest '%s'." % v)
 
+        parallel_u = False
         for vnames in oois:
+            if len(vnames) > 1:
+                parallel_u = True
             for v in vnames:
                 if v not in promoted_unknowns:
                     raise NameError("Can't find quantity of interest '%s'." % v)
 
-        mode = self._check_for_matrix_matrix(pois, oois)
+        mode = self._check_for_parallel_derivs(pois, oois, parallel_u, parallel_p)
 
         relevance = Relevance(self.root, params_dict, unknowns_dict, connections,
                               pois, oois, mode)
@@ -424,9 +450,10 @@ class Problem(System):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
-        dangling_params = sorted(set([m['promoted_name']
-                             for p, m in iteritems(self.root._params_dict)
-                               if p not in self.root.connections]))
+        dangling_params = sorted(set([
+            m['promoted_name'] for p, m in iteritems(self.root._params_dict)
+            if p not in self.root.connections
+        ]))
         if dangling_params:
             print("\nThe following parameters have no associated unknowns:",
                   file=out_stream)
@@ -455,7 +482,7 @@ class Problem(System):
             print("\nUnit Conversions", file=out_stream)
             for (src, tgt), (sunit, tunit) in tuples:
                 print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
-                        file=out_stream)
+                      file=out_stream)
 
             return tuples
         return []
@@ -505,7 +532,7 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun(): # pragma: no cover
+        if under_mpirun():  # pragma: no cover
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if self._comm.rank == 0:
@@ -569,10 +596,11 @@ class Problem(System):
             if out_of_order:
                 # scope ooo names to group
                 for name in out_of_order:
-                    out_of_order[name] = sorted([name_relative_to(grp.pathname, n)
-                                                   for n in out_of_order[name]])
+                    out_of_order[name] = sorted([
+                        name_relative_to(grp.pathname, n) for n in out_of_order[name]
+                    ])
                 print("Group '%s' has the following out-of-order subsystems:" %
-                        grp.pathname, file=out_stream)
+                      grp.pathname, file=out_stream)
                 for n, subs in iteritems(out_of_order):
                     print("   %s should run after %s" % (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(iteritems(out_of_order))))
@@ -584,7 +612,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun(): # pragma: no cover
+        if under_mpirun():  # pragma: no cover
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -608,7 +636,7 @@ class Problem(System):
         print("##############################################", file=out_stream)
         print("Setup: Checking for potential issues...", file=out_stream)
 
-        results = {} # dict of results for easier testing
+        results = {}  # dict of results for easier testing
         results['dangling_params'] = self._check_dangling_params(out_stream)
         results['mode'] = self._check_mode(out_stream)
         results['unit_diffs'] = self._list_unit_conversions(out_stream)
@@ -692,7 +720,7 @@ class Problem(System):
         return mode
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array'):
+                      return_format='array', dv_scale=None, cn_scale=None):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -715,6 +743,12 @@ class Problem(System):
         return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -731,12 +765,16 @@ class Problem(System):
         # Either analytic or finite difference
         if mode == 'fd' or self.root.fd_options['force_fd']:
             return self._calc_gradient_fd(indep_list, unknown_list,
-                                          return_format)
+                                          return_format, dv_scale=dv_scale,
+                                          cn_scale=cn_scale)
         else:
             return self._calc_gradient_ln_solver(indep_list, unknown_list,
-                                                 return_format, mode)
+                                                 return_format, mode,
+                                                 dv_scale=dv_scale,
+                                                 cn_scale=cn_scale)
 
-    def _calc_gradient_fd(self, indep_list, unknown_list, return_format):
+    def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
+                          dv_scale=None, cn_scale=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -753,6 +791,12 @@ class Problem(System):
         return_format : string
             Format for the derivatives, can be 'array' or 'dict'.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -761,6 +805,11 @@ class Problem(System):
         root = self.root
         unknowns = root.unknowns
         params = root.params
+
+        if dv_scale is None:
+            dv_scale = {}
+        if cn_scale is None:
+            cn_scale = {}
 
         abs_params = []
         for name in indep_list:
@@ -820,6 +869,13 @@ class Problem(System):
                         fd_ikey = root._to_abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
+
+                    # Driver scaling
+                    if ikey in dv_scale:
+                        J[okey][ikey] *= dv_scale[ikey]
+                    if okey in cn_scale:
+                        J[okey][ikey] *= cn_scale[okey]
+
         else:
             usize = 0
             psize = 0
@@ -854,12 +910,17 @@ class Problem(System):
                     for row in range(0, rows):
                         for col in range(0, cols):
                             J[ui+row][pi+col] = pd[row][col]
-
+                            # Driver scaling
+                            if p in dv_scale:
+                                J[ui+row][pi+col] *= dv_scale[p]
+                            if u in cn_scale:
+                                J[ui+row][pi+col] *= cn_scale[u]
                     pi += cols
                 ui += rows
         return J
 
-    def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode):
+    def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
+                                 dv_scale=None, cn_scale=None):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
@@ -881,6 +942,12 @@ class Problem(System):
             Default is 'auto', which uses mode specified on the linear solver
             in root.
 
+        dv_scale : dict, optional
+            Dictionary of driver-defined scale factors on the design variables.
+
+        cn_scale : dict, optional
+            Dictionary of driver-defined scale factors on the constraints.
+
         Returns
         -------
         ndarray or dict
@@ -888,14 +955,19 @@ class Problem(System):
         """
 
         root = self.root
+        relevance = root._relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
         to_abs_unames = root._to_abs_unames
-        params = root.params
         comm = root.comm
         iproc = comm.rank
         nproc = comm.size
         owned = root._owning_ranks
+
+        if dv_scale is None:
+            dv_scale = {}
+        if cn_scale is None:
+            cn_scale = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -914,7 +986,7 @@ class Problem(System):
         root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
-        root._sys_jacobian(params, unknowns, root.resids)
+        root._sys_jacobian(root.params, unknowns, root.resids)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -932,22 +1004,30 @@ class Problem(System):
         else:
             usize = 0
             psize = 0
+            Jslices = {}
             for u in unknown_list:
-                usize += self.root.unknowns.metadata(u)['size']
+                start = usize
+                usize += unknowns.metadata(u)['size']
+                Jslices[u] = slice(start, usize)
+
             for p in indep_list:
+                start = psize
                 if p in self._poi_indices:
                     idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
-                    psize += self.root.unknowns.metadata(p)['size']
+                    psize += unknowns.metadata(p)['size']
+                Jslices[p] = slice(start, psize)
             J = np.zeros((usize, psize))
 
         if fwd:
             input_list, output_list = indep_list, unknown_list
             poi_indices, qoi_indices = self._poi_indices, self._qoi_indices
+            in_scale, un_scale = dv_scale, cn_scale
         else:
             input_list, output_list = unknown_list, indep_list
             qoi_indices, poi_indices = self._poi_indices, self._qoi_indices
+            in_scale, un_scale = cn_scale, dv_scale
 
         # Process our inputs/outputs of interest for parallel groups
         all_vois = self.root._relevance.vars_of_interest(mode)
@@ -984,7 +1064,6 @@ class Problem(System):
 
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
-        j = 0
         for params in voi_sets:
             rhs = OrderedDict()
             voi_idxs = {}
@@ -993,7 +1072,7 @@ class Problem(System):
 
             # Allocate all of our Right Hand Sides for this parallel set.
             for voi in params:
-                vkey = voi if len(params) > 1 else None
+                vkey = self._get_voi_key(voi, params)
 
                 duvec = self.root.dumat[vkey]
                 rhs[vkey] = np.zeros((len(duvec.vec), ))
@@ -1005,16 +1084,14 @@ class Problem(System):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'],dtype=int)
+                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
                 elif old_size != len(in_idxs):
                     raise RuntimeError("Indices within the same VOI group must be the same size, but"
-                                       " in the group %s, %d != %d" % (params,old_size,len(in_idxs)))
+                                       " in the group %s, %d != %d" % (params, old_size, len(in_idxs)))
                 voi_idxs[vkey] = in_idxs
-
-            jbase = j
 
             # at this point, we know that for all vars in the current
             # group of interest, the number of indices is the same. We loop
@@ -1023,7 +1100,7 @@ class Problem(System):
             # of interest.
             for i in range(len(in_idxs)):
                 for voi in params:
-                    vkey = voi if len(params) > 1 else None
+                    vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
                     # only set a 1.0 in the entry if that var is 'owned' by this rank
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
@@ -1033,51 +1110,87 @@ class Problem(System):
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
 
                 for param, dx in iteritems(dx_mat):
-                    if len(params) == 1:
-                        vkey = None
-                        param = params[0] # if voi is None, params has only one serial entry
-                    else:
-                        vkey = param
+                    vkey = self._get_voi_key(param, params)
+                    if param is None:
+                        param = params[0]
 
-                    i = 0
                     for item in output_list:
-
-                        if fwd or owned[item] == iproc:
-                            out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
-                                                               qoi_indices,
-                                                               get_slice=True)
-                            dxval = dx[out_idxs]
-                            if dxval.size == 0:
+                        if relevance.is_relevant(vkey, item):
+                            if fwd or owned[item] == iproc:
+                                out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
+                                                                                 qoi_indices,
+                                                                                 get_slice=True)
+                                dxval = dx[out_idxs]
+                                if dxval.size == 0:
+                                    dxval = None
+                            else:
                                 dxval = None
-                        else:
-                            dxval = None
-                        if nproc > 1:
-                            dxval = comm.bcast(dxval, root=owned[item])
+                            if nproc > 1:
+                                dxval = comm.bcast(dxval, root=owned[item])
+                        else:  # irrelevant variable.  just give'em zeros
+                            dxval = np.zeros(unknowns.metadata(item)['size'])
 
                         if dxval is not None:
                             nk = len(dxval)
 
                             if return_format == 'dict':
-                                if mode == 'fwd':
+                                if fwd:
                                     if J[item][param] is None:
                                         J[item][param] = np.zeros((nk, len(in_idxs)))
-                                    J[item][param][:, j-jbase] = dxval
+                                    J[item][param][:, i] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[item][param][:, i] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[item][param][:, i] *= un_scale[item]
                                 else:
                                     if J[param][item] is None:
                                         J[param][item] = np.zeros((len(in_idxs), nk))
-                                    J[param][item][j-jbase, :] = dxval
+                                    J[param][item][i, :] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[param][item][i, :] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[param][item][i, :] *= un_scale[item]
+
                             else:
-                                if mode == 'fwd':
-                                    J[i:i+nk, j] = dx[out_idxs]
+                                if fwd:
+                                    J[Jslices[item], Jslices[param].start+i] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[Jslices[item], Jslices[param].start+i] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[Jslices[item], Jslices[param].start+i] *= un_scale[item]
+
                                 else:
-                                    J[j, i:i+nk] = dx[out_idxs]
-                                i += nk
-                j += 1
+                                    J[Jslices[param].start+i, Jslices[item]] = dxval
+
+                                    # Driver scaling
+                                    if param in in_scale:
+                                        J[Jslices[param].start+i, Jslices[item]] *= in_scale[param]
+                                    if item in un_scale:
+                                        J[Jslices[param].start+i, Jslices[item]] *= un_scale[item]
 
         # Clean up after ourselves
         root.clear_dparams()
 
         return J
+
+    def _get_voi_key(self, voi, grp):
+        """Return the voi name, which allows for parallel derivative calculations
+        (currently only works with LinearGaussSeidel), or None for those
+        solvers that can only do a single linear solve at a time.
+        """
+        if (voi in self._driver_vois and
+                isinstance(self.root.ln_solver, LinearGaussSeidel)):
+            if (len(grp) > 1 or
+                    self.root.ln_solver.options['single_voi_relevance_reduction']):
+                return voi
+
+        return None
 
     def check_partial_derivatives(self, out_stream=sys.stdout):
         """ Checks partial derivatives comprehensively for all components in
@@ -1182,7 +1295,7 @@ class Problem(System):
                             if user[0] != u_size or user[1] != p_size:
                                 msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
                                       "It should be {}, but got {}"
-                                msg = msg.format(cname, u_name, p_name, (u_size,p_size), user)
+                                msg = msg.format(cname, u_name, p_name, (u_size, p_size), user)
                                 raise ValueError(msg)
 
                     jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
@@ -1203,7 +1316,7 @@ class Problem(System):
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
                     finally:
-                        dparams._apply_unit_derivatives(iterkeys(dparams))
+                        dparams._apply_unit_derivatives()
 
                     for p_name in chain(dparams, states):
 
@@ -1223,7 +1336,7 @@ class Problem(System):
                     dunknowns.vec[:] = 0.0
 
                     dinputs.flat[p_name][idx] = 1.0
-                    dparams._apply_unit_derivatives(iterkeys(dparams))
+                    dparams._apply_unit_derivatives()
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
@@ -1273,8 +1386,9 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        indep_list = [self.root._unknowns_dict[p]['promoted_name']
-                          for p, idxs in param_srcs]
+        indep_list = [
+            self.root._unknowns_dict[p]['promoted_name'] for p, idxs in param_srcs
+        ]
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
@@ -1303,27 +1417,35 @@ class Problem(System):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
 
-    def _check_for_matrix_matrix(self, params, unknowns):
+    def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the
-        assumptions needed for matrix-matrix calculation. Returns the mode that
-        the system needs to use.
+        assumptions needed for parallel dervivative calculation. Returns the
+        mode that the system needs to use.
         """
 
         mode = self._mode('auto', params, unknowns)
 
-        # TODO : Only Linear GS is supported on system
+        if mode == 'fwd':
+            has_parallel_derivs = par_p
+        else:
+            has_parallel_derivs = par_u
 
-        for sub in self.root.subgroups(recurse=True):
-            sub_mode = sub.ln_solver.options['mode']
+        # the type of the root linear solver determines whether we solve
+        # multiple RHS in parallel. Currently only LinearGaussSeidel can
+        # support this.
+        if (isinstance(self.root.ln_solver, LinearGaussSeidel) and
+                self.root.ln_solver.options['single_voi_relevance_reduction']) \
+                and has_parallel_derivs:
 
-            # Modes must match root for all subs
-            if sub_mode not in (mode, 'auto'):
-                msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
-                        " Modes must match to use Matrix Matrix."
-                msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
-                raise RuntimeError(msg)
+            for sub in self.root.subgroups(recurse=True):
+                sub_mode = sub.ln_solver.options['mode']
 
-            # TODO : Only Linear GS is supported on sub
+                # Modes must match root for all subs
+                if isinstance(sub.ln_solver, LinearGaussSeidel) and sub_mode not in (mode, 'auto'):
+                    msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
+                          " Modes must match to use parallel derivative groups."
+                    msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                    raise RuntimeError(msg)
 
         return mode
 
@@ -1484,6 +1606,7 @@ class Problem(System):
 
         return connections, dangling
 
+
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
@@ -1517,6 +1640,7 @@ def _jac_to_flat_dict(jac):
             new_jac[(key1, key2)] = val2
 
     return new_jac
+
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root'):
@@ -1575,7 +1699,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 started = True
 
             # Optional file_like output
-            out_stream.write("  %s: '%s' wrt '%s'\n\n"% (c_name, u_name, p_name))
+            out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
             out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
             out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)

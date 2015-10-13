@@ -20,6 +20,7 @@ else:
     def py3fix(s):
         return s
 
+
 class TestCalcGradient(unittest.TestCase):
 
     def test_calc_gradient_interface_errors(self):
@@ -209,7 +210,7 @@ class TestCalcGradient(unittest.TestCase):
         prob.driver.add_desvar('parm.x', low=-10, high=99)
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0., indices=[0, 2])
-        prob.setup()
+        prob.setup(check=False)
         prob.run()
 
         indep_list = ['parm.x']
