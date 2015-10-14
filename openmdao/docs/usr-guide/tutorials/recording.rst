@@ -85,7 +85,7 @@ optimizer progresses.
 ::
 
     recorder = SqliteRecorder('paraboloid')
-    driver.add_recorder(recorder)
+    top.driver.add_recorder(recorder)
 
 We initialize a `SqliteRecorder` by passing it a
 `filename` argument. This recorder indirectly uses Python's `sqlite3` module to store the
@@ -107,7 +107,7 @@ For this tutorial with one recorder added to the driver, this is simply done wit
 
 ::
 
-    driver.recorders[0].close()
+    top.driver.recorders[0].close()
 
 If your model has recorders added to both drivers and solvers,
 a way to make sure all recorders are closed is to use code like this:
@@ -153,7 +153,7 @@ could exclude that by doing the following:
     recorder = SqliteRecorder('paraboloid')
     recorder.options['excludes'] = ['f_xy']
 
-    driver.add_recorder(recorder)
+    top.driver.add_recorder(recorder)
 
 The includes and excludes filters will accept glob arguments. For example,
 `recorder.options['excludes'] = ['comp1.*']` would exclude any variable
