@@ -26,6 +26,7 @@ notifications:
 
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
+- if [[ "$OS" = "Linux" ]]; then sudo apt-get install gfortran; fi
 - wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
 - chmod +x miniconda.sh
 - ./miniconda.sh -b
