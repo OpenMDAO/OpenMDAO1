@@ -29,7 +29,7 @@ In a file-wrapped component, all key inputs for the external code come from an i
 that must be written. When generating the input file, it is important to prevent the loss of
 precision. Consider a variable with 15 digits of precision.
 
-..
+::
 
     >>> # Python 3 compatibility
     >>> from __future__ import print_function
