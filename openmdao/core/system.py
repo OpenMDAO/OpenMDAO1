@@ -8,7 +8,7 @@ from six import string_types, iteritems, itervalues, iterkeys
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
@@ -821,7 +821,6 @@ class System(object):
                 docstring += "})\n"
 
         #Put options into docstring
-        from openmdao.core.options import OptionsDictionary
         firstTime = 1
         #for py3.4, items from vars must come out in same order.
         v = OrderedDict(sorted(vars(self).items()))

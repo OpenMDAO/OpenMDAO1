@@ -1,8 +1,8 @@
-""" Test fo the OptionsDictionary """
+""" Test for the OptionsDictionary """
 
 import unittest
 from six import PY2
-from openmdao.core import OptionsDictionary
+from openmdao.util import OptionsDictionary
 
 
 class TestOptions(unittest.TestCase):
