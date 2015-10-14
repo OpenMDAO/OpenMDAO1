@@ -1,13 +1,18 @@
 """ Testing optimizer ScipyOptimize."""
 
+import os
+
 import unittest
 
 import numpy as np
 
 from openmdao.core.problem import Problem
+
 from openmdao.drivers import ScipyOptimizer
+
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
+
 
 SKIP = False
 try:
@@ -18,6 +23,9 @@ except ImportError:
     pyOptSparseDriver = Driver
     SKIP = True
 
+# optimizer to test, default to SLSQP since SNOPT is not readily available
+OPTIMIZER = 'SLSQP'
+
 
 class TestParamIndices(unittest.TestCase):
 
@@ -26,6 +34,18 @@ class TestParamIndices(unittest.TestCase):
             raise unittest.SkipTest("Could not import pyOptSparseDriver. "
                                     "Is pyoptsparse installed?")
 
+    def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
+        
     def test_Sellar_state_SLSQP(self):
         """ Baseline Sellar test case without specifying indices.
         """
@@ -34,7 +54,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root = SellarStateConnection()
 
         prob.driver = ScipyOptimizer()
-        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
@@ -61,7 +81,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root = SellarStateConnection()
 
         prob.driver = ScipyOptimizer()
-        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['tol'] = 1.0e-8
         prob.root.fd_options['force_fd'] = False
 
@@ -93,7 +113,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver = ScipyOptimizer()
-        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
@@ -124,6 +144,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = False
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
                                     high=np.array([10.0]), indices=[0])
@@ -143,7 +164,7 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-    def test_driver_param_indices_snopt_force_fd(self):
+    def test_driver_param_indices_pyopt_force_fd(self):
         """ Test driver param indices with pyOptSparse and force_fd=True
         """
 
@@ -152,6 +173,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
                                     high=np.array([10.0]), indices=[0])
@@ -172,7 +194,7 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-    def test_driver_param_indices_snopt_force_fd_shift(self):
+    def test_driver_param_indices_pyopt_force_fd_shift(self):
         """ Test driver param indices with pyOptSparse and force_fd=True
         """
 

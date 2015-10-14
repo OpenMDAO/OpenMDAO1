@@ -2,25 +2,25 @@
 OpenMDAO Wrapper for pyoptsparse.
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
-additional MPI capability. Note: only SNOPT is supported right now.
+additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
 """
 
 from __future__ import print_function
 
 import traceback
 from six import iterkeys, iteritems
-import numpy as np
 
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
+
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
     constrained optimization problems, with additional MPI capability.
-    Note: only SNOPT is supported right now.
+    Note: only SNOPT and SLSQP are currently supported.
 
     pyOptSparseDriver supports the following:
         equality_constraints
@@ -60,7 +60,7 @@ class pyOptSparseDriver(Driver):
         self.supports['integer_design_vars'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],
+        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT', 'SLSQP'],
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
@@ -248,9 +248,6 @@ class pyOptSparseDriver(Driver):
         func_dict = {}
         metadata = self.metadata
         system = self.root
-        comm = system.comm
-        iproc = comm.rank
-        nproc = comm.size
 
         try:
             for name in self.indep_list:

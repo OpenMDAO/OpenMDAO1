@@ -29,6 +29,9 @@ except ImportError:
     pyOptSparseDriver = Driver
     SKIP = True
 
+# optimizer to test, default to SLSQP since SNOPT is not readily available
+OPTIMIZER = 'SLSQP'
+
 
 class Parab1D(Component):
     """Just a 1D Parabola."""
@@ -75,6 +78,11 @@ class TestMPIOpt(MPITestCase):
 
     def tearDown(self):
         try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
+        try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
         except OSError:
@@ -99,6 +107,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.c2.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('p1.x', low=-100, high=100)
         driver.add_desvar('p2.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -126,6 +135,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('par.s1.p.x', low=-100, high=100)
         driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -157,6 +167,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('par.s1.p.x', low=-100, high=100)
         driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -218,6 +229,7 @@ class ParallelMPIOptAsym(MPITestCase):
         root.connect('par.ser2.y', 'con.y')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
@@ -228,6 +240,11 @@ class ParallelMPIOptAsym(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -298,6 +315,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         root.connect('par.ser2.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
@@ -308,6 +326,11 @@ class ParallelMPIOptPromoted(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -409,6 +432,7 @@ class ParallelMPIOpt(MPITestCase):
         root.connect('par.ser2.obj.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.p1.x', low=-50.0, high=50.0)
 
@@ -419,6 +443,11 @@ class ParallelMPIOpt(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -474,6 +503,7 @@ class ParallelMPIOpt(MPITestCase):
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
