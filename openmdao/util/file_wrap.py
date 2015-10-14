@@ -727,7 +727,7 @@ class FileParser(object):
                 newdata = np.array(parsed[:])
                 # data might have been split if it contains whitespace. If the
                 # data is string, we probably didn't want this.
-                if newdata.dtype.type is np.string_:
+                if newdata.dtype.type is np.str_:
                     newdata = np.array(line)
 
                 data = np.append(data, newdata)
