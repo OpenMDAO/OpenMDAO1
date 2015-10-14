@@ -1132,12 +1132,8 @@ class Problem(System):
                             if nproc > 1:
                                 dxval = comm.bcast(dxval, root=owned[item])
                         else:  # irrelevant variable.  just give'em zeros
-                            if fwd:
-                                idxdict = self._qoi_indices
-                            else:
-                                idxdict = self._poi_indices
-                            if item in idxdict:
-                                zsize = len(idxdict[item])
+                            if item in qoi_indices:
+                                zsize = len(qoi_indices[item])
                             else:
                                 zsize = unknowns.metadata(item)['size']
                             dxval = np.zeros(zsize)
