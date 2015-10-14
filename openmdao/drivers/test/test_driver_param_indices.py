@@ -257,9 +257,6 @@ class TestParamIndices(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        # I was trying in this test to duplicate an error in pointer, but wasn't able to.
-        # I was able to find a different error that occurred when using return_format='array'
-        # that was also fixed by the same PR that fixed pointer.
         J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
                                return_format='array')
 
