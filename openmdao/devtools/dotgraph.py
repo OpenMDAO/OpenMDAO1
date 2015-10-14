@@ -3,6 +3,8 @@ import os
 import sys
 import webbrowser
 
+from six import itertools
+
 import networkx as nx
 
 from openmdao.core.parallel_group import ParallelGroup
