@@ -29,7 +29,7 @@ In a file-wrapped component, all key inputs for the external code come from an i
 that must be written. When generating the input file, it is important to prevent the loss of
 precision. Consider a variable with 15 digits of precision.
 
-.. doctest:: precision
+..
 
     >>> # Python 3 compatibility
     >>> from __future__ import print_function
@@ -552,7 +552,7 @@ statement is there only for display.)
 
 .. testoutput:: Parse_Output
 
-    1.3334e+07 is a <type 'float'>
+    1.3334e+07 is a <... 'float'>
 
 The method ``mark_anchor`` is used to define an anchor, which becomes the
 starting point for the ``transfer_var`` method. Here, you grab the value from the
