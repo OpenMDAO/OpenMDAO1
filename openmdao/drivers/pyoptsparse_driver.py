@@ -82,6 +82,7 @@ class pyOptSparseDriver(Driver):
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
+        self.sparsity = {}
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -136,12 +137,14 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(iterkeys(econs))
+        self.sparsity = {}
         for name in econs:
             size = con_meta[name]['size']
             lower = upper = con_meta[name]['equals']
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
+            self.sparsity[name] = wrt
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
@@ -163,6 +166,7 @@ class pyOptSparseDriver(Driver):
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
+            self.sparsity[name] = wrt
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,

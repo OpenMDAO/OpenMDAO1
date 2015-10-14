@@ -469,7 +469,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con1', ExecComp('c = 15.0 - x'))
         root.add('con2', ExecComp('c = 15.0 - x'))
 
-        # hook up non explicitly
+        # hook up explicitly
         root.connect('p1.x', 'comp1.x')
         root.connect('p2.x', 'comp2.x')
         root.connect('comp1.y', 'obj.i1')
@@ -495,6 +495,19 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertEqual(con1.wrt, ['p1.x'])
         con2 = prob.driver.pyopt_solution.constraints['con2.c']
         self.assertEqual(con2.wrt, ['p2.x'])
+
+        # Verify that the appropriate sparsity pattern is applied
+
+        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        prob.driver._problem = prob
+        sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
+        print sens_dict
+        self.assertTrue('p2.x' not in sens_dict['con1.c'])
+        self.assertTrue('p1.x' in sens_dict['con1.c'])
+        self.assertTrue('p2.x' in sens_dict['con2.c'])
+        self.assertTrue('p1.x' not in sens_dict['con2.c'])
+        self.assertTrue('p1.x' in sens_dict['obj.o'])
+        self.assertTrue('p2.x' in sens_dict['obj.o'])
 
 if __name__ == "__main__":
     unittest.main()

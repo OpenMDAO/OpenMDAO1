@@ -720,7 +720,8 @@ class Problem(System):
         return mode
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array', dv_scale=None, cn_scale=None):
+                      return_format='array', dv_scale=None, cn_scale=None,
+                      sparsity=None):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -749,6 +750,11 @@ class Problem(System):
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
 
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
+
         Returns
         -------
         ndarray or dict
@@ -774,7 +780,7 @@ class Problem(System):
                                                  cn_scale=cn_scale)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
-                          dv_scale=None, cn_scale=None):
+                          dv_scale=None, cn_scale=None, sparsity=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -797,6 +803,11 @@ class Problem(System):
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
 
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
+
         Returns
         -------
         ndarray or dict
@@ -810,6 +821,8 @@ class Problem(System):
             dv_scale = {}
         if cn_scale is None:
             cn_scale = {}
+        if sparsity is None:
+            sparsity = {}
 
         abs_params = []
         for name in indep_list:
@@ -920,7 +933,7 @@ class Problem(System):
         return J
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
-                                 dv_scale=None, cn_scale=None):
+                                 dv_scale=None, cn_scale=None, sparsity=None):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
@@ -948,6 +961,11 @@ class Problem(System):
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
 
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
+
         Returns
         -------
         ndarray or dict
@@ -968,6 +986,8 @@ class Problem(System):
             dv_scale = {}
         if cn_scale is None:
             cn_scale = {}
+        if sparsity is None:
+            sparsity = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
