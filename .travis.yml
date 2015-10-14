@@ -8,8 +8,6 @@ os:
   - linux
   - osx
 
-sudo: false
-
 language: generic
 
 env:
