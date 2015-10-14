@@ -35,7 +35,7 @@ before_install:
 - conda update --yes conda
 
 install:
-- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock
+- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
 - pip install https://bitbucket.org/stephen_ryan/pyoptsparse/get/tip.tar.gz
 - pip install coveralls
 - pip install .
