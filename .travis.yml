@@ -1,3 +1,9 @@
+# whitelist
+branches:
+  only:
+    - master
+    - /^test-.*$/
+
 os:
   - linux
   - osx
@@ -30,6 +36,7 @@ before_install:
 
 install:
 - conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock
+- pip install https://bitbucket.org/stephen_ryan/pyoptsparse/get/tip.tar.gz
 - pip install coveralls
 - pip install .
 
