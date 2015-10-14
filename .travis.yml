@@ -39,7 +39,7 @@ install:
 - pip install coveralls
 - pip install .
 
-script: nosetests --with-coverage
+script: nosetests --with-coverage -v
 
 after_success:
   coveralls
