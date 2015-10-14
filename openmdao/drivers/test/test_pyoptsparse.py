@@ -1,4 +1,4 @@
-""" Testing pyoptsparse with SLSQP."""
+""" Testing pyoptsparse."""
 
 import os
 import unittest
@@ -14,25 +14,36 @@ from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
 
-SKIP = False
-try:
-    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-except ImportError:
-    # Just so python can parse this file.
-    from openmdao.core.driver import Driver
-    pyOptSparseDriver = Driver
-    SKIP = True
+# make sure pyoptsparse is installed, try SNOPT first but fall back to SLSQP
+OPT = None
+OPTIMIZER = None
 
-# optimizer to test, default to SLSQP since SNOPT is not readily available
-OPTIMIZER = 'SLSQP'
+try:
+    from pyoptsparse import OPT
+except:
+    pass
+
+if OPT:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
 
 
 class TestPyoptSparse(unittest.TestCase):
 
     def setUp(self):
-        if SKIP is True:
-            raise unittest.SkipTest("Could not import pyOptSparseDriver. "
-                                    "Is pyoptsparse installed?")
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
     def tearDown(self):
         try:
