@@ -1137,7 +1137,7 @@ class Problem(System):
                             else:
                                 idxdict = self._poi_indices
                             if item in idxdict:
-                                zsize = len(self._poi_indices[item])
+                                zsize = len(idxdict[item])
                             else:
                                 zsize = unknowns.metadata(item)['size']
                             dxval = np.zeros(zsize)

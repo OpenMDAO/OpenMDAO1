@@ -207,7 +207,6 @@ class TestParamIndices(unittest.TestCase):
         prob.root = root = Group()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
-        prob.root.ln_solver.options['mode'] = 'rev'
 
         root.add('p1', IndepVarComp('x', np.array([1.0, 3.0, 4.0])))
         root.add('p2', IndepVarComp('x', np.array([5.0, 2.0, -1.0])))
@@ -230,6 +229,7 @@ class TestParamIndices(unittest.TestCase):
         root.connect('C1.y', 'obj.y1', src_indices=[1])
         root.connect('C2.y', 'obj.y2', src_indices=[2])
 
+        prob.root.ln_solver.options['mode'] = 'rev'
         prob.setup(check=False)
         prob.run()
 
@@ -251,6 +251,31 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
+
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.setup(check=False)
+        prob.run()
+
+        # I was trying in this test to duplicate an error in pointer, but wasn't able to.
+        # I was able to find a different error that occurred when using return_format='array'
+        # that was also fixed by the same PR that fixed pointer.
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='array')
+
+        assert_rel_error(self, J[0][0], -2.0, 1e-3)
+        assert_rel_error(self, J[0][1], .0, 1e-3)
+        assert_rel_error(self, J[1][0], .0, 1e-3)
+        assert_rel_error(self, J[1][1], -3.0, 1e-3)
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['con1.c']['p1.x'], -2.0, 1e-3)
+        assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
 
 
 if __name__ == "__main__":
