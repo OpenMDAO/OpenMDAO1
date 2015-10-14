@@ -437,6 +437,7 @@ class FanInGrouped(Group):
         self.connect("p1.x1", "sub.comp1.x")
         self.connect("p2.x2", "sub.comp2.x")
 
+
 class RosenSuzuki(Component):
     """ From the CONMIN User's Manual:
     EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION.

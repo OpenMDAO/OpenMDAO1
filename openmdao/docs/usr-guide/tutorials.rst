@@ -12,3 +12,4 @@ Tutorials
    tutorials/sellar.rst
    tutorials/recording.rst
    tutorials/external-code-tutorial.rst
+   tutorials/file-wrapping-tutorial.rst

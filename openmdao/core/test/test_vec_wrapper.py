@@ -4,6 +4,7 @@ from six import iteritems
 from collections import OrderedDict
 
 from openmdao.core import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.system import System, _SysData
 
 class TestVecWrapper(unittest.TestCase):
 
@@ -21,7 +22,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertEqual(u.vec.size, 10)
@@ -73,7 +74,9 @@ class TestVecWrapper(unittest.TestCase):
         for p in params:
             connections[p] = (p, None)
 
-        p = TgtVecWrapper()
+        s = _SysData('')
+        s._unknowns_dict = u._vardict
+        p = TgtVecWrapper(s)
         p.setup(None, params, u, params.keys(),
                 connections, store_byobjs=True)
 
@@ -102,7 +105,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = OrderedDict([
@@ -111,7 +114,9 @@ class TestVecWrapper(unittest.TestCase):
             ('C1.y3','y3'),
         ])
 
-        uview = u.get_view('noname', None, varmap)
+        s = System()
+        s._sysdata = _SysData('')
+        uview = u.get_view(s, None, varmap)
 
         self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
 
@@ -125,7 +130,7 @@ class TestVecWrapper(unittest.TestCase):
         self.assertEqual(u['C1.y3'], 'bar')
 
         # now get a view that's empty
-        uview2 = u.get_view('nonname', None, {})
+        uview2 = u.get_view(s, None, {})
         self.assertEqual(list(uview2.keys()), [])
 
     def test_flat(self):
@@ -142,7 +147,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
@@ -159,7 +164,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         unorm = u.norm()
@@ -175,10 +180,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
@@ -198,10 +203,10 @@ class TestVecWrapper(unittest.TestCase):
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
-        u = SrcVecWrapper()
+        u = SrcVecWrapper(_SysData(''))
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:

@@ -1,22 +1,10 @@
 """functions useful for debugging openmdao"""
+from __future__ import print_function
 
 import sys
 from pprint import pformat
-
-from openmdao.core.mpi_wrap import MPI, under_mpirun
-
-def debug(*msg):
-    for m in msg:
-        sys.stdout.write("%s " % str(m))
-    sys.stdout.write('\n')
-
-if under_mpirun(): # pragma: no cover
-    def debug(*msg):
-        newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
-        for m in newmsg:
-            sys.stdout.write("%s " % m)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+from functools import wraps
+from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
 
 
 def dump_meta(system, nest=0, out_stream=sys.stdout):
@@ -72,3 +60,35 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
         sub.dump_meta(nest, out_stream=out_stream)
 
     out_stream.flush()
+
+def max_mem_usage():
+    """
+    Returns
+    -------
+    The max memory used by this process and its children, in MB.
+    """
+    denom = 1024.
+    if sys.platform == 'darwin':
+        denom *= denom
+    total = getrusage(RUSAGE_SELF).ru_maxrss / denom
+    total += getrusage(RUSAGE_CHILDREN).ru_maxrss / denom
+    return total
+
+
+def diff_max_mem(fn):
+    """
+    This gives the difference in max memory before and after the
+    decorated function is called.  Results can sometimes be
+    deceptive since it only deals with max memory, i.e., the
+    value coming back from getrusage never goes down, even if
+    memory is freed up.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        startmem = max_mem_usage()
+        ret = fn(*args, **kwargs)
+        diff = max_mem_usage()-startmem
+        if diff > 0.0:
+            print("%s added %s MB" % (fn.__name__, diff))
+        return ret
+    return wrapper

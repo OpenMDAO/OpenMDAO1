@@ -37,9 +37,15 @@ class LinearGaussSeidel(LinearSolver):
         opt.add_option('maxiter', 1,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
-                       desc="Derivative calculation mode, set to 'fwd' for " + 
-                       "forward mode, 'rev' for reverse mode, or 'auto' to " + 
+                       desc="Derivative calculation mode, set to 'fwd' for " +
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " +
                        "let OpenMDAO determine the best mode.")
+        opt.add_option('single_voi_relevance_reduction',
+                        False, values=[True, False],
+                        desc="If True, use relevance reduction even for"
+                              " individual variables of interest. This "
+                              "may increase performance but will use "
+                              "more memory.")
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -67,6 +73,8 @@ class LinearGaussSeidel(LinearSolver):
         drmat = system.drmat
         dpmat = system.dpmat
         gs_outputs = system.gs_outputs
+        relevance = system._relevance
+        fwd = mode == 'fwd'
 
         system.clear_dparams()
         for names in system._relevance.vars_of_interest():
@@ -88,15 +96,16 @@ class LinearGaussSeidel(LinearSolver):
         maxiter = self.options['maxiter']
         while self.iter_count < maxiter and f_norm > self.options['atol'] and f_norm/f_norm0 > self.options['rtol']:
 
-            if mode == 'fwd':
+            if fwd:
 
                 for sub in itervalues(system._subsystems):
 
                     for voi in vois:
-                        # print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
+                        #print('pre scatter', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
-                        system._transfer_data(sub.name, deriv=True, var_of_interest=voi)
-                        # print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
+                        system._transfer_data(sub.name, deriv=True,
+                                              var_of_interest=voi)
+                        #print('pre apply', sub.pathname, 'dp', dpmat[voi].vec,
                         #      'du', dumat[voi].vec, 'dr', drmat[voi].vec)
 
                     # we need to loop over all subsystems in order to make
@@ -106,11 +115,11 @@ class LinearGaussSeidel(LinearSolver):
                         continue
 
                     # print(sub.name, sorted(gs_outputs['fwd'][sub.name][None]))
-                  
+
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
-                                         gs_outputs=gs_outputs['fwd'][sub.name])
+                                          gs_outputs=gs_outputs['fwd'][sub.name])
 
                     # for voi in vois:
                     #    print('post apply', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -138,9 +147,9 @@ class LinearGaussSeidel(LinearSolver):
                         if active:
                             dumat[voi].vec *= 0.0
 
-                        # print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('pre scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
                         system._transfer_data(sub.name, mode='rev', deriv=True, var_of_interest=voi)
-                        # print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                        #print('post scatter', sub.pathname, voi, dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                         if active:
                             dumat[voi].vec *= -1.0
@@ -153,18 +162,18 @@ class LinearGaussSeidel(LinearSolver):
                         continue
 
                     sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
-                    # for voi in vois:
-                    #     print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
-                    # print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
+                    #print(sub.name, sorted(gs_outputs['rev'][sub.name][None]))
 
                     # Groups and all other systems just call their own
                     # apply_linear.
                     sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
                                          gs_outputs=gs_outputs['rev'][sub.name])
 
-                    # for voi in vois:
-                    #     print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
+                    #for voi in vois:
+                        #print('post apply', system.dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 
                 for voi in vois:
                     sol_buf[voi] = drmat[voi].vec
