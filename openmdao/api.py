@@ -43,12 +43,15 @@ except ImportError:
     pass
 #surrogate models
 from openmdao.surrogate_models.kriging import KrigingSurrogate, FloatKrigingSurrogate
-from openmdao.surrogate_models.multifi_cokriging import MultiFiCoKrigingSurrogate, FloatMultiFiCoKrigingSurrogate
+from openmdao.surrogate_models.multifi_cokriging import MultiFiCoKrigingSurrogate, \
+    FloatMultiFiCoKrigingSurrogate
 from openmdao.surrogate_models.nearest_neighbor import NearestNeighbor
 from openmdao.surrogate_models.response_surface import ResponseSurface
-from openmdao.surrogate_models.surrogate_model import SurrogateModel, MultiFiSurrogateModel
+from openmdao.surrogate_models.surrogate_model import SurrogateModel, \
+    MultiFiSurrogateModel
 #units
-from openmdao.units.units import PhysicalQuantity, NumberDict, UnitsOnlyPQ, PhysicalUnit, get_conversion_tuple, convert_units
+from openmdao.units.units import PhysicalQuantity, NumberDict, UnitsOnlyPQ, PhysicalUnit, \
+    get_conversion_tuple, convert_units
 #util
 from openmdao.util.array_util import evenly_distrib_idxs, to_slices
 from openmdao.util.file_util import find_files, find_up
