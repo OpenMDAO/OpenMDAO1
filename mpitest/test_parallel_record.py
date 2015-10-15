@@ -1,8 +1,9 @@
 """ Testing out recorders under MPI."""
-
+import errno
 import os
 import unittest
-
+from shutil import rmtree
+from tempfile import mkdtemp
 from openmdao.core import Problem
 from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders import DumpRecorder
@@ -21,23 +22,30 @@ class TestDumpRecorder(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        self.dir = mkdtemp()
+        self.filename = os.path.join(self.dir, "data.dmp")
+
         if MPI: # pragma: no cover
             if MPI.COMM_WORLD.rank == 0:
-                self.filename = 'data_0.dmp'
+                self.expected_filename = os.path.join(self.dir, 'data_0.dmp')
             elif MPI.COMM_WORLD.rank == 1:
-                self.filename = 'data_1.dmp'
+                self.expected_filename = os.path.join(self.dir, 'data_1.dmp')
         else:
-            self.filename = 'data.dmp'
+            self.expected_filename = os.path.join(self.dir, 'data.dmp')
 
     def tearDown(self):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        try:
+            rmtree(self.dir)
+        except OSError as e:
+            # If directory already deleted, keep going
+            if e.errno != errno.ENOENT:
+                raise e
 
     def test_metadata_recorded(self):
         prob = Problem(impl=impl)
         prob.root = FanInGrouped()
 
-        rec = DumpRecorder(out='data.dmp')
+        rec = DumpRecorder(out=self.filename)
         rec.options['record_metadata'] = True
         rec.options['includes'] = ['p1.x1', 'p2.x2', 'comp3.y']
         prob.driver.add_recorder(rec)
@@ -45,7 +53,7 @@ class TestDumpRecorder(MPITestCase):
         prob.setup(check=False)
         rec.close()
         
-        with open(self.filename, 'r') as dumpfile:
+        with open(self.expected_filename, 'r') as dumpfile:
             params = iteritems(prob.root.params)
             unknowns = iteritems(prob.root.unknowns)
             resids = iteritems(prob.root.resids)
@@ -74,7 +82,7 @@ class TestDumpRecorder(MPITestCase):
         prob = Problem(impl=impl)
         prob.root = FanInGrouped()
 
-        rec = DumpRecorder(out='data.dmp')
+        rec = DumpRecorder(out=self.filename)
         rec.options['record_metadata'] = False
         rec.options['record_params'] = True
         rec.options['record_resids'] = True
@@ -83,9 +91,8 @@ class TestDumpRecorder(MPITestCase):
 
         prob.setup(check=False)
         prob.run()
-        rec.close()
 
-        with open(self.filename, 'r') as dumpfile:
+        with open(self.expected_filename, 'r') as dumpfile:
             dump = dumpfile.readlines()
 
         self.assertEqual(dump[4], '  comp3.y: 29.0\n')
