@@ -557,6 +557,12 @@ class Namelist(object):
         in the component.
         """
 
+        # We support loading a model before setup so that we can interact with it.
+        if hasattr(self.comp.params, 'keys'):
+            params = self.comp.params
+        else:
+            params = self.comp._params_dict
+
         # See Pylint W0102 for why we do this
         if not ignore:
             ignore = []
@@ -615,14 +621,14 @@ class Namelist(object):
                         varpath2 = "%s:%s" % (container, name.lower())
 
                         for item in [varpath1, varpath2]:
-                            if item in self.comp.params:
+                            if item in params:
                                 found = True
                                 varpath = item
                                 break
 
                 else:
                     for item in [name, name.lower()]:
-                        if item in self.comp.params:
+                        if item in params:
                             found = True
                             varpath = item
                             break
@@ -636,7 +642,7 @@ class Namelist(object):
                 else:
 
                     # 1D arrays must become ndarrays
-                    target = self.comp.params[varpath]
+                    target = params[varpath]
 
                     # Variables that are passed by array are arrays.
                     # Everythign else is an object.
@@ -644,7 +650,7 @@ class Namelist(object):
                        isinstance(value, (float, int)):
                         value = array([value])
 
-                    self.comp.params[varpath] = value
+                    params[varpath] = value
 
                     #print(varpath, value)
 
