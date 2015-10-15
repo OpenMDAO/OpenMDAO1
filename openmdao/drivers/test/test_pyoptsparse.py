@@ -541,6 +541,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -586,6 +587,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -632,6 +634,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
