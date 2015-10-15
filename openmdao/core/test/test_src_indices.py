@@ -22,9 +22,9 @@ else:
         return s
 
 
-class TestIndices(unittest.TestCase):
+class TestSrcIndices(unittest.TestCase):
 
-    def test_indices(self):
+    def test_src_indices(self):
         size = 10
 
         root = Group()
@@ -112,7 +112,7 @@ class TestIndices(unittest.TestCase):
         self.assertAlmostEqual(root.C.params['x'], 3.)
         assert_rel_error(self, root.G.G2.A2.params['x'], np.array([4., 5.]), 0.0001)
 
-    def test_indices_connect_error(self):
+    def test_src_indices_connect_error(self):
         root = Group()
 
         P = root.add('P', IndepVarComp('x', np.array([1., 2., 3., 4., 5.])))

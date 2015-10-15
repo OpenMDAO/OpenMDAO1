@@ -51,7 +51,6 @@ class DataTransfer(object):
                     # check uniqueness of src_idxs to see if we can avoid calling np.add.at
                     self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
 
-
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
         Performs data transfer between a source vector and a target vector.

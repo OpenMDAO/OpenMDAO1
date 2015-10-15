@@ -7,6 +7,7 @@ additional MPI capability. Note: only SNOPT is supported right now.
 
 from __future__ import print_function
 
+import traceback
 from six import iterkeys, iteritems
 import numpy as np
 
@@ -67,8 +68,6 @@ class pyOptSparseDriver(Driver):
                                 desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
                                 desc='Set to True to let pyOpt calculate the gradient')
-        self.options.add_option('exit_flag', 0,
-                                desc='0 for fail, 1 for ok')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
@@ -105,7 +104,7 @@ class pyOptSparseDriver(Driver):
         # Initial Run
         problem.root.solve_nonlinear(metadata=self.metadata)
 
-        opt_prob = Optimization(self.options['title'], self.objfunc)
+        opt_prob = Optimization(self.options['title'], self._objfunc)
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
@@ -198,7 +197,7 @@ class pyOptSparseDriver(Driver):
             sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
         else:
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self.gradfunc, storeHistory=self.hist_file)
+            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)
 
         self._problem = None
 
@@ -225,7 +224,7 @@ class pyOptSparseDriver(Driver):
         except KeyError: #nothing is here, so something bad happened!
             self.exit_flag = 0
 
-    def objfunc(self, dv_dict):
+    def _objfunc(self, dv_dict):
         """ Function that evaluates and returns the objective function and
         constraints. This function is passed to pyOpt's Optimization object
         and is called from its optimizers.
@@ -268,24 +267,10 @@ class pyOptSparseDriver(Driver):
 
             # Get the objective function evaluations
             for name, obj in iteritems(self.get_objectives()):
-                # if nproc > 1:
-                #     owner = system._owning_ranks[name]
-                #     if iproc == owner:
-                #         func_dict[name] = comm.bcast(obj, root=owner)
-                #     else:
-                #         func_dict[name] = comm.bcast(None, root=owner)
-                # else:
                 func_dict[name] = obj
 
             # Get the constraint evaluations
             for name, con in iteritems(self.get_constraints()):
-                # if nproc > 1:
-                #     owner = system._owning_ranks[name]
-                #     if iproc == owner:
-                #         func_dict[name] = comm.bcast(con, root=owner)
-                #     else:
-                #         func_dict[name] = comm.bcast(None, root=owner)
-                # else:
                 func_dict[name] = con
 
             # Record after getting obj and constraint to assure they have
@@ -299,21 +284,19 @@ class pyOptSparseDriver(Driver):
             fail = 0
 
         except Exception as msg:
+            tb = traceback.format_exc()
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
-            print(70*"=")
-            import traceback
-            traceback.print_exc()
-            print(70*"=")
+            print(70*"=",tb,70*"=")
             fail = 1
 
         #print("Functions calculated")
         #print(func_dict)
         return func_dict, fail
 
-    def gradfunc(self, dv_dict, func_dict):
+    def _gradfunc(self, dv_dict, func_dict):
         """ Function that evaluates and returns the gradient of the objective
         function and constraints. This function is passed to pyOpt's
         Optimization object and is called from its optimizers.
@@ -340,23 +323,20 @@ class pyOptSparseDriver(Driver):
         sens_dict = {}
 
         try:
-            sens_dict = self._problem.calc_gradient(dv_dict.keys(),
-                                                    self.quantities,
-                                                    return_format='dict')
+            sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
+                                           return_format='dict')
             #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 
             fail = 0
 
         except Exception as msg:
+            tb = traceback.format_exc()
 
             # Exceptions seem to be swallowed by the C code, so this
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
-            print(70*"=")
-            import traceback
-            traceback.print_exc()
-            print(70*"=")
+            print(70*"=",tb,70*"=")
 
         #print("Derivatives calculated")
         #print(dv_dict)

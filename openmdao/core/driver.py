@@ -48,6 +48,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
+        self.dv_conversions = {}
+        self.fn_conversions = {}
 
     def _setup(self, root):
         """ Updates metadata for params, constraints and objectives, and
@@ -92,6 +94,40 @@ class Driver(object):
         self._desvars = desvars
         self._objs = objs
         self._cons = cons
+
+        # Cache scalers for derivative calculation
+
+        self.dv_conversions = {}
+        for name, meta in iteritems(desvars):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.dv_conversions[name] = np.reciprocal(scaler)
+
+        self.fn_conversions = {}
+        for name, meta in iteritems(objs):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.fn_conversions[name] = scaler
+
+        for name, meta in iteritems(cons):
+            scaler = meta.get('scaler')
+            if isinstance(scaler, np.ndarray):
+                if all(scaler == 1.0):
+                    continue
+            elif scaler == 1.0:
+                continue
+
+            self.fn_conversions[name] = scaler
 
     def _map_voi_indices(self):
         poi_indices = {}
@@ -501,6 +537,14 @@ class Driver(object):
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
 
+        # Scale the low and high values
+        if lower is not None:
+            lower = (lower + adder)*scaler
+        if upper is not None:
+            upper = (upper + adder)*scaler
+        if equals is not None:
+            equals = (equals + adder)*scaler
+
         con = {}
         con['lower'] = lower
         con['upper'] = upper
@@ -587,6 +631,41 @@ class Driver(object):
         system.solve_nonlinear(metadata=metadata)
 
         self.recorders.record(system, metadata)
+
+    def calc_gradient(self, indep_list, unknown_list, mode='auto',
+                      return_format='array'):
+        """ Returns the scaled gradient for the system that is slotted in
+        self.root, scaled by all scalers that were specified when the desvars
+        and constraints were added.
+
+        Args
+        ----
+        indep_list : list of strings
+            List of independent variable names that derivatives are to
+            be calculated with respect to. All params must have a IndepVarComp.
+
+        unknown_list : list of strings
+            List of output or state names that derivatives are to
+            be calculated for. All must be valid unknowns in OpenMDAO.
+
+        mode : string, optional
+            Deriviative direction, can be 'fwd', 'rev', 'fd', or 'auto'.
+            Default is 'auto', which uses mode specified on the linear solver
+            in root.
+
+        return_format : string, optional
+            Format for the derivatives, can be 'array' or 'dict'.
+
+        Returns
+        -------
+        ndarray or dict
+            Jacobian of unknowns with respect to params.
+        """
+
+        return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                           return_format=return_format,
+                                           dv_scale=self.dv_conversions,
+                                           cn_scale=self.fn_conversions)
 
     def generate_docstring(self):
         """
