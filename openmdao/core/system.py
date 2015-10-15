@@ -382,7 +382,7 @@ class System(object):
         my_fds = [] # list of (uname, pname, i) for those finit differences
                     # that were performed in this process
 
-        fd_count = 0
+        fd_count = -1
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -445,15 +445,15 @@ class System(object):
 
             # Finite Difference each index in array
             for j, idx in enumerate(p_idxs):
+                fd_count += 1
+
                 # skip the current index if its done by some other
                 # parallel fd proc
                 if fd_count % self._num_par_fds != self._par_fd_id:
-                    fd_count += 1
                     continue
 
                 if p_size == 0:
                     run_model(params, unknowns, resids)
-                    fd_count += 1
                     continue
 
                 # Relative or Absolute step size
@@ -508,20 +508,15 @@ class System(object):
 
                     target_input[idx] += step
 
-
                 for u_name in fd_unknowns:
-                    if qoi_indices is not None and u_name in qoi_indices:
-                        u_idxs = qoi_indices[u_name]
-                        result = resultvec.flat[u_name][u_idxs]
+                    if qoi_indices and u_name in qoi_indices:
+                        result = resultvec.flat[u_name][qoi_indices[u_name]]
                     else:
                         result = resultvec.flat[u_name]
                     jac[u_name, p_name][:, j] = result
 
-
                 # Restore old residual
                 resultvec.vec[:] = cache1
-
-                fd_count += 1
 
         if MPI and gather_jac: # pragma: no cover
             jac = self.get_combined_jac(jac)
