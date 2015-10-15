@@ -13,9 +13,7 @@ class RecordingManager(object):
             }
 
         self._recorders = []
-        self._by_method = defaultdict(list)
         self.__has_serial_recorders = False
-
 
     def append(self, recorder):
         self._recorders.append(recorder)
@@ -57,7 +55,7 @@ class RecordingManager(object):
 
     def record_metadata(self, root, exclude=None):
 
-        for recorder in self._by_method['record_metadata']:
+        for recorder in self._recorders:
             metadata_option = recorder.options['record_metadata']
 
             if metadata_option == False:
@@ -75,9 +73,6 @@ class RecordingManager(object):
         for recorder in self._recorders:
             recorder.startup(root)
         
-            for method in recorder.supported_methods():
-                self._by_method[method].append(recorder)
-
             if not recorder._parallel:
                 self.__has_serial_recorders = True
                 pnames, unames, rnames = recorder._filtered[root.pathname]
@@ -112,6 +107,6 @@ class RecordingManager(object):
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
-        for recorder in self._by_method['record_iteration']:
+        for recorder in self._recorders:
             if recorder._parallel or root.comm.rank == 0:
                 recorder.record_iteration(params, unknowns, resids, metadata)
