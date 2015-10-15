@@ -51,6 +51,4 @@ from openmdao.surrogate_models.surrogate_model import SurrogateModel, \
 #units
 from openmdao.units.units import get_conversion_tuple, convert_units
 #util
-from openmdao.util.array_util import evenly_distrib_idxs, to_slices
-from openmdao.util.file_util import find_files, find_up
 from openmdao.util.options import OptionsDictionary
