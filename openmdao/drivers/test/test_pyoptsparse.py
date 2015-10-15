@@ -71,7 +71,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
-            prob.driver.opt_settings['ACC'] = [float, 1e-9]
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -98,7 +98,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
-            prob.driver.opt_settings['ACC'] = [float, 1e-9]
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -125,7 +125,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
-            prob.driver.opt_settings['ACC'] = [float, 1e-9]
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
