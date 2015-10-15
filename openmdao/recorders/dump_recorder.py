@@ -115,9 +115,6 @@ class DumpRecorder(BaseRecorder):
         group : `System`
             `System` containing vectors 
         """
-        if not self.options['record_metadata']:
-            return
-
         params = list(iteritems(group.params))
         unknowns = list(iteritems(group.unknowns))
         resids = list(iteritems(group.resids))

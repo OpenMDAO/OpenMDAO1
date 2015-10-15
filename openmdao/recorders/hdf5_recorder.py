@@ -9,7 +9,6 @@ from h5py import File
 
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
-from openmdao.recorders.recorders import IterationRecorder, MetadataRecorder
 
 class HDF5Recorder(BaseRecorder):
     """
