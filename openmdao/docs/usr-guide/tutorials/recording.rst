@@ -335,7 +335,9 @@ yields the time at which data was recorded:
 
 .. testoutput:: reading
    :hide:
-   :options: +SKIP
+   :options: +ELLIPSIS
+
+   ...
 
 The remaining keys will yield a dictionary containing variable names mapped to values. For example,
 
