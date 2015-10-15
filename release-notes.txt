@@ -39,6 +39,8 @@ Bugfixes
 * Fixed bug regarding Jacobian size disagreement in brachistochrone_slsqp problem.
 * Fixed a bug with scaler and adder in pyoptsparse_driver.
 * Fixed a bug in Jacobian sizing
+* Fix so the Jacobian returned to pyoptsparse reflects sparsity of constraints with
+  respect to the design vars.
 
 ---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.1.1 Alpha Release Notes
