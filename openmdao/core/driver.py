@@ -680,7 +680,6 @@ class Driver(object):
         docstring = '    \"\"\"\n'
 
         #Put options into docstring
-        from openmdao.util.options import OptionsDictionary
         firstTime = 1
         #for py3.4, items from vars must come out in same order.
         v = OrderedDict(sorted(vars(self).items()))
