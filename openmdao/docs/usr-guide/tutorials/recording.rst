@@ -9,11 +9,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 .. testcode:: recording
 
-    from openmdao.components import IndepVarComp
-    from openmdao.core import Component, Group, Problem
-    from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import SqliteRecorder
-
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
