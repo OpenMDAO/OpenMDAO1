@@ -30,6 +30,14 @@ class HDF5Recorder(BaseRecorder):
         self.out = File(out, 'w', **driver_kwargs)
 
     def record_metadata(self, group):
+        """Stores the metadata of the given group in a HDF5 file using
+        the variable name for the key.
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors 
+        """
         params = group.params.iteritems()
         resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()

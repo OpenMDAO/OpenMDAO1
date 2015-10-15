@@ -91,9 +91,33 @@ class BaseRecorder(object):
         return params, unknowns, resids
 
     def record_iteration(self, params, unknowns, resids, metadata):
+        """
+        Writes the provided data.
+
+        Args
+        ----
+        params : dict
+            Dictionary containing parameters. (p)
+
+        unknowns : dict
+            Dictionary containing outputs and states. (u)
+
+        resids : dict
+            Dictionary containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
         raise NotImplementedError()
 
     def record_metadata(self, group):
+        """Writes the metadata of the given group
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors 
+        """
         raise NotImplementedError()
 
     def close(self):

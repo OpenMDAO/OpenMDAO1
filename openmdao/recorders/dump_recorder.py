@@ -108,6 +108,13 @@ class DumpRecorder(BaseRecorder):
         self.out.flush()
 
     def record_metadata(self, group):
+        """Dump the metadata of the given group in a "pretty" form.
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors 
+        """
         if not self.options['record_metadata']:
             return
 
