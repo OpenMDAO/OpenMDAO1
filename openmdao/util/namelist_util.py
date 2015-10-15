@@ -650,7 +650,10 @@ class Namelist(object):
                        isinstance(value, (float, int)):
                         value = array([value])
 
-                    params[varpath] = value
+                    if hasattr(self.comp.params, 'keys'):
+                        params[varpath] = value
+                    else:
+                        params[varpath]['val'] = value
 
                     #print(varpath, value)
 
