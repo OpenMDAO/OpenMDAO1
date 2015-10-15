@@ -308,6 +308,7 @@ etc. To access the data from our run, we can use the following code:
 .. testcode:: reading
 
     import sqlitedict
+    from pprint import pprint
 
     db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao' )
 
@@ -341,13 +342,13 @@ The remaining keys will yield a dictionary containing variable names mapped to v
 .. testcode:: reading
 
     p = data['Parameters']
-    print(p)
+    pprint(p)
 
 .. testoutput:: reading
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    {'p.y': -4.0, 'p.x': 3.0}
+    {'p.x': 3.0, 'p.y': -4.0}
 
 will print out the dictionary {'p.x': 3.0, 'p.y': -4.0}. Generally, the
 variables of interest will be contained in the 'Unknowns' key since that will
@@ -357,13 +358,13 @@ optimizer. For example,
 .. testcode:: reading
 
     u = data['Unknowns']
-    print(u)
+    pprint(u)
 
 .. testoutput:: reading
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    {'p1.x': 3.0, 'p.f_xy': -15.0, 'p2.y': -4.0}
+    {'p.f_xy': -15.0, 'p1.x': 3.0, 'p2.y': -4.0}
 
 will print out the dictionary {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}.
 
