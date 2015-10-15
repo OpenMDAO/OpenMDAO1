@@ -4,8 +4,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.core.problem import Problem
-from openmdao.drivers import ScipyOptimizer
+from openmdao.api import Problem, ScipyOptimizer
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 

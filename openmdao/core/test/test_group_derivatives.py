@@ -3,10 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.api import IndepVarComp, Component, Group, Problem
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.simple_comps import SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error

@@ -1,1 +1,0 @@
-from openmdao.drivers.scipy_optimizer import ScipyOptimizer

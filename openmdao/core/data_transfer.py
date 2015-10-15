@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from openmdao.util import to_slices
+from openmdao.util.array_util import to_slices
 from openmdao.core.mpi_wrap import MPI
 
 class DataTransfer(object):

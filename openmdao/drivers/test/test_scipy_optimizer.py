@@ -5,11 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.drivers import ScipyOptimizer
+from openmdao.api import IndepVarComp, Group, Problem, ScipyOptimizer, ExecComp
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D

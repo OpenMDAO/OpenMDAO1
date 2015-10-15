@@ -6,8 +6,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.core.component import Component
-from openmdao.components.exec_comp import ExecComp
+from openmdao.api import Component, ExecComp
 from openmdao.test.simple_comps import SimpleArrayComp, \
                                        SimpleImplicitComp, SimpleSparseArrayComp
 

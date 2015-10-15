@@ -6,15 +6,10 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.core.component import Component
-from openmdao.core.problem import Problem
+from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel
 from openmdao.core.checks import ConnectError
-from openmdao.core.group import Group
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
-from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 if PY3:
     def py3fix(s):

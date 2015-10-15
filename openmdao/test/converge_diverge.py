@@ -2,7 +2,9 @@
 diverges, then converges again. """
 
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core import Component, Group, ParallelGroup
+from openmdao.core.group import Group
+from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.component import Component
 
 
 class Comp1(Component):
@@ -288,4 +290,3 @@ class SingleDiamondGrouped(Group):
         self.connect('sub1.comp1.y2', 'sub1.comp3.x1')
         self.connect('sub1.comp2.y1', 'comp4.x1')
         self.connect('sub1.comp3.y1', 'comp4.x2')
-

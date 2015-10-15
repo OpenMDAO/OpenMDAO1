@@ -5,9 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.group import Group, Component
-from openmdao.core.problem import Problem
+from openmdao.api import Group, Component, IndepVarComp, Problem
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
