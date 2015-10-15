@@ -14,9 +14,9 @@ import numpy
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.data_transfer import DataTransfer
 
-trace = os.environ.get('TRACE_PETSC')
+trace = os.environ.get('OPENMDAO_TRACE')
 if trace:
-    from openmdao.devtools.debug import debug
+    from openmdao.core.mpi_wrap import debug
 
 from mpi4py import MPI
 
@@ -30,7 +30,7 @@ class PetscImpl(object):
         return MPI.COMM_WORLD
 
     @staticmethod
-    def create_src_vecwrapper(pathname, comm):
+    def create_src_vecwrapper(sysdata, comm):
         """
         Create a`PetscSrcVecWrapper`.
 
@@ -38,10 +38,10 @@ class PetscImpl(object):
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper(pathname, comm)
+        return PetscSrcVecWrapper(sysdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(pathname, comm):
+    def create_tgt_vecwrapper(sysdata, comm):
         """
         Create a `PetscTgtVecWrapper`.
 
@@ -49,7 +49,7 @@ class PetscImpl(object):
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper(pathname, comm)
+        return PetscTgtVecWrapper(sysdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
@@ -99,7 +99,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, unknowns_dict, relevance, var_of_interest=None,
-              store_byobjs=False):
+              store_byobjs=False, shared_vec=None):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -118,13 +118,17 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         store_byobjs : bool, optional
             Indicates that 'pass by object' vars should be stored.  This is only true
             for the unknowns vecwrapper.
+
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
                                               var_of_interest=var_of_interest,
-                                              store_byobjs=store_byobjs)
+                                              store_byobjs=store_byobjs,
+                                              shared_vec=shared_vec)
         if trace:
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
-                  (self.pathname, len(self.vec), self.keys(), self.vec))
+                  (self._syspath.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -149,8 +153,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if trace:
-            debug("'%s': allgathering local unknown sizes: local=%s" % (self.pathname,
-                                                                        sizes))
+            debug("'%s': allgathering local unknown sizes: local=%s" %
+                     (self._sysdata.pathname, sizes))
         return self.comm.allgather(sizes)
 
     def norm(self):
@@ -178,7 +182,8 @@ class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
-              connections, relevance, var_of_interest=None, store_byobjs=False):
+              connections, relevance, var_of_interest=None, store_byobjs=False,
+              shared_vec=None):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -210,15 +215,19 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper` we're building.
+
+        shared_vec : ndarray, optional
+            If not None, create vec as a subslice of this array.
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, relevance=relevance,
                                               var_of_interest=var_of_interest,
-                                              store_byobjs=store_byobjs)
+                                              store_byobjs=store_byobjs,
+                                              shared_vec=shared_vec)
         if trace:
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
-                  (self.pathname, len(self.vec), self.keys(), self.vec))
+                  (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -240,7 +249,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         if trace:
             msg = "'%s': allgathering param sizes.  local param sizes = %s"
-            debug(msg % (self.pathname, psizes))
+            debug(msg % (self._sysdata.pathname, psizes))
 
         return self.comm.allgather(psizes)
 
@@ -282,7 +291,7 @@ class PetscDataTransfer(object):
 
         uvec = src_vec.petsc_vec
         pvec = tgt_vec.petsc_vec
-        name = src_vec.pathname
+        name = src_vec._sysdata.pathname
 
         if trace:
             debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %

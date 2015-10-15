@@ -1,18 +1,14 @@
 """ Testing optimizer ScipyOptimize."""
 
-from pprint import pformat
 import unittest
 
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.core import Problem, Group
+from openmdao.components import IndepVarComp, ExecComp
 from openmdao.drivers import ScipyOptimizer
-from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
-from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
+from openmdao.solvers import LinearGaussSeidel
+from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 
 SKIP = False
@@ -32,7 +28,6 @@ class TestParamIndices(unittest.TestCase):
             raise unittest.SkipTest("Could not import pyOptSparseDriver. "
                                     "Is pyoptsparse installed?")
 
-
     def test_Sellar_state_SLSQP(self):
         """ Baseline Sellar test case without specifying indices.
         """
@@ -45,7 +40,7 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
-                             high=np.array([10.0, 10.0]))
+                                    high=np.array([10.0, 10.0]))
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -60,10 +55,8 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-
     def test_driver_param_indices_slsqp(self):
         """ Test driver param indices with ScipyOptimizer SLSQP and force_fd=False
-
         """
 
         prob = Problem()
@@ -75,7 +68,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = False
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
-                              high=np.array([10.0]),indices=[0])
+                                    high=np.array([10.0]), indices=[0])
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -92,12 +85,9 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][0], 1.9776, 1e-3)
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
-
 
     def test_driver_param_indices_slsqp_force_fd(self):
         """ Test driver param indices with ScipyOptimizer SLSQP and force_fd=True
-
-
         """
 
         prob = Problem()
@@ -109,7 +99,7 @@ class TestParamIndices(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
-                              high=np.array([10.0]),indices=[0])
+                                    high=np.array([10.0]), indices=[0])
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -127,10 +117,8 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-
     def test_driver_param_indices_snopt(self):
         """ Test driver param indices with pyOptSparse and force_fd=False
-
         """
 
         prob = Problem()
@@ -140,7 +128,7 @@ class TestParamIndices(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
-                              high=np.array([10.0]),indices=[0])
+                                    high=np.array([10.0]), indices=[0])
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -157,10 +145,8 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-
     def test_driver_param_indices_snopt_force_fd(self):
-        """ Testt driver param indices with pyOptSparse and force_fd=True
-
+        """ Test driver param indices with pyOptSparse and force_fd=True
         """
 
         prob = Problem()
@@ -170,7 +156,7 @@ class TestParamIndices(unittest.TestCase):
         prob.driver = pyOptSparseDriver()
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
-                              high=np.array([10.0]), indices=[0])
+                                    high=np.array([10.0]), indices=[0])
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -189,8 +175,7 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
     def test_driver_param_indices_snopt_force_fd_shift(self):
-        """ Testt driver param indices with pyOptSparse and force_fd=True
-
+        """ Test driver param indices with pyOptSparse and force_fd=True
         """
 
         prob = Problem()
@@ -198,7 +183,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver.add_desvar('z', low=np.array([-10.0, -10.0]),
-                              high=np.array([10.0, 10.0]), indices=[1])
+                                    high=np.array([10.0, 10.0]), indices=[1])
         prob.driver.add_desvar('x', low=0.0, high=10.0)
 
         prob.driver.add_objective('obj')
@@ -213,8 +198,80 @@ class TestParamIndices(unittest.TestCase):
         prob.run()
 
         J = prob.calc_gradient(['x', 'z'], ['obj'], mode='fd',
-                              return_format='array')
+                               return_format='array')
         assert_rel_error(self, J[0][1], 1.78402, 1e-3)
+
+    def test_poi_index_w_irrelevant_var(self):
+        prob = Problem()
+        prob.driver = pyOptSparseDriver()
+        prob.root = root = Group()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        root.add('p1', IndepVarComp('x', np.array([1.0, 3.0, 4.0])))
+        root.add('p2', IndepVarComp('x', np.array([5.0, 2.0, -1.0])))
+        root.add('C1', ExecComp('y = 2.0*x', x=np.zeros(3), y=np.zeros(3)))
+        root.add('C2', ExecComp('y = 3.0*x', x=np.zeros(3), y=np.zeros(3)))
+        root.add('con1', ExecComp('c = 7.0 - y', y=np.zeros(3), c=np.zeros(3)))
+        root.add('con2', ExecComp('c = 2.0 - y', y=np.zeros(3), c=np.zeros(3)))
+        root.add('obj', ExecComp('o = y1+y2'))
+
+        prob.driver.add_desvar('p1.x', indices=[1])
+        prob.driver.add_desvar('p2.x', indices=[2])
+        prob.driver.add_constraint('con1.c', upper=0.0, indices=[1])
+        prob.driver.add_constraint('con2.c', upper=0.0, indices=[2])
+        prob.driver.add_objective('obj.o')
+
+        root.connect('p1.x', 'C1.x')
+        root.connect('p2.x', 'C2.x')
+        root.connect('C1.y', 'con1.y')
+        root.connect('C2.y', 'con2.y')
+        root.connect('C1.y', 'obj.y1', src_indices=[1])
+        root.connect('C2.y', 'obj.y2', src_indices=[2])
+
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.setup(check=False)
+        prob.run()
+
+        # I was trying in this test to duplicate an error in pointer, but wasn't able to.
+        # I was able to find a different error that occurred when using return_format='array'
+        # that was also fixed by the same PR that fixed pointer.
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='rev',
+                               return_format='array')
+
+        assert_rel_error(self, J[0][0], -2.0, 1e-3)
+        assert_rel_error(self, J[0][1], .0, 1e-3)
+        assert_rel_error(self, J[1][0], .0, 1e-3)
+        assert_rel_error(self, J[1][1], -3.0, 1e-3)
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['con1.c']['p1.x'], -2.0, 1e-3)
+        assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
+
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='array')
+
+        assert_rel_error(self, J[0][0], -2.0, 1e-3)
+        assert_rel_error(self, J[0][1], .0, 1e-3)
+        assert_rel_error(self, J[1][0], .0, 1e-3)
+        assert_rel_error(self, J[1][1], -3.0, 1e-3)
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['con1.c']['p1.x'], -2.0, 1e-3)
+        assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
 
 
 

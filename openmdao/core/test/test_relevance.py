@@ -4,6 +4,7 @@ from six import itervalues
 from openmdao.components import ExecComp, IndepVarComp
 from openmdao.core import Problem, Group
 
+
 class TestLinearGaussSeidel(unittest.TestCase):
     def setUp(self):
         self.p = Problem(Group())
@@ -19,7 +20,6 @@ class TestLinearGaussSeidel(unittest.TestCase):
         root.add('C6', ExecComp('y = 2.0*x'))
         root.add('C7', ExecComp('y = 2.0*x'))
         root.add('C8', ExecComp('y = 2.0*x1 + 3.0*x2'))
-
 
         root.connect('P1.x', 'C2.x')
         root.connect('P1.x', 'C3.x')
@@ -47,20 +47,19 @@ class TestLinearGaussSeidel(unittest.TestCase):
         }
 
         not_rels = {
-            'P1.x': ['P2.x', 'C4.x', 'C4.y','C5.x','C5.y','C7.x','C7.y','C8.x2' ],
-            'C8.y': ['P2.x', 'C4.x', 'C4.y','C5.x','C5.y','C7.x','C7.y','C8.x2' ]
+            'P1.x': ['P2.x', 'C4.x', 'C4.y', 'C5.x', 'C5.y', 'C7.x', 'C7.y', 'C8.x2'],
+            'C8.y': ['P2.x', 'C4.x', 'C4.y', 'C5.x', 'C5.y', 'C7.x', 'C7.y', 'C8.x2']
         }
 
         for voi, voi_rels in rels.items():
             for voi_rel in voi_rels:
                 self.assertTrue(root._relevance.is_relevant(voi, voi_rel),
-                                 msg="%s should be True" % voi_rel)
+                                msg="%s should be True" % voi_rel)
 
         for voi, voi_nrels in not_rels.items():
             for voi_nrel in voi_nrels:
                 self.assertFalse(root._relevance.is_relevant(voi, voi_nrel),
                                  msg="%s should be False" % voi_nrel)
-
 
     def test_relevant_systems(self):
         p = self.p
@@ -75,11 +74,11 @@ class TestLinearGaussSeidel(unittest.TestCase):
         for s in itervalues(root._subsystems):
             if s.pathname in rel_systems:
                 self.assertTrue(root._relevance.is_relevant_system('P1.x', s),
-                               msg="%s should be relevant" % s.pathname)
+                                msg="%s should be relevant" % s.pathname)
                 self.assertTrue(root._relevance.is_relevant_system('C8.y', s),
-                               msg="%s should be relevant" % s.pathname)
+                                msg="%s should be relevant" % s.pathname)
             else:
                 self.assertFalse(root._relevance.is_relevant_system('P1.x', s),
-                                msg="%s should be irrelevant" % s.pathname)
+                                 msg="%s should be irrelevant" % s.pathname)
                 self.assertFalse(root._relevance.is_relevant_system('C8.y', s),
                                  msg="%s should be irrelevant" % s.pathname)
