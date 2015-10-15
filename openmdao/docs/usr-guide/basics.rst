@@ -282,8 +282,7 @@ input parameter to the custom `MultiplyByTwoComponent`.
 
 ::
 
-    from openmdao.core import Group, Problem, Component
-    from openmdao.components import IndepVarComp
+    from openmdao.api import Group, Problem, Component, IndepVarComp
 
     class MultiplyByTwoComponent(Component):
         def __init__(self):
