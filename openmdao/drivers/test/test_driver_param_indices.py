@@ -1,5 +1,7 @@
 """ Testing optimizer ScipyOptimize."""
 
+import os
+
 import unittest
 
 import numpy as np
@@ -11,22 +13,31 @@ from openmdao.solvers import LinearGaussSeidel
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 
-SKIP = False
+
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT = None
+OPTIMIZER = None
+
 try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
+except:
+    pass
+
+if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-except ImportError:
-    # Just so python can parse this file.
-    from openmdao.core.driver import Driver
-    pyOptSparseDriver = Driver
-    SKIP = True
 
 
-class TestParamIndices(unittest.TestCase):
-
-    def setUp(self):
-        if SKIP is True:
-            raise unittest.SkipTest("Could not import pyOptSparseDriver. "
-                                    "Is pyoptsparse installed?")
+class TestParamIndicesScipy(unittest.TestCase):
 
     def test_Sellar_state_SLSQP(self):
         """ Baseline Sellar test case without specifying indices.
@@ -117,7 +128,29 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-    def test_driver_param_indices_snopt(self):
+
+class TestParamIndicesPyoptsparse(unittest.TestCase):
+
+    def setUp(self):
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+    def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
+        try:
+            os.remove('SNOPT_print.out')
+            os.remove('SNOPT_summary.out')
+        except OSError:
+            pass
+
+    def test_driver_param_indices(self):
         """ Test driver param indices with pyOptSparse and force_fd=False
         """
 
@@ -126,6 +159,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = False
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
                                     high=np.array([10.0]), indices=[0])
@@ -145,7 +179,7 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-    def test_driver_param_indices_snopt_force_fd(self):
+    def test_driver_param_indices_force_fd(self):
         """ Test driver param indices with pyOptSparse and force_fd=True
         """
 
@@ -154,6 +188,7 @@ class TestParamIndices(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
                                     high=np.array([10.0]), indices=[0])
@@ -174,8 +209,8 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, prob['z'][1], 0.0, 1e-3)
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
-    def test_driver_param_indices_snopt_force_fd_shift(self):
-        """ Test driver param indices with pyOptSparse and force_fd=True
+    def test_driver_param_indices_force_fd_shift(self):
+        """ Test driver param indices with shifted indices and force_fd=True
         """
 
         prob = Problem()
@@ -204,6 +239,7 @@ class TestParamIndices(unittest.TestCase):
     def test_poi_index_w_irrelevant_var(self):
         prob = Problem()
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.root = root = Group()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
@@ -252,7 +288,6 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
 
-
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.setup(check=False)
         prob.run()
@@ -272,7 +307,6 @@ class TestParamIndices(unittest.TestCase):
         assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
-
 
 
 if __name__ == "__main__":
