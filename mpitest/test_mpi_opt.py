@@ -20,17 +20,29 @@ else:
     from openmdao.core.basic_impl import BasicImpl as impl
     from openmdao.solvers.scipy_gmres import ScipyGMRES as lin_solver
 
-SKIP = False
-try:
-    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-except ImportError:
-    # Just so python can parse this file.
-    from openmdao.core.driver import Driver
-    pyOptSparseDriver = Driver
-    SKIP = True
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT = None
+OPTIMIZER = None
 
-# optimizer to test, default to SLSQP since SNOPT is not readily available
-OPTIMIZER = 'SLSQP'
+try:
+    from pyoptsparse import OPT
+except:
+    pass
+
+if OPT:
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class Parab1D(Component):
@@ -73,8 +85,11 @@ class TestMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
     def tearDown(self):
         try:
@@ -189,8 +204,11 @@ class ParallelMPIOptAsym(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -279,8 +297,11 @@ class ParallelMPIOptPromoted(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -391,8 +412,11 @@ class ParallelMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()

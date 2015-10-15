@@ -18,13 +18,13 @@ from openmdao.test.util import assert_rel_error
 # if it is, try to use SNOPT but fall back to SLSQP
 OPT = None
 OPTIMIZER = None
+
 try:
     from pyoptsparse import OPT
 except:
     pass
 
 if OPT:
-    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
     try:
         OPT('SNOPT')
         OPTIMIZER = 'SNOPT'
@@ -34,6 +34,9 @@ if OPT:
             OPTIMIZER = 'SLSQP'
         except:
             pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class TestParamIndicesScipy(unittest.TestCase):
