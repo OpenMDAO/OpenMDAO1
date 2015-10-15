@@ -21,10 +21,6 @@ OPTIMIZER = None
 
 try:
     from pyoptsparse import OPT
-except:
-    pass
-
-if OPT:
     try:
         OPT('SNOPT')
         OPTIMIZER = 'SNOPT'
@@ -34,6 +30,8 @@ if OPT:
             OPTIMIZER = 'SLSQP'
         except:
             pass
+except:
+    pass
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
