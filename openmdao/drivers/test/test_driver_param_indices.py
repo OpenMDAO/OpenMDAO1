@@ -47,6 +47,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.root = SellarStateConnection()
 
         prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
@@ -73,6 +74,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.root = SellarStateConnection()
 
         prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
         prob.root.fd_options['force_fd'] = False
 
@@ -104,6 +106,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', low=np.array([-10.0]),
