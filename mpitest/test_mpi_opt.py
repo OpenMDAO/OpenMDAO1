@@ -4,9 +4,8 @@ import os
 import unittest
 import numpy as np
 
-from openmdao.components import IndepVarComp, ExecComp
-from openmdao.solvers import LinearGaussSeidel
-from openmdao.core import Component, ParallelGroup, Problem, Group
+from openmdao.api import IndepVarComp, ExecComp, LinearGaussSeidel, Component, \
+    ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error
