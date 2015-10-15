@@ -37,6 +37,29 @@ class TestDumpRecorder(unittest.TestCase):
             if e.errno != errno.ENOENT:
                 raise e
 
+    def assertMetadataRecorded(self, metadata):
+        sout = open(self.filename)
+
+        if metadata is None:
+            for line in sout.readlines():
+                self.assertTrue("Metadata:\n" not in line)
+
+        else:
+            line = sout.readline()
+            self.assertEqual("Metadata:\n", line)
+            groupings = zip(("Params:\n", "Unknowns:\n", "Resids:\n"), metadata)
+
+            for header, expected in groupings:
+                line = sout.readline()
+                self.assertEqual(header, line)
+
+                for name, metadata in expected:
+                    line = sout.readline()
+                    name = str(name)
+                    metadata = str(metadata)
+
+                    self.assertEqual("  {0}: {1}\n".format(name, metadata), line) 
+
     def assertIterationDataRecorded(self, expected, tolerance):
         sout = open(self.filename)
 
@@ -384,6 +407,78 @@ class TestDumpRecorder(unittest.TestCase):
         expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
 
         self.assertIterationDataRecorded(expected, self.eps)
+
+    def test_driver_records_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        self.recorder.close()
+
+        expected_params = list(iteritems(prob.root.params))
+        expected_unknowns = list(iteritems(prob.root.unknowns))
+        expected_resids = list(iteritems(prob.root.resids))
+
+        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+
+    def test_driver_doesnt_record_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        prob.setup(check=False)
+        self.recorder.close()
+
+        self.assertMetadataRecorded(None)
+
+    def test_root_solver_records_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.nl_solver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        self.recorder.close()
+
+        expected_params = list(iteritems(prob.root.params))
+        expected_unknowns = list(iteritems(prob.root.unknowns))
+        expected_resids = list(iteritems(prob.root.resids))
+        
+        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+
+    def test_root_solver_doesnt_record_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.nl_solver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        prob.setup(check=False)
+        self.recorder.close()
+
+        self.assertMetadataRecorded(None)
+
+    def test_subsolver_records_metadata(self):
+        prob = Problem()
+        prob.root = ExampleGroup()
+        prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        self.recorder.close()
+
+        expected_params = list(iteritems(prob.root.params))
+        expected_unknowns = list(iteritems(prob.root.unknowns))
+        expected_resids = list(iteritems(prob.root.resids))
+
+        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+
+    def test_subsolver_doesnt_record_metadata(self):
+        prob = Problem()
+        prob.root = ExampleGroup()
+        prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        prob.setup(check=False)
+        self.recorder.close()
+
+        self.assertMetadataRecorded(None)
 
 if __name__ == "__main__":
     unittest.main()
