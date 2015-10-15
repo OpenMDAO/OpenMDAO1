@@ -8,6 +8,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders import DumpRecorder
 from openmdao.test.simple_comps import FanInGrouped
 from openmdao.test.mpi_util import MPITestCase
+from six import iteritems
 
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
@@ -31,6 +32,42 @@ class TestDumpRecorder(MPITestCase):
     def tearDown(self):
         if os.path.exists(self.filename):
             os.remove(self.filename)
+
+    def test_metadata_recorded(self):
+        prob = Problem(impl=impl)
+        prob.root = FanInGrouped()
+
+        rec = DumpRecorder(out='data.dmp')
+        rec.options['record_metadata'] = True
+        rec.options['includes'] = ['p1.x1', 'p2.x2', 'comp3.y']
+        prob.driver.add_recorder(rec)
+
+        prob.setup(check=False)
+        rec.close()
+        
+        with open(self.filename, 'r') as dumpfile:
+            params = iteritems(prob.root.params)
+            unknowns = iteritems(prob.root.unknowns)
+            resids = iteritems(prob.root.resids)
+
+            self.assertEqual("Metadata:\n", dumpfile.readline())
+            self.assertEqual("Params:\n", dumpfile.readline())
+            
+            for name, metadata in params:
+                fmat = "  {0}: {1}\n".format(name, metadata)
+                self.assertEqual(fmat, dumpfile.readline())
+
+            self.assertEqual("Unknowns:\n", dumpfile.readline())
+            
+            for name, metadata in unknowns:
+                fmat = "  {0}: {1}\n".format(name, metadata)
+                self.assertEqual(fmat, dumpfile.readline())
+            
+            self.assertEqual("Resids:\n", dumpfile.readline())
+
+            for name, metadata in resids:
+                fmat = "  {0}: {1}\n".format(name, metadata)
+                self.assertEqual(fmat, dumpfile.readline())
 
     def test_dump_converge_diverge_par(self):
 
