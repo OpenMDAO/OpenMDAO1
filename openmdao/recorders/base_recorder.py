@@ -8,17 +8,18 @@ from six.moves import filter
 from six import StringIO
 
 from openmdao.core.options import OptionsDictionary
-#from openmdao.core.mpi_wrap import MPI
 
 class BaseRecorder(object):
     """ Base class for all case recorders. """
-    supported_recorders = []
 
     def __init__(self):
         self.options = OptionsDictionary()
-        
-        for recorder in self.supported_recorders:
-            self.support(recorder)
+        self.options.add_option('record_metadata', False)
+        self.options.add_option('record_unknowns', True)
+        self.options.add_option('record_params', False)
+        self.options.add_option('record_resids', False)
+        self.options.add_option('includes', ['*'])
+        self.options.add_option('excludes', [])
 
         self.out = None
         
@@ -34,35 +35,6 @@ class BaseRecorder(object):
 
         self._filtered = {}
         # TODO: System specific includes/excludes
-
-    def support(self, datatype):
-        self.options.update(datatype.options)
-
-        for method in datatype.methods:
-            name = method.func_name
-            if not hasattr(self, name):
-                setattr(self, name, MethodType(method, self))
-
-    @classmethod
-    def supported_options(self):
-        options = []
-        
-        for recorder in self.supported_recorders:
-            for key, _ in recorder.options.items():
-                options.append(key)
-            
-        return options
-
-    @classmethod
-    def supported_methods(self):
-        methods = []
-        
-        for recorder in self.supported_recorders:
-            for method in recorder.methods:
-                methods.append(method.func_name)
-            
-        return methods
-
 
     def startup(self, group):
         """ Prepare for a new run.
@@ -118,25 +90,11 @@ class BaseRecorder(object):
 
         return params, unknowns, resids
 
-#    def record(self, params, unknowns, resids, metadata):
-#        """ Records the requested variables. This method must be defined in
-#        all recorders.
-#
-#        Args
-#        ----
-#        params : `VecWrapper`
-#            `VecWrapper` containing parameters. (p)
-#
-#        unknowns : `VecWrapper`
-#            `VecWrapper` containing outputs and states. (u)
-#
-#        resids : `VecWrapper`
-#            `VecWrapper` containing residuals. (r)
-#
-#        metadata : dict
-#            Dictionary containing execution metadata (e.g. iteration coordinate).
-#        """
-#        raise NotImplementedError("record")
+    def record_iteration(self, params, unknowns, resids, metadata):
+        raise NotImplementedError()
+
+    def record_metadata(self, group):
+        raise NotImplementedError()
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout``, ``sys.stderr``, or StringIO.
