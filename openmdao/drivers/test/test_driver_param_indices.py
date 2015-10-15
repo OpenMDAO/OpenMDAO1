@@ -4,7 +4,8 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Problem, ScipyOptimizer
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
+    LinearGaussSeidel
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 
@@ -197,6 +198,79 @@ class TestParamIndices(unittest.TestCase):
         J = prob.calc_gradient(['x', 'z'], ['obj'], mode='fd',
                                return_format='array')
         assert_rel_error(self, J[0][1], 1.78402, 1e-3)
+
+    def test_poi_index_w_irrelevant_var(self):
+        prob = Problem()
+        prob.driver = pyOptSparseDriver()
+        prob.root = root = Group()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        root.add('p1', IndepVarComp('x', np.array([1.0, 3.0, 4.0])))
+        root.add('p2', IndepVarComp('x', np.array([5.0, 2.0, -1.0])))
+        root.add('C1', ExecComp('y = 2.0*x', x=np.zeros(3), y=np.zeros(3)))
+        root.add('C2', ExecComp('y = 3.0*x', x=np.zeros(3), y=np.zeros(3)))
+        root.add('con1', ExecComp('c = 7.0 - y', y=np.zeros(3), c=np.zeros(3)))
+        root.add('con2', ExecComp('c = 2.0 - y', y=np.zeros(3), c=np.zeros(3)))
+        root.add('obj', ExecComp('o = y1+y2'))
+
+        prob.driver.add_desvar('p1.x', indices=[1])
+        prob.driver.add_desvar('p2.x', indices=[2])
+        prob.driver.add_constraint('con1.c', upper=0.0, indices=[1])
+        prob.driver.add_constraint('con2.c', upper=0.0, indices=[2])
+        prob.driver.add_objective('obj.o')
+
+        root.connect('p1.x', 'C1.x')
+        root.connect('p2.x', 'C2.x')
+        root.connect('C1.y', 'con1.y')
+        root.connect('C2.y', 'con2.y')
+        root.connect('C1.y', 'obj.y1', src_indices=[1])
+        root.connect('C2.y', 'obj.y2', src_indices=[2])
+
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.setup(check=False)
+        prob.run()
+
+        # I was trying in this test to duplicate an error in pointer, but wasn't able to.
+        # I was able to find a different error that occurred when using return_format='array'
+        # that was also fixed by the same PR that fixed pointer.
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='rev',
+                               return_format='array')
+
+        assert_rel_error(self, J[0][0], -2.0, 1e-3)
+        assert_rel_error(self, J[0][1], .0, 1e-3)
+        assert_rel_error(self, J[1][0], .0, 1e-3)
+        assert_rel_error(self, J[1][1], -3.0, 1e-3)
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['con1.c']['p1.x'], -2.0, 1e-3)
+        assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
+
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='array')
+
+        assert_rel_error(self, J[0][0], -2.0, 1e-3)
+        assert_rel_error(self, J[0][1], .0, 1e-3)
+        assert_rel_error(self, J[1][0], .0, 1e-3)
+        assert_rel_error(self, J[1][1], -3.0, 1e-3)
+
+        J = prob.calc_gradient(['p1.x', 'p2.x'], ['con1.c', 'con2.c'], mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['con1.c']['p1.x'], -2.0, 1e-3)
+        assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
+        assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
 
 
 if __name__ == "__main__":
