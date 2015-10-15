@@ -1,6 +1,5 @@
-""" Testing pyoptsparse SNOPT."""
+""" Testing pyoptsparse."""
 
-from pprint import pformat
 import os
 import unittest
 
@@ -14,24 +13,45 @@ from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
-SKIP = False
+
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT = None
+OPTIMIZER = None
+
 try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
+except:
+    pass
+
+if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-except ImportError:
-    # Just so python can parse this file.
-    from openmdao.core.driver import Driver
-    pyOptSparseDriver = Driver
-    SKIP = True
 
 
 class TestPyoptSparse(unittest.TestCase):
 
     def setUp(self):
-        if SKIP is True:
-            raise unittest.SkipTest("Could not import pyOptSparseDriver. "
-                                    "Is pyoptsparse installed?")
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -49,6 +69,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -73,30 +96,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.add_desvar('x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('y', low=-50.0, high=50.0)
-
-        prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', lower=15.0)
-
-        prob.setup(check=False)
-        prob.run()
-
-        # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
-
-    def test_simple_paraboloid_lower(self):
-
-        prob = Problem()
-        root = prob.root = Group()
-
-        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
-        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('con', ExecComp('c = x - y'), promotes=['*'])
-
-        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -121,6 +123,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -145,6 +150,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -168,6 +174,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -191,7 +198,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
 
@@ -217,7 +226,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
 
@@ -243,7 +254,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0, scaler=1/50.0)
 
@@ -269,7 +282,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -295,7 +310,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -321,7 +338,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -347,7 +366,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -373,7 +394,9 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con', ExecComp('c = x - y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
-        prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SNOPT':
+            prob.driver.opt_settings['Verify level'] = 3
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -399,6 +422,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
@@ -421,6 +445,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
 
         prob.driver.add_objective('o')
@@ -443,6 +468,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('obj', ExecComp('o = y[0, 0]', y=np.zeros((2, 2))), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('x', low=-50.0*np.ones((2, 2)), high=50.0*np.ones((2, 2)))
 
         prob.driver.add_objective('o')
@@ -478,6 +504,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -520,6 +547,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -530,7 +558,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Verify that the appropriate sparsity pattern is applied
-        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        dv_dict = {'p1.x': 1.0, 'p2.x': 1.0}
         prob.driver._problem = prob
         sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
 
@@ -565,6 +593,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -576,7 +605,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Verify that the appropriate sparsity pattern is applied
-        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        dv_dict = {'p1.x': 1.0, 'p2.x': 1.0}
         prob.driver._problem = prob
         sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
 
@@ -611,6 +640,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('comp2.y', 'con2.x')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
         prob.driver.add_objective('obj.o')
@@ -622,7 +652,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Verify that the appropriate sparsity pattern is applied
-        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        dv_dict = {'p1.x': 1.0, 'p2.x': 1.0}
         prob.driver._problem = prob
         sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
 
@@ -632,6 +662,7 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertTrue('p1.x' not in sens_dict['con2.c'])
         self.assertTrue('p1.x' in sens_dict['obj.o'])
         self.assertTrue('p2.x' in sens_dict['obj.o'])
+
 
 if __name__ == "__main__":
     unittest.main()
