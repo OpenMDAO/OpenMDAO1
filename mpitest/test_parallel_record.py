@@ -75,6 +75,7 @@ class TestDumpRecorder(MPITestCase):
         prob.root = FanInGrouped()
 
         rec = DumpRecorder(out='data.dmp')
+        rec.options['record_metadata'] = False
         rec.options['record_params'] = True
         rec.options['record_resids'] = True
         rec.options['includes'] = ['p1.x1', 'p2.x2', 'comp3.y']
@@ -82,6 +83,7 @@ class TestDumpRecorder(MPITestCase):
 
         prob.setup(check=False)
         prob.run()
+        rec.close()
 
         with open(self.filename, 'r') as dumpfile:
             dump = dumpfile.readlines()

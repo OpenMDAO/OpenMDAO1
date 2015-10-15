@@ -8,7 +8,7 @@ from tempfile import mkdtemp
 import time
 
 from numpy.testing import assert_allclose
-from six import iteritems
+from six import iteritems, viewkeys
 from sqlitedict import SqliteDict
 
 from openmdao.core.problem import Problem
@@ -28,7 +28,9 @@ def run_problem(problem):
 
 def _assertIterationDataRecorded(test, db, expected, tolerance):
     sentinel = object()
-    test.assertEquals(len(db.keys()), len(expected))
+    keys = list(viewkeys(db))
+
+    test.assertEquals(len(keys), len(expected))
 
     for coord, (t0, t1), params, unknowns, resids in expected:
         iter_coord = format_iteration_coordinate(coord)
