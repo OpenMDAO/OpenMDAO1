@@ -469,7 +469,7 @@ class TestPyoptSparse(unittest.TestCase):
         root.add('con1', ExecComp('c = 15.0 - x'))
         root.add('con2', ExecComp('c = 15.0 - x'))
 
-        # hook up non explicitly
+        # hook up explicitly
         root.connect('p1.x', 'comp1.x')
         root.connect('p2.x', 'comp2.x')
         root.connect('comp1.y', 'obj.i1')
@@ -495,6 +495,143 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertEqual(con1.wrt, ['p1.x'])
         con2 = prob.driver.pyopt_solution.constraints['con2.c']
         self.assertEqual(con2.wrt, ['p2.x'])
+
+    def test_sparsity_fwd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 1.0))
+        root.add('p2', IndepVarComp('x', 1.0))
+
+        root.add('comp1', ExecComp('y = 3.0*x'))
+        root.add('comp2', ExecComp('y = 5.0*x'))
+
+        root.add('obj', ExecComp('o = i1 + i2'))
+        root.add('con1', ExecComp('c = 15.0 - x'))
+        root.add('con2', ExecComp('c = 15.0 - x'))
+
+        # hook up explicitly
+        root.connect('p1.x', 'comp1.x')
+        root.connect('p2.x', 'comp2.x')
+        root.connect('comp1.y', 'obj.i1')
+        root.connect('comp2.y', 'obj.i2')
+        root.connect('comp1.y', 'con1.x')
+        root.connect('comp2.y', 'con2.x')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
+        prob.driver.add_objective('obj.o')
+        prob.driver.add_constraint('con1.c', equals=0.0)
+        prob.driver.add_constraint('con2.c', equals=0.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Verify that the appropriate sparsity pattern is applied
+        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        prob.driver._problem = prob
+        sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
+
+        self.assertTrue('p2.x' not in sens_dict['con1.c'])
+        self.assertTrue('p1.x' in sens_dict['con1.c'])
+        self.assertTrue('p2.x' in sens_dict['con2.c'])
+        self.assertTrue('p1.x' not in sens_dict['con2.c'])
+        self.assertTrue('p1.x' in sens_dict['obj.o'])
+        self.assertTrue('p2.x' in sens_dict['obj.o'])
+
+    def test_sparsity_rev(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 1.0))
+        root.add('p2', IndepVarComp('x', 1.0))
+
+        root.add('comp1', ExecComp('y = 3.0*x'))
+        root.add('comp2', ExecComp('y = 5.0*x'))
+
+        root.add('obj', ExecComp('o = i1 + i2'))
+        root.add('con1', ExecComp('c = 15.0 - x'))
+        root.add('con2', ExecComp('c = 15.0 - x'))
+
+        # hook up explicitly
+        root.connect('p1.x', 'comp1.x')
+        root.connect('p2.x', 'comp2.x')
+        root.connect('comp1.y', 'obj.i1')
+        root.connect('comp2.y', 'obj.i2')
+        root.connect('comp1.y', 'con1.x')
+        root.connect('comp2.y', 'con2.x')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
+        prob.driver.add_objective('obj.o')
+        prob.driver.add_constraint('con1.c', equals=0.0)
+        prob.driver.add_constraint('con2.c', equals=0.0)
+
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.setup(check=False)
+        prob.run()
+
+        # Verify that the appropriate sparsity pattern is applied
+        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        prob.driver._problem = prob
+        sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
+
+        self.assertTrue('p2.x' not in sens_dict['con1.c'])
+        self.assertTrue('p1.x' in sens_dict['con1.c'])
+        self.assertTrue('p2.x' in sens_dict['con2.c'])
+        self.assertTrue('p1.x' not in sens_dict['con2.c'])
+        self.assertTrue('p1.x' in sens_dict['obj.o'])
+        self.assertTrue('p2.x' in sens_dict['obj.o'])
+
+    def test_sparsity_fd(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 1.0))
+        root.add('p2', IndepVarComp('x', 1.0))
+
+        root.add('comp1', ExecComp('y = 3.0*x'))
+        root.add('comp2', ExecComp('y = 5.0*x'))
+
+        root.add('obj', ExecComp('o = i1 + i2'))
+        root.add('con1', ExecComp('c = 15.0 - x'))
+        root.add('con2', ExecComp('c = 15.0 - x'))
+
+        # hook up explicitly
+        root.connect('p1.x', 'comp1.x')
+        root.connect('p2.x', 'comp2.x')
+        root.connect('comp1.y', 'obj.i1')
+        root.connect('comp2.y', 'obj.i2')
+        root.connect('comp1.y', 'con1.x')
+        root.connect('comp2.y', 'con2.x')
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p2.x', low=-50.0, high=50.0)
+        prob.driver.add_objective('obj.o')
+        prob.driver.add_constraint('con1.c', equals=0.0)
+        prob.driver.add_constraint('con2.c', equals=0.0)
+
+        prob.root.fd_options['force_fd'] = True
+        prob.setup(check=False)
+        prob.run()
+
+        # Verify that the appropriate sparsity pattern is applied
+        dv_dict = {'p1.x' : 1.0, 'p2.x' : 1.0}
+        prob.driver._problem = prob
+        sens_dict, fail = prob.driver._gradfunc(dv_dict, {})
+
+        self.assertTrue('p2.x' not in sens_dict['con1.c'])
+        self.assertTrue('p1.x' in sens_dict['con1.c'])
+        self.assertTrue('p2.x' in sens_dict['con2.c'])
+        self.assertTrue('p1.x' not in sens_dict['con2.c'])
+        self.assertTrue('p1.x' in sens_dict['obj.o'])
+        self.assertTrue('p2.x' in sens_dict['obj.o'])
 
 if __name__ == "__main__":
     unittest.main()
