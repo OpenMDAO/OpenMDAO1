@@ -14,7 +14,8 @@ from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
 
 
-# make sure pyoptsparse is installed, try SNOPT first but fall back to SLSQP
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
 OPT = None
 OPTIMIZER = None
 
