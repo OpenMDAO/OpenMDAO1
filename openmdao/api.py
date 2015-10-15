@@ -16,7 +16,6 @@ from openmdao.core.problem import Problem
 from openmdao.core.system import System
 from openmdao.core.driver import Driver
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.vec_wrapper import VecWrapper, SrcVecWrapper, TgtVecWrapper
 from openmdao.core.relevance import Relevance
 #drivers
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
@@ -50,8 +49,7 @@ from openmdao.surrogate_models.response_surface import ResponseSurface
 from openmdao.surrogate_models.surrogate_model import SurrogateModel, \
     MultiFiSurrogateModel
 #units
-from openmdao.units.units import PhysicalQuantity, NumberDict, UnitsOnlyPQ, PhysicalUnit, \
-    get_conversion_tuple, convert_units
+from openmdao.units.units import get_conversion_tuple, convert_units
 #util
 from openmdao.util.array_util import evenly_distrib_idxs, to_slices
 from openmdao.util.file_util import find_files, find_up

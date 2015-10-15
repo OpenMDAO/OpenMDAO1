@@ -3,7 +3,7 @@ import numpy as np
 from six import iteritems
 from collections import OrderedDict
 
-from openmdao.api import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.system import System, _SysData
 
 class TestVecWrapper(unittest.TestCase):
