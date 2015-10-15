@@ -122,8 +122,10 @@ class pyOptSparseDriver(Driver):
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(iterkeys(objs))
+        self.sparsity = {}
         for name in objs:
             opt_prob.addObj(name)
+            self.sparsity[name] = self.indep_list
 
         # Calculate and save gradient for any linear constraints.
         lcons = self.get_constraints(lintype='linear').values()
@@ -137,7 +139,6 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(iterkeys(econs))
-        self.sparsity = {}
         for name in econs:
             size = con_meta[name]['size']
             lower = upper = con_meta[name]['equals']
@@ -328,7 +329,8 @@ class pyOptSparseDriver(Driver):
 
         try:
             sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
-                                           return_format='dict')
+                                           return_format='dict',
+                                           sparsity=self.sparsity)
             #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 

@@ -772,12 +772,13 @@ class Problem(System):
         if mode == 'fd' or self.root.fd_options['force_fd']:
             return self._calc_gradient_fd(indep_list, unknown_list,
                                           return_format, dv_scale=dv_scale,
-                                          cn_scale=cn_scale)
+                                          cn_scale=cn_scale, sparsity=sparsity)
         else:
             return self._calc_gradient_ln_solver(indep_list, unknown_list,
                                                  return_format, mode,
                                                  dv_scale=dv_scale,
-                                                 cn_scale=cn_scale)
+                                                 cn_scale=cn_scale,
+                                                 sparsity=sparsity)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
                           dv_scale=None, cn_scale=None, sparsity=None):
@@ -821,8 +822,6 @@ class Problem(System):
             dv_scale = {}
         if cn_scale is None:
             cn_scale = {}
-        if sparsity is None:
-            sparsity = {}
 
         abs_params = []
         for name in indep_list:
@@ -874,6 +873,12 @@ class Problem(System):
             for okey in unknown_list:
                 J[okey] = {}
                 for j, ikey in enumerate(indep_list):
+
+                    # Support sparsity
+                    if sparsity is not None:
+                        if ikey not in sparsity[okey]:
+                            continue
+
                     abs_ikey = abs_params[j]
                     fd_ikey = get_fd_ikey(abs_ikey)
 
@@ -986,8 +991,6 @@ class Problem(System):
             dv_scale = {}
         if cn_scale is None:
             cn_scale = {}
-        if sparsity is None:
-            sparsity = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1020,6 +1023,12 @@ class Problem(System):
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
+
+                            # Support sparsity
+                            if sparsity is not None:
+                                if ikey not in sparsity[okey]:
+                                    continue
+
                             J[okey][ikey] = None
         else:
             usize = 0
@@ -1139,6 +1148,14 @@ class Problem(System):
                         param = params[0]
 
                     for item in output_list:
+
+                        # Support sparsity
+                        if sparsity is not None:
+                            if fwd and param not in sparsity[item]:
+                                continue
+                            elif not fwd and item not in sparsity[param]:
+                                continue
+
                         if relevance.is_relevant(vkey, item):
                             if fwd or owned[item] == iproc:
                                 out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
