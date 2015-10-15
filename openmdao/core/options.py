@@ -89,12 +89,6 @@ class OptionsDictionary(object):
             return self._options[name]['val']
         return default
 
-    def update(self, options):
-        self._options.update(deepcopy(options._options))
-
-        for name in self._options:
-            self._check(name, self._options[name]['val'])
-
     def iteritems(self):
         return self.items()
 
