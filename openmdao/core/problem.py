@@ -722,7 +722,8 @@ class Problem(System):
         return mode
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array', dv_scale=None, cn_scale=None):
+                      return_format='array', dv_scale=None, cn_scale=None,
+                      sparsity=None):
         """ Returns the gradient for the system that is slotted in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -751,6 +752,11 @@ class Problem(System):
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
 
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
+
         Returns
         -------
         ndarray or dict
@@ -768,15 +774,16 @@ class Problem(System):
         if mode == 'fd' or self.root.fd_options['force_fd']:
             return self._calc_gradient_fd(indep_list, unknown_list,
                                           return_format, dv_scale=dv_scale,
-                                          cn_scale=cn_scale)
+                                          cn_scale=cn_scale, sparsity=sparsity)
         else:
             return self._calc_gradient_ln_solver(indep_list, unknown_list,
                                                  return_format, mode,
                                                  dv_scale=dv_scale,
-                                                 cn_scale=cn_scale)
+                                                 cn_scale=cn_scale,
+                                                 sparsity=sparsity)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
-                          dv_scale=None, cn_scale=None):
+                          dv_scale=None, cn_scale=None, sparsity=None):
         """ Returns the finite differenced gradient for the system that is slotted in
         self.root.
 
@@ -798,6 +805,11 @@ class Problem(System):
 
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
+
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
 
         Returns
         -------
@@ -863,6 +875,12 @@ class Problem(System):
             for okey in unknown_list:
                 J[okey] = {}
                 for j, ikey in enumerate(indep_list):
+
+                    # Support sparsity
+                    if sparsity is not None:
+                        if ikey not in sparsity[okey]:
+                            continue
+
                     abs_ikey = abs_params[j]
                     fd_ikey = get_fd_ikey(abs_ikey)
 
@@ -922,7 +940,7 @@ class Problem(System):
         return J
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
-                                 dv_scale=None, cn_scale=None):
+                                 dv_scale=None, cn_scale=None, sparsity=None):
         """ Returns the gradient for the system that is slotted in
         self.root. The gradient is calculated using root.ln_solver.
 
@@ -949,6 +967,11 @@ class Problem(System):
 
         cn_scale : dict, optional
             Dictionary of driver-defined scale factors on the constraints.
+
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
 
         Returns
         -------
@@ -1002,6 +1025,12 @@ class Problem(System):
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
+
+                            # Support sparsity
+                            if sparsity is not None:
+                                if ikey not in sparsity[okey]:
+                                    continue
+
                             J[okey][ikey] = None
         else:
             usize = 0
@@ -1121,6 +1150,14 @@ class Problem(System):
                         param = params[0]
 
                     for item in output_list:
+
+                        # Support sparsity
+                        if sparsity is not None:
+                            if fwd and param not in sparsity[item]:
+                                continue
+                            elif not fwd and item not in sparsity[param]:
+                                continue
+
                         if relevance.is_relevant(vkey, item):
                             if fwd or owned[item] == iproc:
                                 out_idxs = self.root.dumat[vkey]._get_local_idxs(item,
