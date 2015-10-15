@@ -70,6 +70,8 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = [float, 1e-9]
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -80,8 +82,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
     def test_simple_paraboloid_lower(self):
 
@@ -95,6 +97,8 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = [float, 1e-9]
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -105,8 +109,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
     def test_simple_paraboloid_equality(self):
 
@@ -120,6 +124,8 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = [float, 1e-9]
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
 
@@ -130,8 +136,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-3)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-3)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
     def test_simple_paraboloid_double_sided_low(self):
 
