@@ -8,7 +8,6 @@ from six import string_types, iteritems
 from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
-from openmdao.recorders.recorders import IterationRecorder
 
 class DumpRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
@@ -20,8 +19,6 @@ class DumpRecorder(BaseRecorder):
     rank number appended to each filename. In this case, only variables that
     exist on all processes can be printed.
     """
-
-    supported_recorders = [IterationRecorder]
 
     def __init__(self, out='stdout'):
         super(DumpRecorder, self).__init__()
@@ -109,3 +106,30 @@ class DumpRecorder(BaseRecorder):
 
         # Flush once per iteration to allow external scripts to process the data.
         self.out.flush()
+
+    def record_metadata(self, group):
+        if not self.options['record_metadata']:
+            return
+
+        params = list(iteritems(group.params))
+        unknowns = list(iteritems(group.unknowns))
+        resids = list(iteritems(group.resids))
+
+        self.out.write("Metadata:\n")
+        self.out.write("Params:\n")
+
+        for name, metadata in params:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
+        
+        self.out.write("Unknowns:\n")
+
+        for name, metadata in unknowns:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
+        
+        self.out.write("Resids:\n")
+
+        for name, metadata in resids:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))

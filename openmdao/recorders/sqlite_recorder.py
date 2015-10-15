@@ -7,7 +7,6 @@ from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.recorders.recorders import IterationRecorder, MetadataRecorder
 
 class SqliteRecorder(BaseRecorder):
-    supported_recorders = [IterationRecorder, MetadataRecorder]
 
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()

@@ -24,8 +24,6 @@ class HDF5Recorder(BaseRecorder):
     **driver_kwargs
         Additional keyword args to be passed to the HDF5 driver.
     """
-    supported_recorders = [IterationRecorder, MetadataRecorder]
-
     def __init__(self, out, **driver_kwargs):
 
         super(HDF5Recorder, self).__init__()
