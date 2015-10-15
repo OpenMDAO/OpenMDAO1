@@ -9,7 +9,6 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-
 class DumpRecorder(BaseRecorder):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
@@ -58,7 +57,7 @@ class DumpRecorder(BaseRecorder):
         """
         super(DumpRecorder, self).startup(group)
 
-    def record(self, params, unknowns, resids, metadata):
+    def record_iteration(self, params, unknowns, resids, metadata):
         """Dump the given run data in a "pretty" form.
 
         Args
@@ -90,17 +89,51 @@ class DumpRecorder(BaseRecorder):
         fmat = "Iteration Coordinate: {0:s}\n"
         write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
-        write("Params:\n")
-        for param, val in sorted(iteritems(params)):
-            write("  {0}: {1}\n".format(param, str(val)))
+        if self.options['record_params']:
+            write("Params:\n")
+            for param, val in sorted(iteritems(params)):
+                write("  {0}: {1}\n".format(param, str(val)))
 
-        write("Unknowns:\n")
-        for unknown, val in sorted(iteritems(unknowns)):
-            write("  {0}: {1}\n".format(unknown, str(val)))
+        if self.options['record_unknowns']:
+            write("Unknowns:\n")
+            for unknown, val in sorted(iteritems(unknowns)):
+                write("  {0}: {1}\n".format(unknown, str(val)))
 
-        write("Resids:\n")
-        for resid, val in sorted(iteritems(resids)):
-            write("  {0}: {1}\n".format(resid, str(val)))
+        if self.options['record_resids']:
+            write("Resids:\n")
+            for resid, val in sorted(iteritems(resids)):
+                write("  {0}: {1}\n".format(resid, str(val)))
 
         # Flush once per iteration to allow external scripts to process the data.
         self.out.flush()
+
+    def record_metadata(self, group):
+        """Dump the metadata of the given group in a "pretty" form.
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors 
+        """
+        params = list(iteritems(group.params))
+        unknowns = list(iteritems(group.unknowns))
+        resids = list(iteritems(group.resids))
+
+        self.out.write("Metadata:\n")
+        self.out.write("Params:\n")
+
+        for name, metadata in params:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
+        
+        self.out.write("Unknowns:\n")
+
+        for name, metadata in unknowns:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
+        
+        self.out.write("Resids:\n")
+
+        for name, metadata in resids:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))

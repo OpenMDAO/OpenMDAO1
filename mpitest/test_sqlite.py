@@ -1,95 +1,336 @@
 """ Unit test for the SqliteRecorder. """
-import numpy as np
 import errno
 import os
 import shelve
 import unittest
-
-from openmdao.core.vec_wrapper import _ByObjWrapper
-from recorder_tests import RecorderTests
-from sqlitedict import SqliteDict
-from openmdao.core.mpi_wrap import MPI
-from openmdao.recorders import SqliteRecorder
-from openmdao.test.util import assert_rel_error
-from openmdao.util.record_util import format_iteration_coordinate
-
 from pickle import HIGHEST_PROTOCOL
 from shutil import rmtree
 from tempfile import mkdtemp
+import time
 
-class TestSqliteRecorder(RecorderTests.Tests):
+import numpy as np
+from sqlitedict import SqliteDict
+
+from openmdao.core.problem import Problem
+from openmdao.core.group import Group
+from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.component import Component
+from openmdao.core.mpi_wrap import MPI
+from openmdao.core.vec_wrapper import _ByObjWrapper
+from openmdao.components.indep_var_comp import IndepVarComp
+from openmdao.recorders import SqliteRecorder
+from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
+from openmdao.test.mpi_util import MPITestCase
+
+if MPI: # pragma: no cover
+    from openmdao.core.petsc_impl import PetscImpl as impl
+else:
+    from openmdao.core import BasicImpl as impl
+
+class ABCDArrayComp(Component):
+
+    def __init__(self, arr_size=9, delay=0.01):
+        super(ABCDArrayComp, self).__init__()
+        self.add_param('a', np.ones(arr_size, float))
+        self.add_param('b', np.ones(arr_size, float))
+        self.add_param('in_string', '')
+        self.add_param('in_list', [])
+
+        self.add_output('c', np.ones(arr_size, float))
+        self.add_output('d', np.ones(arr_size, float))
+        self.add_output('out_string', '')
+        self.add_output('out_list', [])
+
+        self.delay = delay
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        time.sleep(self.delay)
+
+        unknowns['c'] = params['a'] + params['b']
+        unknowns['d'] = params['a'] - params['b']
+
+        unknowns['out_string'] = params['in_string'] + '_' + self.name
+        unknowns['out_list']   = params['in_list'] + [1.5]
+
+def run(problem):
+    t0 = time.time()
+    problem.run()
+    t1 = time.time()
+
+    return t0, t1
+
+class TestSqliteRecorder(MPITestCase):
     filename = ""
     dir = ""
+    N_PROCS = 2
 
     def setUp(self):
-        if not MPI or MPI.COMM_WORLD.rank == 0:
-            self.dir = mkdtemp()
-            self.filename = os.path.join(self.dir, "sqlite_test")
-            self.tablename = 'openmdao'
-            self.recorder = SqliteRecorder(self.filename)
+        self.dir = mkdtemp()
+        self.filename = os.path.join(self.dir, "sqlite_test")
+        self.tablename = 'openmdao'
+        self.recorder = SqliteRecorder(self.filename)
+        self.recorder.options['record_metadata'] = False
+        self.eps = 1e-5
 
     def tearDown(self):
-        if not MPI or MPI.COMM_WORLD.rank == 0:
-            super(TestSqliteRecorder, self).tearDown()
-            try:
-                rmtree(self.dir)
-            except OSError as e:
-                # If directory already deleted, keep going
-                if e.errno != errno.ENOENT:
-                    raise e
+        try:
+            rmtree(self.dir)
+        except OSError as e:
+            # If directory already deleted, keep going
+            if e.errno != errno.ENOENT:
+                raise e
 
-    def assertDatasetEquals(self, expected, tolerance):
-        # Close the file to ensure it is written to disk.
-        self.recorder.close()
-        # self.recorder.out = None
-
-        sentinel = object()
-
-        db = SqliteDict( self.filename, self.tablename )
-
-
-        for coord, expect in expected:
-            iter_coord = format_iteration_coordinate(coord)
-
-            groupings = (
-                ("Parameters", expect[0]),
-                ("Unknowns", expect[1]),
-                ("Residuals", expect[2])
-            )
-
-            #### Need to get the record with the key of 'iter_coord'
-            actual_group = db[iter_coord]
-            timestamp = actual_group['timestamp']
-
-            self.assertTrue(self.t0 <= timestamp and timestamp <= self.t1 )
-
-            for label, values in groupings:
-                actual = actual_group[label]
-                # If len(actual) == len(expected) and actual <= expected, then
-                # actual == expected.
-                self.assertEqual(len(actual), len(values))
-                for key, val in values:
-                    found_val = actual.get(key, sentinel)
-                    if found_val is sentinel:
-                        self.fail("Did not find key '{0}'".format(key))
-                    
-                    if isinstance(found_val, _ByObjWrapper):
-                        found_val = found_val.val
-
-                    try:
-                        assert_rel_error(self, found_val, val, tolerance)
-                    except TypeError as error:
-                        self.assertEqual(found_val, val)
-
-            del db[iter_coord]
-            ######## delete the record with the key 'iter_coord'
-
-        # Having deleted all found values, the file should now be empty.
-        ###### Need a way to get the number of records in the main table
-        self.assertEqual(len(db), 0)
-
+    def assertMetadataRecorded(self, expected):
+        db = SqliteDict(self.filename, self.tablename)
+        _assertMetadataRecorded(self, db, expected)
         db.close()
 
+    def assertIterationDataRecorded(self, expected, tolerance, root):
+        if self.comm.rank != 0:
+            return
+
+        db = SqliteDict(self.filename, self.tablename)
+        _assertIterationDataRecorded(self, db, expected, tolerance)
+        db.close()
+
+    def test_basic(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+
+        self.recorder.options['record_params'] = True
+        self.recorder.options['record_resids'] = True
+
+        prob.setup(check=False)
+
+        t0, t1 = run(prob)
+        self.recorder.close()
+       
+
+        coordinate = ['Driver', (1, )]
+
+        expected_params = [
+            ("C1.a", [1.0, 1.0, 1.0]),
+            ("C1.b", [2.0, 2.0, 2.0]),
+        ]
+
+        expected_unknowns = [
+            ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
+            ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
+            ("C1.c",  np.array([3.0, 3.0, 3.0])),
+            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.out_string", "_C1"),
+            ("C1.out_list", [1.5]),
+        ]
+        expected_resids = [
+            ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
+            ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
+            ("C1.c",  np.array([0.0, 0.0, 0.0])),
+            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.out_string", ""),
+            ("C1.out_list", []),
+        ]
+        
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+
+    def test_includes(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_params'] = True
+        self.recorder.options['record_resids'] = True
+
+        self.recorder.options['includes'] = ['C1.*']
+        prob.setup(check=False)
+
+        t0, t1 = run(prob)
+        self.recorder.close()
+
+        coordinate = ['Driver', (1, )]
+
+        expected_params = [
+            ("C1.a", [1.0, 1.0, 1.0]),
+            ("C1.b", [2.0, 2.0, 2.0]),
+        ]
+        expected_unknowns = [
+            ("C1.c",  np.array([3.0, 3.0, 3.0])),
+            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.out_string", "_C1"),
+            ("C1.out_list", [1.5]),
+        ]
+        expected_resids = [
+            ("C1.c",  np.array([0.0, 0.0, 0.0])),
+            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.out_string", ""),
+            ("C1.out_list", []),
+        ]
+        
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+
+    def test_includes_and_excludes(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+
+        self.recorder.options['includes'] = ['C1.*']
+        self.recorder.options['excludes'] = ['*.out*']
+        self.recorder.options['record_params'] = True
+        self.recorder.options['record_resids'] = True
+
+        prob.setup(check=False)
+
+        t0, t1 = run(prob)
+        self.recorder.close()
+       
+        coordinate = ['Driver', (1, )]
+
+        expected_params = [
+            ("C1.a", [1.0, 1.0, 1.0]),
+            ("C1.b", [2.0, 2.0, 2.0]),
+        ]
+
+        expected_unknowns = [
+            ("C1.c",  np.array([3.0, 3.0, 3.0])),
+            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+        ]
+
+        expected_resids = [
+            ("C1.c",  np.array([0.0, 0.0, 0.0])),
+            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+        ]
+
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+
+    def test_solver_record(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+        prob.root.nl_solver.add_recorder(self.recorder)
+        self.recorder.options['record_params'] = True
+        self.recorder.options['record_resids'] = True
+        prob.setup(check=False)
+        t0, t1 = run(prob)
+        self.recorder.close()
+
+        coordinate = ['Driver', (1, ), "root", (1,)]
+
+        expected_params = [
+            ("C1.a", [1.0, 1.0, 1.0]),
+            ("C1.b", [2.0, 2.0, 2.0]),
+        ]
+        expected_unknowns = [
+            ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
+            ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
+            ("C1.c",  np.array([3.0, 3.0, 3.0])),
+            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.out_string", "_C1"),
+            ("C1.out_list", [1.5]),
+        ]
+        expected_resids = [
+            ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
+            ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
+            ("C1.c",  np.array([0.0, 0.0, 0.0])),
+            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.out_string", ""),
+            ("C1.out_list", []),
+        ]
+
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+
+    def test_driver_records_metadata(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+
+        self.recorder.close()
+        
+
+        expected = (
+                list(prob.root.params.iteritems()),
+                list(prob.root.unknowns.iteritems()),
+                list(prob.root.resids.iteritems()),
+        )
+
+        self.assertMetadataRecorded(expected)
+
+    def test_driver_doesnt_records_metadata(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+
+        self.recorder.options['record_metadata'] = False
+        prob.setup(check=False)
+
+        self.recorder.close()
+
+        self.assertMetadataRecorded(None)
 
 if __name__ == "__main__":
     from openmdao.test.mpi_util import mpirun_tests

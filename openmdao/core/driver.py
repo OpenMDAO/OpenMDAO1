@@ -630,7 +630,7 @@ class Driver(object):
         # Solve the system once and record results.
         system.solve_nonlinear(metadata=metadata)
 
-        self.recorders.record(system, metadata)
+        self.recorders.record_iteration(system, metadata)
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', sparsity=None):
