@@ -375,6 +375,50 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+    def test_basic_grouped_grouped_implicit(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        sub1 = prob.root.add('sub1', Group(), promotes=['x2'])
+        sub2 = prob.root.add('sub2', Group(), promotes=['x2'])
+        sub1.add('src', SrcComp(), promotes = ['x2'])
+        sub2.add('tgtF', TgtCompFMulti(), promotes=['x2'])
+        sub2.add('tgtC', TgtCompC(), promotes=['x2'])
+        sub2.add('tgtK', TgtCompK(), promotes=['x2'])
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'sub1.src.x1')
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['sub2.tgtK.x3'], 373.15, 1e-6)
+
+        indep_list = ['x1']
+        unknown_list = ['sub2.tgtF.x3', 'sub2.tgtC.x3', 'sub2.tgtK.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
     def test_apply_linear_adjoint(self):
         # Make sure we can index into dparams
 
