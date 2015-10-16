@@ -1,12 +1,11 @@
 import numpy as np
 import unittest
 
-from openmdao.core import Group, Problem
+from openmdao.api import Group, Problem, MetaModel, MultiFiMetaModel, IndepVarComp, \
+     ResponseSurface, FloatKrigingSurrogate, KrigingSurrogate, MultiFiSurrogateModel
 from openmdao.core.component import _NotSet
-from openmdao.components import MetaModel, MultiFiMetaModel, IndepVarComp
 
-from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, \
-     KrigingSurrogate, MultiFiSurrogateModel
+#from openmdao.api import
 
 from openmdao.test.util import assert_rel_error
 
@@ -213,5 +212,3 @@ class MultiFiMetaModelTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-

@@ -3,11 +3,8 @@
 import unittest
 import numpy as np
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.solvers import ScipyGMRES, DirectSolver
+from openmdao.api import Group, Problem, IndepVarComp, ScipyGMRES, \
+    DirectSolver, ExecComp
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped

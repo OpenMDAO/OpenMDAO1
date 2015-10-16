@@ -7,7 +7,7 @@ import os
 from numpy.distutils.exec_command import find_executable
 
 from openmdao.core.component import Component
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 from openmdao.util.shell_proc import STDOUT, DEV_NULL, ShellProc
 
 from six import iteritems, itervalues, iterkeys

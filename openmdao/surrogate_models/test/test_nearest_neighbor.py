@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
 
-from openmdao.surrogate_models import NearestNeighbor
+from openmdao.api import NearestNeighbor
 from openmdao.test.util import assert_rel_error
 
 

@@ -2,10 +2,8 @@
 
 from __future__ import print_function
 
+from openmdao.api import ParallelGroup, Problem, LinearGaussSeidel
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
-from openmdao.core.parallel_group import ParallelGroup
-from openmdao.core.problem import Problem
-from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck

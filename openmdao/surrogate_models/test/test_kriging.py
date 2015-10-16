@@ -7,7 +7,7 @@ import itertools
 
 from numpy import array, linspace, sin, cos, pi
 
-from openmdao.surrogate_models import KrigingSurrogate
+from openmdao.api import KrigingSurrogate
 from openmdao.test.util import assert_rel_error
 from six.moves import zip
 

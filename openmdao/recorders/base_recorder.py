@@ -6,7 +6,7 @@ import sys
 from six.moves import filter
 from six import StringIO
 
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 
 
 class BaseRecorder(object):
@@ -19,17 +19,17 @@ class BaseRecorder(object):
         self.options.add_option('excludes', [],
                                 desc='Patterns for variables to exclude from recording '
                                 '(processed after includes)')
-        
+
         self.out = None
 
-        
+
         # This is for drivers to determine if a recorder supports
         # real parallel recording (recording on each process), because
         # if it doesn't, the driver figures out what variables must
         # be gathered to rank 0 if running under MPI.
         #
         # By default, this is False, but it should be set to True
-        # if the recorder will record data on each process to avoid 
+        # if the recorder will record data on each process to avoid
         # unnecessary gathering.
         self._parallel = False
 
@@ -72,7 +72,7 @@ class BaseRecorder(object):
 
     def _get_pathname(self, iteration_coordinate):
         '''
-        Converts an iteration coordinate to key to index 
+        Converts an iteration coordinate to key to index
         `_filtered` to retrieve names of variables to be recorder
         '''
         return '.'.join(iteration_coordinate[4::2])

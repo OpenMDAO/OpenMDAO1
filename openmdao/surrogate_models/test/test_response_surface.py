@@ -1,11 +1,11 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest, itertools
-    
+
 
 from numpy import array, linspace, sin, cos, pi
 
-from openmdao.surrogate_models import ResponseSurface
+from openmdao.api import ResponseSurface
 from openmdao.test.util import assert_rel_error
 from six.moves import zip
 

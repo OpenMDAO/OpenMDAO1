@@ -1,10 +1,6 @@
 import unittest
 
-from openmdao.core.problem import Problem
-from openmdao.core import ParallelGroup
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.api import ParallelGroup, Problem, IndepVarComp, ExecComp, NLGaussSeidel
 
 
 class TestGroup(unittest.TestCase):

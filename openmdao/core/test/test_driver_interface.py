@@ -6,16 +6,11 @@ import warnings
 
 import numpy as np
 
-from openmdao.components.exec_comp import ExecComp
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.driver import Driver
-from openmdao.core.group import Group
-from openmdao.core.options import OptionsDictionary
-from openmdao.core.problem import Problem
+from openmdao.api import ExecComp, IndepVarComp, Component, Driver, Group, Problem
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
+from openmdao.util.options import OptionsDictionary
 
 
 class MySimpleDriver(Driver):

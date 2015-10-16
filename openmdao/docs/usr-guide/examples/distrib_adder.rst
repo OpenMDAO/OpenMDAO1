@@ -19,7 +19,7 @@ to a large float array (30,000,000 elements).
     import numpy as np
     from six.moves import range
 
-    from openmdao.core import Component
+    from openmdao.api import Component
     from openmdao.util.array_util import evenly_distrib_idxs
 
     class DistributedAdder(Component):
@@ -110,8 +110,7 @@ Next we'll use these components to build an actual distributed model:
 
     import time
 
-    from openmdao.core import Problem, Group
-    from openmdao.components import IndepVarComp
+    from openmdao.api import Problem, Group, IndepVarComp
 
     from openmdao.core.mpi_wrap import MPI
 
@@ -120,7 +119,7 @@ Next we'll use these components to build an actual distributed model:
         from openmdao.core.petsc_impl import PetscImpl as impl
     else:
         # if you didn't use `mpirun`, then use the numpy data passing
-        from openmdao.core import BasicImpl as impl
+        from openmdao.api import BasicImpl as impl
 
     #how many items in the array
     size = 1000000

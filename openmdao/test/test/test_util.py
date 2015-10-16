@@ -9,10 +9,7 @@ import sys
 import unittest
 import numpy as np
 
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.components.indep_var_comp import IndepVarComp
-
+from openmdao.api import Group, Problem, IndepVarComp
 from openmdao.test.util import assert_rel_error, problem_derivatives_check
 from openmdao.test.simple_comps import SimpleCompWrongDeriv
 

@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
@@ -633,7 +633,7 @@ class Driver(object):
         self.recorders.record(system, metadata)
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array'):
+                      return_format='array', sparsity=None):
         """ Returns the scaled gradient for the system that is slotted in
         self.root, scaled by all scalers that were specified when the desvars
         and constraints were added.
@@ -656,6 +656,11 @@ class Driver(object):
         return_format : string, optional
             Format for the derivatives, can be 'array' or 'dict'.
 
+        sparsity : dict, optional
+            Dictionary that gives the relevant design variables for each
+            constraint. This option is only supported in the `dict` return
+            format.
+
         Returns
         -------
         ndarray or dict
@@ -665,7 +670,8 @@ class Driver(object):
         return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
                                            return_format=return_format,
                                            dv_scale=self.dv_conversions,
-                                           cn_scale=self.fn_conversions)
+                                           cn_scale=self.fn_conversions,
+                                           sparsity=sparsity)
 
     def generate_docstring(self):
         """
@@ -680,7 +686,6 @@ class Driver(object):
         docstring = '    \"\"\"\n'
 
         #Put options into docstring
-        from openmdao.core.options import OptionsDictionary
         firstTime = 1
         #for py3.4, items from vars must come out in same order.
         v = OrderedDict(sorted(vars(self).items()))

@@ -3,9 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.core import Group, Problem
-from openmdao.components import IndepVarComp, ExecComp
-from openmdao.solvers import DirectSolver
+from openmdao.api import Group, Problem, IndepVarComp, ExecComp, DirectSolver
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \

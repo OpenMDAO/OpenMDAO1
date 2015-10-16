@@ -9,11 +9,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 .. testcode:: recording_run
 
-    from openmdao.components import IndepVarComp
-    from openmdao.core import Component, Group, Problem
-    from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import SqliteRecorder
-
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -95,8 +91,8 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 
 .. Copy over the recorded file so we can test reading it later and so other testing code does not mess it up
-.. testcleanup:: recording_run 
-    
+.. testcleanup:: recording_run
+
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
@@ -107,8 +103,7 @@ optimizer progresses.
 
 .. testsetup:: recording
 
-    from openmdao.recorders import SqliteRecorder
-    from openmdao.core import Problem, Group
+    from openmdao.api import SqliteRecorder, Problem, Group
     top = Problem()
     root = top.root = Group()
 
@@ -190,7 +185,7 @@ The includes and excludes filters will accept glob arguments. For example,
 `recorder.options['excludes'] = ['comp1.*']` would exclude any variable
 that starts with "comp1.".
 
-.. testcleanup:: recording 
+.. testcleanup:: recording
 
     import os
     if os.path.exists('paraboloid'):
@@ -217,11 +212,7 @@ etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
 
-    from openmdao.components import IndepVarComp
-    from openmdao.core import Component, Group, Problem
-    from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import SqliteRecorder
-
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -370,9 +361,8 @@ optimizer. For example,
 
 will print out the dictionary {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}.
 
-.. testcleanup:: reading 
+.. testcleanup:: reading
 
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
-

@@ -5,12 +5,9 @@ from __future__ import print_function
 import time
 import numpy as np
 
+from openmdao.api import Group, ParallelGroup, Problem, IndepVarComp, \
+    LinearGaussSeidel
 from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck, debug
-from openmdao.core.group import Group
-from openmdao.core.parallel_group import ParallelGroup
-from openmdao.core.problem import Problem
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped, FanOut3Grouped
 from openmdao.test.exec_comp_for_test import ExecComp4Test

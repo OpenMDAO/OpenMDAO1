@@ -12,8 +12,7 @@ else:
 
 import numpy as np
 
-from openmdao.core.component import Component
-from openmdao.core.problem import Problem
+from openmdao.api import Component, Problem
 
 class TestComponent(unittest.TestCase):
 

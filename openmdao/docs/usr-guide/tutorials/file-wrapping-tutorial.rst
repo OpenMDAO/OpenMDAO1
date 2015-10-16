@@ -161,7 +161,7 @@ input file.
 
     from openmdao.util.file_wrap import InputFileGenerator
     parser = InputFileGenerator()
-    from openmdao.core.component import Component
+    from openmdao.api import Component
     self = Component()
 
     # A way to "cheat" and do this without a file.
@@ -382,7 +382,7 @@ namelist called `MAIN` would look like this:
 
     from numpy import array
 
-    from openmdao.components.external_code import ExternalCode
+    from openmdao.api import ExternalCode
     from openmdao.util.namelist_util import Namelist
 
     class WrappedComp(ExternalCode):
@@ -526,7 +526,7 @@ output file. (Note that this code must be placed in your component's
 
     from openmdao.util.file_wrap import FileParser
     parser = FileParser()
-    from openmdao.core.component import Component
+    from openmdao.api import Component
     self = Component()
 
     # A way to "cheat" and do this without a file.
@@ -727,7 +727,7 @@ Consider an output table that looks like this:
 
     from openmdao.util.file_wrap import FileParser
     parser = FileParser()
-    from openmdao.core.component import Component
+    from openmdao.api import Component
     self = Component()
 
     # A way to "cheat" and do this without a file.

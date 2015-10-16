@@ -16,9 +16,8 @@ need.
     import time
     import numpy as np
 
-    from openmdao.core import Component, Group, ParallelGroup
+    from openmdao.api import Component, Group, ParallelGroup, IndepVarComp, ExecComp
 
-    from openmdao.components import IndepVarComp, ExecComp
 
     class Plus(Component):
         """
@@ -108,7 +107,7 @@ need.
                 self.connect('multi_point.%s.f2'%c_name,'aggregate.f2_%d'%i)
 
 
-    from openmdao.core import Problem
+    from openmdao.api import Problem
 
 
     prob = Problem()
@@ -200,7 +199,7 @@ lots of extra output to the screen.
 
 
     if __name__ == "__main__":
-        from openmdao.core import Problem
+        from openmdao.api import Problem
 
         from openmdao.core.mpi_wrap import MPI
 
@@ -209,7 +208,7 @@ lots of extra output to the screen.
             from openmdao.core.petsc_impl import PetscImpl as impl
         else:
             # if you didn't use `mpirun`, then use the numpy data passing
-            from openmdao.core import BasicImpl as impl
+            from openmdao.api import BasicImpl as impl
 
         def mpi_print(prob, *args):
             """ helper function to only print on rank 0"""

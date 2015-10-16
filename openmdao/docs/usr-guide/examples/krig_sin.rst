@@ -26,9 +26,8 @@ This code will set up a really simple `Group` with only a single
     import sys
     import numpy as np
 
-    from openmdao.core import Group, Component
-    from openmdao.components import MetaModel
-    from openmdao.surrogate_models import KrigingSurrogate, FloatKrigingSurrogate
+    from openmdao.api import Group, Component, MetaModel, KrigingSurrogate, FloatKrigingSurrogate
+
 
     class TrigMM(Group):
         ''' FloatKriging gives responses as floats '''
@@ -48,7 +47,7 @@ pre-generated this data and then would just import it and use it.
 
 .. testcode:: krig_example
 
-    from openmdao.core import Problem
+    from openmdao.api import Problem
 
     prob = Problem()
     prob.root = TrigMM()
@@ -74,7 +73,7 @@ You should get some output that looks like this:
 
    float predicted: 0.8632
    float actual:  0.8632
-   norm_dist predicted: -0.5048, ... 
+   norm_dist predicted: -0.5048, ...
    norm_dist actual:  -0.5048
 
 Notice that one of the outputs is non-float data. Some surrogate models

@@ -3,8 +3,7 @@ import math
 
 import numpy as np
 
-from openmdao.components import IndepVarComp, ExecComp
-from openmdao.core import Group, Problem
+from openmdao.api import IndepVarComp, Group, Problem, ExecComp
 from openmdao.test.util import assert_rel_error
 
 
