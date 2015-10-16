@@ -16,6 +16,7 @@ from openmdao.core.problem import Problem
 from openmdao.core.system import System
 from openmdao.core.driver import Driver
 from openmdao.core.basic_impl import BasicImpl
+from openmdao.core.petsc_impl import PetscImpl
 from openmdao.core.relevance import Relevance
 #drivers
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
