@@ -1,3 +1,48 @@
+OpenMDAO Version 1.2.0 Alpha Release Notes
+October 15, 2015
+
+API Change
+*The way imports work in OpenMDAO has changed.  Importing things from their parent module
+no longer works.  Importing things directly from their source files still works.
+A new namespace, "openmdao.api" has been created, from which you can import anything
+you previously got from a module file.
+
+Examples:
+#Example 1:  old way, import from module, no longer supported
+from openmdao.core import Component, Group
+from openmdao.components import IndepVarComp
+from openmdao.solvers import ScipyGMRES
+
+#Example 2: directly from source file (still works), to do same as Ex 1.
+from openmdao.core.component import Component
+from openmdao.core.group import Group
+from openmdao.components.indep_var_comp import IndepVarComp
+from openmdao.solvers.scipy_gmres import ScipyGMRES
+
+#Example 3: new way using openmdao.api, to do same as Ex 1.
+from openmdao.api import Component, Group, IndepVarComp, ScipyGMRES
+
+As always, even though we are still in alpha, we apologize if our API changes
+cause any problems.  Feel free to ask questions on our StackOverflow tag if you
+experience any difficulties.
+
+
+Features
+* Users can solve for derivatives with a LinGS solver
+* check_partial_derivatives now loops over all variables in a component.
+* Updated many docstrings and the generate_docstring function to include options.
+
+
+Bugfixes
+* Fixed precedence for fd settings in check_partial_derivatives.
+* Fixed small bug in setup's reporting of unit conversions.
+* Fixed bug regarding Jacobian size disagreement in brachistochrone_slsqp problem.
+* Fixed a bug with scaler and adder in pyoptsparse_driver.
+* Fixed a bug in Jacobian sizing
+* Fix so the Jacobian returned to pyoptsparse reflects sparsity of constraints with
+  respect to the design vars.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.1.1 Alpha Release Notes
 September 22, 2015
 

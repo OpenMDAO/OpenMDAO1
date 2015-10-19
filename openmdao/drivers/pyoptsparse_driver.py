@@ -2,25 +2,25 @@
 OpenMDAO Wrapper for pyoptsparse.
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
-additional MPI capability. Note: only SNOPT is supported right now.
+additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
 """
 
 from __future__ import print_function
 
 import traceback
 from six import iterkeys, iteritems
-import numpy as np
 
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
+
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
     constrained optimization problems, with additional MPI capability.
-    Note: only SNOPT is supported right now.
+    Note: only SNOPT and SLSQP are currently supported.
 
     pyOptSparseDriver supports the following:
         equality_constraints
@@ -60,7 +60,7 @@ class pyOptSparseDriver(Driver):
         self.supports['integer_design_vars'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT'],
+        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT', 'SLSQP'],
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
@@ -82,6 +82,7 @@ class pyOptSparseDriver(Driver):
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
+        self.sparsity = {}
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
@@ -121,8 +122,10 @@ class pyOptSparseDriver(Driver):
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(iterkeys(objs))
+        self.sparsity = {}
         for name in objs:
             opt_prob.addObj(name)
+            self.sparsity[name] = self.indep_list
 
         # Calculate and save gradient for any linear constraints.
         lcons = self.get_constraints(lintype='linear').values()
@@ -142,6 +145,7 @@ class pyOptSparseDriver(Driver):
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
+            self.sparsity[name] = wrt
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
@@ -163,6 +167,7 @@ class pyOptSparseDriver(Driver):
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
+            self.sparsity[name] = wrt
 
             if con_meta[name]['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
@@ -248,9 +253,6 @@ class pyOptSparseDriver(Driver):
         func_dict = {}
         metadata = self.metadata
         system = self.root
-        comm = system.comm
-        iproc = comm.rank
-        nproc = comm.size
 
         try:
             for name in self.indep_list:
@@ -324,7 +326,8 @@ class pyOptSparseDriver(Driver):
 
         try:
             sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
-                                           return_format='dict')
+                                           return_format='dict',
+                                           sparsity=self.sparsity)
             #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
 

@@ -2,11 +2,7 @@
 
 import unittest
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.solvers import RunOnce
+from openmdao.api import IndepVarComp, Group, Problem, RunOnce, ExecComp
 from openmdao.test.util import assert_rel_error
 
 

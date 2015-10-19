@@ -525,6 +525,72 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
 
+    def test_read_pre_setup(self):
+        # Put variables in top container, so no rules_dict
+
+        namelist1 = "Testing\n" + \
+                    "  \n" + \
+                    "&OPTION\n" + \
+                    "  This is a comment\n" + \
+                    "  INTVAR = 777, single(1) = 15.0, floatvar = -3.14\n" + \
+                    "  singleint(2) = 3,4,5\n" + \
+                    "  stringarray(3) = 'xyz'\n" + \
+                    "  boolvar = T\n" + \
+                    "  textvar = 'That'\n" + \
+                    "  ! This is a comment too\n" + \
+                    "  arrayvar = 3.5, 7.76, 1.23\n" + \
+                    "  arrayvarsplit = 3.5, 7.76\n" + \
+                    "                  5.45, 22.0\n" + \
+                    "                  1.23\n" + \
+                    "  arrayvarsplit2 = 1\n" + \
+                    "                   2\n" + \
+                    "                   3\n" + \
+                    "  arraysmall = 1.75\n" + \
+                    "  arrayshorthand = 3.456*8\n" + \
+                    "  expvar1 = 1.5e-12\n" + \
+                    "  expvar2 = -1.5D12\n" + \
+                    "/\n"
+
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+
+        top = Problem()
+        top.root = Group()
+        my_comp = top.root.add('my_comp', VarComponent())
+
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+
+        sb.load_model()
+
+        self.assertEqual(sb.title, 'Testing')
+        self.assertEqual(my_comp._params_dict['intvar']['val'], 777)
+        self.assertEqual(my_comp._params_dict['boolvar']['val'], True)
+        self.assertEqual(my_comp._params_dict['floatvar']['val'], -3.14)
+        self.assertEqual(my_comp._params_dict['expvar1']['val'], 1.5e-12)
+        self.assertEqual(my_comp._params_dict['expvar2']['val'], -1.5e12)
+        self.assertEqual(my_comp._params_dict['textvar']['val'], 'That')
+        self.assertEqual(my_comp._params_dict['arrayvar']['val'][0], 3.5)
+        self.assertEqual(my_comp._params_dict['arrayvar']['val'][1], 7.76)
+        self.assertEqual(my_comp._params_dict['arrayvar']['val'][2], 1.23)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit']['val'][0], 3.5)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit']['val'][1], 7.76)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit']['val'][2], 5.45)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit']['val'][3], 22.0)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit']['val'][4], 1.23)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit2']['val'][0], 1)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit2']['val'][1], 2)
+        self.assertEqual(my_comp._params_dict['arrayvarsplit2']['val'][2], 3)
+        self.assertEqual(my_comp._params_dict['arraysmall']['val'], 1.75)
+        self.assertEqual(my_comp._params_dict['arrayshorthand']['val'][4], 3.456)
+        self.assertEqual(len(my_comp._params_dict['arrayshorthand']['val']), 8)
+        self.assertEqual(my_comp._params_dict['single']['val'][0], 15.0)
+        self.assertEqual(my_comp._params_dict['singleint']['val'][3], 5)
+        self.assertEqual(my_comp._params_dict['stringarray']['val'][2], 'xyz')
+
 if __name__ == '__main__':
     import nose
     sys.argv.append('--cover-package=openmdao.util')

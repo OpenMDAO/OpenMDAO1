@@ -6,7 +6,7 @@ import shelve
 import unittest
 
 from sqlitedict import SqliteDict
-from openmdao.recorders import SqliteRecorder
+from openmdao.api import SqliteRecorder
 from openmdao.recorders.test.recorder_tests import RecorderTests
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
@@ -47,7 +47,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
 
         for coord, expect in expected:
             iter_coord = format_iteration_coordinate(coord)
-            
+
             groupings = (
                 ("Parameters", expect[0]),
                 ("Unknowns", expect[1]),

@@ -2,11 +2,7 @@
 import unittest
 from six import text_type, StringIO, itervalues
 
-from openmdao.core.problem import Problem
-from openmdao.core.group import Group
-from openmdao.core.problem import Relevance
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
+from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 
 class TestGroup(unittest.TestCase):

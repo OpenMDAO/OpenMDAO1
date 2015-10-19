@@ -52,7 +52,7 @@ class ExecComp(Component):
     outputs a float variable 'y' which is the sum of the entries in 'x'.
 
     >>> import numpy
-    >>> from openmdao.components import ExecComp
+    >>> from openmdao.api import ExecComp
     >>> excomp = ExecComp('y=numpy.sum(x)', x=numpy.ones(10,dtype=float))
 
     In this example, 'y' would be assumed to be the default type of float

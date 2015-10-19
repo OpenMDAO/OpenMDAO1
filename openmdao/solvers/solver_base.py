@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 from openmdao.recorders.recording_manager import RecordingManager
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 
 
 class SolverBase(object):
@@ -93,7 +93,6 @@ class SolverBase(object):
         docstring = '    \"\"\"\n'
 
         #Put options into docstring
-        from openmdao.core.options import OptionsDictionary
         firstTime = 1
         #for py3.4, items from vars must come out in same order.
         from collections import OrderedDict

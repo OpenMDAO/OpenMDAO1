@@ -4,9 +4,8 @@ import os
 import unittest
 import numpy as np
 
-from openmdao.components import IndepVarComp, ExecComp
-from openmdao.solvers import LinearGaussSeidel
-from openmdao.core import Component, ParallelGroup, Problem, Group
+from openmdao.api import IndepVarComp, ExecComp, LinearGaussSeidel, Component, \
+    ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error
@@ -20,14 +19,27 @@ else:
     from openmdao.core.basic_impl import BasicImpl as impl
     from openmdao.solvers.scipy_gmres import ScipyGMRES as lin_solver
 
-SKIP = False
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT = None
+OPTIMIZER = None
+
 try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
+except:
+    pass
+
+if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-except ImportError:
-    # Just so python can parse this file.
-    from openmdao.core.driver import Driver
-    pyOptSparseDriver = Driver
-    SKIP = True
 
 
 class Parab1D(Component):
@@ -70,10 +82,18 @@ class TestMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -99,6 +119,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.c2.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('p1.x', low=-100, high=100)
         driver.add_desvar('p2.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -126,6 +147,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('par.s1.p.x', low=-100, high=100)
         driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -157,6 +179,7 @@ class TestMPIOpt(MPITestCase):
         root.connect('par.s2.c.y', 'sumcomp.x2')
 
         driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
         driver.add_desvar('par.s1.p.x', low=-100, high=100)
         driver.add_desvar('par.s2.p.x', low=-100, high=100)
         driver.add_objective('sumcomp.sum')
@@ -178,8 +201,11 @@ class ParallelMPIOptAsym(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -218,6 +244,7 @@ class ParallelMPIOptAsym(MPITestCase):
         root.connect('par.ser2.y', 'con.y')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
@@ -228,6 +255,11 @@ class ParallelMPIOptAsym(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -262,8 +294,11 @@ class ParallelMPIOptPromoted(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -298,6 +333,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         root.connect('par.ser2.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
 
@@ -308,6 +344,11 @@ class ParallelMPIOptPromoted(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -368,8 +409,11 @@ class ParallelMPIOpt(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        if SKIP:
-            raise unittest.SkipTest('Could not import pyOptSparseDriver. Is pyoptsparse installed?')
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -409,6 +453,7 @@ class ParallelMPIOpt(MPITestCase):
         root.connect('par.ser2.obj.o', 'total.x2')
 
         prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.add_desvar('par.ser1.p1.x', low=-50.0, high=50.0)
         prob.driver.add_desvar('par.ser2.p1.x', low=-50.0, high=50.0)
 
@@ -419,6 +464,11 @@ class ParallelMPIOpt(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
+        try:
+            os.remove('SLSQP.out')
+        except OSError:
+            pass
+
         try:
             os.remove('SNOPT_print.out')
             os.remove('SNOPT_summary.out')
@@ -474,6 +524,7 @@ class ParallelMPIOpt(MPITestCase):
         prob.run()
 
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

@@ -1,7 +1,6 @@
 import unittest
 import time
-from openmdao.core.problem import Problem
-from openmdao.recorders import BaseRecorder
+from openmdao.api import Problem, BaseRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 

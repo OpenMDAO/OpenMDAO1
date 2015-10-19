@@ -3,16 +3,15 @@
 import os
 import unittest
 
-from openmdao.core import Problem
+from openmdao.api import Problem, DumpRecorder
 from openmdao.core.mpi_wrap import MPI
-from openmdao.recorders import DumpRecorder
 from openmdao.test.simple_comps import FanInGrouped
 from openmdao.test.mpi_util import MPITestCase
 
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core import BasicImpl as impl
+    from openmdao.api import BasicImpl as impl
 
 
 class TestDumpRecorder(MPITestCase):

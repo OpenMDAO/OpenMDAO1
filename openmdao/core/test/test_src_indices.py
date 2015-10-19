@@ -7,10 +7,8 @@ from numpy.testing import assert_almost_equal
 
 from six import PY3
 
-from openmdao.core import Problem, Group, Component
+from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp
 from openmdao.core.checks import ConnectError
-from openmdao.components import IndepVarComp, ExecComp
-
 from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp
 from openmdao.test.util import assert_rel_error
 

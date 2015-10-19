@@ -9,7 +9,7 @@ from openmdao.core.vec_wrapper import _ByObjWrapper
 from recorder_tests import RecorderTests
 from sqlitedict import SqliteDict
 from openmdao.core.mpi_wrap import MPI
-from openmdao.recorders import SqliteRecorder
+from openmdao.api import SqliteRecorder
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
 
@@ -72,7 +72,7 @@ class TestSqliteRecorder(RecorderTests.Tests):
                     found_val = actual.get(key, sentinel)
                     if found_val is sentinel:
                         self.fail("Did not find key '{0}'".format(key))
-                    
+
                     if isinstance(found_val, _ByObjWrapper):
                         found_val = found_val.val
 

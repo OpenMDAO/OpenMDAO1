@@ -38,7 +38,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
         import numpy as np
 
-        from openmdao.core import Component
+        from openmdao.api import Component
 
 
         class SellarDis1(Component):
@@ -156,9 +156,7 @@ for things like objectives and constraints.
 
 .. testcode:: Disciplines
 
-    from openmdao.components import ExecComp, IndepVarComp
-    from openmdao.core import Group
-    from openmdao.solvers import NLGaussSeidel
+    from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel
 
     class SellarDerivatives(Group):
         """ Group containing the Sellar MDA. This version uses the disciplines
@@ -256,8 +254,7 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
 
 .. testcode:: Disciplines
 
-        from openmdao.core import Problem
-        from openmdao.drivers import ScipyOptimizer
+        from openmdao.api import Problem, ScipyOptimizer
 
         top = Problem()
         top.root = SellarDerivatives()
@@ -417,7 +414,7 @@ break the connection and use the `StateConnection` component.
 
 .. testcode:: Disciplines
 
-    from openmdao.solvers import Newton
+    from openmdao.api import Newton
 
     class SellarStateConnection(Group):
         """ Group containing the Sellar MDA. This version uses the disciplines
@@ -464,8 +461,7 @@ which one, since they should only differ by the solver tolerance at most.
 
 .. testcode:: Disciplines
 
-        from openmdao.core import Problem
-        from openmdao.drivers import ScipyOptimizer
+        from openmdao.api import Problem, ScipyOptimizer
 
         top = Problem()
         top.root = SellarStateConnection()
