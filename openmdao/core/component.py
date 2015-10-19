@@ -629,3 +629,130 @@ class Component(System):
             umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
 
         return umap
+
+    def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
+                              fd_params=None, fd_unknowns=None,
+                              poi_indices=None, qoi_indices=None):
+        """ Return derivatives of all unknowns in this system w.r.t. all
+        incoming params using complex step.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        total_derivs : bool, optional
+            Set to true to calculate total derivatives. Otherwise, partial
+            derivatives are returned.
+
+        fd_params : list of strings, optional
+            List of parameter name strings with respect to which derivatives
+            are desired. This is used by problem to limit the derivatives that
+            are taken.
+
+        fd_unknowns : list of strings, optional
+            List of output or state name strings for derivatives to be
+            calculated. This is used by problem to limit the derivatives that
+            are taken.
+
+        poi_indices: dict of list of integers, optional
+            This is a dict that contains the index values for each parameter of
+            interest, so that we only finite difference those indices.
+
+        qoi_indices: dict of list of integers, optional
+            This is a dict that contains the index values for each quantity of
+            interest, so that the finite difference is returned only for those
+            indices.
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays containing the derivative for that
+            tuple pair.
+        """
+
+        # Params and Unknowns that we provide at this level.
+        if fd_params is None:
+            fd_params = self._get_fd_params()
+        if fd_unknowns is None:
+            fd_unknowns = self._get_fd_unknowns()
+
+        # Use settings in the system dict unless variables override.
+        step_size = self.fd_options.get('step_size', 1.0e-6)
+
+        jac = {}
+
+        # Prepare for calculating partial derivatives or total derivatives
+        if total_derivs is False:
+            run_model = self.apply_nonlinear
+            resultvec = resids
+            states = self.states
+        else:
+            run_model = self.solve_nonlinear
+            resultvec = unknowns
+            states = []
+
+        # Compute gradient for this param or state.
+        for p_name in chain(fd_params, states):
+
+            # If our input is connected to a IndepVarComp, then we need to twiddle
+            # the unknowns vector instead of the params vector.
+            src = self.connections.get(p_name)
+            if src is not None:
+                param_src = src[0]  # just the name
+
+                # Have to convert to promoted name to key into unknowns
+                if param_src not in self.unknowns:
+                    param_src = self.unknowns.get_promoted_varname(param_src)
+
+                target_input = unknowns.flat[param_src]
+            else:
+                # Cases where the IndepVarComp is somewhere above us.
+                if p_name in states:
+                    inputs = unknowns
+                else:
+                    inputs = params
+
+                target_input = inputs.flat[p_name]
+
+            mydict = {}
+            if p_name in self._to_abs_pnames:
+                for val in itervalues(self._params_dict):
+                    if val['promoted_name'] == p_name:
+                        mydict = val
+                        break
+
+            # Local settings for this var trump all
+            fdstep = mydict.get('step_size', step_size)
+
+            # Size our Inputs
+            if poi_indices is not None and param_src in poi_indices:
+                p_idxs = poi_indices[param_src]
+                p_size = len(p_idxs)
+            else:
+                p_size = np.size(target_input)
+                p_idxs = range(p_size)
+
+            # Size our Outputs
+            for u_name in fd_unknowns:
+                if qoi_indices is not None and u_name in qoi_indices:
+                    u_size = len(qoi_indices[u_name])
+                else:
+                    u_size = np.size(unknowns[u_name])
+
+                jac[u_name, p_name] = np.zeros((u_size, p_size))
+
+            # if a given param isn't present in this process, we need
+            # to still run the model once for each entry in that param
+            # in order to stay in sync with the other processes.
+            if p_size == 0:
+                gather_jac = True
+                for i in range(self._params_dict[p_name]['size']):
+                    run_model(params, unknowns, resids)
