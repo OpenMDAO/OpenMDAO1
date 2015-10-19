@@ -33,8 +33,7 @@ so that we can watch what it does.
 
         from __future__ import print_function
 
-        from openmdao.components import IndepVarComp
-        from openmdao.core import Component, Group, Problem
+        from openmdao.api import Component, Group, Problem, IndepVarComp
 
 
         class SimpleComp(Component):

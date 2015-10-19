@@ -1,6 +1,6 @@
 import unittest
 import warnings
-from openmdao.components import IndepVarComp, ParamComp
+from openmdao.api import IndepVarComp, ParamComp
 
 class TestDeprecated(unittest.TestCase):
     def test_deprecated_paramcomp(self):

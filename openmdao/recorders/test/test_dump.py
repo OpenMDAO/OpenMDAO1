@@ -12,7 +12,7 @@ from six import StringIO, iteritems
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
-from openmdao.recorders import DumpRecorder
+from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
 def run_problem(problem):

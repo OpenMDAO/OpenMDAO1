@@ -1,6 +1,6 @@
 import unittest
 from numpy import array, sin, cos, pi, ones
-from openmdao.surrogate_models import MultiFiCoKrigingSurrogate
+from openmdao.api import MultiFiCoKrigingSurrogate
 from openmdao.test.util import assert_rel_error
 
 class CoKrigingSurrogateTest(unittest.TestCase):
@@ -174,4 +174,3 @@ class CoKrigingSurrogateTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

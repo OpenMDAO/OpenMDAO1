@@ -3,9 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.core import Group, Problem
-from openmdao.components.exec_comp import ExecComp
-from openmdao.components.indep_var_comp import IndepVarComp
+from openmdao.api import Group, Problem, IndepVarComp, ExecComp
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped

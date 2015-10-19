@@ -15,7 +15,7 @@ from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 from openmdao.core.vec_wrapper import _ByObjWrapper
-from openmdao.recorders import SqliteRecorder
+from openmdao.recorders.sqlite_recorder import SqliteRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.util import assert_rel_error
 

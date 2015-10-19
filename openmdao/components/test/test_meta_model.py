@@ -1,10 +1,8 @@
 import numpy as np
 import unittest
 
-from openmdao.core import Group, Problem
-from openmdao.components import MetaModel, IndepVarComp
-from openmdao.surrogate_models import ResponseSurface, FloatKrigingSurrogate, KrigingSurrogate
-
+from openmdao.api import Group, Problem, MetaModel, IndepVarComp, ResponseSurface, \
+    FloatKrigingSurrogate, KrigingSurrogate
 from openmdao.test.util import assert_rel_error
 
 from six.moves import cStringIO

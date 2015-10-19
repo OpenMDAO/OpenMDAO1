@@ -3,8 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.components import LinearSystem, IndepVarComp
-from openmdao.core import Group, Problem
+from openmdao.api import Group, Problem, LinearSystem, IndepVarComp
 from openmdao.test.util import assert_rel_error
 
 

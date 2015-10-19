@@ -6,10 +6,8 @@ import unittest
 
 import numpy as np
 
-from openmdao.core import Problem, Group
-from openmdao.components import IndepVarComp, ExecComp
-from openmdao.drivers import ScipyOptimizer
-from openmdao.solvers import LinearGaussSeidel
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
+    LinearGaussSeidel
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 

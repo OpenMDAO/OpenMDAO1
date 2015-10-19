@@ -3,8 +3,7 @@ from six import text_type
 
 import numpy as np
 
-from openmdao.core import Problem, Group
-from openmdao.components import IndepVarComp, ExecComp
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp
 
 class TestPromConns(unittest.TestCase):
     def test_prom_conns(self):

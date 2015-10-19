@@ -9,11 +9,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 .. testcode:: recording_run
 
-    from openmdao.components import IndepVarComp
-    from openmdao.core import Component, Group, Problem
-    from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import SqliteRecorder
-
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -97,16 +93,15 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 
 .. Copy over the recorded file so we can test reading it later and so other testing code does not mess it up
-.. testcleanup:: recording_run 
-    
+.. testcleanup:: recording_run
+
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
 
 .. testsetup:: recording
 
-    from openmdao.recorders import SqliteRecorder
-    from openmdao.core import Problem, Group
+    from openmdao.api import SqliteRecorder, Problem, Group
     top = Problem()
     root = top.root = Group()
 
@@ -196,7 +191,7 @@ The includes and excludes filters will accept glob arguments. For example,
 `recorder.options['excludes'] = ['comp1.*']` would exclude any variable
 that starts with "comp1.".
 
-.. testcleanup:: recording 
+.. testcleanup:: recording
 
     import os
     if os.path.exists('paraboloid'):
@@ -223,11 +218,7 @@ etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
 
-    from openmdao.components import IndepVarComp
-    from openmdao.core import Component, Group, Problem
-    from openmdao.drivers import ScipyOptimizer
-    from openmdao.recorders import SqliteRecorder
-
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -362,7 +353,11 @@ optimizer. For example,
 
     {'p.f_xy': -15.0, 'p1.x': 3.0, 'p2.y': -4.0}
 
-will print out the dictionary {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}.
+will print out the dictionary:
+
+::
+
+    {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}
 
 You can also access the values for the `Parameters`:
 
@@ -377,26 +372,102 @@ You can also access the values for the `Parameters`:
 
     {'p.x': 3.0, 'p.y': -4.0}
 
-Which will print out the dictionary {'p.x': 3.0, 'p.y': -4.0}. 
+Which will print out the dictionary:
+
+::
+
+    {'p.x': 3.0, 'p.y': -4.0}
 
 Finally, since our code told the recorder to record metadata, we can read that from the file as well.
 Notice that since metadata is only recorded once, it is a top level element of the dictionary, rather than a
-sub-dictionary of an interation coordinate :
+sub-dictionary of an interation coordinate. It contains sub-dictionaries for metadata about
+`Unknowns`, `Parameters`, `Resids`.
 
 .. testcode:: reading
 
     data = db['metadata']
-    pprint(data)
+    u_meta = data['Unknowns']
+    pprint(u_meta)
+    p_meta = data['Parameters']
+    pprint(p_meta)
 
 .. testoutput:: reading
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    OrderedDict([('Parameters', {'p.y': {'val': array([ 0.]), 'promoted_name': 'p.y', 'owned': True, 'shape': 1, 'pathname': 'p.y', 'top_promoted_name': 'p.y', 'size': 1}, 'p.x': {'val': array([ 0.]), 'promoted_name': 'p.x', 'owned': True, 'shape': 1, 'pathname': 'p.x', 'top_promoted_name': 'p.x', 'size': 1}}), ('Unknowns', {'p1.x': {'val': array([ 3.]), 'promoted_name': 'p1.x', 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', 'size': 1}, 'p.f_xy': {'val': array([ 0.]), 'promoted_name': 'p.f_xy', 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': array([-4.]), 'promoted_name': 'p2.y', 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', 'size': 1}}), ('Residuals', {'p1.x': {'val': array([ 0.]), 'promoted_name': 'p1.x', 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', 'size': 1}, 'p.f_xy': {'val': array([ 0.]), 'promoted_name': 'p.f_xy', 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': array([ 0.]), 'promoted_name': 'p2.y', 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', 'size': 1}})])
+    {'p.f_xy': {'pathname': 'p.f_xy',
+                'promoted_name': 'p.f_xy',
+                'shape': 1,
+                'size': 1,
+                'top_promoted_name': 'p.f_xy',
+                'val': array([ 0.])},
+     'p1.x': {'pathname': 'p1.x',
+              'promoted_name': 'p1.x',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p1.x',
+              'val': array([ 3.])},
+     'p2.y': {'pathname': 'p2.y',
+              'promoted_name': 'p2.y',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p2.y',
+              'val': array([-4.])}}
+    {'p.x': {'owned': True,
+             'pathname': 'p.x',
+             'promoted_name': 'p.x',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.x',
+             'val': array([ 0.])},
+     'p.y': {'owned': True,
+             'pathname': 'p.y',
+             'promoted_name': 'p.y',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.y',
+             'val': array([ 0.])}}
 
-.. testcleanup:: reading 
+This code prints out the following:
+
+::
+
+    {'p.f_xy': {'pathname': 'p.f_xy',
+                'promoted_name': 'p.f_xy',
+                'shape': 1,
+                'size': 1,
+                'top_promoted_name': 'p.f_xy',
+                'val': array([ 0.])},
+     'p1.x': {'pathname': 'p1.x',
+              'promoted_name': 'p1.x',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p1.x',
+              'val': array([ 3.])},
+     'p2.y': {'pathname': 'p2.y',
+              'promoted_name': 'p2.y',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p2.y',
+              'val': array([-4.])}}
+    {'p.x': {'owned': True,
+             'pathname': 'p.x',
+             'promoted_name': 'p.x',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.x',
+             'val': array([ 0.])},
+     'p.y': {'owned': True,
+             'pathname': 'p.y',
+             'promoted_name': 'p.y',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.y',
+             'val': array([ 0.])}}
+
+
+.. testcleanup:: reading
 
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
-

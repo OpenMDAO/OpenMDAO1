@@ -5,11 +5,8 @@ import sys
 
 import numpy as np
 
-from openmdao.core.problem import Problem
+from openmdao.api import Problem, Component, Group, ExecComp
 from openmdao.core.mpi_wrap import MPI
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-from openmdao.components.exec_comp import ExecComp
 from openmdao.util.array_util import evenly_distrib_idxs
 from openmdao.test.mpi_util import MPITestCase
 

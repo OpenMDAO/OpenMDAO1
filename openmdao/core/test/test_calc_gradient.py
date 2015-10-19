@@ -10,10 +10,7 @@ from numpy.testing import assert_almost_equal
 
 from six import text_type, PY3
 
-from openmdao.core.problem import Problem
-from openmdao.core.group import Group
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp
 from openmdao.test.simple_comps import RosenSuzuki, FanIn
 
 

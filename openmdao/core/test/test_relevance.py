@@ -1,8 +1,7 @@
 import unittest
 from six import itervalues
 
-from openmdao.components import ExecComp, IndepVarComp
-from openmdao.core import Problem, Group
+from openmdao.api import ExecComp, IndepVarComp, Problem, Group
 
 
 class TestLinearGaussSeidel(unittest.TestCase):

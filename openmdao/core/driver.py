@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
-from openmdao.core.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
@@ -686,7 +686,6 @@ class Driver(object):
         docstring = '    \"\"\"\n'
 
         #Put options into docstring
-        from openmdao.core.options import OptionsDictionary
         firstTime = 1
         #for py3.4, items from vars must come out in same order.
         v = OrderedDict(sorted(vars(self).items()))

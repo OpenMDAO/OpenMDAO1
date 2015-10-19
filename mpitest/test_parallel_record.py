@@ -4,9 +4,9 @@ import os
 import unittest
 from shutil import rmtree
 from tempfile import mkdtemp
-from openmdao.core import Problem
+from openmdao.core.problem import Problem
 from openmdao.core.mpi_wrap import MPI
-from openmdao.recorders import DumpRecorder
+from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.test.simple_comps import FanInGrouped
 from openmdao.test.mpi_util import MPITestCase
 from six import iteritems
@@ -14,7 +14,7 @@ from six import iteritems
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core import BasicImpl as impl
+    from openmdao.api import BasicImpl as impl
 
 
 class TestDumpRecorder(MPITestCase):

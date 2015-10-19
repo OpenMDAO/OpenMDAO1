@@ -18,14 +18,14 @@ from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.recorders import SqliteRecorder
+from openmdao.recorders.sqlite_recorder import SqliteRecorder
 from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
 from openmdao.test.mpi_util import MPITestCase
 
 if MPI: # pragma: no cover
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
-    from openmdao.core import BasicImpl as impl
+    from openmdao.core.basic_impl import BasicImpl as impl
 
 class ABCDArrayComp(Component):
 

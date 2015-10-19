@@ -1,9 +1,4 @@
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-from openmdao.core.component import Component
-from openmdao.components import MetaModel
-from openmdao.surrogate_models import NearestNeighbor
-
+from openmdao.api import Group, Problem, Component, MetaModel, NearestNeighbor
 from openmdao.test.util import assert_rel_error
 
 import numpy as np
@@ -43,7 +38,7 @@ class TestMap(unittest.TestCase):
 
         p['compmap.train:PR'] = p['compmap.train:Nc']*p['compmap.train:Rline']+p['compmap.train:alpha']
         p['compmap.train:eff'] = p['compmap.train:Nc']*p['compmap.train:Rline']**2+p['compmap.train:alpha']
-        p['compmap.train:Wc'] = p['compmap.train:Nc']**2*p['compmap.train:Rline']**2+p['compmap.train:alpha'] 
+        p['compmap.train:Wc'] = p['compmap.train:Nc']**2*p['compmap.train:Rline']**2+p['compmap.train:alpha']
 
         p['compmap.Nc'] = 0.9
         p['compmap.Rline'] = 2.0

@@ -4,12 +4,8 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-
-from openmdao.core import Group, ParallelGroup, Problem
-from openmdao.components import ExecComp
-from openmdao.solvers import LinearGaussSeidel
-
+from openmdao.api import IndepVarComp, Group, ParallelGroup, Problem, ExecComp, \
+    LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDivergePar, SingleDiamondPar
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                         FanInGrouped, ArrayComp2D
