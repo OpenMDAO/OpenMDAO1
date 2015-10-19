@@ -25,7 +25,7 @@ def run_problem(problem):
 class TestDumpRecorder(unittest.TestCase):
     def setUp(self):
         self.dir = mkdtemp()
-        self.filename = os.path.join(self.dir, "sqlite_test")
+        self.filename = os.path.join(self.dir, "dump_test")
         self.recorder = DumpRecorder(self.filename)
         self.eps = 1e-5
 
