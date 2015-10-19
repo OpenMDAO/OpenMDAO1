@@ -128,7 +128,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
                                               shared_vec=shared_vec)
         if trace:
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
-                  (self._syspath.pathname, len(self.vec), self.keys(), self.vec))
+                  (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
 
     def _get_flattened_sizes(self):
@@ -295,7 +295,7 @@ class PetscDataTransfer(object):
 
         if trace:
             debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %
-                  (name, src_vec.pathname, src_idxs, tgt_idxs))
+                  (name, src_vec._sysdata.pathname, src_idxs, tgt_idxs))
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
@@ -346,25 +346,25 @@ class PetscDataTransfer(object):
             if trace:
                 conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
                 debug("%s rev scatter %s  %s <-- %s" %
-                      (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s:    srcvec = %s" % (tgtvec.pathname,
+                      (srcvec._sysdata.pathname, conns, self.src_idxs, self.tgt_idxs))
+                debug("%s:    srcvec = %s" % (tgtvec._sysdata.pathname,
                                               tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
             if trace:
-                debug("%s:    tgtvec = %s" % (srcvec.pathname,
+                debug("%s:    tgtvec = %s" % (srcvec._sysdata.pathname,
                                               srcvec.petsc_vec.array))
         else:
             # forward mode, source to target including pass_by_object
             if trace:
                 conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
                 debug("%s fwd scatter %s  %s --> %s" %
-                      (srcvec.pathname, conns, self.src_idxs, self.tgt_idxs))
-                debug("%s:    srcvec = %s" % (srcvec.pathname,
+                      (srcvec._sysdata.pathname, conns, self.src_idxs, self.tgt_idxs))
+                debug("%s:    srcvec = %s" % (srcvec._sysdata.pathname,
                                               srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
 
             if trace:
-                debug("%s:    tgtvec = %s" % (tgtvec.pathname,
+                debug("%s:    tgtvec = %s" % (tgtvec._sysdata.pathname,
                                               tgtvec.petsc_vec.array))
 
             if not deriv:

@@ -15,6 +15,7 @@ from openmdao.core.system import System
 from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
@@ -537,11 +538,11 @@ class Problem(System):
             # Indicate that there are no parallel systems if user is running under MPI
             if self._comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
-                    if isinstance(grp, ParallelGroup):
+                    if isinstance(grp, ParallelGroup) or isinstance(grp, ParallelFDGroup):
                         break
                 else:
                     parr = False
-                    print("\nRunning under MPI, but no ParallelGroups were found.",
+                    print("\nRunning under MPI, but no ParallelGroups or ParallelFDGroups were found.",
                           file=out_stream)
 
                 mincpu, maxcpu = self.root.get_req_procs()
@@ -1167,6 +1168,7 @@ class Problem(System):
                             else:
                                 dxval = None
                             if nproc > 1:
+                                # TODO: make this use Bcast for efficiency
                                 dxval = comm.bcast(dxval, root=owned[item])
                         else:  # irrelevant variable.  just give'em zeros
                             if item in qoi_indices:

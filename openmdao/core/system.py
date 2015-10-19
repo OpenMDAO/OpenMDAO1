@@ -379,10 +379,12 @@ class System(object):
 
         gather_jac = False
 
-        my_fds = [] # list of (uname, pname, i) for those finit differences
-                    # that were performed in this process
-
         fd_count = -1
+
+        # if doing parallel FD, we need to save results during calculation
+        # and then pass them around.  fd_cols stores the
+        # column data keyed by (uname, pname, col_id).
+        fd_cols = {}
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -444,81 +446,95 @@ class System(object):
                 p_idxs = range(self._params_dict[p_name]['size'])
 
             # Finite Difference each index in array
-            for j, idx in enumerate(p_idxs):
+            for col, idx in enumerate(p_idxs):
                 fd_count += 1
 
                 # skip the current index if its done by some other
                 # parallel fd proc
-                if fd_count % self._num_par_fds != self._par_fd_id:
-                    continue
+                if fd_count % self._num_par_fds == self._par_fd_id:
+                    #print ("fd_count",fd_count,"par_fd_id",self._par_fd_id)
+                    if p_size == 0:
+                        run_model(params, unknowns, resids)
+                        continue
 
-                if p_size == 0:
-                    run_model(params, unknowns, resids)
-                    continue
-
-                # Relative or Absolute step size
-                if fdtype == 'relative':
-                    step = target_input[idx] * fdstep
-                    if step < fdstep:
+                    # Relative or Absolute step size
+                    if fdtype == 'relative':
+                        step = target_input[idx] * fdstep
+                        if step < fdstep:
+                            step = fdstep
+                    else:
                         step = fdstep
-                else:
-                    step = fdstep
 
-                if fdform == 'forward':
+                    if fdform == 'forward':
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    run_model(params, unknowns, resids)
+                        run_model(params, unknowns, resids)
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
 
-                    # delta resid is delta unknown
-                    resultvec.vec[:] -= cache1
-                    resultvec.vec[:] *= (1.0/step)
+                        # delta resid is delta unknown
+                        resultvec.vec[:] -= cache1
+                        resultvec.vec[:] *= (1.0/step)
 
-                elif fdform == 'backward':
+                    elif fdform == 'backward':
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
 
-                    run_model(params, unknowns, resids)
+                        run_model(params, unknowns, resids)
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    # delta resid is delta unknown
-                    resultvec.vec[:] -= cache1
-                    resultvec.vec[:] *= (-1.0/step)
+                        # delta resid is delta unknown
+                        resultvec.vec[:] -= cache1
+                        resultvec.vec[:] *= (-1.0/step)
 
-                elif fdform == 'central':
+                    elif fdform == 'central':
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    run_model(params, unknowns, resids)
-                    cache2 = resultvec.vec.copy()
+                        run_model(params, unknowns, resids)
+                        cache2 = resultvec.vec.copy()
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
+                        resultvec.vec[:] = cache1
+
+                        target_input[idx] -= step
+
+                        run_model(params, unknowns, resids)
+
+                        # central difference formula
+                        resultvec.vec[:] -= cache2
+                        resultvec.vec[:] *= (-0.5/step)
+
+                        target_input[idx] += step
+
+                    for u_name in fd_unknowns:
+                        if qoi_indices and u_name in qoi_indices:
+                            result = resultvec.flat[u_name][qoi_indices[u_name]]
+                        else:
+                            result = resultvec.flat[u_name]
+                        jac[u_name, p_name][:, col] = result
+                        if self._num_par_fds > 1:
+                            fd_cols[(u_name, p_name, col)] = \
+                                                   jac[u_name, p_name][:, col]
+
+                    # Restore old residual
                     resultvec.vec[:] = cache1
 
-                    target_input[idx] -= step
-
-                    run_model(params, unknowns, resids)
-
-                    # central difference formula
-                    resultvec.vec[:] -= cache2
-                    resultvec.vec[:] *= (-0.5/step)
-
-                    target_input[idx] += step
-
-                for u_name in fd_unknowns:
-                    if qoi_indices and u_name in qoi_indices:
-                        result = resultvec.flat[u_name][qoi_indices[u_name]]
-                    else:
-                        result = resultvec.flat[u_name]
-                    jac[u_name, p_name][:, j] = result
-
-                # Restore old residual
-                resultvec.vec[:] = cache1
-
-        if MPI and gather_jac: # pragma: no cover
+        if self._num_par_fds > 1:
+            jacinfos = self._full_comm.allgather(fd_cols)
+            for rank, jacinfo in enumerate(jacinfos):
+                if rank == self._full_comm.rank:
+                    continue
+                for key, val in iteritems(jacinfo):
+                    if key not in fd_cols:
+                        uname, pname, col = key
+                        print("collecting (%s,%s,%d) from rank %d" %
+                                (uname,pname,col,rank))
+                        jac[uname, pname][:, col] = val
+                        fd_cols[(uname, pname, col)] = val # to avoid setting dups
+        elif MPI and gather_jac: # pragma: no cover
             jac = self.get_combined_jac(jac)
 
         return jac
@@ -790,6 +806,8 @@ class System(object):
         iproc = comm.rank
         nproc = comm.size
 
+        # TODO: calculate dist_need_tups and dist_has_tups once
+        #       and cache it instead of doing every time.
         need_tups = []
         has_tups = []
 

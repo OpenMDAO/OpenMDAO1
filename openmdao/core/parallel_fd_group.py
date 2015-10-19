@@ -2,8 +2,13 @@
 
 from __future__ import print_function
 
-from openmdoa.core.group import Group
+from six import iteritems, iterkeys, itervalues
+
+from openmdao.core.group import Group
 from openmdao.util.array_util import evenly_distrib_idxs
+from openmdao.core.mpi_wrap import MPI
+
+import numpy as np
 
 class ParallelFDGroup(Group):
     """A Group that can do finite difference in parallel.
@@ -25,7 +30,9 @@ class ParallelFDGroup(Group):
     def __init__(self, num_par_fds):
         super(ParallelFDGroup, self).__init__()
 
-        self._num_par_fds = num_par_fds
+        if MPI:
+            self._num_par_fds = num_par_fds
+
         self._par_fd_id = 0
 
     def _setup_communicators(self, comm):
@@ -37,7 +44,7 @@ class ParallelFDGroup(Group):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
         """
-        self._full_comm = comm
+        self._full_comm = full_comm = comm
 
         minprocs, maxprocs = super(ParallelFDGroup, self).get_req_procs()
         sizes, offsets = evenly_distrib_idxs(self._num_par_fds, comm.size)
@@ -46,7 +53,7 @@ class ParallelFDGroup(Group):
         if self._num_par_fds >= 2:
             # a 'color' is assigned to each subsystem, with
             # an entry for each processor it will be given
-            # e.g. [0, 0, 0, 1, 1, 1, 2, 2, 3, 3]
+            # e.g. [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
             color = []
             for i in range(self._num_par_fds):
                 color.extend([i]*sizes[i])
