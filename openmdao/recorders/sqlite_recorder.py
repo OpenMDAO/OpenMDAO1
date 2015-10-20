@@ -29,7 +29,6 @@ class SqliteRecorder(BaseRecorder):
 
         data = OrderedDict([('Parameters', dict(params)),
                             ('Unknowns', dict(unknowns)),
-                            ('Residuals', dict(resids))
                             ])
 
         self.out['metadata'] = data

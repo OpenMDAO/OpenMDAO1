@@ -63,9 +63,9 @@ class TestHDF5Recorder(unittest.TestCase):
             self.assertIsNone(metadata)
             return
 
-        self.assertEquals(len(metadata), 3)
+        self.assertEquals(len(metadata), 2)
 
-        pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns', 'Residuals')))
+        pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
 
         for expected, actual in pairings:
             self.assertEqual(len(expected), len(actual))

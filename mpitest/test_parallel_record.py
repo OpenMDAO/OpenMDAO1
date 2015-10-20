@@ -71,11 +71,6 @@ class TestDumpRecorder(MPITestCase):
                 fmat = "  {0}: {1}\n".format(name, metadata)
                 self.assertEqual(fmat, dumpfile.readline())
             
-            self.assertEqual("Resids:\n", dumpfile.readline())
-
-            for name, metadata in resids:
-                fmat = "  {0}: {1}\n".format(name, metadata)
-                self.assertEqual(fmat, dumpfile.readline())
 
     def test_dump_converge_diverge_par(self):
 

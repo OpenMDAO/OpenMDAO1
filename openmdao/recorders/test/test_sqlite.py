@@ -87,8 +87,8 @@ def _assertMetadataRecorded(test, db, expected):
         test.assertIsNone(metadata)
         return
 
-    test.assertEquals(len(metadata), 3)
-    pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns', 'Residuals')))
+    test.assertEquals(len(metadata), 2)
+    pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
 
     for expected, actual in pairings:
         # If len(actual) == len(expected) and actual <= expected, then

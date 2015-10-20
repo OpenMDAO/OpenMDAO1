@@ -47,7 +47,7 @@ class TestDumpRecorder(unittest.TestCase):
         else:
             line = sout.readline()
             self.assertEqual("Metadata:\n", line)
-            groupings = zip(("Params:\n", "Unknowns:\n", "Resids:\n"), metadata)
+            groupings = zip(("Params:\n", "Unknowns:\n"), metadata)
 
             for header, expected in groupings:
                 line = sout.readline()

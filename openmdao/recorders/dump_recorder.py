@@ -132,8 +132,3 @@ class DumpRecorder(BaseRecorder):
             fmat = "  {0}: {1}\n"
             self.out.write(fmat.format(name, metadata))
         
-        self.out.write("Resids:\n")
-
-        for name, metadata in resids:
-            fmat = "  {0}: {1}\n"
-            self.out.write(fmat.format(name, metadata))

@@ -48,7 +48,6 @@ class HDF5Recorder(BaseRecorder):
         pairings = (
                 (group.create_group("Parameters"), params),
                 (group.create_group("Unknowns"), unknowns),
-                (group.create_group("Residuals"), resids),
             )
 
         for grp, data in pairings:
