@@ -520,14 +520,14 @@ class System(object):
                         else:
                             result = resultvec.flat[u_name]
                         jac[u_name, p_name][:, col] = result
-                        if self._num_par_fds > 1:
+                        if self._num_par_fds > 1: # pragma: no cover
                             fd_cols[(u_name, p_name, col)] = \
                                                    jac[u_name, p_name][:, col]
 
                     # Restore old residual
                     resultvec.vec[:] = cache1
 
-        if self._num_par_fds > 1:
+        if self._num_par_fds > 1: # pragma: no cover
             if trace:
                 debug("%s: allgathering parallel FD columns" % self.pathname)
             jacinfos = self._full_comm.allgather(fd_cols)

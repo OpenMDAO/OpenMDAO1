@@ -12,10 +12,10 @@ from openmdao.core.mpi_wrap import MPI
 import numpy as np
 
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace:
+if trace: # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
-class ParallelFDGroup(Group):
+class ParallelFDGroup(Group): # pragma: no cover
     """A Group that can do finite difference in parallel.
 
     Args
