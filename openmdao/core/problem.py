@@ -1392,7 +1392,14 @@ class Problem(System):
             dresids.vec[:] = 0.0
             root.clear_dparams()
             dunknowns.vec[:] = 0.0
-            jac_fd = comp.fd_jacobian(params, unknowns, resids)
+
+            # Component can request to use complex step.
+            if comp.fd_options['form'] == 'complex_step':
+                fd_func = comp.complex_step_jacobian
+            else:
+                fd_func = comp.fd_jacobian
+
+            jac_fd = fd_func(params, unknowns, resids)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],

@@ -714,7 +714,12 @@ class Component(System):
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
-            csparams.set_complex_var(p_name)
+            if p_name in states:
+                stepvec = csunknowns
+            else:
+                stepvec = csparams
+
+            stepvec.set_complex_var(p_name)
 
             # If our input is connected to a IndepVarComp, then we need to twiddle
             # the unknowns vector instead of the params vector.
@@ -774,8 +779,12 @@ class Component(System):
             # apply Complex Step on each index in array
             for j, idx in enumerate(p_idxs):
 
-                csparams.step_complex(idx, fdstep)
+                stepvec.step_complex(idx, fdstep)
                 run_model(csparams, csunknowns, csresids)
+                stepvec.step_var = None
+
+                if p_name in states:
+                    csunknowns.step_complex(idx, -fdstep)
 
                 for u_name in fd_unknowns:
                     if qoi_indices is not None and u_name in qoi_indices:

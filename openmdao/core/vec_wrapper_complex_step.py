@@ -191,9 +191,11 @@ class ComplexStepSrcVecWrapper(object):
 
         self.vecwrap = vec
         self.vec = vec.vec
+        self.step_var = None
+        self.step_val = None
         self.vals = {}
 
-        # Make complex copies of every unkown or state
+        # Make complex copies of every unknown or state
         for name, val in iteritems(vec):
             self.vals[name] = np.zeros(val['shape'], dtype=np.complex)
             self.vals[name][:] = vec[name]
@@ -211,6 +213,9 @@ class ComplexStepSrcVecWrapper(object):
         -------
             The unflattened value of the named variable.
         """
+        if name == self.step_var:
+            return self.step_val.reshape(self.vecwrap[name].shape)
+
         return self.vals[name]
 
     def __setitem__(self, name, value):
@@ -352,3 +357,31 @@ class ComplexStepSrcVecWrapper(object):
             return val.flatten()
         else:
             return np.array([val])
+
+    def set_complex_var(self, name):
+        """
+        Specifies the current input variable that will be complex stepped.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the metadata for.
+        """
+        var = self.vecwrap.flat[name]
+        self.step_var = name
+        self.step_val = np.zeros(len(var), dtype=np.complex)
+        self.step_val[:] = var
+
+    def step_complex(self, idx, stepsize):
+        """
+        Specifies the current input variable that will be complex stepped.
+
+        Args
+        ----
+        idx : integer
+            Index into step_var flat vector to apply the step.
+
+        stepsize : float
+            Step value. Omit the j.
+        """
+        self.step_val[idx] += 1j*stepsize

@@ -79,6 +79,32 @@ class TestProblemCheckPartials(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
+    def test_simple_implicit_complex_step(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        prob.root.comp.fd_options['step_size'] = 1.0e4
+        prob.root.comp.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
     def test_bad_size(self):
 
         class BadComp(SimpleArrayComp):
