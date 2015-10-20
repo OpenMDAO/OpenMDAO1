@@ -14,7 +14,8 @@ class ComplexStepTgtVecWrapper(object):
 
     def __init__(self, vec):
 
-        self.vec = vec
+        self.vecwrap = vec
+        self.vec = vec.vec
         self.step_var = None
         self.step_val = None
 
@@ -32,9 +33,9 @@ class ComplexStepTgtVecWrapper(object):
             The unflattened value of the named variable.
         """
         if name == self.step_var:
-            return self.step_val.reshape(self.vec[name].shape)
+            return self.step_val.reshape(self.vecwrap[name].shape)
 
-        acc = self.vec._access[name]
+        acc = self.vecwrap._access[name]
         return acc.get(acc.meta)
 
     def __setitem__(self, name, value):
@@ -49,7 +50,7 @@ class ComplexStepTgtVecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        acc = self.vec._access[name]
+        acc = self.vecwrap._access[name]
         acc.set(acc.meta, value)
 
     def __len__(self):
@@ -58,7 +59,7 @@ class ComplexStepTgtVecWrapper(object):
         -------
             The number of keys (variables) in this vector.
         """
-        return len(self.vec._vardict)
+        return len(self.vecwrap._vardict)
 
     def __contains__(self, key):
         """
@@ -67,7 +68,7 @@ class ComplexStepTgtVecWrapper(object):
             A boolean indicating if the given key (variable name) is in this vector.
         """
 
-        return key in self.vec._vardict
+        return key in self.vecwrap._vardict
 
     def __iter__(self):
         """
@@ -75,7 +76,7 @@ class ComplexStepTgtVecWrapper(object):
         -------
             A dictionary iterator over the items in _vardict.
         """
-        return self.vec._vardict.__iter__()
+        return self.vecwrap._vardict.__iter__()
 
     def keys(self):
         """
@@ -84,7 +85,7 @@ class ComplexStepTgtVecWrapper(object):
         list or KeyView (python 3)
             the keys (variable names) in this vector.
         """
-        return self.vec._vardict.keys()
+        return self.vecwrap._vardict.keys()
 
     def iterkeys(self):
         """
@@ -93,7 +94,7 @@ class ComplexStepTgtVecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return iterkeys(self.vec._vardict)
+        return iterkeys(self.vecwrap._vardict)
 
     def items(self):
         """
@@ -103,7 +104,7 @@ class ComplexStepTgtVecWrapper(object):
             List of tuples containing the name and metadata dict for each
             variable.
         """
-        return self.vec._vardict.items()
+        return self.vecwrap._vardict.items()
 
     def iteritems(self):
         """
@@ -112,7 +113,7 @@ class ComplexStepTgtVecWrapper(object):
         iterator
             Iterator returning the name and metadata dict for each variable.
         """
-        return iteritems(self.vec._vardict)
+        return iteritems(self.vecwrap._vardict)
 
     def values(self):
         """
@@ -121,7 +122,7 @@ class ComplexStepTgtVecWrapper(object):
         list of dict
             List containing metadata dict for each variable.
         """
-        return self.vec._vardict.values()
+        return self.vecwrap._vardict.values()
 
     def itervalues(self):
         """
@@ -130,7 +131,7 @@ class ComplexStepTgtVecWrapper(object):
         iter of dict
             Iterator yielding metadata dict for each variable.
         """
-        return self.vec._vardict.values()
+        return self.vecwrap._vardict.values()
 
     def metadata(self, name):
         """
@@ -151,7 +152,7 @@ class ComplexStepTgtVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vec._vardict[name]
+        return self.vecwrap._vardict[name]
 
     def set_complex_var(self, name):
         """
@@ -162,7 +163,7 @@ class ComplexStepTgtVecWrapper(object):
         name : str
             Name of variable to get the metadata for.
         """
-        var = self.vec.flat[name]
+        var = self.vecwrap.flat[name]
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
@@ -188,11 +189,11 @@ class ComplexStepSrcVecWrapper(object):
 
     def __init__(self, vec):
 
-        self.vec = vec
+        self.vecwrap = vec
+        self.vec = vec.vec
         self.vals = {}
 
         # Make complex copies of every unkown or state
-        vec = self.vec
         for name, val in iteritems(vec):
             self.vals[name] = np.zeros(val['shape'], dtype=np.complex)
             self.vals[name][:] = vec[name]
@@ -224,8 +225,7 @@ class ComplexStepSrcVecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        acc = self.vec._access[name]
-        acc.set(acc.meta, value)
+        self.vals[name] = value
 
     def __len__(self):
         """
@@ -233,7 +233,7 @@ class ComplexStepSrcVecWrapper(object):
         -------
             The number of keys (variables) in this vector.
         """
-        return len(self.vec._vardict)
+        return len(self.vecwrap._vardict)
 
     def __contains__(self, key):
         """
@@ -242,7 +242,7 @@ class ComplexStepSrcVecWrapper(object):
             A boolean indicating if the given key (variable name) is in this vector.
         """
 
-        return key in self.vec._vardict
+        return key in self.vecwrap._vardict
 
     def __iter__(self):
         """
@@ -250,7 +250,7 @@ class ComplexStepSrcVecWrapper(object):
         -------
             A dictionary iterator over the items in _vardict.
         """
-        return self.vec._vardict.__iter__()
+        return self.vecwrap._vardict.__iter__()
 
     def keys(self):
         """
@@ -259,7 +259,7 @@ class ComplexStepSrcVecWrapper(object):
         list or KeyView (python 3)
             the keys (variable names) in this vector.
         """
-        return self.vec._vardict.keys()
+        return self.vecwrap._vardict.keys()
 
     def iterkeys(self):
         """
@@ -268,7 +268,7 @@ class ComplexStepSrcVecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return iterkeys(self.vec._vardict)
+        return iterkeys(self.vecwrap._vardict)
 
     def items(self):
         """
@@ -278,7 +278,7 @@ class ComplexStepSrcVecWrapper(object):
             List of tuples containing the name and metadata dict for each
             variable.
         """
-        return self.vec._vardict.items()
+        return self.vecwrap._vardict.items()
 
     def iteritems(self):
         """
@@ -287,7 +287,7 @@ class ComplexStepSrcVecWrapper(object):
         iterator
             Iterator returning the name and metadata dict for each variable.
         """
-        return iteritems(self.vec._vardict)
+        return iteritems(self.vecwrap._vardict)
 
     def values(self):
         """
@@ -296,7 +296,7 @@ class ComplexStepSrcVecWrapper(object):
         list of dict
             List containing metadata dict for each variable.
         """
-        return self.vec._vardict.values()
+        return self.vecwrap._vardict.values()
 
     def itervalues(self):
         """
@@ -305,7 +305,7 @@ class ComplexStepSrcVecWrapper(object):
         iter of dict
             Iterator yielding metadata dict for each variable.
         """
-        return self.vec._vardict.values()
+        return self.vecwrap._vardict.values()
 
     def metadata(self, name):
         """
@@ -326,4 +326,29 @@ class ComplexStepSrcVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vec._vardict[name]
+        return self.vecwrap._vardict[name]
+
+    def flat(self, name):
+        """
+        Returns flattened value of variable in name.
+
+        Args
+        ----
+        name : str
+            Name of variable to get the metadata for.
+
+        Returns
+        -------
+        ndarray
+            Variable value.
+
+        Raises
+        -------
+        KeyError
+            If the named variable is not in this vector.
+        """
+        val = self.vals[name]
+        if isinstance(val, np.ndarray):
+            return val.flatten()
+        else:
+            return np.array([val])

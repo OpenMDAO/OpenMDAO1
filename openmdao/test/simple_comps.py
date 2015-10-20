@@ -146,7 +146,7 @@ class ArrayComp2D(Component):
         """ Doesn't do much."""
 
         x = params['x']
-        y = np.zeros((2, 2))
+        y = np.zeros((2, 2), dtype=unknowns['y'].dtype)
 
         y[0][0] = 2.0*x[0][0] + 1.0*x[0][1] + \
                   3.0*x[1][0] + 7.0*x[1][1]

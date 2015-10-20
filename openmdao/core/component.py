@@ -4,17 +4,20 @@ from __future__ import print_function
 import sys
 import os
 import re
-from six import iteritems, itervalues, iterkeys
+
+from collections import OrderedDict
 from itertools import chain
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
-from collections import OrderedDict
-from openmdao.util.type_util import is_differentiable
 from openmdao.core.vec_wrapper import _ByObjWrapper
+from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
+                                                   ComplexStepTgtVecWrapper
+from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -26,6 +29,7 @@ namecheck_rgx = re.compile(
 trace = os.environ.get('OPENMDAO_TRACE')
 
 empty_arr = np.zeros(0)
+
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -688,19 +692,29 @@ class Component(System):
         step_size = self.fd_options.get('step_size', 1.0e-6)
 
         jac = {}
+        csparams = ComplexStepTgtVecWrapper(params)
+        csunknowns = ComplexStepSrcVecWrapper(unknowns)
+        csresids = ComplexStepSrcVecWrapper(resids)
 
         # Prepare for calculating partial derivatives or total derivatives
         if total_derivs is False:
             run_model = self.apply_nonlinear
-            resultvec = resids
             states = self.states
+
+            # Pull result from resids only if comp overrides apply_nonlinear
+            if len(self.states) > 0:
+                resultvec = csresids
+            else:
+                resultvec = csunknowns
         else:
             run_model = self.solve_nonlinear
-            resultvec = unknowns
+            resultvec = csunknowns
             states = []
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
+
+            csparams.set_complex_var(p_name)
 
             # If our input is connected to a IndepVarComp, then we need to twiddle
             # the unknowns vector instead of the params vector.
@@ -756,3 +770,23 @@ class Component(System):
                 gather_jac = True
                 for i in range(self._params_dict[p_name]['size']):
                     run_model(params, unknowns, resids)
+
+            # apply Complex Step on each index in array
+            for j, idx in enumerate(p_idxs):
+
+                csparams.step_complex(idx, fdstep)
+                run_model(csparams, csunknowns, csresids)
+
+                for u_name in fd_unknowns:
+                    if qoi_indices is not None and u_name in qoi_indices:
+                        u_idxs = qoi_indices[u_name]
+                        result = resultvec.flat(u_name)[u_idxs]
+                    else:
+                        result = resultvec.flat(u_name)
+
+                    jac[u_name, p_name][:, j] = result.imag/fdstep
+
+        if MPI and gather_jac: # pragma: no cover
+            jac = self.get_combined_jac(jac)
+
+        return jac
