@@ -44,4 +44,4 @@ class RunOnce(NonLinearSolver):
         update_local_meta(local_meta, (self.iter_count,))
 
         system.children_solve_nonlinear(local_meta)
-        self.recorders.record(system, local_meta)
+        self.recorders.record_iteration(system, local_meta)

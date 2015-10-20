@@ -63,6 +63,8 @@ by demonstrating how to save the data generated for future use. Consider the cod
     top.driver.add_objective('p.f_xy')
 
     recorder = SqliteRecorder('paraboloid')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
     top.driver.add_recorder(recorder)
 
     top.setup()
@@ -97,19 +99,23 @@ by demonstrating how to save the data generated for future use. Consider the cod
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
 
-
-Two lines are all it takes to record the state of the problem as the
-optimizer progresses.
-
 .. testsetup:: recording
 
     from openmdao.api import SqliteRecorder, Problem, Group
     top = Problem()
     root = top.root = Group()
 
+These next four lines are all it takes to record the state of the problem as the
+optimizer progresses. Notice that because by default, recorders only record 
+`Unknowns`, if we also want to record `Parameters` and `metadata`, we must 
+set those recording options. (We could also record `Resids` by using the 
+`record_metadata` option but this problem does not have residuals. )
+
 .. testcode:: recording
 
     recorder = SqliteRecorder('paraboloid')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
     top.driver.add_recorder(recorder)
 
 We initialize a `SqliteRecorder` by passing it a
@@ -272,6 +278,8 @@ etc. To access the data from our run, we can use the following code:
     top.driver.add_objective('p.f_xy')
 
     recorder = SqliteRecorder('paraboloid')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
     top.driver.add_recorder(recorder)
 
     top.setup()
@@ -311,7 +319,6 @@ recording is done to the `'openmdao'` table.
 
 Now, we can access the data using an iteration coordinate.
 
-
 .. testcode:: reading
 
     data = db['SLSQP/1']
@@ -330,20 +337,7 @@ yields the time at which data was recorded:
 
    ...
 
-The remaining keys will yield a dictionary containing variable names mapped to values. For example,
-
-.. testcode:: reading
-
-    p = data['Parameters']
-    pprint(p)
-
-.. testoutput:: reading
-   :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
-
-    {'p.x': 3.0, 'p.y': -4.0}
-
-will print out the dictionary {'p.x': 3.0, 'p.y': -4.0}. Generally, the
+The remaining keys will yield a dictionary containing variable names mapped to values. Generally, the
 variables of interest will be contained in the 'Unknowns' key since that will
 contain the objective function values and the values controlled by the
 optimizer. For example,
@@ -359,7 +353,118 @@ optimizer. For example,
 
     {'p.f_xy': -15.0, 'p1.x': 3.0, 'p2.y': -4.0}
 
-will print out the dictionary {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}.
+will print out the dictionary:
+
+::
+
+    {'f_xy': -15.0, 'x': 3.0, 'y': -4.0}
+
+You can also access the values for the `Parameters`:
+
+.. testcode:: reading
+
+    p = data['Parameters']
+    pprint(p)
+
+.. testoutput:: reading
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    {'p.x': 3.0, 'p.y': -4.0}
+
+Which will print out the dictionary:
+
+::
+
+    {'p.x': 3.0, 'p.y': -4.0}
+
+Finally, since our code told the recorder to record metadata, we can read that from the file as well.
+Notice that since metadata is only recorded once, it is a top level element of the dictionary, rather than a
+sub-dictionary of an interation coordinate. It contains sub-dictionaries for metadata about
+`Unknowns`, `Parameters`, `Resids`.
+
+.. testcode:: reading
+
+    data = db['metadata']
+    u_meta = data['Unknowns']
+    pprint(u_meta)
+    p_meta = data['Parameters']
+    pprint(p_meta)
+
+.. testoutput:: reading
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    {'p.f_xy': {'pathname': 'p.f_xy',
+                'promoted_name': 'p.f_xy',
+                'shape': 1,
+                'size': 1,
+                'top_promoted_name': 'p.f_xy',
+                'val': array([ 0.])},
+     'p1.x': {'pathname': 'p1.x',
+              'promoted_name': 'p1.x',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p1.x',
+              'val': array([ 3.])},
+     'p2.y': {'pathname': 'p2.y',
+              'promoted_name': 'p2.y',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p2.y',
+              'val': array([-4.])}}
+    {'p.x': {'owned': True,
+             'pathname': 'p.x',
+             'promoted_name': 'p.x',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.x',
+             'val': array([ 0.])},
+     'p.y': {'owned': True,
+             'pathname': 'p.y',
+             'promoted_name': 'p.y',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.y',
+             'val': array([ 0.])}}
+
+This code prints out the following:
+
+::
+
+    {'p.f_xy': {'pathname': 'p.f_xy',
+                'promoted_name': 'p.f_xy',
+                'shape': 1,
+                'size': 1,
+                'top_promoted_name': 'p.f_xy',
+                'val': array([ 0.])},
+     'p1.x': {'pathname': 'p1.x',
+              'promoted_name': 'p1.x',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p1.x',
+              'val': array([ 3.])},
+     'p2.y': {'pathname': 'p2.y',
+              'promoted_name': 'p2.y',
+              'shape': 1,
+              'size': 1,
+              'top_promoted_name': 'p2.y',
+              'val': array([-4.])}}
+    {'p.x': {'owned': True,
+             'pathname': 'p.x',
+             'promoted_name': 'p.x',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.x',
+             'val': array([ 0.])},
+     'p.y': {'owned': True,
+             'pathname': 'p.y',
+             'promoted_name': 'p.y',
+             'shape': 1,
+             'size': 1,
+             'top_promoted_name': 'p.y',
+             'val': array([ 0.])}}
+
 
 .. testcleanup:: reading
 
