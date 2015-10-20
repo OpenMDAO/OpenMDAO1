@@ -73,7 +73,7 @@ class NLGaussSeidel(NonLinearSolver):
         # Initial Solve
         system.children_solve_nonlinear(local_meta)
 
-        self.recorders.record(system, local_meta)
+        self.recorders.record_iteration(system, local_meta)
 
         # Bail early if the user wants to.
         if maxiter == 1:
@@ -99,7 +99,7 @@ class NLGaussSeidel(NonLinearSolver):
 
             # Runs an iteration
             system.children_solve_nonlinear(local_meta)
-            self.recorders.record(system, local_meta)
+            self.recorders.record_iteration(system, local_meta)
 
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)

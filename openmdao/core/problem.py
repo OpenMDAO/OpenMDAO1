@@ -427,11 +427,10 @@ class Problem(System):
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
-        # Prep for case recording
-        self._start_recorders()
 
         # Prepare Driver
         self.driver._setup(self.root)
+        
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -440,6 +439,9 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
+        
+        # Prep for case recording
+        self._start_recorders()
 
         # check for any potential issues
         if check:
@@ -1463,11 +1465,15 @@ class Problem(System):
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        self.driver.recorders.startup(self.root)
+        exclude = set([])
 
+        self.driver.recorders.startup(self.root)
+        self.driver.recorders.record_metadata(self.root, exclude=exclude)
+        
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
+                solver.recorders.record_metadata(self.root, exclude=exclude)
 
     def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the

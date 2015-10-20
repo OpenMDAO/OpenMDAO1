@@ -126,7 +126,7 @@ class Newton(NonLinearSolver):
                 system.children_solve_nonlinear(local_meta)
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 
-            self.recorders.record(system, local_meta)
+            self.recorders.record_iteration(system, local_meta)
 
             f_norm = resids.norm()
             if self.options['iprint'] > 0:
@@ -149,7 +149,7 @@ class Newton(NonLinearSolver):
                     system.children_solve_nonlinear(local_meta)
                 system.apply_nonlinear(params, unknowns, resids, local_meta)
 
-                self.recorders.record(system, local_meta)
+                self.recorders.record_iteration(system, local_meta)
 
                 f_norm = resids.norm()
                 if self.options['iprint'] > 1:
