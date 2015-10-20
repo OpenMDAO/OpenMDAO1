@@ -208,7 +208,7 @@ Finite Difference on an Entire Model
 ====================================
 
 Finally, let's finite difference the whole model in one operation. We tell
-OpenMDAO to do this by setting force_fd in the parent `Group`.
+OpenMDAO to do this by setting force_fd in the top `Group`.
 
 .. testcode:: fd_example
 
@@ -264,3 +264,128 @@ Nothing else changes in the original model. When we run it, we get:
 
 So here, `jacobian` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
+
+
+Parallel Finite Difference
+==========================
+
+Suppose you need to calculate a bunch of finite differences, either because
+you have a bunch of different design variables, or maybe just a single design
+variable that happens to be an array.  OpenMDAO has a special `Group` called
+a `ParallelFDGroup` that will allow you to calculate multiple finite differences
+in parallel.
+
+Let's start off our example by creating a `Component` that has array inputs
+and outputs.
+
+.. testcode:: fd_par_example
+
+    import numpy
+    import time
+    from openmdao.api import Problem, Component, ParallelFDGroup, IndepVarComp
+    from openmdao.core.mpi_wrap import MPI
+
+    class ArrayFDComp(Component):
+        """ A simple component takes an array input, produces
+        an array output, and does not provide derivatives.
+
+        Args
+        ----
+        size : int
+            The size of the input and output variables.
+
+        delay : float
+            The number of seconds to sleep during the solve_nonlinear
+            call.
+        """
+
+        def __init__(self, size, delay):
+            super(ArrayFDComp, self).__init__()
+
+            self.delay = delay
+
+            # Params
+            self.add_param('x', numpy.zeros(size))
+
+            # Unknowns
+            self.add_output('y', numpy.zeros(size))
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            """ Doesn't do much.  Just multiply by 3"""
+            time.sleep(self.delay)
+            unknowns['y'] = 3.0*params['x']
+
+The following check is only here so that our doc tests, which don't run
+under MPI, will pass.  In real life, you would never use a `ParallelFDGroup`
+unless you were running under MPI.
+
+.. testcode:: fd_par_example
+
+    if MPI:
+        from openmdao.api import PetscImpl as impl
+    else:
+        from openmdao.api import BasicImpl as impl
+
+    prob = Problem(impl=impl)
+
+For this simple example, we'll do parallel finite difference at the top level
+of our model, by using a `ParallelFDGroup` in place of a regular `Group`,
+but you can use `ParallelFDGroup` to replace other `Groups` inside of your
+model as well.  `ParallelFDGroup` takes an arg that tells it how many finite
+differences to perform in parallel.  In this case, we'll do two parallel
+finite differences.  The size of our design variable is 10, so we'll perform
+5 finite differences in each of our two processes.  Note that number of
+design variables doesn't have to divide equally among the processes.
+
+.. testcode:: fd_par_example
+
+    # Create a ParallelFDGroup that does 2 finite differences in parallel.
+    prob.root = ParallelFDGroup(2)
+
+    # let's use size 10 arrays and a delay of 0.1 seconds
+    size = 10
+    delay = 0.1
+
+    prob.root.add('P1', IndepVarComp('x', numpy.ones(size)))
+    prob.root.add('C1', ArrayFDComp(size, delay=delay))
+
+    prob.root.connect('P1.x', 'C1.x')
+
+    prob.driver.add_desvar('P1.x')
+    prob.driver.add_objective('C1.y')
+
+    prob.setup(check=False)
+    prob.run()
+
+Now we'll calculate the Jacobian using our parallel finite difference setup.
+
+.. testcode:: fd_par_example
+
+    J = prob.calc_gradient(['P1.x'], ['C1.y'], mode='fd',
+                           return_format='dict')
+
+
+When we're done, our J should look like this:
+
+.. testcode:: fd_par_example
+    :hide:
+
+    print(J['C1.y']['P1.x'])
+
+.. testoutput:: fd_par_example
+    :options: +ELLIPSIS
+
+    [[ 3.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
+     [ 0.  3.  0.  0.  0.  0.  0.  0.  0.  0.]
+     [ 0.  0.  3.  0.  0.  0.  0.  0.  0.  0.]
+     [ 0.  0.  0.  3.  0.  0.  0.  0.  0.  0.]
+     [ 0.  0.  0.  0.  3.  0.  0.  0.  0.  0.]
+     [ 0.  0.  0.  0.  0.  3.  0.  0.  0.  0.]
+     [ 0.  0.  0.  0.  0.  0.  3.  0.  0.  0.]
+     [ 0.  0.  0.  0.  0.  0.  0.  3.  0.  0.]
+     [ 0.  0.  0.  0.  0.  0.  0.  0.  3.  0.]
+     [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  3.]]
+
+You can experiment with this example by changing the size of the arrays and
+the length of the delay.  You'll find that you get the most speedup from
+parallel finite difference when the delay is longer.

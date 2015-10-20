@@ -165,7 +165,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             The norm of the distributed vector.
         """
         if trace:
-            debug("%s: norm: petsc_vec.assemble" % self.pathname)
+            debug("%s: norm: petsc_vec.assemble" % self._sysdata.pathname)
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 

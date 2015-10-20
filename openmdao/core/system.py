@@ -1,6 +1,7 @@
 """ Base class for all systems in OpenMDAO."""
 
 import sys
+import os
 from fnmatch import fnmatch
 from itertools import chain
 from six import string_types, iteritems, itervalues, iterkeys
@@ -14,6 +15,9 @@ from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
 
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:
+    from openmdao.core.mpi_wrap import debug
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -26,7 +30,8 @@ class _SysData(object):
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
-    inherit from `Group` or `Component`"""
+    inherit from `Group` or `Component`
+    """
 
     def __init__(self):
         self.name = ''
@@ -523,6 +528,8 @@ class System(object):
                     resultvec.vec[:] = cache1
 
         if self._num_par_fds > 1:
+            if trace:
+                debug("%s: allgathering parallel FD columns" % self.pathname)
             jacinfos = self._full_comm.allgather(fd_cols)
             for rank, jacinfo in enumerate(jacinfos):
                 if rank == self._full_comm.rank:
@@ -530,8 +537,6 @@ class System(object):
                 for key, val in iteritems(jacinfo):
                     if key not in fd_cols:
                         uname, pname, col = key
-                        print("collecting (%s,%s,%d) from rank %d" %
-                                (uname,pname,col,rank))
                         jac[uname, pname][:, col] = val
                         fd_cols[(uname, pname, col)] = val # to avoid setting dups
         elif MPI and gather_jac: # pragma: no cover
@@ -818,6 +823,8 @@ class System(object):
             else:
                 has_tups.append((output, param))
 
+        if trace:
+            debug("%s: allgather of needed tups" % self.pathname)
         dist_need_tups = comm.allgather(need_tups)
 
         needed_set = set()
@@ -827,6 +834,8 @@ class System(object):
         if not needed_set:
             return J  # nobody needs any J entries
 
+        if trace:
+            debug("%s: allgather of has_tups" % self.pathname)
         dist_has_tups = comm.allgather(has_tups)
 
         found = set()
@@ -838,6 +847,8 @@ class System(object):
                     if rank == iproc:
                         owned_vals.append((tup, J[tup]))
 
+        if trace:
+            debug("%s: allgather of owned vals" % self.pathname)
         dist_vals = comm.allgather(owned_vals)
 
         for rank, vals in enumerate(dist_vals):
