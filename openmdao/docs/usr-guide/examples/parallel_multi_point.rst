@@ -61,8 +61,8 @@ need.
         def __init__(self, adder, scalar):
             super(Point, self).__init__()
 
-            self.add('plus', Plus(adder), promotes=['*'])
-            self.add('times', Times(scalar), promotes=['*'])
+            self.add('plus', Plus(adder), promotes=['x', 'f1'])
+            self.add('times', Times(scalar), promotes=['f1', 'f2'])
 
 
     class Summer(Component):
@@ -94,7 +94,7 @@ need.
             super(ParallelMultiPoint, self).__init__()
 
             size = len(adders)
-            self.add('desvar', IndepVarComp('X', val=np.zeros(size)), promotes=['*'])
+            self.add('desvar', IndepVarComp('X', val=np.zeros(size)), promotes=['X'])
 
             self.add('aggregate', Summer(size))
 

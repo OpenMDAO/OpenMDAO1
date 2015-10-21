@@ -15,7 +15,7 @@ from openmdao.solvers.solver_base import LinearSolver
 
 trace = os.environ.get("OPENMDAO_TRACE")
 if trace:
-    from openmdao.core.mpiwrap import debug
+    from openmdao.core.mpi_wrap import debug
 
 
 def _get_petsc_vec_array_new(vec):
