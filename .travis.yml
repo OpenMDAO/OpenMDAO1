@@ -36,10 +36,11 @@ before_install:
 install:
 - conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
 - pip install https://bitbucket.org/stephen_ryan/pyoptsparse/get/tip.tar.gz
+- pip install git+https://github.com/swryan/testflo.git
 - pip install coveralls
 - pip install .
 
-script: nosetests --with-coverage
+script: testflo --coverage --coverpkg openmdao
 
 after_success:
   coveralls
