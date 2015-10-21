@@ -50,10 +50,10 @@ install:
     fi
   fi
 - if [ "$PY" = "2.7" ]; then
-    pip install mpi4py
-    pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5
-    conda install cython
-    pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5
+    pip install mpi4py;
+    pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5;
+    conda install cython;
+    pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
   fi
 - pip install git+https://github.com/swryan/testflo.git
 - pip install coveralls
