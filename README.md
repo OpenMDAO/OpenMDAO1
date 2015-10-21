@@ -16,10 +16,27 @@ Install Python, Pip, Numpy, and Scipy.
 Next, clone OpenMDAO repository:
 
     git clone https://github.com/OpenMDAO/OpenMDAO.git
+    cd OpenMDAO
+
+Set up a virtual python environment and install dependent python modules for
+development
+
+    python -m virtualenv env
+    ./env/bin/pip install nose
+    ./env/bin/pip install coverage
 
 Lastly, install it in development mode:
 
-    pip install -e OpenMDAO
+    ./env/bin/pip install -e .
+
+Run tests
+
+    ./env/bin/nosetests .
+
+Run tests with coverage
+
+    ./env/bin/nosetests --with-coverage --cover-html --cover-html-dir=htmlcov .
+
 
 For more information, visit our website at:
 http://openmdao.org
