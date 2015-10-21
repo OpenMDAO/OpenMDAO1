@@ -707,12 +707,10 @@ class Component(System):
             # States are stepped in unknowns, not params
             if p_name in states:
                 stepvec = csunknowns
-                inputs = unknowns
+                target_input = unknowns.flat[p_name]
             else:
                 stepvec = csparams
-                inputs = params
-
-            target_input = inputs.flat[p_name]
+                target_input = params.flat[p_name]
 
             stepvec.set_complex_var(p_name)
 
