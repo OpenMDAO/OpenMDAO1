@@ -316,7 +316,7 @@ and outputs.
             unknowns['y'] = 3.0*params['x']
 
 The following check is only here so that our doc tests, which don't run
-under MPI, will pass.  In real life, you would never use a `ParallelFDGroup`
+under MPI, will pass.  In practice, you would never use a `ParallelFDGroup`
 unless you were running under MPI.
 
 .. testcode:: fd_par_example
@@ -334,7 +334,7 @@ but you can use `ParallelFDGroup` to replace other `Groups` inside of your
 model as well.  `ParallelFDGroup` takes an arg that tells it how many finite
 differences to perform in parallel.  In this case, we'll do two parallel
 finite differences.  The size of our design variable is 10, so we'll perform
-5 finite differences in each of our two processes.  Note that number of
+5 finite differences in each of our two processes.  Note that the number of
 design variables doesn't have to divide equally among the processes.
 
 .. testcode:: fd_par_example
