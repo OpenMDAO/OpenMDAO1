@@ -1,6 +1,6 @@
 """ VecWrapper 'wrapper' that is used for component-wise complex step."""
 
-from six import iteritems, iterkeys, itervalues
+from six import iteritems, iterkeys
 
 import numpy as np
 
