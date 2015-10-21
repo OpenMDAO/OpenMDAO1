@@ -65,6 +65,16 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         params.step_complex(0, 4.0)
         self.assertEquals(x, 3.0 + 4j)
 
+        # Make sure all other functions work for coverage
+        self.assertEquals(len(params), 1)
+        self.assertTrue('x' in params)
+        plist = [z for z in params]
+        self.assertEquals(plist, ['x'])
+        self.assertEquals(params.keys(), top.root.comp2.params.keys())
+        self.assertEquals(params.items(), top.root.comp2.params.items())
+        self.assertEquals(params.values(), top.root.comp2.params.values())
+        self.assertEquals(params.metadata('x'), top.root.comp2.params.metadata('x'))
+
     def test_unknown_vec(self):
 
         top = Problem()

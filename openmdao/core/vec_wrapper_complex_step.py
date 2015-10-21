@@ -38,21 +38,6 @@ class ComplexStepTgtVecWrapper(object):
         acc = self.vecwrap._access[name]
         return acc.get(acc.meta)
 
-    def __setitem__(self, name, value):
-        """
-        Set the value of the named variable.
-
-        Args
-        ----
-        name : str
-            Name of variable to get the value for.
-
-        value :
-            The unflattened value of the named variable.
-        """
-        acc = self.vecwrap._access[name]
-        acc.set(acc.meta, value)
-
     def __len__(self):
         """
         Returns
