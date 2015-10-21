@@ -71,18 +71,9 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         plist = [z for z in params]
         self.assertEquals(plist, ['x'])
         self.assertEquals(params.keys(), top.root.comp2.params.keys())
-        self.assertEquals(params.items(), top.root.comp2.params.items())
-        self.assertEquals(params.values(), top.root.comp2.params.values())
         self.assertEquals(params.metadata('x'), top.root.comp2.params.metadata('x'))
         plist1 = [z for z in params.iterkeys()]
         plist2 = [z for z in top.root.comp2.params.iterkeys()]
-        self.assertEquals(plist1, plist2)
-        plist1 = [z for z in params.iteritems()]
-        plist2 = [z for z in top.root.comp2.params.iteritems()]
-        self.assertEquals(plist1, plist2)
-        plist1 = [z for z in params.itervalues()]
-        plist2 = [z for z in top.root.comp2.params.itervalues()]
-        self.assertEquals(plist1, plist2)
 
     def test_unknown_vec(self):
 
@@ -136,18 +127,9 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         plist = [z for z in unknowns]
         self.assertEquals(plist, ['y'])
         self.assertEquals(unknowns.keys(), top.root.comp2.unknowns.keys())
-        self.assertEquals(unknowns.items(), top.root.comp2.unknowns.items())
-        self.assertEquals(unknowns.values(), top.root.comp2.unknowns.values())
         self.assertEquals(unknowns.metadata('y'), top.root.comp2.unknowns.metadata('y'))
         plist1 = [z for z in unknowns.iterkeys()]
         plist2 = [z for z in top.root.comp2.unknowns.iterkeys()]
-        self.assertEquals(plist1, plist2)
-        plist1 = [z for z in unknowns.iteritems()]
-        plist2 = [z for z in top.root.comp2.unknowns.iteritems()]
-        self.assertEquals(plist1, plist2)
-        plist1 = [z for z in unknowns.itervalues()]
-        plist2 = [z for z in top.root.comp2.unknowns.itervalues()]
-        self.assertEquals(plist1, plist2)
 
     def test_unit_convert(self):
 

@@ -81,43 +81,6 @@ class ComplexStepTgtVecWrapper(object):
         """
         return iterkeys(self.vecwrap._vardict)
 
-    def items(self):
-        """
-        Returns
-        -------
-        list of (str, dict)
-            List of tuples containing the name and metadata dict for each
-            variable.
-        """
-        return self.vecwrap._vardict.items()
-
-    def iteritems(self):
-        """
-        Returns
-        -------
-        iterator
-            Iterator returning the name and metadata dict for each variable.
-        """
-        return iteritems(self.vecwrap._vardict)
-
-    def values(self):
-        """
-        Returns
-        -------
-        list of dict
-            List containing metadata dict for each variable.
-        """
-        return self.vecwrap._vardict.values()
-
-    def itervalues(self):
-        """
-        Returns
-        -------
-        iter of dict
-            Iterator yielding metadata dict for each variable.
-        """
-        return self.vecwrap._vardict.values()
-
     def metadata(self, name):
         """
         Returns the metadata for the named variable.
@@ -259,43 +222,6 @@ class ComplexStepSrcVecWrapper(object):
             the keys (variable names) in this vector.
         """
         return iterkeys(self.vecwrap._vardict)
-
-    def items(self):
-        """
-        Returns
-        -------
-        list of (str, dict)
-            List of tuples containing the name and metadata dict for each
-            variable.
-        """
-        return self.vecwrap._vardict.items()
-
-    def iteritems(self):
-        """
-        Returns
-        -------
-        iterator
-            Iterator returning the name and metadata dict for each variable.
-        """
-        return iteritems(self.vecwrap._vardict)
-
-    def values(self):
-        """
-        Returns
-        -------
-        list of dict
-            List containing metadata dict for each variable.
-        """
-        return self.vecwrap._vardict.values()
-
-    def itervalues(self):
-        """
-        Returns
-        -------
-        iter of dict
-            Iterator yielding metadata dict for each variable.
-        """
-        return self.vecwrap._vardict.values()
 
     def metadata(self, name):
         """
