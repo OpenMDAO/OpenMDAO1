@@ -52,7 +52,7 @@ install:
 - if [ "$PY" = "2.7" ]; then
     pip install mpi4py;
     pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5;
-    conda install cython;
+    conda install cython --yes;
     pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
   fi
 - pip install git+https://github.com/swryan/testflo.git
