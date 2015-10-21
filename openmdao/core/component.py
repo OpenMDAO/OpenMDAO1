@@ -652,8 +652,7 @@ class Component(System):
             `VecWrapper` containing residuals. (r)
 
         total_derivs : bool, optional
-            Set to true to calculate total derivatives. Otherwise, partial
-            derivatives are returned.
+            Should always be False, as componentwise derivatives only need partials.
 
         fd_params : list of strings, optional
             List of parameter name strings with respect to which derivatives
@@ -666,13 +665,10 @@ class Component(System):
             are taken.
 
         poi_indices: dict of list of integers, optional
-            This is a dict that contains the index values for each parameter of
-            interest, so that we only finite difference those indices.
+            Should be an empty list, as there is no subcomponent relevance reduction.
 
         qoi_indices: dict of list of integers, optional
-            This is a dict that contains the index values for each quantity of
-            interest, so that the finite difference is returned only for those
-            indices.
+            Should be an empty list, as there is no subcomponent relevance reduction.
 
         Returns
         -------
@@ -696,50 +692,27 @@ class Component(System):
         csunknowns = ComplexStepSrcVecWrapper(unknowns)
         csresids = ComplexStepSrcVecWrapper(resids)
 
-        # Prepare for calculating partial derivatives or total derivatives
-        if total_derivs is False:
-            run_model = self.apply_nonlinear
-            states = self.states
-
-            # Pull result from resids only if comp overrides apply_nonlinear
-            if len(self.states) > 0:
-                resultvec = csresids
-            else:
-                resultvec = csunknowns
+        # Pull result from resids only if comp overrides apply_nonlinear
+        states = self.states
+        if len(states) > 0:
+            resultvec = csresids
         else:
-            run_model = self.solve_nonlinear
             resultvec = csunknowns
-            states = []
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
+            # States are stepped in unknowns, not params
             if p_name in states:
                 stepvec = csunknowns
+                inputs = unknowns
             else:
                 stepvec = csparams
+                inputs = params
+
+            target_input = inputs.flat[p_name]
 
             stepvec.set_complex_var(p_name)
-
-            # If our input is connected to a IndepVarComp, then we need to twiddle
-            # the unknowns vector instead of the params vector.
-            src = self.connections.get(p_name)
-            if src is not None:
-                param_src = src[0]  # just the name
-
-                # Have to convert to promoted name to key into unknowns
-                if param_src not in self.unknowns:
-                    param_src = self.unknowns.get_promoted_varname(param_src)
-
-                target_input = unknowns.flat[param_src]
-            else:
-                # Cases where the IndepVarComp is somewhere above us.
-                if p_name in states:
-                    inputs = unknowns
-                else:
-                    inputs = params
-
-                target_input = inputs.flat[p_name]
 
             mydict = {}
             if p_name in self._to_abs_pnames:
@@ -752,50 +725,26 @@ class Component(System):
             fdstep = mydict.get('step_size', step_size)
 
             # Size our Inputs
-            if poi_indices is not None and param_src in poi_indices:
-                p_idxs = poi_indices[param_src]
-                p_size = len(p_idxs)
-            else:
-                p_size = np.size(target_input)
-                p_idxs = range(p_size)
+            p_size = np.size(target_input)
+            p_idxs = range(p_size)
 
             # Size our Outputs
             for u_name in fd_unknowns:
-                if qoi_indices is not None and u_name in qoi_indices:
-                    u_size = len(qoi_indices[u_name])
-                else:
-                    u_size = np.size(unknowns[u_name])
-
+                u_size = np.size(unknowns[u_name])
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
-
-            # if a given param isn't present in this process, we need
-            # to still run the model once for each entry in that param
-            # in order to stay in sync with the other processes.
-            if p_size == 0:
-                gather_jac = True
-                for i in range(self._params_dict[p_name]['size']):
-                    run_model(params, unknowns, resids)
 
             # apply Complex Step on each index in array
             for j, idx in enumerate(p_idxs):
 
                 stepvec.step_complex(idx, fdstep)
-                run_model(csparams, csunknowns, csresids)
+                self.apply_nonlinear(csparams, csunknowns, csresids)
                 stepvec.step_var = None
 
                 if p_name in states:
                     csunknowns.step_complex(idx, -fdstep)
 
                 for u_name in fd_unknowns:
-                    if qoi_indices is not None and u_name in qoi_indices:
-                        u_idxs = qoi_indices[u_name]
-                        result = resultvec.flat(u_name)[u_idxs]
-                    else:
-                        result = resultvec.flat(u_name)
-
+                    result = resultvec.flat(u_name)
                     jac[u_name, p_name][:, j] = result.imag/fdstep
-
-        if MPI and gather_jac: # pragma: no cover
-            jac = self.get_combined_jac(jac)
 
         return jac

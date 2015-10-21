@@ -134,6 +134,50 @@ but instead are executing twice, as would be expected when using central
 difference.
 
 
+Complex Step on a Component
+===========================
+
+If you have a pure python component (or an external code that can support
+complex inputs and outputs) then you can also choose to use complex step to
+calculate the Jacobian of a component. This will give more accurate
+derivatives that are insensitive to the step size. Like finite difference,
+complex step runs your component using the `apply_nonlinear` or
+`solve_nonlinear` functions, but it applies a step in the complex direction.
+To activate it, you just need to set the `form` option on a Compontent to
+"complex_step":
+
+.. testcode:: fd_example
+    :hide:
+
+    # Setup and run the model.
+    top = Problem()
+    top.root = Model()
+    top.setup()
+    top.run()
+    self = top.root
+
+.. testoutput:: fd_example
+   :hide:
+
+   Execute comp1
+   Execute comp2
+   Execute comp3
+   Execute comp4
+
+.. testcode:: fd_example
+
+    self.comp2.fd_options['form'] = 'complex_step'
+
+In many cases, this will require no other changes to your code, as long as
+all of the calculation in your `solve_nonlinear` and `apply_nonlinear`
+support complex numbers. During a complex step, the incoming `params` vector
+will return a complex number when a variable is being stepped. Likewise, the
+`unknowns` and `resids` vectors will accept complex values. If you are
+allocating temporary numpy arrays, remember to conditionally set their dtype
+based on the dtype in the unknowns vector.
+
+At present, complex step is not supported on groups of components, so you will need to complex step them individually.
+
 Finite Difference on Groups of Components
 =========================================
 
