@@ -24,8 +24,18 @@ notifications:
 
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
+- if [ "$OS" = "Linux" ]; then sudo apt-get install gfortran openmpi-bin libopenmpi-dev; fi
+- wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
+- chmod +x miniconda.sh
+- ./miniconda.sh -b
+- PATHPREFIX=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "/Users/travis/miniconda/bin"; else echo "/home/travis/miniconda/bin"; fi)
+- export PATH=$PATHPREFIX:$PATH
+- export OPENMDAO_TEST_DOCS=1
+- conda update --yes conda
+
+install:
+- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
 - if [ "$OS" = "Linux" ]; then
-    sudo apt-get install gfortran openmpi-bin libopenmpi-dev;
     if [ "$PY" = "2.7" ]; then
         pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
     elif [ "$PY" = "3.4" ]; then
@@ -39,16 +49,6 @@ before_install:
         pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp34-cp34m-macosx_10_5_x86_64.whl;
     fi
   fi
-- wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
-- chmod +x miniconda.sh
-- ./miniconda.sh -b
-- PATHPREFIX=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "/Users/travis/miniconda/bin"; else echo "/home/travis/miniconda/bin"; fi)
-- export PATH=$PATHPREFIX:$PATH
-- export OPENMDAO_TEST_DOCS=1
-- conda update --yes conda
-
-install:
-- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
 - pip install git+https://github.com/swryan/testflo.git
 - pip install coveralls
 - pip install -e .
