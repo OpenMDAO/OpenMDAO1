@@ -364,13 +364,11 @@ Now we'll calculate the Jacobian using our parallel finite difference setup.
     J = prob.calc_gradient(['P1.x'], ['C1.y'], mode='fd',
                            return_format='dict')
 
+    print(J['C1.y']['P1.x'])
+
 
 When we're done, our J should look like this:
 
-.. testcode:: fd_par_example
-    :hide:
-
-    print(J['C1.y']['P1.x'])
 
 .. testoutput:: fd_par_example
     :options: +ELLIPSIS
