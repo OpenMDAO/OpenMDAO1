@@ -13,14 +13,23 @@ To install OpenMDAO 1.0 Alpha:
 Install Python, Pip, Numpy, and Scipy.
 (Anaconda Python, comes bundled with everything you need:   http://continuum.io ).
 
+##### Option 1: System wide installation
+
 Next, clone OpenMDAO repository:
 
     git clone https://github.com/OpenMDAO/OpenMDAO.git
-    cd OpenMDAO
+
+Lastly, install it in development mode:
+
+    pip install -e OpenMDAO
+
+
+##### Option 2: Using virtual environment
 
 Set up a virtual python environment and install dependent python modules for
 development
 
+    cd OpenMDAO
     python -m virtualenv env
     ./env/bin/pip install nose
     ./env/bin/pip install coverage
