@@ -204,9 +204,14 @@ class Problem(System):
         # the 'unknown' sources for that target to all other inputs that are
         # connected to it
         to_add = []
+        checked = set()
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
                 connected_inputs = nx.node_connected_component(input_graph, tgt)
+                tup = tuple(connected_inputs)
+                if tup not in checked:
+                    checked.add(tup)
+
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
@@ -214,15 +219,13 @@ class Problem(System):
                             if compute_indices:
                                 # follow path to new target, apply src_idxs along the way
                                 path = nx.shortest_path(input_graph, tgt, new_tgt)
-                                x = 0
-                                while x < len(path)-1:
-                                    next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                for i, node in enumerate(path[:-1]):
+                                    next_idxs = input_graph[node][path[i+1]]['idxs']
                                     if next_idxs is not None:
                                         if new_idxs is not None:
                                             new_idxs = np.array(new_idxs)[next_idxs]
                                         else:
                                             new_idxs = next_idxs
-                                    x = x + 1
                             to_add.append((new_tgt, (src, new_idxs)))
 
         for tgt, (src, idxs) in to_add:
@@ -430,7 +433,7 @@ class Problem(System):
 
         # Prepare Driver
         self.driver._setup(self.root)
-        
+
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -439,7 +442,7 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
-        
+
         # Prep for case recording
         self._start_recorders()
 
@@ -1462,7 +1465,7 @@ class Problem(System):
 
         self.driver.recorders.startup(self.root)
         self.driver.recorders.record_metadata(self.root, exclude=exclude)
-        
+
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
