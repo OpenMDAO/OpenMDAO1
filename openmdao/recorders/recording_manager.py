@@ -1,15 +1,14 @@
 import itertools
 import time
-from collections import defaultdict
 from openmdao.core.mpi_wrap import MPI
 
 class RecordingManager(object):
     def __init__(self, *args, **kargs):
         super(RecordingManager, self).__init__(*args, **kargs)
         self._vars_to_record = {
-                'pnames' : set(),
-                'unames' : set(),
-                'rnames' : set(),
+                'pnames': set(),
+                'unames': set(),
+                'rnames': set(),
             }
 
         self._recorders = []
@@ -58,21 +57,21 @@ class RecordingManager(object):
         for recorder in self._recorders:
             metadata_option = recorder.options['record_metadata']
 
-            if metadata_option == False:
+            if metadata_option is False:
                 continue
 
             if exclude is not None:
                 if recorder in exclude:
                     continue
-                
+
                 exclude.add(recorder)
-            
+
             recorder.record_metadata(root)
 
     def startup(self, root):
         for recorder in self._recorders:
             recorder.startup(root)
-        
+
             if not recorder._parallel:
                 self.__has_serial_recorders = True
                 pnames, unames, rnames = recorder._filtered[root.pathname]
@@ -96,7 +95,7 @@ class RecordingManager(object):
         unknowns = root.unknowns
         resids = root.resids
 
-        if MPI and self.__has_serial_recorders: # pragma: no cover
+        if MPI and self.__has_serial_recorders:
             pnames = self._vars_to_record['pnames']
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']

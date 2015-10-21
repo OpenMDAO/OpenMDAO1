@@ -283,7 +283,7 @@ class Component(System):
         self._to_abs_unames = self._sysdata._to_abs_unames = {}
         self._to_abs_pnames = self._sysdata._to_abs_pnames = {}
 
-        if MPI and compute_indices and self.is_active(): # pragma: no cover
+        if MPI and compute_indices and self.is_active():
             self.setup_distrib_idxs()
             # now update our distrib_size metadata for any distributed
             # unknowns
@@ -602,7 +602,6 @@ class Component(System):
                                                 nwid=nwid))
 
         out_stream.flush()
-
 
     def _get_relname_map(self, parent_unknowns):
         """

@@ -1316,7 +1316,7 @@ class Group(System):
         local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
         local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
-        if MPI: # pragma: no cover
+        if MPI:
             if trace:
                 debug("allgathering local varnames: locals = ",local_vars)
             all_locals = self.comm.allgather(local_vars)

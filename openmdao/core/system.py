@@ -283,7 +283,7 @@ class System(object):
             The communicator being offered by the parent system.
         """
         minp, maxp = self.get_req_procs()
-        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp: # pragma: no cover
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
             raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
                               (self.pathname, minp, comm.size))
 
@@ -490,7 +490,6 @@ class System(object):
 
                     target_input[idx] += step
 
-
                 for u_name in fd_unknowns:
                     if qoi_indices is not None and u_name in qoi_indices:
                         u_idxs = qoi_indices[u_name]
@@ -499,11 +498,10 @@ class System(object):
                         result = resultvec.flat[u_name]
                     jac[u_name, p_name][:, j] = result
 
-
                 # Restore old residual
                 resultvec.vec[:] = cache1
 
-        if MPI and gather_jac: # pragma: no cover
+        if MPI and gather_jac:
             jac = self.get_combined_jac(jac)
 
         return jac
@@ -771,7 +769,6 @@ class System(object):
 
         comm = self.comm
         iproc = comm.rank
-        nproc = comm.size
 
         need_tups = []
         has_tups = []
@@ -874,9 +871,11 @@ class System(object):
                     docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += str(val)
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += ")\n"
 
                     desc = value._options[name]['desc']
