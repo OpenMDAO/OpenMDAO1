@@ -157,7 +157,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         assert_rel_error(self, p3['x2'], 373.15, 1.0e-6)
 
 
-class ComplexStepComponent(unittest.TestCase):
+class ComplexStepComponentTests(unittest.TestCase):
 
     def test_simple_float(self):
 
