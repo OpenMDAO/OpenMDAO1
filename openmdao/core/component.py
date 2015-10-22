@@ -738,7 +738,6 @@ class Component(System):
 
                 stepvec.step_complex(idx, fdstep)
                 self.apply_nonlinear(csparams, csunknowns, csresids)
-                stepvec.step_var = None
 
                 if p_name in states:
                     csunknowns.step_complex(idx, -fdstep)
@@ -746,5 +745,9 @@ class Component(System):
                 for u_name in fd_unknowns:
                     result = resultvec.flat(u_name)
                     jac[u_name, p_name][:, j] = result.imag/fdstep
+
+            # Need to clear this out because our next input might be a
+            # different vector (state vs param)
+            stepvec.unset_complex_var()
 
         return jac

@@ -46,7 +46,13 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
 
         # Apply complex step and get param
         params.step_complex(1, 4.0)
+        x = params['x']
         self.assertEquals(x[0, 1], 2.0 + 4j)
+
+        # Unset complex
+        params.unset_complex_var()
+        x = params['x']
+        self.assertEquals(x[0, 1], 2.0)
 
         params = ComplexStepTgtVecWrapper(top.root.comp2.params)
 

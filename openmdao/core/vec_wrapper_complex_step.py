@@ -116,6 +116,11 @@ class ComplexStepTgtVecWrapper(object):
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
 
+    def unset_complex_var(self):
+        """ Clear out current complex step. """
+        self.step_var = None
+        self.step_val = None
+
     def step_complex(self, idx, stepsize):
         """
         Specifies the current input variable that will be complex stepped.
@@ -282,6 +287,11 @@ class ComplexStepSrcVecWrapper(object):
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
+
+    def unset_complex_var(self):
+        """ Clear out current complex step. """
+        self.step_var = None
+        self.step_val = None
 
     def step_complex(self, idx, stepsize):
         """
