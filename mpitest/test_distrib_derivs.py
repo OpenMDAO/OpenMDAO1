@@ -2,23 +2,22 @@
 
 from __future__ import print_function
 
-import sys
 import numpy
 
-from openmdao.api import ParallelGroup, Group, Problem, Component, IndepVarComp, \
+from openmdao.api import ParallelGroup, Group, Problem, IndepVarComp, \
     ExecComp, LinearGaussSeidel
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.simple_comps import FanInGrouped, FanOutGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.array_util import evenly_distrib_idxs
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
     rank = MPI.COMM_WORLD.rank
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
     rank = 0
+
 
 class DistribExecComp(ExecComp):
     """An ExecComp that uses 2 procs and
@@ -51,6 +50,7 @@ class DistribExecComp(ExecComp):
     def get_req_procs(self):
         return (2, 2)
 
+
 class MPITests1(MPITestCase):
 
     N_PROCS = 1
@@ -60,10 +60,11 @@ class MPITests1(MPITestCase):
         group = Group()
         group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
-                                           x=numpy.zeros(size),
-                                           y=numpy.zeros(size)))
-        group.add('C2', ExecComp(['z=3.0*y'], y=numpy.zeros(size),
-                                           z=numpy.zeros(size)))
+                                        x=numpy.zeros(size),
+                                        y=numpy.zeros(size)))
+        group.add('C2', ExecComp(['z=3.0*y'],
+                                 y=numpy.zeros(size),
+                                 z=numpy.zeros(size)))
 
         prob = Problem(impl=impl)
         prob.root = group
@@ -78,7 +79,7 @@ class MPITests1(MPITestCase):
                              "This problem was given 1 MPI processes, "
                              "but it requires between 2 and 2.")
         else:
-            if MPI:  # pragma: no cover
+            if MPI:
                 self.fail("Exception expected")
 
 
@@ -91,10 +92,11 @@ class MPITests2(MPITestCase):
         group = Group()
         group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
-                                           x=numpy.zeros(size),
-                                           y=numpy.zeros(size)))
-        group.add('C2', ExecComp(['z=3.0*y'], y=numpy.zeros(size),
-                                           z=numpy.zeros(size)))
+                                        x=numpy.zeros(size),
+                                        y=numpy.zeros(size)))
+        group.add('C2', ExecComp(['z=3.0*y'],
+                                 y=numpy.zeros(size),
+                                 z=numpy.zeros(size)))
 
         prob = Problem(impl=impl)
         prob.root = group
@@ -117,22 +119,22 @@ class MPITests2(MPITestCase):
         prob.root = root = Group()
         root.add('P', IndepVarComp('x', numpy.ones(size, dtype=float)))
         root.add('C1', DistribExecComp(['y=3.0*x'], arr_size=size,
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                                       x=numpy.zeros(size, dtype=float),
+                                       y=numpy.zeros(size, dtype=float)))
         sub = root.add('sub', ParallelGroup())
         sub.add('C2', ExecComp('y=1.5*x',
                                x=numpy.zeros(size),
                                y=numpy.zeros(size)))
         sub.add('C3', ExecComp(['y=5.0*x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                               x=numpy.zeros(size, dtype=float),
+                               y=numpy.zeros(size, dtype=float)))
 
         root.add('C2', ExecComp(['y=x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                                x=numpy.zeros(size, dtype=float),
+                                y=numpy.zeros(size, dtype=float)))
         root.add('C3', ExecComp(['y=x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                                x=numpy.zeros(size, dtype=float),
+                                y=numpy.zeros(size, dtype=float)))
         root.connect('sub.C2.y', 'C2.x')
         root.connect('sub.C3.y', 'C3.x')
 
@@ -165,18 +167,18 @@ class MPITests2(MPITestCase):
         sub = root.add('sub', ParallelGroup())
 
         sub.add('C1', ExecComp(['y=-2.0*x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                               x=numpy.zeros(size, dtype=float),
+                               y=numpy.zeros(size, dtype=float)))
         sub.add('C2', ExecComp(['y=5.0*x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                               x=numpy.zeros(size, dtype=float),
+                               y=numpy.zeros(size, dtype=float)))
         root.add('C3', DistribExecComp(['y=3.0*x1+7.0*x2'], arr_size=size,
-                                            x1=numpy.zeros(size, dtype=float),
-                                            x2=numpy.zeros(size, dtype=float),
-                                            y=numpy.zeros(size, dtype=float)))
+                                       x1=numpy.zeros(size, dtype=float),
+                                       x2=numpy.zeros(size, dtype=float),
+                                       y=numpy.zeros(size, dtype=float)))
         root.add('C4', ExecComp(['y=x'],
-                                   x=numpy.zeros(size, dtype=float),
-                                   y=numpy.zeros(size, dtype=float)))
+                                x=numpy.zeros(size, dtype=float),
+                                y=numpy.zeros(size, dtype=float)))
 
         root.connect("sub.C1.y", "C3.x1")
         root.connect("sub.C2.y", "C3.x2")
@@ -203,10 +205,11 @@ class MPITests2(MPITestCase):
         group = Group()
         group.add('P', IndepVarComp('x', numpy.ones(size)))
         group.add('C1', DistribExecComp(['y=2.0*x'], arr_size=size,
-                                           x=numpy.zeros(size),
-                                           y=numpy.zeros(size)))
-        group.add('C2', ExecComp(['z=3.0*y'], y=numpy.zeros(size),
-                                           z=numpy.zeros(size)))
+                                        x=numpy.zeros(size),
+                                        y=numpy.zeros(size)))
+        group.add('C2', ExecComp(['z=3.0*y'],
+                                 y=numpy.zeros(size),
+                                 z=numpy.zeros(size)))
 
         prob = Problem(impl=impl)
         prob.root = group
@@ -220,11 +223,11 @@ class MPITests2(MPITestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-               "'C1.y' is a distributed variable and may not be used as a "
-               "design var, objective, or constraint.")
+            self.assertEqual(str(err), "'C1.y' is a distributed variable"
+                                       " and may not be used as a design var,"
+                                       " objective, or constraint.")
         else:
-            if MPI:  # pragma: no cover
+            if MPI:
                 self.fail("Exception expected")
 
 

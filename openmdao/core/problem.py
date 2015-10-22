@@ -428,10 +428,8 @@ class Problem(System):
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
-
         # Prepare Driver
         self.driver._setup(self.root)
-
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
