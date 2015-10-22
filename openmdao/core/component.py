@@ -294,7 +294,7 @@ class Component(System):
                     sizes.append(len(meta['src_indices']))
                     names.append(name)
             if sizes:
-                if trace:
+                if trace:   # pragma: no cover
                     debug("allgathering src index sizes:")
                 allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
                 self.comm.Allgather(np.array(sizes, dtype=int), allsizes)

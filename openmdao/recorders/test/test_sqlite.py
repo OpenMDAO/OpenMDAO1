@@ -36,12 +36,11 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
         iter_coord = format_iteration_coordinate(coord)
         actual_group = db[iter_coord]
         groupings = {
-                "timestamp" : None,
-                "Parameters" :  params,
-                "Unknowns" :  unknowns,
-                "Residuals" :  resids,
+            "timestamp":  None,
+            "Parameters": params,
+            "Unknowns":   unknowns,
+            "Residuals":  resids,
         }
-
 
         if params is None:
             test.assertIsNone(actual_group.get('Parameters', None))
@@ -50,7 +49,7 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
         if unknowns is None:
             test.assertIsNone(actual_group.get('Unknowns', None))
             del groupings['Unknowns']
-        
+
         if resids is None:
             test.assertIsNone(actual_group.get('Residuals', None))
             del groupings['Residuals']
@@ -73,7 +72,7 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 
                 if found_val is sentinel:
                     test.fail("Did not find key '{0}'".format(key))
-             
+
                 try:
                     assert_rel_error(test, found_val, val, tolerance)
                 except TypeError:
@@ -100,7 +99,7 @@ def _assertMetadataRecorded(test, db, expected):
 
             if found_val is sentinel:
                 test.fail("Did not find key '{0}'".format(key))
-                
+
             for mkey, mval in iteritems(val):
                 mfound_val = found_val[mkey]
 
@@ -132,7 +131,6 @@ class TestSqliteRecorder(unittest.TestCase):
             if e.errno != errno.ENOENT:
                 raise e
 
-    
     def assertMetadataRecorded(self, expected):
         db = SqliteDict( self.filename, self.tablename )
         _assertMetadataRecorded( self, db, expected )
@@ -154,7 +152,7 @@ class TestSqliteRecorder(unittest.TestCase):
 
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_resids = [
@@ -171,16 +169,16 @@ class TestSqliteRecorder(unittest.TestCase):
         ]
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None, expected_resids),), self.eps)
-       
+
     def test_only_unknowns_recorded(self):
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         prob.setup(check=False)
-        
+
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_unknowns = [
@@ -222,7 +220,7 @@ class TestSqliteRecorder(unittest.TestCase):
             ("comp7.x1", 36.8),
             ("comp7.x2", -46.5)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, None, None),), self.eps)
 
     def test_basic(self):
@@ -235,7 +233,7 @@ class TestSqliteRecorder(unittest.TestCase):
 
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_params = [
@@ -288,7 +286,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1,)]
 
         expected_params = [
@@ -302,7 +300,7 @@ class TestSqliteRecorder(unittest.TestCase):
             ("comp1.y1", 0.0),
             ("comp1.y2", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_includes_and_excludes(self):
@@ -340,7 +338,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1,), "root", (1,)]
 
         expected_params = [
@@ -403,7 +401,7 @@ class TestSqliteRecorder(unittest.TestCase):
         expected_resids = [
             ("C2.y", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_multilevel_record(self):
@@ -418,7 +416,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.close()
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
-        
+
         g1_expected_params = [
             ("C2.x", 5.0)
         ]
@@ -428,8 +426,6 @@ class TestSqliteRecorder(unittest.TestCase):
         g1_expected_resids = [
             ("C2.y", 0.0)
         ]
-
-        g1_expected = (g1_expected_params, g1_expected_unknowns, g1_expected_resids)
 
         driver_coordinate = ['Driver', (1,)]
 
@@ -450,7 +446,7 @@ class TestSqliteRecorder(unittest.TestCase):
             ("G3.C3.y", 0.0),
             ("G3.C4.y", 0.0),
         ]
-     
+
         expected = []
         expected.append((solver_coordinate, (t0, t1), g1_expected_params, g1_expected_unknowns, g1_expected_resids))
         expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
@@ -492,7 +488,7 @@ class TestSqliteRecorder(unittest.TestCase):
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
-        
+
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_root_solver_doesnt_record_metadata(self):
