@@ -447,7 +447,7 @@ class Component(System):
         msg = "Class '%s' does not implement 'solve_nonlinear'"
         raise NotImplementedError(msg  % self.__class__.__name__)
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides this method
         and returns something. J should be a dictionary whose keys are tuples

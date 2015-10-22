@@ -21,7 +21,7 @@ class TestComponentDerivatives(unittest.TestCase):
         params = {'x': 0.0}
         unknowns = {'y': 0.0}
         mycomp = ExecComp(['y=2.0*x'])
-        mycomp._jacobian_cache = mycomp.jacobian(params, unknowns, empty)
+        mycomp._jacobian_cache = mycomp.linearize(params, unknowns, empty)
 
         # Forward
 
@@ -54,7 +54,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         empty = {}
         mycomp = SimpleArrayComp()
-        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+        mycomp._jacobian_cache = mycomp.linearize(empty, empty, empty)
 
         # Forward
 
@@ -89,7 +89,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         empty = {}
         mycomp = SimpleSparseArrayComp()
-        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+        mycomp._jacobian_cache = mycomp.linearize(empty, empty, empty)
 
         # Forward
 
@@ -135,7 +135,7 @@ class TestComponentDerivatives(unittest.TestCase):
         # Run model so we can calc derivatives around the solved state
         mycomp.solve_nonlinear(params, unknowns, resids)
 
-        mycomp._jacobian_cache = mycomp.jacobian(params, unknowns, resids)
+        mycomp._jacobian_cache = mycomp.linearize(params, unknowns, resids)
         J = mycomp._jacobian_cache
 
         # Forward
