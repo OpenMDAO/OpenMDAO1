@@ -11,10 +11,11 @@ os:
 language: generic
 
 env:
-- HDF5=h5py PY=2.7
-- HDF5=h5py PY=3.4
-- HFF5= PY=2.7
-- HFF5= PY=3.4
+- HDF5=h5py PY=2.7 MPI=mpi4py
+- HDF5=h5py PY=2.7 MPI=
+- HDF5=h5py PY=3.4 MPI=
+- HFF5= PY=2.7 MPI=
+- HFF5= PY=3.4 MPI=
 
 notifications:
   email: false
@@ -24,7 +25,7 @@ notifications:
 
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
-- if [ "$OS" = "Linux" ]; then sudo apt-get install gfortran liblapack-dev openmpi-bin libopenmpi-dev; fi
+- if [ "$OS" = "Linux" && "$MPI"]; then sudo apt-get install gfortran liblapack-dev openmpi-bin libopenmpi-dev; fi
 - wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
 - chmod +x miniconda.sh
 - ./miniconda.sh -b
@@ -34,7 +35,7 @@ before_install:
 - conda update --yes conda
 
 install:
-- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
+- conda install --yes python=$PY numpy scipy nose $HDF5 $MPI sphinx mock swig
 - if [ "$OS" = "Linux" ]; then
     if [ "$PY" = "2.7" ]; then
         pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
@@ -49,7 +50,7 @@ install:
         pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp34-cp34m-macosx_10_5_x86_64.whl;
     fi
   fi
-- if [ "$PY" = "2.7" ]; then
+- if [ "$MPI" ]; then
     pip install mpi4py;
     pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5;
     conda install cython --yes;
