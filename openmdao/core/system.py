@@ -654,8 +654,15 @@ class System(object):
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
                                                         total_derivs=True)
             else:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
-                                                        total_derivs=False)
+
+                # Component can request to use complex step.
+                if self.fd_options['form'] == 'complex_step':
+                    fd_func = self.complex_step_jacobian
+                else:
+                    fd_func = self.fd_jacobian
+                self._jacobian_cache = fd_func(params, unknowns, resids,
+                                               total_derivs=False)
+
         else:
             self._jacobian_cache = self.jacobian(params, unknowns, resids)
 
