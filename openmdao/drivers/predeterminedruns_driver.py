@@ -4,6 +4,7 @@ Baseclass for design-of-experiments drivers that have pre-determined parameter s
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
+import six
 
 class PredeterminedRunsDriver(Driver):
     def __init__(self, *args, **kwargs):
@@ -19,7 +20,7 @@ class PredeterminedRunsDriver(Driver):
 
         # Do the runs
         for run in run_list:
-            for dv_name, dv_val in run.iteritems():
+            for dv_name, dv_val in six.iteritems(run):
                 self.set_desvar(dv_name, dv_val)
 
             metadata = create_local_meta(None, 'Driver')

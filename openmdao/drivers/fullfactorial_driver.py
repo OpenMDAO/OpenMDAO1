@@ -14,7 +14,7 @@ class FullFactorialDriver(PredeterminedRunsDriver):
     def _build_runlist(self):
         # Set up Uniform distribution arrays
         value_arrays = dict()
-        for name, value in self.get_desvar_metadata().iteritems():
+        for name, value in six.iteritems(self.get_desvar_metadata()):
             low = value["low"]
             high = value["high"]
             value_arrays[name] = numpy.linspace(low, high, num=self.num_steps).tolist()

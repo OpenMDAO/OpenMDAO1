@@ -3,7 +3,7 @@ OpenMDAO design-of-experiments driver implementing the Latin Hypercube method.
 """
 
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
-import six.moves
+import six
 import numpy
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
@@ -21,4 +21,4 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             numpy.random.shuffle(buckets[design_var_name])
 
         for i in six.moves.xrange(self.num_steps):
-            yield dict(((key, numpy.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in buckets.iteritems()))
+            yield dict(((key, numpy.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in six.iteritems(buckets)))
