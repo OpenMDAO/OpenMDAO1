@@ -4,7 +4,7 @@ OpenMDAO design-of-experiments driver implementing the Full Factorial method.
 
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
 from six import moves, iteritems
-import numpy
+import numpy as np
 import itertools
 
 class FullFactorialDriver(PredeterminedRunsDriver):
@@ -16,7 +16,7 @@ class FullFactorialDriver(PredeterminedRunsDriver):
         for name, value in iteritems(self.get_desvar_metadata()):
             low = value["low"]
             high = value["high"]
-            value_arrays[name] = numpy.linspace(low, high, num=self.num_steps).tolist()
+            value_arrays[name] = np.linspace(low, high, num=self.num_steps).tolist()
         
         keys = list(value_arrays.keys())
         for combination in itertools.product(*value_arrays.values()):
