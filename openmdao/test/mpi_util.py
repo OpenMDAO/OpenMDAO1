@@ -176,7 +176,7 @@ else:
                     sys.stdout.write("%s ... " % tspec)
                 result = run_test(tspec, parent, method, nocap=nocap)
 
-                if under_mpirun(): # pragma: no cover
+                if under_mpirun():
                     results = MPI.COMM_WORLD.gather(result, root=0)
 
                     if MPI.COMM_WORLD.rank == 0:

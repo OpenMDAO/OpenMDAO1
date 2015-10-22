@@ -3,19 +3,18 @@
 from __future__ import print_function
 
 import os
-from six import iteritems, iterkeys, itervalues
+from six import itervalues
 
 from openmdao.core.group import Group
 from openmdao.util.array_util import evenly_distrib_idxs
 from openmdao.core.mpi_wrap import MPI
 
-import numpy as np
-
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace: # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
-class ParallelFDGroup(Group): # pragma: no cover
+
+class ParallelFDGroup(Group):
     """A Group that can do finite difference in parallel.
 
     Args
@@ -60,10 +59,10 @@ class ParallelFDGroup(Group): # pragma: no cover
         if not MPI:
             self._num_par_fds = 1
 
-        self._full_comm = full_comm = comm
+        self._full_comm = comm
 
         # figure out which parallel FD we are associated with
-        if self._num_par_fds > 1: # pragma: no cover
+        if self._num_par_fds > 1:
             minprocs, maxprocs = super(ParallelFDGroup, self).get_req_procs()
             sizes, offsets = evenly_distrib_idxs(self._num_par_fds, comm.size)
 
