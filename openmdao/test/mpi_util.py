@@ -31,8 +31,8 @@ try:
     from mpi4py import MPI
 except ImportError:
     class MPITestCase(TestCase):
-        def __init__(self):
-            super(MPITestCase, self).__init__()
+        def __init__(self, methodName='runTest'):
+            super(MPITestCase, self).__init__(methodName=methodName)
             self.comm = FakeComm
 
     mpirun_tests = unittest.main
