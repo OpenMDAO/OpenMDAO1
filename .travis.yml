@@ -17,6 +17,11 @@ env:
 - HFF5= PY=2.7 MPI=
 - HFF5= PY=3.4 MPI=
 
+matrix:
+    exclude:
+    - os: osx
+        env: MPI=1
+
 notifications:
   email: false
   slack:
