@@ -282,6 +282,8 @@ input parameter to the custom `MultiplyByTwoComponent`.
 
 .. testcode:: basics
 
+    from __future__ import print_function
+
     from openmdao.api import Group, Problem, Component, IndepVarComp
 
     class MultiplyByTwoComponent(Component):
@@ -308,8 +310,8 @@ input parameter to the custom `MultiplyByTwoComponent`.
 
     result = prob['my_comp.y_output']
     count = prob.root.my_comp.counter
-    print result
-    print count
+    print(result)
+    print(count)
 
 Running this example produces the output:
 
