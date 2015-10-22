@@ -4,17 +4,20 @@ from __future__ import print_function
 import sys
 import os
 import re
-from six import iteritems, itervalues, iterkeys
+
+from collections import OrderedDict
 from itertools import chain
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.system import System
 from openmdao.core.mpi_wrap import MPI
-from collections import OrderedDict
-from openmdao.util.type_util import is_differentiable
 from openmdao.core.vec_wrapper import _ByObjWrapper
+from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
+                                                   ComplexStepTgtVecWrapper
+from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
 _NotSet = object()
@@ -28,6 +31,7 @@ if trace:
     from openmdao.core.mpi_wrap import debug
 
 empty_arr = np.zeros(0)
+
 
 class Component(System):
     """ Base class for a Component system. The Component can declare
@@ -630,3 +634,119 @@ class Component(System):
             umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
 
         return umap
+
+    def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
+                              fd_params=None, fd_unknowns=None,
+                              poi_indices=None, qoi_indices=None):
+        """ Return derivatives of all unknowns in this system w.r.t. all
+        incoming params using complex step.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        total_derivs : bool, optional
+            Should always be False, as componentwise derivatives only need partials.
+
+        fd_params : list of strings, optional
+            List of parameter name strings with respect to which derivatives
+            are desired. This is used by problem to limit the derivatives that
+            are taken.
+
+        fd_unknowns : list of strings, optional
+            List of output or state name strings for derivatives to be
+            calculated. This is used by problem to limit the derivatives that
+            are taken.
+
+        poi_indices: dict of list of integers, optional
+            Should be an empty list, as there is no subcomponent relevance reduction.
+
+        qoi_indices: dict of list of integers, optional
+            Should be an empty list, as there is no subcomponent relevance reduction.
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays containing the derivative for that
+            tuple pair.
+        """
+
+        # Params and Unknowns that we provide at this level.
+        if fd_params is None:
+            fd_params = self._get_fd_params()
+        if fd_unknowns is None:
+            fd_unknowns = self._get_fd_unknowns()
+
+        # Use settings in the system dict unless variables override.
+        step_size = self.fd_options.get('step_size', 1.0e-6)
+
+        jac = {}
+        csparams = ComplexStepTgtVecWrapper(params)
+        csunknowns = ComplexStepSrcVecWrapper(unknowns)
+        csresids = ComplexStepSrcVecWrapper(resids)
+
+        # Pull result from resids only if comp overrides apply_nonlinear
+        states = self.states
+        if len(states) > 0:
+            resultvec = csresids
+        else:
+            resultvec = csunknowns
+
+        # Compute gradient for this param or state.
+        for p_name in chain(fd_params, states):
+
+            # States are stepped in unknowns, not params
+            if p_name in states:
+                stepvec = csunknowns
+                target_input = unknowns.flat[p_name]
+            else:
+                stepvec = csparams
+                target_input = params.flat[p_name]
+
+            stepvec.set_complex_var(p_name)
+
+            mydict = {}
+            if p_name in self._to_abs_pnames:
+                for val in itervalues(self._params_dict):
+                    if val['promoted_name'] == p_name:
+                        mydict = val
+                        break
+
+            # Local settings for this var trump all
+            fdstep = mydict.get('step_size', step_size)
+
+            # Size our Inputs
+            p_size = np.size(target_input)
+            p_idxs = range(p_size)
+
+            # Size our Outputs
+            for u_name in fd_unknowns:
+                u_size = np.size(unknowns[u_name])
+                jac[u_name, p_name] = np.zeros((u_size, p_size))
+
+            # apply Complex Step on each index in array
+            for j, idx in enumerate(p_idxs):
+
+                stepvec.step_complex(idx, fdstep)
+                self.apply_nonlinear(csparams, csunknowns, csresids)
+
+                if p_name in states:
+                    csunknowns.step_complex(idx, -fdstep)
+
+                for u_name in fd_unknowns:
+                    result = resultvec.flat(u_name)
+                    jac[u_name, p_name][:, j] = result.imag/fdstep
+
+            # Need to clear this out because our next input might be a
+            # different vector (state vs param)
+            stepvec.set_complex_var(None)
+
+        return jac
