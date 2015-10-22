@@ -290,6 +290,7 @@ input parameter to the custom `MultiplyByTwoComponent`.
             self.add_param('x_input', val=0.) # the input that will be multiplied by 2
             self.add_output('y_output', shape=1) # shape=1 => a one dimensional array of length 1 (a scalar)
             self.add_state('counter', val=0) # an internal variable that counts the number of times this component was executed
+
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y_output'] = params['x_input']*2
             unknowns['counter'] = unknowns['counter']+1

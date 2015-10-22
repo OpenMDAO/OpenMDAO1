@@ -346,6 +346,7 @@ class Driver(object):
                                             uvec.metadata(name)['shape']))
 
         if nproc > 1:
+            # TODO: use Bcast for improved performance
             flatval = comm.bcast(flatval, root=owner)
 
         scaler = meta['scaler']
