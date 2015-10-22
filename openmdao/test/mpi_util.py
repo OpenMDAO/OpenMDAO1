@@ -24,14 +24,16 @@ if PY3:
         return isfunction(obj) or inspect.ismethod(obj)
 
 
-from openmdao.core.mpi_wrap import under_mpirun
+from openmdao.core.mpi_wrap import under_mpirun, FakeComm
 
 
 try:
     from mpi4py import MPI
 except ImportError:
     class MPITestCase(TestCase):
-        pass
+        def __init__(self):
+            super(MPITestCase, self).__init__()
+            self.comm = FakeComm
 
     mpirun_tests = unittest.main
 
