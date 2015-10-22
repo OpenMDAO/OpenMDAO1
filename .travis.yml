@@ -18,9 +18,9 @@ env:
 - HFF5= PY=3.4 MPI=
 
 matrix:
-    exclude:
-    - os: osx
-        env: MPI=1
+  exclude:
+  - os: osx
+      env: MPI=1
 
 notifications:
   email: false
