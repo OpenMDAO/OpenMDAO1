@@ -50,7 +50,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         self.assertEquals(x[0, 1], 2.0 + 4j)
 
         # Unset complex
-        params.unset_complex_var()
+        params.set_complex_var(None)
         x = params['x']
         self.assertEquals(x[0, 1], 2.0)
 

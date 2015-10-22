@@ -111,15 +111,16 @@ class ComplexStepTgtVecWrapper(object):
         name : str
             Name of variable to get the metadata for.
         """
+
+        if name == None:
+            self.step_var = None
+            self.step_val = None
+            return
+
         var = self.vecwrap.flat[name]
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
-
-    def unset_complex_var(self):
-        """ Clear out current complex step. """
-        self.step_var = None
-        self.step_val = None
 
     def step_complex(self, idx, stepsize):
         """
@@ -283,15 +284,16 @@ class ComplexStepSrcVecWrapper(object):
         name : str
             Name of variable to get the metadata for.
         """
+
+        if name == None:
+            self.step_var = None
+            self.step_val = None
+            return
+
         var = self.vecwrap.flat[name]
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
-
-    def unset_complex_var(self):
-        """ Clear out current complex step. """
-        self.step_var = None
-        self.step_val = None
 
     def step_complex(self, idx, stepsize):
         """

@@ -748,6 +748,6 @@ class Component(System):
 
             # Need to clear this out because our next input might be a
             # different vector (state vs param)
-            stepvec.unset_complex_var()
+            stepvec.set_complex_var(None)
 
         return jac
