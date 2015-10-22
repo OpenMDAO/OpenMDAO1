@@ -251,7 +251,7 @@ class ComplexStepSrcVecWrapper(object):
         Args
         ----
         name : str
-            Name of variable to get the metadata for.
+            Name of variable to flatten.
 
         Returns
         -------
