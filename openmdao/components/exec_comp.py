@@ -115,7 +115,7 @@ class ExecComp(Component):
         for expr in self._codes:
             exec(expr, _expr_dict, _UPDict(unknowns, params))
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """
         Uses complex step method to calculate a Jacobian dict.
 

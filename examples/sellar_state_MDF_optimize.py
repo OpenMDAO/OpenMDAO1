@@ -39,7 +39,7 @@ class SellarDis1(Component):
 
         unknowns['y1'] = z1**2 + z2 + x1 - 0.2*y2
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 1."""
         J = {}
 
@@ -80,7 +80,7 @@ class SellarDis2(Component):
 
         unknowns['y2'] = y1**.5 + z1 + z2
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 2."""
         J = {}
 
@@ -114,7 +114,7 @@ class StateConnection(Component):
         """ This is a dummy comp that doesn't modify its state."""
         pass
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}

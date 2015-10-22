@@ -79,7 +79,7 @@ class NearestNeighbor(SurrogateModel):
         super(NearestNeighbor, self).predict(x)
         return self.interpolant(x, **kwargs)
 
-    def jacobian(self, x, **kwargs):
+    def linearize(self, x, **kwargs):
         """
         Calculates the jacobian of the interpolant at the requested point.
 

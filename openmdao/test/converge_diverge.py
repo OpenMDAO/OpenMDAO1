@@ -20,7 +20,7 @@ class Comp1(Component):
         unknowns['y1'] = 2.0*params['x1']**2
         unknowns['y2'] = 3.0*params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 4.0*params['x1']
@@ -38,7 +38,7 @@ class Comp2(Component):
         """ Runs the component."""
         unknowns['y1'] = 0.5*params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 0.5
@@ -55,7 +55,7 @@ class Comp3(Component):
         """ Runs the component."""
         unknowns['y1'] = 3.5*params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 3.5
@@ -75,7 +75,7 @@ class Comp4(Component):
         unknowns['y1'] = params['x1'] + 2.0*params['x2']
         unknowns['y2'] = 3.0*params['x1'] - 5.0*params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 1.0
@@ -95,7 +95,7 @@ class Comp5(Component):
         """ Runs the component."""
         unknowns['y1'] = 0.8*params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 0.8
@@ -112,7 +112,7 @@ class Comp6(Component):
         """ Runs the component."""
         unknowns['y1'] = 0.5*params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 0.5
@@ -130,7 +130,7 @@ class Comp7(Component):
         """ Runs the component."""
         unknowns['y1'] = params['x1'] + 3.0*params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Returns the Jacobian."""
         J = {}
         J[('y1', 'x1')] = 1.0

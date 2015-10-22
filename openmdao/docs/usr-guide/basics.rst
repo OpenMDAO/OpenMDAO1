@@ -143,13 +143,13 @@ Component Derivatives
 ----------------------
 If you want to define analytic derivatives for your components, to help make your
 optimizations faster and more accurate, then your component will also define
-a *jacobian* method, that linearizes the non-linear equations and provides the
+a *linearize* method, that linearizes the non-linear equations and provides the
 partial derivatives (derivatives of unknowns w.r.t parameters for a single component)
 to the framework.
 
 ::
 
-  def jacobian(self, params, unknowns, resids):
+  def linearize(self, params, unknowns, resids):
       J = {}
       J['y','x'] = 2*params['x']
       J['y','y'] = 1
@@ -270,7 +270,7 @@ Summary
 -------
 
 The general procedure for defining and solving a `Problem` in OpenMDAO is:
-    - define `Components` (including their *solve_nonlinear* and optional *jacobian* functions)
+    - define `Components` (including their *solve_nonlinear* and optional *linearize* functions)
     - assemble `Components` into Groups and make connections (explicitly or implicitly)
     - instantiate a `Problem` with the *root* `Group`
     - perform *setup* on the `Problem` to initialize all vectors and data transfers

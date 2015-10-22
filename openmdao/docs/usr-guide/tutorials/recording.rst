@@ -32,7 +32,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
             unknowns['f_xy'] = (x - 3.0) ** 2 + x * y + (y + 4.0) ** 2 - 3.0
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             """ Jacobian for our paraboloid."""
 
             x = params['x']
@@ -241,7 +241,7 @@ etc. To access the data from our run, we can use the following code:
 
             unknowns['f_xy'] = (x - 3.0) ** 2 + x * y + (y + 4.0) ** 2 - 3.0
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             """ Jacobian for our paraboloid."""
 
             x = params['x']

@@ -657,7 +657,7 @@ class System(object):
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
                                                         total_derivs=False)
         else:
-            self._jacobian_cache = self.jacobian(params, unknowns, resids)
+            self._jacobian_cache = self.linearize(params, unknowns, resids)
 
         if self._jacobian_cache is not None:
             jc = self._jacobian_cache
