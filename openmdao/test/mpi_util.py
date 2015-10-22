@@ -33,7 +33,7 @@ except ImportError:
     class MPITestCase(TestCase):
         def __init__(self, methodName='runTest'):
             super(MPITestCase, self).__init__(methodName=methodName)
-            self.comm = FakeComm
+            self.comm = FakeComm()
 
     mpirun_tests = unittest.main
 
