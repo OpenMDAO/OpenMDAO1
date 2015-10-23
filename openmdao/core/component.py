@@ -739,8 +739,7 @@ class Component(System):
                 stepvec.step_complex(idx, fdstep)
                 self.apply_nonlinear(csparams, csunknowns, csresids)
 
-                if p_name in states:
-                    csunknowns.step_complex(idx, -fdstep)
+                stepvec.step_complex(idx, -fdstep)
 
                 for u_name in fd_unknowns:
                     result = resultvec.flat(u_name)
