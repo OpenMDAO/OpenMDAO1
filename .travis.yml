@@ -30,7 +30,7 @@ addons:
     - deadsnakes
     - ubuntu-toolchain-r-test
     packages:
-    - gfortran-4.9
+    - gfortran
     - libopenmpi-dev
     - openmpi-bin
 
