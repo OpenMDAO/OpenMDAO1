@@ -19,10 +19,10 @@ env:
 - HFF5= PY=2.7 MPI=
 - HFF5= PY=3.4 MPI=
 
-matrix:
-  exclude:
-  - os: osx
-    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+# matrix:
+#   exclude:
+#   - os: osx
+#     env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
 
 addons:
   apt:
@@ -43,6 +43,7 @@ notifications:
 
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
+- if [ "$OS" = "MacOSX" ] && [ "$MPI" ]; then brew install openmpi; fi
 - wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
 - chmod +x miniconda.sh
 - ./miniconda.sh -b
