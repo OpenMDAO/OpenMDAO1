@@ -31,9 +31,8 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - gfortran-4.9
-    - openmpi
-    - openmpi-bin
     - libopenmpi-dev
+    - openmpi-bin
 
 notifications:
   email: false
