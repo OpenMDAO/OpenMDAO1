@@ -635,7 +635,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
         for sub in self._local_subsystems:
-            sub._sys_jacobian(sub.params, sub.unknowns, sub.resids)
+            sub._sys_linearize(sub.params, sub.unknowns, sub.resids)
 
     def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,

@@ -592,7 +592,7 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def _sys_jacobian(self, params, unknowns, resids, total_derivs=None):
+    def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
         Entry point for all callers to cause linearization
         of system and all children of system
