@@ -16,7 +16,7 @@ from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
 
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace:
+if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
 class _SysData(object):
@@ -292,7 +292,7 @@ class System(object):
             The communicator being offered by the parent system.
         """
         minp, maxp = self.get_req_procs()
-        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp: # pragma: no cover
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
             raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
                               (self.pathname, minp, comm.size))
 
@@ -457,7 +457,6 @@ class System(object):
                 # skip the current index if its done by some other
                 # parallel fd proc
                 if fd_count % self._num_par_fds == self._par_fd_id:
-                    #print ("fd_count",fd_count,"par_fd_id",self._par_fd_id)
                     if p_size == 0:
                         run_model(params, unknowns, resids)
                         continue
@@ -527,8 +526,8 @@ class System(object):
                     # Restore old residual
                     resultvec.vec[:] = cache1
 
-        if self._num_par_fds > 1: # pragma: no cover
-            if trace:
+        if self._num_par_fds > 1:
+            if trace:  # pragma: no cover
                 debug("%s: allgathering parallel FD columns" % self.pathname)
             jacinfos = self._full_comm.allgather(fd_cols)
             for rank, jacinfo in enumerate(jacinfos):
@@ -539,7 +538,7 @@ class System(object):
                         uname, pname, col = key
                         jac[uname, pname][:, col] = val
                         fd_cols[(uname, pname, col)] = val # to avoid setting dups
-        elif MPI and gather_jac: # pragma: no cover
+        elif MPI and gather_jac:
             jac = self.get_combined_jac(jac)
 
         return jac
@@ -816,7 +815,6 @@ class System(object):
 
         comm = self.comm
         iproc = comm.rank
-        nproc = comm.size
 
         # TODO: calculate dist_need_tups and dist_has_tups once
         #       and cache it instead of doing every time.
@@ -830,7 +828,7 @@ class System(object):
             else:
                 has_tups.append((output, param))
 
-        if trace:
+        if trace:  # pragma: no cover
             debug("%s: allgather of needed tups" % self.pathname)
         dist_need_tups = comm.allgather(need_tups)
 
@@ -841,7 +839,7 @@ class System(object):
         if not needed_set:
             return J  # nobody needs any J entries
 
-        if trace:
+        if trace:  # pragma: no cover
             debug("%s: allgather of has_tups" % self.pathname)
         dist_has_tups = comm.allgather(has_tups)
 
@@ -854,7 +852,7 @@ class System(object):
                     if rank == iproc:
                         owned_vals.append((tup, J[tup]))
 
-        if trace:
+        if trace:  # pragma: no cover
             debug("%s: allgather of owned vals" % self.pathname)
         dist_vals = comm.allgather(owned_vals)
 
@@ -927,9 +925,11 @@ class System(object):
                     docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += str(val)
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += ")\n"
 
                     desc = value._options[name]['desc']

@@ -3,19 +3,15 @@
 from __future__ import print_function
 
 import os
-from collections import OrderedDict
-from six import iteritems, itervalues, iterkeys
 
-import petsc4py
-#petsc4py.init(['-start_in_debugger']) # add petsc init args here
+# import petsc4py
+# petsc4py.init(['-start_in_debugger'])  # add petsc init args here
 from petsc4py import PETSc
-import numpy
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
-from openmdao.core.data_transfer import DataTransfer
 
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace:
+if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
 from mpi4py import MPI
@@ -126,7 +122,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
                                               shared_vec=shared_vec)
-        if trace:
+        if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
@@ -152,7 +148,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         # where a variable belongs to a multiprocess component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        if trace:
+        if trace:  # pragma: no cover
             debug("'%s': allgathering local unknown sizes: local=%s" %
                      (self._sysdata.pathname, sizes))
         return self.comm.allgather(sizes)
@@ -164,14 +160,14 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         float
             The norm of the distributed vector.
         """
-        if trace:
+        if trace:  # pragma: no cover
             debug("%s: norm: petsc_vec.assemble" % self._sysdata.pathname)
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
     def get_view(self, sys_pathname, comm, varmap):
         view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
-        if trace:
+        if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
                   (sys_pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
@@ -225,7 +221,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
                                               shared_vec=shared_vec)
-        if trace:
+        if trace:  # pragma: no cover
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
@@ -247,7 +243,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                 else:
                     psizes.append((name, m['size']))
 
-        if trace:
+        if trace:  # pragma: no cover
             msg = "'%s': allgathering param sizes.  local param sizes = %s"
             debug(msg % (self._sysdata.pathname, psizes))
 
@@ -300,7 +296,7 @@ class PetscDataTransfer(object):
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
         try:
-            if trace:
+            if trace:  # pragma: no cover
                 self.src_idxs = src_idxs
                 self.tgt_idxs = tgt_idxs
                 self.vec_conns = vec_conns
@@ -343,19 +339,19 @@ class PetscDataTransfer(object):
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. This does not involve pass_by_object.
-            if trace:
+            if trace:  # pragma: no cover
                 conns = ['%s <-- %s' % (u, v) for v, u in self.vec_conns]
                 debug("%s rev scatter %s  %s <-- %s" %
                       (srcvec._sysdata.pathname, conns, self.src_idxs, self.tgt_idxs))
                 debug("%s:    srcvec = %s" % (tgtvec._sysdata.pathname,
                                               tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
-            if trace:
+            if trace:  # pragma: no cover
                 debug("%s:    tgtvec = %s" % (srcvec._sysdata.pathname,
                                               srcvec.petsc_vec.array))
         else:
             # forward mode, source to target including pass_by_object
-            if trace:
+            if trace:  # pragma: no cover
                 conns = ['%s --> %s' % (u, v) for v, u in self.vec_conns]
                 debug("%s fwd scatter %s  %s --> %s" %
                       (srcvec._sysdata.pathname, conns, self.src_idxs, self.tgt_idxs))
@@ -363,7 +359,7 @@ class PetscDataTransfer(object):
                                               srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
 
-            if trace:
+            if trace:  # pragma: no cover
                 debug("%s:    tgtvec = %s" % (tgtvec._sysdata.pathname,
                                               tgtvec.petsc_vec.array))
 

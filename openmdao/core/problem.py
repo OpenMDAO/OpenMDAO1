@@ -80,7 +80,7 @@ class Problem(System):
         self.root = root
         self._probdata = _ProbData()
 
-        if MPI:  # pragma: no cover
+        if MPI:
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
                 raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl.")
@@ -334,7 +334,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI:  # pragma: no cover
+        if MPI:
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -428,10 +428,8 @@ class Problem(System):
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
-
         # Prepare Driver
         self.driver._setup(self.root)
-        
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -440,7 +438,7 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
-        
+
         # Prep for case recording
         self._start_recorders()
 
@@ -535,7 +533,7 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun():  # pragma: no cover
+        if under_mpirun():
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if self._comm.rank == 0:
@@ -615,7 +613,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun():  # pragma: no cover
+        if under_mpirun():
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -1471,7 +1469,7 @@ class Problem(System):
 
         self.driver.recorders.startup(self.root)
         self.driver.recorders.record_metadata(self.root, exclude=exclude)
-        
+
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
@@ -1553,7 +1551,7 @@ class Problem(System):
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI:  # pragma: no cover
+        if MPI:
             if not (maxproc is None or maxproc >= self._comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)

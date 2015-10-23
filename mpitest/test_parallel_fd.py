@@ -3,20 +3,20 @@ from __future__ import print_function
 
 import time
 import numpy as np
-from six.moves import range
 from unittest import TestCase
 
 from openmdao.api import Group, ParallelGroup, Problem, IndepVarComp, \
     Component, ParallelFDGroup
 from openmdao.test.exec_comp_for_test import ExecComp4Test
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck, debug
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
+
 
 class ScalableComp(Component):
 
@@ -35,11 +35,12 @@ class ScalableComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
-        print(self.pathname,"solve_nonlin")
-        if self._ncalls > 0: # only delay during FD, not initial run
+        print(self.pathname, "solve_nonlin")
+        if self._ncalls > 0:  # only delay during FD, not initial run
             time.sleep(self._delay)
         self._ncalls += 1
         unknowns['y'] = params['x']*self._mult + self._add
+
 
 def setup_1comp_model(par_fds, size, mult, add, delay):
     prob = Problem(impl=impl)
@@ -59,6 +60,7 @@ def setup_1comp_model(par_fds, size, mult, add, delay):
     prob.run()
 
     return prob
+
 
 def setup_diamond_model(par_fds, size, delay,
                         root_class=ParallelFDGroup,
@@ -103,6 +105,7 @@ def setup_diamond_model(par_fds, size, delay,
 
     return prob
 
+
 class SerialSimpleFDTestCase(TestCase):
 
     def test_serial_fd(self):
@@ -115,6 +118,7 @@ class SerialSimpleFDTestCase(TestCase):
         J = prob.calc_gradient(['P1.x'], ['C1.y'], mode='fd',
                                return_format='dict')
         assert_rel_error(self, J['C1.y']['P1.x'], np.eye(size)*mult, 1e-6)
+
 
 class ParallelSimpleFDTestCase2(MPITestCase):
 
@@ -131,6 +135,7 @@ class ParallelSimpleFDTestCase2(MPITestCase):
                                return_format='dict')
         assert_rel_error(self, J['C1.y']['P1.x'], np.eye(size)*mult, 1e-6)
 
+
 class ParallelFDTestCase5(MPITestCase):
 
     N_PROCS = 5
@@ -146,6 +151,7 @@ class ParallelFDTestCase5(MPITestCase):
                                return_format='dict')
         assert_rel_error(self, J['C1.y']['P1.x'], np.eye(size)*mult, 1e-6)
 
+
 class SerialDiamondFDTestCase(TestCase):
 
     def test_diamond_fd(self):
@@ -160,9 +166,10 @@ class SerialDiamondFDTestCase(TestCase):
 
     def test_bad_num_par_fds(self):
         try:
-            prob = setup_diamond_model(0, 10, 0.1)
+            setup_diamond_model(0, 10, 0.1)
         except Exception as err:
             self.assertEquals(str(err), "'': num_par_fds must be >= 1 but value is 0.")
+
 
 class ParallelDiamondFDTestCase(MPITestCase):
 

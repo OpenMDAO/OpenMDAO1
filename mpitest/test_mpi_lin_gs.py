@@ -2,14 +2,13 @@
 
 from __future__ import print_function
 
-from openmdao.api import ParallelGroup, Problem, LinearGaussSeidel
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.api import Problem, LinearGaussSeidel
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.test.util import assert_rel_error
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
@@ -63,6 +62,7 @@ class MPITests1(MPITestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp3.y']['p1.x1'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['comp3.y']['p2.x2'][0][0], 35.0, 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

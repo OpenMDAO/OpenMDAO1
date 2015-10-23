@@ -14,7 +14,7 @@ import numpy as np
 from openmdao.solvers.solver_base import LinearSolver
 
 trace = os.environ.get("OPENMDAO_TRACE")
-if trace:
+if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
 
@@ -29,11 +29,11 @@ def _get_petsc_vec_array_old(vec):
     """ helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
 
-    return  vec.getArray()
+    return vec.getArray()
 
 try:
     petsc_version = petsc4py.__version__
-except AttributeError: #hack to fix doc-tests
+except AttributeError:  # hack to fix doc-tests
     petsc_version = "3.5"
 
 if int((petsc_version).split('.')[1]) >= 6:
@@ -94,8 +94,8 @@ class PetscKSP(LinearSolver):
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
-                       desc="Derivative calculation mode, set to 'fwd' for " + \
-                       "forward mode, 'rev' for reverse mode, or 'auto' to " + \
+                       desc="Derivative calculation mode, set to 'fwd' for " +
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " +
                        "let OpenMDAO determine the best mode.")
 
         # These are defined whenever we call solve to provide info we need in
@@ -116,7 +116,7 @@ class PetscKSP(LinearSolver):
         jac_mat.setPythonContext(self)
         jac_mat.setUp()
 
-        if trace:
+        if trace:  # pragma: no cover
             debug("creating KSP object for system",system.pathname)
         self.ksp = PETSc.KSP().create(comm=system.comm)
         self.ksp.setOperators(jac_mat)
@@ -125,13 +125,13 @@ class PetscKSP(LinearSolver):
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
         self.ksp.setMonitor(Monitor(self))
 
-        if trace:
+        if trace:  # pragma: no cover
             debug("ksp.getPC()")
             debug("rhs_buf, sol_buf size: %d" % lsize)
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
-        if trace:
+        if trace:  # pragma: no cover
             debug("ksp setup done")
 
         self.rhs_buf = np.zeros((lsize, ))
@@ -170,11 +170,11 @@ class PetscKSP(LinearSolver):
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
-            if trace:
+            if trace:  # pragma: no cover
                 debug("creating sol_buf petsc vec for voi", voi)
             self.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
                                                              comm=system.comm)
-            if trace:
+            if trace:  # pragma: no cover
                 debug("creating rhs_buf petsc vec for voi", voi)
             self.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
                                                              comm=system.comm)

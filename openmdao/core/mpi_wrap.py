@@ -2,8 +2,10 @@
 
 import os
 import sys
+import io
 from contextlib import contextmanager
 
+import six
 from six import PY3
 
 
@@ -27,7 +29,7 @@ def _redirect_streams(to_fd):
     # Create a new sys.stdout that points to the redirected fd
     if PY3:
         sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
-        sys.sterr = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
+        sys.stderr = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
     else:
         sys.stdout = os.fdopen(original_stdout_fd, 'wb', 0) # 0 makes them unbuffered
         sys.stderr = os.fdopen(original_stderr_fd, 'wb', 0)
@@ -55,10 +57,10 @@ def under_mpirun():
     return False
 
 
-if under_mpirun(): # pragma: no cover
+if under_mpirun():
     from mpi4py import MPI
 
-    def debug(*msg):
+    def debug(*msg):  # pragma: no cover
         newmsg = ["%d: " % MPI.COMM_WORLD.rank] + list(msg)
         for m in newmsg:
             sys.stdout.write("%s " % m)
@@ -66,7 +68,8 @@ if under_mpirun(): # pragma: no cover
         sys.stdout.flush()
 else:
     MPI = None
-    def debug(*msg):
+
+    def debug(*msg):  # pragma: no cover
         for m in msg:
             sys.stdout.write("%s " % str(m))
         sys.stdout.write('\n')
