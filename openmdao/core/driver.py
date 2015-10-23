@@ -6,7 +6,6 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
-import itertools
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -72,7 +71,7 @@ class Driver(object):
             for name, meta in iteritems(item):
                 rootmeta = root.unknowns.metadata(name)
 
-                if MPI and 'src_indices' in rootmeta: # pragma: no cover
+                if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
@@ -198,7 +197,6 @@ class Driver(object):
             The names of variables of interest that are to be grouped.
         """
         #make sure all vnames are desvars, constraints, or objectives
-        found = set()
         for n in vnames:
             if not (n in self._desvars or n in self._objs or n in self._cons):
                 raise RuntimeError("'%s' is not a param, objective, or "
@@ -218,7 +216,7 @@ class Driver(object):
                                (vnames, list(param_intsect),
                                 list(set(vnames).difference(param_intsect))))
 
-        if MPI: # pragma: no cover
+        if MPI:
             self._voi_sets.append(tuple(vnames))
         else:
             warnings.warn("parallel derivs %s specified but not running under MPI")
@@ -313,7 +311,6 @@ class Driver(object):
             Keys are the param object names, and the values are the param
             values.
         """
-        uvec = self.root.unknowns
         desvars = OrderedDict()
 
         for key, meta in iteritems(self._desvars):
@@ -349,6 +346,7 @@ class Driver(object):
                                             uvec.metadata(name)['shape']))
 
         if nproc > 1:
+            # TODO: use Bcast for improved performance
             flatval = comm.bcast(flatval, root=owner)
 
         scaler = meta['scaler']
@@ -455,7 +453,6 @@ class Driver(object):
         ndarray (for return_type 'array')
             Array containing all objective values in the order they were added.
         """
-        uvec = self.root.unknowns
         objs = OrderedDict()
 
         for key, meta in iteritems(self._objs):
@@ -525,7 +522,6 @@ class Driver(object):
             msg = "Constraint '{}' needs to define lower, upper, or equals."
             raise RuntimeError(msg.format(name))
 
-
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
         if isinstance(adder, np.ndarray):
@@ -576,12 +572,11 @@ class Driver(object):
         dict
             Key is the constraint name string, value is an ndarray with the values.
         """
-        uvec = self.root.unknowns
         cons = OrderedDict()
 
         for key, meta in iteritems(self._cons):
 
-            if lintype == 'linear' and meta['linear'] == False:
+            if lintype == 'linear' and meta['linear'] is False:
                 continue
 
             if lintype == 'nonlinear' and meta['linear']:
@@ -592,9 +587,6 @@ class Driver(object):
 
             if ctype == 'ineq' and meta['equals'] is not None:
                 continue
-
-            scaler = meta['scaler']
-            adder = meta['adder']
 
             cons[key] = self._get_distrib_var(key, meta, 'constraint')
 
@@ -691,7 +683,8 @@ class Driver(object):
         v = OrderedDict(sorted(vars(self).items()))
         for key, value in v.items():
             if type(value)==OptionsDictionary:
-                if key == "supports": continue
+                if key == "supports":
+                    continue
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
@@ -700,9 +693,11 @@ class Driver(object):
                     docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += str(val)
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += ")\n"
 
                     desc = value._options[name]['desc']

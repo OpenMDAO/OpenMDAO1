@@ -463,7 +463,7 @@ class VecWrapper(object):
             start = 0
         return name[start:]
 
-    def dump(self, out_stream=sys.stdout):
+    def dump(self, out_stream=sys.stdout):  # pragma: no cover
         """
         Args
         ----

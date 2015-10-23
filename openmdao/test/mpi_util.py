@@ -24,14 +24,16 @@ if PY3:
         return isfunction(obj) or inspect.ismethod(obj)
 
 
-from openmdao.core.mpi_wrap import under_mpirun
+from openmdao.core.mpi_wrap import under_mpirun, FakeComm
 
 
 try:
     from mpi4py import MPI
 except ImportError:
     class MPITestCase(TestCase):
-        pass
+        def __init__(self, methodName='runTest'):
+            super(MPITestCase, self).__init__(methodName=methodName)
+            self.comm = FakeComm()
 
     mpirun_tests = unittest.main
 
@@ -176,7 +178,7 @@ else:
                     sys.stdout.write("%s ... " % tspec)
                 result = run_test(tspec, parent, method, nocap=nocap)
 
-                if under_mpirun(): # pragma: no cover
+                if under_mpirun():
                     results = MPI.COMM_WORLD.gather(result, root=0)
 
                     if MPI.COMM_WORLD.rank == 0:

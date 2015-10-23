@@ -280,7 +280,9 @@ A very basic example of defining and running a `Problem` with a custom `Componen
 This example makes use of the convenience component `IndepVarComp` to provide a source for the
 input parameter to the custom `MultiplyByTwoComponent`.
 
-::
+.. testcode:: basics
+
+    from __future__ import print_function
 
     from openmdao.api import Group, Problem, Component, IndepVarComp
 
@@ -289,10 +291,13 @@ input parameter to the custom `MultiplyByTwoComponent`.
             super(MultiplyByTwoComponent, self).__init__() # always call the base class constructor first
             self.add_param('x_input', val=0.) # the input that will be multiplied by 2
             self.add_output('y_output', shape=1) # shape=1 => a one dimensional array of length 1 (a scalar)
-            self.add_state('counter', val=0) # an internal variable that counts the number of times this component was executed
+
+            # an internal variable that counts the number of times this component was executed
+            self.counter = 0
+
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y_output'] = params['x_input']*2
-            unknowns['counter'] = unknowns['counter']+1
+            self.counter += 1
 
     root = Group()
     root.add('indep_var', IndepVarComp('x', 7.0))
@@ -304,6 +309,13 @@ input parameter to the custom `MultiplyByTwoComponent`.
     prob.run()
 
     result = prob['my_comp.y_output']
-    count = prob['my_comp.counter']
-    print result
-    print count
+    count = prob.root.my_comp.counter
+    print(result)
+    print(count)
+
+Running this example produces the output:
+
+.. testoutput:: basics
+
+   14.0
+   1

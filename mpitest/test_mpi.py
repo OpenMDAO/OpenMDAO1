@@ -1,14 +1,12 @@
-import sys
-import unittest
 import time
 
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.api import BasicImpl as impl
@@ -40,6 +38,7 @@ class ABCDArrayComp(Component):
 
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
+
 
 class MPITests1(MPITestCase):
 
@@ -76,14 +75,15 @@ class MPITests1(MPITestCase):
 
         prob.run()
 
-        self.assertTrue(all(prob['C2.a']==np.ones(size, float)*10.))
-        self.assertTrue(all(prob['C2.b']==np.ones(size, float)*5.))
-        self.assertTrue(all(prob['C2.c']==np.ones(size, float)*15.))
-        self.assertTrue(all(prob['C2.d']==np.ones(size, float)*5.))
+        self.assertTrue(all(prob['C2.a'] == np.ones(size, float)*10.))
+        self.assertTrue(all(prob['C2.b'] == np.ones(size, float)*5.))
+        self.assertTrue(all(prob['C2.c'] == np.ones(size, float)*15.))
+        self.assertTrue(all(prob['C2.d'] == np.ones(size, float)*5.))
 
         # TODO: can't do MPI pass_by_object yet
         # self.assertTrue(prob['C2.out_string']=='_C1_C2')
         # self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
+
 
 class MPITests2(MPITestCase):
 
@@ -103,7 +103,7 @@ class MPITests2(MPITestCase):
                              "This problem was given 2 MPI processes, "
                              "but it requires between 1 and 1.")
         else:
-            if MPI: # pragma: no cover
+            if MPI:
                 self.fail("Exception expected")
 
     def test_parallel_fan_in(self):
@@ -124,10 +124,10 @@ class MPITests2(MPITestCase):
         prob.run()
 
         if not MPI or self.comm.rank == 0:
-            self.assertTrue(all(prob.root.C1.params['a']==np.ones(size, float)*1.0))
-            self.assertTrue(all(prob.root.C1.params['b']==np.ones(size, float)*2.0))
-            self.assertTrue(all(prob['C1.c']==np.ones(size, float)*3.0))
-            self.assertTrue(all(prob['C1.d']==np.ones(size, float)*-1.0))
+            self.assertTrue(all(prob.root.C1.params['a'] == np.ones(size, float)*1.0))
+            self.assertTrue(all(prob.root.C1.params['b'] == np.ones(size, float)*2.0))
+            self.assertTrue(all(prob['C1.c'] == np.ones(size, float)*3.0))
+            self.assertTrue(all(prob['C1.d'] == np.ones(size, float)*-1.0))
             # TODO: not handling non-flattenable vars yet
 
     def test_parallel_diamond(self):
@@ -165,17 +165,17 @@ class MPITests2(MPITestCase):
                              np.ones(size)*-.1, 1.e-10)
 
     def test_wrong_impl(self):
-        if MPI: # pragma: no cover
+        if MPI:
             try:
-                prob = Problem(Group())
+                Problem(Group())
             except Exception as err:
-                self.assertEqual(str(err),
-                   "To run under MPI, the impl for a Problem must be PetscImpl.")
+                self.assertEqual(str(err), "To run under MPI, the impl for"
+                                           " a Problem must be PetscImpl.")
             else:
                 self.fail("Exception expected")
 
     def test_multiple_problems(self):
-        if MPI: # pragma: no cover
+        if MPI:
             # split the comm and run an instance of the Problem in each subcomm
             subcomm = self.comm.Split(self.comm.rank)
             prob = Problem(Group(), impl=impl, comm=subcomm)
@@ -194,7 +194,7 @@ class MPITests2(MPITestCase):
             prob.run()
 
             # check the first output array and store in result
-            self.assertTrue(all(prob['C1.c']==np.ones(size)*(value*2)))
+            self.assertTrue(all(prob['C1.c'] == np.ones(size)*(value*2)))
             result = prob['C1.c']
 
             # gather the results from the separate processes/problems and check
@@ -204,7 +204,7 @@ class MPITests2(MPITestCase):
 
             for n in range(self.comm.size):
                 expected = np.ones(size)*2*(n+1)
-                self.assertTrue(all(results[n]==expected))
+                self.assertTrue(all(results[n] == expected))
 
 
 if __name__ == '__main__':

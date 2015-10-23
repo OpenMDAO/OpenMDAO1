@@ -1,6 +1,7 @@
 """ Base class for all systems in OpenMDAO."""
 
 import sys
+import os
 from fnmatch import fnmatch
 from itertools import chain
 import warnings
@@ -16,6 +17,9 @@ from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
 
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:  # pragma: no cover
+    from openmdao.core.mpi_wrap import debug
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -28,7 +32,8 @@ class _SysData(object):
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
-    inherit from `Group` or `Component`"""
+    inherit from `Group` or `Component`
+    """
 
     def __init__(self):
         self.name = ''
@@ -67,6 +72,10 @@ class System(object):
                        desc='Set to absolute, relative')
 
         self._impl = None
+
+        self._num_par_fds = 1 # this will be >1 for ParallelFDGroup
+        self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
+                            # <= the number of parallel FDs
 
         self._reset() # initialize some attrs that are set during setup
 
@@ -285,7 +294,7 @@ class System(object):
             The communicator being offered by the parent system.
         """
         minp, maxp = self.get_req_procs()
-        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp: # pragma: no cover
+        if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
             raise RuntimeError("%s needs %d MPI processes, but was given only %d." %
                               (self.pathname, minp, comm.size))
 
@@ -364,18 +373,25 @@ class System(object):
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
-        if total_derivs is False:
+        if total_derivs:
+            run_model = self.solve_nonlinear
+            resultvec = unknowns
+            states = ()
+        else:
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
-        else:
-            run_model = self.solve_nonlinear
-            resultvec = unknowns
-            states = []
 
         cache1 = resultvec.vec.copy()
 
         gather_jac = False
+
+        fd_count = -1
+
+        # if doing parallel FD, we need to save results during calculation
+        # and then pass them around.  fd_cols stores the
+        # column data keyed by (uname, pname, col_id).
+        fd_cols = {}
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -402,9 +418,9 @@ class System(object):
 
             mydict = {}
             if p_name in self._to_abs_pnames:
-                for val in itervalues(self._params_dict):
-                    if val['promoted_name'] == p_name:
-                        mydict = val
+                for meta in itervalues(self._params_dict):
+                    if meta['promoted_name'] == p_name:
+                        mydict = meta
                         break
 
             # Local settings for this var trump all
@@ -413,7 +429,7 @@ class System(object):
             fdform = mydict.get('form', form)
 
             # Size our Inputs
-            if poi_indices is not None and param_src in poi_indices:
+            if poi_indices and param_src in poi_indices:
                 p_idxs = poi_indices[param_src]
                 p_size = len(p_idxs)
             else:
@@ -422,7 +438,7 @@ class System(object):
 
             # Size our Outputs
             for u_name in fd_unknowns:
-                if qoi_indices is not None and u_name in qoi_indices:
+                if qoi_indices and u_name in qoi_indices:
                     u_size = len(qoi_indices[u_name])
                 else:
                     u_size = np.size(unknowns[u_name])
@@ -434,78 +450,97 @@ class System(object):
             # in order to stay in sync with the other processes.
             if p_size == 0:
                 gather_jac = True
-                for i in range(self._params_dict[p_name]['size']):
-                    run_model(params, unknowns, resids)
+                p_idxs = range(self._params_dict[p_name]['size'])
 
             # Finite Difference each index in array
-            for j, idx in enumerate(p_idxs):
+            for col, idx in enumerate(p_idxs):
+                fd_count += 1
 
-                # Relative or Absolute step size
-                if fdtype == 'relative':
-                    step = target_input[idx] * fdstep
-                    if step < fdstep:
+                # skip the current index if its done by some other
+                # parallel fd proc
+                if fd_count % self._num_par_fds == self._par_fd_id:
+                    if p_size == 0:
+                        run_model(params, unknowns, resids)
+                        continue
+
+                    # Relative or Absolute step size
+                    if fdtype == 'relative':
+                        step = target_input[idx] * fdstep
+                        if step < fdstep:
+                            step = fdstep
+                    else:
                         step = fdstep
-                else:
-                    step = fdstep
 
-                if fdform == 'forward':
+                    if fdform == 'forward':
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    run_model(params, unknowns, resids)
+                        run_model(params, unknowns, resids)
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
 
-                    # delta resid is delta unknown
-                    resultvec.vec[:] -= cache1
-                    resultvec.vec[:] *= (1.0/step)
+                        # delta resid is delta unknown
+                        resultvec.vec[:] -= cache1
+                        resultvec.vec[:] *= (1.0/step)
 
-                elif fdform == 'backward':
+                    elif fdform == 'backward':
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
 
-                    run_model(params, unknowns, resids)
+                        run_model(params, unknowns, resids)
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    # delta resid is delta unknown
-                    resultvec.vec[:] -= cache1
-                    resultvec.vec[:] *= (-1.0/step)
+                        # delta resid is delta unknown
+                        resultvec.vec[:] -= cache1
+                        resultvec.vec[:] *= (-1.0/step)
 
-                elif fdform == 'central':
+                    elif fdform == 'central':
 
-                    target_input[idx] += step
+                        target_input[idx] += step
 
-                    run_model(params, unknowns, resids)
-                    cache2 = resultvec.vec.copy()
+                        run_model(params, unknowns, resids)
+                        cache2 = resultvec.vec.copy()
 
-                    target_input[idx] -= step
+                        target_input[idx] -= step
+                        resultvec.vec[:] = cache1
+
+                        target_input[idx] -= step
+
+                        run_model(params, unknowns, resids)
+
+                        # central difference formula
+                        resultvec.vec[:] -= cache2
+                        resultvec.vec[:] *= (-0.5/step)
+
+                        target_input[idx] += step
+
+                    for u_name in fd_unknowns:
+                        if qoi_indices and u_name in qoi_indices:
+                            result = resultvec.flat[u_name][qoi_indices[u_name]]
+                        else:
+                            result = resultvec.flat[u_name]
+                        jac[u_name, p_name][:, col] = result
+                        if self._num_par_fds > 1: # pragma: no cover
+                            fd_cols[(u_name, p_name, col)] = \
+                                                   jac[u_name, p_name][:, col]
+
+                    # Restore old residual
                     resultvec.vec[:] = cache1
 
-                    target_input[idx] -= step
-
-                    run_model(params, unknowns, resids)
-
-                    # central difference formula
-                    resultvec.vec[:] -= cache2
-                    resultvec.vec[:] *= (-0.5/step)
-
-                    target_input[idx] += step
-
-
-                for u_name in fd_unknowns:
-                    if qoi_indices is not None and u_name in qoi_indices:
-                        u_idxs = qoi_indices[u_name]
-                        result = resultvec.flat[u_name][u_idxs]
-                    else:
-                        result = resultvec.flat[u_name]
-                    jac[u_name, p_name][:, j] = result
-
-
-                # Restore old residual
-                resultvec.vec[:] = cache1
-
-        if MPI and gather_jac: # pragma: no cover
+        if self._num_par_fds > 1:
+            if trace:  # pragma: no cover
+                debug("%s: allgathering parallel FD columns" % self.pathname)
+            jacinfos = self._full_comm.allgather(fd_cols)
+            for rank, jacinfo in enumerate(jacinfos):
+                if rank == self._full_comm.rank:
+                    continue
+                for key, val in iteritems(jacinfo):
+                    if key not in fd_cols:
+                        uname, pname, col = key
+                        jac[uname, pname][:, col] = val
+                        fd_cols[(uname, pname, col)] = val # to avoid setting dups
+        elif MPI and gather_jac:
             jac = self.get_combined_jac(jac)
 
         return jac
@@ -617,9 +652,18 @@ class System(object):
             #force_fd should compute semi-totals across all children,
             #    unless total_derivs=False is specifically requested
             if self._local_subsystems and total_derivs is None:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=True)
+                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
+                                                        total_derivs=True)
             else:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
+
+                # Component can request to use complex step.
+                if self.fd_options['form'] == 'complex_step':
+                    fd_func = self.complex_step_jacobian
+                else:
+                    fd_func = self.fd_jacobian
+                self._jacobian_cache = fd_func(params, unknowns, resids,
+                                               total_derivs=False)
+
         else:
             try:
                 linearize = self.jacobian
@@ -784,8 +828,9 @@ class System(object):
 
         comm = self.comm
         iproc = comm.rank
-        nproc = comm.size
 
+        # TODO: calculate dist_need_tups and dist_has_tups once
+        #       and cache it instead of doing every time.
         need_tups = []
         has_tups = []
 
@@ -796,6 +841,8 @@ class System(object):
             else:
                 has_tups.append((output, param))
 
+        if trace:  # pragma: no cover
+            debug("%s: allgather of needed tups" % self.pathname)
         dist_need_tups = comm.allgather(need_tups)
 
         needed_set = set()
@@ -805,6 +852,8 @@ class System(object):
         if not needed_set:
             return J  # nobody needs any J entries
 
+        if trace:  # pragma: no cover
+            debug("%s: allgather of has_tups" % self.pathname)
         dist_has_tups = comm.allgather(has_tups)
 
         found = set()
@@ -816,6 +865,8 @@ class System(object):
                     if rank == iproc:
                         owned_vals.append((tup, J[tup]))
 
+        if trace:  # pragma: no cover
+            debug("%s: allgather of owned vals" % self.pathname)
         dist_vals = comm.allgather(owned_vals)
 
         for rank, vals in enumerate(dist_vals):
@@ -887,9 +938,11 @@ class System(object):
                     docstring += name + "']"
                     docstring += " :  " + type(val).__name__
                     docstring += "("
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += str(val)
-                    if type(val).__name__ == 'str': docstring += "'"
+                    if type(val).__name__ == 'str':
+                        docstring += "'"
                     docstring += ")\n"
 
                     desc = value._options[name]['desc']
