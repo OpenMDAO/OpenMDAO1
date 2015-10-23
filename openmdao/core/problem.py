@@ -206,33 +206,9 @@ class Problem(System):
         # the 'unknown' sources for that target to all other inputs that are
         # connected to it
         to_add = []
-        checked = {}
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
                 connected_inputs = nx.node_connected_component(input_graph, tgt)
-                # figure out if any connected inputs have different initial values or
-                # different units
-                if tgt not in checked:
-                    for inp in connected_inputs:
-                        checked[inp] = ([], [])
-                    tgt_idx = connected_inputs.index(tgt)
-                    units = [params_dict[n].get('units') for n in connected_inputs]
-                    vals = [params_dict[n]['val'] for n in connected_inputs]
-                    diff_units = [(connected_inputs[i],u) for i,u in
-                                      enumerate(units) if u!=units[tgt_idx]]
-
-                    if isinstance(vals[0], np.ndarray):
-                        diff_vals = [(connected_inputs[i],v) for i,v in
-                                       enumerate(vals) if not
-                                           (isinstance(v, np.ndarray) and
-                                              v.shape==vals[tgt_idx].shape and (v==vals[tgt_idx]).all())]
-                    else:
-                        diff_vals = [(connected_inputs[i],v) for i,v in
-                                         enumerate(vals) if v!=vals[tgt_idx]]
-                    if diff_units:
-                        checked[tgt][0].extend(diff_units)
-                    if diff_vals:
-                        checked[tgt][1].extend(diff_vals)
 
                 for src, idxs in srcs:
                     if src in unknowns_dict:
@@ -270,20 +246,6 @@ class Problem(System):
 
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs[0]
-
-            if tgt in input_graph: # target has an input-input connection
-                diff_units, diff_vals = checked[tgt]
-
-                # if tgt has no unknown source, units MUST match
-                if diff_units and not unknown_srcs:
-                    raise RuntimeError("The following connected inputs have no "
-                               "source in unknowns but their units differ: %s" %
-                               sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                    diff_units))
-                if diff_vals:
-                    msg = ("The following connected inputs have different "
-                                  "initial values: %s" % sorted([(tgt,params_dict[tgt]['val'])]+diff_vals))
-                    warnings.warn(msg)
 
         connections = newconns
 

@@ -23,42 +23,6 @@ class TestConnections(unittest.TestCase):
         self.C3 = self.G4.add("C3", ExecComp('y=x*2.0'))
         self.C4 = self.G4.add("C4", ExecComp('y=x*2.0'))
 
-    def test_diff_conn_input_vals(self):
-        # set different initial values
-        self.C1._params_dict['x']['val'] = 7.
-        self.C3._params_dict['x']['val'] = 5.
-
-        # connect two inputs
-        self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
-
-        with warnings.catch_warnings(record=True) as w:
-            # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
-
-            # Trigger a warning.
-            self.p.setup(check=False)
-
-            self.assertEqual(len(w), 1)
-            self.assertEqual(str(w[0].message),
-                    "The following connected inputs have different initial values: "
-                    "[('G1.G2.C1.x', 7.0), ('G3.G4.C3.x', 5.0)]")
-
-    def test_diff_conn_input_units(self):
-        # set different but compatible units
-        self.C1._params_dict['x']['units'] = 'ft'
-        self.C3._params_dict['x']['units'] = 'in'
-
-        # connect two inputs
-        self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
-
-        try:
-            self.p.setup()
-        except Exception as err:
-            self.assertEqual(str(err),
-                             "The following connected inputs have no source in "
-                             "unknowns but their units differ: "
-                             "[('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]")
-
     def test_no_conns(self):
         self.p.setup(check=False)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))
