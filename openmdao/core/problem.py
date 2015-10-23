@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 import json
+import warnings
 from itertools import chain
 from six import iteritems, iterkeys, itervalues
 from six.moves import cStringIO
@@ -205,9 +206,34 @@ class Problem(System):
         # the 'unknown' sources for that target to all other inputs that are
         # connected to it
         to_add = []
+        checked = {}
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
                 connected_inputs = nx.node_connected_component(input_graph, tgt)
+                # figure out if any connected inputs have different initial values or
+                # different units
+                if tgt not in checked:
+                    for inp in connected_inputs:
+                        checked[inp] = ([], [])
+                    tgt_idx = connected_inputs.index(tgt)
+                    units = [params_dict[n].get('units') for n in connected_inputs]
+                    vals = [params_dict[n]['val'] for n in connected_inputs]
+                    diff_units = [(connected_inputs[i],u) for i,u in
+                                      enumerate(units) if u!=units[tgt_idx]]
+
+                    if isinstance(vals[0], np.ndarray):
+                        diff_vals = [(connected_inputs[i],v) for i,v in
+                                       enumerate(vals) if not
+                                           (isinstance(v, np.ndarray) and
+                                              v.shape==vals[tgt_idx].shape and (v==vals[tgt_idx]).all())]
+                    else:
+                        diff_vals = [(connected_inputs[i],v) for i,v in
+                                         enumerate(vals) if v!=vals[tgt_idx]]
+                    if diff_units:
+                        checked[tgt][0].extend(diff_units)
+                    if diff_vals:
+                        checked[tgt][1].extend(diff_vals)
+
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
@@ -215,15 +241,13 @@ class Problem(System):
                             if compute_indices:
                                 # follow path to new target, apply src_idxs along the way
                                 path = nx.shortest_path(input_graph, tgt, new_tgt)
-                                x = 0
-                                while x < len(path)-1:
-                                    next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                for i, node in enumerate(path[:-1]):
+                                    next_idxs = input_graph[node][path[i+1]]['idxs']
                                     if next_idxs is not None:
                                         if new_idxs is not None:
                                             new_idxs = np.array(new_idxs)[next_idxs]
                                         else:
                                             new_idxs = next_idxs
-                                    x = x + 1
                             to_add.append((new_tgt, (src, new_idxs)))
 
         for tgt, (src, idxs) in to_add:
@@ -238,13 +262,28 @@ class Problem(System):
         # connection to each param
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = list(src for src in srcs if src[0] in unknowns_dict)
+            unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
             if len(unknown_srcs) > 1:
                 src_names = (name for name, idx in unknown_srcs)
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(src_names)))
+
             if unknown_srcs:
-                newconns[tgt] = unknown_srcs.pop()
+                newconns[tgt] = unknown_srcs[0]
+
+            if tgt in input_graph: # target has an input-input connection
+                diff_units, diff_vals = checked[tgt]
+
+                # if tgt has no unknown source, units MUST match
+                if diff_units and not unknown_srcs:
+                    raise RuntimeError("The following connected inputs have no "
+                               "source in unknowns but their units differ: %s" %
+                               sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                    diff_units))
+                if diff_vals:
+                    msg = ("The following connected inputs have different "
+                                  "initial values: %s" % sorted([(tgt,params_dict[tgt]['val'])]+diff_vals))
+                    warnings.warn(msg)
 
         connections = newconns
 
@@ -431,7 +470,7 @@ class Problem(System):
 
         # Prepare Driver
         self.driver._setup(self.root)
-        
+
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -440,7 +479,7 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
-        
+
         # Prep for case recording
         self._start_recorders()
 
@@ -1471,7 +1510,7 @@ class Problem(System):
 
         self.driver.recorders.startup(self.root)
         self.driver.recorders.record_metadata(self.root, exclude=exclude)
-        
+
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
