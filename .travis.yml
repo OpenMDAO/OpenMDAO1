@@ -26,6 +26,10 @@ matrix:
 
 addons:
   apt:
+  apt:
+    sources:
+    - deadsnakes
+    - ubuntu-toolchain-r-test
     packages:
     - gfortran-4.9
     - openmpi
