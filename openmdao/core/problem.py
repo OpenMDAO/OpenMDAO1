@@ -201,37 +201,26 @@ class Problem(System):
                     if p != n:
                         input_graph.add_edge(p, n, idxs=None)
 
+        # store all of the connected sets of inputs for later use
+        self._input_inputs = {}
+        for tgt in connections:
+            if tgt in input_graph and tgt not in self._input_inputs:
+                connected = nx.node_connected_component(input_graph, tgt)
+                for c in connected:
+                    self._input_inputs[c] = connected
+
+        # initialize this here since we may have unit diffs for input-input
+        # connections that get filtered out of the connection dict by the
+        # time setup_units is called.
+        self._unit_diffs = {}
+
         # for all connections where the target is an input, we want to connect
         # the 'unknown' sources for that target to all other inputs that are
         # connected to it
         to_add = []
-        checked = {}
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
-                connected_inputs = nx.node_connected_component(input_graph, tgt)
-                # figure out if any connected inputs have different initial values or
-                # different units
-                if tgt not in checked:
-                    for inp in connected_inputs:
-                        checked[inp] = ([], [])
-                    tgt_idx = connected_inputs.index(tgt)
-                    units = [params_dict[n].get('units') for n in connected_inputs]
-                    vals = [params_dict[n]['val'] for n in connected_inputs]
-                    diff_units = [(connected_inputs[i],u) for i,u in
-                                      enumerate(units) if u!=units[tgt_idx]]
-
-                    if isinstance(vals[0], np.ndarray):
-                        diff_vals = [(connected_inputs[i],v) for i,v in
-                                       enumerate(vals) if not
-                                           (isinstance(v, np.ndarray) and
-                                              v.shape==vals[tgt_idx].shape and (v==vals[tgt_idx]).all())]
-                    else:
-                        diff_vals = [(connected_inputs[i],v) for i,v in
-                                         enumerate(vals) if v!=vals[tgt_idx]]
-                    if diff_units:
-                        checked[tgt][0].extend(diff_units)
-                    if diff_vals:
-                        checked[tgt][1].extend(diff_vals)
+                connected_inputs = self._input_inputs[tgt]
 
                 for src, idxs in srcs:
                     if src in unknowns_dict:
@@ -270,20 +259,6 @@ class Problem(System):
             if unknown_srcs:
                 newconns[tgt] = unknown_srcs[0]
 
-            if tgt in input_graph: # target has an input-input connection
-                diff_units, diff_vals = checked[tgt]
-
-                # if tgt has no unknown source, units MUST match
-                if diff_units and not unknown_srcs:
-                    raise RuntimeError("The following connected inputs have no "
-                               "source in unknowns but their units differ: %s" %
-                               sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                    diff_units))
-                if diff_vals:
-                    msg = ("The following connected inputs have different "
-                                  "initial values: %s" % sorted([(tgt,params_dict[tgt]['val'])]+diff_vals))
-                    warnings.warn(msg)
-
         connections = newconns
 
         self._dangling = {}
@@ -297,6 +272,76 @@ class Problem(System):
                     self._dangling[meta['promoted_name']] = set([meta['pathname']])
 
         return connections
+
+    def _check_input_diffs(self, connections, params_dict, unknowns_dict):
+        """For all sets of connected inputs, find any differences in units
+        or initial value.
+        """
+        input_diffs = {}
+
+        for tgt, connected_inputs in iteritems(self._input_inputs):
+
+            # figure out if any connected inputs have different initial
+            # values or different units
+            if tgt not in input_diffs:
+                for inp in connected_inputs:
+                    input_diffs[inp] = ([], [])
+
+                tgt_idx = connected_inputs.index(tgt)
+                units = [params_dict[n].get('units') for n in connected_inputs]
+                vals = [params_dict[n]['val'] for n in connected_inputs]
+
+                diff_units = []
+
+                for i, u in enumerate(units):
+                    if i != tgt_idx and u != units[tgt_idx]:
+                        if units[tgt_idx] is None:
+                            sname, s = connected_inputs[i], u
+                            tname, t = connected_inputs[tgt_idx], units[tgt_idx]
+                        else:
+                            sname, s = connected_inputs[tgt_idx], units[tgt_idx]
+                            tname, t = connected_inputs[i], u
+
+                        # report these in check_setup later
+                        self._unit_diffs[(sname, tname)] = (s, t)
+                        diff_units.append((connected_inputs[i], u))
+
+                if isinstance(vals[tgt_idx], np.ndarray):
+                    diff_vals = [(connected_inputs[i],v) for i,v in
+                                   enumerate(vals) if not
+                                       (isinstance(v, np.ndarray) and
+                                          v.shape==vals[tgt_idx].shape and
+                                          (v==vals[tgt_idx]).all())]
+                else:
+                    diff_vals = [(connected_inputs[i],v) for i,v in
+                                     enumerate(vals) if v!=vals[tgt_idx]]
+
+                # if tgt has no unknown source, units MUST match, unless
+                # one of them is None. At this point, connections contains
+                # only unknown to input connections, so if the target is
+                # in connections, it has an unknown source.
+                if diff_units and tgt not in connections:
+                    filt = set([u for n,u in diff_units])
+                    if None in filt:
+                        filt.remove(None)
+                    if len(filt) > 1:
+                        raise RuntimeError("The following sourceless "
+                            "connected inputs have different units: %s" %
+                            sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                diff_units))
+                if diff_vals:
+                    # The following is True if one of the comps is first to
+                    # run after breaking of cycles.
+                    is_first = False
+                    for n, val in diff_vals:
+
+                    msg = ("The following sourceless connected inputs have "
+                           "different initial values: %s. Setting all "
+                           % (sorted([(tgt,params_dict[tgt]['val'])]+diff_vals)))
+                    warnings.warn(msg)
+                    # set all connected input values to be consistent
+
+        return input_diffs
 
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -463,13 +508,15 @@ class Problem(System):
                 if not s._order_set:
                     s.set_order(s.list_auto_order())
 
+        # report any differences in units or initial values for
+        # sourceless connected inputs
+        self._check_input_diffs(connections, params_dict, unknowns_dict)
+
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
-
         # Prepare Driver
         self.driver._setup(self.root)
-
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -623,7 +670,7 @@ class Problem(System):
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
-            graph = grp._break_cycles(grp.list_order(), graph)
+            graph, _ = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
             out_of_order = {}
@@ -1618,7 +1665,6 @@ class Problem(System):
             A dict of unknowns metadata for the whole `Problem`.
         """
 
-        self._unit_diffs = {}
         for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]

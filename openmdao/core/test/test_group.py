@@ -471,7 +471,7 @@ class TestGroup(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             prob.root.set_order(order2)
 
-        msg = "Duplicate name found in order list: ['G3']"
+        msg = "Duplicate name(s) found in order list: ['G3']"
         self.assertEqual(str(cm.exception), msg)
 
         # Don't let user call add.

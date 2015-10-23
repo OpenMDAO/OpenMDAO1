@@ -40,8 +40,8 @@ class TestConnections(unittest.TestCase):
 
             self.assertEqual(len(w), 1)
             self.assertEqual(str(w[0].message),
-                    "The following connected inputs have different initial values: "
-                    "[('G1.G2.C1.x', 7.0), ('G3.G4.C3.x', 5.0)]")
+                    "The following sourceless connected inputs have different initial values: "
+                    "[('G1.G2.C1.x', 7.0), ('G3.G4.C3.x', 5.0)].")
 
     def test_diff_conn_input_units(self):
         # set different but compatible units
@@ -52,7 +52,7 @@ class TestConnections(unittest.TestCase):
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
 
         try:
-            self.p.setup()
+            self.p.setup(check=False)
         except Exception as err:
             self.assertEqual(str(err),
                              "The following connected inputs have no source in "
