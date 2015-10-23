@@ -3,6 +3,8 @@
 import sys
 from fnmatch import fnmatch
 from itertools import chain
+import warnings
+
 from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
@@ -619,7 +621,18 @@ class System(object):
             else:
                 self._jacobian_cache = self.fd_jacobian(params, unknowns, resids, total_derivs=False)
         else:
-            self._jacobian_cache = self.linearize(params, unknowns, resids)
+            try:
+                linearize = self.jacobian
+            except AttributeError:
+                linearize = self.linearize
+            else:
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("%s: The 'jacobian' method is deprecated. Please "
+                              "rename 'jacobian' to 'linearize'." %
+                              self.pathname, DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+
+            self._jacobian_cache = linearize(params, unknowns, resids)
 
         if self._jacobian_cache is not None:
             jc = self._jacobian_cache
