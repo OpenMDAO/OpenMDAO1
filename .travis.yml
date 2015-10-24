@@ -19,10 +19,10 @@ env:
 - HFF5= PY=2.7 MPI=
 - HFF5= PY=3.4 MPI=
 
-# matrix:
-#   exclude:
-#   - os: osx
-#     env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+matrix:
+  exclude:
+  - os: osx
+    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
 
 addons:
   apt:
