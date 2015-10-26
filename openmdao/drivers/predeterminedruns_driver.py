@@ -7,18 +7,16 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 from six import iteritems
 
 class PredeterminedRunsDriver(Driver):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         if type(self) == PredeterminedRunsDriver:
             raise Exception('PredeterminedRunsDriver is an abstract class')
-        super(PredeterminedRunsDriver, self).__init__(*args, **kwargs)
-        self.num_steps = 5 # TODO get this from somewhere
+        super(PredeterminedRunsDriver, self).__init__()
 
     def run(self, problem):
 
-        # Let's iterate and run
         run_list = self._build_runlist()
 
-        # Do the runs
+        # For each runlist entry, run the system and record the results
         for run in run_list:
             for dv_name, dv_val in iteritems(run):
                 self.set_desvar(dv_name, dv_val)
