@@ -214,8 +214,8 @@ class Problem(System):
         # time setup_units is called.
         self._unit_diffs = {}
 
-        # for all connections where the target is an input, we want to connect
-        # the 'unknown' sources for that target to all other inputs that are
+        # for all connections where the source is an input, we want to connect
+        # the 'unknown' source for that target to all other inputs that are
         # connected to it
         to_add = []
         for tgt, srcs in iteritems(connections):
@@ -324,24 +324,41 @@ class Problem(System):
                     filt = set([u for n,u in diff_units])
                     if None in filt:
                         filt.remove(None)
-                    if len(filt) > 1:
+                    if filt:
                         raise RuntimeError("The following sourceless "
                             "connected inputs have different units: %s" %
                             sorted([(tgt,params_dict[tgt].get('units'))]+
                                                                 diff_units))
                 if diff_vals:
-                    # The following is True if one of the comps is first to
-                    # run after breaking of cycles.
-                    is_first = False
-                    for n, val in diff_vals:
-
-                    msg = ("The following sourceless connected inputs have "
-                           "different initial values: %s. Setting all "
-                           % (sorted([(tgt,params_dict[tgt]['val'])]+diff_vals)))
-                    warnings.warn(msg)
-                    # set all connected input values to be consistent
+                    if tgt not in connections:
+                        msg = ("The following sourceless connected inputs have "
+                               "different initial values: "
+                               "%s.  Connect one of them to the output of "
+                               "an IndepVarComp to ensure that they have the "
+                               "same initial value." %
+                               (sorted([(tgt,params_dict[tgt]['val'])]+
+                                                 diff_vals)))
+                        raise RuntimeError(msg)
 
         return input_diffs
+
+    def _get_ubc_vars(self, connections):
+        """Return a list of any connected inputs that are used before they
+        are set by their connected unknowns.
+        """
+        # this is the order that each component would run in if executed
+        # a single time from the root system.
+        full_order = {s.pathname : i for i,s in
+                     enumerate(self.root.subsystems(recurse=True))}
+
+        ubcs = []
+        for tgt, srcs in iteritems(connections):
+            tsys = tgt.rsplit('.', 1)[0]
+            ssys = srcs[0].rsplit('.', 1)[0]
+            if full_order[ssys] > full_order[tsys]:
+                ubcs.append(tgt)
+
+        return ubcs
 
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -506,7 +523,7 @@ class Problem(System):
             if isinstance(s, Group):
                 # set auto order if order not already set
                 if not s._order_set:
-                    s.set_order(s.list_auto_order())
+                    s.set_order(s.list_auto_order()[0])
 
         # report any differences in units or initial values for
         # sourceless connected inputs
@@ -692,7 +709,7 @@ class Problem(System):
                 for n, subs in iteritems(out_of_order):
                     print("   %s should run after %s" % (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(iteritems(out_of_order))))
-                print("Auto ordering would be: %s" % grp.list_auto_order(),
+                print("Auto ordering would be: %s" % grp.list_auto_order()[0],
                       file=out_stream)
 
         return (cycles, sorted(ooo))

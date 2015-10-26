@@ -745,7 +745,7 @@ class TestCheckSetup(unittest.TestCase):
 
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        auto = G2.list_auto_order()
+        auto, _ = G2.list_auto_order()
         self.assertTrue(auto==['C1', 'C3', 'C2'] or
                         auto==['C3', 'C2', 'C1'] or
                         auto==['C2', 'C1', 'C3'])

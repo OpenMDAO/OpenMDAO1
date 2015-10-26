@@ -17,6 +17,7 @@ from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.string_util import name_relative_to
+from openmdao.util.graph import collapse_nodes
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -830,7 +831,6 @@ class Group(System):
         graph, broken_edges = self._break_cycles(self.list_order(),
                                                  self._get_sys_graph())
         order = nx.topological_sort(graph)
-                                                       )
         sz = len(self.pathname)+1 if self.pathname else 0
         return [n[sz:] for n in order], broken_edges
 
@@ -857,11 +857,8 @@ class Group(System):
                 renames[node] = newnode
 
         # get the graph of direct children of current group
-        nx.relabel_nodes(graph, renames, copy=False)
+        collapse_nodes(graph, renames, copy=False)
 
-        # remove self loops created by renaming
-        graph.remove_edges_from([(u, v) for u, v in graph.edges_iter()
-                                 if u == v])
         return graph
 
     def _break_cycles(self, order, graph):
@@ -903,6 +900,7 @@ class Group(System):
 
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
+
         return graph, broken_edges
 
     def _all_params(self, voi=None):

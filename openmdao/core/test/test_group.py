@@ -505,7 +505,8 @@ class TestGroup(unittest.TestCase):
 
         p.setup(check=False)
 
-        self.assertEqual(p.root.list_auto_order(), ['P1','C1','C2','C4','C5','C6','C3'])
+        self.assertEqual(p.root.list_auto_order()[0],
+                         ['P1','C1','C2','C4','C5','C6','C3'])
 
     def test_auto_order2(self):
         # this tests the auto ordering when we have a cycle that is the full graph.
@@ -521,7 +522,7 @@ class TestGroup(unittest.TestCase):
 
         p.setup(check=False)
 
-        self.assertEqual(p.root.list_auto_order(), ['C1', 'C3', 'C2'])
+        self.assertEqual(p.root.list_auto_order()[0], ['C1', 'C3', 'C2'])
 
 
 if __name__ == "__main__":
