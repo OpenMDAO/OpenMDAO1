@@ -525,6 +525,9 @@ class VecWrapper(object):
         val = meta['val']
         flatfunc = None
 
+        if meta.get('remote'):
+            return _remote_access_error, _remote_access_error
+
         if meta.get('pass_by_obj'):
             return _get_pbo, flatfunc
 
@@ -566,7 +569,9 @@ class VecWrapper(object):
 
         meta = self._vardict[name]
 
-        if 'pass_by_obj' in meta and meta['pass_by_obj']:
+        if meta.get('remote'):
+            return _remote_access_error
+        elif 'pass_by_obj' in meta and meta['pass_by_obj']:
             return _set_pbo
         else:
             if meta['shape'] == 1:
@@ -1006,3 +1011,7 @@ def _set_scalar(meta, value):
 
 def _set_pbo(meta, value):
     meta['val'].val = value
+
+def _remote_access_error(meta, value=None):
+    msg = "Cannot access remote Variable '{name}' in this process."
+    raise RuntimeError(msg.format(name=meta['promoted_name']))

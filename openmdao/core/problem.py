@@ -90,7 +90,7 @@ class Problem(System):
         else:
             self._impl = impl
 
-        self._comm = comm
+        self.comm = comm
 
         if driver is None:
             self.driver = Driver()
@@ -536,7 +536,7 @@ class Problem(System):
         if under_mpirun():
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
-            if self._comm.rank == 0:
+            if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if isinstance(grp, ParallelGroup) or isinstance(grp, ParallelFDGroup):
                         break
@@ -546,11 +546,11 @@ class Problem(System):
                           file=out_stream)
 
                 mincpu, maxcpu = self.root.get_req_procs()
-                if maxcpu is not None and self._comm.size > maxcpu:
+                if maxcpu is not None and self.comm.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
-                          (self._comm.size, maxcpu))
+                          (self.comm.size, maxcpu))
 
-                return (self._comm.size, maxcpu, parr)
+                return (self.comm.size, maxcpu, parr)
         # or any ParalleGroups found when not running under MPI
         else:
             pargrps = []
@@ -1546,26 +1546,26 @@ class Problem(System):
         return self.root._relevance.json_dependencies()
 
     def _setup_communicators(self):
-        if self._comm is None:
-            self._comm = self._impl.world_comm()
+        if self.comm is None:
+            self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
         if MPI:
-            if not (maxproc is None or maxproc >= self._comm.size):
+            if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %d and %d." %
-                                   (self._comm.size, minproc, maxproc))
-            elif self._comm.size < minproc:
+                                   (self.comm.size, minproc, maxproc))
+            elif self.comm.size < minproc:
                 if maxproc is None:
                     maxproc = '(any)'
                 raise RuntimeError("This problem was given %d MPI processes, "
                                    "but it requires between %s and %s." %
-                                   (self._comm.size, minproc, maxproc))
+                                   (self.comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(self._comm)
+        self.root._setup_communicators(self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
