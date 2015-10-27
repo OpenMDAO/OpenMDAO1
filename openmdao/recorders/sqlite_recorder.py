@@ -11,7 +11,7 @@ class SqliteRecorder(BaseRecorder):
         super(SqliteRecorder, self).__init__()
         sqlite_dict_args.setdefault('autocommit', True)
         sqlite_dict_args.setdefault('tablename', 'openmdao')
-        self.out = SqliteDict(filename=out, **sqlite_dict_args)
+        self.out = SqliteDict(filename=out, flag='n', **sqlite_dict_args)
 
     def record_metadata(self, group):
         """Stores the metadata of the given group in a sqlite file using
