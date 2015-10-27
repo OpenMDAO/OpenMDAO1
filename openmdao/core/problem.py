@@ -321,17 +321,17 @@ class Problem(System):
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if diff_units and tgt not in connections:
-                    filt = set([u for n,u in diff_units])
-                    if None in filt:
-                        filt.remove(None)
-                    if filt:
-                        raise RuntimeError("The following sourceless "
-                            "connected inputs have different units: %s" %
-                            sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                diff_units))
-                if diff_vals:
-                    if tgt not in connections:
+                if tgt not in connections:
+                    if diff_units:
+                        filt = set([u for n,u in diff_units])
+                        if None in filt:
+                            filt.remove(None)
+                        if filt:
+                            raise RuntimeError("The following sourceless "
+                                "connected inputs have different units: %s" %
+                                sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                    diff_units))
+                    if diff_vals:
                         msg = ("The following sourceless connected inputs have "
                                "different initial values: "
                                "%s.  Connect one of them to the output of "
