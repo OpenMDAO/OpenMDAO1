@@ -52,6 +52,8 @@ class BaseRecorder(object):
         unknowns = list(filter(self._check_path, group.unknowns))
         resids = list(filter(self._check_path, group.resids))
 
+        print "in startup"
+
         self._filtered[group.pathname] = (params, unknowns, resids)
 
     def _check_path(self, path):
