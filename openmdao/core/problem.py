@@ -153,7 +153,12 @@ class Problem(System):
                     grp = self.root._subsystem(parts[0])
                     grp.params[parts[1]] = val
         else:
-            raise KeyError("Variable '%s' not found." % name)
+            try:
+                parts = name.rsplit('.', 1)
+                grp = self.root._subsystem(parts[0])
+                grp.params[parts[1]] = val
+            except:
+                raise KeyError("Variable '%s' not found." % name)
 
     def _setup_connections(self, params_dict, unknowns_dict, compute_indices=True):
         """Generate a mapping of absolute param pathname to the pathname
@@ -681,9 +686,12 @@ class Problem(System):
                     relstrong.append([])
                     for s in slist:
                         relstrong[-1].append(name_relative_to(grp.pathname, s))
-                        relstrong[-1] = sorted(relstrong[-1])
+                        # sort the cycle systems in execution order
+                        subs = [s for s in grp._subsystems]
+                        tups = sorted([(subs.index(s),s) for s in relstrong[-1]])
+                        relstrong[-1] = [t[1] for t in tups]
                 print("Group '%s' has the following cycles: %s" %
-                      (grp.pathname, relstrong), file=out_stream)
+                          (grp.pathname, relstrong), file=out_stream)
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
@@ -725,9 +733,17 @@ class Problem(System):
                     break
 
             if has_parallel and isinstance(self.root.ln_solver, ScipyGMRES):
-                print("ScipyGMRES is being used under MPI. Problems can arise "
+                print("\nScipyGMRES is being used under MPI. Problems can arise "
                       "if a variable of interest (param/objective/constraint) "
                       "does not exist in all MPI processes.", file=out_stream)
+
+    def _check_ubcs(self, out_stream=sys.stdout):
+        ubcs = self._get_ubc_vars(self.root.connections)
+        if ubcs:
+            print("\nThe following params are connected to unknowns that are "
+                  "updated out of order, so their initial values will contain "
+                  "uninitialized unknown values: %s" % ubcs, file=out_stream)
+        return ubcs
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
@@ -750,6 +766,7 @@ class Problem(System):
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
+        results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
 
         # TODO: Incomplete optimization driver configuration

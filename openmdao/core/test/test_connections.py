@@ -5,6 +5,7 @@ from six.moves import cStringIO
 import warnings
 
 from openmdao.api import Problem, Group, IndepVarComp, ExecComp
+from openmdao.test.util import assert_rel_error
 
 
 class TestConnections(unittest.TestCase):
@@ -242,7 +243,7 @@ class TestUBCS(unittest.TestCase):
         root = p.root
 
         self.P1 = root.add("P1", IndepVarComp('x', 1.0))
-        self.C1 = root.add("C1", ExecComp('y=x1*2.0+x2*3.0'))
+        self.C1 = root.add("C1", ExecComp('y=x1*2.0+x2*3.0', x2=1.0))
         self.C2 = root.add("C2", ExecComp('y=x1*2.0+x2'))
         self.C3 = root.add("C3", ExecComp('y=x*2.0'))
         self.C4 = root.add("C4", ExecComp('y=x1*2.0 + x2*5.0'))
@@ -259,12 +260,21 @@ class TestUBCS(unittest.TestCase):
         # create a cycle
         root.connect("C4.y", "C1.x2")
 
+        # set a bogus value for C4.y
+        self.C4._unknowns_dict['y']['val'] = -999.
+
         p.setup(check=False)
 
         ubcs = p._get_ubc_vars(root.connections)
 
         self.assertEqual(ubcs, ['C1.x2'])
 
+        p.run()
+
+        # TODO: for now, we've just decided to force component devs to give proper initial
+        # values for their outputs.  If later we decide to use push scatters or some other
+        # means to fix the issue, uncomment this.
+        #assert_rel_error(self, p['C1.y'], 5.0, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

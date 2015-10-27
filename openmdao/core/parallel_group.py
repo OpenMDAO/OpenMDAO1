@@ -140,7 +140,7 @@ class ParallelGroup(Group):
             max_requested = sum(max_req_procs)
             limit = min(size, max_requested)
 
-        # first, just use simple round robin assignment of requested CPUs
+        # first, just use simple round robin assignment of requested procs
         # until everybody has what they asked for or we run out
         if requested:
             while assigned < limit:
