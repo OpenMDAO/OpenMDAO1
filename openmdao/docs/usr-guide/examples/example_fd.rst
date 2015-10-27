@@ -53,7 +53,7 @@ so that we can watch what it does.
                 unknowns['y'] = 3.0*params['x']
                 print('Execute', self.name)
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives."""
 
                 J = {}
@@ -129,7 +129,7 @@ We get output that looks like this:
    [[ 81.]]
 
 
-The output shows that comp2 and comp4 aren't using their `jacobian` function,
+The output shows that comp2 and comp4 aren't using their `linearize` function,
 but instead are executing twice, as would be expected when using central
 difference.
 
@@ -245,7 +245,7 @@ There is no change to the execution code. The result looks like this:
    Calculate Derivatives: comp4
    [[ 81.]]
 
-Here we see that, instead of calling 'jacobian', comp2 and comp3 execute
+Here we see that, instead of calling 'linearize', comp2 and comp3 execute
 during finite differnce of the group that owns them. This is as we expect.
 
 Finite Difference on an Entire Model
@@ -306,7 +306,7 @@ Nothing else changes in the original model. When we run it, we get:
    Execute comp4
    [[ 81.00000002]]
 
-So here, `jacobian` is never called in any component as the finite difference
+So here, `linearize` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
 
 

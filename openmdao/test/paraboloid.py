@@ -25,7 +25,7 @@ class Paraboloid(Component):
 
         unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Jacobian for our paraboloid."""
 
         x = params['x']

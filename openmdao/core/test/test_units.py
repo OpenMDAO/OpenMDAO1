@@ -21,7 +21,7 @@ class SrcComp(Component):
         """ No action."""
         unknowns['x2'] = params['x1']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x2', 'x1')] = np.array([1.0])
@@ -40,7 +40,7 @@ class TgtCompF(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
@@ -64,7 +64,7 @@ class TgtCompFMulti(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('_x3', 'x2')] = np.array([1.0])
@@ -91,7 +91,7 @@ class TgtCompC(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
@@ -110,7 +110,7 @@ class TgtCompK(Component):
         """ No action."""
         unknowns['x3'] = params['x2']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Derivative is 1.0"""
         J = {}
         J[('x3', 'x2')] = np.array([1.0])
@@ -459,7 +459,7 @@ class TestUnitConversion(unittest.TestCase):
                     w_B[1, i] = np.dot(Odot_BI[0, :, i], O_BI[2, :, i])
                     w_B[2, i] = np.dot(Odot_BI[1, :, i], O_BI[0, :, i])
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """ Calculate and save derivatives. (i.e., Jacobian) """
 
                 O_BI = params['O_BI']

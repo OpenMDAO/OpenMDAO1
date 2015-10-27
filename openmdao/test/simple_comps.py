@@ -79,7 +79,7 @@ class SimpleArrayComp(Component):
         unknowns['y'][1] = 5.0*params['x'][0] - 3.0*params['x'][1]
         # print(self.name, "ran", params['x'], unknowns['y'])
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         dy1_dx1 = 2.0
@@ -117,7 +117,7 @@ class DoubleArrayComp(Component):
         unknowns['y1'] = self.JJ[0:2, 0:2].dot(params['x1']) + self.JJ[0:2, 2:4].dot(params['x2'])
         unknowns['y2'] = self.JJ[2:4, 0:2].dot(params['x1']) + self.JJ[2:4, 2:4].dot(params['x2'])
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
 
@@ -162,7 +162,7 @@ class ArrayComp2D(Component):
 
         unknowns['y'] = y
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}
@@ -192,7 +192,7 @@ class SimpleSparseArrayComp(Component):
         unknowns['y'][2] = 5.0*params['x'][1] - 3.0*params['x'][2]
         # print(self.name, "ran", params['x'], unknowns['y'])
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         dy1_dx1 = 2.0
@@ -271,7 +271,7 @@ class SimpleImplicitComp(Component):
         # Output equations need to evaluate a residual just like an explicit comp.
         resids['y'] = x + 2.0*z - unknowns['y']
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}
@@ -497,7 +497,7 @@ class RosenSuzuki(Component):
 
         unknowns['g'] = np.array(g)
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives"""
         J = {}
 

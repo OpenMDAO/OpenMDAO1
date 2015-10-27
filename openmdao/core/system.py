@@ -4,6 +4,8 @@ import sys
 import os
 from fnmatch import fnmatch
 from itertools import chain
+import warnings
+
 from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
@@ -625,7 +627,7 @@ class System(object):
                             var not in states:
                         dunknowns.flat[var] += val
 
-    def _sys_jacobian(self, params, unknowns, resids, total_derivs=None):
+    def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
         Entry point for all callers to cause linearization
         of system and all children of system
@@ -663,7 +665,18 @@ class System(object):
                                                total_derivs=False)
 
         else:
-            self._jacobian_cache = self.jacobian(params, unknowns, resids)
+            try:
+                linearize = self.jacobian
+            except AttributeError:
+                linearize = self.linearize
+            else:
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("%s: The 'jacobian' method is deprecated. Please "
+                              "rename 'jacobian' to 'linearize'." %
+                              self.pathname, DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+
+            self._jacobian_cache = linearize(params, unknowns, resids)
 
         if self._jacobian_cache is not None:
             jc = self._jacobian_cache

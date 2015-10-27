@@ -160,7 +160,7 @@ class KrigingSurrogate(SurrogateModel):
 
         return f, rmse
 
-    def jacobian(self, x):
+    def linearize(self, x):
         """
         Calculates the jacobian of the Kriging surface at the requested point.
 
