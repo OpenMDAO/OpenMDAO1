@@ -829,6 +829,9 @@ class Group(System):
         list of str
             Names of subsystems listed in the order that they
             would be executed if a manual order was not set.
+
+        list of str
+            Edges that where removed from the graph to allow sorting.
         """
         graph, broken_edges = self._break_cycles(self.list_order(),
                                                  self._get_sys_graph())
