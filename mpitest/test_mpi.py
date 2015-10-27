@@ -53,7 +53,7 @@ class MPITests1(MPITestCase):
         if MPI:
             assert prob.comm is MPI.COMM_WORLD
         else:
-            assert instanceof(prob.comm, FakeComm)
+            assert isinstance(prob.comm, FakeComm)
 
     def test_simple(self):
         prob = Problem(Group(), impl=impl)
