@@ -154,12 +154,7 @@ class Problem(System):
                     grp = self.root._subsystem(parts[0])
                     grp.params[parts[1]] = val
         else:
-            try:
-                parts = name.rsplit('.', 1)
-                grp = self.root._subsystem(parts[0])
-                grp.params[parts[1]] = val
-            except:
-                raise KeyError("Variable '%s' not found." % name)
+            raise KeyError("Variable '%s' not found." % name)
 
     def _setup_connections(self, params_dict, unknowns_dict, compute_indices=True):
         """Generate a mapping of absolute param pathname to the pathname
