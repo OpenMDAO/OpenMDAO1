@@ -15,7 +15,7 @@ class TestGroupDerivatves(unittest.TestCase):
 
         class VerificationComp(SimpleCompDerivMatVec):
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 raise RuntimeError("Derivative functions on this comp should not run.")
 
             def apply_linear(self, params, unknowns, dparams, dunknowns,
@@ -79,7 +79,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 """ Doesn't do much.  Just multiply by 3"""
                 unknowns['y'] = 3.0*params['x']
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives."""
 
                 J = {}

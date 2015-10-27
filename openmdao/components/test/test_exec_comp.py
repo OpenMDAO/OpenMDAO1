@@ -131,7 +131,7 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, C1.unknowns['y'], 5.0, 0.00001)
 
-        J = C1.jacobian(C1.params, C1.unknowns, C1.resids)
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
 
         assert_rel_error(self, J[('y','x')], 2.0, 0.00001)
 

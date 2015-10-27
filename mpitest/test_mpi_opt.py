@@ -60,7 +60,7 @@ class Parab1D(Component):
         """ Doesn't do much. """
         unknowns['y'] = (params['x'] - self.root)**2 + 7.0
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ derivs """
         J = {}
         J['y', 'x'] = 2.0*params['x'] - 2.0*self.root

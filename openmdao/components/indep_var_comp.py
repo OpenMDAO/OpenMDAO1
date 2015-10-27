@@ -86,7 +86,7 @@ class IndepVarComp(Component):
                     if var in gs_outputs[voi]:
                         rhs_vec[voi][var] += sol_vec[voi][var]
 
-    def _sys_jacobian(self, params, unknowns, resids, force_fd=False): 
+    def _sys_linearize(self, params, unknowns, resids, force_fd=False): 
         """ No linearization needed for this one""" 
         # added to avoid the small overhead from calling the parent implementation 
         # because this class has nothing to do 

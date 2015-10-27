@@ -181,7 +181,7 @@ older versions.
 
 ::
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         J = {}
         J[('y', 'x')] = numpy.array([2.0])
         return J
@@ -300,7 +300,7 @@ And for new OpenMDAO:
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y'] = params['x'] * 2.0
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             J = {}
             J[('y', 'x')] = numpy.array([2.0])
             return J

@@ -3,13 +3,19 @@ tests. Note: these are isolated/harnessed tests, so they won't involve any of
 the derivatives system outside of Component."""
 
 import unittest
+import warnings
 
 import numpy as np
 
-from openmdao.api import Component, ExecComp
-from openmdao.test.simple_comps import SimpleArrayComp, \
+from openmdao.api import Problem, Group, Component, ExecComp, IndepVarComp
+from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp, \
                                        SimpleImplicitComp, SimpleSparseArrayComp
 
+from openmdao.test.util import assert_rel_error
+
+class MyComp(SimpleComp):
+    def jacobian(self, params, unknowns, resids):
+        return {('y','x'): np.array([[2.0]])}
 
 class TestComponentDerivatives(unittest.TestCase):
 
@@ -21,7 +27,7 @@ class TestComponentDerivatives(unittest.TestCase):
         params = {'x': 0.0}
         unknowns = {'y': 0.0}
         mycomp = ExecComp(['y=2.0*x'])
-        mycomp._jacobian_cache = mycomp.jacobian(params, unknowns, empty)
+        mycomp._jacobian_cache = mycomp.linearize(params, unknowns, empty)
 
         # Forward
 
@@ -54,7 +60,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         empty = {}
         mycomp = SimpleArrayComp()
-        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+        mycomp._jacobian_cache = mycomp.linearize(empty, empty, empty)
 
         # Forward
 
@@ -89,7 +95,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         empty = {}
         mycomp = SimpleSparseArrayComp()
-        mycomp._jacobian_cache = mycomp.jacobian(empty, empty, empty)
+        mycomp._jacobian_cache = mycomp.linearize(empty, empty, empty)
 
         # Forward
 
@@ -135,7 +141,7 @@ class TestComponentDerivatives(unittest.TestCase):
         # Run model so we can calc derivatives around the solved state
         mycomp.solve_nonlinear(params, unknowns, resids)
 
-        mycomp._jacobian_cache = mycomp.jacobian(params, unknowns, resids)
+        mycomp._jacobian_cache = mycomp.linearize(params, unknowns, resids)
         J = mycomp._jacobian_cache
 
         # Forward
@@ -179,6 +185,31 @@ class TestComponentDerivatives(unittest.TestCase):
         target = J[('y', 'z')]*dresids['y'] + J[('z', 'z')]*dresids['z']
         diff = abs(dunknowns['z'] - target).max()
         self.assertAlmostEqual(diff, 0.0, places=3)
+
+    def test_jacobian_deprecated(self):
+        p = Problem(root=Group())
+        p.root.add('P1' ,IndepVarComp('x', 1.0))
+        p.root.add('comp', MyComp())
+        p.root.connect('P1.x', 'comp.x')
+        p.setup(check=False)
+
+        indep_list = ['P1.x']
+        unknown_list = ['comp.y']
+
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            J = p.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                             "comp: The 'jacobian' method is deprecated. Please rename "
+                             "'jacobian' to 'linearize'.")
+
+        assert_rel_error(self, J['comp.y']['P1.x'][0][0], 2.0, 1e-6)
+        self.assertEqual(J['comp.y']['P1.x'].size, 1)
 
 if __name__ == "__main__":
     unittest.main()

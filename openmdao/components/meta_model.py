@@ -223,7 +223,7 @@ class MetaModel(Component):
                 idx += 1
         return inputs
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """
         Returns the Jacobian as a dictionary whose keys are tuples of the form
          ('unknown', 'param') and whose values are ndarrays.
@@ -251,7 +251,7 @@ class MetaModel(Component):
 
         for uname, _ in self._surrogate_output_names:
             surrogate = self._unknowns_dict[uname].get('surrogate')
-            sjac = surrogate.jacobian(inputs)
+            sjac = surrogate.linearize(inputs)
 
             idx = 0
             for pname, sz in self._surrogate_param_names:

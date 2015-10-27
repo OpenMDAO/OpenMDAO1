@@ -88,7 +88,7 @@ class ResponseSurface(SurrogateModel):
         # Predict new_y using X and betas
         return X.dot(self.betas)
 
-    def jacobian(self, x):
+    def linearize(self, x):
         """
         Calculates the jacobian of the Kriging surface at the requested point.
 

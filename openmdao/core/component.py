@@ -453,7 +453,7 @@ class Component(System):
         msg = "Class '%s' does not implement 'solve_nonlinear'"
         raise NotImplementedError(msg  % self.__class__.__name__)
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """
         Returns Jacobian. Returns None unless component overides this method
         and returns something. J should be a dictionary whose keys are tuples
@@ -738,8 +738,7 @@ class Component(System):
                 stepvec.step_complex(idx, fdstep)
                 self.apply_nonlinear(csparams, csunknowns, csresids)
 
-                if p_name in states:
-                    csunknowns.step_complex(idx, -fdstep)
+                stepvec.step_complex(idx, -fdstep)
 
                 for u_name in fd_unknowns:
                     result = resultvec.flat(u_name)

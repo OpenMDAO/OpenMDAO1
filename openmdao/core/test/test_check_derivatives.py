@@ -135,7 +135,7 @@ class TestProblemCheckPartials(unittest.TestCase):
     def test_bad_size(self):
 
         class BadComp(SimpleArrayComp):
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives"""
                 J = {}
                 J[('y', 'x')] = np.zeros((3, 3))
@@ -183,7 +183,7 @@ class TestProblemCheckPartials(unittest.TestCase):
                 """ Doesn't do much. """
                 unknowns['y'] = 3.0*params['x1'] + 4.0*params['x2']
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Intentionally left out x2 derivative."""
 
                 J = {}

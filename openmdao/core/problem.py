@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 import json
+import warnings
 from itertools import chain
 from six import iteritems, iterkeys, itervalues
 from six.moves import cStringIO
@@ -208,6 +209,7 @@ class Problem(System):
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
                 connected_inputs = nx.node_connected_component(input_graph, tgt)
+
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
@@ -215,15 +217,13 @@ class Problem(System):
                             if compute_indices:
                                 # follow path to new target, apply src_idxs along the way
                                 path = nx.shortest_path(input_graph, tgt, new_tgt)
-                                x = 0
-                                while x < len(path)-1:
-                                    next_idxs = input_graph[path[x]][path[x+1]]['idxs']
+                                for i, node in enumerate(path[:-1]):
+                                    next_idxs = input_graph[node][path[i+1]]['idxs']
                                     if next_idxs is not None:
                                         if new_idxs is not None:
                                             new_idxs = np.array(new_idxs)[next_idxs]
                                         else:
                                             new_idxs = next_idxs
-                                    x = x + 1
                             to_add.append((new_tgt, (src, new_idxs)))
 
         for tgt, (src, idxs) in to_add:
@@ -238,13 +238,14 @@ class Problem(System):
         # connection to each param
         newconns = {}
         for tgt, srcs in iteritems(connections):
-            unknown_srcs = list(src for src in srcs if src[0] in unknowns_dict)
+            unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
             if len(unknown_srcs) > 1:
                 src_names = (name for name, idx in unknown_srcs)
                 raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                    (tgt, sorted(src_names)))
+
             if unknown_srcs:
-                newconns[tgt] = unknown_srcs.pop()
+                newconns[tgt] = unknown_srcs[0]
 
         connections = newconns
 
@@ -1010,7 +1011,7 @@ class Problem(System):
         root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
-        root._sys_jacobian(root.params, unknowns, root.resids)
+        root._sys_linearize(root.params, unknowns, root.resids)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -1271,7 +1272,7 @@ class Problem(System):
         root = self.root
 
         # Linearize the model
-        root._sys_jacobian(root.params, root.unknowns, root.resids)
+        root._sys_linearize(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
