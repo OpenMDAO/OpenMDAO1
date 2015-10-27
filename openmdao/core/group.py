@@ -17,6 +17,7 @@ from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.string_util import name_relative_to
+from openmdao.util.graph import collapse_nodes
 from openmdao.core.checks import ConnectError
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -775,7 +776,7 @@ class Group(System):
             List of system names in desired new execution order.
         """
 
-        # Make sure the new_order is valid. It must contain all susbsystems
+        # Make sure the new_order is valid. It must contain all subsystems
         # in this model.
         newset = set(new_order)
         oldset = set(iterkeys(self._subsystems))
@@ -793,8 +794,8 @@ class Group(System):
 
         # Don't allow duplicates either.
         if len(newset) < len(new_order):
-            dupes = [key for key, val in iteritems(Counter(new_order)) if val > 1]
-            msg = "Duplicate name found in order list: %s" % dupes
+            dupes = [key for key, val in iteritems(Counter(new_order)) if val>1]
+            msg = "Duplicate name(s) found in order list: %s" % dupes
             raise ValueError(msg)
 
         new_subs = OrderedDict()
@@ -819,7 +820,7 @@ class Group(System):
         -------
         list of str : List of system names in execution order.
         """
-        return list(iterkeys(self._subsystems))
+        return [n for n in self._subsystems]
 
     def list_auto_order(self):
         """
@@ -828,11 +829,15 @@ class Group(System):
         list of str
             Names of subsystems listed in the order that they
             would be executed if a manual order was not set.
+
+        list of str
+            Edges that where removed from the graph to allow sorting.
         """
-        order = nx.topological_sort(self._break_cycles(self.list_order(),
-                                                       self._get_sys_graph()))
+        graph, broken_edges = self._break_cycles(self.list_order(),
+                                                 self._get_sys_graph())
+        order = nx.topological_sort(graph)
         sz = len(self.pathname)+1 if self.pathname else 0
-        return [n[sz:] for n in order]
+        return [n[sz:] for n in order], broken_edges
 
     def _get_sys_graph(self):
         """Return the subsystem graph for this Group."""
@@ -856,16 +861,15 @@ class Group(System):
                 renames[node] = newnode
 
         # get the graph of direct children of current group
-        nx.relabel_nodes(graph, renames, copy=False)
+        collapse_nodes(graph, renames, copy=False)
 
-        # remove self loops created by renaming
-        graph.remove_edges_from([(u, v) for u, v in graph.edges_iter()
-                                 if u == v])
         return graph
 
     def _break_cycles(self, order, graph):
         """Keep breaking cycles until the graph is a DAG.
         """
+        broken_edges = []
+
         strong = [s for s in nx.strongly_connected_components(graph)
                   if len(s) > 1]
         while strong:
@@ -896,9 +900,12 @@ class Group(System):
             for p in graph.predecessors(start):
                 if p in strong[0]:
                     graph.remove_edge(p, start)
+                    broken_edges.append((p, start))
+
             strong = [s for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
-        return graph
+
+        return graph, broken_edges
 
     def _all_params(self, voi=None):
         """ Returns the set of all parameters in this system and all subsystems.

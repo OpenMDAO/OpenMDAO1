@@ -38,7 +38,7 @@ a value to a large float array (1,000,000 elements).
 
         def get_req_procs(self):
             """
-            min/max number of cpus that this component can use
+            min/max number of procs that this component can use
             """
             return (1,self.size)
 

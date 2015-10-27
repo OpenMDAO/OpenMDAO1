@@ -8,6 +8,8 @@ from six import string_types, itervalues, iteritems
 
 import networkx as nx
 
+from openmdao.util.graph import collapse_nodes
+
 
 class Relevance(object):
     """ Object that manages the data connectivity graph for systems."""
@@ -179,12 +181,7 @@ class Relevance(object):
                     vgraph.add_edge(inp, out)
 
         # now collapse any var nodes with implicit connections
-        nx.relabel_nodes(vgraph, promote_map, copy=False)
-
-        # remove any self edges created by the relabeling
-        for u, v in vgraph.edges():
-            if u == v:
-                vgraph.remove_edge(u, v)
+        collapse_nodes(vgraph, promote_map, copy=False)
 
         return vgraph, sgraph
 
@@ -248,7 +245,7 @@ class Relevance(object):
                     for i in range(len(parts)-1):
                         cname = '.'.join(parts[:i+1])
                         # in rev mode, need to eliminate irrelevant systems that have shared promoted vars
-                        if rev:  
+                        if rev:
                             if cname in gpath:
                                 comps.add(cname)
                         else:

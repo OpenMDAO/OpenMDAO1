@@ -202,13 +202,26 @@ class Problem(System):
                     if p != n:
                         input_graph.add_edge(p, n, idxs=None)
 
-        # for all connections where the target is an input, we want to connect
-        # the 'unknown' sources for that target to all other inputs that are
+        # store all of the connected sets of inputs for later use
+        self._input_inputs = {}
+        for tgt in connections:
+            if tgt in input_graph and tgt not in self._input_inputs:
+                connected = nx.node_connected_component(input_graph, tgt)
+                for c in connected:
+                    self._input_inputs[c] = connected
+
+        # initialize this here since we may have unit diffs for input-input
+        # connections that get filtered out of the connection dict by the
+        # time setup_units is called.
+        self._unit_diffs = {}
+
+        # for all connections where the source is an input, we want to connect
+        # the 'unknown' source for that target to all other inputs that are
         # connected to it
         to_add = []
         for tgt, srcs in iteritems(connections):
             if tgt in input_graph:
-                connected_inputs = nx.node_connected_component(input_graph, tgt)
+                connected_inputs = self._input_inputs[tgt]
 
                 for src, idxs in srcs:
                     if src in unknowns_dict:
@@ -260,6 +273,93 @@ class Problem(System):
                     self._dangling[meta['promoted_name']] = set([meta['pathname']])
 
         return connections
+
+    def _check_input_diffs(self, connections, params_dict, unknowns_dict):
+        """For all sets of connected inputs, find any differences in units
+        or initial value.
+        """
+        input_diffs = {}
+
+        for tgt, connected_inputs in iteritems(self._input_inputs):
+
+            # figure out if any connected inputs have different initial
+            # values or different units
+            if tgt not in input_diffs:
+                for inp in connected_inputs:
+                    input_diffs[inp] = ([], [])
+
+                tgt_idx = connected_inputs.index(tgt)
+                units = [params_dict[n].get('units') for n in connected_inputs]
+                vals = [params_dict[n]['val'] for n in connected_inputs]
+
+                diff_units = []
+
+                for i, u in enumerate(units):
+                    if i != tgt_idx and u != units[tgt_idx]:
+                        if units[tgt_idx] is None:
+                            sname, s = connected_inputs[i], u
+                            tname, t = connected_inputs[tgt_idx], units[tgt_idx]
+                        else:
+                            sname, s = connected_inputs[tgt_idx], units[tgt_idx]
+                            tname, t = connected_inputs[i], u
+
+                        # report these in check_setup later
+                        self._unit_diffs[(sname, tname)] = (s, t)
+                        diff_units.append((connected_inputs[i], u))
+
+                if isinstance(vals[tgt_idx], np.ndarray):
+                    diff_vals = [(connected_inputs[i],v) for i,v in
+                                   enumerate(vals) if not
+                                       (isinstance(v, np.ndarray) and
+                                          v.shape==vals[tgt_idx].shape and
+                                          (v==vals[tgt_idx]).all())]
+                else:
+                    diff_vals = [(connected_inputs[i],v) for i,v in
+                                     enumerate(vals) if v!=vals[tgt_idx]]
+
+                # if tgt has no unknown source, units MUST match, unless
+                # one of them is None. At this point, connections contains
+                # only unknown to input connections, so if the target is
+                # in connections, it has an unknown source.
+                if tgt not in connections:
+                    if diff_units:
+                        filt = set([u for n,u in diff_units])
+                        if None in filt:
+                            filt.remove(None)
+                        if filt:
+                            raise RuntimeError("The following sourceless "
+                                "connected inputs have different units: %s" %
+                                sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                    diff_units))
+                    if diff_vals:
+                        msg = ("The following sourceless connected inputs have "
+                               "different initial values: "
+                               "%s.  Connect one of them to the output of "
+                               "an IndepVarComp to ensure that they have the "
+                               "same initial value." %
+                               (sorted([(tgt,params_dict[tgt]['val'])]+
+                                                 diff_vals)))
+                        raise RuntimeError(msg)
+
+        return input_diffs
+
+    def _get_ubc_vars(self, connections):
+        """Return a list of any connected inputs that are used before they
+        are set by their connected unknowns.
+        """
+        # this is the order that each component would run in if executed
+        # a single time from the root system.
+        full_order = {s.pathname : i for i,s in
+                     enumerate(self.root.subsystems(recurse=True))}
+
+        ubcs = []
+        for tgt, srcs in iteritems(connections):
+            tsys = tgt.rsplit('.', 1)[0]
+            ssys = srcs[0].rsplit('.', 1)[0]
+            if full_order[ssys] > full_order[tsys]:
+                ubcs.append(tgt)
+
+        return ubcs
 
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -424,7 +524,11 @@ class Problem(System):
             if isinstance(s, Group):
                 # set auto order if order not already set
                 if not s._order_set:
-                    s.set_order(s.list_auto_order())
+                    s.set_order(s.list_auto_order()[0])
+
+        # report any differences in units or initial values for
+        # sourceless connected inputs
+        self._check_input_diffs(connections, params_dict, unknowns_dict)
 
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
@@ -578,13 +682,16 @@ class Problem(System):
                     relstrong.append([])
                     for s in slist:
                         relstrong[-1].append(name_relative_to(grp.pathname, s))
-                        relstrong[-1] = sorted(relstrong[-1])
+                        # sort the cycle systems in execution order
+                        subs = [s for s in grp._subsystems]
+                        tups = sorted([(subs.index(s),s) for s in relstrong[-1]])
+                        relstrong[-1] = [t[1] for t in tups]
                 print("Group '%s' has the following cycles: %s" %
-                      (grp.pathname, relstrong), file=out_stream)
+                          (grp.pathname, relstrong), file=out_stream)
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
-            graph = grp._break_cycles(grp.list_order(), graph)
+            graph, _ = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
             out_of_order = {}
@@ -606,7 +713,7 @@ class Problem(System):
                 for n, subs in iteritems(out_of_order):
                     print("   %s should run after %s" % (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(iteritems(out_of_order))))
-                print("Auto ordering would be: %s" % grp.list_auto_order(),
+                print("Auto ordering would be: %s" % grp.list_auto_order()[0],
                       file=out_stream)
 
         return (cycles, sorted(ooo))
@@ -622,9 +729,17 @@ class Problem(System):
                     break
 
             if has_parallel and isinstance(self.root.ln_solver, ScipyGMRES):
-                print("ScipyGMRES is being used under MPI. Problems can arise "
+                print("\nScipyGMRES is being used under MPI. Problems can arise "
                       "if a variable of interest (param/objective/constraint) "
                       "does not exist in all MPI processes.", file=out_stream)
+
+    def _check_ubcs(self, out_stream=sys.stdout):
+        ubcs = self._get_ubc_vars(self.root.connections)
+        if ubcs:
+            print("\nThe following params are connected to unknowns that are "
+                  "updated out of order, so their initial values will contain "
+                  "uninitialized unknown values: %s" % ubcs, file=out_stream)
+        return ubcs
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
@@ -647,6 +762,7 @@ class Problem(System):
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
+        results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
 
         # TODO: Incomplete optimization driver configuration
@@ -1587,7 +1703,6 @@ class Problem(System):
             A dict of unknowns metadata for the whole `Problem`.
         """
 
-        self._unit_diffs = {}
         for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]

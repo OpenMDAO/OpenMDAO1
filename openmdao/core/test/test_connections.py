@@ -5,6 +5,7 @@ from six.moves import cStringIO
 import warnings
 
 from openmdao.api import Problem, Group, IndepVarComp, ExecComp
+from openmdao.test.util import assert_rel_error
 
 
 class TestConnections(unittest.TestCase):
@@ -22,6 +23,41 @@ class TestConnections(unittest.TestCase):
         self.G4 = self.G3.add("G4", Group())
         self.C3 = self.G4.add("C3", ExecComp('y=x*2.0'))
         self.C4 = self.G4.add("C4", ExecComp('y=x*2.0'))
+
+    def test_diff_conn_input_vals(self):
+        # set different initial values
+        self.C1._params_dict['x']['val'] = 7.
+        self.C3._params_dict['x']['val'] = 5.
+
+        # connect two inputs
+        self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
+
+        try:
+            self.p.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                "The following sourceless connected inputs have different initial values: "
+                "[('G1.G2.C1.x', 7.0), ('G3.G4.C3.x', 5.0)].  Connect one of them to the output of "
+                "an IndepVarComp to ensure that they have the same initial value.")
+        else:
+            self.fail("Exception expected")
+
+    def test_diff_conn_input_units(self):
+        # set different but compatible units
+        self.C1._params_dict['x']['units'] = 'ft'
+        self.C3._params_dict['x']['units'] = 'in'
+
+        # connect two inputs
+        self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
+
+        try:
+            self.p.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "The following sourceless connected inputs have different units: "
+                             "[('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]")
+        else:
+            self.fail("Exception expected")
 
     def test_no_conns(self):
         self.p.setup(check=False)
@@ -200,7 +236,45 @@ class TestConnectionsPromoted(unittest.TestCase):
         self.assertEqual(p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(p.root.G3.G4.C4.params['x'], 999.)
 
+class TestUBCS(unittest.TestCase):
 
+    def test_ubcs(self):
+        p = Problem(root=Group())
+        root = p.root
+
+        self.P1 = root.add("P1", IndepVarComp('x', 1.0))
+        self.C1 = root.add("C1", ExecComp('y=x1*2.0+x2*3.0', x2=1.0))
+        self.C2 = root.add("C2", ExecComp('y=x1*2.0+x2'))
+        self.C3 = root.add("C3", ExecComp('y=x*2.0'))
+        self.C4 = root.add("C4", ExecComp('y=x1*2.0 + x2*5.0'))
+        self.C5 = root.add("C5", ExecComp('y=x1*2.0 + x2*7.0'))
+
+        root.connect("P1.x", "C1.x1")
+        root.connect("C1.y", ("C2.x1", "C3.x"))
+        root.connect("C2.y", "C4.x1")
+        root.connect("C3.y", "C4.x2")
+
+        # input-input connection
+        root.connect("C1.x2", "C5.x2")
+
+        # create a cycle
+        root.connect("C4.y", "C1.x2")
+
+        # set a bogus value for C4.y
+        self.C4._unknowns_dict['y']['val'] = -999.
+
+        p.setup(check=False)
+
+        ubcs = p._get_ubc_vars(root.connections)
+
+        self.assertEqual(ubcs, ['C1.x2'])
+
+        p.run()
+
+        # TODO: for now, we've just decided to force component devs to give proper initial
+        # values for their outputs.  If later we decide to use push scatters or some other
+        # means to fix the issue, uncomment this.
+        #assert_rel_error(self, p['C1.y'], 5.0, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
