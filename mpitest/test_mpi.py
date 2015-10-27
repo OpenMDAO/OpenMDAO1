@@ -1,9 +1,11 @@
 import time
 
+from six import text_type
+
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp
-from openmdao.core.mpi_wrap import MPI
+from openmdao.core.mpi_wrap import MPI, FakeComm
 from openmdao.test.mpi_util import MPITestCase
 
 if MPI:
@@ -43,6 +45,15 @@ class ABCDArrayComp(Component):
 class MPITests1(MPITestCase):
 
     N_PROCS = 1
+
+    def test_comm(self):
+        prob = Problem(Group(), impl=impl)
+        prob._setup_communicators()
+
+        if MPI:
+            assert prob.comm is MPI.COMM_WORLD
+        else:
+            assert instanceof(prob.comm, FakeComm)
 
     def test_simple(self):
         prob = Problem(Group(), impl=impl)
@@ -129,6 +140,25 @@ class MPITests2(MPITestCase):
             self.assertTrue(all(prob['C1.c'] == np.ones(size, float)*3.0))
             self.assertTrue(all(prob['C1.d'] == np.ones(size, float)*-1.0))
             # TODO: not handling non-flattenable vars yet
+
+        if MPI and self.comm.rank == 1:
+            # check for useful error messages when trying to get/set remote variable
+            try:
+                x = prob['G1.P1.x']
+            except Exception as error:
+                msg = "Cannot access remote Variable 'G1.P1.x' in this process."
+                self.assertEqual(text_type(error), msg)
+            else:
+                self.fail("Error expected")
+
+            try:
+                prob['G1.P1.x'] = 0.
+            except Exception as error:
+                msg = "Cannot access remote Variable 'G1.P1.x' in this process."
+                self.assertEqual(text_type(error), msg)
+            else:
+                self.fail("Error expected")
+
 
     def test_parallel_diamond(self):
         size = 3
