@@ -1,13 +1,11 @@
 
-import os
-import sys
 from distutils.core import setup
 
 setup(name='openmdao',
       version='1.2.0',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
-""",
+      """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Science/Research',
@@ -47,15 +45,15 @@ setup(name='openmdao',
           'openmdao.recorders.test',
           'openmdao.devtools',
           'openmdao.surrogate_models',
-	  'openmdao.surrogate_models.nn_interpolators',
+          'openmdao.surrogate_models.nn_interpolators',
           'openmdao.surrogate_models.test'
       ],
-      package_data = {'openmdao.units': ['unit_library.ini']},
+      package_data={'openmdao.units': ['unit_library.ini']},
       install_requires=[
-        'six', 'numpydoc', 'networkx==1.9.1', 'numpy', 'scipy', 'sqlitedict', 'pyparsing'
+        'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2', 'scipy', 'sqlitedict', 'pyparsing'
       ],
-      entry_points= """
-        [console_scripts]
-        wingproj=openmdao.devtools.wingproj:run_wing
+      entry_points="""
+      [console_scripts]
+      wingproj=openmdao.devtools.wingproj:run_wing
       """
-    )
+)

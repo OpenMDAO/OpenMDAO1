@@ -336,15 +336,15 @@ class Group(System):
         my_params = param_owners.get(self.pathname, ())
 
         max_psize, self._shared_p_offsets = \
-                           self._get_shared_vec_info(self._params_dict,
-                                                     my_params=my_params)
+            self._get_shared_vec_info(self._params_dict, my_params=my_params)
+
         if parent is None:
             # determine the size of the largest grouping of parallel subvecs,
             # allocate an array of that size, and sub-allocate from that for all
             # relevant subvecs. We should never need more memory than the
             # largest sized collection of parallel vecs.
             max_usize, self._shared_u_offsets = \
-                               self._get_shared_vec_info(self._unknowns_dict)
+                self._get_shared_vec_info(self._unknowns_dict)
 
             # other vecs will be sub-sliced from this one
             self._shared_du_vec = np.zeros(max_usize)
@@ -403,10 +403,12 @@ class Group(System):
         # cache this to speed up apply_linear
         self._abs_inputs = {}
         for voi, vec in iteritems(self.dpmat):
-            self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
-                                     if not meta.get('pass_by_obj')}
+            self._abs_inputs[voi] = {
+                meta['pathname'] for meta in itervalues(vec)
+                    if not meta.get('pass_by_obj')
+            }
 
-        self._relname_map = None # reclaim some memory
+        self._relname_map = None  # reclaim some memory
 
     def _create_vecs(self, my_params, voi, impl):
         """ This creates our vecs and mats. This is only called on
@@ -422,7 +424,7 @@ class Group(System):
         # create implementation specific VecWrappers
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
+            self.states = set((n for n, m in iteritems(self.unknowns) if m.get('state')))
             self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
@@ -620,7 +622,7 @@ class Group(System):
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """
         Linearize all our subsystems.
 
@@ -636,7 +638,7 @@ class Group(System):
             `VecWrapper` containing residuals. (r)
         """
         for sub in self._local_subsystems:
-            sub._sys_jacobian(sub.params, sub.unknowns, sub.resids)
+            sub._sys_linearize(sub.params, sub.unknowns, sub.resids)
 
     def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
@@ -666,7 +668,7 @@ class Group(System):
 
         if mode == 'fwd':
             for voi in vois:
-                self._transfer_data(deriv=True, var_of_interest=voi) # Full Scatter
+                self._transfer_data(deriv=True, var_of_interest=voi)  # Full Scatter
 
         if self.fd_options['force_fd']:
             # parent class has the code to do the fd
@@ -679,7 +681,7 @@ class Group(System):
 
         if mode == 'rev':
             for voi in vois:
-                self._transfer_data(mode='rev', deriv=True, var_of_interest=voi) # Full Scatter
+                self._transfer_data(mode='rev', deriv=True, var_of_interest=voi)  # Full Scatter
 
     def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
         """
@@ -842,8 +844,7 @@ class Group(System):
             path = self.pathname.split('.')
             start = self.pathname + '.'
             slen = len(start)
-            graph = sgraph.subgraph((n for n in sgraph
-                                    if start==n[:slen]))
+            graph = sgraph.subgraph((n for n in sgraph if start == n[:slen]))
         else:
             path = []
             graph = sgraph.subgraph(sgraph.nodes_iter())
@@ -874,7 +875,7 @@ class Group(System):
             start = None
             if len(strong[0]) < len(graph):
                 for s in strong[0]:
-                    count = len([u for u,v in graph.in_edges(s)
+                    count = len([u for u, v in graph.in_edges(s)
                                 if u not in strong[0]])
                     in_edges.append((count, s))
                 in_edges = sorted(in_edges)
@@ -1178,12 +1179,12 @@ class Group(System):
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
-                           if relevance.is_relevant(var_of_interest,
-                                  self.unknowns._sysdata._to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest,
+                                               self.unknowns._sysdata._to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
-                        if relevance.is_relevant(var_of_interest,
-                                    self.params._sysdata._to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest,
+                                               self.params._sysdata._to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
@@ -1231,11 +1232,11 @@ class Group(System):
                         # rev is for derivs only, so no by_obj passing needed
                         if mode == 'fwd':
                             byobj_conns.append((prelname, urelname))
-                    else: # pass by vector
+                    else:  # pass by vector
                         sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                              top_urelname, top_prelname,
                                                              vec_unames, unknown_sizes,
-                                                             vec_pnames, param_sizes,mode)
+                                                             vec_pnames, param_sizes, mode)
                         vec_conns.append((prelname, urelname))
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
@@ -1320,9 +1321,9 @@ class Group(System):
         local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
         local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
 
-        if MPI: # pragma: no cover
-            if trace:
-                debug("allgathering local varnames: locals = ",local_vars)
+        if MPI:
+            if trace:  # pragma: no cover
+                debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
         else:
             all_locals = [local_vars]
@@ -1405,7 +1406,7 @@ class Group(System):
                         piwid = max(piwid, len(pdata[-1][1]))
                         idx += 1
                 # insert a blank line to visually sparate processes
-                pdata.append(('','','',''))
+                pdata.append(('', '', '', ''))
 
             idx = 0
             udata = []
@@ -1419,11 +1420,11 @@ class Group(System):
                         uiwid = max(uiwid, len(udata[-1][1]))
                         idx += 1
                 # insert a blank line to visually sparate processes
-                udata.append(('','','',''))
+                udata.append(('', '', '', ''))
 
             data = []
-            for u, p in zip_longest(udata, pdata, fillvalue=('','')):
-                data.append((u[0],u[1],p[1],p[0]))
+            for u, p in zip_longest(udata, pdata, fillvalue=('', '')):
+                data.append((u[0], u[1], p[1], p[0]))
 
             for d in data[::-1]:
                 template = "{0:<{wid0}} {1:>{wid1}}     {2:>{wid2}} {3:<{wid3}}\n"

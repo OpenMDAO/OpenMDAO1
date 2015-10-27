@@ -16,6 +16,7 @@ from openmdao.core.system import System
 from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
+from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
@@ -80,7 +81,7 @@ class Problem(System):
         self.root = root
         self._probdata = _ProbData()
 
-        if MPI:  # pragma: no cover
+        if MPI:
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
                 raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl.")
@@ -439,7 +440,7 @@ class Problem(System):
                 meta_changed = True
                 comp._set_vars_as_remote()
 
-        if MPI:  # pragma: no cover
+        if MPI:
             for s in self.root.components(recurse=True):
                 if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
                     # component defines its own setup_distrib_idxs, so
@@ -642,16 +643,16 @@ class Problem(System):
 
     def _check_mpi(self, out_stream=sys.stdout):
         """ Some simple MPI checks. """
-        if under_mpirun():  # pragma: no cover
+        if under_mpirun():
             parr = True
             # Indicate that there are no parallel systems if user is running under MPI
             if self._comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
-                    if isinstance(grp, ParallelGroup):
+                    if isinstance(grp, ParallelGroup) or isinstance(grp, ParallelFDGroup):
                         break
                 else:
                     parr = False
-                    print("\nRunning under MPI, but no ParallelGroups were found.",
+                    print("\nRunning under MPI, but no ParallelGroups or ParallelFDGroups were found.",
                           file=out_stream)
 
                 mincpu, maxcpu = self.root.get_req_procs()
@@ -725,7 +726,7 @@ class Problem(System):
     def _check_gmres_under_mpi(self, out_stream=sys.stdout):
         """ warn when using ScipyGMRES solver under MPI.
         """
-        if under_mpirun():  # pragma: no cover
+        if under_mpirun():
             has_parallel = False
             for s in self.root.subgroups(recurse=True, include_self=True):
                 if isinstance(s, ParallelGroup):
@@ -1131,7 +1132,7 @@ class Problem(System):
         root.drmat[None].vec[:] = 0.0
 
         # Linearize Model
-        root._sys_jacobian(root.params, unknowns, root.resids)
+        root._sys_linearize(root.params, unknowns, root.resids)
 
         # Initialize Jacobian
         if return_format == 'dict':
@@ -1289,6 +1290,7 @@ class Problem(System):
                             else:
                                 dxval = None
                             if nproc > 1:
+                                # TODO: make this use Bcast for efficiency
                                 dxval = comm.bcast(dxval, root=owned[item])
                         else:  # irrelevant variable.  just give'em zeros
                             if item in qoi_indices:
@@ -1391,7 +1393,7 @@ class Problem(System):
         root = self.root
 
         # Linearize the model
-        root._sys_jacobian(root.params, root.unknowns, root.resids)
+        root._sys_linearize(root.params, root.unknowns, root.resids)
 
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
@@ -1514,7 +1516,14 @@ class Problem(System):
             dresids.vec[:] = 0.0
             root.clear_dparams()
             dunknowns.vec[:] = 0.0
-            jac_fd = comp.fd_jacobian(params, unknowns, resids)
+
+            # Component can request to use complex step.
+            if comp.fd_options['form'] == 'complex_step':
+                fd_func = comp.complex_step_jacobian
+            else:
+                fd_func = comp.fd_jacobian
+
+            jac_fd = fd_func(params, unknowns, resids)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
@@ -1664,7 +1673,7 @@ class Problem(System):
 
         # first determine how many procs that root can possibly use
         minproc, maxproc = self.root.get_req_procs()
-        if MPI:  # pragma: no cover
+        if MPI:
             if not (maxproc is None or maxproc >= self._comm.size):
                 # we have more procs than we can use, so just raise an
                 # exception to encourage the user not to waste resources :)

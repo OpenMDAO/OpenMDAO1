@@ -49,7 +49,7 @@ class SellarDis1(Component):
 class SellarDis1withDerivatives(SellarDis1):
     """Component containing Discipline 1 -- derivatives version."""
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 1."""
         J = {}
 
@@ -94,7 +94,7 @@ class SellarDis2(Component):
 class SellarDis2withDerivatives(SellarDis2):
     """Component containing Discipline 2 -- derivatives version."""
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """ Jacobian for Sellar discipline 2."""
         J = {}
 
@@ -202,7 +202,7 @@ class StateConnection(Component):
         """ This is a dummy comp that doesn't modify its state."""
         pass
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}

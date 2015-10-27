@@ -143,13 +143,13 @@ Component Derivatives
 ----------------------
 If you want to define analytic derivatives for your components, to help make your
 optimizations faster and more accurate, then your component will also define
-a *jacobian* method, that linearizes the non-linear equations and provides the
+a *linearize* method, that linearizes the non-linear equations and provides the
 partial derivatives (derivatives of unknowns w.r.t parameters for a single component)
 to the framework.
 
 ::
 
-  def jacobian(self, params, unknowns, resids):
+  def linearize(self, params, unknowns, resids):
       J = {}
       J['y','x'] = 2*params['x']
       J['y','y'] = 1
@@ -270,7 +270,7 @@ Summary
 -------
 
 The general procedure for defining and solving a `Problem` in OpenMDAO is:
-    - define `Components` (including their *solve_nonlinear* and optional *jacobian* functions)
+    - define `Components` (including their *solve_nonlinear* and optional *linearize* functions)
     - assemble `Components` into Groups and make connections (explicitly or implicitly)
     - instantiate a `Problem` with the *root* `Group`
     - perform *setup* on the `Problem` to initialize all vectors and data transfers
@@ -280,7 +280,9 @@ A very basic example of defining and running a `Problem` with a custom `Componen
 This example makes use of the convenience component `IndepVarComp` to provide a source for the
 input parameter to the custom `MultiplyByTwoComponent`.
 
-::
+.. testcode:: basics
+
+    from __future__ import print_function
 
     from openmdao.api import Group, Problem, Component, IndepVarComp
 
@@ -289,10 +291,13 @@ input parameter to the custom `MultiplyByTwoComponent`.
             super(MultiplyByTwoComponent, self).__init__() # always call the base class constructor first
             self.add_param('x_input', val=0.) # the input that will be multiplied by 2
             self.add_output('y_output', shape=1) # shape=1 => a one dimensional array of length 1 (a scalar)
-            self.add_state('counter', val=0) # an internal variable that counts the number of times this component was executed
+
+            # an internal variable that counts the number of times this component was executed
+            self.counter = 0
+
         def solve_nonlinear(self, params, unknowns, resids):
             unknowns['y_output'] = params['x_input']*2
-            unknowns['counter'] = unknowns['counter']+1
+            self.counter += 1
 
     root = Group()
     root.add('indep_var', IndepVarComp('x', 7.0))
@@ -304,6 +309,13 @@ input parameter to the custom `MultiplyByTwoComponent`.
     prob.run()
 
     result = prob['my_comp.y_output']
-    count = prob['my_comp.counter']
-    print result
-    print count
+    count = prob.root.my_comp.counter
+    print(result)
+    print(count)
+
+Running this example produces the output:
+
+.. testoutput:: basics
+
+   14.0
+   1

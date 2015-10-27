@@ -36,7 +36,7 @@ this code into a file, and run it directly.
 
             unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             """ Jacobian for our paraboloid."""
 
             x = params['x']
@@ -129,7 +129,7 @@ using the `unknowns` dictionary that is passed in.
 
 ::
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             """ Jacobian for our paraboloid."""
 
             x = params['x']
@@ -140,7 +140,7 @@ using the `unknowns` dictionary that is passed in.
             J['f_xy','y'] = 2.0*y + 8.0 + x
             return J
 
-The `jacobian` method is used to compute analytic partial derivatives of the
+The `linearize` method is used to compute analytic partial derivatives of the
 `unknowns` with respect to `params` (partial derivatives in OpenMDAO context refer to
 derivatives for a single component by itself). The returned value, in this case `J`,
 should be a dictionary whose keys are tuples of the form (‘unknown’, ‘param’) and
@@ -320,7 +320,7 @@ a good idea.
 Finally, we add the objective. You can use any `unknown` in your model as the
 objective.
 
-Since SLSQP is a gradient optimizer, OpenMDAO will call the `jacobian` method
+Since SLSQP is a gradient optimizer, OpenMDAO will call the `linearize` method
 on the `Paraboloid` while calculating the total gradient of the objective
 with respect to the two design variables. This is done automatically.
 

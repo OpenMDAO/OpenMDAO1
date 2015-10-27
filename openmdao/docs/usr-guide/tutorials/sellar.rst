@@ -70,7 +70,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
                 unknowns['y1'] = z1**2 + z2 + x1 - 0.2*y2
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """ Jacobian for Sellar discipline 1."""
                 J = {}
 
@@ -111,7 +111,7 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
 
                 unknowns['y2'] = y1**.5 + z1 + z2
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """ Jacobian for Sellar discipline 2."""
                 J = {}
 
@@ -138,7 +138,7 @@ were combined into a 2-element `ndarray`.
 We have written two (very simple) analysis components. If you were working on a real problem, your components could be more complex, or could potentially be wrappers for external analysis components.
 But keep in mind that from an optimization point of view, whether they are simple tools or wrappers for
 real analyses, OpenMDAO still views them as components with `params`, `unknowns`, `resids` and a `solve_nonlinear` function,
-and optionally a `jacobian` function.
+and optionally a `linearize` function.
 
 
 At this point we've written the components, but we haven't combined them
@@ -223,7 +223,7 @@ outputs objective and constraint variables.
 This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
 'y2', and with output 'obj'. The first argument is a string expression that contains the function.
 OpenMDAO can parse this expression so that the `solve_nonlinear` and
-`jacobian` methods are taken care of for you. Notice that standard math
+`linearize` methods are taken care of for you. Notice that standard math
 functions like `exp` are available to use. Because we promote every variable
 in our call to `add`, all of the input variables are automatically connected
 to sources in the model. We also specify our default initial values as the
@@ -382,7 +382,7 @@ First we need to write the component to replace the connection:
             """ This is a dummy comp that doesn't modify its state."""
             pass
 
-        def jacobian(self, params, unknowns, resids):
+        def linearize(self, params, unknowns, resids):
             """Analytical derivatives."""
 
             J = {}
@@ -406,7 +406,7 @@ define `apply_nonlinear` to return this residual. Residuals live in the
 
     resids['y2_command'] = y2_actual - y2_command
 
-We also define the `Jacobian` method, and the derivatives are trivial to
+We also define the `linearize` method, and the derivatives are trivial to
 compute.
 
 Next, we need to modify the model that we defined in `SellarDerivatives` to

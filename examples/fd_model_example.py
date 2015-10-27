@@ -25,7 +25,7 @@ class SimpleComp(Component):
         unknowns['y'] = 3.0*params['x']
         print('Execute', self.name)
 
-    def jacobian(self, params, unknowns, resids):
+    def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}

@@ -2,18 +2,17 @@
 
 from __future__ import print_function
 
-import time
 import numpy as np
 
 from openmdao.api import Group, ParallelGroup, Problem, IndepVarComp, \
     LinearGaussSeidel
-from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck, debug
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.simple_comps import FanOutGrouped, FanInGrouped, FanOut3Grouped
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.test.util import assert_rel_error
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
@@ -135,32 +134,32 @@ class MatMatTestCase(MPITestCase):
 
         # make sure we can't mix inputs and outputs in parallel sets
         try:
-            prob.driver.parallel_derivs(['p1.x1','comp3.y'])
+            prob.driver.parallel_derivs(['p1.x1', 'comp3.y'])
         except Exception as err:
             self.assertEqual(str(err),
-               "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
-               "design vars and ['comp3.y'] are not.")
+                             "['p1.x1', 'comp3.y'] cannot be grouped because ['p1.x1'] are "
+                             "design vars and ['comp3.y'] are not.")
         else:
             self.fail("Exception expected")
 
-        prob.driver.parallel_derivs(['p1.x1','p2.x2'])
+        prob.driver.parallel_derivs(['p1.x1', 'p2.x2'])
 
-        if MPI: # pragma: no cover
-            expected = [('p1.x1','p2.x2'),('p3.x3',)]
+        if MPI:
+            expected = [('p1.x1', 'p2.x2'), ('p3.x3',)]
         else:
-            expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
+            expected = [('p1.x1',), ('p2.x2',), ('p3.x3',)]
 
         self.assertEqual(prob.driver.desvars_of_interest(),
                          expected)
 
         # make sure we can't add a VOI to multiple groups
-        if MPI: # pragma: no cover
+        if MPI:
             try:
-                prob.driver.parallel_derivs(['p1.x1','p3.x3'])
+                prob.driver.parallel_derivs(['p1.x1', 'p3.x3'])
             except Exception as err:
                 self.assertEqual(str(err),
-                   "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
-                   "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
+                                 "'p1.x1' cannot be added to VOI set ('p1.x1', 'p3.x3') "
+                                 "because it already exists in VOI set: ('p1.x1', 'p2.x2')")
             else:
                 self.fail("Exception expected")
 
@@ -188,12 +187,12 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_desvar('p3.x3')
         prob.driver.add_objective('comp3.y')
 
-        prob.driver.parallel_derivs(['p1.x1','p2.x2'])
+        prob.driver.parallel_derivs(['p1.x1', 'p2.x2'])
 
-        if MPI: # pragma: no cover
-            expected = [('p1.x1','p2.x2'),('p3.x3',)]
+        if MPI:
+            expected = [('p1.x1', 'p2.x2'), ('p3.x3',)]
         else:
-            expected = [('p1.x1',),('p2.x2',),('p3.x3',)]
+            expected = [('p1.x1',), ('p2.x2',), ('p3.x3',)]
 
         self.assertEqual(prob.driver.desvars_of_interest(),
                          expected)
@@ -221,12 +220,12 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_desvar('p.x')
         prob.driver.add_constraint('c2.y', upper=0.0)
         prob.driver.add_constraint('c3.y', upper=0.0)
-        prob.driver.parallel_derivs(['c2.y','c3.y']) # ignored in fwd
+        prob.driver.parallel_derivs(['c2.y', 'c3.y'])  # ignored in fwd
 
-        if MPI: # pragma: no cover
-            expected = [('c2.y','c3.y')]
+        if MPI:
+            expected = [('c2.y', 'c3.y')]
         else:
-            expected = [('c2.y',),('c3.y',)]
+            expected = [('c2.y',), ('c3.y',)]
 
         self.assertEqual(prob.driver.outputs_of_interest(),
                          expected)
@@ -256,12 +255,12 @@ class MatMatTestCase(MPITestCase):
         prob.driver.add_desvar('p.x')
         prob.driver.add_constraint('c2.y', upper=0.0)
         prob.driver.add_constraint('c3.y', upper=0.0)
-        prob.driver.parallel_derivs(['c2.y','c3.y'])
+        prob.driver.parallel_derivs(['c2.y', 'c3.y'])
 
-        if MPI: # pragma: no cover
-            expected = [('c2.y','c3.y')]
+        if MPI:
+            expected = [('c2.y', 'c3.y')]
         else:
-            expected = [('c2.y',),('c3.y',)]
+            expected = [('c2.y',), ('c3.y',)]
 
         self.assertEqual(prob.driver.outputs_of_interest(),
                          expected)
@@ -300,10 +299,10 @@ class ParDeriv3TestCase(MPITestCase):
         prob.driver.add_constraint('c4.y', upper=0.0)
         prob.driver.parallel_derivs(['c2.y', 'c3.y', 'c4.y'])
 
-        if MPI: # pragma: no cover
-            expected = [('c2.y','c3.y', 'c4.y')]
+        if MPI:
+            expected = [('c2.y', 'c3.y', 'c4.y')]
         else:
-            expected = [('c2.y',),('c3.y',), ('c4.y', )]
+            expected = [('c2.y',), ('c3.y',), ('c4.y', )]
 
         self.assertEqual(prob.driver.outputs_of_interest(),
                          expected)
@@ -337,25 +336,24 @@ class MatMatIndicesTestCase(MPITestCase):
         G1.ln_solver.options['mode'] = mode
 
         c2 = G1.add('c2', ExecComp4Test('y = x * 2.0', lin_delay=1.0,
-                                   x=np.zeros(asize), y=np.zeros(asize)))
+                                        x=np.zeros(asize), y=np.zeros(asize)))
         c3 = G1.add('c3', ExecComp4Test('y = numpy.ones(3).T*x.dot(numpy.arange(3.,6.))',
-                                   lin_delay=1.0,
-                                   x=np.zeros(asize), y=np.zeros(asize)))
+                                        lin_delay=1.0,
+                                        x=np.zeros(asize), y=np.zeros(asize)))
         c4 = root.add('c4', ExecComp4Test('y = x * 4.0',
-                                   x=np.zeros(asize), y=np.zeros(asize)))
+                                          x=np.zeros(asize), y=np.zeros(asize)))
         c5 = root.add('c5', ExecComp4Test('y = x * 5.0',
-                                   x=np.zeros(asize), y=np.zeros(asize)))
+                                          x=np.zeros(asize), y=np.zeros(asize)))
 
-
-        prob.driver.add_desvar('p.x', indices=[1,2])
+        prob.driver.add_desvar('p.x', indices=[1, 2])
         prob.driver.add_constraint('c4.y', upper=0.0, indices=[1])
         prob.driver.add_constraint('c5.y', upper=0.0, indices=[2])
-        prob.driver.parallel_derivs(['c4.y','c5.y'])
+        prob.driver.parallel_derivs(['c4.y', 'c5.y'])
 
         root.connect('p.x', 'G1.c2.x')
         root.connect('p.x', 'G1.c3.x')
-        root.connect('G1.c2.y','c4.x')
-        root.connect('G1.c3.y','c5.x')
+        root.connect('G1.c2.y', 'c4.x')
+        root.connect('G1.c3.y', 'c5.x')
 
         prob.setup(check=False)
         prob.run()
@@ -365,22 +363,21 @@ class MatMatIndicesTestCase(MPITestCase):
     def test_indices_fwd(self):
         prob = self.setup_model('fwd')
 
-        start = time.time()
         J = prob.calc_gradient(['p.x'],
-                              ['c4.y','c5.y'],
-                              mode='fwd', return_format='dict')
+                               ['c4.y', 'c5.y'],
+                               mode='fwd', return_format='dict')
 
-        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
-        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
+        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20., 25.]), 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8., 0.]), 1e-6)
 
     def test_indices_rev(self):
         prob = self.setup_model('rev')
-        start = time.time()
-        J = prob.calc_gradient(['p.x'], ['c4.y','c5.y'],
+        J = prob.calc_gradient(['p.x'], ['c4.y', 'c5.y'],
                                mode='rev', return_format='dict')
 
-        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20.,25.]), 1e-6)
-        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8.,0.]), 1e-6)
+        assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20., 25.]), 1e-6)
+        assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8., 0.]), 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

@@ -201,7 +201,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 """Never Call."""
                 raise RuntimeError("This should have been overridden by force_fd.")
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Never Call."""
                 raise RuntimeError("This should have been overridden by force_fd.")
 
@@ -433,7 +433,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 f_xy = ((x-3.0)**2 + x*y + (y+4.0)**2 - 3.0)
                 unknowns['f_xy'] = self.scale*f_xy
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives"""
 
                 x = params['x']
@@ -495,7 +495,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 f_xy = ((x-3.0)**2 + x*y + (y+4.0)**2 - 3.0)
                 unknowns['f_xy'] = f_xy
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives"""
 
                 x = params['x']
@@ -554,7 +554,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                 f_xy = ((x1-3.0)**2 + (x2-3.0)**2 + (x2+x2)*y + (y+4.0)**2 - 3.0)
                 unknowns['f_xy'] = f_xy
 
-            def jacobian(self, params, unknowns, resids):
+            def linearize(self, params, unknowns, resids):
                 """Analytical derivatives"""
 
                 x1 = params['x1']

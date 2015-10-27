@@ -33,9 +33,8 @@ class DumpRecorder(BaseRecorder):
                 out = sys.stderr
 
             else:
-                # Dump out to a separate file for each process if we are under
-                # MPI
-                if MPI: # pragma: no cover
+                # Dump to separate file for each process if we are under MPI
+                if MPI:
                     if '.' in out:
                         parts = out.split('.')
                         parts[-2] += '_' + str(MPI.COMM_WORLD.rank)
@@ -113,11 +112,10 @@ class DumpRecorder(BaseRecorder):
         Args
         ----
         group : `System`
-            `System` containing vectors 
+            `System` containing vectors
         """
         params = list(iteritems(group.params))
         unknowns = list(iteritems(group.unknowns))
-        resids = list(iteritems(group.resids))
 
         self.out.write("Metadata:\n")
         self.out.write("Params:\n")
@@ -125,10 +123,9 @@ class DumpRecorder(BaseRecorder):
         for name, metadata in params:
             fmat = "  {0}: {1}\n"
             self.out.write(fmat.format(name, metadata))
-        
+
         self.out.write("Unknowns:\n")
 
         for name, metadata in unknowns:
             fmat = "  {0}: {1}\n"
             self.out.write(fmat.format(name, metadata))
-        

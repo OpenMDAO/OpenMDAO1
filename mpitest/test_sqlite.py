@@ -1,9 +1,7 @@
 """ Unit test for the SqliteRecorder. """
 import errno
 import os
-import shelve
-import unittest
-from pickle import HIGHEST_PROTOCOL
+
 from shutil import rmtree
 from tempfile import mkdtemp
 import time
@@ -16,16 +14,16 @@ from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI
-from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.recorders.sqlite_recorder import SqliteRecorder
 from openmdao.recorders.test.test_sqlite import _assertMetadataRecorded, _assertIterationDataRecorded
 from openmdao.test.mpi_util import MPITestCase
 
-if MPI: # pragma: no cover
+if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
+
 
 class ABCDArrayComp(Component):
 
@@ -52,12 +50,14 @@ class ABCDArrayComp(Component):
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
 
+
 def run(problem):
     t0 = time.time()
     problem.run()
     t1 = time.time()
 
     return t0, t1
+
 
 class TestSqliteRecorder(MPITestCase):
     filename = ""
@@ -116,7 +116,6 @@ class TestSqliteRecorder(MPITestCase):
 
         t0, t1 = run(prob)
         self.recorder.close()
-       
 
         coordinate = ['Driver', (1, )]
 
@@ -128,20 +127,20 @@ class TestSqliteRecorder(MPITestCase):
         expected_unknowns = [
             ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
             ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
-            ("C1.c",  np.array([3.0, 3.0, 3.0])),
-            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.c",    np.array([3.0, 3.0, 3.0])),
+            ("C1.d",    np.array([-1.0, -1.0, -1.0])),
             ("C1.out_string", "_C1"),
             ("C1.out_list", [1.5]),
         ]
         expected_resids = [
             ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
             ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
-            ("C1.c",  np.array([0.0, 0.0, 0.0])),
-            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.c",    np.array([0.0, 0.0, 0.0])),
+            ("C1.d",    np.array([0.0, 0.0, 0.0])),
             ("C1.out_string", ""),
             ("C1.out_list", []),
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
     def test_includes(self):
@@ -175,18 +174,18 @@ class TestSqliteRecorder(MPITestCase):
             ("C1.b", [2.0, 2.0, 2.0]),
         ]
         expected_unknowns = [
-            ("C1.c",  np.array([3.0, 3.0, 3.0])),
-            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.c", np.array([3.0, 3.0, 3.0])),
+            ("C1.d", np.array([-1.0, -1.0, -1.0])),
             ("C1.out_string", "_C1"),
             ("C1.out_list", [1.5]),
         ]
         expected_resids = [
-            ("C1.c",  np.array([0.0, 0.0, 0.0])),
-            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.c", np.array([0.0, 0.0, 0.0])),
+            ("C1.d", np.array([0.0, 0.0, 0.0])),
             ("C1.out_string", ""),
             ("C1.out_list", []),
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
     def test_includes_and_excludes(self):
@@ -214,7 +213,7 @@ class TestSqliteRecorder(MPITestCase):
 
         t0, t1 = run(prob)
         self.recorder.close()
-       
+
         coordinate = ['Driver', (1, )]
 
         expected_params = [
@@ -223,13 +222,13 @@ class TestSqliteRecorder(MPITestCase):
         ]
 
         expected_unknowns = [
-            ("C1.c",  np.array([3.0, 3.0, 3.0])),
-            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.c", np.array([3.0, 3.0, 3.0])),
+            ("C1.d", np.array([-1.0, -1.0, -1.0])),
         ]
 
         expected_resids = [
-            ("C1.c",  np.array([0.0, 0.0, 0.0])),
-            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.c", np.array([0.0, 0.0, 0.0])),
+            ("C1.d", np.array([0.0, 0.0, 0.0])),
         ]
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
@@ -263,16 +262,16 @@ class TestSqliteRecorder(MPITestCase):
         expected_unknowns = [
             ("G1.P1.x", np.array([1.0, 1.0, 1.0])),
             ("G1.P2.x", np.array([2.0, 2.0, 2.0])),
-            ("C1.c",  np.array([3.0, 3.0, 3.0])),
-            ("C1.d",  np.array([-1.0, -1.0, -1.0])),
+            ("C1.c",    np.array([3.0, 3.0, 3.0])),
+            ("C1.d",    np.array([-1.0, -1.0, -1.0])),
             ("C1.out_string", "_C1"),
             ("C1.out_list", [1.5]),
         ]
         expected_resids = [
             ("G1.P1.x", np.array([0.0, 0.0, 0.0])),
             ("G1.P2.x", np.array([0.0, 0.0, 0.0])),
-            ("C1.c",  np.array([0.0, 0.0, 0.0])),
-            ("C1.d",  np.array([0.0, 0.0, 0.0])),
+            ("C1.c",    np.array([0.0, 0.0, 0.0])),
+            ("C1.d",    np.array([0.0, 0.0, 0.0])),
             ("C1.out_string", ""),
             ("C1.out_list", []),
         ]
@@ -299,12 +298,11 @@ class TestSqliteRecorder(MPITestCase):
         prob.setup(check=False)
 
         self.recorder.close()
-        
 
         expected = (
-                list(prob.root.params.iteritems()),
-                list(prob.root.unknowns.iteritems()),
-                list(prob.root.resids.iteritems()),
+            list(prob.root.params.iteritems()),
+            list(prob.root.unknowns.iteritems()),
+            list(prob.root.resids.iteritems()),
         )
 
         self.assertMetadataRecorded(expected)
@@ -331,6 +329,7 @@ class TestSqliteRecorder(MPITestCase):
         self.recorder.close()
 
         self.assertMetadataRecorded(None)
+
 
 if __name__ == "__main__":
     from openmdao.test.mpi_util import mpirun_tests

@@ -4,6 +4,8 @@ branches:
     - master
     - /^test.*$/
 
+sudo: false
+
 os:
   - linux
   - osx
@@ -11,10 +13,27 @@ os:
 language: generic
 
 env:
-- HDF5=h5py PY=2.7
-- HDF5=h5py PY=3.4
-- HFF5= PY=2.7
-- HFF5= PY=3.4
+- HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+- HDF5=h5py PY=2.7 MPI=
+- HDF5=h5py PY=3.4 MPI=
+- HFF5= PY=2.7 MPI=
+- HFF5= PY=3.4 MPI=
+
+matrix:
+  exclude:
+  - os: osx
+    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gfortran
+    - libblas-dev
+    - liblapack-dev
+    - libopenmpi-dev
+    - openmpi-bin
 
 notifications:
   email: false
@@ -24,7 +43,7 @@ notifications:
 
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
-- if [[ "$OS" = "Linux" ]]; then sudo apt-get install gfortran; fi
+- if [ "$OS" = "MacOSX" ] && [ "$MPI" ]; then brew install openmpi; fi
 - wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
 - chmod +x miniconda.sh
 - ./miniconda.sh -b
@@ -35,11 +54,36 @@ before_install:
 
 install:
 - conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
-- pip install https://bitbucket.org/stephen_ryan/pyoptsparse/get/tip.tar.gz
+- if [ "$OS" = "Linux" ]; then
+    if [ "$PY" = "2.7" ]; then
+        pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
+    elif [ "$PY" = "3.4" ]; then
+        pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp34-cp34m-linux_x86_64.whl;
+    fi
+  fi
+- if [ "$OS" = "MacOSX" ]; then
+    if [ "$PY" = "2.7" ]; then
+        pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp27-none-macosx_10_5_x86_64.whl;
+    elif [ "$PY" = "3.4" ]; then
+        pip install https://openmdao.org/dists/pyoptsparsepyoptsparse-1.0.0-cp34-cp34m-macosx_10_5_x86_64.whl;
+    fi
+  fi
+- if [ "$MPI" ]; then
+    pip install mpi4py;
+    pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5;
+    conda install cython --yes;
+    pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
+  fi
+- pip install git+https://github.com/naylor-b/testflo.git
 - pip install coveralls
-- pip install .
+- pip install -e .
 
-script: nosetests --with-coverage
+script:
+- if [ "$MPI" ]; then
+    testflo . --coverage --coverpkg openmdao -i;
+  else
+    testflo . --coverage --coverpkg openmdao;
+  fi
 
 after_success:
   coveralls

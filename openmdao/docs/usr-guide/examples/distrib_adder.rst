@@ -8,9 +8,9 @@ But it can also be used to speed up any calculations you're implementing yoursel
 directly in OpenMDAO using our MPI-based parallel data passing.
 
 Why should you use OpenMDAO to build your own distributed components? Because
-OpenMDAO lets you build distributed components without writing any significant MPI code yourself.
-Here is a simple example where we break up the job of adding a value
-to a large float array (30,000,000 elements).
+OpenMDAO lets you build distributed components without writing any significant
+MPI code yourself. Here is a simple example where we break up the job of adding
+a value to a large float array (1,000,000 elements).
 
 
 .. testcode :: dist_adder
@@ -52,7 +52,8 @@ to a large float array (30,000,000 elements).
             comm = self.comm
             rank = comm.rank
 
-            #NOTE: evenly_distrib_idxs is a helper function to split the array up as evenly as possible
+            # NOTE: evenly_distrib_idxs is a helper function to split the array
+            #       up as evenly as possible
             sizes, offsets = evenly_distrib_idxs(comm.size, self.size)
             local_size, local_offset = sizes[rank], offsets[rank]
             self.local_size = int(local_size)
@@ -114,7 +115,7 @@ Next we'll use these components to build an actual distributed model:
 
     from openmdao.core.mpi_wrap import MPI
 
-    if MPI: # pragma: no cover
+    if MPI:
         # if you called this script with 'mpirun', then use the petsc data passing
         from openmdao.core.petsc_impl import PetscImpl as impl
     else:
