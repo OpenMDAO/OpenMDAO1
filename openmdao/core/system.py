@@ -32,7 +32,7 @@ class _SysData(object):
 
         self.abs_unames = {}  # promoted name to abs name map
         self.prom_unames = {} # abs name to promoted name map
-        self.abs_pnames = {}  # promoted name to abs name map
+        self.abs_pnames = {}  # promoted name to list of abs names map
         self.prom_pnames = {} # abs name to promoted name map
 
 class System(object):

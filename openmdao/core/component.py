@@ -107,7 +107,6 @@ class Component(System):
         self._check_name(name)
         meta = kwargs.copy()
 
-        meta['promoted_name'] = name
         meta['val'] = val = self._get_initial_val(val, shape)
 
         if is_differentiable(val) and not meta.get('pass_by_obj'):
@@ -362,7 +361,7 @@ class Component(System):
         self._impl = impl
 
         # create map of relative name in parent to relative name in child
-        self._relname_map = self._get_relname_map(parent.unknowns)
+        self._relname_map = self._get_relname_map(parent._sysdata.to_prom)
 
         # at the Group level, we create a set of arrays for each variable of
         # interest, and we make them all subviews of the same shared array in
@@ -609,12 +608,13 @@ class Component(System):
 
         out_stream.flush()
 
-    def _get_relname_map(self, parent_unknowns):
+    def _get_relname_map(self, parent_proms):
         """
         Args
         ----
-        parent_unknowns : `VecWrapper`
-            A dict-like object containing variables keyed using promoted names.
+        parent_proms : `dict`
+            A dict mapping absolute names to promoted names in the parent
+            system.
 
         Returns
         -------
@@ -622,17 +622,16 @@ class Component(System):
             Maps promoted name in parent (owner of unknowns) to
             the corresponding promoted name in the child.
         """
-        # parent_unknowns is keyed on promoted name relative to the parent system
         # unknowns_dict is keyed on absolute pathname
 
-        # use an ordered dict here so we can use this smaller dict when looping during get_view.
+        # use an ordered dict here so we can use this smaller dict when looping
+        # during get_view.
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
-        to_prom = parent_unknowns._sysdata.to_prom
         for key, meta in iteritems(self._unknowns_dict):
             # at comp level, promoted and unknowns_dict key are same
-            umap[to_prom['.'.join((self.pathname, key))]] = key
+            umap[parent_proms['.'.join((self.pathname, key))]] = key
 
         return umap
 
@@ -714,12 +713,8 @@ class Component(System):
 
             stepvec.set_complex_var(p_name)
 
-            mydict = {}
-            if p_name in self._to_abs_pnames:
-                for val in itervalues(self._params_dict):
-                    if val['promoted_name'] == p_name:
-                        mydict = val
-                        break
+            # at component level, promoted names and parms_dict keys are same
+            mydict = self._params_dict.get(p_name, {})
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

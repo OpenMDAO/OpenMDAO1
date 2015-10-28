@@ -12,7 +12,7 @@ else:
 
 import numpy as np
 
-from openmdao.api import Component, Problem
+from openmdao.api import Component, Problem, Group
 
 class TestComponent(unittest.TestCase):
 
@@ -73,12 +73,16 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected_msg)
 
     def test_promotes(self):
+        p = Problem(root=Group())
+        p.root.add('comp', self.comp)
         self.comp.add_param("xxyyzz", 0.0)
         self.comp.add_param("foobar", 0.0)
         self.comp.add_output("a:bcd:efg", -1)
         self.comp.add_output("x_y_z", np.zeros(10))
 
         self.comp._promotes = ('*',)
+        p.setup(check=False)
+
         for name in self.comp._params_dict:
             self.assertTrue(self.comp._promoted(name))
         for name in self.comp._unknowns_dict:
@@ -115,7 +119,7 @@ class TestComponent(unittest.TestCase):
             self.comp._promoted('xxyyzz')
         except Exception as err:
             self.assertEqual(text_type(err),
-                             "'' promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
+                             "'comp' promotes must be specified as a list, tuple or other iterator of strings, but '*' was specified")
 
     def test_add_params(self):
         self.comp.add_param("x", 0.0)
@@ -211,8 +215,10 @@ class TestComponent(unittest.TestCase):
         self.comp.add_param("y", shape=2)
         self.comp.add_output("z", -1)
         self.comp.add_state("s", 0.0)
+
         test_string = self.comp.generate_docstring()
-        original_string = '    """\n\n    Params\n    ----------\n    x: param ({\'promoted_name\': x, \'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'promoted_name\': y, \'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'promoted_name\': z, \'size\': 0, \'val\': -1})\n    s : unknown ({\'promoted_name\': s, \'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n    Options\n    -------\n    fd_options[\'force_fd\'] :  bool(False)\n        Set to True to finite difference this system.\n    fd_options[\'form\'] :  str(\'forward\')\n        Finite difference mode. (forward, backward, central) You can also set to \'complex_step\' to peform the complex step method if your components support it.\n    fd_options[\'step_size\'] :  float(1e-06)\n        Default finite difference stepsize\n    fd_options[\'step_type\'] :  str(\'absolute\')\n        Set to absolute, relative\n\n    """\n'
+
+        original_string = '    """\n\n    Params\n    ----------\n    x: param ({\'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'size\': 0, \'val\': -1})\n    s : unknown ({\'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n    Options\n    -------\n    fd_options[\'force_fd\'] :  bool(False)\n        Set to True to finite difference this system.\n    fd_options[\'form\'] :  str(\'forward\')\n        Finite difference mode. (forward, backward, central) You can also set to \'complex_step\' to peform the complex step method if your components support it.\n    fd_options[\'step_size\'] :  float(1e-06)\n        Default finite difference stepsize\n    fd_options[\'step_type\'] :  str(\'absolute\')\n        Set to absolute, relative\n\n    """\n'
         self.assertEqual(original_string, test_string)
 
 if __name__ == "__main__":

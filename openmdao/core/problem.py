@@ -264,10 +264,9 @@ class Problem(System):
         connections = newconns
 
         self._dangling = {}
-        prom_unknowns = self.root._to_abs_unames
         for p, meta in iteritems(params_dict):
             if p not in connections:
-                if meta['promoted_name'] not in prom_unknowns and p in input_graph:
+                if p in input_graph:
                     self._dangling[meta['promoted_name']] = \
                         set(nx.node_connected_component(input_graph, p))
                 else:
@@ -1759,21 +1758,14 @@ class Problem(System):
             if a a promoted variable name matches multiple unknowns
         """
 
-        # check if any promoted names correspond to mutiple unknowns
-        for name, lst in iteritems(self.root._to_abs_unames):
-            if len(lst) > 1:
-                raise RuntimeError("Promoted name '%s' matches multiple unknowns: %s" %
-                                   (name, lst))
-
         connections = {}
         dangling = {}
 
         for prom_name, pabs_list in iteritems(self.root._to_abs_pnames):
             if prom_name in self.root._to_abs_unames:  # param has a src in unknowns
-                uprom = self.root._to_abs_unames[prom_name]
+                uprom = self.root._to_abs_unames[prom_name][0]
                 for pabs in pabs_list:
-                    uprom = set(uprom)
-                    connections[pabs] = ((u, None) for u in uprom)
+                    connections[pabs] = ((uprom, None),)
             else:
                 dangling.setdefault(prom_name, set()).update(pabs_list)
 

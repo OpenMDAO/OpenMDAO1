@@ -259,8 +259,15 @@ class Group(System):
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
-                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
+                prom = self._promoted_name(meta['promoted_name'], sub)
+                meta['promoted_name'] = prom
                 unknowns_dict[u] = meta
+                if prom in self._to_abs_unames:
+                    raise RuntimeError("'%s': promoted name '%s' matches "
+                                       "multiple unknowns: %s" %
+                                       (self.pathname, prom,
+                                        (self._to_abs_unames[prom][0], u)))
+
                 self._to_abs_unames.setdefault(meta['promoted_name'], []).append(u)
 
             # check for any promotes that didn't match a variable
@@ -357,7 +364,7 @@ class Group(System):
             self._shared_dp_vec = np.zeros(max_psize)
 
             # map promoted name in parent to corresponding promoted name in this view
-            self._relname_map = self._get_relname_map(parent.unknowns)
+            self._relname_map = self._get_relname_map(parent._sysdata.to_prom)
             self._create_views(top_unknowns, parent, my_params, voi=None)
 
         self._u_size_lists = self.unknowns._get_flattened_sizes()
@@ -536,8 +543,9 @@ class Group(System):
                 try:
                     for tgt_pathname in self._to_abs_pnames[tgt]:
                         for src_pathname in src_pathnames:
-                            connection = (src_pathname, idxs)
-                            connections.setdefault(tgt_pathname, []).append(connection)
+                            connections.setdefault(tgt_pathname,
+                                                   []).append((src_pathname,
+                                                               idxs))
                 except KeyError as error:
                     try:
                         self._to_abs_unames[tgt]
@@ -1339,12 +1347,13 @@ class Group(System):
 
         return ranks
 
-    def _get_relname_map(self, unknowns):
+    def _get_relname_map(self, parent_proms):
         """
         Args
         ----
-        unknowns : `VecWrapper`
-            A dict-like object containing variables keyed using promoted names.
+        parent_proms : `dict`
+            A dict mapping absolute names to promoted names in the parent
+            system.
 
         Returns
         -------
@@ -1358,9 +1367,8 @@ class Group(System):
         # use an ordered dict here so we can use this smaller dict to loop over in get_view
         umap = OrderedDict()
 
-        to_prom = unknowns._sysdata.to_prom
         for abspath, meta in iteritems(self._unknowns_dict):
-            umap[to_prom[abspath]] = meta['promoted_name']
+            umap[parent_proms[abspath]] = meta['promoted_name']
 
         return umap
 
