@@ -34,7 +34,8 @@ from openmdao.util.string_util import get_common_ancestor, name_relative_to
 
 class _ProbData(object):
     """
-    A container for Problem level data that is needed by subsystems.
+    A container for Problem level data that is needed by subsystems
+    and VecWrappers.
     """
     def __init__(self):
         self.top_lin_gs = False
@@ -514,17 +515,15 @@ class Problem(System):
 
         mode = self._check_for_parallel_derivs(pois, oois, parallel_u, parallel_p)
 
-        relevance = Relevance(self.root, params_dict, unknowns_dict, connections,
-                              pois, oois, mode)
+        self._probdata.relevance = Relevance(self.root, params_dict,
+                                             unknowns_dict, connections,
+                                             pois, oois, mode)
 
-        # pass relevance object down to all systems and perform
-        # auto ordering
-        for s in self.root.subsystems(recurse=True, include_self=True):
-            s._relevance = relevance
-            if isinstance(s, Group):
-                # set auto order if order not already set
-                if not s._order_set:
-                    s.set_order(s.list_auto_order()[0])
+        # perform auto ordering
+        for s in self.root.subgroups(recurse=True, include_self=True):
+            # set auto order if order not already set
+            if not s._order_set:
+                s.set_order(s.list_auto_order()[0])
 
         # report any differences in units or initial values for
         # sourceless connected inputs
@@ -570,15 +569,15 @@ class Problem(System):
 
     def _check_mode(self, out_stream=sys.stdout):
         """ Adjoint vs Forward mode appropriateness """
-        if self._calculated_mode != self.root._relevance.mode:
+        if self._calculated_mode != self.root._probdata.relevance.mode:
             print("\nSpecified derivative mode is '%s', but calculated mode is '%s'\n(based "
-                  "on param size of %d and unknown size of %d)" % (self.root._relevance.mode,
+                  "on param size of %d and unknown size of %d)" % (self.root._probdata.relevance.mode,
                                                                    self._calculated_mode,
                                                                    self._p_length,
                                                                    self._u_length),
                   file=out_stream)
 
-        return (self.root._relevance.mode, self._calculated_mode)
+        return (self.root._probdata.relevance.mode, self._calculated_mode)
 
     def _list_unit_conversions(self, out_stream=sys.stdout):
         """ List all unit conversions being made (including only units on one
@@ -1096,7 +1095,7 @@ class Problem(System):
         """
 
         root = self.root
-        relevance = root._relevance
+        relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
         to_abs_unames = root._to_abs_unames
@@ -1118,7 +1117,7 @@ class Problem(System):
 
         # Prepare model for calculation
         root.clear_dparams()
-        for names in root._relevance.vars_of_interest(mode):
+        for names in root._probdata.relevance.vars_of_interest(mode):
             for name in names:
                 if name in root.dumat:
                     root.dumat[name].vec[:] = 0.0
@@ -1181,7 +1180,7 @@ class Problem(System):
             in_scale, un_scale = cn_scale, dv_scale
 
         # Process our inputs/outputs of interest for parallel groups
-        all_vois = self.root._relevance.vars_of_interest(mode)
+        all_vois = self.root._probdata.relevance.vars_of_interest(mode)
 
         input_set = set()
         for inp in input_list:
@@ -1660,7 +1659,7 @@ class Problem(System):
         A json string with a dependency matrix and a list of variable
         name labels.
         """
-        return self.root._relevance.json_dependencies()
+        return self.root._probdata.relevance.json_dependencies()
 
     def _setup_communicators(self):
         if self.comm is None:

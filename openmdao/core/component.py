@@ -354,7 +354,7 @@ class Component(System):
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
-        relevance = self._relevance
+        relevance = self._probdata.relevance
 
         if not self.is_active():
             return

@@ -27,8 +27,9 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
-        self._to_prom_name = {}
-        self._to_top_prom_name = {}
+        self.to_prom_name = {}
+        self.to_top_prom_name = {}
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -91,7 +92,6 @@ class System(object):
         self.drmat = {}
 
         self._local_subsystems = []
-        self._relevance = None
         self._fd_params = None
 
     def __getitem__(self, name):
@@ -565,7 +565,7 @@ class System(object):
         """
         force_fd = self.fd_options['force_fd']
         states = self.states
-        is_relevant = self._relevance.is_relevant_system
+        is_relevant = self._probdata.relevance.is_relevant_system
         fwd = mode == "fwd"
 
         for voi in vois:
@@ -764,7 +764,7 @@ class System(object):
 
         comm = self.comm
         params_dict = self._params_dict
-        relevance = self._relevance
+        relevance = self._probdata.relevance
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = self._relname_map
@@ -975,7 +975,7 @@ class System(object):
         if not self._probdata.top_lin_gs:
             return max_size, offsets
 
-        relevance = self._relevance
+        relevance = self._probdata.relevance
         for vois in relevance.groups:
             vec_size = 0
             for voi in vois:

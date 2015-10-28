@@ -326,7 +326,7 @@ class Group(System):
         self._local_unknown_sizes = {}
         self._local_param_sizes = {}
         self._owning_ranks = None
-        relevance = self._relevance
+        relevance = self._probdata.relevance
 
         if not self.is_active():
             return
@@ -430,14 +430,14 @@ class Group(System):
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
-                                relevance=self._relevance,
+                                relevance=self._probdata.relevance,
                                 var_of_interest=None, store_byobjs=True)
             self.resids.setup(unknowns_dict,
-                              relevance=self._relevance,
+                              relevance=self._probdata.relevance,
                               var_of_interest=None)
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
-                              relevance=self._relevance,
+                              relevance=self._probdata.relevance,
                               var_of_interest=None, store_byobjs=True)
 
         if voi is None or self._probdata.top_lin_gs:
@@ -445,14 +445,14 @@ class Group(System):
             dresids = impl.create_src_vecwrapper(self._sysdata, comm)
             dparams = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
-            dunknowns.setup(unknowns_dict, relevance=self._relevance,
+            dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
                             shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
-            dresids.setup(unknowns_dict, relevance=self._relevance,
+            dresids.setup(unknowns_dict, relevance=self._probdata.relevance,
                           var_of_interest=voi,
                           shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
             dparams.setup(None, params_dict, self.unknowns, my_params,
-                          self.connections, relevance=self._relevance,
+                          self.connections, relevance=self._probdata.relevance,
                           var_of_interest=voi,
                           shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
@@ -754,7 +754,7 @@ class Group(System):
         # their own params. All of the calls to clear_dparams on components
         # are unnecessary
 
-        for parallel_set in self._relevance.vars_of_interest():
+        for parallel_set in self._probdata.relevance.vars_of_interest():
             for name in parallel_set:
                 if name in self.dpmat:
                     self.dpmat[name].vec[:] = 0.0
@@ -842,7 +842,7 @@ class Group(System):
     def _get_sys_graph(self):
         """Return the subsystem graph for this Group."""
 
-        sgraph = self._relevance._sgraph
+        sgraph = self._probdata.relevance._sgraph
         if self.pathname:
             path = self.pathname.split('.')
             start = self.pathname + '.'
@@ -1177,17 +1177,17 @@ class Group(System):
             The name of a variable of interest.
 
         """
-        relevance = self._relevance
+        relevance = self._probdata.relevance
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
         vec_unames = (n for n, sz in self._u_size_lists[0]
                       if relevance.is_relevant(var_of_interest,
-                                               self.unknowns._sysdata._to_top_prom_name[n]))
+                                               self.unknowns._sysdata.to_top_prom_name[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
                       if relevance.is_relevant(var_of_interest,
-                                               self.params._sysdata._to_top_prom_name[n]))
+                                               self.params._sysdata.to_top_prom_name[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []

@@ -67,7 +67,7 @@ def plot_vgraph(group, outfile=None, fmt='pdf'):
         Default is 'pdf'.
 
     """
-    _plot_graph(group._relevance._vgraph, outfile=outfile, fmt=fmt)
+    _plot_graph(group._probdata.relevance._vgraph, outfile=outfile, fmt=fmt)
 
 def plot_sgraph(group, outfile=None, fmt='pdf'):
     """

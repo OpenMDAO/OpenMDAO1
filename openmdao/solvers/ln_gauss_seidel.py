@@ -73,11 +73,11 @@ class LinearGaussSeidel(LinearSolver):
         drmat = system.drmat
         dpmat = system.dpmat
         gs_outputs = system.gs_outputs
-        relevance = system._relevance
+        relevance = system._probdata.relevance
         fwd = mode == 'fwd'
 
         system.clear_dparams()
-        for names in system._relevance.vars_of_interest():
+        for names in system._probdata.relevance.vars_of_interest():
             for name in names:
                 if name in dumat:
                     dumat[name].vec[:] = 0.0

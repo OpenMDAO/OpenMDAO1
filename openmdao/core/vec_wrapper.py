@@ -99,8 +99,8 @@ class VecWrapper(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        to_prom_name = self._sysdata._to_prom_name
-        to_top = self._sysdata._to_top_prom_name
+        to_prom_name = self._sysdata.to_prom_name
+        to_top = self._sysdata.to_top_prom_name
 
         for prom_name, meta in iteritems(self):
             to_prom_name[meta['pathname']] = prom_name
@@ -398,7 +398,7 @@ class VecWrapper(object):
             Relative name mapped to the given absolute pathname.
         """
         try:
-            return self._sysdata._to_prom_name[abs_name]
+            return self._sysdata.to_prom_name[abs_name]
         except KeyError:
             raise KeyError("Relative name not found for variable '%s'" % abs_name)
 
