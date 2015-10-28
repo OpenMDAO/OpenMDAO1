@@ -27,9 +27,13 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
-        self.to_prom_name = {}
-        self.to_top_prom_name = {}
+        self.to_prom = {}
+        self.to_top_prom = {}
 
+        self.abs_unames = {}  # promoted name to abs name map
+        self.prom_unames = {} # abs name to promoted name map
+        self.abs_pnames = {}  # promoted name to abs name map
+        self.prom_pnames = {} # abs name to promoted name map
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -393,6 +397,8 @@ class System(object):
         # column data keyed by (uname, pname, col_id).
         fd_cols = {}
 
+        to_prom = self._sysdata.to_prom
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
@@ -404,7 +410,7 @@ class System(object):
 
                 # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
-                    param_src = self.unknowns.get_promoted_varname(param_src)
+                    param_src = to_prom[param_src]
 
                 target_input = unknowns.flat[param_src]
             else:

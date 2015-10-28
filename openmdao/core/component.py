@@ -629,9 +629,10 @@ class Component(System):
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
+        to_prom = parent_unknowns._sysdata.to_prom
         for key, meta in iteritems(self._unknowns_dict):
             # at comp level, promoted and unknowns_dict key are same
-            umap[parent_unknowns.get_promoted_varname('.'.join((self.pathname, key)))] = key
+            umap[to_prom['.'.join((self.pathname, key))]] = key
 
         return umap
 

@@ -99,11 +99,11 @@ class VecWrapper(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        to_prom_name = self._sysdata.to_prom_name
-        to_top = self._sysdata.to_top_prom_name
+        to_prom = self._sysdata.to_prom
+        to_top = self._sysdata.to_top_prom
 
         for prom_name, meta in iteritems(self):
-            to_prom_name[meta['pathname']] = prom_name
+            to_prom[meta['pathname']] = prom_name
             to_top[prom_name] = meta['top_promoted_name']
 
     def __getitem__(self, name):
@@ -381,26 +381,6 @@ class VecWrapper(object):
             return self.make_idx_array(0, 0)
 
         return numpy.concatenate(idxs)
-
-    def get_promoted_varname(self, abs_name):
-        """
-        Returns the relative pathname for the given absolute variable
-        pathname.
-
-        Args
-        ----
-        abs_name : str
-            Absolute pathname of a variable.
-
-        Returns
-        -------
-        rel_name : str
-            Relative name mapped to the given absolute pathname.
-        """
-        try:
-            return self._sysdata.to_prom_name[abs_name]
-        except KeyError:
-            raise KeyError("Relative name not found for variable '%s'" % abs_name)
 
     def get_states(self):
         """
@@ -742,6 +722,7 @@ class TgtVecWrapper(VecWrapper):
         if not store_byobjs:
             self.deriv_units = True
 
+        src_to_prom = srcvec._sysdata.to_prom
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for meta in itervalues(params_dict):
@@ -754,7 +735,7 @@ class TgtVecWrapper(VecWrapper):
                     if src is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
                     src_pathname, idxs = src
-                    src_rel_name = srcvec.get_promoted_varname(src_pathname)
+                    src_rel_name = src_to_prom[src_pathname]
                     src_meta = srcvec.metadata(src_rel_name)
 
                     vmeta = self._setup_var_meta(pathname, meta, vec_size,

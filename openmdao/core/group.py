@@ -1181,13 +1181,14 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
+        to_top_prom = self._sysdata.to_top_prom
+        to_prom = self._sysdata.to_prom
+
         vec_unames = (n for n, sz in self._u_size_lists[0]
-                      if relevance.is_relevant(var_of_interest,
-                                               self.unknowns._sysdata.to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest, to_top_prom[n]))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
-                      if relevance.is_relevant(var_of_interest,
-                                               self.params._sysdata.to_top_prom_name[n]))
+                      if relevance.is_relevant(var_of_interest, to_top_prom[n]))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
@@ -1209,8 +1210,8 @@ class Group(System):
         xfer_dict = {}
         for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
-                urelname = self.unknowns.get_promoted_varname(unknown)
-                prelname = self.params.get_promoted_varname(param)
+                urelname = to_prom[unknown]
+                prelname = to_prom[param]
 
                 top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
                 top_prelname = self._params_dict[param]['top_promoted_name']
@@ -1357,8 +1358,9 @@ class Group(System):
         # use an ordered dict here so we can use this smaller dict to loop over in get_view
         umap = OrderedDict()
 
+        to_prom = unknowns._sysdata.to_prom
         for abspath, meta in iteritems(self._unknowns_dict):
-            umap[unknowns.get_promoted_varname(abspath)] = meta['promoted_name']
+            umap[to_prom[abspath]] = meta['promoted_name']
 
         return umap
 
