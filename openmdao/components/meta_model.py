@@ -69,7 +69,7 @@ class MetaModel(Component):
             Initial value for the input.
 
         training_data : float or ndarray
-            training data for this variable. Optional, can be set 
+            training data for this variable. Optional, can be set
             by the problem later.
         """
         if training_data is None:
@@ -78,7 +78,7 @@ class MetaModel(Component):
         super(MetaModel, self).add_param(name, val, **kwargs)
         super(MetaModel, self).add_param('train:'+name, val=training_data, pass_by_obj=True)
 
-        input_size = self._params_dict[name]['size']
+        input_size = self._init_params_dict[name]['size']
 
         self._surrogate_param_names.append((name, input_size))
         self._input_size += input_size
@@ -97,7 +97,7 @@ class MetaModel(Component):
             execution, it is useful for infering size.
 
         training_data : float or ndarray
-            training data for this variable. Optional, can be set 
+            training data for this variable. Optional, can be set
             by the problem later.
         """
         if training_data is None:
@@ -107,17 +107,17 @@ class MetaModel(Component):
         super(MetaModel, self).add_output('train:'+name, val=training_data, pass_by_obj=True)
 
         try:
-            output_shape = self._unknowns_dict[name]['shape']
+            output_shape = self._init_unknowns_dict[name]['shape']
         except KeyError: #then its some kind of object, and just assume scalar training data
             output_shape = 1
 
         self._surrogate_output_names.append((name, output_shape))
         self._training_output[name] = np.zeros(0)
 
-        if self._unknowns_dict[name].get('surrogate'):
-            self._unknowns_dict[name]['default_surrogate'] = False
+        if self._init_unknowns_dict[name].get('surrogate'):
+            self._init_unknowns_dict[name]['default_surrogate'] = False
         else:
-            self._unknowns_dict[name]['default_surrogate'] = True
+            self._init_unknowns_dict[name]['default_surrogate'] = True
 
     def _setup_variables(self, compute_indices=False):
         """Returns our params and unknowns dictionaries,
@@ -137,9 +137,9 @@ class MetaModel(Component):
         # did not have a surrogate specified
         if self.default_surrogate is not None:
             for name, shape in self._surrogate_output_names:
-                if self._unknowns_dict[name].get('default_surrogate'):
+                if self._init_unknowns_dict[name].get('default_surrogate'):
                     surrogate = deepcopy(self.default_surrogate)
-                    self._unknowns_dict[name]['surrogate'] = surrogate
+                    self._init_unknowns_dict[name]['surrogate'] = surrogate
 
         # training will occur on first execution after setup
         self.train = True
@@ -160,7 +160,7 @@ class MetaModel(Component):
         if self.default_surrogate is None:
             no_sur = []
             for name, shape in self._surrogate_output_names:
-                surrogate = self._unknowns_dict[name].get('surrogate')
+                surrogate = self._init_unknowns_dict[name].get('surrogate')
                 if surrogate is None:
                     no_sur.append(name)
             if len(no_sur) > 0:
@@ -194,7 +194,7 @@ class MetaModel(Component):
         inputs = self._params_to_inputs(params)
 
         for name, shape in self._surrogate_output_names:
-            surrogate = self._unknowns_dict[name].get('surrogate')
+            surrogate = self._init_unknowns_dict[name].get('surrogate')
             if surrogate:
                 unknowns[name] = surrogate.predict(inputs)
             else:
@@ -250,7 +250,7 @@ class MetaModel(Component):
         inputs = self._params_to_inputs(params)
 
         for uname, _ in self._surrogate_output_names:
-            surrogate = self._unknowns_dict[uname].get('surrogate')
+            surrogate = self._init_unknowns_dict[uname].get('surrogate')
             sjac = surrogate.linearize(inputs)
 
             idx = 0
@@ -340,7 +340,7 @@ class MetaModel(Component):
                             v = np.array(v)
                         new_output[row_idx, :] = v.flat
 
-            surrogate = self._unknowns_dict[name].get('surrogate')
+            surrogate = self._init_unknowns_dict[name].get('surrogate')
             if surrogate is not None:
                 surrogate.train(self._training_input, self._training_output[name])
 

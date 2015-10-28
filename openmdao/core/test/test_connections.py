@@ -26,8 +26,8 @@ class TestConnections(unittest.TestCase):
 
     def test_diff_conn_input_vals(self):
         # set different initial values
-        self.C1._params_dict['x']['val'] = 7.
-        self.C3._params_dict['x']['val'] = 5.
+        self.C1._init_params_dict['x']['val'] = 7.
+        self.C3._init_params_dict['x']['val'] = 5.
 
         # connect two inputs
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
@@ -44,8 +44,8 @@ class TestConnections(unittest.TestCase):
 
     def test_diff_conn_input_units(self):
         # set different but compatible units
-        self.C1._params_dict['x']['units'] = 'ft'
-        self.C3._params_dict['x']['units'] = 'in'
+        self.C1._init_params_dict['x']['units'] = 'ft'
+        self.C3._init_params_dict['x']['units'] = 'in'
 
         # connect two inputs
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
@@ -261,7 +261,7 @@ class TestUBCS(unittest.TestCase):
         root.connect("C4.y", "C1.x2")
 
         # set a bogus value for C4.y
-        self.C4._unknowns_dict['y']['val'] = -999.
+        self.C4._init_unknowns_dict['y']['val'] = -999.
 
         p.setup(check=False)
 

@@ -246,8 +246,8 @@ class Group(System):
         self._sysdata._unknowns_dict = unknowns_dict
 
         self._data_xfer = {}
-        self._to_abs_unames = {}
-        self._to_abs_pnames = {}
+        abs_unames = self._sysdata.abs_unames = {}
+        abs_pnames = self._sysdata.abs_pnames = {}
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
@@ -255,20 +255,20 @@ class Group(System):
                 meta = meta.copy()
                 meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
                 params_dict[p] = meta
-                self._to_abs_pnames.setdefault(meta['promoted_name'], []).append(p)
+                abs_pnames.setdefault(meta['promoted_name'], []).append(p)
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
                 prom = self._promoted_name(meta['promoted_name'], sub)
                 meta['promoted_name'] = prom
                 unknowns_dict[u] = meta
-                if prom in self._to_abs_unames:
+                if prom in abs_unames:
                     raise RuntimeError("'%s': promoted name '%s' matches "
                                        "multiple unknowns: %s" %
                                        (self.pathname, prom,
-                                        (self._to_abs_unames[prom][0], u)))
+                                        (abs_unames[prom], u)))
 
-                self._to_abs_unames.setdefault(meta['promoted_name'], []).append(u)
+                abs_unames[prom] = u
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
@@ -530,25 +530,28 @@ class Group(System):
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
+        abs_unames = self._sysdata.abs_unames
+        abs_pnames = self._sysdata.abs_pnames
+
         for tgt, srcs in iteritems(self._src):
             for src, idxs in srcs:
                 try:
-                    src_pathnames = self._to_abs_unames[src]
+                    src_pathnames = [abs_unames[src]]
                 except KeyError as error:
                     try:
-                        src_pathnames = self._to_abs_pnames[src]
+                        src_pathnames = abs_pnames[src]
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
                 try:
-                    for tgt_pathname in self._to_abs_pnames[tgt]:
+                    for tgt_pathname in abs_pnames[tgt]:
                         for src_pathname in src_pathnames:
                             connections.setdefault(tgt_pathname,
                                                    []).append((src_pathname,
                                                                idxs))
                 except KeyError as error:
                     try:
-                        self._to_abs_unames[tgt]
+                        abs_unames[tgt]
                     except KeyError as error:
                         raise ConnectError.nonexistent_target_error(src, tgt)
                     else:

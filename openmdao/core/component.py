@@ -56,6 +56,9 @@ class Component(System):
         self._post_setup_vars = False
         self._jacobian_cache = {}
 
+        self._init_params_dict = OrderedDict() # for storage of initial var data
+        self._init_unknowns_dict = OrderedDict() # for storage of initial var data
+
     def _get_initial_val(self, val, shape):
         """ Determines initial value based on starting val and shape."""
         if val is _NotSet:
@@ -136,8 +139,8 @@ class Component(System):
         val : float or ndarray or object
             Initial value for the input.
         """
-        self._params_dict[name] = self._add_variable(name, val, 'param',
-                                                     **kwargs)
+        self._init_params_dict[name] = self._add_variable(name, val, 'param',
+                                                          **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
         """ Add an output to this component.
@@ -151,8 +154,8 @@ class Component(System):
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
-        self._unknowns_dict[name] = self._add_variable(name, val, 'output',
-                                                       **kwargs)
+        self._init_unknowns_dict[name] = self._add_variable(name, val, 'output',
+                                                            **kwargs)
 
     def add_state(self, name, val=_NotSet, **kwargs):
         """ Add an implicit state to this component.
@@ -167,7 +170,7 @@ class Component(System):
         """
         args = self._add_variable(name, val, 'state', **kwargs)
         args['state'] = True
-        self._unknowns_dict[name] = args
+        self._init_unknowns_dict[name] = args
 
     def set_var_indices(self, name, val=_NotSet, shape=None,
                         src_indices=None):
@@ -193,9 +196,9 @@ class Component(System):
             version of this variable are present in this process.
 
         """
-        meta = self._params_dict.get(name)
+        meta = self._init_params_dict.get(name)
         if meta is None:
-            meta = self._unknowns_dict[name]
+            meta = self._init_unknowns_dict[name]
 
         if src_indices is None:
             raise ValueError("You must provide src_indices for variable '%s'" %
@@ -228,7 +231,7 @@ class Component(System):
         if self._post_setup_vars:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called." %
                                (self.pathname, name))
-        if name in self._params_dict or name in self._unknowns_dict:
+        if name in self._init_params_dict or name in self._init_unknowns_dict:
             raise RuntimeError("%s: variable '%s' already exists." %
                                (self.pathname, name))
 
@@ -285,8 +288,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        self._to_abs_unames = self._sysdata._to_abs_unames = {}
-        self._to_abs_pnames = self._sysdata._to_abs_pnames = {}
+        abs_unames = self._sysdata.abs_unames
+        abs_pnames = self._sysdata.abs_pnames
 
         if MPI and compute_indices and self.is_active():
             self.setup_distrib_idxs()
@@ -294,7 +297,7 @@ class Component(System):
             # unknowns
             sizes = []
             names = []
-            for name, meta in iteritems(self._unknowns_dict):
+            for name, meta in iteritems(self._init_unknowns_dict):
                 if 'src_indices' in meta:
                     sizes.append(len(meta['src_indices']))
                     names.append(name)
@@ -304,32 +307,31 @@ class Component(System):
                 allsizes = np.zeros((self.comm.size, len(sizes)), dtype=int)
                 self.comm.Allgather(np.array(sizes, dtype=int), allsizes)
                 for i, name in enumerate(names):
-                    self._unknowns_dict[name]['distrib_size'] = np.sum(allsizes[:, i])
+                    self._init_unknowns_dict[name]['distrib_size'] = np.sum(allsizes[:, i])
 
         # rekey with absolute path names and add promoted names
-        _new_params = OrderedDict()
-        for name, meta in iteritems(self._params_dict):
+        self._params_dict = OrderedDict()
+        for name, meta in iteritems(self._init_params_dict):
             pathname = self._get_var_pathname(name)
-            _new_params[pathname] = meta
+            self._params_dict [pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
-            self._params_dict[name]['promoted_name'] = name
-            self._to_abs_pnames[name] = (pathname,)
+            abs_pnames[name] = (pathname,)
 
-        _new_unknowns = OrderedDict()
-        for name, meta in iteritems(self._unknowns_dict):
+        self._unknowns_dict = OrderedDict()
+        for name, meta in iteritems(self._init_unknowns_dict):
             pathname = self._get_var_pathname(name)
-            _new_unknowns[pathname] = meta
+            self._unknowns_dict[pathname] = meta
             meta['pathname'] = pathname
             meta['promoted_name'] = name
-            self._to_abs_unames[name] = (pathname,)
+            abs_unames[name] = pathname
 
         self._post_setup_vars = True
 
-        self._sysdata._params_dict = _new_params
-        self._sysdata._unknowns_dict = _new_unknowns
+        self._sysdata._params_dict = self._params_dict
+        self._sysdata._unknowns_dict = self._unknowns_dict
 
-        return _new_params, _new_unknowns
+        return self._params_dict, self._unknowns_dict
 
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, impl=None):
@@ -629,8 +631,8 @@ class Component(System):
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
-        for key, meta in iteritems(self._unknowns_dict):
-            # at comp level, promoted and unknowns_dict key are same
+        for key, meta in iteritems(self._init_unknowns_dict):
+            # promoted and _init_unknowns_dict key are same
             umap[parent_proms['.'.join((self.pathname, key))]] = key
 
         return umap
@@ -713,8 +715,8 @@ class Component(System):
 
             stepvec.set_complex_var(p_name)
 
-            # at component level, promoted names and parms_dict keys are same
-            mydict = self._params_dict.get(p_name, {})
+            # promoted names and _init_params_dict keys are same
+            mydict = self._init_params_dict.get(p_name, {})
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

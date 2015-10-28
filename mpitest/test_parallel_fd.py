@@ -35,7 +35,6 @@ class ScalableComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much. """
-        print(self.pathname, "solve_nonlin")
         if self._ncalls > 0:  # only delay during FD, not initial run
             time.sleep(self._delay)
         self._ncalls += 1

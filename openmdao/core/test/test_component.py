@@ -83,32 +83,32 @@ class TestComponent(unittest.TestCase):
         self.comp._promotes = ('*',)
         p.setup(check=False)
 
-        for name in self.comp._params_dict:
+        for name in self.comp._init_params_dict:
             self.assertTrue(self.comp._promoted(name))
-        for name in self.comp._unknowns_dict:
+        for name in self.comp._init_unknowns_dict:
             self.assertTrue(self.comp._promoted(name))
 
         self.assertFalse(self.comp._promoted('blah'))
 
         self.comp._promotes = ('x*',)
-        for name in self.comp._params_dict:
+        for name in self.comp._init_params_dict:
             if name.startswith('x'):
                 self.assertTrue(self.comp._promoted(name))
             else:
                 self.assertFalse(self.comp._promoted(name))
-        for name in self.comp._unknowns_dict:
+        for name in self.comp._init_unknowns_dict:
             if name.startswith('x'):
                 self.assertTrue(self.comp._promoted(name))
             else:
                 self.assertFalse(self.comp._promoted(name))
 
         self.comp._promotes = ('*:efg',)
-        for name in self.comp._params_dict:
+        for name in self.comp._init_params_dict:
             if name.endswith(':efg'):
                 self.assertTrue(self.comp._promoted(name))
             else:
                 self.assertFalse(self.comp._promoted(name))
-        for name in self.comp._unknowns_dict:
+        for name in self.comp._init_unknowns_dict:
             if name.endswith(':efg'):
                 self.assertTrue(self.comp._promoted(name))
             else:

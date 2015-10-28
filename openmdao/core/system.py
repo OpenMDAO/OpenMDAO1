@@ -368,6 +368,8 @@ class System(object):
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
 
+        abs_pnames = self._sysdata.abs_pnames
+
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
         form = self.fd_options.get('form', 'forward')
@@ -423,11 +425,12 @@ class System(object):
                 target_input = inputs.flat[p_name]
 
             mydict = {}
-            if p_name in self._to_abs_pnames:
-                for meta in itervalues(self._params_dict):
-                    if meta['promoted_name'] == p_name:
-                        mydict = meta
-                        break
+            # since p_name is a promoted name, it could refer to multiple
+            # params.  We've checked earlier to make sure that step_size,
+            # step_type, and form are not defined differently for each
+            # matching param.  If they differ, a warning has already been issued.
+            if p_name in abs_pnames:
+                mydict = self._params_dict[abs_pnames[p_name][0]]
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)
@@ -900,11 +903,11 @@ class System(object):
         #start the docstring off
         docstring = '    \"\"\"\n'
 
-        if self._params_dict or self._unknowns_dict:
+        if self._init_params_dict or self._init_unknowns_dict:
             docstring += '\n    Params\n    ----------\n'
 
-        if self._params_dict:
-            for key, value in self._params_dict.items():
+        if self._init_params_dict:
+            for key, value in self._init_params_dict.items():
                 #docstring += type(value).__name__
                 docstring += "    " + key + ": param ({"
                 #get the values out in order
@@ -918,8 +921,8 @@ class System(object):
                     dictPosition += 1
                 docstring += "})\n"
 
-        if self._unknowns_dict:
-            for key, value in self._unknowns_dict.items():
+        if self._init_unknowns_dict:
+            for key, value in self._init_unknowns_dict.items():
                 docstring += "    " + key + " : unknown ({"
                 dictItemCount = len(value)
                 dictPosition = 1

@@ -116,8 +116,8 @@ class Problem(System):
             return self.root.unknowns[name]
         elif name in self.root.params:
             return self.root.params[name]
-        elif name in self.root._to_abs_pnames:
-            for p in self.root._to_abs_pnames[name]:
+        elif name in self.root._sysdata.abs_pnames:
+            for p in self.root._sysdata.abs_pnames[name]:
                 return self._rec_get_param(p)
         elif name in self._dangling:
             for p in self._dangling[name]:
@@ -341,6 +341,41 @@ class Problem(System):
                                                  diff_vals)))
                         raise RuntimeError(msg)
 
+        # now check for differences in step_size, step_type, or form for
+        # promoted inputs
+        for promname, absnames in iteritems(self.root._sysdata.abs_pnames):
+            if len(absnames) > 1:
+                step_sizes, step_types, forms = {}, {}, {}
+                for name in absnames:
+                    meta = self.root._params_dict[name]
+                    ss = meta.get('step_size')
+                    if ss is not None:
+                        step_sizes[ss] = name
+                    st = meta.get('step_type')
+                    if st is not None:
+                        step_types[st] = name
+                    f = meta.get('form')
+                    if f is not None:
+                        forms[f] = name
+
+                if len(step_sizes) > 1:
+                    raise RuntimeError("The following parameters have the same "
+                                  "promoted name, '%s', but different "
+                                  "'step_size' values: %s" % (promname,
+                                  sorted([(v,k) for k,v in step_sizes.items()])))
+
+                if len(step_types) > 1:
+                    raise RuntimeError("The following parameters have the same "
+                                  "promoted name, '%s', but different "
+                                  "'step_type' values: %s" % (promname,
+                                 sorted([(v,k) for k,v in step_types.items()])))
+
+                if len(forms) > 1:
+                    raise RuntimeError("The following parameters have the same "
+                                  "promoted name, '%s', but different 'form' "
+                                  "values: %s" % (promname,
+                                      sorted([(v,k) for k,v in forms.items()])))
+
         return input_diffs
 
     def _get_ubc_vars(self, connections):
@@ -418,9 +453,7 @@ class Problem(System):
             meta_changed = True
             for comp in self.root.components(recurse=True):
                 for tgt, src, idxs in src_idx_conns:
-                    # component dicts are keyed on var name, not pathname
-                    path, name = tgt.rsplit('.', 1)
-                    meta = comp._params_dict.get(name)
+                    meta = comp._params_dict.get(tgt)
                     if meta and meta['pathname'] == tgt:
                         meta['src_indices'] = idxs
 
@@ -494,7 +527,7 @@ class Problem(System):
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
-        promoted_unknowns = self.root._to_abs_unames
+        promoted_unknowns = self.root._sysdata.abs_unames
 
         parallel_p = False
         for vnames in pois:
@@ -934,6 +967,8 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
+        abs_pnames = self.root._sysdata.abs_pnames
+
         if dv_scale is None:
             dv_scale = {}
         if cn_scale is None:
@@ -1000,7 +1035,7 @@ class Problem(System):
 
                     # Support for IndepVarComps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
-                        fd_ikey = root._to_abs_pnames[fd_ikey][0]
+                        fd_ikey = abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
 
@@ -1036,7 +1071,7 @@ class Problem(System):
 
                     # Support for IndepVarComps that are buried in sub-Groups
                     if (u, fd_ikey) not in Jfd:
-                        fd_ikey = root._to_abs_pnames[fd_ikey][0]
+                        fd_ikey = abs_pnames[fd_ikey][0]
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
@@ -1097,7 +1132,7 @@ class Problem(System):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_unames = root._to_abs_unames
+        to_abs_unames = root._sysdata.abs_unames
         comm = root.comm
         iproc = comm.rank
         nproc = comm.size
@@ -1233,7 +1268,7 @@ class Problem(System):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi][0]]['size'], dtype=int)
+                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -1761,9 +1796,11 @@ class Problem(System):
         connections = {}
         dangling = {}
 
-        for prom_name, pabs_list in iteritems(self.root._to_abs_pnames):
-            if prom_name in self.root._to_abs_unames:  # param has a src in unknowns
-                uprom = self.root._to_abs_unames[prom_name][0]
+        abs_unames = self.root._sysdata.abs_unames
+
+        for prom_name, pabs_list in iteritems(self.root._sysdata.abs_pnames):
+            if prom_name in abs_unames:  # param has a src in unknowns
+                uprom = abs_unames[prom_name]
                 for pabs in pabs_list:
                     connections[pabs] = ((uprom, None),)
             else:
