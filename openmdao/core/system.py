@@ -1009,20 +1009,15 @@ class System(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        to_prom = self._sysdata.to_prom
         to_top = self._sysdata.to_top_prom
-
-        to_prom_pnames = self._sysdata.to_prom_pnames
-        to_prom_unames = self._sysdata.to_prom_unames
+        to_prom = self._sysdata.to_prom
 
         for pathname, meta in iteritems(self._unknowns_dict):
-            prom = to_prom_unames[pathname]
-            to_prom[pathname] = prom
+            prom = to_prom[pathname]
             to_top[prom] = meta['top_promoted_name']
 
         for pathname, meta in iteritems(self._params_dict):
-            prom = to_prom_pnames[pathname]
-            to_prom[pathname] = prom
+            prom = to_prom[pathname]
             to_top[name_relative_to(self.pathname, pathname)] = \
                                       meta['top_promoted_name']
 

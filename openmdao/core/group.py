@@ -246,6 +246,9 @@ class Group(System):
         self._sysdata._unknowns_dict = unknowns_dict
 
         self._data_xfer = {}
+
+        to_prom = self._sysdata.to_prom = {}
+        to_top_prom = self._sysdata.to_top_prom = {}
         to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
@@ -275,6 +278,9 @@ class Group(System):
                 to_prom_unames[u] = prom
                 meta['promoted_name'] = prom
 
+            to_prom.update(to_prom_unames)
+            to_prom.update(to_prom_pnames)
+            
             # check for any promotes that didn't match a variable
             sub._check_promotes()
 

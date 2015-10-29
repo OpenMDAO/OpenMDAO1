@@ -288,6 +288,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
+        to_prom = self._sysdata.to_prom = {}
+        to_top_prom = self._sysdata.to_top_prom = {}
         to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
@@ -318,8 +320,8 @@ class Component(System):
             self._params_dict [pathname] = meta
             meta['pathname'] = pathname
             to_prom_pnames[pathname] = name
-            meta['promoted_name'] = name
             to_abs_pnames[name] = (pathname,)
+            meta['promoted_name'] = name
 
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
@@ -327,8 +329,11 @@ class Component(System):
             self._unknowns_dict[pathname] = meta
             meta['pathname'] = pathname
             to_prom_unames[pathname] = name
-            meta['promoted_name'] = name
             to_abs_unames[name] = pathname
+            meta['promoted_name'] = name
+
+        to_prom.update(to_prom_unames)
+        to_prom.update(to_prom_pnames)
 
         self._post_setup_vars = True
 
@@ -365,7 +370,7 @@ class Component(System):
             return
 
         self._setup_prom_map()
-        
+
         self._impl = impl
 
         # create map of relative name in parent to relative name in child

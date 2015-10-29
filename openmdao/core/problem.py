@@ -497,19 +497,18 @@ class Problem(System):
 
         # propagate top level promoted names, unit conversions,
         # and connections down to all subsystems
+        to_prom = self.root._sysdata.to_prom
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 
-            for meta in chain(itervalues(sub._params_dict),
-                              itervalues(sub._unknowns_dict)):
-                path = meta['pathname']
-                if path in unknowns_dict:
-                    meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
-                else:
-                    meta['top_promoted_name'] = params_dict[path]['promoted_name']
-                    unit_conv = params_dict[path].get('unit_conv')
-                    if unit_conv:
-                        meta['unit_conv'] = unit_conv
+            for path, meta in iteritems(sub._params_dict):
+                meta['top_promoted_name'] = to_prom[path]
+                unit_conv = params_dict[path].get('unit_conv')
+                if unit_conv:
+                    meta['unit_conv'] = unit_conv
+
+            for path, meta in iteritems(sub._unknowns_dict):
+                meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
