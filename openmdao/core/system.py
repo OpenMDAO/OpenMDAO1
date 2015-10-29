@@ -39,6 +39,7 @@ class _SysData(object):
         self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
         self.to_prom_pnames = OrderedDict() # abs name to promoted namep
 
+
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
     inherit from `Group` or `Component`
@@ -806,13 +807,13 @@ class System(object):
         for sub in self._local_subsystems:
             gso[sub.name] = outs = {}
             for voi in vois:
-                outs[voi] = set([x for x in dumat[voi] if
+                outs[voi] = set([x for x in dumat[voi]._access if
                                            sub.dumat and x not in sub.dumat[voi]])
         gso = self.gs_outputs['rev']
         for sub in reversed(self._local_subsystems):
             gso[sub.name] = outs = {}
             for voi in vois:
-                outs[voi] = set([x for x in dumat[voi] if
+                outs[voi] = set([x for x in dumat[voi]._access if
                                            not sub.dumat or
                                            (sub.dumat and x not in sub.dumat[voi])])
 

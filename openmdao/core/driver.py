@@ -69,18 +69,18 @@ class Driver(object):
 
         for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
+                # Check validity of variable
+                if name not in root.unknowns:
+                    msg = "{} '{}' not found in unknowns."
+                    msg = msg.format(item_name, name)
+                    raise ValueError(msg)
+
                 rootmeta = root.unknowns.metadata(name)
 
                 if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
-
-                # Check validity of variable
-                if name not in root.unknowns:
-                    msg = "{} '{}' not found in unknowns."
-                    msg = msg.format(item_name, name)
-                    raise ValueError(msg)
 
                 # Size is useful metadata to save
                 if 'indices' in meta:

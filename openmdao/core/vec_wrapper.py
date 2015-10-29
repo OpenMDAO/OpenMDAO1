@@ -55,6 +55,7 @@ class VecWrapper(object):
         self.comm = comm
         self.vec = None
         self._vardict = OrderedDict()
+        self._access = OrderedDict()
         self._slices = {}
         self.flat = None
 
@@ -132,7 +133,7 @@ class VecWrapper(object):
         -------
             The number of keys (variables) in this vector.
         """
-        return len(self._vardict)
+        return len(self._access)
 
     def __contains__(self, key):
         """
@@ -141,7 +142,7 @@ class VecWrapper(object):
             A boolean indicating if the given key (variable name) is in this vector.
         """
 
-        return key in self._vardict
+        return key in self._access
 
     def __iter__(self):
         """
@@ -287,7 +288,9 @@ class VecWrapper(object):
             if name in vardict:
                 meta = vardict[name]
                 view._vardict[pname] = meta
-                if not meta.get('pass_by_obj') and not meta.get('remote'):
+                if meta.get('pass_by_obj'):
+                    view._access[pname] = view._setup_access_functs(pname, meta)
+                elif not meta.get('remote'):
                     pstart, pend = self._slices[name]
                     if start == -1:
                         start = pstart
@@ -299,6 +302,7 @@ class VecWrapper(object):
                     end = pend
                     view._slices[pname] = (view_size, view_size + meta['size'])
                     view_size += meta['size']
+                    view._access[pname] = view._setup_access_functs(pname, meta)
 
         if start == -1: # no items found
             view.vec = self.vec[0:0]
@@ -306,7 +310,6 @@ class VecWrapper(object):
             view.vec = self.vec[start:end]
 
         view.setup_flat()
-        view._setup_access_functs()
 
         return view
 
@@ -483,13 +486,12 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _setup_get_funct(self, name):
+    def _setup_get_funct(self, name, meta):
         """
         Returns a tuple of efficient closures (nonflat and flat) to access
         the named value.
         """
 
-        meta = self._vardict[name]
         val = meta['val']
         flatfunc = None
 
@@ -507,7 +509,7 @@ class VecWrapper(object):
         if is_scalar:
             shapes_same = True
         else:
-            shapes_same = shape == val.shape
+            shapes_same = (shape == val.size or shape == (val.size,))
 
         # No unit conversion.
         # dparams vector does no unit conversion.
@@ -532,10 +534,8 @@ class VecWrapper(object):
 
         return func, flatfunc
 
-    def _setup_set_funct(self, name):
+    def _setup_set_funct(self, name, meta):
         """ Sets up our fast set functions."""
-
-        meta = self._vardict[name]
 
         if meta.get('remote'):
             return _remote_access_error
@@ -547,13 +547,10 @@ class VecWrapper(object):
             else:
                 return _set_arr
 
-    def _setup_access_functs(self):
-        self._access = {}
-        for name in self:
-            func, flatfunc = self._setup_get_funct(name)
-            setfunc = self._setup_set_funct(name)
-            self._access[name] = Accessor(func, setfunc, flatfunc,
-                                          self._vardict[name])
+    def _setup_access_functs(self, name, meta):
+        func, flatfunc = self._setup_get_funct(name, meta)
+        setfunc = self._setup_set_funct(name, meta)
+        return Accessor(func, setfunc, flatfunc, meta)
 
 
 class SrcVecWrapper(VecWrapper):
@@ -598,6 +595,7 @@ class SrcVecWrapper(VecWrapper):
                     vec_size += vmeta['size']
 
                 self._vardict[promname] = vmeta
+                self._access[promname] = self._setup_access_functs(promname, vmeta)
 
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
@@ -628,7 +626,6 @@ class SrcVecWrapper(VecWrapper):
                             self._vardict[to_prom[path]]['val'][:] = meta['val'].flat
 
         self.setup_flat()
-        self._setup_access_functs()
 
     def _setup_var_meta(self, name, meta):
         """
@@ -732,7 +729,9 @@ class TgtVecWrapper(VecWrapper):
                     if not meta.get('remote'):
                         vec_size += vmeta['size']
 
-                    self._vardict[self._scoped_abs_name(pathname)] = vmeta
+                    my_abs = self._scoped_abs_name(pathname)
+                    self._vardict[my_abs] = vmeta
+                    self._access[my_abs] = self._setup_access_functs(my_abs, vmeta)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -761,7 +760,9 @@ class TgtVecWrapper(VecWrapper):
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
-                self._vardict[self._scoped_abs_name(pathname)] = newmeta
+                my_abs = self._scoped_abs_name(pathname)
+                self._vardict[my_abs] = newmeta
+                self._access[my_abs] = self._setup_access_functs(my_abs, newmeta)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -777,7 +778,6 @@ class TgtVecWrapper(VecWrapper):
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
         self.setup_flat()
-        self._setup_access_functs()
 
     def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
         """
@@ -841,9 +841,10 @@ class TgtVecWrapper(VecWrapper):
         vmeta['val'] = _ByObjWrapper(val)
         vmeta['pass_by_obj'] = True
         self._vardict[sname] = vmeta
-        func, flatfunc = self._setup_get_funct(sname)
-        self._access[sname] = Accessor(func, self._setup_set_funct(sname),
-                                       flatfunc, self._vardict[sname])
+        self._access[sname] = self._setup_access_functs(sname, vmeta)
+        #func, flatfunc = self._setup_get_funct(sname)
+        #self._access[sname] = Accessor(func, self._setup_set_funct(sname),
+                                       #flatfunc, self._vardict[sname])
 
     def _get_flattened_sizes(self):
         """
