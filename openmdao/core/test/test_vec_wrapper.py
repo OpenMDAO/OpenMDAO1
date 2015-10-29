@@ -37,7 +37,6 @@ class TestVecWrapper(unittest.TestCase):
 
         self.assertEqual(u.get_states(), ['s1'])
         self.assertEqual([t[0] for t in iteritems(u.flat)], ['y1','y2','y4','s1'])
-        self.assertEqual([t[0] for t in u.get_byobjs()], ['y3'])
 
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
@@ -76,7 +75,7 @@ class TestVecWrapper(unittest.TestCase):
             connections[p] = (p, None)
 
         s = _SysData('')
-        s._unknowns_dict = u._vardict
+        s._unknowns_dict = u._access
         p = TgtVecWrapper(s)
         p.setup(None, params, u, params.keys(),
                 connections, store_byobjs=True)

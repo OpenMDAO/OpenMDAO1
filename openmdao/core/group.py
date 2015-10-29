@@ -1221,8 +1221,7 @@ class Group(System):
             param_sizes.append([sz for n, sz in self._p_size_lists[iproc]
                                 if n in vec_pnames])
 
-        unknown_sizes = np.array(unknown_sizes,
-                                 dtype=self._impl.idx_arr_type)
+        unknown_sizes = np.array(unknown_sizes, dtype=self._impl.idx_arr_type)
         self._local_unknown_sizes[var_of_interest] = unknown_sizes
 
         param_sizes = np.array(param_sizes,

@@ -44,7 +44,7 @@ class ComplexStepTgtVecWrapper(object):
         -------
             The number of keys (variables) in this vector.
         """
-        return len(self.vecwrap._vardict)
+        return len(self.vecwrap)
 
     def __contains__(self, key):
         """
@@ -53,15 +53,15 @@ class ComplexStepTgtVecWrapper(object):
             A boolean indicating if the given key (variable name) is in this vector.
         """
 
-        return key in self.vecwrap._vardict
+        return key in self.vecwrap
 
     def __iter__(self):
         """
         Returns
         -------
-            A dictionary iterator over the items in _vardict.
+            A dictionary iterator over the items in _access.
         """
-        return self.vecwrap._vardict.__iter__()
+        return iter(self.vecwrap)
 
     def keys(self):
         """
@@ -70,7 +70,7 @@ class ComplexStepTgtVecWrapper(object):
         list or KeyView (python 3)
             the keys (variable names) in this vector.
         """
-        return self.vecwrap._vardict.keys()
+        return self.vecwrap.keys()
 
     def iterkeys(self):
         """
@@ -79,7 +79,7 @@ class ComplexStepTgtVecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return iterkeys(self.vecwrap._vardict)
+        return self.vecwrap.iterkeys()
 
     def metadata(self, name):
         """
@@ -100,7 +100,7 @@ class ComplexStepTgtVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vecwrap._vardict[name]
+        return self.vecwrap._access[name].meta
 
     def set_complex_var(self, name):
         """
@@ -192,7 +192,7 @@ class ComplexStepSrcVecWrapper(object):
         -------
             The number of keys (variables) in this vector.
         """
-        return len(self.vecwrap._vardict)
+        return len(self.vecwrap)
 
     def __contains__(self, key):
         """
@@ -201,15 +201,15 @@ class ComplexStepSrcVecWrapper(object):
             A boolean indicating if the given key (variable name) is in this vector.
         """
 
-        return key in self.vecwrap._vardict
+        return key in self.vecwrap
 
     def __iter__(self):
         """
         Returns
         -------
-            A dictionary iterator over the items in _vardict.
+            A dictionary iterator over the items in _access.
         """
-        return self.vecwrap._vardict.__iter__()
+        return iter(self.vecwrap)
 
     def keys(self):
         """
@@ -218,7 +218,7 @@ class ComplexStepSrcVecWrapper(object):
         list or KeyView (python 3)
             the keys (variable names) in this vector.
         """
-        return self.vecwrap._vardict.keys()
+        return self.vecwrap.keys()
 
     def iterkeys(self):
         """
@@ -227,7 +227,7 @@ class ComplexStepSrcVecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return iterkeys(self.vecwrap._vardict)
+        return self.vecwrap.iterkeys()
 
     def metadata(self, name):
         """
@@ -248,7 +248,7 @@ class ComplexStepSrcVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vecwrap._vardict[name]
+        return self.vecwrap._access[name].meta
 
     def flat(self, name):
         """

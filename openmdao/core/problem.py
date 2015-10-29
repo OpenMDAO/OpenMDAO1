@@ -1014,7 +1014,7 @@ class Problem(System):
                 # We need the absolute name, but the fd Jacobian
                 # holds relative promoted inputs
                 if fd_ikey not in params:
-                    for key, meta in iteritems(params._vardict):
+                    for key, meta in iteritems(params):
                         if to_prom[key] == fd_ikey:
                             fd_ikey = meta['pathname']
                             break

@@ -735,7 +735,7 @@ class System(object):
                         vec = dresids._flat(unknown)
                         vec += J.dot(arg_vec._flat(param))
                     else:
-                        shape = arg_vec._vardict[param]['shape']
+                        shape = arg_vec._access[param].meta['shape']
                         arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
                 else: # plain dicts were passed in for unit testing...
                     if fwd:

@@ -54,7 +54,6 @@ class VecWrapper(object):
     def __init__(self, sysdata, comm=None):
         self.comm = comm
         self.vec = None
-        self._vardict = OrderedDict()
         self._access = OrderedDict()
         self._slices = {}
         self.flat = None
@@ -91,7 +90,7 @@ class VecWrapper(object):
             If the named variable is not in this vector.
         """
         try:
-            return self._vardict[name]
+            return self._access[name].meta
         except KeyError as error:
             msg = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
@@ -148,9 +147,9 @@ class VecWrapper(object):
         """
         Returns
         -------
-            A dictionary iterator over the items in _vardict.
+            A dictionary iterator over the items in _access.
         """
-        return self._vardict.__iter__()
+        return self._access.__iter__()
 
     def keys(self):
         """
@@ -159,7 +158,7 @@ class VecWrapper(object):
         list or KeyView (python 3)
             the keys (variable names) in this vector.
         """
-        return self._vardict.keys()
+        return self._access.keys()
 
     def iterkeys(self):
         """
@@ -168,7 +167,7 @@ class VecWrapper(object):
         iter of str
             the keys (variable names) in this vector.
         """
-        return iterkeys(self._vardict)
+        return iterkeys(self._access)
 
     def items(self):
         """
@@ -178,7 +177,7 @@ class VecWrapper(object):
             List of tuples containing the name and metadata dict for each
             variable.
         """
-        return self._vardict.items()
+        return [(name, acc.meta) for name, acc in iteritems(self._access)]
 
     def iteritems(self):
         """
@@ -187,7 +186,7 @@ class VecWrapper(object):
         iterator
             Iterator returning the name and metadata dict for each variable.
         """
-        return iteritems(self._vardict)
+        return ((name, acc.meta) for name, acc in iteritems(self._access))
 
     def values(self):
         """
@@ -196,7 +195,7 @@ class VecWrapper(object):
         list of dict
             List containing metadata dict for each variable.
         """
-        return self._vardict.values()
+        return [acc.meta for acc in itervalues(self._access)]
 
     def itervalues(self):
         """
@@ -205,7 +204,7 @@ class VecWrapper(object):
         iter of dict
             Iterator yielding metadata dict for each variable.
         """
-        return self._vardict.values()
+        return (acc.meta for acc in itervalues(self._access))
 
     def _get_local_idxs(self, name, idx_dict, get_slice=False):
         """
@@ -280,17 +279,15 @@ class VecWrapper(object):
         view = self.__class__(system._sysdata, comm)
         view_size = 0
 
-        vardict = self._vardict
         start = -1
 
-        # varmap is ordered, in the same order as vardict
+        # varmap is ordered, in the same order as _access
         for name, pname in iteritems(varmap):
-            if name in vardict:
-                meta = vardict[name]
-                view._vardict[pname] = meta
-                if meta.get('pass_by_obj'):
+            if name in self._access:
+                meta = self._access[name].meta
+                if meta.get('pass_by_obj') or meta.get('remote'):
                     view._access[pname] = view._setup_access_functs(pname, meta)
-                elif not meta.get('remote'):
+                else:
                     pstart, pend = self._slices[name]
                     if start == -1:
                         start = pstart
@@ -380,7 +377,7 @@ class VecWrapper(object):
         list
             A list of names of state variables.
         """
-        return [n for n, meta in iteritems(self._vardict) if meta.get('state')]
+        return [n for n, meta in iteritems(self) if meta.get('state')]
 
     def _get_vecvars(self):
         """
@@ -389,7 +386,7 @@ class VecWrapper(object):
             A list of names of variables found in our 'vec' array. This includes
             params that are not 'owned' and remote vars, which have size 0 array values.
         """
-        return ((n, meta) for n, meta in iteritems(self._vardict)
+        return ((n, meta) for n, meta in self.iteritems()
                             if not meta.get('pass_by_obj'))
 
     def setup_flat(self):
@@ -403,17 +400,6 @@ class VecWrapper(object):
         if self.flat is None:
             self.flat = OrderedDict([(n,m['val']) for n,m in self._get_vecvars()])
         return self.flat
-
-    def get_byobjs(self):
-        """
-        Returns
-        -------
-        list
-            A list of names of variables that are passed by object rather than
-            through scattering entries from one array to another.
-        """
-        return [(n, meta) for n, meta in iteritems(self._vardict)
-                   if meta.get('pass_by_obj')]
 
     def _scoped_abs_name(self, name):
         """
@@ -594,7 +580,6 @@ class SrcVecWrapper(VecWrapper):
                     self._slices[promname] = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
 
-                self._vardict[promname] = vmeta
                 self._access[promname] = self._setup_access_functs(promname, vmeta)
 
         if shared_vec is not None:
@@ -618,12 +603,12 @@ class SrcVecWrapper(VecWrapper):
                 if 'remote' not in meta and (relevance is None or
                                   relevance.is_relevant(var_of_interest, path)):
                     if meta.get('pass_by_obj'):
-                        self._vardict[to_prom[path]]['val'].val = meta['val']
+                        self._access[to_prom[path]].meta['val'].val = meta['val']
                     else:
                         if meta['shape'] == 1:
-                            self._vardict[to_prom[path]]['val'][0] = meta['val']
+                            self._access[to_prom[path]].meta['val'][0] = meta['val']
                         else:
-                            self._vardict[to_prom[path]]['val'][:] = meta['val'].flat
+                            self._access[to_prom[path]].meta['val'][:] = meta['val'].flat
 
         self.setup_flat()
 
@@ -730,7 +715,6 @@ class TgtVecWrapper(VecWrapper):
                         vec_size += vmeta['size']
 
                     my_abs = self._scoped_abs_name(pathname)
-                    self._vardict[my_abs] = vmeta
                     self._access[my_abs] = self._setup_access_functs(my_abs, vmeta)
                 else:
                     if parent_params_vec is not None:
@@ -748,7 +732,7 @@ class TgtVecWrapper(VecWrapper):
             self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in iteritems(self._vardict):
+        for name, meta in iteritems(self):
             if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._slices[name]
                 meta['val'] = self.vec[start:end]
@@ -756,12 +740,11 @@ class TgtVecWrapper(VecWrapper):
         # fill entries for missing params with views from the parent
         for meta in missing:
             pathname = meta['pathname']
-            newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
+            newmeta = parent_params_vec._access[parent_params_vec._scoped_abs_name(pathname)].meta
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
-                self._vardict[my_abs] = newmeta
                 self._access[my_abs] = self._setup_access_functs(my_abs, newmeta)
 
         # Finally, set up unit conversions, if any exist.
@@ -775,7 +758,8 @@ class TgtVecWrapper(VecWrapper):
                     scale, offset = unitconv
                     if self.deriv_units:
                         offset = 0.0
-                    self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
+                    scoped_abs = self._scoped_abs_name(pathname)
+                    self._access[scoped_abs].meta['unit_conv'] = (scale, offset)
 
         self.setup_flat()
 
@@ -840,11 +824,7 @@ class TgtVecWrapper(VecWrapper):
 
         vmeta['val'] = _ByObjWrapper(val)
         vmeta['pass_by_obj'] = True
-        self._vardict[sname] = vmeta
         self._access[sname] = self._setup_access_functs(sname, vmeta)
-        #func, flatfunc = self._setup_get_funct(sname)
-        #self._access[sname] = Accessor(func, self._setup_set_funct(sname),
-                                       #flatfunc, self._vardict[sname])
 
     def _get_flattened_sizes(self):
         """
@@ -862,7 +842,8 @@ class TgtVecWrapper(VecWrapper):
         sitting in vector.
         """
         if self.deriv_units:
-            for name, meta in iteritems(self._vardict):
+            for name, acc in iteritems(self._access):
+                meta = acc.meta
                 if 'unit_conv' in meta:
                     meta['val'] *= meta['unit_conv'][0]
 
@@ -870,7 +851,8 @@ class TgtVecWrapper(VecWrapper):
     #     """ Applies the unit conversion factor to params
     #     sitting in vector.
     #     """
-    #     for name, meta in iteritems(self._vardict):
+    #     for name, acc in iteritems(self._access):
+    #         meta = acc.meta
     #         if 'unit_conv' in meta and 'owned' in meta:
     #             scale, offset = meta['unit_conv']
     #             val = meta['val']
