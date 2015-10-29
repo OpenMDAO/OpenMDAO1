@@ -22,7 +22,6 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
-
             sd.to_prom[u] = u
 
         u = SrcVecWrapper(sd)
@@ -72,6 +71,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['pathname'] = p
             meta['promoted_name'] = p
             meta['top_promoted_name'] = p
+            sd.to_prom[u] = u
 
         connections = {}
         for p in params:
@@ -103,12 +103,15 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['C2.y4'] = { 'shape': (2, 1),  'val': np.zeros((2,1)), 'size': 2,  }
         unknowns_dict['C2.s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
+
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
+            sd.to_prom[u] = u
 
-        u = SrcVecWrapper(_SysData(''))
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = OrderedDict([
@@ -145,12 +148,14 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['C2.y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
         unknowns_dict['C2.s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
+            sd.to_prom[u] = u
 
-        u = SrcVecWrapper(_SysData(''))
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
@@ -162,12 +167,14 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['y1'] = { 'shape': (2,1), 'size': 2, 'val' : np.array([2.0, 3.0]) }
         unknowns_dict['y2'] = { 'shape': 1, 'size': 1, 'val' : -4.0 }
 
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
+            sd.to_prom[u] = u
 
-        u = SrcVecWrapper(_SysData(''))
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         unorm = u.norm()
@@ -178,15 +185,14 @@ class TestVecWrapper(unittest.TestCase):
 
         unknowns_dict['y1'] = { 'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
 
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
+            sd.to_prom[u] = u
 
-        u = SrcVecWrapper(_SysData(''))
-        u.setup(unknowns_dict, store_byobjs=True)
-
-        u = SrcVecWrapper(_SysData(''))
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
@@ -201,15 +207,14 @@ class TestVecWrapper(unittest.TestCase):
 
         unknowns_dict['y1'] = {  'shape': (3,2), 'size': 6, 'val': np.ones((3, 2)) }
 
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
+            sd.to_prom[u] = u
 
-        u = SrcVecWrapper(_SysData(''))
-        u.setup(unknowns_dict, store_byobjs=True)
-
-        u = SrcVecWrapper(_SysData(''))
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:

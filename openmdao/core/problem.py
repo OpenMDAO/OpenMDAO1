@@ -508,7 +508,7 @@ class Problem(System):
                     meta['unit_conv'] = unit_conv
 
             for path, meta in iteritems(sub._unknowns_dict):
-                meta['top_promoted_name'] = unknowns_dict[path]['promoted_name']
+                meta['top_promoted_name'] = to_prom[path]
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
@@ -584,8 +584,10 @@ class Problem(System):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
+        to_prom = self.root._sysdata.to_prom
+
         dangling_params = sorted(set([
-            m['promoted_name'] for p, m in iteritems(self.root._params_dict)
+            to_prom[p] for p, m in iteritems(self.root._params_dict)
             if p not in self.root.connections
         ]))
         if dangling_params:
@@ -837,9 +839,11 @@ class Problem(System):
             else:
                 pset.add(pnames)
 
-        for meta in chain(itervalues(self.root._unknowns_dict),
-                          itervalues(self.root._params_dict)):
-            prom_name = meta['promoted_name']
+        to_prom = self.root._sysdata.to_prom
+
+        for path, meta in chain(iteritems(self.root._unknowns_dict),
+                                iteritems(self.root._params_dict)):
+            prom_name = to_prom[path]
             if prom_name in uset:
                 self._u_length += meta['size']
                 uset.remove(prom_name)
@@ -964,6 +968,7 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
+        to_prom = root._sysdata.to_prom
         to_abs_pnames = root._sysdata.to_abs_pnames
         to_abs_unames = root._sysdata.to_abs_unames
 
@@ -1009,9 +1014,8 @@ class Problem(System):
                 # We need the absolute name, but the fd Jacobian
                 # holds relative promoted inputs
                 if fd_ikey not in params:
-                    for key in params:
-                        meta = params.metadata(key)
-                        if meta['promoted_name'] == fd_ikey:
+                    for key, meta in iteritems(params._vardict):
+                        if to_prom[key] == fd_ikey:
                             fd_ikey = meta['pathname']
                             break
 
@@ -1588,8 +1592,9 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
+        to_prom = self.root._sysdata.to_prom
         indep_list = [
-            self.root._unknowns_dict[p]['promoted_name'] for p, idxs in param_srcs
+            to_prom[p] for p, idxs in param_srcs
         ]
 
         # Calculate all our Total Derivatives

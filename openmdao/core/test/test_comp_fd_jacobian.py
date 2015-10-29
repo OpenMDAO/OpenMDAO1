@@ -74,19 +74,16 @@ class CompFDTestCase(unittest.TestCase):
         #params_dict = OrderedDict()
         #params_dict['x'] = { 'val': np.ones((2)),
                              #'pathname' : 'x',
-                             #'promoted_name' : 'x',
                              #'shape': 2, 'size' : 2 }
 
         #unknowns_dict = OrderedDict()
         #unknowns_dict['y'] = { 'val': np.zeros((2)),
                                #'pathname' : 'y',
-                               #'promoted_name' : 'y',
                              #'shape': 2, 'size' : 2 }
 
         #resids_dict = OrderedDict()
         #resids_dict['y'] = { 'val': np.zeros((2)),
                              #'pathname' : 'y',
-                             #'promoted_name' : 'y',
                              #'shape': 2, 'size' : 2 }
 
         #params = SrcVecWrapper()

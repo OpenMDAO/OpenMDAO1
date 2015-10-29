@@ -140,6 +140,7 @@ class Relevance(object):
         compouts = {} # maps output vars to components
 
         promote_map = {}
+        to_prom = group._sysdata.to_prom
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
@@ -153,7 +154,7 @@ class Relevance(object):
             param = meta['pathname']
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            prom = meta['promoted_name']
+            prom = to_prom[param]
             if prom != param:
                 promote_map[param] = prom
                 if param not in vgraph:
@@ -164,7 +165,7 @@ class Relevance(object):
             unknown = meta['pathname']
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            prom = meta['promoted_name']
+            prom = to_prom[unknown]
             if prom != unknown:
                 promote_map[unknown] = prom
                 if unknown not in vgraph:

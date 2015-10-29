@@ -182,13 +182,10 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
+        to_prom = self._sysdata.to_prom
         for prom in self._promotes:
-            for name, meta in chain(iteritems(self._params_dict),
-                                    iteritems(self._unknowns_dict)):
-                if 'promoted_name' in meta:
-                    pname = meta['promoted_name']
-                else:
-                    pname = name
+            for name in chain(self._params_dict, self._unknowns_dict):
+                pname = to_prom[name]
                 if fnmatch(pname, prom):
                     break
             else:

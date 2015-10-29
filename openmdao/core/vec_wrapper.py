@@ -587,11 +587,12 @@ class SrcVecWrapper(VecWrapper):
         """
 
         vec_size = 0
-        for meta in itervalues(unknowns_dict):
-            promname = meta['promoted_name']
+        to_prom = self._sysdata.to_prom
+        for path, meta in iteritems(unknowns_dict):
+            promname = to_prom[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
-                vmeta = self._setup_var_meta(meta['pathname'], meta)
+                vmeta = self._setup_var_meta(path, meta)
                 if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
                     self._slices[promname] = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
@@ -615,17 +616,16 @@ class SrcVecWrapper(VecWrapper):
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
         if store_byobjs:
-            for meta in itervalues(unknowns_dict):
+            for path, meta in iteritems(unknowns_dict):
                 if 'remote' not in meta and (relevance is None or
-                                             relevance.is_relevant(var_of_interest,
-                                                                  meta['pathname'])):
+                                  relevance.is_relevant(var_of_interest, path)):
                     if meta.get('pass_by_obj'):
-                        self._vardict[meta['promoted_name']]['val'].val = meta['val']
+                        self._vardict[to_prom[path]]['val'].val = meta['val']
                     else:
                         if meta['shape'] == 1:
-                            self._vardict[meta['promoted_name']]['val'][0] = meta['val']
+                            self._vardict[to_prom[path]]['val'][0] = meta['val']
                         else:
-                            self._vardict[meta['promoted_name']]['val'][:] = meta['val'].flat
+                            self._vardict[to_prom[path]]['val'][:] = meta['val'].flat
 
         self.setup_flat()
         self._setup_access_functs()
@@ -981,4 +981,4 @@ def _set_pbo(meta, value):
 
 def _remote_access_error(meta, value=None):
     msg = "Cannot access remote Variable '{name}' in this process."
-    raise RuntimeError(msg.format(name=meta['promoted_name']))
+    raise RuntimeError(msg.format(name=meta['pathname']))
