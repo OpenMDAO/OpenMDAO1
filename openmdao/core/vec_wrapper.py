@@ -760,7 +760,6 @@ class TgtVecWrapper(VecWrapper):
             newmeta = parent_params_vec._vardict[parent_params_vec._scoped_abs_name(pathname)]
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
-                newmeta['promoted_name'] = meta['promoted_name']
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 self._vardict[self._scoped_abs_name(pathname)] = newmeta
 

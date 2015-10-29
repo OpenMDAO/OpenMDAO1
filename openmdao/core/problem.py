@@ -490,7 +490,7 @@ class Problem(System):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict)
+        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -1739,6 +1739,8 @@ class Problem(System):
             A dict of unknowns metadata for the whole `Problem`.
         """
 
+        to_prom = self.root._sysdata.to_prom
+
         for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
@@ -1759,9 +1761,11 @@ class Problem(System):
                 scale, offset = get_conversion_tuple(src_unit, tgt_unit)
             except TypeError as err:
                 if str(err) == "Incompatible units":
-                    msg = "Unit '{s[units]}' in source '{s[promoted_name]}' "\
+                    msg = "Unit '{s[units]}' in source '{sprom}' "\
                         "is incompatible with unit '{t[units]}' "\
-                        "in target '{t[promoted_name]}'.".format(s=smeta, t=tmeta)
+                        "in target '{tprom}'.".format(s=smeta, t=tmeta,
+                                                                 sprom=to_prom[source],
+                                                                 tprom=to_prom[target])
                     raise TypeError(msg)
                 else:
                     raise

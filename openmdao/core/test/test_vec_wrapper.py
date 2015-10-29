@@ -20,7 +20,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 
@@ -69,7 +68,6 @@ class TestVecWrapper(unittest.TestCase):
 
         for p, meta in params.items():
             meta['pathname'] = p
-            meta['promoted_name'] = p
             meta['top_promoted_name'] = p
             sd.to_prom[u] = u
 
@@ -107,7 +105,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 
@@ -151,7 +148,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 
@@ -170,7 +166,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 
@@ -188,7 +183,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 
@@ -210,7 +204,6 @@ class TestVecWrapper(unittest.TestCase):
         sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
-            meta['promoted_name'] = u
             meta['top_promoted_name'] = u
             sd.to_prom[u] = u
 

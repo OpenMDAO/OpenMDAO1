@@ -321,7 +321,6 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_pnames[pathname] = name
             to_abs_pnames[name] = (pathname,)
-            meta['promoted_name'] = name
 
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
@@ -330,7 +329,6 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_unames[pathname] = name
             to_abs_unames[name] = pathname
-            meta['promoted_name'] = name
 
         to_prom.update(to_prom_unames)
         to_prom.update(to_prom_pnames)

@@ -106,9 +106,9 @@ by demonstrating how to save the data generated for future use. Consider the cod
     root = top.root = Group()
 
 These next four lines are all it takes to record the state of the problem as the
-optimizer progresses. Notice that because by default, recorders only record 
-`Unknowns`, if we also want to record `Parameters` and `metadata`, we must 
-set those recording options. (We could also record `Resids` by using the 
+optimizer progresses. Notice that because by default, recorders only record
+`Unknowns`, if we also want to record `Parameters` and `metadata`, we must
+set those recording options. (We could also record `Resids` by using the
 `record_metadata` option but this problem does not have residuals. )
 
 .. testcode:: recording
@@ -396,33 +396,28 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     {'p.f_xy': {'pathname': 'p.f_xy',
-                'promoted_name': 'p.f_xy',
                 'shape': 1,
                 'size': 1,
                 'top_promoted_name': 'p.f_xy',
                 'val': array([ 0.])},
      'p1.x': {'pathname': 'p1.x',
-              'promoted_name': 'p1.x',
               'shape': 1,
               'size': 1,
               'top_promoted_name': 'p1.x',
               'val': array([ 3.])},
      'p2.y': {'pathname': 'p2.y',
-              'promoted_name': 'p2.y',
               'shape': 1,
               'size': 1,
               'top_promoted_name': 'p2.y',
               'val': array([-4.])}}
     {'p.x': {'owned': True,
              'pathname': 'p.x',
-             'promoted_name': 'p.x',
              'shape': 1,
              'size': 1,
              'top_promoted_name': 'p.x',
              'val': array([ 0.])},
      'p.y': {'owned': True,
              'pathname': 'p.y',
-             'promoted_name': 'p.y',
              'shape': 1,
              'size': 1,
              'top_promoted_name': 'p.y',
@@ -433,33 +428,28 @@ This code prints out the following:
 ::
 
     {'p.f_xy': {'pathname': 'p.f_xy',
-                'promoted_name': 'p.f_xy',
                 'shape': 1,
                 'size': 1,
                 'top_promoted_name': 'p.f_xy',
                 'val': array([ 0.])},
      'p1.x': {'pathname': 'p1.x',
-              'promoted_name': 'p1.x',
               'shape': 1,
               'size': 1,
               'top_promoted_name': 'p1.x',
               'val': array([ 3.])},
      'p2.y': {'pathname': 'p2.y',
-              'promoted_name': 'p2.y',
               'shape': 1,
               'size': 1,
               'top_promoted_name': 'p2.y',
               'val': array([-4.])}}
     {'p.x': {'owned': True,
              'pathname': 'p.x',
-             'promoted_name': 'p.x',
              'shape': 1,
              'size': 1,
              'top_promoted_name': 'p.x',
              'val': array([ 0.])},
      'p.y': {'owned': True,
              'pathname': 'p.y',
-             'promoted_name': 'p.y',
              'shape': 1,
              'size': 1,
              'top_promoted_name': 'p.y',

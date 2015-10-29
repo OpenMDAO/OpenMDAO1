@@ -111,23 +111,24 @@ class ConnectError(Exception):
         return cls(msg)
 
 
-def __make_metadata(metadata):
+def __make_metadata(metadata, to_prom):
     '''
     Add type field to metadata dict.
     Returns a modified copy of `metadata`.
     '''
     metadata = dict(metadata)
     metadata['type'] = type(metadata['val'])
+    metadata['promoted_name'] = to_prom[metadata['pathname']]
 
     return metadata
 
 
-def __get_metadata(paths, metadata_dict):
+def __get_metadata(paths, metadata_dict, to_prom):
     metadata = []
 
     for path in paths:
         var_metadata = metadata_dict[path]
-        metadata.append(__make_metadata(var_metadata))
+        metadata.append(__make_metadata(var_metadata, to_prom))
 
     return metadata
 
@@ -143,7 +144,7 @@ def _check_types_match(src, tgt):
     raise ConnectError._type_mismatch_error(src, tgt)
 
 
-def check_connections(connections, params_dict, unknowns_dict):
+def check_connections(connections, params_dict, unknowns_dict, to_prom):
     """Checks the specified connections to make sure they are valid in
     OpenMDAO.
 
@@ -157,6 +158,9 @@ def check_connections(connections, params_dict, unknowns_dict):
          A dictionary mapping absolute var name to its metadata for
          every unknown in the model.
 
+    to_prom : dict
+        A dictionary mapping absolute var name to promoted var name.
+
     Raises
     ------
     ConnectError
@@ -165,10 +169,10 @@ def check_connections(connections, params_dict, unknowns_dict):
 
     # Get metadata for all sources
     srcs = (src for src, idxs in itervalues(connections))
-    sources = __get_metadata(srcs, unknowns_dict)
+    sources = __get_metadata(srcs, unknowns_dict, to_prom)
 
     #Get metadata for all targets
-    targets = __get_metadata(iterkeys(connections), params_dict)
+    targets = __get_metadata(iterkeys(connections), params_dict, to_prom)
 
     for source, target in zip(sources, targets):
         _check_types_match(source, target)

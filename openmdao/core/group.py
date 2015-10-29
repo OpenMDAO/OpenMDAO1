@@ -262,7 +262,6 @@ class Group(System):
                 params_dict[p] = meta
                 to_abs_pnames.setdefault(prom, []).append(p)
                 to_prom_pnames[p] = prom
-                meta['promoted_name'] = prom
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
@@ -276,11 +275,10 @@ class Group(System):
 
                 to_abs_unames[prom] = u
                 to_prom_unames[u] = prom
-                meta['promoted_name'] = prom
 
             to_prom.update(to_prom_unames)
             to_prom.update(to_prom_pnames)
-            
+
             # check for any promotes that didn't match a variable
             sub._check_promotes()
 
