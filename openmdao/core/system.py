@@ -16,6 +16,7 @@ from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
+from openmdao.util.string_util import name_relative_to
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
@@ -27,13 +28,16 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
+
+        # map absolute name to local promoted name
         self.to_prom = {}
+        # map local promoted name to top level promoted name
         self.to_top_prom = {}
 
-        self.abs_unames = {}  # promoted name to abs name map
-        self.prom_unames = {} # abs name to promoted name map
-        self.abs_pnames = {}  # promoted name to list of abs names map
-        self.prom_pnames = {} # abs name to promoted name map
+        self.to_abs_unames = OrderedDict()  # promoted name to abs name
+        self.to_prom_unames = OrderedDict() # abs name to promoted name
+        self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
+        self.to_prom_pnames = OrderedDict() # abs name to promoted namep
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -139,12 +143,14 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
+        abs_unames = self._sysdata.to_abs_unames
+        abs_pnames = self._sysdata.to_abs_pnames
+
+        mybool = False
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(itervalues(self._params_dict),
-                                  itervalues(self._unknowns_dict)):
-                    if name == meta.get('promoted_name'):
-                        return True
+                if name in abs_pnames or name in abs_unames:
+                    return True
 
         return False
 
@@ -368,7 +374,7 @@ class System(object):
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
 
-        abs_pnames = self._sysdata.abs_pnames
+        abs_pnames = self._sysdata.to_abs_pnames
 
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
@@ -998,6 +1004,28 @@ class System(object):
                 max_size = vec_size
 
         return max_size, offsets
+
+    def _setup_prom_map(self):
+        """
+        Sets up the internal dict that maps absolute name to promoted name.
+        """
+        to_prom = self._sysdata.to_prom
+        to_top = self._sysdata.to_top_prom
+
+        to_prom_pnames = self._sysdata.to_prom_pnames
+        to_prom_unames = self._sysdata.to_prom_unames
+
+        for pathname, meta in iteritems(self._unknowns_dict):
+            prom = to_prom_unames[pathname]
+            to_prom[pathname] = prom
+            to_top[prom] = meta['top_promoted_name']
+
+        for pathname, meta in iteritems(self._params_dict):
+            prom = to_prom_pnames[pathname]
+            to_prom[pathname] = prom
+            to_top[name_relative_to(self.pathname, pathname)] = \
+                                      meta['top_promoted_name']
+
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):

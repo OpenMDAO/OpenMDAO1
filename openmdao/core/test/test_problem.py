@@ -481,7 +481,6 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root=Group())
         root = prob.root
 
-        # ? Didn't we say that IndepVarComp by default promoted its variable?
         root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
         root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x'])
 

@@ -95,17 +95,6 @@ class VecWrapper(object):
             msg = "Variable '{name}' does not exist".format(name=name)
             raise KeyError(msg)
 
-    def _setup_prom_map(self):
-        """
-        Sets up the internal dict that maps absolute name to promoted name.
-        """
-        to_prom = self._sysdata.to_prom
-        to_top = self._sysdata.to_top_prom
-
-        for prom_name, meta in iteritems(self):
-            to_prom[meta['pathname']] = prom_name
-            to_top[prom_name] = meta['top_promoted_name']
-
     def __getitem__(self, name):
         """
         Retrieve unflattened value of named var.
@@ -316,7 +305,6 @@ class VecWrapper(object):
         else:
             view.vec = self.vec[start:end]
 
-        view._setup_prom_map()
         view.setup_flat()
         view._setup_access_functs()
 
@@ -639,7 +627,6 @@ class SrcVecWrapper(VecWrapper):
                         else:
                             self._vardict[meta['promoted_name']]['val'][:] = meta['val'].flat
 
-        self._setup_prom_map()
         self.setup_flat()
         self._setup_access_functs()
 
@@ -790,7 +777,6 @@ class TgtVecWrapper(VecWrapper):
                         offset = 0.0
                     self._vardict[self._scoped_abs_name(pathname)]['unit_conv'] = (scale, offset)
 
-        self._setup_prom_map()
         self.setup_flat()
         self._setup_access_functs()
 

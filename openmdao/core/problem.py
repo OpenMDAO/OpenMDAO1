@@ -29,7 +29,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
-from openmdao.util.string_util import get_common_ancestor, name_relative_to
+from openmdao.util.string_util import get_common_ancestor, nearest_child
 
 
 class _ProbData(object):
@@ -116,8 +116,8 @@ class Problem(System):
             return self.root.unknowns[name]
         elif name in self.root.params:
             return self.root.params[name]
-        elif name in self.root._sysdata.abs_pnames:
-            for p in self.root._sysdata.abs_pnames[name]:
+        elif name in self.root._sysdata.to_abs_pnames:
+            for p in self.root._sysdata.to_abs_pnames[name]:
                 return self._rec_get_param(p)
         elif name in self._dangling:
             for p in self._dangling[name]:
@@ -196,8 +196,7 @@ class Problem(System):
                     input_graph.add_edge(src, tgt, idxs=idxs)
 
         # find any promoted but not connected inputs
-        for p, meta in iteritems(params_dict):
-            prom = meta['promoted_name']
+        for p, prom in iteritems(self.root._sysdata.to_prom_pnames):
             if prom in prom_noconns:
                 for n in prom_noconns[prom]:
                     if p != n:
@@ -264,13 +263,13 @@ class Problem(System):
         connections = newconns
 
         self._dangling = {}
-        for p, meta in iteritems(params_dict):
+        for p, prom in iteritems(self.root._sysdata.to_prom_pnames):
             if p not in connections:
                 if p in input_graph:
-                    self._dangling[meta['promoted_name']] = \
+                    self._dangling[prom] = \
                         set(nx.node_connected_component(input_graph, p))
                 else:
-                    self._dangling[meta['promoted_name']] = set([meta['pathname']])
+                    self._dangling[prom] = set([p])
 
         return connections
 
@@ -343,7 +342,7 @@ class Problem(System):
 
         # now check for differences in step_size, step_type, or form for
         # promoted inputs
-        for promname, absnames in iteritems(self.root._sysdata.abs_pnames):
+        for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
                 step_sizes, step_types, forms = {}, {}, {}
                 for name in absnames:
@@ -430,7 +429,6 @@ class Problem(System):
         # name of the variable, any user defined metadata, and the value,
         # size and/or shape if known. For example:
         #  unknowns_dict['G1.G2.foo.v1'] = {
-        #     'promoted_name' :  'v1',
         #     'pathname' : 'G1.G2.foo.v1', # absolute path from the top
         #     'size' : 1,
         #     'shape' : 1,
@@ -527,7 +525,7 @@ class Problem(System):
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
-        promoted_unknowns = self.root._sysdata.abs_unames
+        promoted_unknowns = self.root._sysdata.to_abs_unames
 
         parallel_p = False
         for vnames in pois:
@@ -712,7 +710,7 @@ class Problem(System):
                 for slist in strong:
                     relstrong.append([])
                     for s in slist:
-                        relstrong[-1].append(name_relative_to(grp.pathname, s))
+                        relstrong[-1].append(nearest_child(grp.pathname, s))
                         # sort the cycle systems in execution order
                         subs = [s for s in grp._subsystems]
                         tups = sorted([(subs.index(s),s) for s in relstrong[-1]])
@@ -730,14 +728,14 @@ class Problem(System):
                 visited.add(sub.pathname)
                 for u, v in nx.dfs_edges(graph, sub.pathname):
                     if v in visited:
-                        out_of_order.setdefault(name_relative_to(grp.pathname, v),
+                        out_of_order.setdefault(nearest_child(grp.pathname, v),
                                                 set()).add(sub.pathname)
 
             if out_of_order:
                 # scope ooo names to group
                 for name in out_of_order:
                     out_of_order[name] = sorted([
-                        name_relative_to(grp.pathname, n) for n in out_of_order[name]
+                        nearest_child(grp.pathname, n) for n in out_of_order[name]
                     ])
                 print("Group '%s' has the following out-of-order subsystems:" %
                       grp.pathname, file=out_stream)
@@ -967,7 +965,8 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
-        abs_pnames = self.root._sysdata.abs_pnames
+        to_abs_pnames = root._sysdata.to_abs_pnames
+        to_abs_unames = root._sysdata.to_abs_unames
 
         if dv_scale is None:
             dv_scale = {}
@@ -978,7 +977,7 @@ class Problem(System):
         for name in indep_list:
 
             if name in unknowns:
-                name = unknowns.metadata(name)['pathname']
+                name = to_abs_unames[name]
 
             for tgt, (src, idxs) in iteritems(root.connections):
                 if name == src:
@@ -1035,7 +1034,7 @@ class Problem(System):
 
                     # Support for IndepVarComps that are buried in sub-Groups
                     if (okey, fd_ikey) not in Jfd:
-                        fd_ikey = abs_pnames[fd_ikey][0]
+                        fd_ikey = to_abs_pnames[fd_ikey][0]
 
                     J[okey][ikey] = Jfd[(okey, fd_ikey)]
 
@@ -1071,7 +1070,7 @@ class Problem(System):
 
                     # Support for IndepVarComps that are buried in sub-Groups
                     if (u, fd_ikey) not in Jfd:
-                        fd_ikey = abs_pnames[fd_ikey][0]
+                        fd_ikey = to_abs_pnames[fd_ikey][0]
 
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
@@ -1132,7 +1131,7 @@ class Problem(System):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_unames = root._sysdata.abs_unames
+        to_abs_unames = root._sysdata.to_abs_unames
         comm = root.comm
         iproc = comm.rank
         nproc = comm.size
@@ -1796,9 +1795,9 @@ class Problem(System):
         connections = {}
         dangling = {}
 
-        abs_unames = self.root._sysdata.abs_unames
+        abs_unames = self.root._sysdata.to_abs_unames
 
-        for prom_name, pabs_list in iteritems(self.root._sysdata.abs_pnames):
+        for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
             if prom_name in abs_unames:  # param has a src in unknowns
                 uprom = abs_unames[prom_name]
                 for pabs in pabs_list:

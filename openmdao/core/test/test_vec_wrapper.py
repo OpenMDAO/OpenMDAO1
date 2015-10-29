@@ -17,12 +17,15 @@ class TestVecWrapper(unittest.TestCase):
         unknowns_dict['y4'] = { 'shape': (2,1), 'size': 2, 'val': np.zeros((2, 1)), }
         unknowns_dict['s1'] = { 'shape': 1, 'size': 1, 'val': -1.0, 'state': True, }
 
+        sd = _SysData('')
         for u, meta in unknowns_dict.items():
             meta['pathname'] = u
             meta['promoted_name'] = u
             meta['top_promoted_name'] = u
 
-        u = SrcVecWrapper(_SysData(''))
+            sd.to_prom[u] = u
+
+        u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertEqual(u.vec.size, 10)

@@ -288,8 +288,10 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        abs_unames = self._sysdata.abs_unames
-        abs_pnames = self._sysdata.abs_pnames
+        to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
+        to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
+        to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
+        to_prom_pnames = self._sysdata.to_prom_pnames = OrderedDict()
 
         if MPI and compute_indices and self.is_active():
             self.setup_distrib_idxs()
@@ -309,22 +311,24 @@ class Component(System):
                 for i, name in enumerate(names):
                     self._init_unknowns_dict[name]['distrib_size'] = np.sum(allsizes[:, i])
 
-        # rekey with absolute path names and add promoted names
+        # key with absolute path names and add promoted names
         self._params_dict = OrderedDict()
         for name, meta in iteritems(self._init_params_dict):
             pathname = self._get_var_pathname(name)
             self._params_dict [pathname] = meta
             meta['pathname'] = pathname
+            to_prom_pnames[pathname] = name
             meta['promoted_name'] = name
-            abs_pnames[name] = (pathname,)
+            to_abs_pnames[name] = (pathname,)
 
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
             pathname = self._get_var_pathname(name)
             self._unknowns_dict[pathname] = meta
             meta['pathname'] = pathname
+            to_prom_unames[pathname] = name
             meta['promoted_name'] = name
-            abs_unames[name] = pathname
+            to_abs_unames[name] = pathname
 
         self._post_setup_vars = True
 
@@ -360,6 +364,8 @@ class Component(System):
         if not self.is_active():
             return
 
+        self._setup_prom_map()
+        
         self._impl = impl
 
         # create map of relative name in parent to relative name in child

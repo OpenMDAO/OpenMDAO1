@@ -16,7 +16,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
-from openmdao.util.string_util import name_relative_to
+from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
 from openmdao.core.checks import ConnectError
 
@@ -246,29 +246,34 @@ class Group(System):
         self._sysdata._unknowns_dict = unknowns_dict
 
         self._data_xfer = {}
-        abs_unames = self._sysdata.abs_unames = {}
-        abs_pnames = self._sysdata.abs_pnames = {}
+        to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
+        to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
+        to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
+        to_prom_pnames = self._sysdata.to_prom_pnames = OrderedDict()
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
                 meta = meta.copy()
-                meta['promoted_name'] = self._promoted_name(meta['promoted_name'], sub)
+                prom = self._promoted_name(sub._sysdata.to_prom_pnames[p], sub)
                 params_dict[p] = meta
-                abs_pnames.setdefault(meta['promoted_name'], []).append(p)
+                to_abs_pnames.setdefault(prom, []).append(p)
+                to_prom_pnames[p] = prom
+                meta['promoted_name'] = prom
 
             for u, meta in iteritems(subunknowns):
                 meta = meta.copy()
-                prom = self._promoted_name(meta['promoted_name'], sub)
-                meta['promoted_name'] = prom
+                prom = self._promoted_name(sub._sysdata.to_prom_unames[u], sub)
                 unknowns_dict[u] = meta
-                if prom in abs_unames:
+                if prom in to_abs_unames:
                     raise RuntimeError("'%s': promoted name '%s' matches "
                                        "multiple unknowns: %s" %
                                        (self.pathname, prom,
-                                        (abs_unames[prom], u)))
+                                        (to_abs_unames[prom], u)))
 
-                abs_unames[prom] = u
+                to_abs_unames[prom] = u
+                to_prom_unames[u] = prom
+                meta['promoted_name'] = prom
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
@@ -284,7 +289,7 @@ class Group(System):
         """
         if subsystem._promoted(name):
             return name
-        if len(subsystem.name) > 0:
+        if subsystem.name:
             return '.'.join((subsystem.name, name))
         else:
             return name
@@ -337,6 +342,8 @@ class Group(System):
 
         if not self.is_active():
             return
+
+        self._setup_prom_map()
 
         self._impl = impl
 
@@ -530,28 +537,28 @@ class Group(System):
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
-        abs_unames = self._sysdata.abs_unames
-        abs_pnames = self._sysdata.abs_pnames
+        to_abs_unames = self._sysdata.to_abs_unames
+        to_abs_pnames = self._sysdata.to_abs_pnames
 
         for tgt, srcs in iteritems(self._src):
             for src, idxs in srcs:
                 try:
-                    src_pathnames = [abs_unames[src]]
+                    src_pathnames = [to_abs_unames[src]]
                 except KeyError as error:
                     try:
-                        src_pathnames = abs_pnames[src]
+                        src_pathnames = to_abs_pnames[src]
                     except KeyError as error:
                         raise ConnectError.nonexistent_src_error(src, tgt)
 
                 try:
-                    for tgt_pathname in abs_pnames[tgt]:
+                    for tgt_pathname in to_abs_pnames[tgt]:
                         for src_pathname in src_pathnames:
                             connections.setdefault(tgt_pathname,
                                                    []).append((src_pathname,
                                                                idxs))
                 except KeyError as error:
                     try:
-                        abs_unames[tgt]
+                        to_abs_unames[tgt]
                     except KeyError as error:
                         raise ConnectError.nonexistent_target_error(src, tgt)
                     else:
@@ -1222,7 +1229,7 @@ class Group(System):
         for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
                 urelname = to_prom[unknown]
-                prelname = to_prom[param]
+                prelname = name_relative_to(self.pathname, param)
 
                 top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
                 top_prelname = self._params_dict[param]['top_promoted_name']
@@ -1236,8 +1243,8 @@ class Group(System):
                 # remove our system pathname from the abs pathname of the param and
                 # get the subsystem name from that
 
-                tgt_sys = name_relative_to(self.pathname, param)
-                src_sys = name_relative_to(self.pathname, unknown)
+                tgt_sys = nearest_child(self.pathname, param)
+                src_sys = nearest_child(self.pathname, unknown)
 
                 for sname, mode in ((tgt_sys, 'fwd'), (src_sys, 'rev')):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
@@ -1369,9 +1376,8 @@ class Group(System):
 
         # use an ordered dict here so we can use this smaller dict to loop over in get_view
         umap = OrderedDict()
-
-        for abspath, meta in iteritems(self._unknowns_dict):
-            umap[parent_proms[abspath]] = meta['promoted_name']
+        for abspath, prom in iteritems(self._sysdata.to_prom_unames):
+            umap[parent_proms[abspath]] = prom
 
         return umap
 
