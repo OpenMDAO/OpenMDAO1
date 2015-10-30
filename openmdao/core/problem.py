@@ -784,13 +784,13 @@ class Problem(System):
         print("Setup: Checking for potential issues...", file=out_stream)
 
         results = {}  # dict of results for easier testing
-        results['dangling_params'] = self._check_dangling_params(out_stream)
-        results['mode'] = self._check_mode(out_stream)
         results['unit_diffs'] = self._list_unit_conversions(out_stream)
-        results['no_unknown_comps'] = self._check_no_unknown_comps(out_stream)
-        results['no_connect_comps'] = self._check_no_connect_comps(out_stream)
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
+        results['dangling_params'] = self._check_dangling_params(out_stream)
+        results['mode'] = self._check_mode(out_stream)
+        results['no_unknown_comps'] = self._check_no_unknown_comps(out_stream)
+        results['no_connect_comps'] = self._check_no_connect_comps(out_stream)
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
