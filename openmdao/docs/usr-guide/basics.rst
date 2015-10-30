@@ -1,5 +1,4 @@
-
-.. _Basics:
+ _Basics:
 
 ======
 Basics
@@ -186,6 +185,12 @@ For example, we can add a `Group` to another `Group` along with some `Components
     g2.add('comp3', c3)
     g2.add('sub_group_1', g1)
 
+
+.. image:: ../_images/GroupDemo_still.gif
+  :target: ../_images/GroupDemo_animated.gif
+
+
+
 Interdependencies between `Systems` in a `Group` are represented as connections
 between the variables in the `Group`'s subsystems.  Connections can be made
 either explicitly or implicitly.
@@ -195,7 +200,10 @@ An explicit connection is made from the output (or state) of one `System` to the
 
 ::
 
-    g1.connect('c1.y', 'c2.x')
+    g2.sub_group_1.connect('comp1.y', 'comp2.x')
+
+.. image:: ../_images/ExplicitConnection_animated.gif
+
 
 Alternatively, you can use the *promotion* mechanism to implicitly connect two
 or more variables.  When a `System` is added to a `Group`, you may optionally
@@ -205,7 +213,7 @@ were a variable of the `Group` rather than the subsystem.  For Example:
 
 ::
 
-    g2.add(c3, promotes=['x'])
+    g2.add("comp3", c3, promotes=['x'])
 
 Now you can access the parameter 'x' from 'c3' as if it were a variable of
 the group: 'g2.x'. If you promote multiple subsystem variables with the same
@@ -213,12 +221,14 @@ name, then those variables will be implicitly connected:
 
 ::
 
-    g2.add(g1, promotes=['c1.x'])
+    g2.add("sub_group_1", g1, promotes=['comp1.x'])
 
 Now setting a value for 'g2.x' will set the value for both 'c3.x' and 'g1.c1.x'
 and they are said to be implicitly connected.  If you promote the output from
 one subsystem and the input of another with the same name, then that will have
 the same effect as the explicit connection statement as shown above.
+
+.. image:: ../_images/Promotion_animated.gif
 
 In contrast to a `Component`, which is responsible for defining the variables
 and equations that map between them, a `Group` has the responsibility of assembling
@@ -265,6 +275,9 @@ the necessary initialization of the data vectors and configuration for the
 data transfers that must occur during execution. It will also look for and
 report any potential issues with the `Problem` configuration, including
 unconnected parameters, conflicting units, etc.
+
+.. image:: ../_images/Problem_animated.gif
+
 
 Summary
 -------
