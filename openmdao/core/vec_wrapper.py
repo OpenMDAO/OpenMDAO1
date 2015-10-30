@@ -300,8 +300,8 @@ class VecWrapper(object):
             if name in self._access:
                 meta = self._access[name].meta
                 if meta.get('pass_by_obj') or meta.get('remote'):
-                    view._access[pname] = view._setup_access(pname,
-                                                                    None, meta)
+                    view._access[pname] = acc = view._setup_access(pname, None, meta)
+                    acc.val = self._access[name].val
                 else:
                     pstart, pend = self._access[name].slice
                     if start == -1:
@@ -312,8 +312,9 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._access[pname] = view._setup_access(pname,
+                    view._access[pname] = acc = view._setup_access(pname,
                                     (view_size, view_size + meta['size']), meta)
+                    acc.val = self._access[name].val[pstart:pend]
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -765,12 +766,14 @@ class TgtVecWrapper(VecWrapper):
         # fill entries for missing params with views from the parent
         for meta in missing:
             pathname = meta['pathname']
-            newmeta = parent_params_vec._access[parent_params_vec._scoped_abs_name(pathname)].meta
+            parent_acc = parent_params_vec._access[parent_params_vec._scoped_abs_name(pathname)]
+            newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
-                self._access[my_abs] = self._setup_access(my_abs, None, newmeta)
+                self._access[my_abs] = acc = self._setup_access(my_abs, None, newmeta)
+                acc.val = parent_acc.val
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -852,9 +855,10 @@ class TgtVecWrapper(VecWrapper):
             else:
                 self.flat[sname] = numpy.array([val])
 
-        vmeta['val'] = _ByObjWrapper(val)
+        val = vmeta['val'] = _ByObjWrapper(val)
         vmeta['pass_by_obj'] = True
         self._access[sname] = self._setup_access(sname, None, vmeta)
+        self._access[sname].val = val
 
     def _get_flattened_sizes(self):
         """
@@ -875,7 +879,7 @@ class TgtVecWrapper(VecWrapper):
             for name, acc in iteritems(self._access):
                 meta = acc.meta
                 if 'unit_conv' in meta:
-                    meta['val'] *= meta['unit_conv'][0]
+                    acc.val *= meta['unit_conv'][0]
 
     # def _apply_units(self):
     #     """ Applies the unit conversion factor to params
