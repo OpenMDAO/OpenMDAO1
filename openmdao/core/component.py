@@ -606,9 +606,9 @@ class Component(System):
             nwid = max(lens) if lens else 12
 
             for v in uvec:
-                if v in uvec._slices:
+                if v in uvec._access and uvec._access[v].slice is not None:
                     uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel,
-                                                         uvec._slices[v])
+                                                         uvec._access[v].slice)
                     tem = "{0}{1:<{nwid}} {2:<21} {3:>10}\n"
                     out_stream.write(tem.format(" "*(nest+8), v, uslice,
                                                 repr(uvec[v]), nwid=nwid))

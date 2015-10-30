@@ -1016,16 +1016,23 @@ class Group(System):
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
-                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._slices[v])
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._acess[v].slice)
                 pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
-                        pslice = pvec._slices.get(pname, (-1, -1))
+                        pslice = pvec._access[pname].slice
+                        if pslice is None:
+                            pslice = (-1, -1)
                         pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
-                        pslice = [('%d:%d' % pvec._slices.get(p, (-1, -1))) for p in pnames]
+                        pslice = []
+                        for p in pnames:
+                            ps = pvec._access[p].slice
+                            if ps is None:
+                                ps = (-1, -1)
+                            pslice.append(['%d:%d' % ps])
                         if len(pslice) > 1:
                             pslice = ','.join(pslice)
                         else:
