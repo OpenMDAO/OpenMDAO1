@@ -1,0 +1,240 @@
+""" Optimize the Sellar problem using SLSQP. This version elminates the cycle
+and replaces it with an implicit component."""
+
+#import numpy as np
+
+#from openmdao.core import Problem
+#from openmdao.drivers import ScipyOptimizer
+#from openmdao.components.exec_comp import ExecComp
+#from openmdao.components.indep_var_comp import IndepVarComp
+#from openmdao.core.component import Component
+#from openmdao.core.group import Group
+#from openmdao.solvers.newton import Newton
+#from openmdao.recorders import DumpRecorder
+from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group, DumpRecorder
+#from openmdao.recorders import DumpRecorder
+
+#room_area = room_length * room_width                                (1)
+#room_length >= room_width                                   (2)
+#(29000000 * 228 * 384) / {5 * [(0.24305 * room_width)  + 4.83] * (room_length)3}>= 720  (3)
+#(0.5*8.75) * [(0.24305 * room_width)  + 4.83] * (room_length)2 / (8 * 50,000 * 228) < 0.5   (4)
+#0.5 * [(0.24305 * room_width)  + 4.83] * (room_length) / (17.1*50,000) < 1/3            (5)
+
+#constants
+E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel) 
+I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam) 
+BEAM_WEIGHT_LBS_PER_IN = 58.0 / 12.0 #self weight of beam per unit length (58 lbs/ft or 4.83 lbs/in.)
+DEAD_LOAD_PSI = 20.0 / 144 #The dead load is 20psf or 0.1389psi.
+LIVE_LOAD_PSI = 50.0 / 144 #The live load is 50psf or 0.3472psi.
+TOTAL_LOAD_PSI = DEAD_LOAD_PSI + LIVE_LOAD_PSI #total load
+BEAM_HEIGHT_IN = 8.75 #inches
+YIELD_STRENGTH_PSI = 50000 #The maximum yield strength Fy for ASTM A992 Grade 50 steel is 50,000 psi
+CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
+
+
+
+#negate the area to turn from a maximization problem to a minimization problem
+class NegativeAreaDiscipline(Component):    
+
+    def __init__(self):
+        super(NegativeAreaDiscipline, self).__init__()
+        
+        self.add_param('room_width', val=0.0)
+        self.add_param('room_length', val=0.0)
+        self.add_output('neg_room_area', val=0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):        
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        unknowns['neg_room_area'] = -(room_length * room_width)
+
+    def linearize(self, params, unknowns, resids):        
+        J = {}
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        J['neg_room_area','room_width'] = -room_length
+        J['neg_room_area','room_length'] = -room_width
+
+        return J
+
+
+class LengthMinusWidthDiscipline(Component):    
+
+    def __init__(self):
+        super(LengthMinusWidthDiscipline, self).__init__()
+        
+        self.add_param('room_width', val=0.0)
+        self.add_param('room_length', val=0.0)
+        self.add_output('length_minus_width', val=0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):        
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        unknowns['length_minus_width'] = room_length - room_width
+
+    def linearize(self, params, unknowns, resids):        
+        J = {}
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        J['length_minus_width','room_width'] = -1.0
+        J['length_minus_width','room_length'] = 1.0
+
+        return J  
+
+class DeflectionDiscipline(Component):
+    
+    def __init__(self):
+        super(DeflectionDiscipline, self).__init__()
+        
+        self.add_param('room_width', val=0.0)
+        self.add_param('room_length', val=0.0)
+        self.add_output('deflection', val=0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):        
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        unknowns['deflection'] = (E * I * 384.0) / (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)
+        #print( "d=%f rw=%f rl=%f num=%f denom=%f" % (unknowns['deflection'], room_width, room_length, (E * I * 384.0), (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)))
+
+    def linearize(self, params, unknowns, resids):        
+        J = {}
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        J['deflection','room_width'] = (-192.0 * E * I * TOTAL_LOAD_PSI) / ((5.0 * room_length**3) * (TOTAL_LOAD_PSI * room_width/2.0 + BEAM_WEIGHT_LBS_PER_IN)**2)
+        J['deflection','room_length'] = (-1152.0 * E * I) / (5.0 * ((TOTAL_LOAD_PSI * room_width)/2.0 + BEAM_WEIGHT_LBS_PER_IN) * room_length**4)
+
+        return J
+
+
+class BendingStressDiscipline(Component):
+    """Component containing Bending Discipline."""
+
+    def __init__(self):
+        super(BendingStressDiscipline, self).__init__()
+        
+        self.add_param('room_width', val=0.0)
+        self.add_param('room_length', val=0.0)
+        self.add_output('bending_stress_ratio', val=0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):        
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        unknowns['bending_stress_ratio'] = (0.5*BEAM_HEIGHT_IN * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length)**2) / (8.0 * YIELD_STRENGTH_PSI * I)
+
+    def linearize(self, params, unknowns, resids):        
+        J = {}
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        J['bending_stress_ratio','room_width'] = (room_length**2) * BEAM_HEIGHT_IN * (TOTAL_LOAD_PSI*room_width/2.0 + BEAM_WEIGHT_LBS_PER_IN) / (16.0 * I * YIELD_STRENGTH_PSI)
+        J['bending_stress_ratio','room_length'] = (BEAM_WEIGHT_LBS_PER_IN + (TOTAL_LOAD_PSI*room_width/2.0)) * BEAM_HEIGHT_IN * room_length / (8.0 * I * YIELD_STRENGTH_PSI)
+
+        return J
+
+class ShearStressDiscipline(Component):
+    """Component containing Bending Discipline."""
+
+    def __init__(self):
+        super(ShearStressDiscipline, self).__init__()
+        
+        self.add_param('room_width', val=0.0)
+        self.add_param('room_length', val=0.0)
+        self.add_output('shear_stress_ratio', val=0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):        
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        unknowns['shear_stress_ratio'] = 0.5 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length) / (CROSS_SECTIONAL_AREA_SQIN * YIELD_STRENGTH_PSI)
+
+    def linearize(self, params, unknowns, resids):        
+        J = {}
+
+        room_width = params['room_width']
+        room_length = params['room_length']
+
+        J['shear_stress_ratio','room_width'] = TOTAL_LOAD_PSI * room_length / (4.0 * YIELD_STRENGTH_PSI * CROSS_SECTIONAL_AREA_SQIN)
+        J['shear_stress_ratio','room_length'] = (BEAM_WEIGHT_LBS_PER_IN + (TOTAL_LOAD_PSI * room_width / 2.0))/(2.0 * YIELD_STRENGTH_PSI * CROSS_SECTIONAL_AREA_SQIN)
+
+        return J
+
+
+class BeamTutorialDerivatives(Group):
+   
+    def __init__(self):
+        super(BeamTutorialDerivatives, self).__init__()
+
+        self.add('ivc_rl', IndepVarComp('room_length', 100.0), promotes=['*'])
+        self.add('ivc_rw', IndepVarComp('room_width', 100.0), promotes=['*'])
+        
+        
+        self.add('d_len_minus_wid', LengthMinusWidthDiscipline(), promotes=['*'])
+        self.add('d_deflection', DeflectionDiscipline(), promotes=['*'])
+        self.add('d_bending', BendingStressDiscipline(), promotes=['*'])
+        self.add('d_shear', ShearStressDiscipline(), promotes=['*'])
+        self.add('d_neg_area', NegativeAreaDiscipline(), promotes=['*'])
+
+        #self.add('d_area', ExecComp('room_area = -(room_length * room_width)'), promotes=['*']) #negative to minimize        
+        #room_length >= room_width OR  room_width - room_length <= 0
+        #self.add('d_rw_minus_rl', ExecComp('rw_minus_rl = room_width - room_length'), promotes=['*'])
+        
+
+        #self.nl_solver = NLGaussSeidel()
+        #self.nl_solver.options['atol'] = 1.0e-12
+
+
+
+top = Problem()
+top.root = BeamTutorialDerivatives()
+
+top.driver = ScipyOptimizer()
+top.driver.options['optimizer'] = 'SLSQP'
+top.driver.options['tol'] = 1.0e-8
+top.driver.options['maxiter'] = 10000
+
+#room length and width bounds
+top.driver.add_desvar('room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
+top.driver.add_desvar('room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
+
+top.driver.add_objective('neg_room_area') #minimize negative area (or maximize area)
+top.driver.add_constraint('length_minus_width', lower=0.0) #room_length >= room_width
+top.driver.add_constraint('deflection', lower=720.0) #deflection >= 720
+top.driver.add_constraint('bending_stress_ratio', upper=0.5) #bending < 0.5
+top.driver.add_constraint('shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
+
+recorder = DumpRecorder('beamrec.txt')
+top.driver.add_recorder(recorder)
+
+top.setup()
+top.run()
+
+print("\n")
+print( "Solution found")
+print("room area: %f in^2 (%f ft^2)" % (-top['neg_room_area'], -top['neg_room_area']/144.0))
+print("room width: %f in (%f ft)" % (top['room_width'], top['room_width']/12.0))
+print("room/beam length: %f in (%f ft)" % (top['room_length'], top['room_length']/12.0))
+print( "deflection: L/%f"  % (top['deflection']))
+print( "bending stress ratio: %f"  % (top['bending_stress_ratio']))
+print( "shear stress ratio: %f"  % (top['shear_stress_ratio']))
+
+loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['room_width']) + BEAM_WEIGHT_LBS_PER_IN) #PLI (pounds per linear inch)
+loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['room_width'])) #PLI (pounds per linear inch)
+print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
+print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
+
