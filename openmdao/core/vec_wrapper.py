@@ -10,7 +10,8 @@ from collections import OrderedDict, namedtuple
 from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
-#Accessor = namedtuple('Accessor', ['get', 'set', 'flat', 'meta'])
+# using a class with slots here instead of a namedtuple because we need
+# to be able to change/set values after creation
 class Accessor(object):
     __slots__ = ['get', 'set', 'flat', 'val', 'slice', 'meta']
     def __init__(self, get, set, flat, slice, meta):
@@ -299,7 +300,7 @@ class VecWrapper(object):
             if name in self._access:
                 meta = self._access[name].meta
                 if meta.get('pass_by_obj') or meta.get('remote'):
-                    view._access[pname] = view._setup_access_functs(pname,
+                    view._access[pname] = view._setup_access(pname,
                                                                     None, meta)
                 else:
                     pstart, pend = self._access[name].slice
@@ -311,7 +312,7 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._access[pname] = view._setup_access_functs(pname,
+                    view._access[pname] = view._setup_access(pname,
                                     (view_size, view_size + meta['size']), meta)
                     view_size += meta['size']
 
@@ -548,7 +549,7 @@ class VecWrapper(object):
             else:
                 return _set_arr
 
-    def _setup_access_functs(self, name, slice, meta):
+    def _setup_access(self, name, slice, meta):
         func, flatfunc = self._setup_get_funct(name, meta)
         setfunc = self._setup_set_funct(name, meta)
         return Accessor(func, setfunc, flatfunc, slice, meta)
@@ -591,14 +592,13 @@ class SrcVecWrapper(VecWrapper):
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
                 vmeta = self._setup_var_meta(path, meta)
-                if not vmeta.get('pass_by_obj') and not vmeta.get('remote'):
+                if vmeta.get('pass_by_obj') or vmeta.get('remote'):
+                    slc = None
+                else:
                     slc = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
-                else:
-                    slc = None
 
-                self._access[promname] = self._setup_access_functs(promname,
-                                                                   slc, vmeta)
+                self._access[promname] = self._setup_access(promname, slc, vmeta)
 
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
@@ -606,13 +606,15 @@ class SrcVecWrapper(VecWrapper):
             self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in iteritems(self):
+        for name, acc in iteritems(self._access):
+            meta = acc.meta
             if not meta.get('pass_by_obj'):
                 if meta.get('remote'):
-                    meta['val'] = numpy.array([], dtype=float)
+                    acc.val = numpy.array([], dtype=float)
                 else:
                     start, end = self._access[name].slice
-                    meta['val'] = self.vec[start:end]
+                    acc.val = self.vec[start:end]
+                meta['val'] = acc.val
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -621,12 +623,14 @@ class SrcVecWrapper(VecWrapper):
                 if 'remote' not in meta and (relevance is None or
                                   relevance.is_relevant(var_of_interest, path)):
                     if meta.get('pass_by_obj'):
-                        self._access[to_prom[path]].meta['val'].val = meta['val']
+                        self._access[to_prom[path]].val = _ByObjWrapper(meta['val'])
                     else:
                         if meta['shape'] == 1:
-                            self._access[to_prom[path]].meta['val'][0] = meta['val']
+                            self._access[to_prom[path]].val[0] = meta['val']
                         else:
-                            self._access[to_prom[path]].meta['val'][:] = meta['val'].flat
+                            self._access[to_prom[path]].val[:] = meta['val'].flat
+                    self._access[to_prom[path]].meta['val'] = \
+                                                self._access[to_prom[path]].val
 
         self.setup_flat()
 
@@ -725,16 +729,16 @@ class TgtVecWrapper(VecWrapper):
                     src_rel_name = src_to_prom[src_pathname]
                     src_meta = srcvec.metadata(src_rel_name)
 
-                    vmeta, slc = self._setup_var_meta(pathname, meta, vec_size,
-                                                      src_meta, store_byobjs)
+                    vmeta, slc, val = self._setup_var_meta(pathname, meta, vec_size,
+                                                           src_meta, store_byobjs)
                     vmeta['owned'] = True
 
                     if not meta.get('remote'):
                         vec_size += vmeta['size']
 
                     my_abs = self._scoped_abs_name(pathname)
-                    self._access[my_abs] = self._setup_access_functs(my_abs,
-                                                                     slc, vmeta)
+                    self._access[my_abs] = self._setup_access(my_abs, slc, vmeta)
+                    self._access[my_abs].val = val
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -751,10 +755,12 @@ class TgtVecWrapper(VecWrapper):
             self.vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, meta in iteritems(self):
+        for name, acc in iteritems(self._access):
+            meta = acc.meta
             if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._access[name].slice
-                meta['val'] = self.vec[start:end]
+                acc.val = self.vec[start:end]
+                meta['val'] = acc.val
 
         # fill entries for missing params with views from the parent
         for meta in missing:
@@ -764,8 +770,7 @@ class TgtVecWrapper(VecWrapper):
                 newmeta = newmeta.copy()
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
-                self._access[my_abs] = self._setup_access_functs(my_abs,
-                                                                 None, newmeta)
+                self._access[my_abs] = self._setup_access(my_abs, None, newmeta)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -808,12 +813,14 @@ class TgtVecWrapper(VecWrapper):
             we're building.
         """
         vmeta = meta.copy()
+        val = vmeta['val']
+
         if 'src_indices' not in vmeta and 'src_indices' not in src_meta:
             vmeta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
-                vmeta['val'] = src_meta['val']
+                val = vmeta['val'] = src_meta['val']
             vmeta['pass_by_obj'] = True
             slc = None
         elif vmeta.get('remote'):
@@ -821,7 +828,7 @@ class TgtVecWrapper(VecWrapper):
         else:
             slc = (index, index + vmeta['size'])
 
-        return vmeta, slc
+        return vmeta, slc, val
 
     def _add_unconnected_var(self, pathname, meta):
         """
@@ -847,7 +854,7 @@ class TgtVecWrapper(VecWrapper):
 
         vmeta['val'] = _ByObjWrapper(val)
         vmeta['pass_by_obj'] = True
-        self._access[sname] = self._setup_access_functs(sname, None, vmeta)
+        self._access[sname] = self._setup_access(sname, None, vmeta)
 
     def _get_flattened_sizes(self):
         """
