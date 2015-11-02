@@ -22,8 +22,8 @@ class _ByObjWrapper(object):
     def __init__(self, val):
         self.val = val
 
-    def __repr__(self):
-        return repr(self.val)
+    def __str__(self):
+        return str(self.val)
 
 # using a class with slots here instead of a namedtuple because we need
 # to be able to change/set values after creation
@@ -34,6 +34,7 @@ class Accessor(object):
             self.val = _ByObjWrapper(val)
         else:
             self.val = val
+
         if meta.get('pass_by_obj') or meta.get('remote'):
             self.slice = None
         else:
@@ -642,7 +643,7 @@ class SrcVecWrapper(VecWrapper):
             promname = to_prom[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                     meta['top_promoted_name']):
-                vmeta = self._setup_var_meta(path, meta)
+                vmeta = meta.copy()
                 if vmeta.get('pass_by_obj') or vmeta.get('remote'):
                     slc = None
                 else:
@@ -672,34 +673,13 @@ class SrcVecWrapper(VecWrapper):
             for path, meta in iteritems(unknowns_dict):
                 if 'remote' not in meta and (relevance is None or
                                   relevance.is_relevant(var_of_interest, path)):
-                    if meta.get('pass_by_obj'):
-                        self._access[to_prom[path]].val = _ByObjWrapper(meta['val'])
-                    else:
+                    if not meta.get('pass_by_obj'):
                         if meta['shape'] == 1:
                             self._access[to_prom[path]].val[0] = meta['val']
                         else:
                             self._access[to_prom[path]].val[:] = meta['val'].flat
-                    # self._access[to_prom[path]].meta['val'] = \
-                    #                             self._access[to_prom[path]].val
 
         self.setup_flat()
-
-    def _setup_var_meta(self, name, meta):
-        """
-        Populate the metadata dict for the named variable.
-
-        Args
-        ----
-        name : str
-           The name of the variable to add.
-
-        meta : dict
-            Starting metadata for the variable, collected from components
-            in an earlier stage of setup.
-
-        """
-        vmeta = meta.copy()
-        return vmeta
 
     def _get_flattened_sizes(self):
         """
@@ -773,10 +753,10 @@ class TgtVecWrapper(VecWrapper):
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
                     src_pathname, idxs = src
                     src_rel_name = src_to_prom[src_pathname]
-                    src_meta = srcvec.metadata(src_rel_name)
+                    src_acc = srcvec._access[src_rel_name]
 
                     vmeta, slc, val = self._setup_var_meta(pathname, meta, vec_size,
-                                                           src_meta, store_byobjs)
+                                                           src_acc, store_byobjs)
                     vmeta['owned'] = True
 
                     if not meta.get('remote'):
@@ -835,7 +815,7 @@ class TgtVecWrapper(VecWrapper):
 
         self.setup_flat()
 
-    def _setup_var_meta(self, pathname, meta, index, src_meta, store_byobjs):
+    def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
         Populate the metadata dict for the named variable.
 
@@ -851,14 +831,16 @@ class TgtVecWrapper(VecWrapper):
             Index into the array where the variable value is to be stored
             (if variable is not 'pass by object').
 
-        src_meta : dict
-            Metadata for the source variable that this target variable is
+        src_acc : Accessor
+            Accessor object for the source variable that this target variable is
             connected to.
 
         store_byobjs : bool, optional
             If True, store 'pass by object' variables in the `VecWrapper`
             we're building.
         """
+        src_meta = src_acc.meta
+
         vmeta = meta.copy()
         val = vmeta['val']
 
@@ -867,9 +849,7 @@ class TgtVecWrapper(VecWrapper):
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
-                val = src_meta['val']
-                if not isinstance(val, _ByObjWrapper):
-                    val = _ByObjWrapper(val)
+                val = src_acc.val
             vmeta['pass_by_obj'] = True
             slc = None
         elif vmeta.get('remote'):

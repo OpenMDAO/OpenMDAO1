@@ -969,8 +969,8 @@ class System(object):
     def _get_shared_vec_info(self, vdict, my_params=None):
         # determine the size of the largest grouping of parallel subvecs and the
         # offsets within those vecs for each voi in a parallel set.
-        # We should never need more memory than the largest sized collection of parallel
-        # vecs.
+        # We should never need more memory than the largest sized collection of
+        # parallel vecs.
         metas = [m for m in itervalues(vdict)
                       if not m.get('pass_by_obj')]
 
