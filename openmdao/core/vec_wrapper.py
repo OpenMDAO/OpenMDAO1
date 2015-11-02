@@ -645,15 +645,14 @@ class SrcVecWrapper(VecWrapper):
             promname = to_prom[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                     meta['top_promoted_name']):
-                vmeta = meta.copy()
-                if vmeta.get('pass_by_obj') or vmeta.get('remote'):
+                if meta.get('pass_by_obj') or meta.get('remote'):
                     slc = None
                 else:
-                    slc = (vec_size, vec_size + vmeta['size'])
-                    vec_size += vmeta['size']
+                    slc = (vec_size, vec_size + meta['size'])
+                    vec_size += meta['size']
 
                 self._access[promname] = self._setup_access(slc, meta['val'],
-                                                            vmeta)
+                                                            meta)
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
@@ -757,14 +756,14 @@ class TgtVecWrapper(VecWrapper):
                     src_rel_name = src_to_prom[src_pathname]
                     src_acc = srcvec._access[src_rel_name]
 
-                    vmeta, slc, val = self._setup_var_meta(pathname, meta, vec_size,
-                                                           src_acc, store_byobjs)
+                    slc, val = self._setup_var_meta(pathname, meta, vec_size,
+                                                    src_acc, store_byobjs)
 
                     if not meta.get('remote'):
-                        vec_size += vmeta['size']
+                        vec_size += meta['size']
 
                     my_abs = self._scoped_abs_name(pathname)
-                    self._access[my_abs] = self._setup_access(slc, val, vmeta)
+                    self._access[my_abs] = self._setup_access(slc, val, meta)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -786,7 +785,7 @@ class TgtVecWrapper(VecWrapper):
             if not meta.get('pass_by_obj') and not meta.get('remote'):
                 start, end = self._access[name].slice
                 acc.val = self.vec[start:end]
-                meta['val'] = acc.val
+                #meta['val'] = acc.val
 
         # fill entries for missing params with views from the parent
         for meta in missing:
@@ -794,7 +793,6 @@ class TgtVecWrapper(VecWrapper):
             parent_acc = parent_params_vec._access[parent_params_vec._scoped_abs_name(pathname)]
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
-                newmeta = newmeta.copy()
                 my_abs = self._scoped_abs_name(pathname)
                 # mark this param as not 'owned' by this VW
                 self._access[my_abs] = self._setup_access(None, parent_acc.val,
@@ -809,8 +807,8 @@ class TgtVecWrapper(VecWrapper):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
                     scale, offset = unitconv
-                    if self.deriv_units:
-                        offset = 0.0
+                    # if self.deriv_units:
+                    #     offset = 0.0
                     scoped_abs = self._scoped_abs_name(pathname)
                     self._access[scoped_abs].meta['unit_conv'] = (scale, offset)
 
@@ -842,23 +840,22 @@ class TgtVecWrapper(VecWrapper):
         """
         src_meta = src_acc.meta
 
-        vmeta = meta.copy()
-        val = vmeta['val']
+        val = meta['val']
 
-        if 'src_indices' not in vmeta and 'src_indices' not in src_meta:
-            vmeta['size'] = src_meta['size']
+        if 'src_indices' not in meta and 'src_indices' not in src_meta:
+            meta['size'] = src_meta['size']
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
                 val = src_acc.val
-            vmeta['pass_by_obj'] = True
+            meta['pass_by_obj'] = True
             slc = None
-        elif vmeta.get('remote'):
+        elif meta.get('remote'):
             slc = None
         else:
-            slc = (index, index + vmeta['size'])
+            slc = (index, index + meta['size'])
 
-        return vmeta, slc, val
+        return slc, val
 
     def _add_unconnected_var(self, pathname, meta):
         """
@@ -866,7 +863,6 @@ class TgtVecWrapper(VecWrapper):
         component can access its value through the vecwrapper.
         """
         sname = self._scoped_abs_name(pathname)
-        vmeta = meta.copy()
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:
@@ -876,14 +872,14 @@ class TgtVecWrapper(VecWrapper):
             raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
                                pathname)
 
-        if not vmeta.get('pass_by_obj'):
+        if not meta.get('pass_by_obj'):
             if isinstance(val, numpy.ndarray):
                 self.flat[sname] = val.flat
             else:
                 self.flat[sname] = numpy.array([val])
 
-        vmeta['pass_by_obj'] = True
-        self._access[sname] = self._setup_access(None, val, vmeta)
+        meta['pass_by_obj'] = True
+        self._access[sname] = self._setup_access(None, val, meta)
 
     def _get_flattened_sizes(self):
         """
