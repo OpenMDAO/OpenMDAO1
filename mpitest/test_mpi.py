@@ -159,7 +159,6 @@ class MPITests2(MPITestCase):
             else:
                 self.fail("Error expected")
 
-
     def test_parallel_diamond(self):
         size = 3
         prob = Problem(Group(), impl=impl)

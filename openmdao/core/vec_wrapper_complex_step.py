@@ -35,8 +35,7 @@ class ComplexStepTgtVecWrapper(object):
         if name == self.step_var:
             return self.step_val.reshape(self.vecwrap[name].shape)
 
-        acc = self.vecwrap._access[name]
-        return acc.get(acc.meta)
+        return self.vecwrap._access[name].get()
 
     def __len__(self):
         """

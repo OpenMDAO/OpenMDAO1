@@ -10,18 +10,6 @@ from collections import OrderedDict, namedtuple
 from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
-# using a class with slots here instead of a namedtuple because we need
-# to be able to change/set values after creation
-class Accessor(object):
-    __slots__ = ['get', 'set', 'flat', 'val', 'slice', 'meta']
-    def __init__(self, get, set, flat, slice, meta):
-        self.get = get
-        self.set = set
-        self.flat = flat
-        self.val = None
-        self.slice = slice
-        self.meta = meta
-
 class _ByObjWrapper(object):
     """
     We have to wrap byobj values in these in order to have param vec entries
@@ -37,6 +25,131 @@ class _ByObjWrapper(object):
     def __repr__(self):
         return repr(self.val)
 
+# using a class with slots here instead of a namedtuple because we need
+# to be able to change/set values after creation
+class Accessor(object):
+    __slots__ = ['val', 'slice', 'meta', 'get', 'set', 'flat']
+    def __init__(self, vecwrapper, slice, val, meta):
+        if meta.get('pass_by_obj') and not isinstance(val, _ByObjWrapper):
+            self.val = _ByObjWrapper(val)
+        else:
+            self.val = val
+        if meta.get('pass_by_obj') or meta.get('remote'):
+            self.slice = None
+        else:
+            self.slice = slice
+        self.meta = meta
+
+        self.get, self.flat = self._setup_get_funct(vecwrapper, meta)
+        self.set = self._setup_set_funct(meta)
+
+    def _setup_get_funct(self, vecwrapper, meta):
+        """
+        Returns a tuple of efficient closures (nonflat and flat) to access
+        the value contained in the metadata.
+        """
+
+        val = meta['val']
+        flatfunc = None
+
+        if meta.get('remote'):
+            return self._remote_access_error, self._remote_access_error
+
+        if meta.get('pass_by_obj'):
+            return self._get_pbo, flatfunc
+
+        shape = meta['shape']
+        scale, offset = meta.get('unit_conv', (None, None))
+        if vecwrapper.deriv_units:
+            offset = 0.0
+        is_scalar = shape == 1
+        if is_scalar:
+            shapes_same = True
+        else:
+            shapes_same = (shape == val.size or shape == (val.size,))
+
+        # No unit conversion.
+        # dparams vector does no unit conversion.
+        if scale is None or vecwrapper.deriv_units is True:
+            flatfunc = self._get_arr
+            if is_scalar:
+                func = self._get_scalar
+            elif shapes_same:
+                func = flatfunc
+            else:
+                func = self._get_arr_diff_shape
+
+        # We have a unit conversion
+        else:
+            flatfunc = self._get_arr_units
+            if is_scalar:
+                func = self._get_scalar_units
+            elif shapes_same:
+                func = flatfunc
+            else:
+                func = self._get_arr_units_diff_shape
+
+        return func, flatfunc
+
+    def _setup_set_funct(self, meta):
+        """ Sets up our fast set functions."""
+
+        if meta.get('remote'):
+            return self._remote_access_error
+        elif 'pass_by_obj' in meta and meta['pass_by_obj']:
+            return self._set_pbo
+        else:
+            if meta['shape'] == 1:
+                return self._set_scalar
+            else:
+                return self._set_arr
+
+    # accessor functions
+    def _get_pbo(self):
+        """pass by obj"""
+        return self.val.val
+
+    def _get_arr(self):
+        """Array with same shape"""
+        return self.val
+
+    def _get_arr_diff_shape(self):
+        """Array with different shape"""
+        return self.val.reshape(self.meta['shape'])
+
+    def _get_scalar(self):
+        return self.val[0]
+
+    def _get_arr_units(self):
+        """Array with same shape and unit conversion"""
+        scale, offset = self.meta['unit_conv']
+        vec = self.val + offset
+        vec *= scale
+        return vec
+
+    def _get_arr_units_diff_shape(self):
+        """Array with diff shape and unit conversion"""
+        scale, offset = self.meta['unit_conv']
+        vec = self.val + offset
+        vec *= scale
+        return vec.reshape(self.meta['shape'])
+
+    def _get_scalar_units(self):
+        scale, offset = self.meta['unit_conv']
+        return scale*(self.val[0] + offset)
+
+    def _set_arr(self, value):
+        self.val[:] = value.flat
+
+    def _set_scalar(self, value):
+        self.val[0] = value
+
+    def _set_pbo(self, value):
+        self.val.val = value
+
+    def _remote_access_error(self, value=None):
+        msg = "Cannot access remote Variable '{name}' in this process."
+        raise RuntimeError(msg.format(name=self.meta['pathname']))
 
 class VecWrapper(object):
     """
@@ -77,8 +190,7 @@ class VecWrapper(object):
         """
         Return a flat version of the named variable, including any necessary conversions.
         """
-        acc = self._access[name]
-        return acc.flat(acc.meta)
+        return self._access[name].flat()
 
     def metadata(self, name):
         """
@@ -118,8 +230,7 @@ class VecWrapper(object):
         -------
             The unflattened value of the named variable.
         """
-        acc = self._access[name]
-        return acc.get(acc.meta)
+        return self._access[name].get()
 
     def __setitem__(self, name, value):
         """
@@ -133,8 +244,7 @@ class VecWrapper(object):
         value :
             The unflattened value of the named variable.
         """
-        acc = self._access[name]
-        acc.set(acc.meta, value)
+        self._access[name].set(value)
 
     def __len__(self):
         """
@@ -300,8 +410,9 @@ class VecWrapper(object):
             if name in self._access:
                 meta = self._access[name].meta
                 if meta.get('pass_by_obj') or meta.get('remote'):
-                    view._access[pname] = acc = view._setup_access(pname, None, meta)
-                    acc.val = self._access[name].val
+                    view._access[pname] = view._setup_access(None,
+                                                         self._access[name].val,
+                                                             meta)
                 else:
                     pstart, pend = self._access[name].slice
                     if start == -1:
@@ -312,9 +423,10 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._access[pname] = acc = view._setup_access(pname,
-                                    (view_size, view_size + meta['size']), meta)
-                    acc.val = self._access[name].val[pstart:pend]
+                    view._access[pname] = view._setup_access(
+                                    (view_size, view_size + meta['size']),
+                                    self._access[name].val,
+                                    meta)
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -414,7 +526,8 @@ class VecWrapper(object):
         A list of (name, array) for each local vector variable.
         """
         if self.flat is None:
-            self.flat = OrderedDict([(n,m['val']) for n,m in self._get_vecvars()])
+            self.flat = OrderedDict([(n,self._access[n].val)
+                                        for n,_ in self._get_vecvars()])
         return self.flat
 
     def _scoped_abs_name(self, name):
@@ -431,10 +544,9 @@ class VecWrapper(object):
             contains this `VecWrapper`.
         """
         if self._sysdata.pathname:
-            start = len(self._sysdata.pathname)+1
+            return name[len(self._sysdata.pathname)+1:]
         else:
-            start = 0
-        return name[start:]
+            return name
 
     def dump(self, out_stream=sys.stdout):  # pragma: no cover
         """
@@ -489,71 +601,8 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _setup_get_funct(self, name, meta):
-        """
-        Returns a tuple of efficient closures (nonflat and flat) to access
-        the named value.
-        """
-
-        val = meta['val']
-        flatfunc = None
-
-        if meta.get('remote'):
-            return _remote_access_error, _remote_access_error
-
-        if meta.get('pass_by_obj'):
-            return _get_pbo, flatfunc
-
-        shape = meta['shape']
-        scale, offset = meta.get('unit_conv', (None, None))
-        if self.deriv_units:
-            offset = 0.0
-        is_scalar = shape == 1
-        if is_scalar:
-            shapes_same = True
-        else:
-            shapes_same = (shape == val.size or shape == (val.size,))
-
-        # No unit conversion.
-        # dparams vector does no unit conversion.
-        if scale is None or self.deriv_units is True:
-            flatfunc = _get_arr
-            if is_scalar:
-                func = _get_scalar
-            elif shapes_same:
-                func = flatfunc
-            else:
-                func = _get_arr_diff_shape
-
-        # We have a unit conversion
-        else:
-            flatfunc = _get_arr_units
-            if is_scalar:
-                func = _get_scalar_units
-            elif shapes_same:
-                func = flatfunc
-            else:
-                func = _get_arr_units_diff_shape
-
-        return func, flatfunc
-
-    def _setup_set_funct(self, name, meta):
-        """ Sets up our fast set functions."""
-
-        if meta.get('remote'):
-            return _remote_access_error
-        elif 'pass_by_obj' in meta and meta['pass_by_obj']:
-            return _set_pbo
-        else:
-            if meta['shape'] == 1:
-                return _set_scalar
-            else:
-                return _set_arr
-
-    def _setup_access(self, name, slice, meta):
-        func, flatfunc = self._setup_get_funct(name, meta)
-        setfunc = self._setup_set_funct(name, meta)
-        return Accessor(func, setfunc, flatfunc, slice, meta)
+    def _setup_access(self, slice, val, meta):
+        return Accessor(self, slice, val, meta)
 
 
 class SrcVecWrapper(VecWrapper):
@@ -588,10 +637,11 @@ class SrcVecWrapper(VecWrapper):
 
         vec_size = 0
         to_prom = self._sysdata.to_prom
+
         for path, meta in iteritems(unknowns_dict):
             promname = to_prom[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
-                                                          meta['top_promoted_name']):
+                                                    meta['top_promoted_name']):
                 vmeta = self._setup_var_meta(path, meta)
                 if vmeta.get('pass_by_obj') or vmeta.get('remote'):
                     slc = None
@@ -599,8 +649,8 @@ class SrcVecWrapper(VecWrapper):
                     slc = (vec_size, vec_size + vmeta['size'])
                     vec_size += vmeta['size']
 
-                self._access[promname] = self._setup_access(promname, slc, vmeta)
-
+                self._access[promname] = self._setup_access(slc, meta['val'],
+                                                            vmeta)
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
@@ -615,7 +665,6 @@ class SrcVecWrapper(VecWrapper):
                 else:
                     start, end = self._access[name].slice
                     acc.val = self.vec[start:end]
-                meta['val'] = acc.val
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -630,8 +679,8 @@ class SrcVecWrapper(VecWrapper):
                             self._access[to_prom[path]].val[0] = meta['val']
                         else:
                             self._access[to_prom[path]].val[:] = meta['val'].flat
-                    self._access[to_prom[path]].meta['val'] = \
-                                                self._access[to_prom[path]].val
+                    # self._access[to_prom[path]].meta['val'] = \
+                    #                             self._access[to_prom[path]].val
 
         self.setup_flat()
 
@@ -650,10 +699,6 @@ class SrcVecWrapper(VecWrapper):
 
         """
         vmeta = meta.copy()
-        val = meta['val']
-        if not is_differentiable(val) or meta.get('pass_by_obj'):
-            vmeta['val'] = _ByObjWrapper(val)
-
         return vmeta
 
     def _get_flattened_sizes(self):
@@ -738,8 +783,7 @@ class TgtVecWrapper(VecWrapper):
                         vec_size += vmeta['size']
 
                     my_abs = self._scoped_abs_name(pathname)
-                    self._access[my_abs] = self._setup_access(my_abs, slc, vmeta)
-                    self._access[my_abs].val = val
+                    self._access[my_abs] = self._setup_access(slc, val, vmeta)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -772,8 +816,8 @@ class TgtVecWrapper(VecWrapper):
                 newmeta = newmeta.copy()
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
-                self._access[my_abs] = acc = self._setup_access(my_abs, None, newmeta)
-                acc.val = parent_acc.val
+                self._access[my_abs] = self._setup_access(None, parent_acc.val,
+                                                          newmeta)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -823,7 +867,9 @@ class TgtVecWrapper(VecWrapper):
 
         if src_meta.get('pass_by_obj'):
             if not meta.get('remote') and store_byobjs:
-                val = vmeta['val'] = src_meta['val']
+                val = src_meta['val']
+                if not isinstance(val, _ByObjWrapper):
+                    val = _ByObjWrapper(val)
             vmeta['pass_by_obj'] = True
             slc = None
         elif vmeta.get('remote'):
@@ -855,10 +901,8 @@ class TgtVecWrapper(VecWrapper):
             else:
                 self.flat[sname] = numpy.array([val])
 
-        val = vmeta['val'] = _ByObjWrapper(val)
         vmeta['pass_by_obj'] = True
-        self._access[sname] = self._setup_access(sname, None, vmeta)
-        self._access[sname].val = val
+        self._access[sname] = self._setup_access(None, val, vmeta)
 
     def _get_flattened_sizes(self):
         """
@@ -950,51 +994,3 @@ class _PlaceholderVecWrapper(object):
         raise AttributeError("'%s' has not been initialized, "
                              "setup() must be called before '%s' can be accessed" %
                              (self.name, name))
-
-
-# accessor functions
-def _get_pbo(meta):
-    """pass by obj"""
-    return meta['val'].val
-
-def _get_arr(meta):
-    """Array with same shape"""
-    return meta['val']
-
-def _get_arr_diff_shape(meta):
-    """Array with different shape"""
-    return meta['val'].reshape(meta['shape'])
-
-def _get_scalar(meta):
-    return meta['val'][0]
-
-def _get_arr_units(meta):
-    """Array with same shape and unit conversion"""
-    scale, offset = meta['unit_conv']
-    vec = meta['val'] + offset
-    vec *= scale
-    return vec
-
-def _get_arr_units_diff_shape(meta):
-    """Array with diff shape and unit conversion"""
-    scale, offset = meta['unit_conv']
-    vec = meta['val'] + offset
-    vec *= scale
-    return vec.reshape(meta['shape'])
-
-def _get_scalar_units(meta):
-    scale, offset = meta['unit_conv']
-    return scale*(meta['val'][0] + offset)
-
-def _set_arr(meta, value):
-    meta['val'][:] = value.flat
-
-def _set_scalar(meta, value):
-    meta['val'][0] = value
-
-def _set_pbo(meta, value):
-    meta['val'].val = value
-
-def _remote_access_error(meta, value=None):
-    msg = "Cannot access remote Variable '{name}' in this process."
-    raise RuntimeError(msg.format(name=meta['pathname']))
