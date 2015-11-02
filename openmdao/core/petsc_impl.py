@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import os
+from six import iteritems
 
 # import petsc4py
 # petsc4py.init(['-start_in_debugger'])  # add petsc init args here
@@ -236,12 +237,13 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             'pass by vector' params.
         """
         psizes = []
-        for name, m in self._get_vecvars():
-            if m.get('owned'):
-                if m.get('remote'):
+        for name, acc in iteritems(self._access):
+            meta = acc.meta
+            if acc.owned and not meta.get('pass_by_obj'):
+                if meta.get('remote'):
                     psizes.append((name, 0))
                 else:
-                    psizes.append((name, m['size']))
+                    psizes.append((name, meta['size']))
 
         if trace:  # pragma: no cover
             msg = "'%s': allgathering param sizes.  local param sizes = %s"

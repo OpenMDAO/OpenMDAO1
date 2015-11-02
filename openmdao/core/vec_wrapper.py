@@ -28,8 +28,10 @@ class _ByObjWrapper(object):
 # using a class with slots here instead of a namedtuple because we need
 # to be able to change/set values after creation
 class Accessor(object):
-    __slots__ = ['val', 'slice', 'meta', 'get', 'set', 'flat']
-    def __init__(self, vecwrapper, slice, val, meta):
+    __slots__ = ['val', 'slice', 'meta', 'owned', 'get', 'set', 'flat']
+    def __init__(self, vecwrapper, slice, val, meta, owned=True):
+        self.owned = owned
+
         if meta.get('pass_by_obj') and not isinstance(val, _ByObjWrapper):
             self.val = _ByObjWrapper(val)
         else:
@@ -602,8 +604,8 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _setup_access(self, slice, val, meta):
-        return Accessor(self, slice, val, meta)
+    def _setup_access(self, slice, val, meta, owned=True):
+        return Accessor(self, slice, val, meta, owned)
 
 
 class SrcVecWrapper(VecWrapper):
@@ -797,7 +799,7 @@ class TgtVecWrapper(VecWrapper):
                 newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
                 self._access[my_abs] = self._setup_access(None, parent_acc.val,
-                                                          newmeta)
+                                                          newmeta, owned=False)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -892,8 +894,8 @@ class TgtVecWrapper(VecWrapper):
             A one entry list of lists with tuples pairing names to local sizes
             of owned, local params in this `VecWrapper`.
         """
-        return [[(n, m['size']) for n, m in self._get_vecvars()
-                    if m.get('owned')]]
+        return [[(n, acc.meta['size']) for n, acc in iteritems(self._access)
+                    if acc.owned and not acc.meta.get('pass_by_obj')]]
 
     def _apply_unit_derivatives(self):
         """ Applies derivative of the unit conversion factor to params
