@@ -6,17 +6,31 @@ Beam Sizing Problem
 ======================
 
 Story Problem
------------
+------------------
 George is building a one story room addition with a basement onto his house. He is looking to maximize square footage while at the same time meeting his requirements.  The addition will have a full basement, and George hates support columns in the middle of his basement.  Therefore, George wants to buy a single beam (girder) that will run across the length of his basement down the middle and only be supported on the ends.  The beam will be used to support the floor joists.  George’s basement will be 8 feet tall, but the beam height will intrude into that space.  Therefore, George has decided that he doesn’t want a beam taller than 8 inches.  The beam will only support the weights imposed by the single floor, and not the weight of the walls and roof.  George has consulted his local building codes and found that a floor must be able to support up to 20psf dead load (furniture, bookshelves, carpet, etc) and up to a 40psf live load (people walking around).  George knows that this will be his party room with people jumping around, so George plays it safe and assumes 20psf dead load and 50psf live load (70psf total load).  George also consulted his building codes on floor deflection and learned that the floor must not deflect downward more than 1 unit for every 360 unit lengths spanned (a rating of L/360).  George knows that this building code minimum will be safe but will result in a very bouncy floor.  George hates bouncy floors and has decided to design for a deflection rating of at least L/720.  George also wants the length of the room to be greater than or equal to the width of the room.
 
 George knows that the best way to meet his requirements will be to choose a steel wide flange beam.  George called his local steel retailer and found that the largest, heaviest, and strongest 8 inch beam they sell is a W8x58 beam, meaning that it is about 8 inches high and weighs 58 pounds per foot length.  
 
+.. figure:: basement_actual.png
+   :align: center
+   :alt: An actual W8x58 steel beam supporting the floor joists in the basement.
+
+   An actual W8x58 steel beam supporting the floor joists in the basement.
+
+
+
 Objective
---------
+-----------------
 Maximize room addition square footage.  In other words, find the optimum length and width of the room addition while satisfying the constraints.  For this exercise, all calculations will be done in inches and pounds.
 
+.. figure:: basement_top_view.png
+   :align: center
+   :alt: Top view sketch of room addition basement.
+
+   Top view sketch of room addition basement.
+
 Constraints
-------------
+---------------------
 - Use a W8x58 wide flange beam made from ASTM A992 steel.
 - Beam will only be supported at the two ends.
 - Achieve a deflection rating of at least L/720.
@@ -41,7 +55,7 @@ The constants used in this tutorial are:
     CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
 
 Room Area Discipline
----------
+----------------------
 We want to maximize room area.  Room area is given by the following equation.
 
 .. math:: 
@@ -92,7 +106,7 @@ Now we can take this equation and create a `Component` called `NegativeAreaDisci
             return J
 
 Room Length and Width Discipline
------------
+-----------------------------------
 George wants the length of the room to be at least the width of the room, given by the following equation.
 
 .. math:: 
@@ -144,7 +158,7 @@ Now we can take this equation and create a `Component` called `LengthMinusWidthD
 
 
 Deflection Discipline
----------------
+---------------------------
 Maximum deflection for a uniformly loaded beam can be calculated as
 
 .. math:: 
@@ -223,7 +237,7 @@ Now we can take this equation and create a `Component` called `DeflectionDiscipl
             return J
 
 Bending Stress Equation
---------------
+----------------------------
 Deflection is usually the limiting factor in beam design since designing just to the maximum load would result in an unacceptable deflection.  However, it is important to be safe by calculating the maximum bending stress of the beam.  Maximum stress in a beam with uniform load supported at both ends can be calculated as
 
 .. math:: 
@@ -288,7 +302,7 @@ Now we can take this equation and create a `Component` called `BendingStressDisc
             return J
 
 Shear Stress Equation
----------------------
+-------------------------------
 In addition to making sure the bending stress is safe, it is also important to make sure the shear stress is safe.  According to http://www.wikiengineer.com/Structural/SteelBeamShearStrength:
 
     It is important to know that shear force will normally not govern over bending force, unless the member in question is very short in length, with very high loads. This is due to the fact that the bending stress will normally increase exponentially with the length of a beam while shear stress will only increase if the Force acting on the beam is increased.”
@@ -359,25 +373,42 @@ Now we can take this equation and create a `Component` called `ShearStressDiscip
 
 
 Putting it all Together
--------------------
+-------------------------------
 
-First we must take all five of our disciplines and combine them into a `Group`.  The design variables `room_length` and `room_width` must be created as `IndepVarComp`, and they are initialized to 100 inches as a best guess.
+First we must take all five of our disciplines and combine them into a `Group`.  The design variables `room_length` and `room_width` must be created as `IndepVarComp`, and they are initialized to 100 inches as a best guess.  Then, we connnect the design variables to the inputs of the five disciplines.
 
 .. testcode:: Beam
     class BeamTutorialDerivatives(Group):
    
         def __init__(self):
             super(BeamTutorialDerivatives, self).__init__()
+            
+            #add design variables or IndepVarComp's
+            self.add('ivc_rlength', IndepVarComp('room_length', 100.0))
+            self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
+            
+            #add our custom discipline components
+            self.add('d_len_minus_wid', LengthMinusWidthDiscipline())
+            self.add('d_deflection', DeflectionDiscipline())
+            self.add('d_bending', BendingStressDiscipline())
+            self.add('d_shear', ShearStressDiscipline())
+            self.add('d_neg_area', NegativeAreaDiscipline())
 
-            self.add('ivc_rl', IndepVarComp('room_length', 100.0), promotes=['*'])
-            self.add('ivc_rw', IndepVarComp('room_width', 100.0), promotes=['*'])
-            
-            
-            self.add('d_len_minus_wid', LengthMinusWidthDiscipline(), promotes=['*'])
-            self.add('d_deflection', DeflectionDiscipline(), promotes=['*'])
-            self.add('d_bending', BendingStressDiscipline(), promotes=['*'])
-            self.add('d_shear', ShearStressDiscipline(), promotes=['*'])
-            self.add('d_neg_area', NegativeAreaDiscipline(), promotes=['*'])
+            #make connections from design variables to the disciplines
+            self.connect('ivc_rlength.room_length','d_len_minus_wid.room_length')
+            self.connect('ivc_rwidth.room_width','d_len_minus_wid.room_width')
+
+            self.connect('ivc_rlength.room_length','d_deflection.room_length')
+            self.connect('ivc_rwidth.room_width','d_deflection.room_width')
+
+            self.connect('ivc_rlength.room_length','d_bending.room_length')
+            self.connect('ivc_rwidth.room_width','d_bending.room_width')
+
+            self.connect('ivc_rlength.room_length','d_shear.room_length')
+            self.connect('ivc_rwidth.room_width','d_shear.room_width')
+
+            self.connect('ivc_rlength.room_length','d_neg_area.room_length')
+            self.connect('ivc_rwidth.room_width','d_neg_area.room_width')
 
 Finally, we set up the problem.  We bound `room_length` to only be between 5ft and 50ft, and `room_width` to be between 5ft and 30ft.  We set our minimization objective to `neg_room_area`.  Then we constrain the outputs from our disciplines.
 
@@ -388,17 +419,18 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
     top.driver.options['tol'] = 1.0e-8
-    top.driver.options['maxiter'] = 10000
+    top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
 
     #room length and width bounds
-    top.driver.add_desvar('room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
-    top.driver.add_desvar('room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
+    top.driver.add_desvar('ivc_rlength.room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
+    top.driver.add_desvar('ivc_rwidth.room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
 
-    top.driver.add_objective('neg_room_area') #minimize negative area (or maximize area)
-    top.driver.add_constraint('length_minus_width', lower=0.0) #room_length >= room_width
-    top.driver.add_constraint('deflection', lower=720.0) #deflection >= 720
-    top.driver.add_constraint('bending_stress_ratio', upper=0.5) #bending < 0.5
-    top.driver.add_constraint('shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
+    top.driver.add_objective('d_neg_area.neg_room_area') #minimize negative area (or maximize area)
+
+    top.driver.add_constraint('d_len_minus_wid.length_minus_width', lower=0.0) #room_length >= room_width
+    top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >= 720
+    top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
+    top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
     recorder = DumpRecorder('beamrec.txt')
     top.driver.add_recorder(recorder)
@@ -408,17 +440,42 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
 
     print("\n")
     print( "Solution found")
-    print("room area: %f in^2 (%f ft^2)" % (-top['neg_room_area'], -top['neg_room_area']/144.0))
-    print("room width: %f in (%f ft)" % (top['room_width'], top['room_width']/12.0))
-    print("room/beam length: %f in (%f ft)" % (top['room_length'], top['room_length']/12.0))
-    print( "deflection: L/%f"  % (top['deflection']))
-    print( "bending stress ratio: %f"  % (top['bending_stress_ratio']))
-    print( "shear stress ratio: %f"  % (top['shear_stress_ratio']))
+    print("room area: %f in^2 (%f ft^2)" % (-top['d_neg_area.neg_room_area'], -top['d_neg_area.neg_room_area']/144.0))
+    print("room width: %f in (%f ft)" % (top['ivc_rwidth.room_width'], top['ivc_rwidth.room_width']/12.0))
+    print("room/beam length: %f in (%f ft)" % (top['ivc_rlength.room_length'], top['ivc_rlength.room_length']/12.0))
+    print( "deflection: L/%f"  % (top['d_deflection.deflection']))
+    print( "bending stress ratio: %f"  % (top['d_bending.bending_stress_ratio']))
+    print( "shear stress ratio: %f"  % (top['d_shear.shear_stress_ratio']))
 
-    loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['room_width']) + BEAM_WEIGHT_LBS_PER_IN) #PLI (pounds per linear inch)
-    loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['room_width'])) #PLI (pounds per linear inch)
+    loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width']) + BEAM_WEIGHT_LBS_PER_IN) #PLI (pounds per linear inch)
+    loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width'])) #PLI (pounds per linear inch)
     print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
     print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
+
+
+
+Output
+-------------------------------
+
+    Solution found
+
+    room area: 51655.257618 in^2 (358.717067 ft^2)
+
+    room width: 227.277956 in (18.939830 ft)
+
+    room/beam length: 227.277904 in (18.939825 ft)
+
+    deflection: L/719.999555
+
+    bending stress ratio: 0.148863
+
+    shear stress ratio: 0.007985
+
+    loading (including self weight of beam): 60.074503pli 720.894039plf
+    
+    loading (not including self weight of beam): 55.241170pli 662.894039plf
+
+
 
 References
 ---------------
