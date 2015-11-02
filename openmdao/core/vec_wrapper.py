@@ -759,7 +759,6 @@ class TgtVecWrapper(VecWrapper):
 
                     vmeta, slc, val = self._setup_var_meta(pathname, meta, vec_size,
                                                            src_acc, store_byobjs)
-                    vmeta['owned'] = True
 
                     if not meta.get('remote'):
                         vec_size += vmeta['size']
@@ -796,8 +795,8 @@ class TgtVecWrapper(VecWrapper):
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
                 newmeta = newmeta.copy()
-                newmeta['owned'] = False # mark this param as not 'owned' by this VW
                 my_abs = self._scoped_abs_name(pathname)
+                # mark this param as not 'owned' by this VW
                 self._access[my_abs] = self._setup_access(None, parent_acc.val,
                                                           newmeta, owned=False)
 
@@ -913,7 +912,7 @@ class TgtVecWrapper(VecWrapper):
     #     """
     #     for name, acc in iteritems(self._access):
     #         meta = acc.meta
-    #         if 'unit_conv' in meta and 'owned' in meta:
+    #         if 'unit_conv' in meta and acc.owned:
     #             scale, offset = meta['unit_conv']
     #             val = meta['val']
     #             if offset != 0.0:
