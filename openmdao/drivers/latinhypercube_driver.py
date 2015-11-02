@@ -21,21 +21,18 @@ def rand_latin_hypercube(n, k):
     for i in range(k):
         shuffle(row)
         X[:,i] = row
+    return X
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
     def __init__(self, num_samples=1):
         super(LatinHypercubeDriver, self).__init__()
         self.num_samples = num_samples
-        print("\nIn constructor for LHC...")
-        print(list(self.get_desvar_metadata()))
-        print("num_samples:", self.num_samples, "num_design_vars:", self.num_design_vars)
 
     def _build_runlist(self):
-        self.num_design_vars = len(list(self.get_desvar_metadata()))
-
         design_vars = self.get_desvar_metadata()
         design_vars_names = list(design_vars)
-        print("\nIn _build_runlist()...")
+        self.num_design_vars = len(design_vars_names)
+
         # Generate an LHC of the proper size
         rand_lhc = self._get_lhc()
 
@@ -44,16 +41,16 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         for j in range(self.num_design_vars):
             bounds = design_vars[design_vars_names[j]]
             design_var_buckets = self._get_buckets(bounds['low'], bounds['high'])
-            buckets[design_var_name[j]] = list()
+            buckets[design_vars_names[j]] = list()
             for i in range(self.num_samples):
-                buckets[design_var_name].append(design_var_buckets[rand_lhc[i,j]])
+                buckets[design_vars_names[j]].append(design_var_buckets[rand_lhc[i,j]])
 
         # Return random values in given buckets
         for i in moves.xrange(self.num_samples):
             yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
 
     def _get_lhc(self):
-        return rand_latin_hypercube(self.num_samples, self.num_design_vars)
+        return rand_latin_hypercube(self.num_samples, self.num_design_vars).astype(int)
 
     def _get_buckets(self, low, high):
         bucket_walls = np.linspace(low, high, self.num_samples + 1)
