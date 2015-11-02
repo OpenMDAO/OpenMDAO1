@@ -418,7 +418,7 @@ class System(object):
                 if param_src not in self.unknowns:
                     param_src = to_prom[param_src]
 
-                target_input = unknowns.flat[param_src]
+                target_input = unknowns._access[param_src].val
             else:
                 # Cases where the IndepVarComp is somewhere above us.
                 if p_name in states:
@@ -426,7 +426,7 @@ class System(object):
                 else:
                     inputs = params
 
-                target_input = inputs.flat[p_name]
+                target_input = inputs._access[p_name].val
 
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
@@ -530,9 +530,9 @@ class System(object):
 
                     for u_name in fd_unknowns:
                         if qoi_indices and u_name in qoi_indices:
-                            result = resultvec.flat[u_name][qoi_indices[u_name]]
+                            result = resultvec._access[u_name].val[qoi_indices[u_name]]
                         else:
-                            result = resultvec.flat[u_name]
+                            result = resultvec._access[u_name].val
                         jac[u_name, p_name][:, col] = result
                         if self._num_par_fds > 1: # pragma: no cover
                             fd_cols[(u_name, p_name, col)] = \
@@ -607,15 +607,17 @@ class System(object):
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
-                for var, val in iteritems(dunknowns.flat):
+                for var, val in dunknowns.veciter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids.flat[var] += val
+                        dresids._access[var].val += val
             else:
-                for val in itervalues(dparams.flat):
+                # This zeros out some vars that are not in the local .vec, so we can't just
+                # do dparams.vec[:] = 0.0 for example.
+                for _, val in dparams.veciter():
                     val[:] = 0.0
-                for val in itervalues(dunknowns.flat):
+                for _, val in dunknowns.veciter():
                     val[:] = 0.0
 
                 if do_apply:
@@ -634,11 +636,11 @@ class System(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                for var, val in iteritems(dresids.flat):
+                for var, val in dresids.veciter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns.flat[var] += val
+                        dunknowns._access[var].val += val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """

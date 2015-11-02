@@ -116,7 +116,7 @@ class ComplexStepTgtVecWrapper(object):
             self.step_val = None
             return
 
-        var = self.vecwrap.flat[name]
+        var = self.vecwrap._access[name].val
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
@@ -289,7 +289,7 @@ class ComplexStepSrcVecWrapper(object):
             self.step_val = None
             return
 
-        var = self.vecwrap.flat[name]
+        var = self.vecwrap._access[name].val
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var

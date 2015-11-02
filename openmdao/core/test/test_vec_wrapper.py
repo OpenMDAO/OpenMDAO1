@@ -36,7 +36,7 @@ class TestVecWrapper(unittest.TestCase):
         self.assertEqual(u['s1'], -1.0)
 
         self.assertEqual(u.get_states(), ['s1'])
-        self.assertEqual([t[0] for t in iteritems(u.flat)], ['y1','y2','y4','s1'])
+        self.assertEqual([t[0] for t in u.veciter()], ['y1','y2','y4','s1'])
 
         u['y1'] = np.ones((3,2))*3.
         u['y2'] = 2.5
@@ -153,8 +153,8 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
-        self.assertTrue((np.array(u.flat['C1.y1'])==np.array([1., 1., 1., 1., 1., 1.])).all())
-        self.assertTrue((np.array(u.flat['C1.y2'])==np.array([2.])).all())
+        self.assertTrue((np.array(u._access['C1.y1'].val)==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u._access['C1.y2'].val)==np.array([2.])).all())
 
     def test_norm(self):
         unknowns_dict = OrderedDict()
