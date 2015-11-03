@@ -5,8 +5,9 @@ import json
 import numpy
 import sys
 import os
-import inspect
+import copy
 
+from array import array
 from six import string_types, iteritems
 
 from openmdao.recorders.base_recorder import BaseRecorder
@@ -26,30 +27,17 @@ class JsonRecorder(BaseRecorder):
                 # filename was given
                 out = open(out, 'w')
         self.out = out
-        out.write('{' + os.linesep + '"iterations": [' + os.linesep)
+
+        self.jsonToWrite = {}
 
     def startup(self, group):
         super(JsonRecorder, self).startup(group)
 
     def record_iteration(self, params, unknowns, resids, metadata):
-        # if self._wrote_header is False:
-        #     self.writer.writerow([param for param in params] + [unknown for unknown in unknowns])
-        #     self._wrote_header = True
+        if not "iterations" in self.jsonToWrite:
+            self.jsonToWrite["iterations"] = []
 
-        # def munge(val):
-        #     if isinstance(val, numpy.ndarray):
-        #         return ",".join(map(str, val))
-        #     return str(val)
-        # self.writer.writerow([munge(value['val']) for value in params.values()] + [munge(value['val']) for value in unknowns.values()])
-        if self._first_entry:
-            self._first_entry = False
-        else:
-            self.out.write("," + os.linesep)
-
-        self.out.write(self.make_iteration_json(params, unknowns, resids, metadata))
-
-        if self.out:
-            self.out.flush()
+        self.jsonToWrite["iterations"].append(self.make_iteration_json(params, unknowns, resids, metadata))
 
     def make_iteration_json(self, params, unknowns, resids, metadata):
         iteration_dict = {}
@@ -79,13 +67,32 @@ class JsonRecorder(BaseRecorder):
             for resid, val in sorted(iteritems(resids)):
                 resid_dict[resid] = val
 
-        return json.dumps(iteration_dict)
+        # Do a deep copy of our results dict:  there's no guarantee that openmdao isn't going
+        # to try and reuse one of the objects that we're trying to store until the end of the
+        # run when we write JSON (and, in fact, it does reuse the list at metadata['coord'],
+        # resulting in incorrect coordinates for all but the last iteration if we don't do a
+        # deep copy here).
+        return copy.deepcopy(iteration_dict)
 
     def record_metadata(self, group):
-        pass
-        # TODO: what to do here?
-        # self.writer.writerow([param.name for param in group.params] + [unknown.name for unknowns in group.unknowns])
+        params = list(iteritems(group.params))
+        unknowns = list(iteritems(group.unknowns))
+        resids = list(iteritems(group.resids))
+
+        self.jsonToWrite["metadata"] = {
+            "params": params,
+            "unknowns": unknowns,
+            "resids": resids
+        }
 
     def close(self):
-        self.out.write(os.linesep + "]" + os.linesep + "}" + os.linesep)
+        self.out.write(json.dumps(self.jsonToWrite, default=_json_encode_fallback))
         super(JsonRecorder, self).close()
+
+def _json_encode_fallback(object):
+    if isinstance(object, array):
+        return object.tolist()
+    elif isinstance(object, numpy.ndarray):
+        return object.tolist()
+    else:
+        raise TypeError("No fallback encoding for type {0}".format(type(object).__name__))
