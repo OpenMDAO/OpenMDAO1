@@ -20,6 +20,8 @@ from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
 from openmdao.core.checks import ConnectError
 
+#from openmdao.devtools.debug import diff_max_mem
+
 trace = os.environ.get('OPENMDAO_TRACE')
 
 
@@ -1206,6 +1208,7 @@ class Group(System):
             The name of a variable of interest.
 
         """
+        #print(self.pathname,"size:",self.params.vec.size,"+",self.unknowns.vec.size)
         relevance = self._probdata.relevance
 
         # create ordered dicts that map relevant vars to their index into
@@ -1273,9 +1276,70 @@ class Group(System):
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
-        for (tgt_sys, mode), (srcs, tgts, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            src_idxs = self.unknowns.merge_idxs(srcs)
-            tgt_idxs = self.unknowns.merge_idxs(tgts)
+        partial_map = {} # map of partial scatter idxs to their posision in
+                         # the full scatter
+        full_map = {}  # map of 'fwd' and 'rev' to the full scatter idxs
+        # create a DataTransfer object that combines all of the
+        # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
+        # scatter to all subsystems can be done at the same time.  Store that DataTransfer
+        # object under the name ''.
+        for mode in ('fwd', 'rev'):
+            start = 0
+            full_srcs = []
+            full_tgts = []
+            full_flats = []
+            full_byobjs = []
+            for tup, (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):
+                tgt_sys, direction = tup
+                if mode == direction:
+                    if len(srcs) > 0:
+                        src_idxs = self.unknowns.merge_idxs(srcs)
+                        tgt_idxs = self.unknowns.merge_idxs(tgts)
+                        if MPI:
+                            srcs = src_idxs
+                            tgts = tgt_idxs
+                        else: # sort idxs for slice conversion in serial
+                            if mode == 'fwd':
+                                sort_idxs = np.argsort(src_idxs)
+                            else: # rev
+                                sort_idxs = np.argsort(tgt_idxs)
+                            srcs = src_idxs[sort_idxs]
+                            tgts = tgt_idxs[sort_idxs]
+                        xfer_dict[tup] = (srcs, tgts, flats, byobjs)
+
+                    if flats:
+                        partial_map[tup] = start
+                        start += len(srcs)
+
+                    full_srcs.append(srcs)
+                    full_tgts.append(tgts)
+                    full_flats.extend(flats)
+                    full_byobjs.extend(byobjs)
+
+            src_idxs = self.unknowns.merge_idxs(full_srcs)
+            tgt_idxs = self.unknowns.merge_idxs(full_tgts)
+            full_map[mode] = { 'src': src_idxs, 'tgt': tgt_idxs }
+            #print("full size:",len(src_idxs))
+
+            self._data_xfer[('', mode, var_of_interest)] = \
+                self._impl.create_data_xfer(self.dumat[var_of_interest],
+                                            self.dpmat[var_of_interest],
+                                            src_idxs, tgt_idxs,
+                                            full_flats, full_byobjs,
+                                            mode)
+
+            full_srcs = full_tgts = full_flats = full_byobjs = None
+
+        # create a 'partial' scatter to each subsystem in both fwd and rev
+        for (tgt_sys, mode), (src_idxs, tgt_idxs, vec_conns, byobj_conns) in iteritems(xfer_dict):
+            #src_idxs = self.unknowns.merge_idxs(src_idxs)
+            #tgt_idxs = self.unknowns.merge_idxs(tgt_idxs)
+            if len(src_idxs) > 0:
+                start = partial_map[(tgt_sys, mode)]
+
+                # create partial scatter as a view of the full scatter
+                src_idxs = full_map[mode]['src'][start:start+len(src_idxs)]
+                tgt_idxs = full_map[mode]['tgt'][start:start+len(tgt_idxs)]
 
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
@@ -1284,32 +1348,6 @@ class Group(System):
                                                 src_idxs, tgt_idxs,
                                                 vec_conns, byobj_conns,
                                                 mode)
-
-        # create a DataTransfer object that combines all of the
-        # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
-        # scatter to all subsystems can be done at the same time.  Store that DataTransfer
-        # object under the name ''.
-
-        for mode in ('fwd', 'rev'):
-            full_srcs = []
-            full_tgts = []
-            full_flats = []
-            full_byobjs = []
-            for (tgt_sys, direction), (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):
-                if mode == direction:
-                    full_srcs.extend(srcs)
-                    full_tgts.extend(tgts)
-                    full_flats.extend(flats)
-                    full_byobjs.extend(byobjs)
-
-            src_idxs = self.unknowns.merge_idxs(full_srcs)
-            tgt_idxs = self.unknowns.merge_idxs(full_tgts)
-            self._data_xfer[('', mode, var_of_interest)] = \
-                self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                            self.dpmat[var_of_interest],
-                                            src_idxs, tgt_idxs,
-                                            full_flats, full_byobjs,
-                                            mode)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
