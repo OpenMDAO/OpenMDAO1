@@ -86,7 +86,8 @@ class JsonRecorder(BaseRecorder):
         }
 
     def close(self):
-        self.out.write(json.dumps(self.jsonToWrite, default=_json_encode_fallback))
+        self.out.write(json.dumps(self.jsonToWrite, indent=2, default=_json_encode_fallback))
+        self.out.write(os.linesep) # trailing newline
         super(JsonRecorder, self).close()
 
 def _json_encode_fallback(object):
