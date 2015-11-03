@@ -1226,10 +1226,6 @@ class Group(System):
         unknown_sizes = []
         param_sizes = []
 
-        fwd = 0
-        rev = 1
-        modename = ['fwd', 'rev']
-
         for iproc in range(self.comm.size):
             unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
                                   if n in vec_unames])
@@ -1243,7 +1239,11 @@ class Group(System):
                                dtype=self._impl.idx_arr_type)
         self._local_param_sizes[var_of_interest] = param_sizes
 
+        fwd = 0
+        rev = 1
+        modename = ['fwd', 'rev']
         xfer_dict = {}
+
         for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
                 urelname = to_prom[unknown]
@@ -1258,8 +1258,8 @@ class Group(System):
 
                 umeta = self.unknowns.metadata(urelname)
 
-                # remove our system pathname from the abs pathname of the param and
-                # get the subsystem name from that
+                # remove our system pathname from the abs pathname of the param
+                # and get the subsystem name from that
 
                 tgt_sys = nearest_child(self.pathname, param)
                 src_sys = nearest_child(self.pathname, unknown)

@@ -973,12 +973,13 @@ class System(object):
         # offsets within those vecs for each voi in a parallel set.
         # We should never need more memory than the largest sized collection of
         # parallel vecs.
-        metas = [m for m in itervalues(vdict)
-                      if not m.get('pass_by_obj')]
-
-        # for params, we only include 'owned' vars in the vector
-        if my_params is not None:
-            metas = [m for m in metas if m['pathname'] in my_params]
+        if my_params is None:
+            metas = [m for m in itervalues(vdict)
+                          if not m.get('pass_by_obj')]
+        else: # for params, we only include 'owned' vars in the vector
+            metas = [m for m in itervalues(vdict)
+                          if m['pathname'] in my_params and
+                             not m.get('pass_by_obj')]
 
         full_size = sum([m['size'] for m in metas])  # 'None' vecs are this size
         max_size = full_size
