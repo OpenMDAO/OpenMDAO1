@@ -28,16 +28,20 @@ class JsonRecorder(BaseRecorder):
                 out = open(out, 'w')
         self.out = out
 
-        self.jsonToWrite = {}
+        self.out.write("{")
 
     def startup(self, group):
         super(JsonRecorder, self).startup(group)
 
     def record_iteration(self, params, unknowns, resids, metadata):
-        if not "iterations" in self.jsonToWrite:
-            self.jsonToWrite["iterations"] = []
+        if self._first_entry:
+            self.out.write('"iterations": [' + os.linesep)
+            self._first_entry = False
+        else:
+            self.out.write("," + os.linesep)
 
-        self.jsonToWrite["iterations"].append(self.make_iteration_json(params, unknowns, resids, metadata))
+        iterationObject = self.make_iteration_json(params, unknowns, resids, metadata)
+        self.out.write(json.dumps(iterationObject, indent=2, default=_json_encode_fallback))
 
     def make_iteration_json(self, params, unknowns, resids, metadata):
         iteration_dict = {}
@@ -67,26 +71,33 @@ class JsonRecorder(BaseRecorder):
             for resid, val in sorted(iteritems(resids)):
                 resid_dict[resid] = val
 
-        # Do a deep copy of our results dict:  there's no guarantee that openmdao isn't going
-        # to try and reuse one of the objects that we're trying to store until the end of the
-        # run when we write JSON (and, in fact, it does reuse the list at metadata['coord'],
-        # resulting in incorrect coordinates for all but the last iteration if we don't do a
-        # deep copy here).
-        return copy.deepcopy(iteration_dict)
+        return iteration_dict
 
     def record_metadata(self, group):
         params = list(iteritems(group.params))
         unknowns = list(iteritems(group.unknowns))
         resids = list(iteritems(group.resids))
 
-        self.jsonToWrite["metadata"] = {
+        metadataObject = {
             "params": params,
             "unknowns": unknowns,
             "resids": resids
         }
 
+        # Write the metadata to the output stream.
+        # Assumes that it's alway called before the first call to record_iteration
+        self.out.write('"metadata": ' + json.dumps(metadataObject, indent=2, default=_json_encode_fallback) + "," + os.linesep)
+        self.out.flush()
+
     def close(self):
-        self.out.write(json.dumps(self.jsonToWrite, indent=2, default=_json_encode_fallback))
+        # Close out the JSON object to make it nice and well-formed
+        if self._first_entry:
+            # Write empty iterations object if, for some reason, record_iteration were never called
+            self.out.write('"iterations": [' + os.linesep)
+            self._first_entry = False
+
+        self.out.write(']' + os.linesep + "}")
+
         self.out.write(os.linesep) # trailing newline
         super(JsonRecorder, self).close()
 
