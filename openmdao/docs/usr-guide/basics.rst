@@ -1,4 +1,4 @@
- _Basics:
+.. _Basics:
 
 ======
 Basics
@@ -185,10 +185,11 @@ For example, we can add a `Group` to another `Group` along with some `Components
     g2.add('comp3', c3)
     g2.add('sub_group_1', g1)
 
+.. |playbutton|  image:: ../_images/blueplaybutton.png
+    :height: 20px
+    :target: http://openmdao.org/images/GroupDemo_animated.gif
 
-.. image:: ../_images/GroupDemo_still.gif
-  :target: ../_images/GroupDemo_animated.gif
-
+Visualize this example: |playbutton|
 
 
 Interdependencies between `Systems` in a `Group` are represented as connections
@@ -202,8 +203,11 @@ An explicit connection is made from the output (or state) of one `System` to the
 
     g2.sub_group_1.connect('comp1.y', 'comp2.x')
 
-.. image:: ../_images/ExplicitConnection_animated.gif
+.. |playbutton2|  image:: ../_images/blueplaybutton.png
+    :height: 20px
+    :target: http://openmdao.org/images/ExplicitConnection_animated.gif
 
+Visualize this example: |playbutton2|
 
 Alternatively, you can use the *promotion* mechanism to implicitly connect two
 or more variables.  When a `System` is added to a `Group`, you may optionally
@@ -228,7 +232,12 @@ and they are said to be implicitly connected.  If you promote the output from
 one subsystem and the input of another with the same name, then that will have
 the same effect as the explicit connection statement as shown above.
 
-.. image:: ../_images/Promotion_animated.gif
+.. |playbutton3|  image:: ../_images/blueplaybutton.png
+    :height: 20px
+    :target: http://openmdao.org/images/Promotion_animated.gif
+
+Visualize this example: |playbutton3|
+
 
 In contrast to a `Component`, which is responsible for defining the variables
 and equations that map between them, a `Group` has the responsibility of assembling
@@ -276,8 +285,11 @@ data transfers that must occur during execution. It will also look for and
 report any potential issues with the `Problem` configuration, including
 unconnected parameters, conflicting units, etc.
 
-.. image:: ../_images/Problem_animated.gif
+.. |playbutton4|  image:: ../_images/blueplaybutton.png
+    :height: 20px
+    :target: http://openmdao.org/images/Problem_animated.gif
 
+Visualize this example: |playbutton4|
 
 Summary
 -------
@@ -332,3 +344,15 @@ Running this example produces the output:
 
    14.0
    1
+
+
+.. raw:: html
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript" src="http://openmdao.org/images/lightbox.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("a[href$=.gif]").lightBox();
+        });
+    </script>
