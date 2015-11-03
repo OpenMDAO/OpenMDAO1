@@ -1225,6 +1225,11 @@ class Group(System):
 
         unknown_sizes = []
         param_sizes = []
+
+        fwd = 0
+        rev = 1
+        modename = ['fwd', 'rev']
+
         for iproc in range(self.comm.size):
             unknown_sizes.append([sz for n, sz in self._u_size_lists[iproc]
                                   if n in vec_unames])
@@ -1259,31 +1264,32 @@ class Group(System):
                 tgt_sys = nearest_child(self.pathname, param)
                 src_sys = nearest_child(self.pathname, unknown)
 
-                for sname, mode in ((tgt_sys, 'fwd'), (src_sys, 'rev')):
+                for sname, mode in ((tgt_sys, fwd), (src_sys, rev)):
                     src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                         xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
                     if 'pass_by_obj' in umeta and umeta['pass_by_obj']:
                         # rev is for derivs only, so no by_obj passing needed
-                        if mode == 'fwd':
+                        if mode == fwd:
                             byobj_conns.append((prelname, urelname))
                     else:  # pass by vector
                         sidxs, didxs = self._get_global_idxs(urelname, prelname,
                                                              top_urelname, top_prelname,
                                                              vec_unames, unknown_sizes,
-                                                             vec_pnames, param_sizes, mode)
+                                                             vec_pnames, param_sizes,
+                                                             modename[mode])
                         vec_conns.append((prelname, urelname))
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
-        partial_map = {} # map of partial scatter idxs to their posision in
+        partial_map = {} # map of partial scatter idxs to their position in
                          # the full scatter
-        full_map = {}  # map of 'fwd' and 'rev' to the full scatter idxs
+        full_map = [None, None]  # list of full scatter idxs for fwd and rev
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataTransfer
         # object under the name ''.
-        for mode in ('fwd', 'rev'):
+        for mode in (fwd, rev):
             start = 0
             full_srcs = []
             full_tgts = []
@@ -1299,7 +1305,7 @@ class Group(System):
                             srcs = src_idxs
                             tgts = tgt_idxs
                         else: # sort idxs for slice conversion in serial
-                            if mode == 'fwd':
+                            if mode == fwd:
                                 sort_idxs = np.argsort(src_idxs)
                             else: # rev
                                 sort_idxs = np.argsort(tgt_idxs)
@@ -1321,12 +1327,12 @@ class Group(System):
             full_map[mode] = { 'src': src_idxs, 'tgt': tgt_idxs }
             #print("full size:",len(src_idxs))
 
-            self._data_xfer[('', mode, var_of_interest)] = \
+            self._data_xfer[('', modename[mode], var_of_interest)] = \
                 self._impl.create_data_xfer(self.dumat[var_of_interest],
                                             self.dpmat[var_of_interest],
                                             src_idxs, tgt_idxs,
                                             full_flats, full_byobjs,
-                                            mode)
+                                            modename[mode])
 
             full_srcs = full_tgts = full_flats = full_byobjs = None
 
@@ -1342,12 +1348,12 @@ class Group(System):
                 tgt_idxs = full_map[mode]['tgt'][start:start+len(tgt_idxs)]
 
             if vec_conns or byobj_conns:
-                self._data_xfer[(tgt_sys, mode, var_of_interest)] = \
+                self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
                     self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                 self.dpmat[var_of_interest],
                                                 src_idxs, tgt_idxs,
                                                 vec_conns, byobj_conns,
-                                                mode)
+                                                modename[mode])
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
