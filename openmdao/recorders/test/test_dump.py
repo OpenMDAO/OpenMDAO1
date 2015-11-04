@@ -9,8 +9,9 @@ import time
 
 from six import StringIO, iteritems
 
-from openmdao.core.problem import Problem
+from openmdao.api import IndepVarComp, Group, ScipyOptimizer, Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.example_groups import ExampleGroup
 from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.util.record_util import format_iteration_coordinate
@@ -422,6 +423,38 @@ class TestDumpRecorder(unittest.TestCase):
 
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
+    def test_driver_records_unknown_types_metadata(self):
+        
+        prob = Problem()
+        root = prob.root = Group()
+
+        # Need an optimization problem to test to make sure 
+        #   the is_desvar, is_con, is_obj metadata is being 
+        #   recorded for the Unknowns
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.add_desvar('x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.options['disp'] = False
+        
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        self.recorder.close()
+
+        expected_params = list(iteritems(prob.root.params))
+        expected_unknowns = list(iteritems(prob.root.unknowns))
+        expected_resids = list(iteritems(prob.root.resids))
+
+        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+
+
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
         prob.root = ConvergeDiverge()
@@ -479,6 +512,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.close()
 
         self.assertMetadataRecorded(None)
+
 
 if __name__ == "__main__":
     unittest.main()
