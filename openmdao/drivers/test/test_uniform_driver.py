@@ -13,8 +13,8 @@ from openmdao.test.util import assert_rel_error
 
 from openmdao.drivers.uniform_driver import UniformDriver
 
-class TestFullFactorial(unittest.TestCase):
-    def test_fullfactorial(self):
+class TestUniformDriver(unittest.TestCase):
+    def test_uniformDriver(self):
         prob = Problem()
         root = prob.root = Group()
 
@@ -27,8 +27,8 @@ class TestFullFactorial(unittest.TestCase):
         prob.driver.add_desvar('y', low=-10, high=10)
         prob.driver.add_objective('f_xy')
         runList = prob.driver._build_runlist()
-        prob.setup(check=False)
-        prob.run()
+        #prob.setup(check=False)
+        #prob.run()
         # Assert that the runList generated is of Generator Type
         self.assertTrue((type(runList) == GeneratorType),"_build_runlist did not return a generator.")
 

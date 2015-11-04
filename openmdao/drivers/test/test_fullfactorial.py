@@ -27,8 +27,8 @@ class TestFullFactorial(unittest.TestCase):
         prob.driver.add_desvar('y', low=0, high=1)
         prob.driver.add_objective('f_xy')
         runList = prob.driver._build_runlist()
-        prob.setup(check=False)
-        prob.run()
+        #prob.setup(check=False)
+        #prob.run()
         # Assert that the runList generated is of Generator Type
         self.assertTrue((type(runList) == GeneratorType),"_build_runlist did not return a generator.")
 
