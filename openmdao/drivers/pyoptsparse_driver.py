@@ -16,6 +16,22 @@ from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
+def _check_imports():
+    """ Dynamically remove optimizers we don't have
+    """
+
+    optlist = ['ALPSO', 'CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+               'NSGA2', 'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG', 'NOMAD']
+
+    for optimizer in optlist[:]:
+        try:
+            exec('from pyoptsparse import %s' % optimizer)
+        except ImportError:
+            optlist.remove(optimizer)
+
+    return optlist
+
+
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
@@ -60,7 +76,7 @@ class pyOptSparseDriver(Driver):
         self.supports['integer_design_vars'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT', 'SLSQP'],
+        self.options.add_option('optimizer', 'SNOPT', values=_check_imports(),
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
