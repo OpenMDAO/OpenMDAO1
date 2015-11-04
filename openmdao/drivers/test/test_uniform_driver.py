@@ -43,11 +43,7 @@ class TestFullFactorial(unittest.TestCase):
             if (-10< value['x'] < 10 and -10 <value['y'] <10):
                 inRange = True
 
-        self.assertTrue(inRange,"_build_runlist did not return a generator.")
-
-
-
-
+        self.assertTrue(inRange,"Not in range.")
 
 if __name__ == "__main__":
     unittest.main()
