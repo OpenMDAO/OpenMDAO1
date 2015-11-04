@@ -3,7 +3,7 @@ OpenMDAO design-of-experiments driver implementing the Latin Hypercube method.
 """
 
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
-from six import moves, iteritems
+from six import moves, iteritems, itervalues
 from random import shuffle, randint, seed
 import numpy as np
 
@@ -101,10 +101,10 @@ class _LHC_Individual(object):
                     nrm = np.linalg.norm(arr[i]-arr[j], ord=self.p)
                     distdict[nrm] = distdict.get(nrm, 0) + 1
 
-            distinct_d = np.array(distdict.keys())
+            distinct_d = np.array(list(distdict))
 
             # Mutltiplicity array with a count of how many pairs of points have a given distance
-            J = np.array(distdict.values())
+            J = np.array(list(itervalues(distdict)))
 
             self.phi = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
 
@@ -154,8 +154,8 @@ class _LHC_Individual(object):
 def _rand_latin_hypercube(n, k):
     # Calculates a random Latin hypercube set of n points in k dimensions within [0,n-1]^k hypercube.
     arr = np.zeros((n, k))
-    row = range(0, n)
-    for i in range(k):
+    row = list(moves.xrange(0, n))
+    for i in moves.xrange(k):
         shuffle(row)
         arr[:,i] = row
     return arr
