@@ -56,7 +56,7 @@ The constants used in this tutorial are:
     YIELD_STRENGTH_PSI = 50000 #The maximum yield strength Fy for ASTM A992 Grade 50 steel is 50,000 psi
     CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
 
-Room Area Discipline
+Room Area Component
 ----------------------
 We want to maximize room area.  Room area is given by the following equation.
 
@@ -76,14 +76,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{neg\_room\_area}} {d \mathrm{room\_length}} = -\mathrm{room\_width}
 
-Now we can take this equation and create a `Component` called `NegativeAreaDiscipline`.
+Now we can take this equation and create a `Component` called `NegativeAreaComponent`.
 
 .. testcode:: Beam
 
-    class NegativeAreaDiscipline(Component):    
+    class NegativeAreaComponent(Component):    
 
         def __init__(self):
-            super(NegativeAreaDiscipline, self).__init__()
+            super(NegativeAreaComponent, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -107,7 +107,7 @@ Now we can take this equation and create a `Component` called `NegativeAreaDisci
 
             return J
 
-Room Length and Width Discipline
+Room Length and Width Component
 -----------------------------------
 George wants the length of the room to be at least the width of the room, given by the following equation.
 
@@ -127,14 +127,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{length\_minus\_width}} {d \mathrm{room\_length}} = 1
 
-Now we can take this equation and create a `Component` called `LengthMinusWidthDiscipline`.
+Now we can take this equation and create a `Component` called `LengthMinusWidthComponent`.
 
 .. testcode:: Beam
 
-    class LengthMinusWidthDiscipline(Component):    
+    class LengthMinusWidthComponent(Component):    
 
         def __init__(self):
-            super(LengthMinusWidthDiscipline, self).__init__()
+            super(LengthMinusWidthComponent, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -159,7 +159,7 @@ Now we can take this equation and create a `Component` called `LengthMinusWidthD
             return J  
 
 
-Deflection Discipline
+Deflection Component
 ---------------------------
 Maximum deflection for a uniformly loaded beam can be calculated as
 
@@ -206,14 +206,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{deflection}} {d \mathrm{room\_length}} = \frac{-1152 * E * I} {5 * (\frac{\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} }{2} + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN}) * \mathrm{room\_length}^4 }
 
-Now we can take this equation and create a `Component` called `DeflectionDiscipline`.
+Now we can take this equation and create a `Component` called `DeflectionComponent`.
 
 .. testcode:: Beam
 
-    class DeflectionDiscipline(Component):
+    class DeflectionComponent(Component):
     
         def __init__(self):
-            super(DeflectionDiscipline, self).__init__()
+            super(DeflectionComponent, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -271,15 +271,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{bending\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{(\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI}*\mathrm{room\_width}/2)) * \mathrm{BEAM\_HEIGHT\_IN} * \mathrm{room\_length}} {8I_x * \mathrm{YIELD\_STRENGTH\_PSI}}
 
-Now we can take this equation and create a `Component` called `BendingStressDiscipline`.
+Now we can take this equation and create a `Component` called `BendingStressComponent`.
 
 .. testcode:: Beam
 
-    class BendingStressDiscipline(Component):
-        """Component containing Bending Discipline."""
-
+    class BendingStressComponent(Component):
+        
         def __init__(self):
-            super(BendingStressDiscipline, self).__init__()
+            super(BendingStressComponent, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -341,15 +340,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{shear\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} / 2)} {2 * \mathrm{YIELD\_STRENGTH\_PSI} * \mathrm{CROSS\_SECTIONAL\_AREA\_SQIN}}
 
-Now we can take this equation and create a `Component` called `ShearStressDiscipline`.
+Now we can take this equation and create a `Component` called `ShearStressComponent`.
 
 .. testcode:: Beam
 
-    class ShearStressDiscipline(Component):
-        """Component containing Bending Discipline."""
+    class ShearStressComponent(Component):        
 
         def __init__(self):
-            super(ShearStressDiscipline, self).__init__()
+            super(ShearStressComponent, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -378,7 +376,7 @@ Now we can take this equation and create a `Component` called `ShearStressDiscip
 Putting it all Together
 -------------------------------
 
-First we must take all five of our disciplines and combine them into a `Group`.  The design variables `room_length` and `room_width` must be created as `IndepVarComp`, and they are initialized to 100 inches as a best guess.  Then, we connnect the design variables to the inputs of the five disciplines.
+First we must take all five of our `Components` and combine them into a `Group`.  The design variables `room_length` and `room_width` must be created as `IndepVarComp`, and they are initialized to 100 inches as a best guess.  Then, we connnect the design variables to the inputs of the five `Components`.
 
 .. testcode:: Beam
 
@@ -391,14 +389,14 @@ First we must take all five of our disciplines and combine them into a `Group`. 
             self.add('ivc_rlength', IndepVarComp('room_length', 100.0))
             self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
             
-            #add our custom discipline components
-            self.add('d_len_minus_wid', LengthMinusWidthDiscipline())
-            self.add('d_deflection', DeflectionDiscipline())
-            self.add('d_bending', BendingStressDiscipline())
-            self.add('d_shear', ShearStressDiscipline())
-            self.add('d_neg_area', NegativeAreaDiscipline())
+            #add our custom components
+            self.add('d_len_minus_wid', LengthMinusWidthComponent())
+            self.add('d_deflection', DeflectionComponent())
+            self.add('d_bending', BendingStressComponent())
+            self.add('d_shear', ShearStressComponent())
+            self.add('d_neg_area', NegativeAreaComponent())
 
-            #make connections from design variables to the disciplines
+            #make connections from design variables to the Components
             self.connect('ivc_rlength.room_length','d_len_minus_wid.room_length')
             self.connect('ivc_rwidth.room_width','d_len_minus_wid.room_width')
 
@@ -414,7 +412,7 @@ First we must take all five of our disciplines and combine them into a `Group`. 
             self.connect('ivc_rlength.room_length','d_neg_area.room_length')
             self.connect('ivc_rwidth.room_width','d_neg_area.room_width')
 
-Finally, we set up the problem.  We bound `room_length` to only be between 5ft and 50ft, and `room_width` to be between 5ft and 30ft.  We set our minimization objective to `neg_room_area`.  Then we constrain the outputs from our disciplines.
+Finally, we set up the problem.  We bound `room_length` to only be between 5ft and 50ft, and `room_width` to be between 5ft and 30ft.  We set our minimization objective to `neg_room_area`.  Then we constrain the outputs from our Components.
 
 .. testcode:: Beam
 

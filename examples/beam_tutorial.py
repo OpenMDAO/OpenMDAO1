@@ -24,10 +24,10 @@ CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
 
 
 #negate the area to turn from a maximization problem to a minimization problem
-class NegativeAreaDiscipline(Component):    
+class NegativeAreaComponent(Component):    
 
     def __init__(self):
-        super(NegativeAreaDiscipline, self).__init__()
+        super(NegativeAreaComponent, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -52,10 +52,10 @@ class NegativeAreaDiscipline(Component):
         return J
 
 
-class LengthMinusWidthDiscipline(Component):    
+class LengthMinusWidthComponent(Component):    
 
     def __init__(self):
-        super(LengthMinusWidthDiscipline, self).__init__()
+        super(LengthMinusWidthComponent, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -79,10 +79,10 @@ class LengthMinusWidthDiscipline(Component):
 
         return J  
 
-class DeflectionDiscipline(Component):
+class DeflectionComponent(Component):
     
     def __init__(self):
-        super(DeflectionDiscipline, self).__init__()
+        super(DeflectionComponent, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -108,11 +108,10 @@ class DeflectionDiscipline(Component):
         return J
 
 
-class BendingStressDiscipline(Component):
-    """Component containing Bending Discipline."""
-
+class BendingStressComponent(Component):
+    
     def __init__(self):
-        super(BendingStressDiscipline, self).__init__()
+        super(BendingStressComponent, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -136,11 +135,10 @@ class BendingStressDiscipline(Component):
 
         return J
 
-class ShearStressDiscipline(Component):
-    """Component containing Bending Discipline."""
+class ShearStressComponent(Component):    
 
     def __init__(self):
-        super(ShearStressDiscipline, self).__init__()
+        super(ShearStressComponent, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -174,14 +172,14 @@ class BeamTutorialDerivatives(Group):
         self.add('ivc_rlength', IndepVarComp('room_length', 100.0))
         self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
         
-        #add our custom discipline components
-        self.add('d_len_minus_wid', LengthMinusWidthDiscipline())
-        self.add('d_deflection', DeflectionDiscipline())
-        self.add('d_bending', BendingStressDiscipline())
-        self.add('d_shear', ShearStressDiscipline())
-        self.add('d_neg_area', NegativeAreaDiscipline())
+        #add our custom components
+        self.add('d_len_minus_wid', LengthMinusWidthComponent())
+        self.add('d_deflection', DeflectionComponent())
+        self.add('d_bending', BendingStressComponent())
+        self.add('d_shear', ShearStressComponent())
+        self.add('d_neg_area', NegativeAreaComponent())
 
-        #make connections from design variables to the disciplines
+        #make connections from design variables to the Components
         self.connect('ivc_rlength.room_length','d_len_minus_wid.room_length')
         self.connect('ivc_rwidth.room_width','d_len_minus_wid.room_width')
 
