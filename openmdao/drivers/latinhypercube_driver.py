@@ -7,31 +7,19 @@ from six import moves, iteritems
 from random import shuffle, randint, seed
 import numpy as np
 
-def rand_latin_hypercube(n, k):
-    """
-    Calculates a random Latin hypercube set of n points in k
-    dimensions within [0,n-1]^k hypercube.
-    n: int
-       Desired number of points.
-    k: int
-       Number of design variables (dimensions).
-    """
-    X = np.zeros((n, k))
-    row = range(0, n)
-    for i in range(k):
-        shuffle(row)
-        X[:,i] = row
-    return X
-
 class LatinHypercubeDriver(PredeterminedRunsDriver):
-    def __init__(self, num_samples=1):
+    def __init__(self, num_samples=1, seed=None):
         super(LatinHypercubeDriver, self).__init__()
         self.num_samples = num_samples
+        self.seed = seed
 
     def _build_runlist(self):
         design_vars = self.get_desvar_metadata()
         design_vars_names = list(design_vars)
         self.num_design_vars = len(design_vars_names)
+        if self.seed != None:
+            seed(self.seed)
+            np.random.seed(self.seed)
 
         # Generate an LHC of the proper size
         rand_lhc = self._get_lhc()
@@ -51,7 +39,8 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
     # Determines how the LHC is generated
     def _get_lhc(self):
-        return rand_latin_hypercube(self.num_samples, self.num_design_vars).astype(int)
+        rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
+        return rand_lhc.astype(int)
 
     # Determines the distribution of samples.
     def _get_buckets(self, low, high):
@@ -60,24 +49,22 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
 
 class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
-    def __init__(self, num_samples=1, population=20, generations=2, norm_method=1):
+    def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
         super(OptimizedLatinHypercubeDriver, self).__init__()
-        self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
+        self.qs = [1,2,5,10,20,50,100] # List of qs to try for Phi_q optimization
         self.num_samples = num_samples
+        self.seed = seed
         self.population = population
         self.generations = generations
         self.norm_method = norm_method
 
     def _get_lhc(self):
-        rand_lhc = rand_latin_hypercube(self.num_samples, self.num_design_vars)
-        print("in OLHC._get_lhc()")
-        print("rand_lhc:", rand_lhc)
-        best_lhc = LHC_individual(rand_lhc, q=1, p=self.norm_method)
-        # Optimize our LHC before returning it
+        rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
 
+        # Optimize our LHC before returning it
+        best_lhc = _LHC_Individual(rand_lhc, q=1, p=self.norm_method)
         for q in self.qs:
-            print("q:", q)
-            lhc_start = LHC_individual(rand_lhc, q, self.norm_method)
+            lhc_start = _LHC_Individual(rand_lhc, q, self.norm_method)
             lhc_opt = _mmlhs(lhc_start, self.population, self.generations)
             if lhc_opt.mmphi() < best_lhc.mmphi():
                 best_lhc = lhc_opt
@@ -85,7 +72,7 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
         return best_lhc._get_doe().astype(int)
 
 
-class LHC_individual(object):
+class _LHC_Individual(object):
 
     def __init__(self, doe, q=2, p=1):
         self.q = q
@@ -105,7 +92,7 @@ class LHC_individual(object):
             n,m = self.doe.shape
             distdict = {}
 
-            #calculate the norm between each pair of points in the DOE
+            # Calculate the norm between each pair of points in the DOE
             # TODO: This norm takes up the majority of the computation time. It
             # should be converted to C or ShedSkin.
             arr = self.doe
@@ -116,7 +103,7 @@ class LHC_individual(object):
 
             distinct_d = np.array(distdict.keys())
 
-            #mutltiplicity array with a count of how many pairs of points have a given distance
+            # Mutltiplicity array with a count of how many pairs of points have a given distance
             J = np.array(distdict.values())
 
             self.phi = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
@@ -133,7 +120,7 @@ class LHC_individual(object):
         for count in range(mutation_count):
             col = randint(0, k-1)
 
-            #choosing two distinct random points
+            # Choosing two distinct random points
             el1 = randint(0, n-1)
             el2 = randint(0, n-1)
             while el1==el2:
@@ -142,8 +129,7 @@ class LHC_individual(object):
             new_doe[el1, col] = self.doe[el2, col]
             new_doe[el2, col] = self.doe[el1, col]
 
-        return LHC_individual(new_doe, self.q, self.p)
-
+        return _LHC_Individual(new_doe, self.q, self.p)
 
     def __iter__(self):
         return self._get_rows()
@@ -165,6 +151,29 @@ class LHC_individual(object):
         return self.doe
 
 
+def _rand_latin_hypercube(n, k):
+    # Calculates a random Latin hypercube set of n points in k dimensions within [0,n-1]^k hypercube.
+    arr = np.zeros((n, k))
+    row = range(0, n)
+    for i in range(k):
+        shuffle(row)
+        arr[:,i] = row
+    return arr
+
+
+def _is_latin_hypercube(lh):
+    """Returns True if the given array is a Latin hypercube.
+    The given array is assumed to be a numpy array.
+    """
+    n,k = lh.shape
+    for j in range(k):
+        col = lh[:,j]
+        colset = set(col)
+        if len(colset) < len(col):
+            return False  # something was duplicated
+    return True
+
+
 def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube.
     Returns a new LatinHypercube instance with an optimized set of points.
@@ -175,7 +184,6 @@ def _mmlhs(x_start, population, generations):
 
     level_off = np.floor(0.85*generations)
     for it in range(generations):
-
         if it < level_off and level_off > 1.:
             mutations = int(round(1+(0.5*n-1)*(level_off-it)/(level_off-1)))
         else:
@@ -200,30 +208,17 @@ def _mmlhs(x_start, population, generations):
 
 
 if __name__== "__main__":
-    x = rand_latin_hypercube(40,10)
-    lhc_x = LHC_individual(x)
-    #print(lhc_x)
-    #print("mmphi:",lhc_x.mmphi())
-
-    lhc_y= lhc_x.perturb(1)
-    #print(lhc_y)
-    #print("mmphi:",lhc_y.mmphi())
-
-    lhc_z = _mmlhs(lhc_x, 20, 4)
-    #print(lhc_z)
-    #print("mmphi:",lhc_z.mmphi())
-
-    rand_lhc = rand_latin_hypercube(10, 5)
-    best_lhc = LHC_individual(rand_lhc, q=1, p=1)
+    rand_lhc = _rand_latin_hypercube(100, 20)
+    print("Is LHC:", _is_latin_hypercube(rand_lhc))
+    best_lhc = _LHC_Individual(rand_lhc, q=1, p=1)
     print(best_lhc)
     print("mmphi:",best_lhc.mmphi())
-    for q in [1,2,5,10,20,50,100,200]:
-        lhc_start = LHC_individual(rand_lhc, q, 1)
-        lhc_opt = _mmlhs(lhc_start, 20, 2)
+    for q in [1,2,5,10,20,50,100]:
+        lhc_start = _LHC_Individual(rand_lhc, q, 1)
+        lhc_opt = _mmlhs(lhc_start, 30, 6)
         if lhc_opt.mmphi() < best_lhc.mmphi():
             best_lhc = lhc_opt
         print("q:", q, "best_lhc.mmphi:", best_lhc.mmphi())
-
 
     print(best_lhc)
     print("mmphi:",best_lhc.mmphi())
