@@ -431,16 +431,19 @@ class TestDumpRecorder(unittest.TestCase):
         # Need an optimization problem to test to make sure 
         #   the is_desvar, is_con, is_obj metadata is being 
         #   recorded for the Unknowns
-        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
-        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 50.0))
+        root.add('p2', IndepVarComp('y', 50.0))
+        root.add('comp', Paraboloid())
+
+        root.connect('p1.x', 'comp.x')
+        root.connect('p2.y', 'comp.y')
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('p2.y', low=-50.0, high=50.0)
 
-        prob.driver.add_objective('f_xy')
+        prob.driver.add_objective('comp.f_xy')
         prob.driver.options['disp'] = False
         
         prob.driver.add_recorder(self.recorder)
