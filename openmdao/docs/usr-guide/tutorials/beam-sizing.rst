@@ -44,6 +44,8 @@ The constants used in this tutorial are:
 
 .. testcode:: Beam
     
+    from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group
+
     E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel) 
     I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam) 
     BEAM_WEIGHT_LBS_PER_IN = 58.0 / 12.0 #self weight of beam per unit length (58 lbs/ft or 4.83 lbs/in.)
@@ -342,6 +344,7 @@ Now we can find our derivatives:
 Now we can take this equation and create a `Component` called `ShearStressDiscipline`.
 
 .. testcode:: Beam
+
     class ShearStressDiscipline(Component):
         """Component containing Bending Discipline."""
 
@@ -378,6 +381,7 @@ Putting it all Together
 First we must take all five of our disciplines and combine them into a `Group`.  The design variables `room_length` and `room_width` must be created as `IndepVarComp`, and they are initialized to 100 inches as a best guess.  Then, we connnect the design variables to the inputs of the five disciplines.
 
 .. testcode:: Beam
+
     class BeamTutorialDerivatives(Group):
    
         def __init__(self):
@@ -413,6 +417,7 @@ First we must take all five of our disciplines and combine them into a `Group`. 
 Finally, we set up the problem.  We bound `room_length` to only be between 5ft and 50ft, and `room_width` to be between 5ft and 30ft.  We set our minimization objective to `neg_room_area`.  Then we constrain the outputs from our disciplines.
 
 .. testcode:: Beam
+
     top = Problem()
     top.root = BeamTutorialDerivatives()
 
@@ -432,9 +437,7 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
     top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
     top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
-    recorder = DumpRecorder('beamrec.txt')
-    top.driver.add_recorder(recorder)
-
+    
     top.setup()
     top.run()
 
@@ -451,7 +454,7 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
     loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width'])) #PLI (pounds per linear inch)
     print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
     print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
-
+    print( "Finished!")
 
 
 Output
@@ -472,7 +475,7 @@ Output
     shear stress ratio: 0.007985
 
     loading (including self weight of beam): 60.074503pli 720.894039plf
-    
+
     loading (not including self weight of beam): 55.241170pli 662.894039plf
 
 
@@ -485,3 +488,14 @@ http://www.engineeringtoolbox.com/beam-stress-deflection-d_1312.html
 
 http://www.engineeringtoolbox.com/american-wide-flange-steel-beams-d_1319.html
 
+.. testoutput:: Beam
+   :hide:
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
+
+   ...
+   Solution found...
+   room width: 227...
+   room/beam length: 227...
+   bending stress ratio: 0.1...   
+   shear stress ratio: 0.007...
+   Finished!...

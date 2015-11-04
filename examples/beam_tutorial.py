@@ -1,7 +1,7 @@
 """ Beam sizing problem"""
 
 
-from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group, DumpRecorder
+from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group
 
 
 #room_area = room_length * room_width                                (1)
@@ -217,8 +217,6 @@ top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >=
 top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
 top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
-recorder = DumpRecorder('beamrec.txt')
-top.driver.add_recorder(recorder)
 
 top.setup()
 top.run()
@@ -236,4 +234,4 @@ loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width']) + BEAM_
 loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width'])) #PLI (pounds per linear inch)
 print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
 print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
-
+print( "Finished!")
