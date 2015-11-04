@@ -2,7 +2,7 @@ OpenMDAO Version 1.3.0 Alpha Release Notes
 November 4, 2015
 
 API Change
-* The name `jacobian` has been changed everywhere to the clearer, more descriptive,
+* The function named `jacobian` has been changed everywhere to the clearer, more descriptive,
 more correct `linearize`.  Use of `jacobian` is deprecated, please change your files
 accordingly.
 
