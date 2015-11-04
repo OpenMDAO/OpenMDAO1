@@ -12,6 +12,7 @@ Features
 * Improved warning/error system for connected input problems.
 * Added ability to capture variable metadata to recorders.
 * User can now set fd mode to complex_step for fd_jacobian method on component.
+* Added new option to recorders to specify to not save Params, Unknowns, Resids.
 
 Bugfixes
 * Fixed a bug in sparse Jacobian so that it no longer computes nor creates knowably zero entries.
