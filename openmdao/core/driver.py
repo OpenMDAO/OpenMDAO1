@@ -69,14 +69,14 @@ class Driver(object):
 
         for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
+
                 rootmeta = root.unknowns.metadata(name)
-                
                 if name in self._desvars:
-                    root.unknowns.metadata(name)['is_desvar'] = True
+                    rootmeta['is_desvar'] = True
                 if name in self._objs:
-                    root.unknowns.metadata(name)['is_objective'] = True
+                    rootmeta['is_objective'] = True
                 if name in self._cons:
-                    root.unknowns.metadata(name)['is_constraint'] = True
+                    rootmeta['is_constraint'] = True
 
                 if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
