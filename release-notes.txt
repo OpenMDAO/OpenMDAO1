@@ -1,3 +1,28 @@
+OpenMDAO Version 1.3.0 Alpha Release Notes
+November 4, 2015
+
+API Change
+* The name `jacobian` has been changed everywhere to the clearer, more descriptive,
+more correct `linearize`.  Use of `jacobian` is deprecated, please change your files
+accordingly.
+
+Features
+* Added some explanatory animations to the Basics section of the User Guide.
+* Users can now finite difference in parallel for derivatives.
+* Improved warning/error system for connected input problems.
+* Added ability to capture variable metadata to recorders.
+* User can now set fd mode to complex_step for fd_jacobian method on component.
+
+Bugfixes
+* Fixed a bug in sparse Jacobian so that it no longer computes nor creates knowably zero entries.
+* Fixed some documentation errors in the recorder tutorial.
+* Fixed a bug wherein unknown values were not updated when using Python 3.x
+* Created a more descriptive error message for a user trying to access a variable
+    unavailable in the current process.
+* Components now required to properly initialize their outputs.
+
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.2.0 Alpha Release Notes
 October 15, 2015
 
