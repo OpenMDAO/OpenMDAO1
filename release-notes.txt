@@ -21,7 +21,6 @@ Bugfixes
     unavailable in the current process.
 * Components now required to properly initialize their outputs.
 
-
 ---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.2.0 Alpha Release Notes
 October 15, 2015
