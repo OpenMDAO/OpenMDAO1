@@ -8,9 +8,13 @@ import numpy as np
 import itertools
 
 class FullFactorialDriver(PredeterminedRunsDriver):
+    """Design-of-experiments Driver implementing the Full Factorial method.
+    """
+    
     def __init__(self, num_levels=1):
         super(FullFactorialDriver, self).__init__()
         self.num_levels = num_levels
+
 
     def _build_runlist(self):
         value_arrays = dict()

@@ -1,5 +1,5 @@
 """
-OpenMDAO design-of-experiments driver implementing the Latin Hypercube method.
+OpenMDAO design-of-experiments Driver implementing the Latin Hypercube and Optimized Latin Hypercube methods.
 """
 
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
@@ -8,12 +8,17 @@ from random import shuffle, randint, seed
 import numpy as np
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
+    """Design-of-experiments Driver implementing the Latin Hypercube method.
+    """
+
     def __init__(self, num_samples=1, seed=None):
         super(LatinHypercubeDriver, self).__init__()
         self.num_samples = num_samples
         self.seed = seed
 
+
     def _build_runlist(self):
+        """Build a runlist based on the Latin Hypercube method."""
         design_vars = self.get_desvar_metadata()
         design_vars_names = list(design_vars)
         self.num_design_vars = len(design_vars_names)
@@ -37,18 +42,25 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         for i in moves.xrange(self.num_samples):
             yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
 
-    # Determines how the LHC is generated
+
     def _get_lhc(self):
+        """Generates a Latin Hypercube based on the number of samplts and the number of design variables."""
+
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
         return rand_lhc.astype(int)
 
-    # Determines the distribution of samples.
+
     def _get_buckets(self, low, high):
+        """Determines the distribution of samples."""
+
         bucket_walls = np.linspace(low, high, self.num_samples + 1)
         return list(moves.zip(bucket_walls[0:-1], bucket_walls[1:]))
 
 
 class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
+    """Design-of-experiments Driver implementing the Morris-Mitchell method for an Optimized Latin Hypercube.
+    """
+
     def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
         super(OptimizedLatinHypercubeDriver, self).__init__()
         self.qs = [1,2,5,10,20,50,100] # List of qs to try for Phi_q optimization
@@ -58,7 +70,11 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
         self.generations = generations
         self.norm_method = norm_method
 
+
     def _get_lhc(self):
+        """Generate an Optimized Latin Hypercube
+        """
+
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
 
         # Optimize our LHC before returning it
@@ -80,10 +96,13 @@ class _LHC_Individual(object):
         self.doe = doe
         self.phi = None # Morris-Mitchell sampling criterion
 
+
     @property
     def shape(self):
         """Size of the LatinHypercube DOE (rows,cols)."""
+
         return self.doe.shape
+
 
     def mmphi(self):
         """Returns the Morris-Mitchell sampling criterion for this Latin hypercube."""
@@ -110,11 +129,13 @@ class _LHC_Individual(object):
 
         return self.phi
 
+
     def perturb(self, mutation_count):
         """ Interchanges pairs of randomly chosen elements within randomly chosen
         columns of a DOE a number of times. The result of this operation will also
         be a Latin hypercube.
         """
+
         new_doe = self.doe.copy()
         n,k = self.doe.shape
         for count in range(mutation_count):
@@ -134,18 +155,23 @@ class _LHC_Individual(object):
     def __iter__(self):
         return self._get_rows()
 
+
     def _get_rows(self):
         for row in self.doe:
             yield row
 
+
     def __repr__(self):
         return repr(self.doe)
+
 
     def __str__(self):
         return str(self.doe)
 
+
     def __getitem__(self,*args):
         return self.doe.__getitem__(*args)
+
 
     def _get_doe(self):
         return self.doe
@@ -165,6 +191,7 @@ def _is_latin_hypercube(lh):
     """Returns True if the given array is a Latin hypercube.
     The given array is assumed to be a numpy array.
     """
+
     n,k = lh.shape
     for j in range(k):
         col = lh[:,j]
@@ -178,6 +205,7 @@ def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube.
     Returns a new LatinHypercube instance with an optimized set of points.
     """
+
     x_best = x_start
     phi_best = x_start.mmphi()
     n = x_start.shape[1]
@@ -205,20 +233,3 @@ def _mmlhs(x_start, population, generations):
             x_best = x_improved
 
     return x_best
-
-
-if __name__== "__main__":
-    rand_lhc = _rand_latin_hypercube(100, 20)
-    print("Is LHC:", _is_latin_hypercube(rand_lhc))
-    best_lhc = _LHC_Individual(rand_lhc, q=1, p=1)
-    print(best_lhc)
-    print("mmphi:",best_lhc.mmphi())
-    for q in [1,2,5,10,20,50,100]:
-        lhc_start = _LHC_Individual(rand_lhc, q, 1)
-        lhc_opt = _mmlhs(lhc_start, 30, 6)
-        if lhc_opt.mmphi() < best_lhc.mmphi():
-            best_lhc = lhc_opt
-        print("q:", q, "best_lhc.mmphi:", best_lhc.mmphi())
-
-    print(best_lhc)
-    print("mmphi:",best_lhc.mmphi())
