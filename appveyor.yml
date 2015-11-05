@@ -13,6 +13,8 @@ environment:
 
 init:
   - set OPENMDAO_TEST_DOCS=1
+  - copy C:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
+  - set PATH=%PATH%;C:\MinGW\bin
   - set CONDA=Miniconda
   - if "%PYTHON%" == "3.4" (set CONDA=%CONDA%3)
   - if "%PLATFORM%" == "x64" (set CONDA=%CONDA%-x64)
