@@ -1282,9 +1282,6 @@ class Group(System):
                         src_idx_list.append(sidxs)
                         dest_idx_list.append(didxs)
 
-        partial_map = {} # map of partial scatter idxs to their position in
-                         # the full scatter
-        full_map = [None, None]  # list of full scatter idxs for fwd and rev
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataTransfer
