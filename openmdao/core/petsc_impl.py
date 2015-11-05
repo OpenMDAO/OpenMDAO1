@@ -19,6 +19,8 @@ if trace:  # pragma: no cover
 
 from mpi4py import MPI
 
+#from openmdao.devtools.debug import diff_mem, mem_usage
+
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
 
@@ -292,6 +294,7 @@ class PetscDataTransfer(object):
     # so that we can find any matches and reuse them
     _idx_dict = {}
 
+    #@diff_mem
     def __init__(self, src_vec, tgt_vec,
                  src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
 
@@ -330,10 +333,7 @@ class PetscDataTransfer(object):
                             # so we won't hang.
                             iset = PETSc.IS().createGeneral(empty, comm=comm)
                             iset.destroy()
-                            if idxs is src_idxs:
-                                idx_set = oldidxs
-                            else:
-                                idx_set = oldidxs
+                            idx_set = oldidxs
                             break
                     else:
                         idx_set = PETSc.IS().createGeneral(idxs, comm=comm)

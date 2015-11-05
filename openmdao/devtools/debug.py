@@ -95,7 +95,7 @@ def max_mem_usage():
 try:
     import psutil
 
-    def mem_usage():
+    def mem_usage(msg='', out=sys.stdout):
         """
         Returns
         -------
@@ -103,7 +103,10 @@ try:
         """
         denom = 1024. * 1024.
         p = psutil.Process(os.getpid())
-        return p.memory_info().rss / denom
+        mem = p.memory_info().rss / denom
+        if msg:
+            print(msg,"%6.3f MB" % mem, file=out)
+        return mem
 
     def diff_mem(fn):
         """
