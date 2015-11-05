@@ -1510,7 +1510,7 @@ class Problem(System):
                     root.clear_dparams()
                     dunknowns.vec[:] = 0.0
 
-                    dresids._access[u_name].val[idx] = 1.0
+                    dresids._dat[u_name].val[idx] = 1.0
                     try:
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'rev')
@@ -1520,7 +1520,7 @@ class Problem(System):
                     for p_name in chain(dparams, states):
 
                         dinputs = dunknowns if p_name in states else dparams
-                        jac_rev[(u_name, p_name)][idx, :] = dinputs._access[p_name].val
+                        jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
             for p_name in chain(dparams, states):
@@ -1534,7 +1534,7 @@ class Problem(System):
                     root.clear_dparams()
                     dunknowns.vec[:] = 0.0
 
-                    dinputs._access[p_name].val[idx] = 1.0
+                    dinputs._dat[p_name].val[idx] = 1.0
                     dparams._apply_unit_derivatives()
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')

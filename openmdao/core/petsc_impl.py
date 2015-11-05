@@ -245,7 +245,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             'pass by vector' params.
         """
         psizes = []
-        for name, acc in iteritems(self._access):
+        for name, acc in iteritems(self._dat):
             meta = acc.meta
             if acc.owned and not meta.get('pass_by_obj'):
                 if meta.get('remote'):

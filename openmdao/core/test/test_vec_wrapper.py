@@ -75,7 +75,7 @@ class TestVecWrapper(unittest.TestCase):
             connections[p] = (p, None)
 
         s = _SysData('')
-        s._unknowns_dict = u._access
+        s._unknowns_dict = u._dat
         p = TgtVecWrapper(s)
         p.setup(None, params, u, params.keys(),
                 connections, store_byobjs=True)
@@ -153,8 +153,8 @@ class TestVecWrapper(unittest.TestCase):
         u = SrcVecWrapper(sd)
         u.setup(unknowns_dict, store_byobjs=True)
 
-        self.assertTrue((np.array(u._access['C1.y1'].val)==np.array([1., 1., 1., 1., 1., 1.])).all())
-        self.assertTrue((np.array(u._access['C1.y2'].val)==np.array([2.])).all())
+        self.assertTrue((np.array(u._dat['C1.y1'].val)==np.array([1., 1., 1., 1., 1., 1.])).all())
+        self.assertTrue((np.array(u._dat['C1.y2'].val)==np.array([2.])).all())
 
     def test_norm(self):
         unknowns_dict = OrderedDict()

@@ -35,7 +35,7 @@ class ComplexStepTgtVecWrapper(object):
         if name == self.step_var:
             return self.step_val.reshape(self.vecwrap[name].shape)
 
-        return self.vecwrap._access[name].get()
+        return self.vecwrap._dat[name].get()
 
     def __len__(self):
         """
@@ -99,7 +99,7 @@ class ComplexStepTgtVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vecwrap._access[name].meta
+        return self.vecwrap._dat[name].meta
 
     def set_complex_var(self, name):
         """
@@ -116,7 +116,7 @@ class ComplexStepTgtVecWrapper(object):
             self.step_val = None
             return
 
-        var = self.vecwrap._access[name].val
+        var = self.vecwrap._dat[name].val
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var
@@ -247,7 +247,7 @@ class ComplexStepSrcVecWrapper(object):
         KeyError
             If the named variable is not in this vector.
         """
-        return self.vecwrap._access[name].meta
+        return self.vecwrap._dat[name].meta
 
     def flat(self, name):
         """
@@ -289,7 +289,7 @@ class ComplexStepSrcVecWrapper(object):
             self.step_val = None
             return
 
-        var = self.vecwrap._access[name].val
+        var = self.vecwrap._dat[name].val
         self.step_var = name
         self.step_val = np.zeros(len(var), dtype=np.complex)
         self.step_val[:] = var

@@ -327,12 +327,12 @@ class Driver(object):
         if nproc > 1:
             owner = self.root._owning_ranks[name]
             if iproc == owner:
-                flatval = uvec._access[name].val
+                flatval = uvec._dat[name].val
             else:
                 flatval = None
         else:
             owner = 0
-            flatval = uvec._access[name].val
+            flatval = uvec._dat[name].val
 
         if 'indices' in meta and not (nproc > 1 and owner != iproc):
             # Make sure our indices are valid
@@ -380,7 +380,7 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        if self.root.unknowns._access[name].val.size == 0:
+        if self.root.unknowns._dat[name].val.size == 0:
             return
 
         scaler = self._desvars[name]['scaler']

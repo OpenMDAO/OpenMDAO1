@@ -605,9 +605,9 @@ class Component(System):
             nwid = max(lens) if lens else 12
 
             for v in uvec:
-                if v in uvec._access and uvec._access[v].slice is not None:
+                if v in uvec._dat and uvec._dat[v].slice is not None:
                     uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel,
-                                                         uvec._access[v].slice)
+                                                         uvec._dat[v].slice)
                     tem = "{0}{1:<{nwid}} {2:<21} {3:>10}\n"
                     out_stream.write(tem.format(" "*(nest+8), v, uslice,
                                                 repr(uvec[v]), nwid=nwid))
@@ -716,10 +716,10 @@ class Component(System):
             # States are stepped in unknowns, not params
             if p_name in states:
                 stepvec = csunknowns
-                target_input = unknowns._access[p_name].val
+                target_input = unknowns._dat[p_name].val
             else:
                 stepvec = csparams
-                target_input = params._access[p_name].val
+                target_input = params._dat[p_name].val
 
             stepvec.set_complex_var(p_name)
 

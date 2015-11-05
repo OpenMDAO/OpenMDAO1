@@ -1020,20 +1020,20 @@ class Group(System):
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
-                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._access[v].slice)
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._dat[v].slice)
                 pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
                     if len(pnames) == 1:
                         pname = pnames[0]
-                        pslice = pvec._access[pname].slice
+                        pslice = pvec._dat[pname].slice
                         if pslice is None:
                             pslice = (-1, -1)
                         pslice = '%d:%d' % (pslice[0], pslice[1])
                     else:
                         pslice = []
                         for p in pnames:
-                            ps = pvec._access[p].slice
+                            ps = pvec._dat[p].slice
                             if ps is None:
                                 ps = (-1, -1)
                             pslice.append(['%d:%d' % ps])
@@ -1214,8 +1214,8 @@ class Group(System):
         """
         relevance = self._probdata.relevance
         to_prom = self._sysdata.to_prom
-        uacc = self.unknowns._access
-        pacc = self.params._access
+        uacc = self.unknowns._dat
+        pacc = self.params._dat
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
