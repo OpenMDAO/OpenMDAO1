@@ -10,7 +10,7 @@ if os.environ.get('OPENMDAO_TEST_DOCS'):
         dn = os.path.dirname
         docdir = os.path.join(dn(dn(dn(os.path.abspath(__file__)))), 'docs')
 
-        p = Popen(['make', tname], stdout=PIPE, stderr=STDOUT,
+        p = Popen(['make -d', tname], stdout=PIPE, stderr=STDOUT,
                   env=os.environ, cwd=docdir)
         return p.communicate()[0], p.returncode
 
