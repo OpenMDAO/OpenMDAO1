@@ -12,6 +12,7 @@ environment:
     - PYTHON: 3.4
 
 init:
+  - set OPENMDAO_TEST_DOCS=1
   - set CONDA=Miniconda
   - if "%PYTHON%" == "3.4" (set CONDA=%CONDA%3)
   - if "%PLATFORM%" == "x64" (set CONDA=%CONDA%-x64)
