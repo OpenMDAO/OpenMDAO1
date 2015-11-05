@@ -141,7 +141,7 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'state_eq.y2_actual')
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
+                                     z=np.array([0.0, 0.0])),
                   promotes=['x', 'z', 'y1', 'obj'])
         self.connect('d2.y2', 'obj_cmp.y2')
 
