@@ -2,12 +2,7 @@
 
 import numpy as np
 
-from openmdao.components.exec_comp import ExecComp
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
-
+from openmdao.api import Component, Group, IndepVarComp, ExecComp, NLGaussSeidel
 
 class SellarDis1(Component):
     """Component containing Discipline 1."""
@@ -103,7 +98,7 @@ class SellarDerivatives(Group):
         self.add('d2', SellarDis2(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0]), x=0.0),
                  promotes=['*'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
