@@ -4,7 +4,7 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, Component
 from openmdao.test.util import assert_rel_error
 
 
@@ -122,6 +122,25 @@ class TestConnections(unittest.TestCase):
         self.p.run()
         self.assertEqual(self.p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(self.p.root.G3.G4.C4.params['x'], 999.)
+
+    def test_pull_size_from_source(self):
+
+        class Src(Component):
+
+            def __init(self):
+                super(Src, self).__init__()
+
+                self.add_param('x', 2.0)
+                self.add_output('y1', np.zeros((3, )))
+                self.add_output('y2', shape=((3, )))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x = params['x']
+
+                unknowns['y1'] = x * np.array( [1.0, 2.0, 3.0])
+                unknowns['y2'] = x * np.array( [1.0, 2.0, 3.0])
 
 
 class TestConnectionsPromoted(unittest.TestCase):
