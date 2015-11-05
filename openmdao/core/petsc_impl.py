@@ -284,6 +284,9 @@ class PetscDataTransfer(object):
     def __init__(self, src_vec, tgt_vec,
                  src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
 
+        src_idxs = src_vec.merge_idxs(src_idxs)
+        tgt_idxs = tgt_vec.merge_idxs(tgt_idxs)
+        
         self.byobj_conns = byobj_conns
         self.comm = comm = src_vec.comm
 

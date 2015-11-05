@@ -1,5 +1,7 @@
 """ Class definition for the DataTransfer object."""
 
+from six.moves import zip
+
 import numpy as np
 
 from openmdao.util.array_util import to_slice
@@ -32,20 +34,47 @@ class DataTransfer(object):
 
     def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
 
-        self.src_idxs = src_idxs
-        self.tgt_idxs = tgt_idxs
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
 
-        if not MPI:
-            self.src_idxs = to_slice(self.src_idxs)
-            self.tgt_idxs = to_slice(self.tgt_idxs)
-            if mode == 'rev':
-                if isinstance(self.src_idxs, slice):
-                    self._src_unique = True
+        fwd = mode == 'fwd'
+
+        both = [(s, t) for s, t in zip(src_idxs, tgt_idxs)]
+
+        # sort subarrays wrt each other in ascending order (not internally)
+        if fwd:
+            both = sorted(both, key=lambda l: l[0][0])
+        else:
+            both = sorted(both, key=lambda l: l[1][0])
+
+        scatters = []
+        for isrcs, itgts in both:
+            srcs = to_slice(isrcs)
+            tgts = to_slice(itgts)
+
+            if not fwd and not isinstance(srcs, slice):
+                # check uniqueness of src_idxs to see if we can avoid
+                # calling np.add.at, which is slower than +=
+                src_unique = np.unique(srcs).size == srcs.size
+            else:
+                src_unique = True
+
+            if scatters:
+                # try to combine smaller slices into a larger one
+                olds, oldt, sunique = scatters[-1]
+                if isinstance(olds, slice) and isinstance(oldt, slice) and \
+                     isinstance(srcs, slice) and isinstance(tgts, slice) and \
+                     olds.stop == srcs.start and olds.step == srcs.step and \
+                     oldt.stop == tgts.start and oldt.step == tgts.step:
+                    news = slice(olds.start, srcs.stop, srcs.step)
+                    newt = slice(oldt.start, tgts.stop, tgts.step)
+                    scatters[-1] = (news, newt, src_unique)
                 else:
-                    # check uniqueness of src_idxs to see if we can avoid calling np.add.at
-                    self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
+                    scatters.append((srcs, tgts, src_unique))
+            else:
+                scatters.append((srcs, tgts, src_unique))
+
+        self.scatters = scatters
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
@@ -73,12 +102,15 @@ class DataTransfer(object):
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. byobjs are never scattered in reverse
-            if self._src_unique:
-                srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-            else:
-                np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
+            for isrcs, itgts, src_unique in self.scatters:
+                if src_unique:
+                    srcvec.vec[isrcs] += tgtvec.vec[itgts]
+                else:
+                    np.add.at(srcvec.vec, isrcs, tgtvec.vec[itgts])
         else:
-            tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
+            for isrcs, itgts, _ in self.scatters:
+                tgtvec.vec[itgts] = srcvec.vec[isrcs]
+
             # forward, include byobjs if not a deriv scatter
             if not deriv:
                 for tgt, src in self.byobj_conns:

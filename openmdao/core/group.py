@@ -20,7 +20,6 @@ from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
 from openmdao.core.checks import ConnectError
 
-#from openmdao.devtools.debug import diff_max_mem
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
@@ -1018,7 +1017,7 @@ class Group(System):
                 if meta.get('pass_by_obj') or meta.get('remote'):
                     continue
                 out_stream.write(" "*(nest+8))
-                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._acess[v].slice)
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._access[v].slice)
                 pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
@@ -1132,7 +1131,8 @@ class Group(System):
             index array into the global unknowns vector and the corresponding
             index array into the global params vector.
         """
-        rev = True if mode == 'rev' else False
+        rev = mode == 'rev'
+        fwd = not rev
         umeta = self.unknowns.metadata(uname)
         pmeta = self.params.metadata(pname)
 
@@ -1141,7 +1141,7 @@ class Group(System):
         pdist = 'src_indices' in pmeta
 
         # FIXME: if we switch to push scatters, this check will flip
-        if ((not rev and pmeta.get('remote')) or
+        if ((fwd and pmeta.get('remote')) or
             (rev and not pdist and umeta.get('remote')) or
                 (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
@@ -1179,7 +1179,7 @@ class Group(System):
             var_rank = iproc
 
         else:
-            var_rank = self._owning_ranks[uname] if not rev else iproc
+            var_rank = self._owning_ranks[uname] if fwd else iproc
             offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
             src_idxs = arg_idxs + offset
 
@@ -1246,15 +1246,15 @@ class Group(System):
 
         for param, (unknown, idxs) in iteritems(self.connections):
             if param in my_params:
-                urelname = to_prom[unknown]
-                prelname = name_relative_to(self.pathname, param)
-
                 top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
                 top_prelname = self._params_dict[param]['top_promoted_name']
 
                 if not relevance.is_relevant(var_of_interest, top_urelname) or \
                    not relevance.is_relevant(var_of_interest, top_prelname):
                     continue
+
+                urelname = to_prom[unknown]
+                prelname = name_relative_to(self.pathname, param)
 
                 umeta = self.unknowns.metadata(urelname)
 
@@ -1298,55 +1298,20 @@ class Group(System):
             for tup, (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):
                 tgt_sys, direction = tup
                 if mode == direction:
-                    if len(srcs) > 0:
-                        src_idxs = self.unknowns.merge_idxs(srcs)
-                        tgt_idxs = self.unknowns.merge_idxs(tgts)
-                        if MPI:
-                            srcs = src_idxs
-                            tgts = tgt_idxs
-                        else: # sort idxs for slice conversion in serial
-                            if mode == fwd:
-                                sort_idxs = np.argsort(src_idxs)
-                            else: # rev
-                                sort_idxs = np.argsort(tgt_idxs)
-                            srcs = src_idxs[sort_idxs]
-                            tgts = tgt_idxs[sort_idxs]
-                        xfer_dict[tup] = (srcs, tgts, flats, byobjs)
-
-                    if flats:
-                        partial_map[tup] = start
-                        start += len(srcs)
-
-                    full_srcs.append(srcs)
-                    full_tgts.append(tgts)
+                    full_srcs.extend(srcs)
+                    full_tgts.extend(tgts)
                     full_flats.extend(flats)
                     full_byobjs.extend(byobjs)
-
-            src_idxs = self.unknowns.merge_idxs(full_srcs)
-            tgt_idxs = self.unknowns.merge_idxs(full_tgts)
-            full_map[mode] = { 'src': src_idxs, 'tgt': tgt_idxs }
-            #print("full size:",len(src_idxs))
 
             self._data_xfer[('', modename[mode], var_of_interest)] = \
                 self._impl.create_data_xfer(self.dumat[var_of_interest],
                                             self.dpmat[var_of_interest],
-                                            src_idxs, tgt_idxs,
+                                            full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode])
 
-            full_srcs = full_tgts = full_flats = full_byobjs = None
-
         # create a 'partial' scatter to each subsystem in both fwd and rev
         for (tgt_sys, mode), (src_idxs, tgt_idxs, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            #src_idxs = self.unknowns.merge_idxs(src_idxs)
-            #tgt_idxs = self.unknowns.merge_idxs(tgt_idxs)
-            if len(src_idxs) > 0:
-                start = partial_map[(tgt_sys, mode)]
-
-                # create partial scatter as a view of the full scatter
-                src_idxs = full_map[mode]['src'][start:start+len(src_idxs)]
-                tgt_idxs = full_map[mode]['tgt'][start:start+len(tgt_idxs)]
-
             if vec_conns or byobj_conns:
                 self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
                     self._impl.create_data_xfer(self.dumat[var_of_interest],
