@@ -7,6 +7,7 @@ from six import moves, iteritems, itervalues
 from random import shuffle, randint, seed
 import numpy as np
 
+
 class LatinHypercubeDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Latin Hypercube method.
     """
@@ -15,7 +16,6 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         super(LatinHypercubeDriver, self).__init__()
         self.num_samples = num_samples
         self.seed = seed
-
 
     def _build_runlist(self):
         """Build a runlist based on the Latin Hypercube method."""
@@ -36,19 +36,17 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             design_var_buckets = self._get_buckets(bounds['low'], bounds['high'])
             buckets[design_vars_names[j]] = list()
             for i in range(self.num_samples):
-                buckets[design_vars_names[j]].append(design_var_buckets[rand_lhc[i,j]])
+                buckets[design_vars_names[j]].append(design_var_buckets[rand_lhc[i, j]])
 
         # Return random values in given buckets
         for i in moves.xrange(self.num_samples):
             yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
-
 
     def _get_lhc(self):
         """Generates a Latin Hypercube based on the number of samplts and the number of design variables."""
 
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
         return rand_lhc.astype(int)
-
 
     def _get_buckets(self, low, high):
         """Determines the distribution of samples."""
@@ -63,13 +61,12 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
 
     def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
         super(OptimizedLatinHypercubeDriver, self).__init__()
-        self.qs = [1,2,5,10,20,50,100] # List of qs to try for Phi_q optimization
+        self.qs = [1, 2, 5, 10, 20, 50, 100]  # List of qs to try for Phi_q optimization
         self.num_samples = num_samples
         self.seed = seed
         self.population = population
         self.generations = generations
         self.norm_method = norm_method
-
 
     def _get_lhc(self):
         """Generate an Optimized Latin Hypercube
@@ -89,13 +86,11 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
 
 
 class _LHC_Individual(object):
-
     def __init__(self, doe, q=2, p=1):
         self.q = q
         self.p = p
         self.doe = doe
-        self.phi = None # Morris-Mitchell sampling criterion
-
+        self.phi = None  # Morris-Mitchell sampling criterion
 
     @property
     def shape(self):
@@ -103,12 +98,11 @@ class _LHC_Individual(object):
 
         return self.doe.shape
 
-
     def mmphi(self):
         """Returns the Morris-Mitchell sampling criterion for this Latin hypercube."""
 
         if self.phi is None:
-            n,m = self.doe.shape
+            n, m = self.doe.shape
             distdict = {}
 
             # Calculate the norm between each pair of points in the DOE
@@ -116,8 +110,8 @@ class _LHC_Individual(object):
             # should be converted to C or ShedSkin.
             arr = self.doe
             for i in range(n):
-                for j in range(i+1, n):
-                    nrm = np.linalg.norm(arr[i]-arr[j], ord=self.p)
+                for j in range(i + 1, n):
+                    nrm = np.linalg.norm(arr[i] - arr[j], ord=self.p)
                     distdict[nrm] = distdict.get(nrm, 0) + 1
 
             distinct_d = np.array(list(distdict))
@@ -125,10 +119,9 @@ class _LHC_Individual(object):
             # Mutltiplicity array with a count of how many pairs of points have a given distance
             J = np.array(list(itervalues(distdict)))
 
-            self.phi = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
+            self.phi = sum(J * (distinct_d ** (-self.q))) ** (1.0 / self.q)
 
         return self.phi
-
 
     def perturb(self, mutation_count):
         """ Interchanges pairs of randomly chosen elements within randomly chosen
@@ -137,15 +130,15 @@ class _LHC_Individual(object):
         """
 
         new_doe = self.doe.copy()
-        n,k = self.doe.shape
+        n, k = self.doe.shape
         for count in range(mutation_count):
-            col = randint(0, k-1)
+            col = randint(0, k - 1)
 
             # Choosing two distinct random points
-            el1 = randint(0, n-1)
-            el2 = randint(0, n-1)
-            while el1==el2:
-                el2 = randint(0, n-1)
+            el1 = randint(0, n - 1)
+            el2 = randint(0, n - 1)
+            while el1 == el2:
+                el2 = randint(0, n - 1)
 
             new_doe[el1, col] = self.doe[el2, col]
             new_doe[el2, col] = self.doe[el1, col]
@@ -155,23 +148,18 @@ class _LHC_Individual(object):
     def __iter__(self):
         return self._get_rows()
 
-
     def _get_rows(self):
         for row in self.doe:
             yield row
 
-
     def __repr__(self):
         return repr(self.doe)
-
 
     def __str__(self):
         return str(self.doe)
 
-
-    def __getitem__(self,*args):
+    def __getitem__(self, *args):
         return self.doe.__getitem__(*args)
-
 
     def _get_doe(self):
         return self.doe
@@ -183,7 +171,7 @@ def _rand_latin_hypercube(n, k):
     row = list(moves.xrange(0, n))
     for i in moves.xrange(k):
         shuffle(row)
-        arr[:,i] = row
+        arr[:, i] = row
     return arr
 
 
@@ -192,9 +180,9 @@ def _is_latin_hypercube(lh):
     The given array is assumed to be a numpy array.
     """
 
-    n,k = lh.shape
+    n, k = lh.shape
     for j in range(k):
-        col = lh[:,j]
+        col = lh[:, j]
         colset = set(col)
         if len(colset) < len(col):
             return False  # something was duplicated
@@ -210,10 +198,10 @@ def _mmlhs(x_start, population, generations):
     phi_best = x_start.mmphi()
     n = x_start.shape[1]
 
-    level_off = np.floor(0.85*generations)
+    level_off = np.floor(0.85 * generations)
     for it in range(generations):
         if it < level_off and level_off > 1.:
-            mutations = int(round(1+(0.5*n-1)*(level_off-it)/(level_off-1)))
+            mutations = int(round(1 + (0.5 * n - 1) * (level_off - it) / (level_off - 1)))
         else:
             mutations = 1
 

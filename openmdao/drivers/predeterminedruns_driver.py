@@ -6,6 +6,7 @@ from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from six import iteritems
 
+
 class PredeterminedRunsDriver(Driver):
     """ Baseclass for design-of-experiments Drivers that have pre-determined parameter sets.
     """
@@ -14,7 +15,6 @@ class PredeterminedRunsDriver(Driver):
         if type(self) == PredeterminedRunsDriver:
             raise Exception('PredeterminedRunsDriver is an abstract class')
         super(PredeterminedRunsDriver, self).__init__()
-
 
     def run(self, problem):
         """Build a runlist and execute the Problem for each set of generated parameters.        
@@ -30,4 +30,3 @@ class PredeterminedRunsDriver(Driver):
             metadata = create_local_meta(None, 'Driver')
             problem.root.solve_nonlinear(metadata=metadata)
             self.recorders.record_iteration(problem.root, metadata)
-
