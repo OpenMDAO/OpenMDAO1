@@ -53,6 +53,10 @@ class BasicImpl(object):
         return TgtVecWrapper(sysdata, comm)
 
     @staticmethod
+    def cleanup_data_xfer():
+        pass
+
+    @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
                          src_idxs, tgt_idxs, vec_conns, byobj_conns,
                          mode):

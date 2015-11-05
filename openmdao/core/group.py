@@ -401,6 +401,8 @@ class Group(System):
 
                     self._setup_data_transfer(my_params, voi)
 
+        self._impl.cleanup_data_xfer()
+        
         self._setup_gs_outputs(all_vois)
 
         # convert any src_indices to index arrays
