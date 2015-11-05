@@ -1212,20 +1212,20 @@ class Group(System):
             The name of a variable of interest.
 
         """
-        #print(self.pathname,"size:",self.params.vec.size,"+",self.unknowns.vec.size)
         relevance = self._probdata.relevance
+        to_prom = self._sysdata.to_prom
+        uacc = self.unknowns._access
+        pacc = self.params._access
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        to_prom = self._sysdata.to_prom
-
         vec_unames = (n for n, sz in self._u_size_lists[0]
                       if relevance.is_relevant(var_of_interest,
-                           self.unknowns._access[n].meta['top_promoted_name']))
+                                             uacc[n].meta['top_promoted_name']))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
                       if relevance.is_relevant(var_of_interest,
-                        self.params._access[n].meta['top_promoted_name']))
+                                             pacc[n].meta['top_promoted_name']))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
