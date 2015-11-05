@@ -289,7 +289,6 @@ class Component(System):
 
         """
         to_prom = self._sysdata.to_prom = {}
-        to_top_prom = self._sysdata.to_top_prom = {}
         to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()

@@ -250,7 +250,6 @@ class Group(System):
         self._data_xfer = {}
 
         to_prom = self._sysdata.to_prom = {}
-        to_top_prom = self._sysdata.to_top_prom = {}
         to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
@@ -404,7 +403,7 @@ class Group(System):
                     self._setup_data_transfer(my_params, voi)
 
         self._impl.cleanup_data_xfer()
-        
+
         self._setup_gs_outputs(all_vois)
 
         # convert any src_indices to index arrays
@@ -1218,14 +1217,15 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        to_top_prom = self._sysdata.to_top_prom
         to_prom = self._sysdata.to_prom
 
         vec_unames = (n for n, sz in self._u_size_lists[0]
-                      if relevance.is_relevant(var_of_interest, to_top_prom[n]))
+                      if relevance.is_relevant(var_of_interest,
+                           self.unknowns._access[n].meta['top_promoted_name']))
         vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
         vec_pnames = (n for n, sz in self._p_size_lists[0]
-                      if relevance.is_relevant(var_of_interest, to_top_prom[n]))
+                      if relevance.is_relevant(var_of_interest,
+                        self.params._access[n].meta['top_promoted_name']))
         vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
 
         unknown_sizes = []
