@@ -52,7 +52,7 @@ if __name__ == '__main__':
     from openmdao.devtools.debug import stats
     vec_size = 100000
     num_comps = 50
-    pts = 2
+    pts = 1
 
     if 'petsc' in sys.argv:
         from openmdao.core.petsc_impl import PetscImpl
@@ -88,5 +88,7 @@ if __name__ == '__main__':
     p.setup()
     p.run()
     #g.dump(verbose=True)
-    g.dump()
+    print("Pts:", pts)
+    print("Comps per pt:", num_comps)
+    print("Var size:", vec_size)
     stats(p)

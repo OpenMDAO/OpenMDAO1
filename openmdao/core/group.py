@@ -1247,43 +1247,43 @@ class Group(System):
         modename = ['fwd', 'rev']
         xfer_dict = {}
 
-        for param, (unknown, idxs) in iteritems(self.connections):
-            if param in my_params:
-                top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
-                top_prelname = self._params_dict[param]['top_promoted_name']
+        for param in my_params:
+            unknown, idxs = self.connections[param]
+            top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
+            top_prelname = self._params_dict[param]['top_promoted_name']
 
-                if not relevance.is_relevant(var_of_interest, top_urelname) or \
-                   not relevance.is_relevant(var_of_interest, top_prelname):
-                    continue
+            if not relevance.is_relevant(var_of_interest, top_urelname) or \
+               not relevance.is_relevant(var_of_interest, top_prelname):
+                continue
 
-                urelname = to_prom[unknown]
-                prelname = name_relative_to(self.pathname, param)
+            urelname = to_prom[unknown]
+            prelname = name_relative_to(self.pathname, param)
 
-                umeta = self.unknowns.metadata(urelname)
+            umeta = self.unknowns.metadata(urelname)
 
-                # remove our system pathname from the abs pathname of the param
-                # and get the subsystem name from that
+            # remove our system pathname from the abs pathname of the param
+            # and get the subsystem name from that
 
-                tgt_sys = nearest_child(self.pathname, param)
-                src_sys = nearest_child(self.pathname, unknown)
+            tgt_sys = nearest_child(self.pathname, param)
+            src_sys = nearest_child(self.pathname, unknown)
 
-                for sname, mode in ((tgt_sys, fwd), (src_sys, rev)):
-                    src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
-                        xfer_dict.setdefault((sname, mode), ([], [], [], []))
+            for sname, mode in ((tgt_sys, fwd), (src_sys, rev)):
+                src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
+                    xfer_dict.setdefault((sname, mode), ([], [], [], []))
 
-                    if 'pass_by_obj' in umeta and umeta['pass_by_obj']:
-                        # rev is for derivs only, so no by_obj passing needed
-                        if mode == fwd:
-                            byobj_conns.append((prelname, urelname))
-                    else:  # pass by vector
-                        sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                             top_urelname, top_prelname,
-                                                             vec_unames, unknown_sizes,
-                                                             vec_pnames, param_sizes,
-                                                             modename[mode])
-                        vec_conns.append((prelname, urelname))
-                        src_idx_list.append(sidxs)
-                        dest_idx_list.append(didxs)
+                if 'pass_by_obj' in umeta and umeta['pass_by_obj']:
+                    # rev is for derivs only, so no by_obj passing needed
+                    if mode == fwd:
+                        byobj_conns.append((prelname, urelname))
+                else:  # pass by vector
+                    sidxs, didxs = self._get_global_idxs(urelname, prelname,
+                                                         top_urelname, top_prelname,
+                                                         vec_unames, unknown_sizes,
+                                                         vec_pnames, param_sizes,
+                                                         modename[mode])
+                    vec_conns.append((prelname, urelname))
+                    src_idx_list.append(sidxs)
+                    dest_idx_list.append(didxs)
 
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
