@@ -124,16 +124,14 @@ class TestComponent(unittest.TestCase):
         self.comp.add_param("t", shape=2)
         self.comp.add_param("u", shape=1)
 
-        with self.assertRaises(ValueError) as cm:
-            self.comp.add_param("w")
-
-        self.assertEqual(str(cm.exception), "Shape of param 'w' must be specified because 'val' is not set")
+        # This should no longer raise an error
+        self.comp.add_param("w")
 
         prob = Problem()
         self.comp._init_sys_data('', prob._probdata)
         params, unknowns = self.comp._setup_variables()
 
-        self.assertEqual(["x", "y", "z", "t", "u"], list(params.keys()))
+        self.assertEqual(["x", "y", "z", "t", "u", 'w'], list(params.keys()))
 
         self.assertEqual(params["x"], {'shape': 1, 'promoted_name': 'x', 'pathname': 'x', 'val': 0.0, 'size': 1})
         self.assertEqual(params["y"], {'shape': 1, 'promoted_name': 'y', 'pathname': 'y', 'val': 0.0, 'size': 1})
