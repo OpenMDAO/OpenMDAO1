@@ -174,3 +174,4 @@ def stats(root):
                                 root.subsystems(recurse=True,
                                                 include_self=True)])*2)
     print("Max mem usage: %s MB" % max_mem_usage())
+    print("Current mem usage: %s MB" % mem_usage())

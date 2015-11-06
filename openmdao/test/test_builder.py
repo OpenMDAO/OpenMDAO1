@@ -6,7 +6,9 @@ from __future__ import print_function
 import numpy
 
 from openmdao.core.group import Group
+from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.component import Component
+from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 
 class ABCDArrayComp(ExecComp4Test):
@@ -20,7 +22,6 @@ class ABCDArrayComp(ExecComp4Test):
                                             c=numpy.zeros(size),
                                             d=numpy.zeros(size))
 
-#class Summer()
 
 def _child_name(child, i):
     if isinstance(child, Group):
@@ -46,15 +47,46 @@ def build_sequence(child_factory, num_children, conns=(), parent=None):
 
 
 if __name__ == '__main__':
+    import sys
     from openmdao.core.problem import Problem
     from openmdao.devtools.debug import stats
     vec_size = 100000
-    num_comps = 50
+    num_comps = 25
+    pts = 2
 
-    g = build_sequence(lambda: ABCDArrayComp(vec_size),
-                       num_comps, [('c', 'a'),('d','b')])
-    p = Problem(root=g)
+    if 'petsc' in sys.argv:
+        from openmdao.core.petsc_impl import PetscImpl
+        impl = PetscImpl
+    else:
+        from openmdao.core.basic_impl import BasicImpl
+        impl = BasicImpl
+
+    g = Group()
+    p = Problem(impl=impl, root=g)
+
+    if 'lings' in sys.argv:
+        from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
+        p.root.ln_solver = LinearGaussSeidel()
+
+    g.add("P", IndepVarComp('x', numpy.ones(vec_size)))
+
+    p.driver.add_desvar("P.x")
+
+    par = g.add("par", ParallelGroup())
+    for pt in range(pts):
+        ptg = Group()
+        par.add(_child_name(ptg, pt), ptg)
+        build_sequence(lambda: ABCDArrayComp(vec_size),
+                           num_comps, [('c', 'a'),('d','b')], ptg)
+        g.connect("P.x", "par.%s.%s.a" % (_child_name(ptg, pt),
+                                          _child_name(None, 0)))
+
+        cname = _child_name(ptg, pt) + '.' + _child_name(None, num_comps-1)
+        p.driver.add_objective("par.%s.c" % cname)
+        p.driver.add_constraint("par.%s.d" % cname, lower=0.0)
+
     p.setup()
     p.run()
     #g.dump(verbose=True)
+    g.dump()
     stats(g)

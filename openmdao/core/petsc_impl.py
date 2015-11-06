@@ -13,6 +13,7 @@ from petsc4py import PETSc
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 
+reuse_idxs = os.environ.get('OPENMDAO_REUSE_IDXS')
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
@@ -301,13 +302,6 @@ class PetscDataTransfer(object):
         src_idxs = src_vec.merge_idxs(src_idxs)
         tgt_idxs = tgt_vec.merge_idxs(tgt_idxs)
 
-        if mode == 'fwd':
-            sort_idxs = np.argsort(src_idxs)
-        else:
-            sort_idxs = np.argsort(tgt_idxs)
-        src_idxs = src_idxs[sort_idxs]
-        tgt_idxs = tgt_idxs[sort_idxs]
-
         self.byobj_conns = byobj_conns
         self.comm = comm = src_vec.comm
 
@@ -319,34 +313,45 @@ class PetscDataTransfer(object):
             debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %
                   (name, src_vec._sysdata.pathname, src_idxs, tgt_idxs))
 
-        empty = src_vec.make_idx_array(0, 0)
+        if reuse_idxs:
+            empty = src_vec.make_idx_array(0, 0)
 
-        # see if we can match a pre-existing index set
-        for idxs in (src_idxs, tgt_idxs):
-            size = idxs.size
-            if size > 0:
-                tup = (idxs[0], size, id(comm))
-                if tup in self._idx_dict:
-                    for oldidxs in self._idx_dict[tup]:
-                        if np.all(oldidxs.indices==idxs):
-                            # still need to make this call (just use an empty idx array)
-                            # so we won't hang.
-                            iset = PETSc.IS().createGeneral(empty, comm=comm)
-                            iset.destroy()
-                            idx_set = oldidxs
-                            break
+            if mode == 'fwd':
+                sort_idxs = np.argsort(src_idxs)
+            else:
+                sort_idxs = np.argsort(tgt_idxs)
+            src_idxs = src_idxs[sort_idxs]
+            tgt_idxs = tgt_idxs[sort_idxs]
+
+            # see if we can match a pre-existing index set
+            for idxs in (src_idxs, tgt_idxs):
+                size = idxs.size
+                if size > 0:
+                    tup = (idxs[0], size, id(comm))
+                    if tup in self._idx_dict:
+                        for oldidxs in self._idx_dict[tup]:
+                            if np.all(oldidxs.indices==idxs):
+                                # still need to make this call (just use an empty idx array)
+                                # so we won't hang.
+                                iset = PETSc.IS().createGeneral(empty, comm=comm)
+                                iset.destroy()
+                                idx_set = oldidxs
+                                break
+                        else:
+                            idx_set = PETSc.IS().createGeneral(idxs, comm=comm)
                     else:
                         idx_set = PETSc.IS().createGeneral(idxs, comm=comm)
+                        self._idx_dict.setdefault(tup, []).append(idx_set)
                 else:
-                    idx_set = PETSc.IS().createGeneral(idxs, comm=comm)
-                    self._idx_dict.setdefault(tup, []).append(idx_set)
-            else:
-                idx_set = PETSc.IS().createGeneral(empty, comm=comm)
+                    idx_set = PETSc.IS().createGeneral(empty, comm=comm)
 
-            if idxs is src_idxs:
-                src_idx_set = idx_set
-            else:
-                tgt_idx_set = idx_set
+                if idxs is src_idxs:
+                    src_idx_set = idx_set
+                else:
+                    tgt_idx_set = idx_set
+        else:
+            src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
+            tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 
         try:
             if trace:  # pragma: no cover
