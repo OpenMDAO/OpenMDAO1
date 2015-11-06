@@ -146,7 +146,7 @@ class TestComponent(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), "Unconnected input 'comp.w' is missing a shape or default value.")
+        self.assertEqual(str(cm.exception), "Unconnected param 'comp.w' is missing a shape or default value.")
 
     def test_add_outputs(self):
         self.comp.add_output("x", -1)

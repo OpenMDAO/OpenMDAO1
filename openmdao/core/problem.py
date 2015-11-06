@@ -546,7 +546,7 @@ class Problem(System):
         for param in dangling_params:
             tmeta = self.root._params_dict[param]
             if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
-                msg = "Unconnected input '{}' is missing a shape or default value."
+                msg = "Unconnected param '{}' is missing a shape or default value."
                 raise RuntimeError(msg.format(param))
 
         # create VecWrappers for all systems in the tree.
