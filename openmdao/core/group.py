@@ -1210,21 +1210,26 @@ class Group(System):
             The name of a variable of interest.
 
         """
-        relevance = self._probdata.relevance
+        relevant = self._probdata.relevance.is_relevant
         to_prom = self._sysdata.to_prom
         uacc = self.unknowns._dat
         pacc = self.params._dat
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        vec_unames = (n for n, sz in self._u_size_lists[0]
-                      if relevance.is_relevant(var_of_interest,
-                                             uacc[n].meta['top_promoted_name']))
-        vec_unames = OrderedDict(((n, i) for i, n in enumerate(vec_unames)))
-        vec_pnames = (n for n, sz in self._p_size_lists[0]
-                      if relevance.is_relevant(var_of_interest,
-                                             pacc[n].meta['top_promoted_name']))
-        vec_pnames = OrderedDict(((n, i) for i, n in enumerate(vec_pnames)))
+        vec_unames = OrderedDict()
+        i = 0
+        for n, sz in self._u_size_lists[0]:
+            if relevant(var_of_interest, uacc[n].meta['top_promoted_name']):
+                vec_unames[n] = i
+                i += 1
+
+        vec_pnames = OrderedDict()
+        i = 0
+        for n, sz in self._p_size_lists[0]:
+            if relevant(var_of_interest, pacc[n].meta['top_promoted_name']):
+                vec_pnames[n] = i
+                i += 1
 
         unknown_sizes = []
         param_sizes = []
@@ -1252,8 +1257,8 @@ class Group(System):
             top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
             top_prelname = self._params_dict[param]['top_promoted_name']
 
-            if not relevance.is_relevant(var_of_interest, top_urelname) or \
-               not relevance.is_relevant(var_of_interest, top_prelname):
+            if not relevant(var_of_interest, top_urelname) or \
+               not relevant(var_of_interest, top_prelname):
                 continue
 
             urelname = to_prom[unknown]
