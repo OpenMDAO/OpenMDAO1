@@ -145,6 +145,12 @@ def max_tree_depth(root):
     return max(len(s.pathname.split('.'))
                    for s in root.subsystems(recurse=True))
 
+def _f2mb(fsize):
+    """Returns the size of an array of floats (double precision)
+    in MB.
+    """
+    return fsize * 8 / 1024 / 1024
+
 def initial_value_storage(root):
     """
     Return the total storage used for initial values stored in params_dict and
@@ -160,20 +166,22 @@ def initial_value_storage(root):
             elif isinstance(val, real_types):
                 size += 1 # val is a scalar
 
-    return size * 8 / 1024 / 1024
+    return _f2mb(size)
 
-def stats(root):
+def stats(problem):
     """
-    Print various stats about the system tree starting from root.
+    Print various stats about the Problem.
     """
+    root = problem.root
+
     print("Num systems:", num_systems(root))
     print("Max tree depth:", max_tree_depth(root))
 
     initial = initial_value_storage(root)
-    udurdr = root.unknowns.vec.size*4*8/1024/1024
-    pdp = sum([s.params.vec.size for s in
+    udurdr = _f2mb(root.unknowns.vec.size*4)
+    pdp = _f2mb(sum([s.params.vec.size for s in
                                 root.subsystems(recurse=True,
-                                            include_self=True)])*2*8/1024/1024
+                                            include_self=True)])*2)
     total_data_vecs = initial + udurdr + pdp
 
     print("Initial value size: %d MB" % initial)

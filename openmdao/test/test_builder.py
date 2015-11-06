@@ -89,4 +89,4 @@ if __name__ == '__main__':
     p.run()
     #g.dump(verbose=True)
     g.dump()
-    stats(g)
+    stats(p)
