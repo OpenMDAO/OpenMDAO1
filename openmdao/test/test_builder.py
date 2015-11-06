@@ -51,7 +51,7 @@ if __name__ == '__main__':
     from openmdao.core.problem import Problem
     from openmdao.devtools.debug import stats
     vec_size = 100000
-    num_comps = 25
+    num_comps = 50
     pts = 2
 
     if 'petsc' in sys.argv:

@@ -160,7 +160,7 @@ def initial_value_storage(root):
             elif isinstance(val, real_types):
                 size += 1 # val is a scalar
 
-    return size
+    return size * 8 / 1024 / 1024
 
 def stats(root):
     """
@@ -168,10 +168,20 @@ def stats(root):
     """
     print("Num systems:", num_systems(root))
     print("Max tree depth:", max_tree_depth(root))
-    print("Initial value size:", initial_value_storage(root))
-    print("u+du+r+dr size:", root.unknowns.vec.size*4)
-    print("p+dp size:", sum([s.params.vec.size for s in
+
+    initial = initial_value_storage(root)
+    udurdr = root.unknowns.vec.size*4*8/1024/1024
+    pdp = sum([s.params.vec.size for s in
                                 root.subsystems(recurse=True,
-                                                include_self=True)])*2)
-    print("Max mem usage: %s MB" % max_mem_usage())
+                                            include_self=True)])*2*8/1024/1024
+    total_data_vecs = initial + udurdr + pdp
+
+    print("Initial value size: %d MB" % initial)
+    print("u+du+r+dr size: %d MB" % udurdr)
+    print("p+dp size: %d MB" % pdp)
+    print("total data value size: %d MB" % total_data_vecs)
+
+    print("\nMax mem usage: %s MB" % max_mem_usage())
     print("Current mem usage: %s MB" % mem_usage())
+
+    print("\nOverhead memory usage: %d MB" % (mem_usage()-total_data_vecs))
