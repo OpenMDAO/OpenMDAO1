@@ -540,6 +540,15 @@ class Problem(System):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
+        # Check for dangling params that have no size or shape
+        dangling_params = set([p for p in self.root._params_dict
+                               if p not in self.root.connections])
+        for param in dangling_params:
+            tmeta = self.root._params_dict[param]
+            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
+                msg = "Unconnected input '{}' is missing a shape or default value."
+                raise RuntimeError(msg.format(param))
+
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 

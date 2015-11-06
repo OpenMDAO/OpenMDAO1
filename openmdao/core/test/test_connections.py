@@ -1,3 +1,5 @@
+""" Tests related to connecing params to unknowns."""
+
 import unittest
 import numpy as np
 from six import text_type, PY3

@@ -12,7 +12,7 @@ else:
 
 import numpy as np
 
-from openmdao.api import Component, Problem
+from openmdao.api import Component, Problem, Group
 
 class TestComponent(unittest.TestCase):
 
@@ -120,7 +120,7 @@ class TestComponent(unittest.TestCase):
     def test_add_params(self):
         self.comp.add_param("x", 0.0)
         self.comp.add_param("y", 0.0)
-        self.comp.add_param("z", shape=(1,))
+        self.comp.add_param("z", shape=(1, ))
         self.comp.add_param("t", shape=2)
         self.comp.add_param("u", shape=1)
 
@@ -135,9 +135,18 @@ class TestComponent(unittest.TestCase):
 
         self.assertEqual(params["x"], {'shape': 1, 'promoted_name': 'x', 'pathname': 'x', 'val': 0.0, 'size': 1})
         self.assertEqual(params["y"], {'shape': 1, 'promoted_name': 'y', 'pathname': 'y', 'val': 0.0, 'size': 1})
-        np.testing.assert_array_equal(params["z"]["val"], np.zeros((1,)))
-        np.testing.assert_array_equal(params["t"]["val"], np.zeros((2,)))
+        np.testing.assert_array_equal(params["z"]["val"], np.zeros((1, )))
+        np.testing.assert_array_equal(params["t"]["val"], np.zeros((2, )))
         self.assertEqual(params["u"], {'shape': 1, 'promoted_name': 'u', 'pathname': 'u', 'val': 0.0, 'size': 1})
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', self.comp)
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        self.assertEqual(str(cm.exception), "Unconnected input 'comp.w' is missing a shape or default value.")
 
     def test_add_outputs(self):
         self.comp.add_output("x", -1)
