@@ -1,3 +1,5 @@
+"""Testing FullFactorialDriver"""
+
 import unittest
 from pprint import pformat
 from types import GeneratorType
