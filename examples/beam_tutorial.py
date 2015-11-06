@@ -24,10 +24,10 @@ CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
 
 
 #negate the area to turn from a maximization problem to a minimization problem
-class NegativeAreaComponent(Component):    
+class NegativeArea(Component):    
 
     def __init__(self):
-        super(NegativeAreaComponent, self).__init__()
+        super(NegativeArea, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -52,10 +52,10 @@ class NegativeAreaComponent(Component):
         return J
 
 
-class LengthMinusWidthComponent(Component):    
+class LengthMinusWidth(Component):    
 
     def __init__(self):
-        super(LengthMinusWidthComponent, self).__init__()
+        super(LengthMinusWidth, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -79,10 +79,10 @@ class LengthMinusWidthComponent(Component):
 
         return J  
 
-class DeflectionComponent(Component):
+class Deflection(Component):
     
     def __init__(self):
-        super(DeflectionComponent, self).__init__()
+        super(Deflection, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -94,7 +94,7 @@ class DeflectionComponent(Component):
         room_length = params['room_length']
 
         unknowns['deflection'] = (E * I * 384.0) / (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)
-        #print( "d=%f rw=%f rl=%f num=%f denom=%f" % (unknowns['deflection'], room_width, room_length, (E * I * 384.0), (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)))
+        
 
     def linearize(self, params, unknowns, resids):        
         J = {}
@@ -108,10 +108,10 @@ class DeflectionComponent(Component):
         return J
 
 
-class BendingStressComponent(Component):
+class BendingStress(Component):
     
     def __init__(self):
-        super(BendingStressComponent, self).__init__()
+        super(BendingStress, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -135,10 +135,10 @@ class BendingStressComponent(Component):
 
         return J
 
-class ShearStressComponent(Component):    
+class ShearStress(Component):    
 
     def __init__(self):
-        super(ShearStressComponent, self).__init__()
+        super(ShearStress, self).__init__()
         
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
@@ -173,11 +173,11 @@ class BeamTutorialDerivatives(Group):
         self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
         
         #add our custom components
-        self.add('d_len_minus_wid', LengthMinusWidthComponent())
-        self.add('d_deflection', DeflectionComponent())
-        self.add('d_bending', BendingStressComponent())
-        self.add('d_shear', ShearStressComponent())
-        self.add('d_neg_area', NegativeAreaComponent())
+        self.add('d_len_minus_wid', LengthMinusWidth())
+        self.add('d_deflection', Deflection())
+        self.add('d_bending', BendingStress())
+        self.add('d_shear', ShearStress())
+        self.add('d_neg_area', NegativeArea())
 
         #make connections from design variables to the Components
         self.connect('ivc_rlength.room_length','d_len_minus_wid.room_length')
@@ -195,41 +195,41 @@ class BeamTutorialDerivatives(Group):
         self.connect('ivc_rlength.room_length','d_neg_area.room_length')
         self.connect('ivc_rwidth.room_width','d_neg_area.room_width')
 
-        
-top = Problem()
-top.root = BeamTutorialDerivatives()
+if __name__ == "__main__":      
+    top = Problem()
+    top.root = BeamTutorialDerivatives()
 
-top.driver = ScipyOptimizer()
-top.driver.options['optimizer'] = 'SLSQP'
-top.driver.options['tol'] = 1.0e-8
-top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+    top.driver.options['tol'] = 1.0e-8
+    top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
 
-#room length and width bounds
-top.driver.add_desvar('ivc_rlength.room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
-top.driver.add_desvar('ivc_rwidth.room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
+    #room length and width bounds
+    top.driver.add_desvar('ivc_rlength.room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
+    top.driver.add_desvar('ivc_rwidth.room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
 
-top.driver.add_objective('d_neg_area.neg_room_area') #minimize negative area (or maximize area)
+    top.driver.add_objective('d_neg_area.neg_room_area') #minimize negative area (or maximize area)
 
-top.driver.add_constraint('d_len_minus_wid.length_minus_width', lower=0.0) #room_length >= room_width
-top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >= 720
-top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
-top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
+    top.driver.add_constraint('d_len_minus_wid.length_minus_width', lower=0.0) #room_length >= room_width
+    top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >= 720
+    top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
+    top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
 
-top.setup()
-top.run()
+    top.setup()
+    top.run()
 
-print("\n")
-print( "Solution found")
-print("room area: %f in^2 (%f ft^2)" % (-top['d_neg_area.neg_room_area'], -top['d_neg_area.neg_room_area']/144.0))
-print("room width: %f in (%f ft)" % (top['ivc_rwidth.room_width'], top['ivc_rwidth.room_width']/12.0))
-print("room/beam length: %f in (%f ft)" % (top['ivc_rlength.room_length'], top['ivc_rlength.room_length']/12.0))
-print( "deflection: L/%f"  % (top['d_deflection.deflection']))
-print( "bending stress ratio: %f"  % (top['d_bending.bending_stress_ratio']))
-print( "shear stress ratio: %f"  % (top['d_shear.shear_stress_ratio']))
+    print("\n")
+    print( "Solution found")
+    print("room area: %f in^2 (%f ft^2)" % (-top['d_neg_area.neg_room_area'], -top['d_neg_area.neg_room_area']/144.0))
+    print("room width: %f in (%f ft)" % (top['ivc_rwidth.room_width'], top['ivc_rwidth.room_width']/12.0))
+    print("room/beam length: %f in (%f ft)" % (top['ivc_rlength.room_length'], top['ivc_rlength.room_length']/12.0))
+    print( "deflection: L/%f"  % (top['d_deflection.deflection']))
+    print( "bending stress ratio: %f"  % (top['d_bending.bending_stress_ratio']))
+    print( "shear stress ratio: %f"  % (top['d_shear.shear_stress_ratio']))
 
-loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width']) + BEAM_WEIGHT_LBS_PER_IN) #PLI (pounds per linear inch)
-loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width'])) #PLI (pounds per linear inch)
-print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
-print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
-print( "Finished!")
+    loadingPlusBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width']) + BEAM_WEIGHT_LBS_PER_IN) #PLI (pounds per linear inch)
+    loadingNoBeam = ((0.5 * TOTAL_LOAD_PSI * top['ivc_rwidth.room_width'])) #PLI (pounds per linear inch)
+    print( "loading (including self weight of beam): %fpli %fplf"  % (loadingPlusBeam, loadingPlusBeam*12.0))
+    print( "loading (not including self weight of beam): %fpli %fplf"  % (loadingNoBeam, loadingNoBeam*12.0))
+    print( "Finished!")

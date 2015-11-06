@@ -76,14 +76,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{neg\_room\_area}} {d \mathrm{room\_length}} = -\mathrm{room\_width}
 
-Now we can take this equation and create a `Component` called `NegativeAreaComponent`.
+Now we can take this equation and create a `Component` called `NegativeArea`.
 
 .. testcode:: Beam
 
-    class NegativeAreaComponent(Component):    
+    class NegativeArea(Component):    
 
         def __init__(self):
-            super(NegativeAreaComponent, self).__init__()
+            super(NegativeArea, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -127,14 +127,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{length\_minus\_width}} {d \mathrm{room\_length}} = 1
 
-Now we can take this equation and create a `Component` called `LengthMinusWidthComponent`.
+Now we can take this equation and create a `Component` called `LengthMinusWidth`.
 
 .. testcode:: Beam
 
-    class LengthMinusWidthComponent(Component):    
+    class LengthMinusWidth(Component):    
 
         def __init__(self):
-            super(LengthMinusWidthComponent, self).__init__()
+            super(LengthMinusWidth, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -206,14 +206,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{deflection}} {d \mathrm{room\_length}} = \frac{-1152 * E * I} {5 * (\frac{\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} }{2} + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN}) * \mathrm{room\_length}^4 }
 
-Now we can take this equation and create a `Component` called `DeflectionComponent`.
+Now we can take this equation and create a `Component` called `Deflection`.
 
 .. testcode:: Beam
 
-    class DeflectionComponent(Component):
+    class Deflection(Component):
     
         def __init__(self):
-            super(DeflectionComponent, self).__init__()
+            super(Deflection, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -225,7 +225,7 @@ Now we can take this equation and create a `Component` called `DeflectionCompone
             room_length = params['room_length']
 
             unknowns['deflection'] = (E * I * 384.0) / (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)
-            #print( "d=%f rw=%f rl=%f num=%f denom=%f" % (unknowns['deflection'], room_width, room_length, (E * I * 384.0), (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)))
+            
 
         def linearize(self, params, unknowns, resids):        
             J = {}
@@ -238,7 +238,7 @@ Now we can take this equation and create a `Component` called `DeflectionCompone
 
             return J
 
-Bending Stress Equation
+Bending Stress Component
 ----------------------------
 Deflection is usually the limiting factor in beam design since designing just to the maximum load would result in an unacceptable deflection.  However, it is important to be safe by calculating the maximum bending stress of the beam.  Maximum stress in a beam with uniform load supported at both ends can be calculated as
 
@@ -271,14 +271,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{bending\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{(\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI}*\mathrm{room\_width}/2)) * \mathrm{BEAM\_HEIGHT\_IN} * \mathrm{room\_length}} {8I_x * \mathrm{YIELD\_STRENGTH\_PSI}}
 
-Now we can take this equation and create a `Component` called `BendingStressComponent`.
+Now we can take this equation and create a `Component` called `BendingStress`.
 
 .. testcode:: Beam
 
-    class BendingStressComponent(Component):
+    class BendingStress(Component):
         
         def __init__(self):
-            super(BendingStressComponent, self).__init__()
+            super(BendingStress, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -302,7 +302,7 @@ Now we can take this equation and create a `Component` called `BendingStressComp
 
             return J
 
-Shear Stress Equation
+Shear Stress Component
 -------------------------------
 In addition to making sure the bending stress is safe, it is also important to make sure the shear stress is safe.  According to http://www.wikiengineer.com/Structural/SteelBeamShearStrength:
 
@@ -340,14 +340,14 @@ Now we can find our derivatives:
            
     \frac{d \mathrm{shear\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} / 2)} {2 * \mathrm{YIELD\_STRENGTH\_PSI} * \mathrm{CROSS\_SECTIONAL\_AREA\_SQIN}}
 
-Now we can take this equation and create a `Component` called `ShearStressComponent`.
+Now we can take this equation and create a `Component` called `ShearStress`.
 
 .. testcode:: Beam
 
-    class ShearStressComponent(Component):        
+    class ShearStress(Component):        
 
         def __init__(self):
-            super(ShearStressComponent, self).__init__()
+            super(ShearStress, self).__init__()
             
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
@@ -390,11 +390,11 @@ First we must take all five of our `Components` and combine them into a `Group`.
             self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
             
             #add our custom components
-            self.add('d_len_minus_wid', LengthMinusWidthComponent())
-            self.add('d_deflection', DeflectionComponent())
-            self.add('d_bending', BendingStressComponent())
-            self.add('d_shear', ShearStressComponent())
-            self.add('d_neg_area', NegativeAreaComponent())
+            self.add('d_len_minus_wid', LengthMinusWidth())
+            self.add('d_deflection', Deflection())
+            self.add('d_bending', BendingStress())
+            self.add('d_shear', ShearStress())
+            self.add('d_neg_area', NegativeArea())
 
             #make connections from design variables to the Components
             self.connect('ivc_rlength.room_length','d_len_minus_wid.room_length')
@@ -476,7 +476,7 @@ Output
 
     loading (not including self weight of beam): 55.241170pli 662.894039plf
 
-
+The solution indicates that the optimum room size is about 19ft by 19ft (using a 19ft beam), which is about 359 sq ft.  The fact that the room is square makes some sense since squares are more efficient at yielding more area than rectangles.  It is clear that deflection was the limiting component at the limit of L/720.  The bending stress ratio was not limiting (0.149 < 0.5).  The shear stress ratio was not limiting (0.008 < 0.33).
 
 References
 ---------------
