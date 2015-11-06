@@ -11,6 +11,7 @@ The Optimized Latin Hypercube (OLHC) is an improvment on the LHC method in which
 Below is an example using the component from the `Paraboloid Tutorial
 <http://openmdao.readthedocs.org/en/1.3.0/usr-guide/tutorials/paraboloid-tutorial.html>`_.
 :: 
+
     from openmdao.api import IndepVarComp, Group, Problem, ScipyOptimizer, ExecComp, DumpRecorder
     from openmdao.test.paraboloid import Paraboloid
 
@@ -43,10 +44,12 @@ Below is an example using the component from the `Paraboloid Tutorial
 
 Here we will explain the code statements that pertain to using an Optimized Latin Hypercube (OLHC).
 ::
+
     from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver, OptimizedLatinHypercubeDriver
 
 In order to setup a model to utilize the OLHC, we need to import these specific drivers. The 'optimized' version is a subclass of the LatinHypercubeDriver.
 ::
+
     root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
     root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
     root.add('comp', Paraboloid(), promotes=['*'])
@@ -55,6 +58,7 @@ By promoting the variables x and y to the group level, no *connect* statement is
 
 The next three lines will initialize and add design variables to the OLHC. 
 ::
+
     top.driver = OptimizedLatinHypercubeDriver(num_samples=4, seed=0, population=20, generations=4, norm_method=2)
     top.driver.add_desvar('x', low=-50.0, high=50.0)
     top.driver.add_desvar('y', low=-50.0, high=50.0)
@@ -67,6 +71,7 @@ Now we are ready to record data. The four intervals of [-50, 50) are: [-50,-25),
 
 The recorded output is shown below. It's been filtered to show only the generated input values.
 ::
+
     Timestamp: 1446745425.935
     Iteration Coordinate: Driver/0
     Params:
