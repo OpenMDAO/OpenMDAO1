@@ -33,22 +33,21 @@ class DataTransfer(object):
     """
 
     def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
-
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
 
         fwd = mode == 'fwd'
 
-        both = [(s, t) for s, t in zip(src_idxs, tgt_idxs)]
-
-        # sort subarrays wrt each other in ascending order (not internally)
-        if fwd:
-            both = sorted(both, key=lambda l: l[0][0])
-        else:
-            both = sorted(both, key=lambda l: l[1][0])
+        # both = [(s, t) for s, t in zip(src_idxs, tgt_idxs)]
+        #
+        # # sort subarrays wrt each other in ascending order (not internally)
+        # if fwd:
+        #     both = sorted(both, key=lambda l: l[0][0])
+        # else:
+        #     both = sorted(both, key=lambda l: l[1][0])
 
         scatters = []
-        for isrcs, itgts in both:
+        for isrcs, itgts in zip(src_idxs, tgt_idxs): #both:
             srcs = to_slice(isrcs)
             tgts = to_slice(itgts)
 
@@ -64,8 +63,8 @@ class DataTransfer(object):
                 olds, oldt, sunique = scatters[-1]
                 if isinstance(olds, slice) and isinstance(oldt, slice) and \
                      isinstance(srcs, slice) and isinstance(tgts, slice) and \
-                     olds.stop == srcs.start and olds.step == srcs.step and \
-                     oldt.stop == tgts.start and oldt.step == tgts.step:
+                     olds.stop == srcs.start and oldt.stop == tgts.start and \
+                     olds.step == srcs.step and oldt.step == tgts.step:
                     news = slice(olds.start, srcs.stop, srcs.step)
                     newt = slice(oldt.start, tgts.stop, tgts.step)
                     scatters[-1] = (news, newt, src_unique)

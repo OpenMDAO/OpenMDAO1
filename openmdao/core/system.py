@@ -800,23 +800,6 @@ class System(object):
                   relevance=relevance, var_of_interest=voi,
                   shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
 
-    def _setup_gs_outputs(self, vois):
-        self.gs_outputs = { 'fwd': {}, 'rev': {}}
-        dumat = self.dumat
-        gso = self.gs_outputs['fwd']
-        for sub in self._local_subsystems:
-            gso[sub.name] = outs = {}
-            for voi in vois:
-                outs[voi] = set([x for x in dumat[voi]._dat if
-                                           sub.dumat and x not in sub.dumat[voi]])
-        gso = self.gs_outputs['rev']
-        for sub in reversed(self._local_subsystems):
-            gso[sub.name] = outs = {}
-            for voi in vois:
-                outs[voi] = set([x for x in dumat[voi]._dat if
-                                           not sub.dumat or
-                                           (sub.dumat and x not in sub.dumat[voi])])
-
     def get_combined_jac(self, J):
         """
         Take a J dict that's distributed, i.e., has different values across

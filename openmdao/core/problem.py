@@ -501,14 +501,16 @@ class Problem(System):
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 
-            for path, meta in iteritems(sub._params_dict):
-                meta['top_promoted_name'] = to_prom[path]
-                unit_conv = params_dict[path].get('unit_conv')
-                if unit_conv:
-                    meta['unit_conv'] = unit_conv
+        # set top_promoted_name and unit_conv in top system (all metatdata
+        # is shared, so not need to propagate down the tree)
+        for path, meta in iteritems(self.root._params_dict):
+            meta['top_promoted_name'] = to_prom[path]
+            unit_conv = params_dict[path].get('unit_conv')
+            if unit_conv:
+                meta['unit_conv'] = unit_conv
 
-            for path, meta in iteritems(sub._unknowns_dict):
-                meta['top_promoted_name'] = to_prom[path]
+        for path, meta in iteritems(self.root._unknowns_dict):
+            meta['top_promoted_name'] = to_prom[path]
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
@@ -571,6 +573,7 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
+            sub.precon.setup(sub)
 
         # Prep for case recording
         self._start_recorders()
@@ -578,6 +581,7 @@ class Problem(System):
         # check for any potential issues
         if check:
             return self.check_setup(out_stream)
+
         return {}
 
     def _check_dangling_params(self, out_stream=sys.stdout):

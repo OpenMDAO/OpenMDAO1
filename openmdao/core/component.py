@@ -409,8 +409,6 @@ class Component(System):
             self._abs_inputs[voi] = {meta['pathname'] for meta in itervalues(vec)
                                          if not meta.get('pass_by_obj')}
 
-        self._setup_gs_outputs(all_vois)
-
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit

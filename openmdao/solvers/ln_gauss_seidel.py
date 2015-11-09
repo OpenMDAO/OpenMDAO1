@@ -47,6 +47,21 @@ class LinearGaussSeidel(LinearSolver):
                               "may increase performance but will use "
                               "more memory.")
 
+    def setup(self, system):
+        """ Solvers override to define post-setup initiailzation.
+
+        Args
+        ----
+        system: `System`
+            System that owns this solver.
+        """
+        dumat = system.dumat
+        self._vois = [None]
+        for vois in system._probdata.relevance.vars_of_interest():
+            for voi in vois:
+                if voi in dumat:  # FIXME: do we need this check?
+                    self._vois.append(voi)
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
@@ -72,15 +87,13 @@ class LinearGaussSeidel(LinearSolver):
         dumat = system.dumat
         drmat = system.drmat
         dpmat = system.dpmat
-        gs_outputs = system.gs_outputs
+        gs_outputs = system._get_gs_outputs(mode, self._vois)
         relevance = system._probdata.relevance
         fwd = mode == 'fwd'
 
         system.clear_dparams()
-        for names in system._probdata.relevance.vars_of_interest():
-            for name in names:
-                if name in dumat:
-                    dumat[name].vec[:] = 0.0
+        for voi in self._vois:
+            dumat[voi].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
 
         vois = rhs_mat.keys()
@@ -94,7 +107,8 @@ class LinearGaussSeidel(LinearSolver):
         f_norm0, f_norm = 1.0, 1.0
         self.iter_count = 0
         maxiter = self.options['maxiter']
-        while self.iter_count < maxiter and f_norm > self.options['atol'] and f_norm/f_norm0 > self.options['rtol']:
+        while self.iter_count < maxiter and f_norm > self.options['atol'] \
+                  and f_norm/f_norm0 > self.options['rtol']:
 
             if fwd:
 

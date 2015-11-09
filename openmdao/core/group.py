@@ -64,6 +64,8 @@ class Group(System):
         # Flag is true after order is set
         self._order_set = False
 
+        self._gs_outputs = None
+
     def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
@@ -258,14 +260,12 @@ class Group(System):
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
-                meta = meta.copy()
                 prom = self._promoted_name(sub._sysdata.to_prom_pnames[p], sub)
                 params_dict[p] = meta
                 to_abs_pnames.setdefault(prom, []).append(p)
                 to_prom_pnames[p] = prom
 
             for u, meta in iteritems(subunknowns):
-                meta = meta.copy()
                 prom = self._promoted_name(sub._sysdata.to_prom_unames[u], sub)
                 unknowns_dict[u] = meta
                 if prom in to_abs_unames:
@@ -284,6 +284,28 @@ class Group(System):
             sub._check_promotes()
 
         return self._params_dict, self._unknowns_dict
+
+    def _get_gs_outputs(self, mode, vois):
+        if self._gs_outputs is None:
+            self._gs_outputs = {}
+
+        if mode not in self._gs_outputs:
+            dumat = self.dumat
+            gs_outputs = self._gs_outputs[mode] = {}
+            if mode == 'fwd':
+                for sub in self._local_subsystems:
+                    gs_outputs[sub.name] = outs = {}
+                    for voi in vois:
+                        outs[voi] = set([x for x in dumat[voi]._dat if
+                                                   sub.dumat and x not in sub.dumat[voi]])
+            else: # rev
+                for sub in reversed(self._local_subsystems):
+                    gs_outputs[sub.name] = outs = {}
+                    for voi in vois:
+                        outs[voi] = set([x for x in dumat[voi]._dat if
+                                                   not sub.dumat or
+                                                   (sub.dumat and x not in sub.dumat[voi])])
+        return self._gs_outputs
 
     def _promoted_name(self, name, subsystem):
         """
@@ -401,8 +423,6 @@ class Group(System):
                                            voi)
 
                     self._setup_data_transfer(my_params, voi)
-
-        self._setup_gs_outputs(all_vois)
 
         # convert any src_indices to index arrays
         for meta in itervalues(self._params_dict):
