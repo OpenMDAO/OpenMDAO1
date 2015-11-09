@@ -211,5 +211,51 @@ class TestComponentDerivatives(unittest.TestCase):
         assert_rel_error(self, J['comp.y']['P1.x'][0][0], 2.0, 1e-6)
         self.assertEqual(J['comp.y']['P1.x'].size, 1)
 
+    def test_error_message_for_badly_sized_jac_key(self):
+
+        class BadJComp(Component):
+
+            def __init__(self):
+                super(BadJComp, self).__init__()
+
+                self.add_param('x1', np.zeros(2, ))
+                self.add_param('x2', np.zeros(3, ))
+
+                self.add_output('y1', np.zeros(2, ))
+                self.add_output('y2', np.zeros(3, ))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                pass
+
+            def linearize(self, params, unknowns, resids):
+                """Analytical derivatives."""
+
+                J = {}
+                J[('y1', 'x1')] = np.zeros((2, 2))
+                J[('y1', 'x2')] = np.zeros((2, 3))
+                J[('y2', 'x2')] = np.zeros((3, 3))
+
+                # Size this one wrong.
+                J[('y2', 'x1')] = np.zeros((3, 3))
+
+                return J
+
+        p = Problem(root=Group())
+        p.root.add('P1', IndepVarComp('x1', np.ones((2, ))))
+        p.root.add('P2', IndepVarComp('x2', np.ones((3, ))))
+        p.root.add('comp', BadJComp())
+        p.root.connect('P1.x1', 'comp.x1')
+        p.root.connect('P2.x2', 'comp.x2')
+
+        p.setup(check=False)
+        p.run()
+
+        with self.assertRaises(ValueError) as cm:
+            J = p.calc_gradient(['P1.x1', 'P2.x2'], ['comp.y1', 'comp.y2'])
+
+        self.assertEqual(str(cm.exception), "In component 'comp', the derivative of 'y2' wrt 'x1' should have shape '(3, 2)' but has shape '(3, 3)' instead.")
+
+
 if __name__ == "__main__":
     unittest.main()
