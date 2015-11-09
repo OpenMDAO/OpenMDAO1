@@ -734,6 +734,14 @@ class System(object):
             except KeyError:
                 continue # either didn't find param in dparams/dunknowns or
                          # didn't find unknown in dresids
+            except ValueError:
+                # Provide a user-readable message that locates the problem
+                # derivative term.
+                req_shape = (len(dresids[unknown].flat), len(arg_vec[param]))
+                msg = "In component '{}', the derivative of '{}' wrt '{}' should have shape '{}' "
+                msg += "but has shape '{}' instead."
+                msg = msg.format(self.pathname, unknown, param, req_shape, J.shape)
+                raise ValueError(msg)
 
     def _create_views(self, top_unknowns, parent, my_params,
                       voi=None):
