@@ -55,12 +55,9 @@ class LinearGaussSeidel(LinearSolver):
         system: `System`
             System that owns this solver.
         """
-        dumat = system.dumat
         self._vois = [None]
         for vois in system._probdata.relevance.vars_of_interest():
-            for voi in vois:
-                if voi in dumat:  # FIXME: do we need this check?
-                    self._vois.append(voi)
+            self._vois.extend(vois)
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
