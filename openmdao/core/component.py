@@ -77,7 +77,7 @@ class Component(System):
             msg = msg.format(var_type=var_type, name=name)
             raise ValueError(msg)
 
-    def _add_variable(self, name, val, var_type, **kwargs):
+    def _add_variable(self, name, val, **kwargs):
         """ Contruct metadata for new variable.
 
         Args
@@ -87,9 +87,6 @@ class Component(System):
 
         val : float or ndarray or object
             Initial value for the variable.
-
-        var_type : 'param' or 'output'
-            Type of variable.
 
         **kwargs
             Arbitrary keyword arguments to be added to metadata.
@@ -106,7 +103,6 @@ class Component(System):
             If a valid value or shape is not specified.
         """
         shape = kwargs.get('shape')
-        self._check_val(name, var_type, val, shape)
         self._check_name(name)
         meta = kwargs.copy()
 
@@ -139,8 +135,7 @@ class Component(System):
         val : float or ndarray or object
             Initial value for the input.
         """
-        self._init_params_dict[name] = self._add_variable(name, val, 'param',
-                                                          **kwargs)
+        self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
         """ Add an output to this component.
@@ -154,8 +149,9 @@ class Component(System):
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
-        self._init_unknowns_dict[name] = self._add_variable(name, val, 'output',
-                                                            **kwargs)
+        shape = kwargs.get('shape')
+        self._check_val(name, 'output', val, shape)
+        self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_state(self, name, val=_NotSet, **kwargs):
         """ Add an implicit state to this component.
@@ -168,7 +164,9 @@ class Component(System):
         val : float or ndarray
             Initial value for the state.
         """
-        args = self._add_variable(name, val, 'state', **kwargs)
+        shape = kwargs.get('shape')
+        self._check_val(name, 'state', val, shape)
+        args = self._add_variable(name, val, **kwargs)
         args['state'] = True
         self._init_unknowns_dict[name] = args
 

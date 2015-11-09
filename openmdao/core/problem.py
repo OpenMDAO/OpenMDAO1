@@ -442,6 +442,28 @@ class Problem(System):
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
 
+        # Allow the user to omit the size of a parameter and pull the size
+        # and shape from the connection source.
+        for tgt, src in iteritems(connections):
+            tmeta = params_dict[tgt]
+            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
+
+                src_name, src_idx = src
+                smeta = unknowns_dict[src_name]
+
+                # Connected with src_indices specified
+                if src_idx is not None:
+                    size = len(src_idx)
+                    tmeta['shape'] = (size, )
+                    tmeta['size'] = size
+                    tmeta['val'] = smeta['val'][np.array(src_idx)]
+
+                # Regular connection
+                else:
+                    tmeta['shape'] = smeta['shape']
+                    tmeta['size'] = smeta['size']
+                    tmeta['val'] = smeta['val']
+
         # push connection src_indices down into the metadata for all target
         # params in all component level systems, then flag meta_changed so
         # it will get percolated back up to all groups in next setup_vars()
@@ -559,6 +581,15 @@ class Problem(System):
         # report any differences in units or initial values for
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
+
+        # Check for dangling params that have no size or shape
+        dangling_params = set([p for p in self.root._params_dict
+                               if p not in self.root.connections])
+        for param in dangling_params:
+            tmeta = self.root._params_dict[param]
+            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
+                msg = "Unconnected param '{}' is missing a shape or default value."
+                raise RuntimeError(msg.format(param))
 
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)

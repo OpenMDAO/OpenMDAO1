@@ -46,7 +46,12 @@ before_install:
 - if [ "$OS" = "MacOSX" ] && [ "$MPI" ]; then brew install openmpi; fi
 - wget "https://repo.continuum.io/miniconda/Miniconda-latest-$OS-x86_64.sh" -O miniconda.sh
 - chmod +x miniconda.sh
-- ./miniconda.sh -b
+- if [ "$OS" = "Linux" ]; then
+    ./miniconda.sh -b  -p /home/travis/miniconda;
+  fi
+- if [ "$OS" = "MacOSX" ]; then
+    ./miniconda.sh -b  -p /Users/travis/miniconda;
+  fi
 - PATHPREFIX=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "/Users/travis/miniconda/bin"; else echo "/home/travis/miniconda/bin"; fi)
 - export PATH=$PATHPREFIX:$PATH
 - export OPENMDAO_TEST_DOCS=1

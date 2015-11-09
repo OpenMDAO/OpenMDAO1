@@ -124,26 +124,33 @@ class TestComponent(unittest.TestCase):
     def test_add_params(self):
         self.comp.add_param("x", 0.0)
         self.comp.add_param("y", 0.0)
-        self.comp.add_param("z", shape=(1,))
+        self.comp.add_param("z", shape=(1, ))
         self.comp.add_param("t", shape=2)
         self.comp.add_param("u", shape=1)
 
-        with self.assertRaises(ValueError) as cm:
-            self.comp.add_param("w")
-
-        self.assertEqual(str(cm.exception), "Shape of param 'w' must be specified because 'val' is not set")
+        # This should no longer raise an error
+        self.comp.add_param("w")
 
         prob = Problem()
         self.comp._init_sys_data('', prob._probdata)
         params, unknowns = self.comp._setup_variables()
 
-        self.assertEqual(["x", "y", "z", "t", "u"], list(params.keys()))
+        self.assertEqual(["x", "y", "z", "t", "u", 'w'], list(params.keys()))
 
         self.assertEqual(params["x"], {'shape': 1, 'pathname': 'x', 'val': 0.0, 'size': 1})
         self.assertEqual(params["y"], {'shape': 1, 'pathname': 'y', 'val': 0.0, 'size': 1})
         np.testing.assert_array_equal(params["z"]["val"], np.zeros((1,)))
         np.testing.assert_array_equal(params["t"]["val"], np.zeros((2,)))
         self.assertEqual(params["u"], {'shape': 1, 'pathname': 'u', 'val': 0.0, 'size': 1})
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', self.comp)
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        self.assertEqual(str(cm.exception), "Unconnected param 'comp.w' is missing a shape or default value.")
 
     def test_add_outputs(self):
         self.comp.add_output("x", -1)

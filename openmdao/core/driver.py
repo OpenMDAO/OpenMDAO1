@@ -69,6 +69,7 @@ class Driver(object):
 
         for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
+
                 # Check validity of variable
                 if name not in root.unknowns:
                     msg = "{} '{}' not found in unknowns."
@@ -76,6 +77,12 @@ class Driver(object):
                     raise ValueError(msg)
 
                 rootmeta = root.unknowns.metadata(name)
+                if name in self._desvars:
+                    rootmeta['is_desvar'] = True
+                if name in self._objs:
+                    rootmeta['is_objective'] = True
+                if name in self._cons:
+                    rootmeta['is_constraint'] = True
 
                 if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
@@ -87,7 +94,6 @@ class Driver(object):
                     meta['size'] = len(meta['indices'])
                 else:
                     meta['size'] = rootmeta['size']
-
                 newitem[name] = meta
 
         self._desvars = desvars

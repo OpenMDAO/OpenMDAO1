@@ -1,11 +1,9 @@
 from __future__ import print_function
 
-import sys
 import numpy as np
 
-from openmdao.core import Group, Component
-from openmdao.components import MetaModel
-from openmdao.surrogate_models import KrigingSurrogate, FloatKrigingSurrogate
+from openmdao.api import Group, Problem, MetaModel, \
+    KrigingSurrogate, FloatKrigingSurrogate
 
 class TrigMM(Group):
     ''' FloatKriging gives responses as floats '''
@@ -19,8 +17,6 @@ class TrigMM(Group):
         sin_mm.add_output('f_x:float', val=0., surrogate=FloatKrigingSurrogate())
         sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
 
-
-from openmdao.core import Problem
 
 prob = Problem()
 prob.root = TrigMM()

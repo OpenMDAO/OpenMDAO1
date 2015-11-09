@@ -2,11 +2,7 @@
 
 from __future__ import print_function
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
-
+from openmdao.api import IndepVarComp, Component, Group, Problem
 
 class SimpleComp(Component):
     """ A simple component that provides derivatives. """

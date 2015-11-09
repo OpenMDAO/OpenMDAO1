@@ -3,11 +3,8 @@ and replaces it with an implicit component."""
 
 import numpy as np
 
-from openmdao.components.exec_comp import ExecComp
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-from openmdao.solvers.newton import Newton
+from openmdao.api import Component, Group, IndepVarComp, \
+    ExecComp, Newton
 
 
 class SellarDis1(Component):
@@ -144,7 +141,7 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'state_eq.y2_actual')
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
-                                     z=np.array([0.0, 0.0]), x=0.0, d1=0.0, d2=0.0),
+                                     z=np.array([0.0, 0.0])),
                   promotes=['x', 'z', 'y1', 'obj'])
         self.connect('d2.y2', 'obj_cmp.y2')
 

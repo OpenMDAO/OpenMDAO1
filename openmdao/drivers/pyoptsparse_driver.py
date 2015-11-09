@@ -16,11 +16,31 @@ from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
+def _check_imports():
+    """ Dynamically remove optimizers we don't have
+    """
+
+    optlist = ['ALPSO', 'CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+               'NSGA2', 'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG', 'NOMAD']
+
+    for optimizer in optlist[:]:
+        try:
+            exec('from pyoptsparse import %s' % optimizer)
+        except ImportError:
+            optlist.remove(optimizer)
+
+    return optlist
+
+
 class pyOptSparseDriver(Driver):
     """ Driver wrapper for pyoptsparse. pyoptsparse is based on pyOpt, which
     is an object-oriented framework for formulating and solving nonlinear
     constrained optimization problems, with additional MPI capability.
-    Note: only SNOPT and SLSQP are currently supported.
+    pypptsparse has interfaces to the following optimizers:
+    ALPSO, CONMIN, FSQP, IPOPT, NLPQLP, NSGA2, PSQP, SLSQP,
+    SNOPT, NLPY_AUGLAG, NOMAD.
+    Note that some of these are not open source and therefore not included
+    in the pyoptsparse source code. 
 
     pyOptSparseDriver supports the following:
         equality_constraints
@@ -33,7 +53,7 @@ class pyOptSparseDriver(Driver):
     -------
     options['exit_flag'] :  int(0)
         0 for fail, 1 for ok
-    options['optimizer'] :  str('SNOPT')
+    options['optimizer'] :  str('SLSQP')
         Name of optimizers to use
     options['print_results'] :  bool(True)
         Print pyOpt results if True
@@ -60,7 +80,7 @@ class pyOptSparseDriver(Driver):
         self.supports['integer_design_vars'] = False
 
         # User Options
-        self.options.add_option('optimizer', 'SNOPT', values=['SNOPT', 'SLSQP'],
+        self.options.add_option('optimizer', 'SLSQP', values=_check_imports(),
                                 desc='Name of optimizers to use')
         self.options.add_option('title', 'Optimization using pyOpt_sparse',
                                 desc='Title of this optimization run')
