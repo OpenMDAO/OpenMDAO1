@@ -177,6 +177,59 @@ class TestConnections(unittest.TestCase):
         self.assertEqual(top['tgt.y1'], 12.0)
         self.assertEqual(top['tgt.y2'], 12.0)
 
+    def test_pull_size_from_source_with_indices(self):
+
+        class Src(Component):
+
+            def __init__(self):
+                super(Src, self).__init__()
+
+                self.add_param('x', 2.0)
+                self.add_output('y1', np.zeros((3, )))
+                self.add_output('y2', shape=((3, )))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x = params['x']
+
+                unknowns['y1'] = x * np.array( [1.0, 2.0, 3.0])
+                unknowns['y2'] = x * np.array( [1.0, 2.0, 3.0])
+
+        class Tgt(Component):
+
+            def __init__(self):
+                super(Tgt, self).__init__()
+
+                self.add_param('x1')
+                self.add_param('x2')
+                self.add_output('y1', 0.0)
+                self.add_output('y2', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x1 = params['x1']
+                x2 = params['x2']
+
+                unknowns['y1'] = np.sum(x1)
+                unknowns['y2'] = np.sum(x2)
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('src', Src())
+        top.root.add('tgt', Tgt())
+
+        top.root.connect('src.y1', 'tgt.x1', src_indices=(0, 1))
+        top.root.connect('src.y2', 'tgt.x2', src_indices=(0, 1))
+
+        top.setup(check=False)
+        top.run()
+
+        self.assertEqual(top['tgt.y1'], 6.0)
+        self.assertEqual(top['tgt.y2'], 6.0)
+
+
 
 class TestConnectionsPromoted(unittest.TestCase):
 

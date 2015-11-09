@@ -414,10 +414,22 @@ class Problem(System):
         for tgt, src in iteritems(connections):
             tmeta = params_dict[tgt]
             if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
-                smeta = unknowns_dict[src[0]]
-                tmeta['shape'] = smeta['shape']
-                tmeta['size'] = smeta['size']
-                tmeta['val'] = smeta['val']
+
+                src_name, src_idx = src
+                smeta = unknowns_dict[src_name]
+
+                # Connected with src_indices specified
+                if src_idx is not None:
+                    size = len(src_idx)
+                    tmeta['shape'] = (size, )
+                    tmeta['size'] = size
+                    tmeta['val'] = smeta['val'][np.array(src_idx)]
+
+                # Regular connection
+                else:
+                    tmeta['shape'] = smeta['shape']
+                    tmeta['size'] = smeta['size']
+                    tmeta['val'] = smeta['val']
 
         # push connection src_indices down into the metadata for all target
         # params in all component level systems, then flag meta_changed so
