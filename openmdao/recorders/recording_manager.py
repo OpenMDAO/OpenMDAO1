@@ -55,18 +55,21 @@ class RecordingManager(object):
     def record_metadata(self, root, exclude=None):
 
         for recorder in self._recorders:
-            metadata_option = recorder.options['record_metadata']
+            # If the recorder does not support parallel recording
+            # we need to make sure we only record on rank 0.
+            if recorder._parallel or root.comm.rank == 0:
+                metadata_option = recorder.options['record_metadata']
 
-            if metadata_option is False:
-                continue
-
-            if exclude is not None:
-                if recorder in exclude:
+                if metadata_option is False:
                     continue
 
-                exclude.add(recorder)
+                if exclude is not None:
+                    if recorder in exclude:
+                        continue
 
-            recorder.record_metadata(root)
+                    exclude.add(recorder)
+
+                recorder.record_metadata(root)
 
     def startup(self, root):
         for recorder in self._recorders:
