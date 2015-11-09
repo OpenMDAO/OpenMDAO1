@@ -556,7 +556,7 @@ class System(object):
 
         return jac
 
-    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
         """
         Entry point method for all parent classes to access the apply_linear method.
         This method handles the functionality for self-fd, or otherwise passes the call
@@ -568,7 +568,7 @@ class System(object):
             Derivative mode, can be 'fwd' or 'rev'.
         vois: list of strings
             List of all quantities of interest to key into the mats.
-        ls_inputs : dict
+        do_apply : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
         gs_outputs : dict, optional
@@ -589,12 +589,10 @@ class System(object):
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
-            do_apply = ls_inputs[(self.pathname, voi)]
-
             if fwd:
                 dresids.vec[:] = 0.0
 
-                if do_apply:
+                if do_apply[(self.pathname, voi)]:
                     dparams._apply_unit_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
@@ -615,7 +613,7 @@ class System(object):
                 for _, val in dunknowns.veciter():
                     val[:] = 0.0
 
-                if do_apply:
+                if do_apply[(self.pathname, voi)]:
                     try:
                         # Sign on the local Jacobian needs to be -1 before
                         # we add in the fake residual. Since we can't modify

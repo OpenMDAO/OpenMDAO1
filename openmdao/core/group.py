@@ -434,10 +434,12 @@ class Group(System):
                                top_unknowns=top_unknowns,
                                impl=self._impl)
 
+        # now that all of the vectors and subvecs are allocated, calculate
+        # and cache a boolean flag telling us whether to run apply_linear for a
+        # given voi and a given child system.
+
         self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
 
-        # now that all of the vectors and subvecs are allocated, calculate
-        # and cache the ls_inputs.
         ls_inputs = {}
         for voi in self.dumat:
             ls_inputs[voi] = self._all_params(voi)
@@ -688,7 +690,7 @@ class Group(System):
         for sub in self._local_subsystems:
             sub._sys_linearize(sub.params, sub.unknowns, sub.resids)
 
-    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -701,7 +703,7 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : dict
+        do_apply : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
 
@@ -720,11 +722,11 @@ class Group(System):
 
         if self.fd_options['force_fd']:
             # parent class has the code to do the fd
-            super(Group, self)._sys_apply_linear(mode, ls_inputs, vois, gs_outputs)
+            super(Group, self)._sys_apply_linear(mode, do_apply, vois, gs_outputs)
 
         else:
             for sub in self._local_subsystems:
-                sub._sys_apply_linear(mode, ls_inputs=ls_inputs, vois=vois,
+                sub._sys_apply_linear(mode, do_apply, vois=vois,
                                       gs_outputs=gs_outputs)
 
         if mode == 'rev':

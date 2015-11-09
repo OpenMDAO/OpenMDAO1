@@ -159,7 +159,7 @@ class ScipyGMRES(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system._sys_apply_linear(mode, ls_inputs=self.system._do_apply, vois=(voi,))
+        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
 
         #print("arg", arg)
         #print("result", rhs_vec.vec)
