@@ -42,6 +42,11 @@ class Relevance(object):
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
+        # when voi is None, everything is relevant
+        self.relevant[None] = set([m['top_promoted_name']
+                                    for m in itervalues(unknowns_dict)])
+        self.relevant[None].update([m['top_promoted_name']
+                                    for m in itervalues(params_dict)])
         self._relevant_systems = self._get_relevant_systems()
 
         if mode == 'fwd':
@@ -74,9 +79,10 @@ class Relevance(object):
         -------
         bool: True if varname is in the relevant path of var_of_interest
         """
-        if var_of_interest is None or var_of_interest not in self.relevant:
+        try:
+            return varname in self.relevant[var_of_interest]
+        except KeyError:
             return True
-        return varname in self.relevant[var_of_interest]
 
     def vars_of_interest(self, mode=None):
         """ Determines our list of var_of_interest depending on mode.

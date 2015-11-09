@@ -676,7 +676,7 @@ class SrcVecWrapper(VecWrapper):
         if store_byobjs:
             for path, meta in iteritems(unknowns_dict):
                 if 'remote' not in meta and (relevance is None or
-                                  relevance.is_relevant(var_of_interest, path)):
+                                  relevance.is_relevant(var_of_interest, meta['top_promoted_name'])):
                     if not meta.get('pass_by_obj'):
                         if meta['shape'] == 1:
                             self._dat[to_prom[path]].val[0] = meta['val']

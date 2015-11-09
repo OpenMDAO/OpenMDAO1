@@ -829,11 +829,8 @@ class Group(System):
         self._subsystems = new_subs
 
         # reset locals
-        new_locs = []
-        for sub in itervalues(self._subsystems):
-            if sub in self._local_subsystems:
-                new_locs.append(sub)
-        self._local_subsystems = new_locs
+        self._local_subsystems = [s for s in self._local_subsystems
+                                      if s.name in newset]
 
         self._order_set = True
 
@@ -1210,7 +1207,7 @@ class Group(System):
             The name of a variable of interest.
 
         """
-        relevant = self._probdata.relevance.is_relevant
+        relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
         to_prom = self._sysdata.to_prom
         uacc = self.unknowns._dat
         pacc = self.params._dat
@@ -1220,14 +1217,14 @@ class Group(System):
         vec_unames = OrderedDict()
         i = 0
         for n, sz in self._u_size_lists[0]:
-            if relevant(var_of_interest, uacc[n].meta['top_promoted_name']):
+            if uacc[n].meta['top_promoted_name'] in relevant:
                 vec_unames[n] = i
                 i += 1
 
         vec_pnames = OrderedDict()
         i = 0
         for n, sz in self._p_size_lists[0]:
-            if relevant(var_of_interest, pacc[n].meta['top_promoted_name']):
+            if pacc[n].meta['top_promoted_name'] in relevant:
                 vec_pnames[n] = i
                 i += 1
 
@@ -1257,8 +1254,7 @@ class Group(System):
             top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
             top_prelname = self._params_dict[param]['top_promoted_name']
 
-            if not relevant(var_of_interest, top_urelname) or \
-               not relevant(var_of_interest, top_prelname):
+            if top_urelname not in relevant or top_prelname not in relevant:
                 continue
 
             urelname = to_prom[unknown]

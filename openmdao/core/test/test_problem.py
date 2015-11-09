@@ -762,5 +762,6 @@ class TestCheckSetup(unittest.TestCase):
         for node, afters in oo[0][1]:
             self.assertEqual(node, expected[tuple(afters)])
 
+
 if __name__ == "__main__":
     unittest.main()
