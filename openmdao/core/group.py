@@ -299,7 +299,7 @@ class Group(System):
                         outs[voi] = set([x for x in dumat[voi]._dat if
                                                    sub.dumat and x not in sub.dumat[voi]])
             else: # rev
-                for sub in reversed(self._local_subsystems):
+                for sub in self._local_subsystems:
                     gs_outputs[sub.name] = outs = {}
                     for voi in vois:
                         outs[voi] = set([x for x in dumat[voi]._dat if
@@ -437,7 +437,7 @@ class Group(System):
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
         self._ls_inputs = {}
-        for voi, vec in iteritems(self.dumat):
+        for voi in self.dumat:
             self._ls_inputs[voi] = self._all_params(voi)
 
         # cache this to speed up apply_linear
@@ -949,27 +949,17 @@ class Group(System):
         return graph, broken_edges
 
     def _all_params(self, voi=None):
-        """ Returns the set of all parameters in this system and all subsystems.
+        """ Returns the set of all parameters in this system and all
+        subsystems that are relevant to the given variable of interest.
 
         Args
         ----
         voi: string
             Variable of interest, default is None.
         """
-
-        # TODO: clean this up
-        ls_inputs = set(iterkeys(self.dpmat[voi]))
-        abs_uvec = {meta['pathname'] for meta in itervalues(self.dumat[voi])}
-
-        for comp in self.components(local=True, recurse=True):
-            for intinp_rel, meta in iteritems(comp.dpmat[voi]):
-                intinp_abs = meta['pathname']
-                src, idxs = self.connections.get(intinp_abs)
-
-                if src in abs_uvec:
-                    ls_inputs.add(intinp_abs)
-
-        return ls_inputs
+        relevant = self._probdata.relevance.relevant[voi]
+        return set(n for n,m in iteritems(self._params_dict)
+                          if m['top_promoted_name'] in relevant)
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
              sizes=False):
