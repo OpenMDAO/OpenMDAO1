@@ -256,7 +256,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         msg = str(cm.exception)
         msg = msg.replace('3L', '3')
-        self.assertEqual(str(cm.exception), "In component 'comp', the derivative of 'y2' wrt 'x1' should have shape '(3, 2)' but has shape '(3, 3)' instead.")
+        self.assertEqual(msg, "In component 'comp', the derivative of 'y2' wrt 'x1' should have shape '(3, 2)' but has shape '(3, 3)' instead.")
 
 
 if __name__ == "__main__":
