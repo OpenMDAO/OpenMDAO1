@@ -151,23 +151,6 @@ def _f2mb(fsize):
     """
     return fsize * 8 / 1024 / 1024
 
-def initial_value_storage(root):
-    """
-    Return the total storage used for initial values stored in params_dict and
-    unknowns dict.  (Doesn't include sizes of some pass_by_obj variables.)
-    """
-    size = 0
-    for s in root.components(recurse=True, include_self=True):
-        for meta in chain(itervalues(s._unknowns_dict),
-                          itervalues(s._params_dict)):
-            val = meta['val']
-            if isinstance(val, numpy.ndarray):
-                size += val.size
-            elif isinstance(val, real_types):
-                size += 1 # val is a scalar
-
-    return _f2mb(size)
-
 def stats(problem):
     """
     Print various stats about the Problem.
@@ -177,19 +160,5 @@ def stats(problem):
     print("Num systems:", num_systems(root))
     print("Max tree depth:", max_tree_depth(root))
 
-    initial = initial_value_storage(root)
-    udurdr = _f2mb(root.unknowns.vec.size*4)
-    pdp = _f2mb(sum([s.params.vec.size for s in
-                                root.subsystems(recurse=True,
-                                            include_self=True)])*2)
-    total_data_vecs = initial + udurdr + pdp
-
-    print("Initial value size: %d MB" % initial)
-    print("u+du+r+dr size: %d MB" % udurdr)
-    print("p+dp size: %d MB" % pdp)
-    print("total data value size: %d MB" % total_data_vecs)
-
     print("\nMax mem usage: %s MB" % max_mem_usage())
     print("Current mem usage: %s MB" % mem_usage())
-
-    print("\nOverhead memory usage: %d MB" % (mem_usage()-total_data_vecs))

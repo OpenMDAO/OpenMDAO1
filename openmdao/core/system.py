@@ -589,10 +589,7 @@ class System(object):
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
-            # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = self._abs_inputs[voi]
-            do_apply = ls_inputs[voi] is None or (abs_inputs and
-                                  len(abs_inputs.intersection(ls_inputs[voi])))
+            do_apply = ls_inputs[(self.pathname, voi)]
 
             if fwd:
                 dresids.vec[:] = 0.0

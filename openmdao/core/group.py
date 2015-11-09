@@ -434,19 +434,23 @@ class Group(System):
                                top_unknowns=top_unknowns,
                                impl=self._impl)
 
+        self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
+
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache the ls_inputs.
-        self._ls_inputs = {}
+        ls_inputs = {}
         for voi in self.dumat:
-            self._ls_inputs[voi] = self._all_params(voi)
+            ls_inputs[voi] = self._all_params(voi)
 
-        # cache this to speed up apply_linear
-        self._abs_inputs = {}
-        for voi, vec in iteritems(self.dpmat):
-            self._abs_inputs[voi] = {
-                meta['pathname'] for meta in itervalues(vec)
-                    if not meta.get('pass_by_obj')
-            }
+        for s in self.subsystems(recurse=True, include_self=True):
+            for voi, vec in iteritems(s.dpmat):
+                abs_inputs = {
+                    meta['pathname'] for meta in itervalues(vec)
+                        if not meta.get('pass_by_obj')
+                }
+
+                self._do_apply[(s.pathname, voi)] = bool(abs_inputs and
+                                      len(abs_inputs.intersection(ls_inputs[voi])))
 
         self._relname_map = None  # reclaim some memory
 
