@@ -113,7 +113,8 @@ Indices and tables
             # continue to write in the top-level index file.
             # only document non-empty packages to avoid errors
             # (e.g. at time of writing, doegenerators, drivers, are empty dirs)
-            index.write("   packages/openmdao." + package + "\n")
+            po = os.path.join("   packages", "openmdao.")
+            index.write(po + package + "\n")
 
             # make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
             package_dirname = os.path.join(dir, "srcdocs", "packages", package)
