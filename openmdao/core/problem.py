@@ -437,6 +437,8 @@ class Problem(System):
         #     'val': 2.5,   # the initial value of that variable (if known)
         #  }
         params_dict, unknowns_dict = self.root._setup_variables()
+        self._probdata.params_dict = params_dict
+        self._probdata.unknowns_dict = unknowns_dict
 
         # collect all connections, both implicit and explicit from
         # anywhere in the tree, and put them in a dict where each key
@@ -522,6 +524,7 @@ class Problem(System):
         # propagate top level promoted names, unit conversions,
         # and connections down to all subsystems
         to_prom = self.root._sysdata.to_prom
+        self._probdata.to_prom = to_prom
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 

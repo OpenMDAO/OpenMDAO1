@@ -1497,3 +1497,47 @@ class Group(System):
                     _dump(s, stream)
         else:
             _dump(self, stream)
+
+    def list_connections(self, stream=sys.stdout):
+        """
+        Writes out the list of all connections involving this Group or any
+        of its children.  The list is of the form:
+
+        source_absolute_name (source_promoted_name) -> target
+
+        Where sources that broadcast to multiple targets will be replaced with
+        a blank source for all but the first of their targets, in order to help
+        broadcast sources visually stand out.  The source name will be followed
+        by its promoted name if it differs, and if a target is promoted it will
+        be followed by a '*'.
+
+        Sources are sorted alphabetically and targets are subsorted
+        alphabetically when a source is broadcast to multiple targets.
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the connection info to. Defaults to sys.stdout.
+        """
+        template = "{0:<{swid}} -> {1}\n"
+
+        to_prom = self._probdata.to_prom
+        scope = self.pathname + '.' if self.pathname else ''
+
+        # create a dict with srcs as keys so we can more easily subsort
+        # targets after sorting srcs.
+        by_src = {}
+        for tgt, (src, idx) in iteritems(self.connections):
+            if src.startswith(scope) or tgt.startswith(scope):
+                if to_prom[tgt] != tgt:
+                    tgt += ' *'
+                if to_prom[src] != src:
+                    src += " (%s)" % to_prom[src]
+                by_src.setdefault(src, []).append(tgt)
+
+        src_max_wid = max(len(n) for n in by_src)
+
+        for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
+            for i, tgt in enumerate(sorted(tgts)):
+                if i: src = ''
+                stream.write(template.format(src, tgt, swid=src_max_wid))
