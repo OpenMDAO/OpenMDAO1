@@ -19,14 +19,18 @@ class ScipyGMRES(LinearSolver):
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each
+        iteration, set to 2 to print subiteration residuals as well.
     options['maxiter'] :  int(1000)
         Maximum number of iterations.
     options['mode'] :  str('auto')
-        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse
+        mode, or 'auto' to let OpenMDAO determine the best mode.
     options['precondition'] :  bool(False)
         Set to True to turn on preconditioning.
-
+    options['restart'] :  int(20)
+        Number of iterations between restarts. Larger values increase iteration cost,
+        but may be necessary for convergence
     """
 
     def __init__(self):
@@ -43,6 +47,9 @@ class ScipyGMRES(LinearSolver):
                        "let OpenMDAO determine the best mode.")
         opt.add_option('precondition', False,
                        desc='Set to True to turn on preconditioning.')
+        opt.add_option('restart', 20,
+                       desc='Number of iterations between restarts. Larger values ' +
+                       'increase iteration cost, but may be necessary for convergence')
 
         # These are defined whenever we call solve to provide info we need in
         # the callback.
@@ -101,6 +108,7 @@ class ScipyGMRES(LinearSolver):
             d_unknowns, info = gmres(A, rhs, M=M,
                                      tol=options['atol'],
                                      maxiter=options['maxiter'],
+                                     restart=options['restart'],
                                      callback=self.monitor)
             self.system = None
 
