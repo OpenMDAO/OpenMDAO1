@@ -28,6 +28,10 @@ try:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 except ImportError:
     pass
+from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
+from openmdao.drivers.uniform_driver import UniformDriver
+from openmdao.drivers.fullfactorial_driver import FullFactorialDriver
+from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver
 #recorders
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.recorders.dump_recorder import DumpRecorder
