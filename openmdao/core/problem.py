@@ -206,7 +206,9 @@ class Problem(System):
         self._input_inputs = {}
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
-                connected = nx.node_connected_component(input_graph, tgt)
+                # force list here, since some versions of networkx return a
+                # set here.
+                connected = list(nx.node_connected_component(input_graph, tgt))
                 for c in connected:
                     self._input_inputs[c] = connected
 
