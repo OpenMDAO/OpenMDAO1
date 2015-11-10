@@ -29,6 +29,9 @@ class CsvRecorder(BaseRecorder):
         super(CsvRecorder, self).startup(group)
 
     def record_iteration(self, params, unknowns, resids, metadata):
+        iteration_coordinate = metadata['coord']
+        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
+
         if self._wrote_header is False:
             header = []
             if self.options['record_params']:
@@ -47,11 +50,11 @@ class CsvRecorder(BaseRecorder):
 
         row = []
         if self.options['record_params']:
-            row.extend((serialize(value['val']) for value in params.values()))
+            row.extend((serialize(value) for value in params.values()))
         if self.options['record_unknowns']:
-            row.extend((serialize(value['val']) for value in unknowns.values()))
+            row.extend((serialize(value) for value in unknowns.values()))
         if self.options['record_resids']:
-            row.extend((serialize(value['val']) for value in resids.values()))
+            row.extend((serialize(value) for value in resids.values()))
 
         self.writer.writerow(row)
 
