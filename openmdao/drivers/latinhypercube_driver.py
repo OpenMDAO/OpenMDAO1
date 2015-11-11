@@ -22,7 +22,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         design_vars = self.get_desvar_metadata()
         design_vars_names = list(design_vars)
         self.num_design_vars = len(design_vars_names)
-        if self.seed != None:
+        if self.seed is not None:
             seed(self.seed)
             np.random.seed(self.seed)
 
@@ -43,7 +43,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
 
     def _get_lhc(self):
-        """Generates a Latin Hypercube based on the number of samplts and the number of design variables."""
+        """Generates a Latin Hypercube based on the number of samples and the number of design variables."""
 
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
         return rand_lhc.astype(int)

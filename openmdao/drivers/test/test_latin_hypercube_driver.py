@@ -1,44 +1,45 @@
 """ Testing driver LatinHypercubeDriver."""
 
-from pprint import pformat
 import unittest
-from random import randint
+from random import seed
 from types import GeneratorType
 
 import numpy as np
 
-from openmdao.api import IndepVarComp, Group, Problem, ScipyOptimizer, ExecComp
+from openmdao.api import IndepVarComp, Group, Problem
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.sellar import SellarDerivatives, SellarStateConnection
-from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
-from openmdao.test.util import assert_rel_error
 
 from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver, OptimizedLatinHypercubeDriver
 from openmdao.drivers.latinhypercube_driver import _is_latin_hypercube, _rand_latin_hypercube, _mmlhs, _LHC_Individual
 
+
 class TestLatinHypercubeDriver(unittest.TestCase):
 
+    def setUp(self):
+        self.seed()
+        self.hypercube_sizes = ((3, 1), (5, 5), (20, 8))
+
+    def seed(self):
+        # seedval = None
+        self.seedval = 1
+        seed(self.seedval)
+        np.random.seed(self.seedval)
+
     def test_rand_latin_hypercube(self):
+        for n, k in self.hypercube_sizes:
+            test_lhc = _rand_latin_hypercube(n, k)
 
-        n = randint(1,100)
-        k = randint(1,20)
+            self.assertTrue(_is_latin_hypercube(test_lhc))
 
-        test_lhc = _rand_latin_hypercube(n, k)
-
-        self.assertTrue(_is_latin_hypercube(test_lhc))
-
-    def test_mmlhs(self):
-
-        n = randint(1,100)
-        k = randint(1,20)
+    def _test_mmlhs_latin(self, n, k):
         p = 1
-        population = 30
+        population = 3
         generations = 6
 
         test_lhc = _rand_latin_hypercube(n, k)
         best_lhc = _LHC_Individual(test_lhc, 1, p)
         mmphi_initial = best_lhc.mmphi()
-        for q in [1,2,5,10,20,50,100]:
+        for q in (1, 2, 5, 10, 20, 50, 100):
             lhc_start = _LHC_Individual(test_lhc, q, p)
             lhc_opt = _mmlhs(lhc_start, population, generations)
             if lhc_opt.mmphi() < best_lhc.mmphi():
@@ -46,7 +47,11 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         self.assertTrue(
                 best_lhc.mmphi() < mmphi_initial,
-                "'_mmlhs' didn't yield lower phi.")
+                "'_mmlhs' didn't yield lower phi. Seed was {}".format(self.seedval))
+
+    def test_mmlhs_latin(self):
+        for n, k in self.hypercube_sizes:
+            self._test_mmlhs_latin(n, k)
 
     def test_algorithm_coverage_lhc(self):
 
@@ -60,7 +65,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         prob.driver = LatinHypercubeDriver(100)
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
-        
+
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)
@@ -103,7 +108,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         self.assertTrue(
                 len(yDict) == 100,
                 "One of the intervals wasn't covered.")
-        
+
     def test_algorithm_coverage_olhc(self):
 
         prob = Problem()
@@ -113,10 +118,10 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
 
-        prob.driver = OptimizedLatinHypercubeDriver(100)
+        prob.driver = OptimizedLatinHypercubeDriver(100, population=5)
         prob.driver.add_desvar('x', low=-50.0, high=50.0)
         prob.driver.add_desvar('y', low=-50.0, high=50.0)
-        
+
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)
@@ -159,7 +164,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         self.assertTrue(
                 len(yDict) == 100,
                 "One of the intervals wasn't covered.")
-        
+
     '''
     def test_seed_works(self):
 
