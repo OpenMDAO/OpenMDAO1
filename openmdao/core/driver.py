@@ -386,7 +386,8 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        if self.root.unknowns.flat[name].size == 0:
+        pass_by_obj = self.root.unknowns.metadata(name).get('pass_by_obj', False)
+        if not pass_by_obj and self.root.unknowns.flat[name].size == 0:
             return
 
         scaler = self._desvars[name]['scaler']
