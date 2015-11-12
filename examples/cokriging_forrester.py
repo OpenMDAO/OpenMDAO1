@@ -5,9 +5,7 @@ MultiFiMetaModel and MultiFiCoKrigingSurrogate usage
 
 import numpy as np
 
-from openmdao.core import Component, Group, Problem
-from openmdao.components import MultiFiMetaModel
-from openmdao.surrogate_models import MultiFiCoKrigingSurrogate, KrigingSurrogate
+from openmdao.api import Component, Group, Problem, MultiFiMetaModel, MultiFiCoKrigingSurrogate, KrigingSurrogate
 
 def model_hifi(x):
     return ((6*x-2)**2)*np.sin((6*x-2)*2)

@@ -2,9 +2,7 @@
 
 from __future__ import print_function
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.component import Component
-from openmdao.core.problem import Problem, Group
+from openmdao.api import IndepVarComp, Component, Problem, Group
 
 
 class Paraboloid(Component):
