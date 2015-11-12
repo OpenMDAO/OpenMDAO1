@@ -14,3 +14,4 @@ Tutorials
    tutorials/doe-drivers.rst
    tutorials/external-code-tutorial.rst
    tutorials/file-wrapping-tutorial.rst
+   tutorials/beam-sizing.rst
