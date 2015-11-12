@@ -8,21 +8,21 @@ class ConnectError(Exception):
 
     @classmethod
     def _type_mismatch_error(cls, src, target):
-        msg = "Type '{src[type]}' of source '{src[promoted_name]}' must be the same as type '{target[type]}' of target '{target[promoted_name]}'"
+        msg = "Type {src[type]} of source '{src[promoted_name]}' must be the same as type {target[type]} of target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def _shape_mismatch_error(cls, src, target):
-        msg  = "Shape '{src[shape]}' of source '{src[pathname]}' must be the same as shape '{target[shape]}' of target '{target[pathname]}'"
+        msg  = "Shape {src[shape]} of source '{src[pathname]}' must be the same as shape {target[shape]} of target '{target[pathname]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
 
     @classmethod
     def _size_mismatch_error(cls, src, target):
-        msg  = "Size {isize} of the indexed sub-part of source '{src[promoted_name]}' must be the same as size '{target[size]}' of target '{target[promoted_name]}'"
+        msg  = "Size {isize} of the indexed sub-part of source '{src[promoted_name]}' must be the same as size {target[size]} of target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target, isize=len(target['src_indices']))
 
         return cls(msg)
@@ -36,7 +36,7 @@ class ConnectError(Exception):
 
     @classmethod
     def _val_and_shape_mismatch_error(cls, src, target):
-        msg = "Shape of the initial value '{src[val].shape}' of source '{src[promoted_name]}' must be the same as shape '{target[shape]}' of target '{target[promoted_name]}'"
+        msg = "Shape of the initial value {src[val].shape} of source '{src[promoted_name]}' must be the same as shape {target[shape]} of target '{target[promoted_name]}'"
         msg = msg.format(src=src, target=target)
 
         return cls(msg)
@@ -195,7 +195,7 @@ def __check_shapes_match(src, target):
             if target['size'] != src['distrib_size']:
                 msg  = ("Total size {src[distrib_size]} of  distributed source "
                         "'{src[pathname]}' must be the same as size "
-                        "'{target[size]}' of target '{target[pathname]}'")
+                        "{target[size]} of target '{target[pathname]}'")
                 msg = msg.format(src=src, target=target)
                 raise RuntimeError(msg)
         else:

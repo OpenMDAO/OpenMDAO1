@@ -301,9 +301,9 @@ class TestProblem(unittest.TestCase):
                 self.add_param('y', 1.0)
 
         # Type mismatch error message
-        type_err = "Type '<type '%s'>' of source '%s'" \
+        type_err = "Type <type '%s'> of source '%s'" \
                    " must be the same as "             \
-                   "type '<type '%s'>' of target '%s'"
+                   "type <type '%s'> of target '%s'"
         
         # Type mismatch in explicit connection
         prob = Problem()
@@ -332,9 +332,9 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected)
 
         # Shape mismatch error message
-        shape_err = "Shape '%s' of source '%s'" \
+        shape_err = "Shape %s of source '%s'" \
                     " must be the same as "     \
-                    "shape '%s' of target '%s'"
+                    "shape %s of target '%s'"
 
         # Shape mismatch in explicit connection
         prob = Problem()
@@ -603,8 +603,8 @@ class TestProblem(unittest.TestCase):
         root.connect('B1.y', 'C1.x')
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
-        expected = "Shape '(2,)' of source 'B1.y' must be the same as " \
-                   "shape '(3,)' of target 'C1.x'"
+        expected = "Shape (2,) of source 'B1.y' must be the same as " \
+                   "shape (3,) of target 'C1.x'"
         self.assertEqual(expected, str(cm.exception))
 
         # Mismatched Scalar to Array Value
@@ -615,8 +615,8 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        expected = py3fix("Type '<type 'float'>' of source 'x' must be the same as "
-                          "type '<type 'numpy.ndarray'>' of target 'x'")
+        expected = py3fix("Type <type 'float'> of source 'x' must be the same as "
+                          "type <type 'numpy.ndarray'> of target 'x'")
         self.assertEqual(expected, str(cm.exception))
 
     def test_mode_auto(self):

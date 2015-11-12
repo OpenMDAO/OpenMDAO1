@@ -127,7 +127,7 @@ class TestSrcIndices(unittest.TestCase):
             prob.setup(check=False)
 
         expected = py3fix("Size 1 of the indexed sub-part of source 'P.x' "
-                          "must be the same as size '2' of target 'G.A.x'")
+                          "must be the same as size 2 of target 'G.A.x'")
         self.assertEqual(str(cm.exception), expected)
 
         # now try the same thing with promoted var
@@ -147,7 +147,7 @@ class TestSrcIndices(unittest.TestCase):
             prob.setup(check=False)
 
         expected = py3fix("Size 3 of the indexed sub-part of source 'P.x' "
-                          "must be the same as size '2' of target 'G.x'")
+                          "must be the same as size 2 of target 'G.x'")
         self.assertEqual(str(cm.exception), expected)
 
     def test_inner_connection(self):
