@@ -235,8 +235,6 @@ class TestProblem(unittest.TestCase):
         prob.root.connect('A.x', 'B.x')
         prob.setup(check=False)
 
-        expected_error_message = ("Source 'A.y' cannot be connected to target 'B.x': "
-                                  "'A.y' does not exist.")
         prob = Problem()
         prob.root = Group()
         prob.root.add('A', A())
@@ -246,10 +244,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = ("Source 'A.y' cannot be connected to target 'B.x': "
+                    "'A.y' does not exist.")
+        self.assertEqual(str(cm.exception), expected)
 
-        expected_error_message = ("Source 'A.x' cannot be connected to target 'B.y': "
-                                  "'B.y' does not exist.")
         prob = Problem()
         prob.root = Group()
         prob.root.add('A', A())
@@ -259,10 +257,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = ("Source 'A.x' cannot be connected to target 'B.y': "
+                    "'B.y' does not exist.")
+        self.assertEqual(str(cm.exception), expected)
 
-        expected_error_message = ("Source 'A.x' cannot be connected to target 'A.x': "
-                                  "Target must be a parameter but 'A.x' is an unknown.")
         prob = Problem()
         prob.root = Group()
         prob.root.add('A', A())
@@ -272,7 +270,9 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = ("Source 'A.x' cannot be connected to target 'A.x': "
+                    "Target must be a parameter but 'A.x' is an unknown.")
+        self.assertEqual(str(cm.exception), expected)
 
     def test_check_connections(self):
         class A(Component):
@@ -300,11 +300,12 @@ class TestProblem(unittest.TestCase):
                 super(E, self).__init__()
                 self.add_param('y', 1.0)
 
-        #Explicit
-        expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
-                                  "'A.y' must be the same as type "
-                                  "'<type 'float'>' of target "
-                                  "'E.y'")
+        # Type mismatch error message
+        type_err = "Type '<type '%s'>' of source '%s'" \
+                   " must be the same as "             \
+                   "type '<type '%s'>' of target '%s'"
+        
+        # Type mismatch in explicit connection
         prob = Problem()
         prob.root = Group()
         prob.root.add('A', A())
@@ -315,14 +316,10 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = py3fix(type_err % ('numpy.ndarray', 'A.y', 'float', 'E.y'))
+        self.assertEqual(str(cm.exception), expected)
 
-        #Implicit
-        expected_error_message = py3fix("Type '<type 'numpy.ndarray'>' of source "
-                                  "'y' must be the same as type "
-                                  "'<type 'float'>' of target "
-                                  "'y'")
-
+        # Type mismatch in implicit connection
         prob = Problem()
         prob.root = Group()
         prob.root.add('A', A(), promotes=['y'])
@@ -331,13 +328,15 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = py3fix(type_err % ('numpy.ndarray', 'y', 'float', 'y'))
+        self.assertEqual(str(cm.exception), expected)
 
+        # Shape mismatch error message
+        shape_err = "Shape '%s' of source '%s'" \
+                    " must be the same as "     \
+                    "shape '%s' of target '%s'"
 
-        # Explicit
-        expected_error_message = ("Shape '(2,)' of the source 'A.y' "
-                                  "must match the shape '(3,)' "
-                                  "of the target 'B.y'")
+        # Shape mismatch in explicit connection
         prob = Problem()
         prob.root = Group()
 
@@ -351,13 +350,11 @@ class TestProblem(unittest.TestCase):
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
-        self.assertEqual(raised_error, expected_error_message)
 
-        # Implicit
-        expected_error_message = ("Shape '(2,)' of the source 'y' "
-                                  "must match the shape '(3,)' "
-                                  "of the target 'y'")
+        expected = shape_err % ('(2,)', 'A.y', '(3,)', 'B.y')
+        self.assertEqual(raised_error, expected)
 
+        # Shape mismatch in implicit connection
         prob = Problem()
         prob.root = Group()
 
@@ -370,12 +367,11 @@ class TestProblem(unittest.TestCase):
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
-        self.assertEqual(raised_error, expected_error_message)
 
-        # Explicit
-        expected_error_message = ("Shape '(2,)' of the source 'C.y' must match the shape '(3,)' "
-                                  "of the target 'B.y'")
+        expected = shape_err % ('(2,)', 'A.y', '(3,)', 'B.y')
+        self.assertEqual(raised_error, expected)
 
+        # Shape mismatch in explicit connection
         prob = Problem()
         prob.root = Group()
         prob.root.add('B', B())
@@ -388,12 +384,11 @@ class TestProblem(unittest.TestCase):
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
-        self.assertEqual(raised_error, expected_error_message)
 
-        # Implicit
-        expected_error_message = ("Shape '(2,)' of the source 'y' must match the shape"
-                                  " '(3,)' of the target 'y'")
+        expected = shape_err % ('(2,)', 'C.y', '(3,)', 'B.y')
+        self.assertEqual(raised_error, expected)
 
+        # Shape mismatch in implicit connection
         prob = Problem()
         prob.root = Group()
         prob.root.add('B', B(), promotes=['y'])
@@ -405,7 +400,9 @@ class TestProblem(unittest.TestCase):
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
-        self.assertEqual(raised_error, expected_error_message)
+
+        expected = shape_err % ('(2,)', 'C.y', '(3,)', 'B.y')
+        self.assertEqual(raised_error, expected)
 
         # Explicit
         prob = Problem()
@@ -413,8 +410,10 @@ class TestProblem(unittest.TestCase):
         prob.root.add('A', A())
         prob.root.add('D', D())
         prob.root.connect('A.y', 'D.y')
+        
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -426,8 +425,10 @@ class TestProblem(unittest.TestCase):
         prob.root = Group()
         prob.root.add('A', A(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
+        
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -440,8 +441,10 @@ class TestProblem(unittest.TestCase):
         prob.root.add('C', C())
         prob.root.add('D', D())
         prob.root.connect('C.y', 'D.y')
+        
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -453,8 +456,10 @@ class TestProblem(unittest.TestCase):
         prob.root = Group()
         prob.root.add('C', C(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
+        
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
+        
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -598,10 +603,9 @@ class TestProblem(unittest.TestCase):
         root.connect('B1.y', 'C1.x')
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
-        expected_error_message = "Shape '(2,)' of the source "\
-                                  "'B1.y' must match the shape '(3,)' "\
-                                  "of the target 'C1.x'"
-        self.assertEqual(expected_error_message, str(cm.exception))
+        expected = "Shape '(2,)' of source 'B1.y' must be the same as " \
+                   "shape '(3,)' of target 'C1.x'"
+        self.assertEqual(expected, str(cm.exception))
 
         # Mismatched Scalar to Array Value
         prob = Problem()
@@ -611,11 +615,9 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        expected_error_message = py3fix("Type '<type 'float'>' of source "
-                                  "'x' must be the same as type "
-                                  "'<type 'numpy.ndarray'>' of target "
-                                  "'x'")
-        self.assertEqual(expected_error_message, str(cm.exception))
+        expected = py3fix("Type '<type 'float'>' of source 'x' must be the same as "
+                          "type '<type 'numpy.ndarray'>' of target 'x'")
+        self.assertEqual(expected, str(cm.exception))
 
     def test_mode_auto(self):
         # Make sure mode=auto chooses correctly for all prob sizes as well
