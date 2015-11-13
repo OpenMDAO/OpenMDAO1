@@ -122,14 +122,13 @@ class TestSrcIndices(unittest.TestCase):
         root.connect('P.x', 'G.A.x', src_indices=[0])
         root.connect('P.x', 'C.x', src_indices=[2,])
 
-        expected_error_message = py3fix("Size 1 of the indexed sub-part of "
-                                        "source 'P.x' must match the size "
-                                        "'2' of the target 'G.A.x'")
         prob = Problem(root)
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = py3fix("Size 1 of the indexed sub-part of source 'P.x' "
+                          "must be the same as size 2 of target 'G.A.x'")
+        self.assertEqual(str(cm.exception), expected)
 
         # now try the same thing with promoted var
         root = Group()
@@ -143,14 +142,13 @@ class TestSrcIndices(unittest.TestCase):
         root.connect('P.x', 'G.x', src_indices=[0,1,2])
         root.connect('P.x', 'C.x', src_indices=[2,])
 
-        expected_error_message = py3fix("Size 3 of the indexed sub-part of "
-                                        "source 'P.x' must match the size "
-                                        "'2' of the target 'G.x'")
         prob = Problem(root)
         with self.assertRaises(ConnectError) as cm:
             prob.setup(check=False)
 
-        self.assertEqual(str(cm.exception), expected_error_message)
+        expected = py3fix("Size 3 of the indexed sub-part of source 'P.x' "
+                          "must be the same as size 2 of target 'G.x'")
+        self.assertEqual(str(cm.exception), expected)
 
     def test_inner_connection(self):
         class Squarer(Component):
