@@ -714,10 +714,9 @@ class TestProblem(unittest.TestCase):
         top.setup(check=False)
 
         base_stdout = sys.stdout
-        from cStringIO import StringIO
 
         try:
-            ostream = StringIO()
+            ostream = cStringIO()
             sys.stdout = ostream
             top.run()
         finally:
@@ -730,7 +729,7 @@ class TestProblem(unittest.TestCase):
         top.print_all_convergence()
 
         try:
-            ostream = StringIO()
+            ostream = cStringIO()
             sys.stdout = ostream
             top.run()
         finally:
