@@ -238,7 +238,9 @@ class Driver(object):
         """
         self.recorders.append(recorder)
 
-    def add_desvar(self, name, lower=None, higher=None, indices=None, adder=0.0, scaler=1.0):
+    def add_desvar(self, name, lower=None, higher=None,
+                   low=None, high=None,
+                   indices=None, adder=0.0, scaler=1.0):
         """
         Adds a parameter to this driver.
 
@@ -251,7 +253,7 @@ class Driver(object):
             Lower boundary for the param
 
         higher : upper or ndarray, optional
-            Lower boundary for the param
+            Upper boundary for the param
 
         indices : iter of int, optional
             If a param is an array, these indicate which entries are of
@@ -265,6 +267,16 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+        if low is not None or high is not None:
+            warnings.simplefilter('always', DeprecationWarning)
+            warnings.warn("'low' and 'high' are deprecated. "
+                          "Use 'lower' and 'higher' instead.",
+                          DeprecationWarning,stacklevel=2)
+            warnings.simplefilter('ignore', DeprecationWarning)
+            if low is not None and lower is None:
+                lower = low
+            if high is not None and higher is None:
+                higher = high
 
         if lower is None:
             lower = -1e99
@@ -511,7 +523,6 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
-
         if equals is not None and (lower is not None or upper is not None):
             msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))
