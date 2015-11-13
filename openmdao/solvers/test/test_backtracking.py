@@ -34,7 +34,7 @@ class FakeSolver(NonLinearSolver):
         arg.vec[:] = resids.vec*100
         system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
-        unknowns.vec[:] += result.vec
+        unknowns.vec += result.vec
 
         self.sub.solve(params, unknowns, resids, system, self, 1.0, 1.0, 1.0)
 
