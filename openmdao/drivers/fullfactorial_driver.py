@@ -19,8 +19,8 @@ class FullFactorialDriver(PredeterminedRunsDriver):
     def _build_runlist(self):
         value_arrays = dict()
         for name, value in iteritems(self.get_desvar_metadata()):
-            low = value["low"]
-            high = value["high"]
+            low = value['lower']
+            high = value['higher']
             value_arrays[name] = np.linspace(low, high, num=self.num_levels).tolist()
 
         keys = list(value_arrays.keys())

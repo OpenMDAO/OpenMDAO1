@@ -19,7 +19,7 @@ class OptionsDictionary(object):
         self._options = {}
         self.read_only = read_only
 
-    def add_option(self, name, value, low=None, high=None, values=None,
+    def add_option(self, name, value, lower=None, higher=None, values=None,
                    desc=''):
         """ Adds an option to this options dictionary.
 
@@ -31,10 +31,10 @@ class OptionsDictionary(object):
         value : object
             Default value for this option. The type of this value will be enforced.
 
-        low : float, optional
+        lower : float, optional
             Lower bounds for a float value.
 
-        high : float, optional
+        higher : float, optional
             Upper bounds for a float value.
 
         values : list, optional
@@ -49,8 +49,8 @@ class OptionsDictionary(object):
 
         self._options[name] = {
             'val':    value,
-            'low':    low,
-            'high':   high,
+            'lower':    lower,
+            'higher':   higher,
             'values': values,
             'desc' : desc,
         }
@@ -106,18 +106,18 @@ class OptionsDictionary(object):
 
     def _check(self, name, value):
         """ Type checking happens here. """
-        low = self._options[name]['low']
-        high = self._options[name]['high']
+        lower = self._options[name]['lower']
+        higher = self._options[name]['higher']
         values = self._options[name]['values']
         _type = type(self._options[name]['val'])
 
         self._check_type(name, value, _type)
 
-        if low is not None:
-            self._check_low(name, value, low)
+        if lower is not None:
+            self._check_low(name, value, lower)
 
-        if high is not None:
-            self._check_high(name, value, high)
+        if higher is not None:
+            self._check_high(name, value, higher)
 
         if values is not None:
             self._check_values(name, value, values)
@@ -128,17 +128,17 @@ class OptionsDictionary(object):
             msg = "'{}' should be a '{}'"
             raise ValueError(msg.format(name, _type))
 
-    def _check_low(self, name, value, low):
-        """ Check for violation of lowe bounds. """
-        if value < low:
+    def _check_low(self, name, value, lower):
+        """ Check for violation of lower bounds. """
+        if value < lower:
             msg = "minimum allowed value for '{}' is '{}'"
-            raise ValueError(msg.format(name, low))
+            raise ValueError(msg.format(name, lower))
 
-    def _check_high(self, name, value, high):
+    def _check_high(self, name, value, higher):
         """ Check for violation of upper bounds. """
-        if value > high:
+        if value > higher:
             msg = "maximum allowed value for '{}' is '{}'"
-            raise ValueError(msg.format(name, high))
+            raise ValueError(msg.format(name, higher))
 
     def _check_values(self, name, value, values):
         """ Check for value not in enumeration. """

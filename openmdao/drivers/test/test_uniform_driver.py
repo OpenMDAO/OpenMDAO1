@@ -23,8 +23,8 @@ class TestUniformDriver(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
 
         prob.driver = UniformDriver(5)
-        prob.driver.add_desvar('x', low=-10, high=10)
-        prob.driver.add_desvar('y', low=-10, high=10)
+        prob.driver.add_desvar('x', lower=-10, higher=10)
+        prob.driver.add_desvar('y', lower=-10, higher=10)
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)

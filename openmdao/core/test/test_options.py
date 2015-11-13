@@ -56,7 +56,7 @@ class TestOptions(unittest.TestCase):
 
         # Test Max and Min
 
-        self.options.add_option('maxiter', 10, low=0, high=10)
+        self.options.add_option('maxiter', 10, lower=0, higher=10)
         for value in range(0, 11):
             self.options['maxiter'] = value
 

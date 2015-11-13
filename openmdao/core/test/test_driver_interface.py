@@ -102,7 +102,7 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
-        prob.driver.add_desvar('z', low=-100.0, high=100.0)
+        prob.driver.add_desvar('z', lower=-100.0, higher=100.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -134,8 +134,8 @@ class TestDriver(unittest.TestCase):
                 self.param = params['x']
                 self.obj_scaled = objective['f_xy']
                 self.con_scaled = constraint['con']
-                self.param_high = param_meta['x']['high']
-                self.param_low = param_meta['x']['low']
+                self.param_high = param_meta['x']['higher']
+                self.param_low = param_meta['x']['lower']
 
         prob = Problem()
         root = prob.root = Group()
@@ -146,7 +146,7 @@ class TestDriver(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
 
-        driver.add_desvar('x', low=59000.0, high=61000.0, adder=-60000.0, scaler=1/1000.0)
+        driver.add_desvar('x', lower=59000.0, higher=61000.0, adder=-60000.0, scaler=1/1000.0)
         driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
         driver.add_constraint('con', upper=0.0, adder=-10890487502.0, scaler=1.0/20)
 
@@ -181,7 +181,7 @@ class TestDriver(unittest.TestCase):
                 self.param = params['x']
                 self.obj_scaled = objective['y']
                 self.con_scaled = constraint['con']
-                self.param_low = param_meta['x']['low']
+                self.param_low = param_meta['x']['lower']
 
         prob = Problem()
         root = prob.root = Group()
@@ -196,7 +196,7 @@ class TestDriver(unittest.TestCase):
                                         con=np.array([[1.0, 1.0], [1.0, 1.0]])),
                  promotes=['*'])
 
-        driver.add_desvar('x', low=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
+        driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
                          adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
         driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),

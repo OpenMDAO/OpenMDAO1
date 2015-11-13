@@ -57,8 +57,8 @@ class TestExamples(unittest.TestCase):
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
 
-        top.driver.add_desvar('p1.x', low=-50, high=50)
-        top.driver.add_desvar('p2.y', low=-50, high=50)
+        top.driver.add_desvar('p1.x', lower=-50, higher=50)
+        top.driver.add_desvar('p2.y', lower=-50, higher=50)
         top.driver.add_objective('p.f_xy')
         top.driver.add_constraint('con.c', lower=15.0)
 
@@ -84,8 +84,8 @@ class TestExamples(unittest.TestCase):
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
 
-        top.driver.add_desvar('p1.x', low=-50, high=50)
-        top.driver.add_desvar('p2.y', low=-50, high=50)
+        top.driver.add_desvar('p1.x', lower=-50, higher=50)
+        top.driver.add_desvar('p2.y', lower=-50, higher=50)
         top.driver.add_objective('p.f_xy')
 
         top.setup(check=False)
@@ -105,8 +105,8 @@ class TestExamples(unittest.TestCase):
         top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
 
         #room length and width bounds
-        top.driver.add_desvar('ivc_rlength.room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
-        top.driver.add_desvar('ivc_rwidth.room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
+        top.driver.add_desvar('ivc_rlength.room_length', lower=5.0*12.0, higher=50.0*12.0) #domain: 1in <= length <= 50ft
+        top.driver.add_desvar('ivc_rwidth.room_width', lower=5.0*12.0, higher=30.0*12.0) #domain: 1in <= width <= 30ft
 
         top.driver.add_objective('d_neg_area.neg_room_area') #minimize negative area (or maximize area)
 
