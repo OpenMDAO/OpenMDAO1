@@ -77,7 +77,7 @@ class TestCalcGradient(unittest.TestCase):
         root.connect('parm.x', 'comp.x')
 
         prob = Problem(root)
-        prob.driver.add_desvar('parm.x', low=-10, high=99)
+        prob.driver.add_desvar('parm.x', lower=-10, higher=99)
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0.)
         prob.setup(check=False)
@@ -123,7 +123,7 @@ class TestCalcGradient(unittest.TestCase):
         root.connect('parm.x', 'comp.x', src_indices=p_idxs)
 
         prob = Problem(root)
-        prob.driver.add_desvar('parm.x', indices=p_idxs, low=-10, high=99)
+        prob.driver.add_desvar('parm.x', indices=p_idxs, lower=-10, higher=99)
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0.)
         prob.setup(check=False)
@@ -169,7 +169,7 @@ class TestCalcGradient(unittest.TestCase):
         root.connect('parm.x', 'comp.x')
 
         prob = Problem(root)
-        prob.driver.add_desvar('parm.x', low=-10, high=99)
+        prob.driver.add_desvar('parm.x', lower=-10, higher=99)
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0., indices=q_idxs)
         prob.setup(check=False)

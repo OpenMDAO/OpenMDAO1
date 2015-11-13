@@ -135,7 +135,7 @@ class pyOptSparseDriver(Driver):
         for name, meta in iteritems(param_meta):
             opt_prob.addVarGroup(name, meta['size'], type='c',
                                  value=param_vals[name],
-                                 lower=meta['low'], upper=meta['high'])
+                                 lower=meta['lower'], upper=meta['higher'])
 
         opt_prob.finalizeDesignVariables()
 

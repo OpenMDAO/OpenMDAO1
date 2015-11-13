@@ -238,7 +238,7 @@ class Driver(object):
         """
         self.recorders.append(recorder)
 
-    def add_desvar(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
+    def add_desvar(self, name, lower=None, higher=None, indices=None, adder=0.0, scaler=1.0):
         """
         Adds a parameter to this driver.
 
@@ -247,10 +247,10 @@ class Driver(object):
         name : string
            Name of the IndepVarComp in the root system.
 
-        low : float or ndarray, optional
+        lower : float or ndarray, optional
             Lower boundary for the param
 
-        high : upper or ndarray, optional
+        higher : upper or ndarray, optional
             Lower boundary for the param
 
         indices : iter of int, optional
@@ -266,28 +266,28 @@ class Driver(object):
             is second in precedence.
         """
 
-        if low is None:
-            low = -1e99
-        elif isinstance(low, np.ndarray):
-            low = low.flatten()
+        if lower is None:
+            lower = -1e99
+        elif isinstance(lower, np.ndarray):
+            lower = lower.flatten()
 
-        if high is None:
-            high = 1e99
-        elif isinstance(high, np.ndarray):
-            high = high.flatten()
+        if higher is None:
+            higher = 1e99
+        elif isinstance(higher, np.ndarray):
+            higher = higher.flatten()
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        # Scale the low and high values
-        low = (low + adder)*scaler
-        high = (high + adder)*scaler
+        # Scale the lower and higher values
+        lower = (lower + adder)*scaler
+        higher = (higher + adder)*scaler
 
         param = {}
-        param['low'] = low
-        param['high'] = high
+        param['lower'] = lower
+        param['higher'] = higher
         param['adder'] = adder
         param['scaler'] = scaler
         if indices:
@@ -295,7 +295,7 @@ class Driver(object):
 
         self._desvars[name] = param
 
-    def add_param(self, name, low=None, high=None, indices=None, adder=0.0,
+    def add_param(self, name, lower=None, higher=None, indices=None, adder=0.0,
                   scaler=1.0):
         """
         Deprecated.  Use ``add_desvar`` instead.
@@ -305,7 +305,7 @@ class Driver(object):
                       DeprecationWarning,stacklevel=2)
         warnings.simplefilter('ignore', DeprecationWarning)
 
-        self.add_desvar(name, low=low, high=high, indices=indices, adder=adder,
+        self.add_desvar(name, lower=lower, higher=higher, indices=indices, adder=adder,
                         scaler=scaler)
 
     def get_desvars(self):
@@ -539,7 +539,7 @@ class Driver(object):
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
 
-        # Scale the low and high values
+        # Scale the lower and higher values
         if lower is not None:
             lower = (lower + adder)*scaler
         if upper is not None:

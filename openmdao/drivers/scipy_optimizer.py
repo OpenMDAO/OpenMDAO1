@@ -134,8 +134,8 @@ class ScipyOptimizer(Driver):
 
             # Bounds if our optimizer supports them
             if use_bounds:
-                meta_low = pmeta[name]['low']
-                meta_high = pmeta[name]['high']
+                meta_low = pmeta[name]['lower']
+                meta_high = pmeta[name]['higher']
                 for j in range(0, size):
 
                     if isinstance(meta_low, np.ndarray):

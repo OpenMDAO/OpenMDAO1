@@ -230,7 +230,7 @@ class SimpleImplicitComp(Component):
         super(SimpleImplicitComp, self).__init__()
 
         # Params
-        self.add_param('x', 0.5, low=0.01, high=1.0)
+        self.add_param('x', 0.5)
 
         # Unknowns
         self.add_output('y', 0.0)
@@ -468,7 +468,7 @@ class RosenSuzuki(Component):
         super(RosenSuzuki, self).__init__()
 
         # parameters
-        self.add_param('x', np.array([1., 1., 1., 1.])) # low=-10, high=99
+        self.add_param('x', np.array([1., 1., 1., 1.]))
 
         # unknowns
         self.add_output('g', np.array([1., 1., 1.]))    # constraints

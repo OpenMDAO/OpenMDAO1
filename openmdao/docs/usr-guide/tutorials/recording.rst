@@ -58,8 +58,8 @@ by demonstrating how to save the data generated for future use. Consider the cod
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
 
-    top.driver.add_desvar('p1.x', low=-50, high=50)
-    top.driver.add_desvar('p2.y', low=-50, high=50)
+    top.driver.add_desvar('p1.x', lower=-50, higher=50)
+    top.driver.add_desvar('p2.y', lower=-50, higher=50)
     top.driver.add_objective('p.f_xy')
 
     recorder = SqliteRecorder('paraboloid')
@@ -273,8 +273,8 @@ etc. To access the data from our run, we can use the following code:
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
 
-    top.driver.add_desvar('p1.x', low=-50, high=50)
-    top.driver.add_desvar('p2.y', low=-50, high=50)
+    top.driver.add_desvar('p1.x', lower=-50, higher=50)
+    top.driver.add_desvar('p2.y', lower=-50, higher=50)
     top.driver.add_objective('p.f_xy')
 
     recorder = SqliteRecorder('paraboloid')

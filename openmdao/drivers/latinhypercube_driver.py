@@ -33,7 +33,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         buckets = dict()
         for j in range(self.num_design_vars):
             bounds = design_vars[design_vars_names[j]]
-            design_var_buckets = self._get_buckets(bounds['low'], bounds['high'])
+            design_var_buckets = self._get_buckets(bounds['lower'], bounds['higher'])
             buckets[design_vars_names[j]] = list()
             for i in range(self.num_samples):
                 buckets[design_vars_names[j]].append(design_var_buckets[rand_lhc[i, j]])
