@@ -10,7 +10,7 @@ from openmdao.util.record_util import update_local_meta, create_local_meta
 class Newton(NonLinearSolver):
     """A python Newton solver that solves a linear system to determine the
     next direction to step. Also uses `Backtracking` as the default line
-    search algorithm, but you can choose a different on by specifying
+    search algorithm, but you can choose a different one by specifying
     `self.line_search`.
 
     Options
@@ -103,7 +103,7 @@ class Newton(NonLinearSolver):
             arg.vec[:] = resids.vec
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
-            unknowns.vec[:] += alpha*result.vec
+            unknowns.vec += alpha*result.vec
 
             # Metadata update
             self.iter_count += 1
