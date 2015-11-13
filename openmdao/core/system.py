@@ -994,7 +994,7 @@ class System(object):
         for pathname, meta in iteritems(self._params_dict):
             prom = to_prom[pathname]
 
-    def list_connections(self, stream=sys.stdout):
+    def list_connections(self, group_by_comp=False, stream=sys.stdout):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
@@ -1012,32 +1012,47 @@ class System(object):
 
         Args
         ----
+        group_by_comp : bool, optional
+            If True, show all sources and targets grouped by component. Note
+            that this will cause repeated lines in the output since a given
+            connection will always be from one component's source to a different
+            component's target.  Default is False.
+
         stream : output stream, optional
             Stream to write the connection info to. Defaults to sys.stdout.
         """
-        template = "{0:<{swid}} -> {1}\n"
 
-        to_prom = self._probdata.to_prom
-        scope = self.pathname + '.' if self.pathname else ''
+        def _list_conns(self):
+            template = "{0:<{swid}} -> {1}\n"
 
-        # create a dict with srcs as keys so we can more easily subsort
-        # targets after sorting srcs.
-        by_src = {}
-        for tgt, (src, idx) in iteritems(self.connections):
-            if src.startswith(scope) or tgt.startswith(scope):
-                if to_prom[tgt] != tgt:
-                    tgt += ' *'
-                if to_prom[src] != src:
-                    src += " (%s)" % to_prom[src]
-                by_src.setdefault(src, []).append(tgt)
+            to_prom = self._probdata.to_prom
+            scope = self.pathname + '.' if self.pathname else ''
 
-        src_max_wid = max(len(n) for n in by_src)
+            # create a dict with srcs as keys so we can more easily subsort
+            # targets after sorting srcs.
+            by_src = {}
+            for tgt, (src, idx) in iteritems(self.connections):
+                if src.startswith(scope) or tgt.startswith(scope):
+                    if to_prom[tgt] != tgt:
+                        tgt += ' *'
+                    if to_prom[src] != src:
+                        src += " (%s)" % to_prom[src]
+                    by_src.setdefault(src, []).append(tgt)
 
-        for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
-            for i, tgt in enumerate(sorted(tgts)):
-                if i: src = ''
-                stream.write(template.format(src, tgt, swid=src_max_wid))
+            src_max_wid = max(len(n) for n in by_src)
 
+            for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
+                for i, tgt in enumerate(sorted(tgts)):
+                    if i: src = ''
+                    stream.write(template.format(src, tgt, swid=src_max_wid))
+
+        if group_by_comp:
+            for c in self.components(recurse=True, include_self=True):
+                line = "Connections for %s:" % c.pathname
+                stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
+                c.list_connections(stream=stream)
+        else:
+            _list_conns(self)
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):
