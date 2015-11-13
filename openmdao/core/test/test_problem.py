@@ -1,6 +1,8 @@
 """ Unit test for the Problem class. """
 
 import unittest
+import sys
+
 import numpy as np
 from six import text_type, PY3
 from six.moves import cStringIO
@@ -9,6 +11,7 @@ import warnings
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel
 from openmdao.core.checks import ConnectError
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
+from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
 
 if PY3:
@@ -703,6 +706,41 @@ class TestProblem(unittest.TestCase):
 
         sub1.ln_solver.options['mode'] = 'rev'
         mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
+
+    def test_iprint(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+        from cStringIO import StringIO
+
+        try:
+            ostream = StringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed, '')
+
+        # Turn on all iprints
+        top.print_all_convergence()
+
+        try:
+            ostream = StringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed.count('NEWTON'), 3)
+        self.assertEqual(printed.count('GMRES'), 5)
+        self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
+        self.assertTrue('   [root] LN: GMRES   0 | ' in printed)
 
 class TestCheckSetup(unittest.TestCase):
 

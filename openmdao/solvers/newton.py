@@ -2,14 +2,17 @@
 
 from math import isnan
 
+from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
 class Newton(NonLinearSolver):
-    """A python Newton solver with line-search adapation of the relaxation
-    parameter.
-    
+    """A python Newton solver that solves a linear system to determine the
+    next direction to step. Also uses `Backtracking` as the default line
+    search algorithm, but you can choose a different on by specifying
+    `self.line_search`.
+
     Options
     -------
     options['alpha'] :  float(1.0)
@@ -17,20 +20,14 @@ class Newton(NonLinearSolver):
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-    options['ls_atol'] :  float(1e-10)
-        Absolute convergence tolerancee for line search.
-    options['ls_maxiter'] :  int(10)
-        Maximum number of line searches.
-    options['ls_rtol'] :  float(0.9)
-        Relative convergence tolerancee for line search.
+        Set to 0 to disable printing, set to 1 to print the residual to stdout
+        each iteration, set to 2 to print subiteration residuals as well.
     options['maxiter'] :  int(20)
         Maximum number of iterations.
     options['rtol'] :  float(1e-10)
         Relative convergence tolerance.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
-
     """
 
     def __init__(self):
@@ -43,16 +40,13 @@ class Newton(NonLinearSolver):
                        desc='Relative convergence tolerance.')
         opt.add_option('maxiter', 20,
                        desc='Maximum number of iterations.')
-        opt.add_option('ls_atol', 1e-10,
-                       desc='Absolute convergence tolerancee for line search.')
-        opt.add_option('ls_rtol', 0.9,
-                       desc='Relative convergence tolerancee for line search.')
-        opt.add_option('ls_maxiter', 10,
-                       desc='Maximum number of line searches.')
         opt.add_option('alpha', 1.0,
                        desc='Initial over-relaxation factor.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
+
+        # Only one choice, but you can set this to None if you want.
+        self.line_search = BackTracking()
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
@@ -78,17 +72,13 @@ class Newton(NonLinearSolver):
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
-        ls_atol = self.options['ls_atol']
-        ls_rtol = self.options['ls_rtol']
-        ls_maxiter = self.options['ls_maxiter']
         alpha = self.options['alpha']
 
         # Metadata setup
         self.iter_count = 0
-        ls_itercount = 0
         local_meta = create_local_meta(metadata, system.pathname)
         system.ln_solver.local_meta = local_meta
-        update_local_meta(local_meta, (self.iter_count, ls_itercount))
+        update_local_meta(local_meta, (self.iter_count, 0))
 
         # Perform an initial run to propagate srcs to targets.
         system.children_solve_nonlinear(local_meta)
@@ -103,7 +93,6 @@ class Newton(NonLinearSolver):
         arg = system.drmat[None]
         result = system.dumat[None]
 
-        alpha_base = alpha
         while self.iter_count < maxiter and f_norm > atol and \
                 f_norm/f_norm0 > rtol:
 
@@ -118,8 +107,7 @@ class Newton(NonLinearSolver):
 
             # Metadata update
             self.iter_count += 1
-            ls_itercount = 0
-            update_local_meta(local_meta, (self.iter_count, ls_itercount))
+            update_local_meta(local_meta, (self.iter_count, 0))
 
             # Just evaluate the model with the new points
             if self.options['solve_subsystems'] is True:
@@ -133,31 +121,9 @@ class Newton(NonLinearSolver):
                 self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm, f_norm0)
 
             # Backtracking Line Search
-            while ls_itercount < ls_maxiter and \
-                    f_norm > ls_atol and \
-                    f_norm/f_norm0 > ls_rtol:
-
-                alpha *= 0.5
-                unknowns.vec[:] -= alpha*result.vec
-                ls_itercount += 1
-
-                # Metadata update
-                update_local_meta(local_meta, (self.iter_count, ls_itercount))
-
-                # Just evaluate the model with the new points
-                if self.options['solve_subsystems'] is True:
-                    system.children_solve_nonlinear(local_meta)
-                system.apply_nonlinear(params, unknowns, resids, local_meta)
-
-                self.recorders.record_iteration(system, local_meta)
-
-                f_norm = resids.norm()
-                if self.options['iprint'] > 1:
-                    self.print_norm('BK_TKG', system.pathname, ls_itercount, f_norm,
-                                    f_norm0, indent=1, solver='LS')
-
-            # Reset backtracking
-            alpha = alpha_base
+            if self.line_search is not None:
+                self.line_search.solve(params, unknowns, resids, system, self,
+                                       alpha, f_norm, f_norm0, metadata)
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
@@ -174,3 +140,11 @@ class Newton(NonLinearSolver):
 
             self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm,
                             f_norm0, msg=msg)
+
+    def print_all_convergence(self):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers."""
+        self.options['iprint'] = 1
+        if self.line_search is not None:
+            self.line_search.options['iprint'] = 1
+
