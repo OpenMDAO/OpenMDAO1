@@ -106,13 +106,15 @@ class _LHC_Individual(object):
             distdict = {}
 
             # Calculate the norm between each pair of points in the DOE
-            # TODO: This norm takes up the majority of the computation time. It
-            # should be converted to C or ShedSkin.
             arr = self.doe
-            for i in range(n):
-                for j in range(i + 1, n):
-                    nrm = np.linalg.norm(arr[i] - arr[j], ord=self.p)
-                    distdict[nrm] = distdict.get(nrm, 0) + 1
+            for i in range(1, n):
+                nrm = np.linalg.norm(arr[i] - arr[:i], ord=self.p, axis=1)
+                for j in range(0, i):
+                    nrmj = nrm[j]
+                    if nrmj in distdict:
+                        distdict[nrmj] += 1
+                    else:
+                        distdict[nrmj] = 1
 
             distinct_d = np.array(list(distdict))
 
