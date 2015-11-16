@@ -475,11 +475,6 @@ class TestSqliteRecorder(unittest.TestCase):
 
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
-        # qqq just to get the stdout in the log
-        self.assertMetadataRecorded(None)
-
-
-
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
         prob.root = ConvergeDiverge()
