@@ -1855,6 +1855,16 @@ class Problem(System):
 
         return connections, dangling
 
+    def print_all_convergence(self):
+        """ Sets iprint to True for all solvers and subsolvers in the model."""
+
+        root = self.root
+        root.ln_solver.print_all_convergence()
+        root.nl_solver.print_all_convergence()
+        for grp in root.subgroups(recurse=True):
+            grp.ln_solver.print_all_convergence()
+            grp.nl_solver.print_all_convergence()
+
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the

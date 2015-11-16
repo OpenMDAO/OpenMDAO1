@@ -68,7 +68,7 @@ class SolverBase(object):
         # Find indentation level
         level = pathname.count('.')
         # No indentation for driver; top solver is no indentation.
-        level = level + indent - 2
+        level = level + indent
 
         indent = '   ' * level
         if msg is not None:
@@ -78,6 +78,11 @@ class SolverBase(object):
 
         form = indent + '[%s] %s: %s   %d | %.9g %.9g'
         print(form % (name, solver, solver_string, iteration, res, res/res0))
+
+    def print_all_convergence(self):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers."""
+        self.options['iprint'] = 1
 
     def generate_docstring(self):
         """
@@ -128,9 +133,8 @@ class LinearSolver(SolverBase):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-
-
+        Set to 0 to disable printing, set to 1 to print the residual to stdout
+        each iteration, set to 2 to print subiteration residuals as well.
     """
 
     def add_recorder(self, recorder):
@@ -174,8 +178,8 @@ class NonLinearSolver(SolverBase):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-
+        Set to 0 to disable printing, set to 1 to print the residual to stdout
+        each iteration, set to 2 to print subiteration residuals as well.
     """
 
     def add_recorder(self, recorder):
@@ -209,5 +213,54 @@ class NonLinearSolver(SolverBase):
 
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+        pass
+
+
+class LineSearch(SolverBase):
+    """ Base class for all linesearch subsolvers. Line search is used by
+    other solvers such as the Newton solver. Inherit from this class to
+    create a new custom line search.
+
+    Options
+    -------
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout
+        each iteration, set to 2 to print subiteration residuals as well.
+    """
+
+    def solve(self, params, unknowns, resids, system, solver, alpha, fnorm,
+              fnorm0, metadata=None):
+        """ Take the gradient calculated by the parent solver and figure out
+        how far to go.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        system : `System`
+            Parent `System` object.
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+
+        solver : `Solver`
+            Parent solver instance.
+
+        alpha : float
+            Initial over-relaxation factor as used in parent solver.
+
+        fnorm : float
+            Initial norm of the residual for absolute tolerance check.
+
+        fnorm0 : float
+            Initial norm of the residual for relative tolerance check.
         """
         pass
