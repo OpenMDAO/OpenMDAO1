@@ -92,6 +92,7 @@ class SqliteRecorder(BaseRecorder):
 
         print "QQQ SqliteRecorder.close", self._open_close_sqlitedict, self.out
         if self._open_close_sqlitedict:
-            if self.out is not None:
+            # if self.out is not None:
+            if self.out :
                 self.out.close()
                 self.out = None
