@@ -427,9 +427,8 @@ class VecWrapper(object):
                 meta = self._dat[name].meta
                 pbo = meta.get('pass_by_obj')
                 if pbo or meta.get('remote'):
-                    view._dat[pname] = view._setup_access(None,
-                                                         self._dat[name].val,
-                                                             meta)
+                    view._dat[pname] = Accessor(view, None,
+                                                self._dat[name].val, meta)
                     if pbo:
                         view._has_pbos = True
                 else:
@@ -442,10 +441,9 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
-                    view._dat[pname] = view._setup_access(
-                                    (view_size, view_size + meta['size']),
-                                    self._dat[name].val,
-                                    meta)
+                    view._dat[pname] = Accessor(view,
+                                        (view_size, view_size + meta['size']),
+                                        self._dat[name].val, meta)
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -605,9 +603,6 @@ class VecWrapper(object):
         if return_str:
             return out_stream.getvalue()
 
-    def _setup_access(self, slice, val, meta, owned=True):
-        return Accessor(self, slice, val, meta, owned)
-
 
 class SrcVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
@@ -652,8 +647,8 @@ class SrcVecWrapper(VecWrapper):
                     slc = (vec_size, vec_size + meta['size'])
                     vec_size += meta['size']
 
-                self._dat[promname] = self._setup_access(slc, meta['val'],
-                                                            meta)
+                self._dat[promname] = Accessor(self, slc, meta['val'], meta)
+
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
@@ -764,7 +759,7 @@ class TgtVecWrapper(VecWrapper):
                         vec_size += meta['size']
 
                     my_abs = self._scoped_abs_name(pathname)
-                    self._dat[my_abs] = self._setup_access(slc, val, meta)
+                    self._dat[my_abs] = Accessor(self, slc, val, meta)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -797,8 +792,8 @@ class TgtVecWrapper(VecWrapper):
             if newmeta['pathname'] == pathname:
                 my_abs = self._scoped_abs_name(pathname)
                 # mark this param as not 'owned' by this VW
-                self._dat[my_abs] = self._setup_access(None, parent_acc.val,
-                                                          newmeta, owned=False)
+                self._dat[my_abs] = Accessor(self, None, parent_acc.val,
+                                             newmeta, owned=False)
                 if self._dat[my_abs].meta.get('pass_by_obj'):
                     self._has_pbos = True
 
@@ -874,7 +869,7 @@ class TgtVecWrapper(VecWrapper):
 
         meta['pass_by_obj'] = True
         self._has_pbos = True
-        self._dat[sname] = self._setup_access(None, val, meta)
+        self._dat[sname] = Accessor(self, None, val, meta)
 
     def _get_flattened_sizes(self):
         """
