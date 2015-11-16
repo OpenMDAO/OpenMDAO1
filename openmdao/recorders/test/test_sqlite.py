@@ -130,6 +130,8 @@ class TestSqliteRecorder(unittest.TestCase):
     def tearDown(self):
         print "QQQ TestSqliteRecorder.tearDown: rmtree"
         try:
+            import os # qqq
+            os.remove( self.filename )
             rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
