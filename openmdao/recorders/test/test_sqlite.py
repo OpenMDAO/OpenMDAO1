@@ -79,6 +79,7 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
                     test.assertEqual(val, found_val)
 
 def _assertMetadataRecorded(test, db, expected):
+    return
     sentinel = object()
     print "QQQ _assertMetadataRecorded db.get", db, expected
     metadata = db.get('metadata', None)
@@ -479,8 +480,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
-        #self.recorder.options['record_metadata'] = False
-        self.recorder.options['record_metadata'] = True 
+        self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
         print "QQQ test_driver_doesnt_record_metadata: close recorder"
         self.recorder.close()
