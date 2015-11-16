@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import re
+import warnings
 
 from collections import OrderedDict
 from itertools import chain
@@ -118,6 +119,13 @@ class Component(System):
                 meta['size'] = 1
                 meta['shape'] = 1
         else:
+            if not meta.get('pass_by_obj'):
+                warnings.warn("Variable '%s' in component '%s' is not "
+                              "differentiable (type is %s) but 'pass_by_obj' "
+                              "was not found in its metadata. Set 'pass_by_obj'"
+                              " in the metadata to avoid this warning." %
+                              (name, self.name, type(val)))
+
             meta['size'] = 0
             meta['pass_by_obj'] = True
 
