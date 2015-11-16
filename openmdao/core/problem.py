@@ -741,9 +741,25 @@ class Problem(System):
                   "uninitialized unknown values: %s" % ubcs, file=out_stream)
         return ubcs
 
+    def _check_unmarked_pbos(self, out_stream=sys.stdout):
+        pbos = []
+        for comp in self.root.components(recurse=True, include_self=True):
+            if comp._pbo_warns:
+                pbos.append((comp.pathname, comp._pbo_warns))
+
+        if pbos:
+            print("\nThe following variables are not differentiable but were "
+                  "not labeled by the user as pass_by_obj:", file=out_stream)
+            for cname, pbo_warns in sorted(pbos, key=lambda x: x[0]):
+                for vname, val in pbo_warns:
+                    print("%s: %s" % ('.'.join((cname, vname)), type(val)),
+                          file=out_stream)
+
+        return pbos
+
     def check_setup(self, out_stream=sys.stdout):
-        """Write a report to the given stream indicating any potential problems found
-        with the current configuration of this ``Problem``.
+        """Write a report to the given stream indicating any potential problems
+        found with the current configuration of this ``Problem``.
 
         Args
         ----
@@ -754,9 +770,9 @@ class Problem(System):
         print("Setup: Checking for potential issues...", file=out_stream)
 
         results = {}  # dict of results for easier testing
+        results['unit_diffs'] = self._list_unit_conversions(out_stream)
         results['dangling_params'] = self._check_dangling_params(out_stream)
         results['mode'] = self._check_mode(out_stream)
-        results['unit_diffs'] = self._list_unit_conversions(out_stream)
         results['no_unknown_comps'] = self._check_no_unknown_comps(out_stream)
         results['no_connect_comps'] = self._check_no_connect_comps(out_stream)
         results['recorders'] = self._check_no_recorders(out_stream)
@@ -764,6 +780,7 @@ class Problem(System):
         results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
+        results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models

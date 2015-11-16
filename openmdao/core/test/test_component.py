@@ -2,6 +2,8 @@
 
 import unittest
 from six import text_type, PY3
+from six.moves import cStringIO
+import warnings
 
 if PY3:
     def py3fix(s):
@@ -12,7 +14,19 @@ else:
 
 import numpy as np
 
-from openmdao.api import Component, Problem
+from openmdao.api import Component, Problem, Group
+
+class MyComp(Component):
+    def __init__(self):
+        super(MyComp, self).__init__()
+        self.add_param('x_int_pbo', 2, pass_by_obj=True)
+        self.add_output('x_int', 3)
+
+class MyComp2(Component):
+    def __init__(self):
+        super(MyComp2, self).__init__()
+        self.add_output('x_list_pbo', [1.0, 2.0], pass_by_obj=True)
+        self.add_param('x_list', [2.0, 3.0])
 
 class TestComponent(unittest.TestCase):
 
@@ -214,6 +228,21 @@ class TestComponent(unittest.TestCase):
         test_string = self.comp.generate_docstring()
         original_string = '    """\n\n    Params\n    ----------\n    x: param ({\'promoted_name\': x, \'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'promoted_name\': y, \'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'promoted_name\': z, \'size\': 0, \'val\': -1})\n    s : unknown ({\'promoted_name\': s, \'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n    Options\n    -------\n    fd_options[\'force_fd\'] :  bool(False)\n        Set to True to finite difference this system.\n    fd_options[\'form\'] :  str(\'forward\')\n        Finite difference mode. (forward, backward, central) You can also set to \'complex_step\' to peform the complex step method if your components support it.\n    fd_options[\'step_size\'] :  float(1e-06)\n        Default finite difference stepsize\n    fd_options[\'step_type\'] :  str(\'absolute\')\n        Set to absolute, relative\n\n    """\n'
         self.assertEqual(original_string, test_string)
+
+    def test_add_var_pbo_check(self):
+        p = Problem(root=Group())
+        root = p.root
+        root.add('C1', MyComp())
+        root.add('C2', MyComp2())
+
+        s = cStringIO()
+        p.setup(out_stream=s)
+
+        content = s.getvalue()
+        self.assertTrue("The following variables are not differentiable but were "
+                        "not labeled by the user as pass_by_obj:\n"
+                        "C1.x_int: <type 'int'>\n"
+                        "C2.x_list: <type 'list'>" in content)
 
 if __name__ == "__main__":
     unittest.main()
