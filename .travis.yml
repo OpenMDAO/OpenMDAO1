@@ -87,7 +87,7 @@ script:
 - if [ "$MPI" ]; then
     testflo . --coverage --coverpkg openmdao -i;
   else
-    testflo . --coverage --coverpkg openmdao;
+    testflo . --coverage --coverpkg openmdao -n 1;
   fi
 
 after_success:
