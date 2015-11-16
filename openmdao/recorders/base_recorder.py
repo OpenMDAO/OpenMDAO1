@@ -14,7 +14,7 @@ class BaseRecorder(object):
 
     def __init__(self):
         self.options = OptionsDictionary()
-        self.options.add_option('record_metadata', False)
+        self.options.add_option('record_metadata', True)
         self.options.add_option('record_unknowns', True)
         self.options.add_option('record_params', False)
         self.options.add_option('record_resids', False)
@@ -56,7 +56,7 @@ class BaseRecorder(object):
 
     def _check_path(self, path):
         """ Return True if `path` should be recorded. """
-        
+
         includes = self.options['includes']
         excludes = self.options['excludes']
 
@@ -85,7 +85,7 @@ class BaseRecorder(object):
         '''
         pathname = self._get_pathname(iteration_coordinate)
         pnames, unames, rnames = self._filtered[pathname]
-    
+
         params = {key: params[key] for key in pnames}
         unknowns = {key: unknowns[key] for key in unames}
         resids = {key: resids[key] for key in rnames}
@@ -118,7 +118,7 @@ class BaseRecorder(object):
         Args
         ----
         group : `System`
-            `System` containing vectors 
+            `System` containing vectors
         """
         raise NotImplementedError()
 

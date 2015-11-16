@@ -28,6 +28,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "dump_test")
         self.recorder = DumpRecorder(self.filename)
+        self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
 
     def tearDown(self):
@@ -59,7 +60,7 @@ class TestDumpRecorder(unittest.TestCase):
                     name = str(name)
                     metadata = str(metadata)
 
-                    self.assertEqual("  {0}: {1}\n".format(name, metadata), line) 
+                    self.assertEqual("  {0}: {1}\n".format(name, metadata), line)
 
     def assertIterationDataRecorded(self, expected, tolerance):
         sout = open(self.filename)
@@ -106,7 +107,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_resids = [
@@ -123,16 +124,16 @@ class TestDumpRecorder(unittest.TestCase):
         ]
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None, expected_resids),), self.eps)
-       
+
     def test_only_unknowns_recorded(self):
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         prob.setup(check=False)
-        
+
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_unknowns = [
@@ -174,7 +175,7 @@ class TestDumpRecorder(unittest.TestCase):
             ("comp7.x1", 36.8),
             ("comp7.x2", -46.5)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, None, None),), self.eps)
 
     def test_basic(self):
@@ -187,7 +188,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1, )]
 
         expected_params = [
@@ -240,7 +241,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1,)]
 
         expected_params = [
@@ -254,7 +255,7 @@ class TestDumpRecorder(unittest.TestCase):
             ("comp1.y1", 0.0),
             ("comp1.y2", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_includes_and_excludes(self):
@@ -292,7 +293,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
         self.recorder.close()
-        
+
         coordinate = ['Driver', (1,), "root", (1,)]
 
         expected_params = [
@@ -355,7 +356,7 @@ class TestDumpRecorder(unittest.TestCase):
         expected_resids = [
             ("C2.y", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_multilevel_record(self):
@@ -370,7 +371,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.close()
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
-        
+
         g1_expected_params = [
             ("C2.x", 5.0)
         ]
@@ -402,7 +403,7 @@ class TestDumpRecorder(unittest.TestCase):
             ("G3.C3.y", 0.0),
             ("G3.C4.y", 0.0),
         ]
-     
+
         expected = []
         expected.append((solver_coordinate, (t0, t1), g1_expected_params, g1_expected_unknowns, g1_expected_resids))
         expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
@@ -424,12 +425,12 @@ class TestDumpRecorder(unittest.TestCase):
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_driver_records_unknown_types_metadata(self):
-        
+
         prob = Problem()
         root = prob.root = Group()
 
-        # Need an optimization problem to test to make sure 
-        #   the is_desvar, is_con, is_obj metadata is being 
+        # Need an optimization problem to test to make sure
+        #   the is_desvar, is_con, is_obj metadata is being
         #   recorded for the Unknowns
         root.add('p1', IndepVarComp('x', 50.0))
         root.add('p2', IndepVarComp('y', 50.0))
@@ -445,7 +446,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.driver.add_objective('comp.f_xy')
         prob.driver.options['disp'] = False
-        
+
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
@@ -479,7 +480,7 @@ class TestDumpRecorder(unittest.TestCase):
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
-        
+
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_root_solver_doesnt_record_metadata(self):
