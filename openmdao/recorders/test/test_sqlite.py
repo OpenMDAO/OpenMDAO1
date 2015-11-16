@@ -135,9 +135,11 @@ class TestSqliteRecorder(unittest.TestCase):
         try:
             import os # qqq
             os.remove( self.filename )
-            print "QQQ os.remove succeeded"
+            print "QQQ os.remove succeeded in", self.id()
+            print "QQQ isfile", os.path.isfile( self.filename )
+            print "QQQ listdir", os.listdir( self.dir )
             os.rmdir( self.dir )
-            print "QQQ os.rmdir succeeded"
+            print "QQQ os.rmdir succeeded in", self.id()
             # rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
