@@ -139,7 +139,7 @@ class TestSqliteRecorder(unittest.TestCase):
 
     def assertMetadataRecorded(self, expected):
         print "QQQ assertMetadataRecorded: SqliteDict"
-        db = SqliteDict( self.filename, self.tablename )
+        db = SqliteDict( self.filename, self.tablename, flag='r' )
         _assertMetadataRecorded( self, db, expected )
         print "QQQ assertMetadataRecorded: close", db
         db.close()
