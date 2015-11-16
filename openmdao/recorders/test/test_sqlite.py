@@ -80,16 +80,10 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 
 def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
-    print "QQQ _assertMetadataRecorded db.get", db, expected
-
-    if expected:
-        metadata = db.get('metadata', None)
+    metadata = db.get('metadata', None)
 
     if expected is None:
-        return
-        print "QQQ _assertMetadataRecorded: expected is None"
         test.assertIsNone(metadata)
-        print "QQQ _assertMetadataRecorded: return"
         return
 
     test.assertEquals(len(metadata), 2)
@@ -125,38 +119,22 @@ class TestSqliteRecorder(unittest.TestCase):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
         self.tablename = 'openmdao'
-        print "QQQ TestSqliteRecorder.setup: open SqliteRecorder"
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
 
     def tearDown(self):
-        print "QQQ TestSqliteRecorder.tearDown: rmtree", self.id()
         try:
-            import os # qqq
-            print "QQQ listdir", os.listdir( self.dir )
-            os.remove( self.filename )
-            print "QQQ os.remove succeeded in", self.id()
-            print "QQQ isfile", os.path.isfile( self.filename )
-            os.rmdir( self.dir )
-            print "QQQ os.rmdir succeeded in", self.id()
-            # rmtree(self.dir)
+            rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
             if e.errno != errno.ENOENT:
                 raise e
 
     def assertMetadataRecorded(self, expected):
-        print "QQQ assertMetadataRecorded: SqliteDict"
-        # db = SqliteDict( self.filename, self.tablename, flag='r' )
-        # _assertMetadataRecorded( self, db, expected )
-        # print "QQQ assertMetadataRecorded: close", db
-        # db.close()
-        # db = None
         with SqliteDict( self.filename, self.tablename, flag='r' ) as db:
             _assertMetadataRecorded( self, db, expected )
-            print "QQQ assertMetadataRecorded: close", db
-        
+
     def assertIterationDataRecorded(self, expected, tolerance):
         db = SqliteDict( self.filename, self.tablename )
         _assertIterationDataRecorded(self, db, expected, tolerance)
@@ -475,7 +453,6 @@ class TestSqliteRecorder(unittest.TestCase):
         self.assertIterationDataRecorded(expected, self.eps)
 
     def test_driver_records_metadata(self):
-        print "QQQ test_driver_records_metadata: begin"
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
@@ -490,13 +467,11 @@ class TestSqliteRecorder(unittest.TestCase):
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_driver_doesnt_record_metadata(self):
-        print "QQQ test_driver_doesnt_record_metadata: begin"
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        print "QQQ test_driver_doesnt_record_metadata: close recorder"
         self.recorder.close()
 
         self.assertMetadataRecorded(None)

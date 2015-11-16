@@ -21,10 +21,8 @@ class SqliteRecorder(BaseRecorder):
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
             sqlite_dict_args.setdefault('tablename', 'openmdao')
-            print "QQQ SqliteRecorder.__init__: SqliteDict"
             self.out = SqliteDict(filename=out, flag='n', **sqlite_dict_args)
         else:
-            print "QQQ SqliteRecorder.__init__: self.out = None"
             self.out = None
 
     def record_metadata(self, group):
@@ -90,9 +88,7 @@ class SqliteRecorder(BaseRecorder):
     def close(self):
         """Closes `out`"""
 
-        print "QQQ SqliteRecorder.close", self._open_close_sqlitedict, self.out
         if self._open_close_sqlitedict:
-            # if self.out is not None:
-            if self.out :
+            if self.out is not None:
                 self.out.close()
                 self.out = None
