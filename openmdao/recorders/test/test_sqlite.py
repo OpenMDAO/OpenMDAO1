@@ -462,6 +462,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.assertIterationDataRecorded(expected, self.eps)
 
     def test_driver_records_metadata(self):
+        print "QQQ test_driver_records_metadata: begin"
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
@@ -476,6 +477,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_driver_doesnt_record_metadata(self):
+        print "QQQ test_driver_doesnt_record_metadata: begin"
         prob = Problem()
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
