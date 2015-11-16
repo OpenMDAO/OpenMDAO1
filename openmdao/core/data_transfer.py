@@ -38,16 +38,19 @@ class DataTransfer(object):
 
         fwd = mode == 'fwd'
 
-        # both = [(s, t) for s, t in zip(src_idxs, tgt_idxs)]
-        #
-        # # sort subarrays wrt each other in ascending order (not internally)
-        # if fwd:
-        #     both = sorted(both, key=lambda l: l[0][0])
-        # else:
-        #     both = sorted(both, key=lambda l: l[1][0])
+        # sort subarrays wrt each other in ascending order (not internally)
+        # this assumes that subarrays are already sorted internally. The
+        # only time this won't be true is if an unknown is connected to
+        # a param with src_indices that are not sorted or have non unique
+        # entries.  In this case we'll just use the array index we were
+        # given and won't convert to a slice.
+        if fwd:
+            keyfunc = lambda l: l[0][0]
+        else:
+            keyfunc = lambda l: l[1][0]
 
         scatters = []
-        for isrcs, itgts in zip(src_idxs, tgt_idxs): #both:
+        for isrcs, itgts in sorted(zip(src_idxs, tgt_idxs), key=keyfunc):
             srcs = to_slice(isrcs)
             tgts = to_slice(itgts)
 
@@ -58,7 +61,7 @@ class DataTransfer(object):
             else:
                 src_unique = True
 
-            if scatters:
+            if scatters: # after the first iteration...
                 # try to combine smaller slices into a larger one
                 olds, oldt, sunique = scatters[-1]
                 if isinstance(olds, slice) and isinstance(oldt, slice) and \
