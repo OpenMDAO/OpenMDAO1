@@ -81,9 +81,12 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
     print "QQQ _assertMetadataRecorded db.get", db, expected
-    metadata = db.get('metadata', None)
+
+    if expected:
+        metadata = db.get('metadata', None)
 
     if expected is None:
+        return
         print "QQQ _assertMetadataRecorded: expected is None"
         test.assertIsNone(metadata)
         print "QQQ _assertMetadataRecorded: return"
