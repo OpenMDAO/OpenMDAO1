@@ -116,7 +116,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         assert_rel_error(self, -top['d_neg_area.neg_room_area'], 51655.257618, .01)
