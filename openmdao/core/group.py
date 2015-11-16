@@ -1205,7 +1205,6 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
-    #@diff_mem
     def _setup_data_transfer(self, my_params, var_of_interest):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
@@ -1320,22 +1319,21 @@ class Group(System):
                     full_flats.extend(flats)
                     full_byobjs.extend(byobjs)
 
+                    if flats or byobjs:
+                        # create a 'partial' scatter to each subsystem
+                        self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
+                            self._impl.create_data_xfer(self.dumat[var_of_interest],
+                                                        self.dpmat[var_of_interest],
+                                                        srcs, tgts, flats, byobjs,
+                                                        modename[mode])
+
+            # add a full scatter for the current direction
             self._data_xfer[('', modename[mode], var_of_interest)] = \
                 self._impl.create_data_xfer(self.dumat[var_of_interest],
                                             self.dpmat[var_of_interest],
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode])
-
-        # create a 'partial' scatter to each subsystem in both fwd and rev
-        for (tgt_sys, mode), (src_idxs, tgt_idxs, vec_conns, byobj_conns) in iteritems(xfer_dict):
-            if vec_conns or byobj_conns:
-                self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
-                    self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                self.dpmat[var_of_interest],
-                                                src_idxs, tgt_idxs,
-                                                vec_conns, byobj_conns,
-                                                modename[mode])
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
