@@ -476,7 +476,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         #self.recorder.options['record_metadata'] = False
-        self.recorder.options['record_metadata'] = True
+        self.recorder.options['record_metadata'] = True 
         prob.setup(check=False)
         print "QQQ test_driver_doesnt_record_metadata: close recorder"
         self.recorder.close()
