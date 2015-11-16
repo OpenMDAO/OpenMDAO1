@@ -13,7 +13,8 @@ class CsvRecorder(BaseRecorder):
 
     def __init__(self, out=sys.stdout):
         super(CsvRecorder, self).__init__()
-
+        
+        self.options['record_metadata'] = False
         self._wrote_header = False
         self._parallel = False
 
