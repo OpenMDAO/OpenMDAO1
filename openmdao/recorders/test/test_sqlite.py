@@ -119,13 +119,13 @@ class TestSqliteRecorder(unittest.TestCase):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
         self.tablename = 'openmdao'
+        print "QQQ TestSqliteRecorder.setup: open SqliteRecorder"
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
-        print "TestSqliteRecorder.setup: open SqliteRecorder"
 
     def tearDown(self):
-        print "TestSqliteRecorder.tearDown: rmtree"
+        print "QQQ TestSqliteRecorder.tearDown: rmtree"
         try:
             rmtree(self.dir)
         except OSError as e:
@@ -134,8 +134,10 @@ class TestSqliteRecorder(unittest.TestCase):
                 raise e
 
     def assertMetadataRecorded(self, expected):
+        print "QQQ assertMetadataRecorded: SqliteDict"
         db = SqliteDict( self.filename, self.tablename )
         _assertMetadataRecorded( self, db, expected )
+        print "QQQ assertMetadataRecorded: close"
         db.close()
 
     def assertIterationDataRecorded(self, expected, tolerance):
