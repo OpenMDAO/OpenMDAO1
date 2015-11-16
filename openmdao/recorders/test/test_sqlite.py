@@ -131,13 +131,13 @@ class TestSqliteRecorder(unittest.TestCase):
         self.eps = 1e-5
 
     def tearDown(self):
-        print "QQQ TestSqliteRecorder.tearDown: rmtree"
+        print "QQQ TestSqliteRecorder.tearDown: rmtree", self.id()
         try:
             import os # qqq
+            print "QQQ listdir", os.listdir( self.dir )
             os.remove( self.filename )
             print "QQQ os.remove succeeded in", self.id()
             print "QQQ isfile", os.path.isfile( self.filename )
-            print "QQQ listdir", os.listdir( self.dir )
             os.rmdir( self.dir )
             print "QQQ os.rmdir succeeded in", self.id()
             # rmtree(self.dir)
@@ -148,12 +148,15 @@ class TestSqliteRecorder(unittest.TestCase):
 
     def assertMetadataRecorded(self, expected):
         print "QQQ assertMetadataRecorded: SqliteDict"
-        db = SqliteDict( self.filename, self.tablename, flag='r' )
-        _assertMetadataRecorded( self, db, expected )
-        print "QQQ assertMetadataRecorded: close", db
-        db.close()
-        db = None
-
+        # db = SqliteDict( self.filename, self.tablename, flag='r' )
+        # _assertMetadataRecorded( self, db, expected )
+        # print "QQQ assertMetadataRecorded: close", db
+        # db.close()
+        # db = None
+        with SqliteDict( self.filename, self.tablename, flag='r' ) as db:
+            _assertMetadataRecorded( self, db, expected )
+            print "QQQ assertMetadataRecorded: close", db
+        
     def assertIterationDataRecorded(self, expected, tolerance):
         db = SqliteDict( self.filename, self.tablename )
         _assertIterationDataRecorded(self, db, expected, tolerance)
