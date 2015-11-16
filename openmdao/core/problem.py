@@ -752,8 +752,8 @@ class Problem(System):
                   "not labeled by the user as pass_by_obj:", file=out_stream)
             for cname, pbo_warns in sorted(pbos, key=lambda x: x[0]):
                 for vname, val in pbo_warns:
-                    print("%s: %s" % ('.'.join((cname, vname)), type(val)),
-                          file=out_stream)
+                    print("%s: type %s" % ('.'.join((cname, vname)),
+                          type(val).__name__), file=out_stream)
 
         return pbos
 

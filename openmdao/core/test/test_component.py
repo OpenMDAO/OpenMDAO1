@@ -240,8 +240,8 @@ class TestComponent(unittest.TestCase):
         content = s.getvalue()
         self.assertTrue("The following variables are not differentiable but were "
                         "not labeled by the user as pass_by_obj:\n"
-                        "C1.x_int: <type 'int'>\n"
-                        "C2.x_list: <type 'list'>" in content)
+                        "C1.x_int: type int\n"
+                        "C2.x_list: type list" in content)
 
 if __name__ == "__main__":
     unittest.main()
