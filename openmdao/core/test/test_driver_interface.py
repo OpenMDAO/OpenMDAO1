@@ -102,7 +102,7 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
-        prob.driver.add_desvar('z', lower=-100.0, higher=100.0)
+        prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -134,7 +134,7 @@ class TestDriver(unittest.TestCase):
                 self.param = params['x']
                 self.obj_scaled = objective['f_xy']
                 self.con_scaled = constraint['con']
-                self.param_high = param_meta['x']['higher']
+                self.param_high = param_meta['x']['upper']
                 self.param_low = param_meta['x']['lower']
 
         prob = Problem()
@@ -146,7 +146,7 @@ class TestDriver(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
         root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
 
-        driver.add_desvar('x', lower=59000.0, higher=61000.0, adder=-60000.0, scaler=1/1000.0)
+        driver.add_desvar('x', lower=59000.0, upper=61000.0, adder=-60000.0, scaler=1/1000.0)
         driver.add_objective('f_xy', adder=-10890367002.0, scaler=1.0/20)
         driver.add_constraint('con', upper=0.0, adder=-10890487502.0, scaler=1.0/20)
 

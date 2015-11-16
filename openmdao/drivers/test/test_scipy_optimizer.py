@@ -25,8 +25,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'TNC'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
         prob.driver.options['disp'] = False
 
         prob.driver.add_objective('f_xy')
@@ -49,8 +49,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'L-BFGS-B'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.options['disp'] = False
@@ -73,8 +73,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'COBYLA'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.options['disp'] = False
@@ -97,8 +97,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.options['disp'] = False
@@ -123,8 +123,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('obj')
         prob.driver.options['disp'] = False
@@ -148,8 +148,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=0.0)
@@ -175,8 +175,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'COBYLA'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
@@ -202,8 +202,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'COBYLA'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=15.0)
@@ -229,8 +229,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', equals=15.0)
@@ -255,7 +255,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', equals=0.0)
@@ -279,7 +279,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0, scaler=np.array([1.0, 1.0]))
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=np.array([1.0, 1.0]))
 
         prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
         prob.driver.add_constraint('c', equals=0.0, scaler=np.array([1.0, 1.0]))
@@ -304,7 +304,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0, scaler=np.array([1.0, 1.0]))
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=np.array([1.0, 1.0]))
 
         prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
         prob.driver.add_constraint('c1', lower=0.0, scaler=np.array([1.0, 1.0]))
@@ -329,7 +329,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('o')
         prob.driver.add_constraint('c', equals=0.0)
@@ -366,8 +366,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('p1.x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('p2.x', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('p2.x', lower=-50.0, upper=50.0)
         prob.driver.add_objective('obj.o')
         prob.driver.add_constraint('con1.c', equals=0.0)
         prob.driver.add_constraint('con2.c', equals=0.0)
@@ -389,8 +389,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                             higher=np.array([10.0, 10.0]))
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -414,8 +414,8 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                             higher=np.array([10.0, 10.0]))
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -438,9 +438,9 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_desvar('z', lower=np.array([-10.0]), higher=np.array([10.0]),
+        prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
                               indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -469,8 +469,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0, scaler=1/50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
@@ -497,8 +497,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0, scaler=1/50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
@@ -525,8 +525,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0, scaler=1/50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
@@ -553,8 +553,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
@@ -581,8 +581,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
@@ -609,8 +609,8 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
-        prob.driver.add_desvar('x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
@@ -631,9 +631,9 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_desvar('z', lower=np.array([-10.0]), higher=np.array([10.0]),
+        prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
                               indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)

@@ -25,8 +25,8 @@ Below is an example using the component from the `Paraboloid Tutorial
     root.add('comp', Paraboloid(), promotes=['*'])
 
     top.driver = OptimizedLatinHypercubeDriver(num_samples=4, seed=0, population=20, generations=4, norm_method=2)
-    top.driver.add_desvar('x', lower=-50.0, higher=50.0)
-    top.driver.add_desvar('y', lower=-50.0, higher=50.0)
+    top.driver.add_desvar('x', lower=-50.0, upper=50.0)
+    top.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
     top.driver.add_objective('f_xy')
 
@@ -60,8 +60,8 @@ The next three lines will initialize and add design variables to the OLHC.
 ::
 
     top.driver = OptimizedLatinHypercubeDriver(num_samples=4, seed=0, population=20, generations=4, norm_method=2)
-    top.driver.add_desvar('x', lower=-50.0, higher=50.0)
-    top.driver.add_desvar('y', lower=-50.0, higher=50.0)
+    top.driver.add_desvar('x', lower=-50.0, upper=50.0)
+    top.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
 The first line initializes the driver. The 'num_samples' argument determines how many samples each design variable will cycle through. By default, the 'seed' argument itself is a random value. However, by choosing a seed value, we can easily duplicate a sample set for a repeatable testing environment.
 

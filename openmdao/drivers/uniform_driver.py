@@ -19,5 +19,5 @@ class UniformDriver(PredeterminedRunsDriver):
         """Build a runlist based on a uniform distribution."""
 
         for i in moves.xrange(self.num_samples):
-            yield dict(((key, np.random.uniform(bound['lower'], bound['higher']))
+            yield dict(((key, np.random.uniform(bound['lower'], bound['upper']))
                         for key, bound in iteritems(self.get_desvar_metadata())))

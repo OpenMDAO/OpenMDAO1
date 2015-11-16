@@ -20,7 +20,7 @@ class FullFactorialDriver(PredeterminedRunsDriver):
         value_arrays = dict()
         for name, value in iteritems(self.get_desvar_metadata()):
             low = value['lower']
-            high = value['higher']
+            high = value['upper']
             value_arrays[name] = np.linspace(low, high, num=self.num_levels).tolist()
 
         keys = list(value_arrays.keys())

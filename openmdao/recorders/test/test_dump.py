@@ -440,8 +440,8 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.add_desvar('p1.x', lower=-50.0, higher=50.0)
-        prob.driver.add_desvar('p2.y', lower=-50.0, higher=50.0)
+        prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('p2.y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('comp.f_xy')
         prob.driver.options['disp'] = False

@@ -166,8 +166,8 @@ if __name__ == '__main__':
     top.driver.options['tol'] = 1.0e-8
 
     top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                         higher=np.array([10.0, 10.0]))
-    top.driver.add_desvar('x', lower=0.0, higher=10.0)
+                         upper=np.array([10.0, 10.0]))
+    top.driver.add_desvar('x', lower=0.0, upper=10.0)
 
     top.driver.add_objective('obj')
     top.driver.add_constraint('con1', upper=0.0)

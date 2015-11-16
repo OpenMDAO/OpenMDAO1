@@ -49,8 +49,8 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                                    higher=np.array([10.0, 10.0]))
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -77,8 +77,8 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.root.fd_options['force_fd'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
-                                    higher=np.array([10.0]), indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0]), indices=[0])
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -108,8 +108,8 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
-                                    higher=np.array([10.0]), indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0]), indices=[0])
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -160,8 +160,8 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
-                                    higher=np.array([10.0]), indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0]), indices=[0])
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -189,8 +189,8 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
-                                    higher=np.array([10.0]), indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0]), indices=[0])
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)
@@ -216,8 +216,8 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         prob.root.fd_options['force_fd'] = True
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, -10.0]),
-                                    higher=np.array([10.0, 10.0]), indices=[1])
-        prob.driver.add_desvar('x', lower=0.0, higher=10.0)
+                                    upper=np.array([10.0, 10.0]), indices=[1])
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)

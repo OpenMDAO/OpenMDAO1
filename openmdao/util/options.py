@@ -19,7 +19,7 @@ class OptionsDictionary(object):
         self._options = {}
         self.read_only = read_only
 
-    def add_option(self, name, value, lower=None, higher=None, values=None,
+    def add_option(self, name, value, lower=None, upper=None, values=None,
                    desc=''):
         """ Adds an option to this options dictionary.
 
@@ -34,7 +34,7 @@ class OptionsDictionary(object):
         lower : float, optional
             Lower bounds for a float value.
 
-        higher : float, optional
+        upper : float, optional
             Upper bounds for a float value.
 
         values : list, optional
@@ -50,7 +50,7 @@ class OptionsDictionary(object):
         self._options[name] = {
             'val':    value,
             'lower':    lower,
-            'higher':   higher,
+            'upper':   upper,
             'values': values,
             'desc' : desc,
         }
@@ -107,7 +107,7 @@ class OptionsDictionary(object):
     def _check(self, name, value):
         """ Type checking happens here. """
         lower = self._options[name]['lower']
-        higher = self._options[name]['higher']
+        upper = self._options[name]['upper']
         values = self._options[name]['values']
         _type = type(self._options[name]['val'])
 
@@ -116,8 +116,8 @@ class OptionsDictionary(object):
         if lower is not None:
             self._check_low(name, value, lower)
 
-        if higher is not None:
-            self._check_high(name, value, higher)
+        if upper is not None:
+            self._check_high(name, value, upper)
 
         if values is not None:
             self._check_values(name, value, values)
@@ -134,11 +134,11 @@ class OptionsDictionary(object):
             msg = "minimum allowed value for '{}' is '{}'"
             raise ValueError(msg.format(name, lower))
 
-    def _check_high(self, name, value, higher):
+    def _check_high(self, name, value, upper):
         """ Check for violation of upper bounds. """
-        if value > higher:
+        if value > upper:
             msg = "maximum allowed value for '{}' is '{}'"
-            raise ValueError(msg.format(name, higher))
+            raise ValueError(msg.format(name, upper))
 
     def _check_values(self, name, value, values):
         """ Check for value not in enumeration. """

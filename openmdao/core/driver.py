@@ -238,7 +238,7 @@ class Driver(object):
         """
         self.recorders.append(recorder)
 
-    def add_desvar(self, name, lower=None, higher=None,
+    def add_desvar(self, name, lower=None, upper=None,
                    low=None, high=None,
                    indices=None, adder=0.0, scaler=1.0):
         """
@@ -252,7 +252,7 @@ class Driver(object):
         lower : float or ndarray, optional
             Lower boundary for the param
 
-        higher : upper or ndarray, optional
+        upper : upper or ndarray, optional
             Upper boundary for the param
 
         indices : iter of int, optional
@@ -270,36 +270,36 @@ class Driver(object):
         if low is not None or high is not None:
             warnings.simplefilter('always', DeprecationWarning)
             warnings.warn("'low' and 'high' are deprecated. "
-                          "Use 'lower' and 'higher' instead.",
+                          "Use 'lower' and 'upper' instead.",
                           DeprecationWarning,stacklevel=2)
             warnings.simplefilter('ignore', DeprecationWarning)
             if low is not None and lower is None:
                 lower = low
-            if high is not None and higher is None:
-                higher = high
+            if high is not None and upper is None:
+                upper = high
 
         if lower is None:
             lower = -1e99
         elif isinstance(lower, np.ndarray):
             lower = lower.flatten()
 
-        if higher is None:
-            higher = 1e99
-        elif isinstance(higher, np.ndarray):
-            higher = higher.flatten()
+        if upper is None:
+            upper = 1e99
+        elif isinstance(upper, np.ndarray):
+            upper = upper.flatten()
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        # Scale the lower and higher values
+        # Scale the lower and upper values
         lower = (lower + adder)*scaler
-        higher = (higher + adder)*scaler
+        upper = (upper + adder)*scaler
 
         param = {}
         param['lower'] = lower
-        param['higher'] = higher
+        param['upper'] = upper
         param['adder'] = adder
         param['scaler'] = scaler
         if indices:
@@ -307,7 +307,7 @@ class Driver(object):
 
         self._desvars[name] = param
 
-    def add_param(self, name, lower=None, higher=None, indices=None, adder=0.0,
+    def add_param(self, name, lower=None, upper=None, indices=None, adder=0.0,
                   scaler=1.0):
         """
         Deprecated.  Use ``add_desvar`` instead.
@@ -317,7 +317,7 @@ class Driver(object):
                       DeprecationWarning,stacklevel=2)
         warnings.simplefilter('ignore', DeprecationWarning)
 
-        self.add_desvar(name, lower=lower, higher=higher, indices=indices, adder=adder,
+        self.add_desvar(name, lower=lower, upper=upper, indices=indices, adder=adder,
                         scaler=scaler)
 
     def get_desvars(self):
@@ -550,7 +550,7 @@ class Driver(object):
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
 
-        # Scale the lower and higher values
+        # Scale the lower and upper values
         if lower is not None:
             lower = (lower + adder)*scaler
         if upper is not None:
