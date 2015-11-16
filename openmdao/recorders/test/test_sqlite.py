@@ -134,7 +134,10 @@ class TestSqliteRecorder(unittest.TestCase):
         print "QQQ TestSqliteRecorder.tearDown: rmtree"
         try:
             import os # qqq
+            import time
+            time.sleep(5)
             os.remove( self.filename )
+            print "QQQ os.remove succeeded"
             rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
