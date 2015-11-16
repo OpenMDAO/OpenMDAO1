@@ -79,7 +79,6 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
                     test.assertEqual(val, found_val)
 
 def _assertMetadataRecorded(test, db, expected):
-    return
     sentinel = object()
     print "QQQ _assertMetadataRecorded db.get", db, expected
     metadata = db.get('metadata', None)
@@ -475,6 +474,11 @@ class TestSqliteRecorder(unittest.TestCase):
         expected_resids = list(iteritems(prob.root.resids))
 
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+
+        # qqq just to get the stdout in the log
+        self.assertMetadataRecorded(None)
+
+
 
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
