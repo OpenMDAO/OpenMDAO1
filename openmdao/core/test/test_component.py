@@ -3,7 +3,6 @@
 import unittest
 from six import text_type, PY3
 from six.moves import cStringIO
-import warnings
 
 if PY3:
     def py3fix(s):
