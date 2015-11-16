@@ -122,8 +122,10 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
+        print "TestSqliteRecorder.setup: open SqliteRecorder"
 
     def tearDown(self):
+        print "TestSqliteRecorder.tearDown: rmtree"
         try:
             rmtree(self.dir)
         except OSError as e:
