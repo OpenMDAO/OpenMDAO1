@@ -296,8 +296,8 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
 
-        top.driver.add_desvar('p1.x', low=-50, high=50)
-        top.driver.add_desvar('p2.y', low=-50, high=50)
+        top.driver.add_desvar('p1.x', lower=-50, upper=50)
+        top.driver.add_desvar('p2.y', lower=-50, upper=50)
         top.driver.add_objective('p.f_xy')
 
         top.setup()
@@ -379,8 +379,8 @@ expression for us.
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
 
-    top.driver.add_desvar('p1.x', low=-50, high=50)
-    top.driver.add_desvar('p2.y', low=-50, high=50)
+    top.driver.add_desvar('p1.x', lower=-50, upper=50)
+    top.driver.add_desvar('p2.y', lower=-50, upper=50)
     top.driver.add_objective('p.f_xy')
     top.driver.add_constraint('con.c', lower=15.0)
 
