@@ -70,6 +70,12 @@ class Driver(object):
         for item_name, item, newitem in item_tups:
             for name, meta in iteritems(item):
 
+                # Check validity of variable
+                if name not in root.unknowns:
+                    msg = "{} '{}' not found in unknowns."
+                    msg = msg.format(item_name, name)
+                    raise ValueError(msg)
+
                 rootmeta = root.unknowns.metadata(name)
                 if name in self._desvars:
                     rootmeta['is_desvar'] = True
@@ -82,12 +88,6 @@ class Driver(object):
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
-
-                # Check validity of variable
-                if name not in root.unknowns:
-                    msg = "{} '{}' not found in unknowns."
-                    msg = msg.format(item_name, name)
-                    raise ValueError(msg)
 
                 # Size is useful metadata to save
                 if 'indices' in meta:
@@ -345,12 +345,12 @@ class Driver(object):
         if nproc > 1:
             owner = self.root._owning_ranks[name]
             if iproc == owner:
-                flatval = uvec.flat[name]
+                flatval = uvec._dat[name].val
             else:
                 flatval = None
         else:
             owner = 0
-            flatval = uvec.flat[name]
+            flatval = uvec._dat[name].val
 
         if 'indices' in meta and not (nproc > 1 and owner != iproc):
             # Make sure our indices are valid
@@ -398,7 +398,7 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        if self.root.unknowns.flat[name].size == 0:
+        if self.root.unknowns._dat[name].val.size == 0:
             return
 
         scaler = self._desvars[name]['scaler']

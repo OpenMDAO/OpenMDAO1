@@ -9,7 +9,7 @@ import networkx as nx
 
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.group import Group
-from openmdao.util.string_util import name_relative_to
+from openmdao.util.string_util import nearest_child
 from six import itervalues
 
 def plot_sys_tree(system, outfile=None, fmt='pdf'):
@@ -67,7 +67,7 @@ def plot_vgraph(group, outfile=None, fmt='pdf'):
         Default is 'pdf'.
 
     """
-    _plot_graph(group._relevance._vgraph, outfile=outfile, fmt=fmt)
+    _plot_graph(group._probdata.relevance._vgraph, outfile=outfile, fmt=fmt)
 
 def plot_sgraph(group, outfile=None, fmt='pdf'):
     """

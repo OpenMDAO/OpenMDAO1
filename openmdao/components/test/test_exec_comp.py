@@ -20,8 +20,8 @@ class TestExecComp(unittest.TestCase):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=numpy.sum(x)',
                                           x=np.arange(10,dtype=float)))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()
@@ -31,8 +31,8 @@ class TestExecComp(unittest.TestCase):
     def test_simple(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=x+1.', x=2.0))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()
@@ -42,8 +42,8 @@ class TestExecComp(unittest.TestCase):
     def test_math(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=sin(x)', x=2.0))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()
@@ -53,8 +53,8 @@ class TestExecComp(unittest.TestCase):
     def test_array(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=x[1]', x=np.array([1.,2.,3.]), y=0.0))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()
@@ -65,8 +65,8 @@ class TestExecComp(unittest.TestCase):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp(['y[0]=x[1]', 'y[1]=x[0]'],
                                           x=np.array([1.,2.,3.]), y=np.array([0.,0.])))
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()
@@ -123,8 +123,8 @@ class TestExecComp(unittest.TestCase):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp(['y=2.0*x+1.'], x=2.0))
 
-        self.assertTrue('x' in C1._params_dict)
-        self.assertTrue('y' in C1._unknowns_dict)
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
 
         prob.setup(check=False)
         prob.run()

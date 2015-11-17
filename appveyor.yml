@@ -29,4 +29,4 @@ install:
   - pip install .
 
 test_script:
-  - nosetests --nocapture -v openmdao.recorders.test.test_sqlite
+  - nosetests

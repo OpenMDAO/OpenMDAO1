@@ -39,11 +39,11 @@ class DistribExecComp(ExecComp):
         start = offsets[rank]
         end = start + sizes[rank]
 
-        for n, m in self._unknowns_dict.items():
+        for n, m in self._init_unknowns_dict.items():
             self.set_var_indices(n, val=numpy.ones(sizes[rank], float),
                                  src_indices=numpy.arange(start, end, dtype=int))
 
-        for n, m in self._params_dict.items():
+        for n, m in self._init_params_dict.items():
             self.set_var_indices(n, val=numpy.ones(sizes[rank], float),
                                  src_indices=numpy.arange(start, end, dtype=int))
 

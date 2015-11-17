@@ -4,6 +4,8 @@
 
 import sys
 import os
+
+import numpy.distutils
 from numpy.distutils.exec_command import find_executable
 
 from openmdao.core.component import Component
@@ -44,7 +46,7 @@ class ExternalCode(Component):
     options['timeout'] :  float(0.0)
         Maximum time to wait for command completion. A value of zero implies an infinite wait
 
-	"""
+    """
 
     def __init__(self):
         super(ExternalCode, self).__init__()
@@ -184,6 +186,9 @@ class ExternalCode(Component):
             program_to_execute = self.options['command']
         else:
             program_to_execute = self.options['command'][0]
+
+        # suppress message from find_executable function, we'll handle it
+        numpy.distutils.log.set_verbosity(-1)
 
         command_full_path = find_executable( program_to_execute )
         if not command_full_path:

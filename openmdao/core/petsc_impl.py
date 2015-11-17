@@ -3,6 +3,9 @@
 from __future__ import print_function
 
 import os
+from six import iteritems
+
+import numpy as np
 
 # import petsc4py
 # petsc4py.init(['-start_in_debugger'])  # add petsc init args here
@@ -15,6 +18,8 @@ if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
 from mpi4py import MPI
+
+#from openmdao.devtools.debug import diff_mem, mem_usage
 
 class PetscImpl(object):
     """PETSc vector and data transfer implementation factory."""
@@ -236,12 +241,13 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             'pass by vector' params.
         """
         psizes = []
-        for name, m in self._get_vecvars():
-            if m.get('owned'):
-                if m.get('remote'):
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if acc.owned and not meta.get('pass_by_obj'):
+                if meta.get('remote'):
                     psizes.append((name, 0))
                 else:
-                    psizes.append((name, m['size']))
+                    psizes.append((name, meta['size']))
 
         if trace:  # pragma: no cover
             msg = "'%s': allgathering param sizes.  local param sizes = %s"
@@ -279,8 +285,13 @@ class PetscDataTransfer(object):
     mode : str
         Either 'fwd' or 'rev', indicating a forward or reverse scatter.
     """
+
+    #@diff_mem
     def __init__(self, src_vec, tgt_vec,
                  src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
+
+        src_idxs = src_vec.merge_idxs(src_idxs)
+        tgt_idxs = tgt_vec.merge_idxs(tgt_idxs)
 
         self.byobj_conns = byobj_conns
         self.comm = comm = src_vec.comm
@@ -292,6 +303,7 @@ class PetscDataTransfer(object):
         if trace:
             debug("'%s': creating index sets for '%s' DataTransfer: %s %s" %
                   (name, src_vec._sysdata.pathname, src_idxs, tgt_idxs))
+
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
 

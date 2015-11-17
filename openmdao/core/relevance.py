@@ -20,6 +20,7 @@ class Relevance(object):
         self.params_dict = params_dict
         self.unknowns_dict = unknowns_dict
         self.mode = mode
+        self._sysdata = group._sysdata
 
         param_groups = []
         output_groups = []
@@ -41,6 +42,11 @@ class Relevance(object):
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
+        # when voi is None, everything is relevant
+        self.relevant[None] = set([m['top_promoted_name']
+                                    for m in itervalues(unknowns_dict)])
+        self.relevant[None].update([m['top_promoted_name']
+                                    for m in itervalues(params_dict)])
         self._relevant_systems = self._get_relevant_systems()
 
         if mode == 'fwd':
@@ -73,9 +79,10 @@ class Relevance(object):
         -------
         bool: True if varname is in the relevant path of var_of_interest
         """
-        if var_of_interest is None or var_of_interest not in self.relevant:
+        try:
+            return varname in self.relevant[var_of_interest]
+        except KeyError:
             return True
-        return varname in self.relevant[var_of_interest]
 
     def vars_of_interest(self, mode=None):
         """ Determines our list of var_of_interest depending on mode.
@@ -140,6 +147,7 @@ class Relevance(object):
         compouts = {} # maps output vars to components
 
         promote_map = {}
+        to_prom_name = group._sysdata.to_prom_name
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
@@ -148,30 +156,23 @@ class Relevance(object):
             vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
-        p_to_a = {} # mapping of promoted to abs names
-        for meta in itervalues(params_dict):
-            param = meta['pathname']
+        for param, meta in iteritems(params_dict):
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            prom = meta['promoted_name']
+            prom = to_prom_name[param]
             if prom != param:
                 promote_map[param] = prom
                 if param not in vgraph:
                     vgraph.add_node(param)
-            p_to_a.setdefault(prom, []).append(param)
 
-        for meta in itervalues(unknowns_dict):
-            unknown = meta['pathname']
+        for unknown, meta in iteritems(unknowns_dict):
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            prom = meta['promoted_name']
+            prom = to_prom_name[unknown]
             if prom != unknown:
                 promote_map[unknown] = prom
                 if unknown not in vgraph:
                     vgraph.add_node(unknown)
-            p_to_a.setdefault(prom, []).append(unknown)
-
-        self._prom_to_abs = p_to_a
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -232,19 +233,28 @@ class Relevance(object):
         """
         relevant_systems = {}
         grev = self._sgraph.reverse()
+
+        to_abs_uname = self._sysdata.to_abs_uname
+        to_abs_pnames = self._sysdata.to_abs_pnames
+
         for voi, relvars in iteritems(self.relevant):
             rev = True if voi in self._outset else False
             if rev:
-                voicomp = self._prom_to_abs[voi][0].rsplit('.', 1)[0]
+                voicomp = to_abs_uname[voi].rsplit('.', 1)[0]
                 gpath = set([voicomp])
                 gpath.update([v for u,v in nx.dfs_edges(grev, voicomp)])
             comps = set()
             for relvar in relvars:
-                for absvar in self._prom_to_abs[relvar]:
+                if relvar in to_abs_uname:
+                    absvars = (to_abs_uname[relvar],)
+                else:
+                    absvars = iter(to_abs_pnames[relvar])
+                for absvar in absvars:
                     parts = absvar.split('.')
                     for i in range(len(parts)-1):
                         cname = '.'.join(parts[:i+1])
-                        # in rev mode, need to eliminate irrelevant systems that have shared promoted vars
+                        # in rev mode, need to eliminate irrelevant systems that
+                        # have shared promoted vars
                         if rev:
                             if cname in gpath:
                                 comps.add(cname)

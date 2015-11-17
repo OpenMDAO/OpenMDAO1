@@ -1,8 +1,10 @@
 """ Class definition for the DataTransfer object."""
 
+from six.moves import zip
+
 import numpy as np
 
-from openmdao.util.array_util import to_slices
+from openmdao.util.array_util import to_slice
 from openmdao.core.mpi_wrap import MPI
 
 class DataTransfer(object):
@@ -31,25 +33,50 @@ class DataTransfer(object):
     """
 
     def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
-
-        self.src_idxs = src_idxs
-        self.tgt_idxs = tgt_idxs
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
 
-        if not MPI:
-            # if in fwd mode, sort using src indices and in rev mode sort using tgt indices,
-            # to increase the likelihood of slice conversion for 'get' access in order to
-            # avoid array copies.
-            if mode == 'fwd':
-                self.src_idxs, self.tgt_idxs = to_slices(self.src_idxs, self.tgt_idxs)
+        fwd = mode == 'fwd'
+
+        # sort subarrays wrt each other in ascending order (not internally)
+        # this assumes that subarrays are already sorted internally. The
+        # only time this won't be true is if an unknown is connected to
+        # a param with src_indices that are not sorted or have non unique
+        # entries.  In this case we'll just use the array index we were
+        # given and won't convert to a slice.
+        if fwd:
+            keyfunc = lambda l: l[0][0]
+        else:
+            keyfunc = lambda l: l[1][0]
+
+        scatters = []
+        for isrcs, itgts in sorted(zip(src_idxs, tgt_idxs), key=keyfunc):
+            srcs = to_slice(isrcs)
+            tgts = to_slice(itgts)
+
+            if not fwd and not isinstance(srcs, slice):
+                # check uniqueness of src_idxs to see if we can avoid
+                # calling np.add.at, which is slower than +=
+                src_unique = np.unique(srcs).size == srcs.size
             else:
-                self.tgt_idxs, self.src_idxs = to_slices(self.tgt_idxs, self.src_idxs)
-                if isinstance(self.src_idxs, slice):
-                    self._src_unique = True
+                src_unique = True
+
+            if scatters: # after the first iteration...
+                # try to combine smaller slices into a larger one
+                olds, oldt, sunique = scatters[-1]
+                if isinstance(olds, slice) and isinstance(oldt, slice) and \
+                     isinstance(srcs, slice) and isinstance(tgts, slice) and \
+                     olds.stop == srcs.start and oldt.stop == tgts.start and \
+                     olds.step == srcs.step and oldt.step == tgts.step:
+                    news = slice(olds.start, srcs.stop, srcs.step)
+                    newt = slice(oldt.start, tgts.stop, tgts.step)
+                    scatters[-1] = (news, newt, src_unique)
                 else:
-                    # check uniqueness of src_idxs to see if we can avoid calling np.add.at
-                    self._src_unique = np.unique(self.src_idxs).size == self.src_idxs.size
+                    scatters.append((srcs, tgts, src_unique))
+            else:
+                scatters.append((srcs, tgts, src_unique))
+
+        self.scatters = scatters
 
     def transfer(self, srcvec, tgtvec, mode='fwd', deriv=False):
         """
@@ -77,12 +104,15 @@ class DataTransfer(object):
             # in reverse mode, srcvec and tgtvec are switched. Note, we only
             # run in reverse for derivatives, and derivatives accumulate from
             # all targets. byobjs are never scattered in reverse
-            if self._src_unique:
-                srcvec.vec[self.src_idxs] += tgtvec.vec[self.tgt_idxs]
-            else:
-                np.add.at(srcvec.vec, self.src_idxs, tgtvec.vec[self.tgt_idxs])
+            for isrcs, itgts, src_unique in self.scatters:
+                if src_unique:
+                    srcvec.vec[isrcs] += tgtvec.vec[itgts]
+                else:
+                    np.add.at(srcvec.vec, isrcs, tgtvec.vec[itgts])
         else:
-            tgtvec.vec[self.tgt_idxs] = srcvec.vec[self.src_idxs]
+            for isrcs, itgts, _ in self.scatters:
+                tgtvec.vec[itgts] = srcvec.vec[isrcs]
+
             # forward, include byobjs if not a deriv scatter
             if not deriv:
                 for tgt, src in self.byobj_conns:

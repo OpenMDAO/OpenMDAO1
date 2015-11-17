@@ -52,12 +52,12 @@ class TestLinearGaussSeidel(unittest.TestCase):
 
         for voi, voi_rels in rels.items():
             for voi_rel in voi_rels:
-                self.assertTrue(root._relevance.is_relevant(voi, voi_rel),
+                self.assertTrue(root._probdata.relevance.is_relevant(voi, voi_rel),
                                 msg="%s should be True" % voi_rel)
 
         for voi, voi_nrels in not_rels.items():
             for voi_nrel in voi_nrels:
-                self.assertFalse(root._relevance.is_relevant(voi, voi_nrel),
+                self.assertFalse(root._probdata.relevance.is_relevant(voi, voi_nrel),
                                  msg="%s should be False" % voi_nrel)
 
     def test_relevant_systems(self):
@@ -72,12 +72,12 @@ class TestLinearGaussSeidel(unittest.TestCase):
         rel_systems = ['P1', 'C2', 'C8']
         for s in itervalues(root._subsystems):
             if s.pathname in rel_systems:
-                self.assertTrue(root._relevance.is_relevant_system('P1.x', s),
+                self.assertTrue(root._probdata.relevance.is_relevant_system('P1.x', s),
                                 msg="%s should be relevant" % s.pathname)
-                self.assertTrue(root._relevance.is_relevant_system('C8.y', s),
+                self.assertTrue(root._probdata.relevance.is_relevant_system('C8.y', s),
                                 msg="%s should be relevant" % s.pathname)
             else:
-                self.assertFalse(root._relevance.is_relevant_system('P1.x', s),
+                self.assertFalse(root._probdata.relevance.is_relevant_system('P1.x', s),
                                  msg="%s should be irrelevant" % s.pathname)
-                self.assertFalse(root._relevance.is_relevant_system('C8.y', s),
+                self.assertFalse(root._probdata.relevance.is_relevant_system('C8.y', s),
                                  msg="%s should be irrelevant" % s.pathname)

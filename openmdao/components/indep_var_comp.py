@@ -53,7 +53,7 @@ class IndepVarComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None, ), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None, ), gs_outputs=None):
         """For `IndepVarComp`, just pass on the incoming values.
 
         Args
@@ -61,7 +61,7 @@ class IndepVarComp(Component):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        ls_inputs : dict
+        do_apply : dict
             We can only solve derivatives for the inputs the instigating
             system has access to. (Not used here.)
 
@@ -86,10 +86,10 @@ class IndepVarComp(Component):
                     if var in gs_outputs[voi]:
                         rhs_vec[voi][var] += sol_vec[voi][var]
 
-    def _sys_linearize(self, params, unknowns, resids, force_fd=False): 
-        """ No linearization needed for this one""" 
-        # added to avoid the small overhead from calling the parent implementation 
-        # because this class has nothing to do 
+    def _sys_linearize(self, params, unknowns, resids, force_fd=False):
+        """ No linearization needed for this one"""
+        # added to avoid the small overhead from calling the parent implementation
+        # because this class has nothing to do
         pass
 
     def solve_nonlinear(self, params, unknowns, resids):

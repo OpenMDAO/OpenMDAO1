@@ -16,6 +16,7 @@ from collections import OrderedDict
 from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
+from openmdao.util.string_util import name_relative_to
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
@@ -27,8 +28,15 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
-        self._to_prom_name = {}
-        self._to_top_prom_name = {}
+
+        # map absolute name to local promoted name
+        self.to_prom_name = {}
+
+        self.to_abs_uname = OrderedDict()  # promoted name to abs name
+        self.to_prom_uname = OrderedDict() # abs name to promoted name
+        self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
+        self.to_prom_pname = OrderedDict() # abs name to promoted namep
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -91,7 +99,6 @@ class System(object):
         self.drmat = {}
 
         self._local_subsystems = []
-        self._relevance = None
         self._fd_params = None
 
     def __getitem__(self, name):
@@ -135,12 +142,14 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
+        abs_unames = self._sysdata.to_abs_uname
+        abs_pnames = self._sysdata.to_abs_pnames
+
+        mybool = False
         for prom in self._promotes:
             if fnmatch(name, prom):
-                for meta in chain(itervalues(self._params_dict),
-                                  itervalues(self._unknowns_dict)):
-                    if name == meta.get('promoted_name'):
-                        return True
+                if name in abs_pnames or name in abs_unames:
+                    return True
 
         return False
 
@@ -172,13 +181,10 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
+        to_prom_name = self._sysdata.to_prom_name
         for prom in self._promotes:
-            for name, meta in chain(iteritems(self._params_dict),
-                                    iteritems(self._unknowns_dict)):
-                if 'promoted_name' in meta:
-                    pname = meta['promoted_name']
-                else:
-                    pname = name
+            for name in chain(self._params_dict, self._unknowns_dict):
+                pname = to_prom_name[name]
                 if fnmatch(pname, prom):
                     break
             else:
@@ -364,6 +370,8 @@ class System(object):
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
 
+        abs_pnames = self._sysdata.to_abs_pnames
+
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
         form = self.fd_options.get('form', 'forward')
@@ -393,6 +401,8 @@ class System(object):
         # column data keyed by (uname, pname, col_id).
         fd_cols = {}
 
+        to_prom_name = self._sysdata.to_prom_name
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
 
@@ -404,9 +414,9 @@ class System(object):
 
                 # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
-                    param_src = self.unknowns.get_promoted_varname(param_src)
+                    param_src = to_prom_name[param_src]
 
-                target_input = unknowns.flat[param_src]
+                target_input = unknowns._dat[param_src].val
             else:
                 # Cases where the IndepVarComp is somewhere above us.
                 if p_name in states:
@@ -414,14 +424,15 @@ class System(object):
                 else:
                     inputs = params
 
-                target_input = inputs.flat[p_name]
+                target_input = inputs._dat[p_name].val
 
             mydict = {}
-            if p_name in self._to_abs_pnames:
-                for meta in itervalues(self._params_dict):
-                    if meta['promoted_name'] == p_name:
-                        mydict = meta
-                        break
+            # since p_name is a promoted name, it could refer to multiple
+            # params.  We've checked earlier to make sure that step_size,
+            # step_type, and form are not defined differently for each
+            # matching param.  If they differ, a warning has already been issued.
+            if p_name in abs_pnames:
+                mydict = self._params_dict[abs_pnames[p_name][0]]
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)
@@ -517,9 +528,9 @@ class System(object):
 
                     for u_name in fd_unknowns:
                         if qoi_indices and u_name in qoi_indices:
-                            result = resultvec.flat[u_name][qoi_indices[u_name]]
+                            result = resultvec._dat[u_name].val[qoi_indices[u_name]]
                         else:
-                            result = resultvec.flat[u_name]
+                            result = resultvec._dat[u_name].val
                         jac[u_name, p_name][:, col] = result
                         if self._num_par_fds > 1: # pragma: no cover
                             fd_cols[(u_name, p_name, col)] = \
@@ -545,7 +556,7 @@ class System(object):
 
         return jac
 
-    def _sys_apply_linear(self, mode, ls_inputs=None, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
         """
         Entry point method for all parent classes to access the apply_linear method.
         This method handles the functionality for self-fd, or otherwise passes the call
@@ -557,7 +568,7 @@ class System(object):
             Derivative mode, can be 'fwd' or 'rev'.
         vois: list of strings
             List of all quantities of interest to key into the mats.
-        ls_inputs : dict
+        do_apply : dict
             We can only solve derivatives for the inputs the instigating
             system has access to.
         gs_outputs : dict, optional
@@ -565,7 +576,7 @@ class System(object):
         """
         force_fd = self.fd_options['force_fd']
         states = self.states
-        is_relevant = self._relevance.is_relevant_system
+        is_relevant = self._probdata.relevance.is_relevant_system
         fwd = mode == "fwd"
 
         for voi in vois:
@@ -578,15 +589,10 @@ class System(object):
             dparams = self.dpmat[voi]
             gsouts = None if gs_outputs is None else gs_outputs[voi]
 
-            # Linear GS imposes a stricter requirement on whether or not to run.
-            abs_inputs = self._abs_inputs[voi]
-            do_apply = ls_inputs[voi] is None or (abs_inputs and
-                                  len(abs_inputs.intersection(ls_inputs[voi])))
-
             if fwd:
                 dresids.vec[:] = 0.0
 
-                if do_apply:
+                if do_apply[(self.pathname, voi)]:
                     dparams._apply_unit_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
@@ -594,18 +600,20 @@ class System(object):
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
-                for var, val in iteritems(dunknowns.flat):
+                for var, val in dunknowns.veciter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids.flat[var] += val
+                        dresids._dat[var].val += val
             else:
-                for val in itervalues(dparams.flat):
+                # This zeros out some vars that are not in the local .vec, so we can't just
+                # do dparams.vec[:] = 0.0 for example.
+                for _, val in dparams.veciter():
                     val[:] = 0.0
-                for val in itervalues(dunknowns.flat):
+                for _, val in dunknowns.veciter():
                     val[:] = 0.0
 
-                if do_apply:
+                if do_apply[(self.pathname, voi)]:
                     try:
                         # Sign on the local Jacobian needs to be -1 before
                         # we add in the fake residual. Since we can't modify
@@ -621,11 +629,11 @@ class System(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                for var, val in iteritems(dresids.flat):
+                for var, val in dresids.veciter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns.flat[var] += val
+                        dunknowns._dat[var].val += val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
@@ -722,7 +730,7 @@ class System(object):
                         vec = dresids._flat(unknown)
                         vec += J.dot(arg_vec._flat(param))
                     else:
-                        shape = arg_vec._vardict[param]['shape']
+                        shape = arg_vec._dat[param].meta['shape']
                         arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
                 else: # plain dicts were passed in for unit testing...
                     if fwd:
@@ -772,7 +780,7 @@ class System(object):
 
         comm = self.comm
         params_dict = self._params_dict
-        relevance = self._relevance
+        relevance = self._probdata.relevance
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = self._relname_map
@@ -794,23 +802,6 @@ class System(object):
                   my_params, self.connections,
                   relevance=relevance, var_of_interest=voi,
                   shared_vec=self._shared_dp_vec[self._shared_p_offsets[voi]:])
-
-    def _setup_gs_outputs(self, vois):
-        self.gs_outputs = { 'fwd': {}, 'rev': {}}
-        dumat = self.dumat
-        gso = self.gs_outputs['fwd']
-        for sub in self._local_subsystems:
-            gso[sub.name] = outs = {}
-            for voi in vois:
-                outs[voi] = set([x for x in dumat[voi] if
-                                           sub.dumat and x not in sub.dumat[voi]])
-        gso = self.gs_outputs['rev']
-        for sub in reversed(self._local_subsystems):
-            gso[sub.name] = outs = {}
-            for voi in vois:
-                outs[voi] = set([x for x in dumat[voi] if
-                                           not sub.dumat or
-                                           (sub.dumat and x not in sub.dumat[voi])])
 
     def get_combined_jac(self, J):
         """
@@ -902,11 +893,11 @@ class System(object):
         #start the docstring off
         docstring = '    \"\"\"\n'
 
-        if self._params_dict or self._unknowns_dict:
+        if self._init_params_dict or self._init_unknowns_dict:
             docstring += '\n    Params\n    ----------\n'
 
-        if self._params_dict:
-            for key, value in self._params_dict.items():
+        if self._init_params_dict:
+            for key, value in self._init_params_dict.items():
                 #docstring += type(value).__name__
                 docstring += "    " + key + ": param ({"
                 #get the values out in order
@@ -920,8 +911,8 @@ class System(object):
                     dictPosition += 1
                 docstring += "})\n"
 
-        if self._unknowns_dict:
-            for key, value in self._unknowns_dict.items():
+        if self._init_unknowns_dict:
+            for key, value in self._init_unknowns_dict.items():
                 docstring += "    " + key + " : unknown ({"
                 dictItemCount = len(value)
                 dictPosition = 1
@@ -964,14 +955,15 @@ class System(object):
     def _get_shared_vec_info(self, vdict, my_params=None):
         # determine the size of the largest grouping of parallel subvecs and the
         # offsets within those vecs for each voi in a parallel set.
-        # We should never need more memory than the largest sized collection of parallel
-        # vecs.
-        metas = [m for m in itervalues(vdict)
-                      if not m.get('pass_by_obj')]
-
-        # for params, we only include 'owned' vars in the vector
-        if my_params is not None:
-            metas = [m for m in metas if m['pathname'] in my_params]
+        # We should never need more memory than the largest sized collection of
+        # parallel vecs.
+        if my_params is None:
+            metas = [m for m in itervalues(vdict)
+                          if not m.get('pass_by_obj')]
+        else: # for params, we only include 'owned' vars in the vector
+            metas = [m for m in itervalues(vdict)
+                          if m['pathname'] in my_params and
+                             not m.get('pass_by_obj')]
 
         full_size = sum([m['size'] for m in metas])  # 'None' vecs are this size
         max_size = full_size
@@ -983,7 +975,7 @@ class System(object):
         if not self._probdata.top_lin_gs:
             return max_size, offsets
 
-        relevance = self._relevance
+        relevance = self._probdata.relevance
         for vois in relevance.groups:
             vec_size = 0
             for voi in vois:
@@ -997,6 +989,78 @@ class System(object):
                 max_size = vec_size
 
         return max_size, offsets
+
+    def _setup_prom_map(self):
+        """
+        Sets up the internal dict that maps absolute name to promoted name.
+        """
+        to_prom_name = self._sysdata.to_prom_name
+
+        for pathname, meta in iteritems(self._unknowns_dict):
+            prom = to_prom_name[pathname]
+
+        for pathname, meta in iteritems(self._params_dict):
+            prom = to_prom_name[pathname]
+
+    def list_connections(self, group_by_comp=False, stream=sys.stdout):
+        """
+        Writes out the list of all connections involving this System or any
+        of its children.  The list is of the form:
+
+        source_absolute_name (source_promoted_name) -> target
+
+        Where sources that broadcast to multiple targets will be replaced with
+        a blank source for all but the first of their targets, in order to help
+        broadcast sources visually stand out.  The source name will be followed
+        by its promoted name if it differs, and if a target is promoted it will
+        be followed by a '*'.
+
+        Sources are sorted alphabetically and targets are subsorted
+        alphabetically when a source is broadcast to multiple targets.
+
+        Args
+        ----
+        group_by_comp : bool, optional
+            If True, show all sources and targets grouped by component. Note
+            that this will cause repeated lines in the output since a given
+            connection will always be from one component's source to a different
+            component's target.  Default is False.
+
+        stream : output stream, optional
+            Stream to write the connection info to. Defaults to sys.stdout.
+        """
+
+        def _list_conns(self):
+            template = "{0:<{swid}} -> {1}\n"
+
+            to_prom_name = self._probdata.to_prom
+            scope = self.pathname + '.' if self.pathname else ''
+
+            # create a dict with srcs as keys so we can more easily subsort
+            # targets after sorting srcs.
+            by_src = {}
+            for tgt, (src, idx) in iteritems(self.connections):
+                if src.startswith(scope) or tgt.startswith(scope):
+                    if to_prom_name[tgt] != tgt:
+                        tgt += ' *'
+                    if to_prom_name[src] != src:
+                        src += " (%s)" % to_prom_name[src]
+                    by_src.setdefault(src, []).append(tgt)
+
+            src_max_wid = max(len(n) for n in by_src)
+
+            for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
+                for i, tgt in enumerate(sorted(tgts)):
+                    if i: src = ''
+                    stream.write(template.format(src, tgt, swid=src_max_wid))
+
+        if group_by_comp:
+            for c in self.components(recurse=True, include_self=True):
+                line = "Connections for %s:" % c.pathname
+                stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
+                c.list_connections(stream=stream)
+        else:
+            _list_conns(self)
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):
