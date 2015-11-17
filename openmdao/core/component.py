@@ -56,6 +56,10 @@ class Component(System):
         self._post_setup_vars = False
         self._jacobian_cache = {}
 
+        # keep a list of nondifferentiable vars without user set 'pass_by_obj'
+        # metadata for use later in check_setup
+        self._pbo_warns = []
+
     def _get_initial_val(self, val, shape):
         """ Determines initial value based on starting val and shape."""
         if val is _NotSet:
@@ -118,6 +122,9 @@ class Component(System):
                 meta['size'] = 1
                 meta['shape'] = 1
         else:
+            if not meta.get('pass_by_obj'):
+                self._pbo_warns.append((name, val))
+
             meta['size'] = 0
             meta['pass_by_obj'] = True
 
