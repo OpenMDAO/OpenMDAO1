@@ -52,10 +52,9 @@ class Group(System):
         # put these in here to avoid circular imports
         from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
         from openmdao.solvers.run_once import RunOnce
-        from openmdao.solvers.scipy_gmres import ScipyGMRES
 
         # These solvers are the default
-        self.ln_solver = ScipyGMRES()
+        self.ln_solver = LinearGaussSeidel()
         self.nl_solver = RunOnce()
         self.precon = LinearGaussSeidel()
 
@@ -214,6 +213,7 @@ class Group(System):
             Problem level data container.
         """
         super(Group, self)._init_sys_data(parent_path, probdata)
+        self._sys_graph = None
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
@@ -842,28 +842,30 @@ class Group(System):
     def _get_sys_graph(self):
         """Return the subsystem graph for this Group."""
 
-        sgraph = self._relevance._sgraph
-        if self.pathname:
-            path = self.pathname.split('.')
-            start = self.pathname + '.'
-            slen = len(start)
-            graph = sgraph.subgraph((n for n in sgraph if start == n[:slen]))
-        else:
-            path = []
-            graph = sgraph.subgraph(sgraph.nodes_iter())
+        if self._sys_graph is None:
+            sgraph = self._relevance._sgraph
+            if self.pathname:
+                path = self.pathname.split('.')
+                start = self.pathname + '.'
+                slen = len(start)
+                graph = sgraph.subgraph((n for n in sgraph if start == n[:slen]))
+            else:
+                path = []
+                graph = sgraph.subgraph(sgraph.nodes_iter())
 
-        plen = len(path)+1
+            plen = len(path)+1
 
-        renames = {}
-        for node in graph.nodes_iter():
-            newnode = '.'.join(node.split('.')[:plen])
-            if newnode != node:
-                renames[node] = newnode
+            renames = {}
+            for node in graph.nodes_iter():
+                newnode = '.'.join(node.split('.')[:plen])
+                if newnode != node:
+                    renames[node] = newnode
 
-        # get the graph of direct children of current group
-        collapse_nodes(graph, renames, copy=False)
+            # get the graph of direct children of current group
+            collapse_nodes(graph, renames, copy=False)
+            self._sys_graph = graph
 
-        return graph
+        return self._sys_graph
 
     def _break_cycles(self, order, graph):
         """Keep breaking cycles until the graph is a DAG.
