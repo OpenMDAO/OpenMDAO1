@@ -507,7 +507,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         except Exception as err:
             self.assertEqual(str(err),
                              "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
-                             "[['C3', 'C2', 'C1']]. To fix this error, change to a different linear solver, "
+                             "[['C1', 'C2', 'C3']]. To fix this error, change to a different linear solver, "
                              "e.g. ScipyGMRES or PetscKSP, or increase maxiter (only if you "
                              "really know what you're doing!)")
         else:
