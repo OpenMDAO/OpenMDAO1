@@ -65,17 +65,13 @@ class MultiPoint(Group):
         size = len(adders)
         # self.add('desvar', IndepVarComp('X', val=10*np.arange(size, dtype=float)), promotes=['*'])
 
-        order = []
         for i,(a,s) in enumerate(zip(adders, scalars)):
             c_name = 'p%d'%i
-            order.append(c_name)
             self.add(c_name, Point(a,s))
             # self.connect('X', c_name+'.x', src_indices=[i,])
             self.connect(c_name+'.f2','aggregate.y%d'%i)
 
         self.add('aggregate', Summer(size))
-        order.append('aggregate')
-        self.set_order(order)
 
 if __name__ == '__main__':
     import time

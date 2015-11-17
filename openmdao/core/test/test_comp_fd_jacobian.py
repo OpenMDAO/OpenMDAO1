@@ -15,6 +15,22 @@ from openmdao.test.simple_comps import SimpleArrayComp, \
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.util import assert_equal_jacobian, assert_rel_error
 
+class FDpropsComp(Component):
+
+    def __init__(self, **kwargs):
+        super(FDpropsComp, self).__init__()
+
+        # Params
+        self.add_param('x1', 3.0)
+        self.add_param('x2', 3.0, **kwargs)
+
+        # Unknowns
+        self.add_output('y', 5.5)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much. """
+        unknowns['y'] = 7.0*params['x1']**2 + 7.0*params['x2']**2
+
 
 class TestProb(Problem):
 
@@ -58,19 +74,16 @@ class CompFDTestCase(unittest.TestCase):
         #params_dict = OrderedDict()
         #params_dict['x'] = { 'val': np.ones((2)),
                              #'pathname' : 'x',
-                             #'promoted_name' : 'x',
                              #'shape': 2, 'size' : 2 }
 
         #unknowns_dict = OrderedDict()
         #unknowns_dict['y'] = { 'val': np.zeros((2)),
                                #'pathname' : 'y',
-                               #'promoted_name' : 'y',
                              #'shape': 2, 'size' : 2 }
 
         #resids_dict = OrderedDict()
         #resids_dict['y'] = { 'val': np.zeros((2)),
                              #'pathname' : 'y',
-                             #'promoted_name' : 'y',
                              #'shape': 2, 'size' : 2 }
 
         #params = SrcVecWrapper()
@@ -280,6 +293,63 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
         assert_rel_error(self, x1_err, 7e-4, 1e-1)
         assert_rel_error(self, x2_err, 7e-6, 1e-1)
+
+    def test_fd_options_step_size_ambiguous(self):
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', FDpropsComp(step_size=1.e-6), promotes=['x2'])
+        comp2 = prob.root.add('comp2', FDpropsComp(step_size=1.001e-6), promotes=['x2'])
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_size'] = 1.0e-4
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+                             "'x2', but different 'step_size' values: [('comp.x2', 1e-06), "
+                             "('comp2.x2', 1.001e-06)]")
+
+    def test_fd_options_step_type_ambiguous(self):
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', FDpropsComp(step_type='absolute'), promotes=['x2'])
+        comp2 = prob.root.add('comp2', FDpropsComp(step_type='relative'), promotes=['x2'])
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_size'] = 1.0e-4
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+                             "'x2', but different 'step_type' values: [('comp.x2', 'absolute'), "
+                             "('comp2.x2', 'relative')]")
+
+    def test_fd_options_form_ambiguous(self):
+
+        prob = Problem()
+        prob.root = Group()
+        comp = prob.root.add('comp', FDpropsComp(form='central'), promotes=['x2'])
+        comp2 = prob.root.add('comp2', FDpropsComp(form='forward'), promotes=['x2'])
+        prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
+        prob.root.connect('p1.x1', 'comp.x1')
+
+        comp.fd_options['force_fd'] = True
+        comp.fd_options['step_size'] = 1.0e-4
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+                             "'x2', but different 'form' values: [('comp.x2', 'central'), "
+                             "('comp2.x2', 'forward')]")
 
     def test_fd_options_step_type_precedence(self):
 

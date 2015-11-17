@@ -81,7 +81,7 @@ class MultiFiMetaModel(MetaModel):
             if fi > 0:
                 name_with_fi = 'train:'+_get_name_fi(name, fi)
                 super(MetaModel, self).add_param(name_with_fi, val=list(), pass_by_obj=True)
-                self._input_sizes[fi]+=self._params_dict[name]['size']
+                self._input_sizes[fi]+=self._init_params_dict[name]['size']
 
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -194,7 +194,7 @@ class MultiFiMetaModel(MetaModel):
                                 v = np.array(v)
                             new_outputs[fi][row_idx, :] = v.flat
 
-            surrogate = self._unknowns_dict[name].get('surrogate')
+            surrogate = self._init_unknowns_dict[name].get('surrogate')
             if surrogate is not None:
                 surrogate.train_multifi(self._training_input,
                                         self._training_output[name])

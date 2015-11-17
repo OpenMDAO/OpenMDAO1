@@ -111,7 +111,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as error:
-            msg = "Promoted name 'G3.y' matches multiple unknowns: ['G3.C3.y', 'G3.C4.y']"
+            msg = "'G3': promoted name 'y' matches multiple unknowns: ('G3.C3.y', 'G3.C4.y')"
             self.assertEqual(text_type(error), msg)
         else:
             self.fail("Error expected")
@@ -131,7 +131,7 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(RuntimeError) as err:
             prob.setup(check=False)
 
-        expected_msg = "Promoted name 'z' matches multiple unknowns: ['c1.z', 'c2.z']"
+        expected_msg = "'': promoted name 'z' matches multiple unknowns: ('c1.z', 'c2.z')"
 
         self.assertEqual(str(err.exception), expected_msg)
 
@@ -489,7 +489,6 @@ class TestProblem(unittest.TestCase):
         prob = Problem(root=Group())
         root = prob.root
 
-        # ? Didn't we say that IndepVarComp by default promoted its variable?
         root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
         root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x'])
 
@@ -801,6 +800,7 @@ class TestCheckSetup(unittest.TestCase):
 
         for node, afters in oo[0][1]:
             self.assertEqual(node, expected[tuple(afters)])
+
 
 if __name__ == "__main__":
     unittest.main()
