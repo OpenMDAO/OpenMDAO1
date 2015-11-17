@@ -6,7 +6,7 @@ import numpy as np
 from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
-from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives
+from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives, StateConnection
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
@@ -490,6 +490,45 @@ class TestLinearGaussSeidel(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+    def test_lings_cycle_msg(self):
+        p = Problem(root=Group())
+        root = p.root
+        C1 = root.add("C1", ExecComp('y=x*2.0'))
+        C2 = root.add("C2", ExecComp('y=x*2.0'))
+        C3 = root.add("C3", ExecComp('y=x*2.0'))
+
+        root.connect('C1.y', 'C3.x')
+        root.connect('C3.y', 'C2.x')
+        root.connect('C2.y', 'C1.x')
+
+        try:
+            p.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
+                             "[['C3', 'C2', 'C1']]. To fix this error, change to a different linear solver, "
+                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (only if you "
+                             "really know what you're doing!)")
+        else:
+            self.fail("Exception expected")
+
+    def test_lings_state_msg(self):
+        p = Problem(root=Group())
+        root = p.root
+        C1 = root.add("C1", StateConnection())
+
+        try:
+            p.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
+                             "implicit states ['C1.y2_command']. To fix this error, change to a different "
+                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (only "
+                             "if you really know what you're doing!)")
+        else:
+            self.fail("Exception expected")
+
 
 if __name__ == "__main__":
     unittest.main()

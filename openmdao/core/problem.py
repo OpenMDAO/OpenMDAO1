@@ -623,6 +623,10 @@ class Problem(System):
         return {}
 
     def _check_solvers(self):
+        """
+        Raise an exception of we detect a LinearGaussSeidel solver if that
+        group has either cycles or states.
+        """
         for group in self.root.subgroups(recurse=True, include_self=True):
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
@@ -635,10 +639,10 @@ class Problem(System):
                     raise RuntimeError("Group '%s' has a LinearGaussSeidel "
                                    "solver with maxiter==1 but it contains "
                                    "cycles %s. To fix this error, change to "
-                                   "a different linear solver, e.g. gmres, "
-                                   "or increase maxiter to a value larger than "
-                                   "1 (only do this if you really know what "
-                                   "you're doing!)" % (group.pathname, strong))
+                                   "a different linear solver, e.g. ScipyGMRES "
+                                   "or PetscKSP, or increase maxiter (only "
+                                   "if you really know what you're doing!)"
+                                   % (group.pathname, strong))
 
                 states = [n for n,m in iteritems(group._unknowns_dict)
                                   if m.get('state')]
@@ -647,10 +651,9 @@ class Problem(System):
                                    "solver with maxiter==1 but it contains "
                                    "implicit states %s. To fix this error, "
                                    "change to a different linear solver, e.g. "
-                                   "gmres, or increase maxiter to a value "
-                                   "larger than 1 (only do this if you really "
-                                   "know what you're doing!)" % (group.pathname,
-                                                                 states))
+                                   "ScipyGMRES or PetscKSP, or increase maxiter "
+                                   "(only if you really know what "
+                                   "you're doing!)" % (group.pathname, states))
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
