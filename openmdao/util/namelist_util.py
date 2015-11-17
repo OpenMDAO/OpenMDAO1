@@ -470,8 +470,6 @@ class Namelist(object):
                     current_group = None
 
                 # Everything else must be a pure comment
-                #else:
-                    #print( "Comment ignored: %s" % line.rstrip('\n'))
 
                 # Group ending '/' can also conclude a data line.
                 if line[-1] == '/':
