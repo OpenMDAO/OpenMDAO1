@@ -729,6 +729,12 @@ class Group(System):
         else:
             sol_vec, rhs_vec = drmat, dumat
 
+        # Don't solve if user requests finite difference in this group.
+        if self.fd_options['force_fd']:
+            for voi in vois:
+                sol_vec[voi].vec[:] = rhs_vec[voi].vec
+                return
+
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
         rhs_buf = OrderedDict()
         for voi in vois:

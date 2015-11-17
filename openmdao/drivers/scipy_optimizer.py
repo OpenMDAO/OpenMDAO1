@@ -306,9 +306,9 @@ class ScipyOptimizer(Driver):
                                   return_format='array')
         self.grad_cache = grad
 
-        #print("Gradients calculated")
-        #print(x_new)
-        #print(grad[0, :])
+        print("Gradients calculated")
+        print(x_new)
+        print(grad[0, :])
 
         return grad[0, :]
 
@@ -336,9 +336,9 @@ class ScipyOptimizer(Driver):
         meta = self._cons[name]
         grad_idx = self.con_idx[name] + idx + 1
 
-        #print("Constraint Gradient returned")
-        #print(x_new)
-        #print(name, idx, grad[grad_idx, :])
+        print("Constraint Gradient returned")
+        print(x_new)
+        print(name, idx, grad[grad_idx, :])
 
         # Equality constraints
         if meta['equals'] is not None:
