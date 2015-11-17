@@ -13,7 +13,7 @@ os:
 language: generic
 
 env:
-- HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+- HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=
 - HDF5=h5py PY=2.7 MPI=
 - HDF5=h5py PY=3.4 MPI=
 - HFF5= PY=2.7 MPI=
@@ -22,7 +22,7 @@ env:
 matrix:
   exclude:
   - os: osx
-    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=1
+    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=
 
 addons:
   apt:
