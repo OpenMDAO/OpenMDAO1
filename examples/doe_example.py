@@ -18,12 +18,13 @@ class DUT(Component):
     def __init__(self):
         super(DUT, self).__init__()
         self.add_param('x', val=0.)
+        self.add_param('c', val=0.)
         self.add_output('y', shape=1)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much.  Just multiply by 3"""
         sum([j*j for j in xrange(10000000)])    # dummy delay (busy loop)
-        unknowns['y'] = 3.0*params['x']
+        unknowns['y'] = params['c']*params['x']
         
 if __name__ == "__main__":
 
@@ -37,15 +38,17 @@ if __name__ == "__main__":
     problem = Problem(impl=impl)
     root = problem.root = ParallelDOEGroup(impl.world_comm().size)
     root.add('indep_var', IndepVarComp('x', val=7.0))
+    root.add('const', IndepVarComp('c', val=3.0, pass_by_obj=False))
     root.add('dut', DUT())
 
     root.connect('indep_var.x', 'dut.x')    
+    root.connect('const.c', 'dut.c')  
 
     problem.driver = UniformDriver(num_samples = 10)
     problem.driver.add_desvar('indep_var.x', low=4410.0,  high=4450.0)
     problem.driver.add_objective('dut.y')
 
-    recorder = DumpRecorder('dump')
+    recorder = DumpRecorder()
     problem.driver.add_recorder(recorder)
 
     problem.setup()
