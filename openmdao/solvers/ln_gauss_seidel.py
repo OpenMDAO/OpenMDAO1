@@ -5,6 +5,8 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
+import networkx as nx
+
 from openmdao.solvers.solver_base import LinearSolver
 
 
@@ -46,6 +48,30 @@ class LinearGaussSeidel(LinearSolver):
                               " individual variables of interest. This "
                               "may increase performance but will use "
                               "more memory.")
+
+    def setup(self, group):
+        """
+        Args
+        ----
+        group: `Group`
+            Group that owns this solver.
+        """
+        super(LinearGaussSeidel, self).setup(group)
+
+        # If our group has a cycle and we can't iterate, that's
+        # an error.
+        if self.options['maxiter'] == 1:
+            graph = group._get_sys_graph()
+            strong = [s for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+            if strong:
+                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                                   "solver with maxiter==1 but it contains "
+                                   "cycles %s. To fix this error, change to "
+                                   "a different linear solver, e.g. gmres, "
+                                   "or increase maxiter to a value larger than "
+                                   "1 (only do this if you really know what "
+                                   "you're doing!)" % (group.pathname, strong))
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
