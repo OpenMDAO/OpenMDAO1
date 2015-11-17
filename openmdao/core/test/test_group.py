@@ -2,7 +2,7 @@
 import unittest
 from six import text_type, StringIO, itervalues
 
-from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp
+from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, ScipyGMRES
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 
 class TestGroup(unittest.TestCase):
@@ -486,6 +486,8 @@ class TestGroup(unittest.TestCase):
         # than the full graph.
         p = Problem(root=Group())
         root = p.root
+        root.ln_solver = ScipyGMRES()
+
         C5 = root.add("C5", ExecComp('y=x*2.0'))
         C6 = root.add("C6", ExecComp('y=x*2.0'))
         C1 = root.add("C1", ExecComp('y=x*2.0'))
@@ -512,6 +514,7 @@ class TestGroup(unittest.TestCase):
         # this tests the auto ordering when we have a cycle that is the full graph.
         p = Problem(root=Group())
         root = p.root
+        root.ln_solver = ScipyGMRES()
         C1 = root.add("C1", ExecComp('y=x*2.0'))
         C2 = root.add("C2", ExecComp('y=x*2.0'))
         C3 = root.add("C3", ExecComp('y=x*2.0'))

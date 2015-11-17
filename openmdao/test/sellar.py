@@ -13,6 +13,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.solvers.nl_gauss_seidel import NLGaussSeidel
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.solvers.newton import Newton
 
 
@@ -150,6 +151,7 @@ class SellarDerivatives(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
 
         self.nl_solver = NLGaussSeidel()
+        self.ln_solver = ScipyGMRES()
 
 
 class SellarDerivativesGrouped(Group):
@@ -161,10 +163,10 @@ class SellarDerivativesGrouped(Group):
 
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
-        sub = self.add('mda', Group(), promotes=['*'])
+        mda = self.add('mda', Group(), promotes=['*'])
 
-        sub.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        sub.add('d2', SellarDis2withDerivatives(), promotes=['*'])
+        mda.add('d1', SellarDis1withDerivatives(), promotes=['*'])
+        mda.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
@@ -173,9 +175,11 @@ class SellarDerivativesGrouped(Group):
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
 
-        sub.nl_solver = NLGaussSeidel()
-        sub.d1.fd_options['force_fd'] = True
-        sub.d2.fd_options['force_fd'] = True
+        mda.nl_solver = NLGaussSeidel()
+        mda.d1.fd_options['force_fd'] = True
+        mda.d2.fd_options['force_fd'] = True
+
+        self.ln_solver = ScipyGMRES()
 
 
 class StateConnection(Component):
@@ -240,3 +244,4 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'con_cmp2.y2')
 
         self.nl_solver = Newton()
+        self.ln_solver = ScipyGMRES()

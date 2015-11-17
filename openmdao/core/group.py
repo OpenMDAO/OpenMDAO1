@@ -862,7 +862,7 @@ class Group(System):
                     renames[node] = newnode
 
             # get the graph of direct children of current group
-            collapse_nodes(graph, renames, copy=False)
+            graph = collapse_nodes(graph, renames, copy=False)
             self._sys_graph = graph
 
         return self._sys_graph
@@ -874,6 +874,11 @@ class Group(System):
 
         strong = [s for s in nx.strongly_connected_components(graph)
                   if len(s) > 1]
+
+        if strong:
+            # copy the graph, because we don't want to modify the starting graph
+            graph = graph.subgraph(graph.nodes_iter())
+
         while strong:
             # First of all, see if the cycle has in edges
             in_edges = []

@@ -4,7 +4,7 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 
@@ -241,6 +241,7 @@ class TestUBCS(unittest.TestCase):
     def test_ubcs(self):
         p = Problem(root=Group())
         root = p.root
+        root.ln_solver = ScipyGMRES()
 
         self.P1 = root.add("P1", IndepVarComp('x', 1.0))
         self.C1 = root.add("C1", ExecComp('y=x1*2.0+x2*3.0', x2=1.0))

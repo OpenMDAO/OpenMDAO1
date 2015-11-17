@@ -73,6 +73,18 @@ class LinearGaussSeidel(LinearSolver):
                                    "1 (only do this if you really know what "
                                    "you're doing!)" % (group.pathname, strong))
 
+            states = [n for n,m in iteritems(group._unknowns_dict)
+                              if m.get('state')]
+            if states:
+                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                                   "solver with maxiter==1 but it contains "
+                                   "implicit states %s. To fix this error, "
+                                   "change to a different linear solver, e.g. "
+                                   "gmres, or increase maxiter to a value "
+                                   "larger than 1 (only do this if you really "
+                                   "know what you're doing!)" % (group.pathname,
+                                                                 states))
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
