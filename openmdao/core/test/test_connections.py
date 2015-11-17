@@ -1,10 +1,13 @@
+""" Tests related to connecing params to unknowns."""
+
 import unittest
 import numpy as np
 from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyGMRES
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, Component, \
+                         ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 
@@ -26,8 +29,8 @@ class TestConnections(unittest.TestCase):
 
     def test_diff_conn_input_vals(self):
         # set different initial values
-        self.C1._params_dict['x']['val'] = 7.
-        self.C3._params_dict['x']['val'] = 5.
+        self.C1._init_params_dict['x']['val'] = 7.
+        self.C3._init_params_dict['x']['val'] = 5.
 
         # connect two inputs
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
@@ -44,8 +47,8 @@ class TestConnections(unittest.TestCase):
 
     def test_diff_conn_input_units(self):
         # set different but compatible units
-        self.C1._params_dict['x']['units'] = 'ft'
-        self.C3._params_dict['x']['units'] = 'in'
+        self.C1._init_params_dict['x']['units'] = 'ft'
+        self.C3._init_params_dict['x']['units'] = 'in'
 
         # connect two inputs
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
@@ -122,6 +125,111 @@ class TestConnections(unittest.TestCase):
         self.p.run()
         self.assertEqual(self.p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(self.p.root.G3.G4.C4.params['x'], 999.)
+
+    def test_pull_size_from_source(self):
+
+        class Src(Component):
+
+            def __init__(self):
+                super(Src, self).__init__()
+
+                self.add_param('x', 2.0)
+                self.add_output('y1', np.zeros((3, )))
+                self.add_output('y2', shape=((3, )))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x = params['x']
+
+                unknowns['y1'] = x * np.array( [1.0, 2.0, 3.0])
+                unknowns['y2'] = x * np.array( [1.0, 2.0, 3.0])
+
+        class Tgt(Component):
+
+            def __init__(self):
+                super(Tgt, self).__init__()
+
+                self.add_param('x1')
+                self.add_param('x2')
+                self.add_output('y1', 0.0)
+                self.add_output('y2', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x1 = params['x1']
+                x2 = params['x2']
+
+                unknowns['y1'] = np.sum(x1)
+                unknowns['y2'] = np.sum(x2)
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('src', Src())
+        top.root.add('tgt', Tgt())
+
+        top.root.connect('src.y1', 'tgt.x1')
+        top.root.connect('src.y2', 'tgt.x2')
+
+        top.setup(check=False)
+        top.run()
+
+        self.assertEqual(top['tgt.y1'], 12.0)
+        self.assertEqual(top['tgt.y2'], 12.0)
+
+    def test_pull_size_from_source_with_indices(self):
+
+        class Src(Component):
+
+            def __init__(self):
+                super(Src, self).__init__()
+
+                self.add_param('x', 2.0)
+                self.add_output('y1', np.zeros((3, )))
+                self.add_output('y2', shape=((3, )))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x = params['x']
+
+                unknowns['y1'] = x * np.array( [1.0, 2.0, 3.0])
+                unknowns['y2'] = x * np.array( [1.0, 2.0, 3.0])
+
+        class Tgt(Component):
+
+            def __init__(self):
+                super(Tgt, self).__init__()
+
+                self.add_param('x1')
+                self.add_param('x2')
+                self.add_output('y1', 0.0)
+                self.add_output('y2', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ counts up. """
+
+                x1 = params['x1']
+                x2 = params['x2']
+
+                unknowns['y1'] = np.sum(x1)
+                unknowns['y2'] = np.sum(x2)
+
+        top = Problem()
+        top.root = Group()
+        top.root.add('src', Src())
+        top.root.add('tgt', Tgt())
+
+        top.root.connect('src.y1', 'tgt.x1', src_indices=(0, 1))
+        top.root.connect('src.y2', 'tgt.x2', src_indices=(0, 1))
+
+        top.setup(check=False)
+        top.run()
+
+        self.assertEqual(top['tgt.y1'], 6.0)
+        self.assertEqual(top['tgt.y2'], 6.0)
+
 
 
 class TestConnectionsPromoted(unittest.TestCase):
@@ -262,7 +370,7 @@ class TestUBCS(unittest.TestCase):
         root.connect("C4.y", "C1.x2")
 
         # set a bogus value for C4.y
-        self.C4._unknowns_dict['y']['val'] = -999.
+        self.C4._init_unknowns_dict['y']['val'] = -999.
 
         p.setup(check=False)
 

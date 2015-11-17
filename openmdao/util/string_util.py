@@ -3,7 +3,7 @@
 import ast
 
 #public symbols
-__all__ = ['get_common_ancestor', 'name_relative_to', 'parse_for_vars']
+__all__ = ['get_common_ancestor', 'nearest_child', 'name_relative_to', 'parse_for_vars']
 
 def get_common_ancestor(name1, name2):
     """
@@ -33,6 +33,26 @@ def get_common_ancestor(name1, name2):
     else:
         return ''
 
+def nearest_child(parent_abspath, child_abspath):
+    """ Determine the relative name of the nearest child inside of the
+    parent that contains or is the object specified by child_abspath.
+
+    Args
+    ----
+    parent_abspath : str
+        Asbolute path of the parent system.
+
+    child_abspath : str
+        Absolute path of the child variable or system.
+
+    Returns
+    -------
+    str
+        Name of the child relative to the parent.
+    """
+    start = len(parent_abspath)+1 if parent_abspath else 0
+    return child_abspath[start:].split('.', 1)[0]
+
 def name_relative_to(parent_abspath, child_abspath):
     """ Determine the relative name of a child path with respect to a parent
     system.
@@ -51,8 +71,7 @@ def name_relative_to(parent_abspath, child_abspath):
         Name of the child relative to the parent.
     """
     start = len(parent_abspath)+1 if parent_abspath else 0
-    return child_abspath[start:].split('.', 1)[0]
-
+    return child_abspath[start:]
 
 class ExprVarScanner(ast.NodeVisitor):
     """

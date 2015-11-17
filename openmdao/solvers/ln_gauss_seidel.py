@@ -58,32 +58,9 @@ class LinearGaussSeidel(LinearSolver):
         """
         super(LinearGaussSeidel, self).setup(group)
 
-        # If our group has a cycle and we can't iterate, that's
-        # an error.
-        if self.options['maxiter'] == 1:
-            graph = group._get_sys_graph()
-            strong = [s for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
-            if strong:
-                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
-                                   "solver with maxiter==1 but it contains "
-                                   "cycles %s. To fix this error, change to "
-                                   "a different linear solver, e.g. gmres, "
-                                   "or increase maxiter to a value larger than "
-                                   "1 (only do this if you really know what "
-                                   "you're doing!)" % (group.pathname, strong))
-
-            states = [n for n,m in iteritems(group._unknowns_dict)
-                              if m.get('state')]
-            if states:
-                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
-                                   "solver with maxiter==1 but it contains "
-                                   "implicit states %s. To fix this error, "
-                                   "change to a different linear solver, e.g. "
-                                   "gmres, or increase maxiter to a value "
-                                   "larger than 1 (only do this if you really "
-                                   "know what you're doing!)" % (group.pathname,
-                                                                 states))
+        self._vois = [None]
+        for vois in group._probdata.relevance.vars_of_interest():
+            self._vois.extend(vois)
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -110,15 +87,13 @@ class LinearGaussSeidel(LinearSolver):
         dumat = system.dumat
         drmat = system.drmat
         dpmat = system.dpmat
-        gs_outputs = system.gs_outputs
-        relevance = system._relevance
+        gs_outputs = system._get_gs_outputs(mode, self._vois)
+        relevance = system._probdata.relevance
         fwd = mode == 'fwd'
 
         system.clear_dparams()
-        for names in system._relevance.vars_of_interest():
-            for name in names:
-                if name in dumat:
-                    dumat[name].vec[:] = 0.0
+        for voi in self._vois:
+            dumat[voi].vec[:] = 0.0
         dumat[None].vec[:] = 0.0
 
         vois = rhs_mat.keys()
@@ -132,7 +107,8 @@ class LinearGaussSeidel(LinearSolver):
         f_norm0, f_norm = 1.0, 1.0
         self.iter_count = 0
         maxiter = self.options['maxiter']
-        while self.iter_count < maxiter and f_norm > self.options['atol'] and f_norm/f_norm0 > self.options['rtol']:
+        while self.iter_count < maxiter and f_norm > self.options['atol'] \
+                  and f_norm/f_norm0 > self.options['rtol']:
 
             if fwd:
 
@@ -156,7 +132,7 @@ class LinearGaussSeidel(LinearSolver):
 
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                    sub._sys_apply_linear(mode, system._do_apply, vois=vois,
                                           gs_outputs=gs_outputs['fwd'][sub.name])
 
                     # for voi in vois:
@@ -207,7 +183,7 @@ class LinearGaussSeidel(LinearSolver):
 
                     # Groups and all other systems just call their own
                     # apply_linear.
-                    sub._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=vois,
+                    sub._sys_apply_linear(mode, system._do_apply, vois=vois,
                                          gs_outputs=gs_outputs['rev'][sub.name])
 
                     #for voi in vois:
@@ -254,15 +230,15 @@ class LinearGaussSeidel(LinearSolver):
             solve.
         """
 
+        # we used to build gs_outputs up using dumat, but dumat is already
+        # identical to gs_outputs in the vois we care about, so just use it.
+        system._sys_apply_linear(mode, system._do_apply, vois=rhs_mat.keys(),
+                                gs_outputs=system.dumat)
+
         if mode == 'fwd':
             rhs_vec = system.drmat
         else:
             rhs_vec = system.dumat
-
-        # we used to build gs_outputs up using dumat, but dumat is already
-        # identical to gs_outputs in the vois we care about, so just use it.
-        system._sys_apply_linear(mode, ls_inputs=system._ls_inputs, vois=rhs_mat.keys(),
-                                gs_outputs=system.dumat)
 
         norm = 0.0
         for voi, rhs in iteritems(rhs_mat):

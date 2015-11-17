@@ -115,7 +115,7 @@ class pyOptSparseDriver(Driver):
         """
 
         self.pyopt_solution = None
-        rel = problem.root._relevance
+        rel = problem.root._probdata.relevance
 
         # Metadata Setup
         self.metadata = create_local_meta(None, self.options['optimizer'])

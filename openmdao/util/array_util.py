@@ -53,15 +53,15 @@ def evenly_distrib_idxs(num_divisions, arr_size):
 
     return sizes, offsets
 
-def to_slices(sidxs, didxs):
-    """Convert matching src and dest idxs into slices if possible.
-    Sort the indices together to increase the likelihood of being able
-    to represent them as slices.
-    """
-    sort_idxs = np.argsort(sidxs)
-    return _to_slice(sidxs[sort_idxs]), _to_slice(didxs[sort_idxs])
+# def to_slices(sidxs, didxs):
+#     """Convert matching src and dest idxs into slices if possible.
+#     Sort the indices together to increase the likelihood of being able
+#     to represent them as slices.
+#     """
+#     sort_idxs = np.argsort(sidxs)
+#     return _to_slice(sidxs[sort_idxs]), _to_slice(didxs[sort_idxs])
 
-def _to_slice(idxs):
+def to_slice(idxs):
     """Convert an index array to a slice if possible. Otherwise,
     return the index array. Indices are assumed to be sorted in
     ascending order.

@@ -208,7 +208,7 @@ class Namelist(object):
         if not skip:
             skip = []
 
-        for name in iterkeys(self.comp._params_dict):
+        for name in iterkeys(self.comp._init_params_dict):
             if name.startswith(varpath):
                 sub_name = name.lstrip(varpath + ':')
                 print(name, sub_name, skip)
@@ -561,7 +561,7 @@ class Namelist(object):
         if hasattr(self.comp.params, 'keys'):
             params = self.comp.params
         else:
-            params = self.comp._params_dict
+            params = self.comp._init_params_dict
 
         # See Pylint W0102 for why we do this
         if not ignore:
