@@ -425,8 +425,8 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
     top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
 
     #room length and width bounds
-    top.driver.add_desvar('ivc_rlength.room_length', low=5.0*12.0, high=50.0*12.0) #domain: 1in <= length <= 50ft
-    top.driver.add_desvar('ivc_rwidth.room_width', low=5.0*12.0, high=30.0*12.0) #domain: 1in <= width <= 30ft
+    top.driver.add_desvar('ivc_rlength.room_length', lower=5.0*12.0, upper=50.0*12.0) #domain: 1in <= length <= 50ft
+    top.driver.add_desvar('ivc_rwidth.room_width', lower=5.0*12.0, upper=30.0*12.0) #domain: 1in <= width <= 30ft
 
     top.driver.add_objective('d_neg_area.neg_room_area') #minimize negative area (or maximize area)
 

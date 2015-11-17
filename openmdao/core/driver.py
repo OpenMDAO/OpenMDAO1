@@ -238,7 +238,9 @@ class Driver(object):
         """
         self.recorders.append(recorder)
 
-    def add_desvar(self, name, low=None, high=None, indices=None, adder=0.0, scaler=1.0):
+    def add_desvar(self, name, lower=None, upper=None,
+                   low=None, high=None,
+                   indices=None, adder=0.0, scaler=1.0):
         """
         Adds a parameter to this driver.
 
@@ -247,11 +249,11 @@ class Driver(object):
         name : string
            Name of the IndepVarComp in the root system.
 
-        low : float or ndarray, optional
+        lower : float or ndarray, optional
             Lower boundary for the param
 
-        high : upper or ndarray, optional
-            Lower boundary for the param
+        upper : upper or ndarray, optional
+            Upper boundary for the param
 
         indices : iter of int, optional
             If a param is an array, these indicate which entries are of
@@ -265,29 +267,39 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+        if low is not None or high is not None:
+            warnings.simplefilter('always', DeprecationWarning)
+            warnings.warn("'low' and 'high' are deprecated. "
+                          "Use 'lower' and 'upper' instead.",
+                          DeprecationWarning,stacklevel=2)
+            warnings.simplefilter('ignore', DeprecationWarning)
+            if low is not None and lower is None:
+                lower = low
+            if high is not None and upper is None:
+                upper = high
 
-        if low is None:
-            low = -1e99
-        elif isinstance(low, np.ndarray):
-            low = low.flatten()
+        if lower is None:
+            lower = -1e99
+        elif isinstance(lower, np.ndarray):
+            lower = lower.flatten()
 
-        if high is None:
-            high = 1e99
-        elif isinstance(high, np.ndarray):
-            high = high.flatten()
+        if upper is None:
+            upper = 1e99
+        elif isinstance(upper, np.ndarray):
+            upper = upper.flatten()
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        # Scale the low and high values
-        low = (low + adder)*scaler
-        high = (high + adder)*scaler
+        # Scale the lower and upper values
+        lower = (lower + adder)*scaler
+        upper = (upper + adder)*scaler
 
         param = {}
-        param['low'] = low
-        param['high'] = high
+        param['lower'] = lower
+        param['upper'] = upper
         param['adder'] = adder
         param['scaler'] = scaler
         if indices:
@@ -295,7 +307,7 @@ class Driver(object):
 
         self._desvars[name] = param
 
-    def add_param(self, name, low=None, high=None, indices=None, adder=0.0,
+    def add_param(self, name, lower=None, upper=None, indices=None, adder=0.0,
                   scaler=1.0):
         """
         Deprecated.  Use ``add_desvar`` instead.
@@ -305,7 +317,7 @@ class Driver(object):
                       DeprecationWarning,stacklevel=2)
         warnings.simplefilter('ignore', DeprecationWarning)
 
-        self.add_desvar(name, low=low, high=high, indices=indices, adder=adder,
+        self.add_desvar(name, lower=lower, upper=upper, indices=indices, adder=adder,
                         scaler=scaler)
 
     def get_desvars(self):
@@ -511,7 +523,6 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
-
         if equals is not None and (lower is not None or upper is not None):
             msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))
@@ -539,7 +550,7 @@ class Driver(object):
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
 
-        # Scale the low and high values
+        # Scale the lower and upper values
         if lower is not None:
             lower = (lower + adder)*scaler
         if upper is not None:

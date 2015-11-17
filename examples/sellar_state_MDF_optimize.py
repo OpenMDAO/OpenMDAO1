@@ -165,9 +165,9 @@ if __name__ == '__main__':
     top.driver.options['optimizer'] = 'SLSQP'
     top.driver.options['tol'] = 1.0e-8
 
-    top.driver.add_desvar('z', low=np.array([-10.0, 0.0]),
-                         high=np.array([10.0, 10.0]))
-    top.driver.add_desvar('x', low=0.0, high=10.0)
+    top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                         upper=np.array([10.0, 10.0]))
+    top.driver.add_desvar('x', lower=0.0, upper=10.0)
 
     top.driver.add_objective('obj')
     top.driver.add_constraint('con1', upper=0.0)

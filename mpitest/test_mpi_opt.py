@@ -120,8 +120,8 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.add_desvar('p1.x', low=-100, high=100)
-        driver.add_desvar('p2.x', low=-100, high=100)
+        driver.add_desvar('p1.x', lower=-100, upper=100)
+        driver.add_desvar('p2.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
 
         root.fd_options['force_fd'] = True
@@ -148,8 +148,8 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.add_desvar('par.s1.p.x', low=-100, high=100)
-        driver.add_desvar('par.s2.p.x', low=-100, high=100)
+        driver.add_desvar('par.s1.p.x', lower=-100, upper=100)
+        driver.add_desvar('par.s2.p.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
 
         root.fd_options['force_fd'] = True
@@ -180,8 +180,8 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.add_desvar('par.s1.p.x', low=-100, high=100)
-        driver.add_desvar('par.s2.p.x', low=-100, high=100)
+        driver.add_desvar('par.s1.p.x', lower=-100, upper=100)
+        driver.add_desvar('par.s2.p.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
 
         model.setup(check=False)
@@ -245,8 +245,8 @@ class ParallelMPIOptAsym(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('par.ser2.x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.c', equals=0.0)
@@ -335,8 +335,8 @@ class ParallelMPIOptPromoted(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.add_desvar('par.ser1.x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('par.ser2.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('par.ser2.x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.c', equals=0.0)
@@ -456,8 +456,8 @@ class ParallelMPIOpt(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.add_desvar('par.ser1.p1.x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('par.ser2.p1.x', low=-50.0, high=50.0)
+        prob.driver.add_desvar('par.ser1.p1.x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('par.ser2.p1.x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('total.obj')
         prob.driver.add_constraint('par.ser1.con.c', equals=0.0)
