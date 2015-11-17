@@ -81,6 +81,9 @@ class TestSqliteRecorder(MPITestCase):
                 raise e
 
     def assertMetadataRecorded(self, expected):
+        if self.comm.rank != 0:
+            return
+
         db = SqliteDict(self.filename, self.tablename)
         _assertMetadataRecorded(self, db, expected)
         db.close()

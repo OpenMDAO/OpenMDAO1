@@ -58,8 +58,8 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
 
         prob.driver = LatinHypercubeDriver(100)
-        prob.driver.add_desvar('x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
         
         prob.driver.add_objective('f_xy')
 
@@ -114,8 +114,8 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
 
         prob.driver = OptimizedLatinHypercubeDriver(100)
-        prob.driver.add_desvar('x', low=-50.0, high=50.0)
-        prob.driver.add_desvar('y', low=-50.0, high=50.0)
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
         
         prob.driver.add_objective('f_xy')
 
@@ -172,9 +172,9 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
 
-        prob.driver.add_desvar('z', low=np.array([-10.0]), high=np.array([10.0]),
+        prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
                               indices=[0])
-        prob.driver.add_desvar('x', low=0.0, high=10.0)
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
         prob.driver.add_constraint('con1', upper=0.0)

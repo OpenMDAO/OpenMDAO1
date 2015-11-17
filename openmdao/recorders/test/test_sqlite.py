@@ -132,9 +132,8 @@ class TestSqliteRecorder(unittest.TestCase):
                 raise e
 
     def assertMetadataRecorded(self, expected):
-        db = SqliteDict( self.filename, self.tablename )
-        _assertMetadataRecorded( self, db, expected )
-        db.close()
+        with SqliteDict( self.filename, self.tablename, flag='r' ) as db:
+            _assertMetadataRecorded( self, db, expected )
 
     def assertIterationDataRecorded(self, expected, tolerance):
         db = SqliteDict( self.filename, self.tablename )

@@ -188,11 +188,11 @@ Currently, we are supporting two different versions of Python_:
 
 .. _Python: http://www.python.org
 
- * 2.7.9_ or higher versions of 2.7.x
+ * 2.7.9_ or upper versions of 2.7.x
 
 .. _2.7.9: https://www.python.org/downloads/release/python-279/
 
- * 3.4.3_ or higher versions of 3.4.x
+ * 3.4.3_ or upper versions of 3.4.x
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 
@@ -205,7 +205,7 @@ includes Numpy.
 
 .. _Numpy: http://numpy.org
 
- * Version 1.9.2 or higher will be supported.
+ * Version 1.9.2 or upper will be supported.
 
 Scipy
 +++++
@@ -215,7 +215,7 @@ includes Scipy.
 
 .. _Scipy: http://scipy.org
 
- * Version 0.15.1 or higher will be supported.
+ * Version 0.15.1 or upper will be supported.
 
 Git (Optional)
 ++++++++++++++

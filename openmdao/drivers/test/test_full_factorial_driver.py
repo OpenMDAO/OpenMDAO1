@@ -21,8 +21,8 @@ class TestFullFactorial(unittest.TestCase):
         root.add('comp', Paraboloid(), promotes=['*'])
 
         prob.driver = FullFactorialDriver(2)
-        prob.driver.add_desvar('x', low=0, high=1)
-        prob.driver.add_desvar('y', low=0, high=1)
+        prob.driver.add_desvar('x', lower=0, upper=1)
+        prob.driver.add_desvar('y', lower=0, upper=1)
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)
