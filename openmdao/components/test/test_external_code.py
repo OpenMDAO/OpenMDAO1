@@ -10,7 +10,7 @@ import pkg_resources
 from openmdao.api import Problem, Group, ExternalCode
 from openmdao.components.external_code import STDOUT
 
-DIRECTORY = pkg_resources.resource_filename('openmdao.components', 'test')
+DIRECTORY = os.path.dirname((os.path.abspath(__file__)))
 
 class ExternalCodeForTesting(ExternalCode):
     def __init__(self):
