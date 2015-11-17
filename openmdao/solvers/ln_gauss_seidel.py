@@ -32,11 +32,11 @@ class LinearGaussSeidel(LinearSolver):
         super(LinearGaussSeidel, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-12,
+        opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-10,
+        opt.add_option('rtol', 1e-10, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('maxiter', 1,
+        opt.add_option('maxiter', 1, lower=1,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +

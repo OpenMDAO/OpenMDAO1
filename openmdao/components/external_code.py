@@ -56,9 +56,10 @@ class ExternalCode(Component):
         self.options = OptionsDictionary()
         self.options.add_option('command', [], desc='command to be executed')
         self.options.add_option('env_vars', {}, desc='Environment variables required by the command')
-        self.options.add_option('poll_delay', 0.0,
+        self.options.add_option('poll_delay', 0.0, lower=0.0,
             desc='Delay between polling for command completion. A value of zero will use an internally computed default')
-        self.options.add_option('timeout', 0.0, desc='Maximum time to wait for command completion. A value of zero implies an infinite wait')
+        self.options.add_option('timeout', 0.0, lower=0.0,
+                                desc='Maximum time to wait for command completion. A value of zero implies an infinite wait')
         self.options.add_option('check_external_outputs', True,
             desc='Check that all input or output external files exist')
 

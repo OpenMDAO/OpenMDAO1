@@ -633,7 +633,7 @@ class Problem(System):
                 # If group has a cycle and lings can't iterate, that's
                 # an error.
                 graph = group._get_sys_graph()
-                strong = [s for s in nx.strongly_connected_components(graph)
+                strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                           if len(s) > 1]
                 if strong:
                     raise RuntimeError("Group '%s' has a LinearGaussSeidel "
@@ -775,6 +775,7 @@ class Problem(System):
         """ Check for cycles in group w/o solver. """
         cycles = []
         ooo = []
+
         for grp in self.root.subgroups(recurse=True, include_self=True):
             graph = grp._get_sys_graph()
 
