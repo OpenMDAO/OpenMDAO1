@@ -696,7 +696,7 @@ class System(object):
 
         if not self._jacobian_cache:
             msg = ("No derivatives defined for Component '{name}'")
-            msg = msg.format(name=self.name)
+            msg = msg.format(name=self.pathname)
             raise ValueError(msg)
 
         isvw = isinstance(dresids, VecWrapper)

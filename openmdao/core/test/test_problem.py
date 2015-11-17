@@ -8,7 +8,7 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel
+from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel, ScipyGMRES
 from openmdao.core.checks import ConnectError
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
@@ -232,6 +232,7 @@ class TestProblem(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('A', A())
         prob.root.add('B', B())
 
@@ -307,7 +308,7 @@ class TestProblem(unittest.TestCase):
         type_err = "Type <type '%s'> of source '%s'" \
                    " must be the same as "             \
                    "type <type '%s'> of target '%s'"
-        
+
         # Type mismatch in explicit connection
         prob = Problem()
         prob.root = Group()
@@ -410,13 +411,14 @@ class TestProblem(unittest.TestCase):
         # Explicit
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('A', A())
         prob.root.add('D', D())
         prob.root.connect('A.y', 'D.y')
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -426,12 +428,13 @@ class TestProblem(unittest.TestCase):
         # Implicit
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('A', A(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -441,13 +444,14 @@ class TestProblem(unittest.TestCase):
         # Explicit
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('C', C())
         prob.root.add('D', D())
         prob.root.connect('C.y', 'D.y')
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -457,12 +461,13 @@ class TestProblem(unittest.TestCase):
         # Implicit
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('C', C(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -771,6 +776,8 @@ class TestCheckSetup(unittest.TestCase):
 
         G1 = root.add("G1", Group())
         G2 = G1.add("G2", Group())
+        G2.ln_solver = ScipyGMRES()
+
         C1 = G2.add("C1", ExecComp('y=x*2.0'))
         C2 = G2.add("C2", ExecComp('y=x*2.0'))
         C3 = G2.add("C3", ExecComp('y=x*2.0'))

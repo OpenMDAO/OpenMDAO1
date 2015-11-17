@@ -129,6 +129,8 @@ class SellarNoDerivatives(Group):
         self.d1.fd_options['force_fd'] = True
         self.d2.fd_options['force_fd'] = True
 
+        self.ln_solver = ScipyGMRES()
+
 
 class SellarDerivatives(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
@@ -164,6 +166,7 @@ class SellarDerivativesGrouped(Group):
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
         mda = self.add('mda', Group(), promotes=['*'])
+        mda.ln_solver = ScipyGMRES()
 
         mda.add('d1', SellarDis1withDerivatives(), promotes=['*'])
         mda.add('d2', SellarDis2withDerivatives(), promotes=['*'])
