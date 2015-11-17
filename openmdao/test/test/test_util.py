@@ -74,10 +74,18 @@ class TestCase(unittest.TestCase):
 
         data = prob.check_partial_derivatives(out_stream=None)
 
+        # suppress printed output from problem_derivatives_check()
+        sysout = sys.stdout
+        devnull = open(os.devnull, 'w')
+
         try:
+            sys.stdout = devnull
             problem_derivatives_check(self, prob)
         except AssertionError as err:
+            sys.stdout = sysout
             self.assertIn("not less than or equal to 1e-05", err.args[0])
+        finally:
+            sys.stdout = sysout
 
 
 

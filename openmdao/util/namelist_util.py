@@ -9,7 +9,6 @@ from collections import OrderedDict
 from six import iteritems, iterkeys
 from six.moves import range
 
-
 from numpy import ndarray, array, append, vstack, zeros, \
                  int32, int64, float32, float64
 
@@ -204,14 +203,12 @@ class Namelist(object):
             List of variables to skip printing to the file. No need to include
             the vartree path in the names."""
 
-        print(skip)
         if not skip:
             skip = []
 
         for name in iterkeys(self.comp._params_dict):
             if name.startswith(varpath):
                 sub_name = name.lstrip(varpath + ':')
-                print(name, sub_name, skip)
                 if sub_name not in skip:
                     self.add_var(name)
 
@@ -473,14 +470,13 @@ class Namelist(object):
                     current_group = None
 
                 # Everything else must be a pure comment
-                else:
-                    print( "Comment ignored: %s" % line.rstrip('\n'))
+                #else:
+                    #print( "Comment ignored: %s" % line.rstrip('\n'))
 
                 # Group ending '/' can also conclude a data line.
                 if line[-1] == '/':
                     current_group = None
 
-                #print(self.cards[-1][-1].name, self.cards[-1][-1].value)
             else:
                 group_name = group_name_token.searchString(line)
 
@@ -538,23 +534,24 @@ class Namelist(object):
         -------
         tuple
              Returns a tuple containing the following values:
-             (empty_groups, unlisted_groups, unlinked_vars). These need to be
-             examined after calling ``load_model`` to make sure you loaded every
-             variable into your model.
+             (empty_groups, unlisted_groups, unlinked_vars).
 
-        empty_groups : ordereddict( integer : string )
-             Names and ID number of groups that don't have cards. This includes
-             strings found at the top level that aren't comments; these need to
-             be processed by your wrapper to determine how the information fits
-             into your component's variable hierarchy.
+             These need to be examined after calling ``load_model`` to make sure you
+             loaded every variable into your model.
 
-        unlisted_groups : ordereddict( integer : string )
-             This dictionary includes the names and ID number of groups that have
-             variables that couldn't be loaded because the group wasn't mentioned
-             in the rules dictionary.
+             empty_groups : ordereddict( integer : string )
+                  Names and ID number of groups that don't have cards. This includes
+                  strings found at the top level that aren't comments; these need to
+                  be processed by your wrapper to determine how the information fits
+                  into your component's variable hierarchy.
 
-        unlinked_vars : list containing all variable names that weren't found
-        in the component.
+             unlisted_groups : ordereddict( integer : string )
+                  This dictionary includes the names and ID number of groups that have
+                  variables that couldn't be loaded because the group wasn't mentioned
+                  in the rules dictionary.
+
+             unlinked_vars : list
+                  List of all variable names that weren't found in the component.
         """
 
         # We support loading a model before setup so that we can interact with it.
@@ -612,7 +609,6 @@ class Namelist(object):
                         containers = rules[group_name]
                     except KeyError:
                         unlisted_groups[i] = group_name
-                        #print("Group not found: %s" % group_name)
                         break
 
                     for container in containers:
@@ -636,8 +632,6 @@ class Namelist(object):
                 if not found:
                     if name not in ignore and name.lower() not in ignore:
                         unlinked_vars.append(name)
-                        print("Variable not found: " + \
-                              "%s in group %s." % (name, group_name))
 
                 else:
 
@@ -654,8 +648,6 @@ class Namelist(object):
                         params[varpath] = value
                     else:
                         params[varpath]['val'] = value
-
-                    #print(varpath, value)
 
         return empty_groups, unlisted_groups, unlinked_vars
 

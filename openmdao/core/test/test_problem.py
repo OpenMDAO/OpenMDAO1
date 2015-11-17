@@ -10,6 +10,7 @@ import warnings
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel
 from openmdao.core.checks import ConnectError
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
@@ -307,7 +308,7 @@ class TestProblem(unittest.TestCase):
         type_err = "Type <type '%s'> of source '%s'" \
                    " must be the same as "             \
                    "type <type '%s'> of target '%s'"
-        
+
         # Type mismatch in explicit connection
         prob = Problem()
         prob.root = Group()
@@ -413,10 +414,10 @@ class TestProblem(unittest.TestCase):
         prob.root.add('A', A())
         prob.root.add('D', D())
         prob.root.connect('A.y', 'D.y')
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -428,10 +429,10 @@ class TestProblem(unittest.TestCase):
         prob.root = Group()
         prob.root.add('A', A(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -444,10 +445,10 @@ class TestProblem(unittest.TestCase):
         prob.root.add('C', C())
         prob.root.add('D', D())
         prob.root.connect('C.y', 'D.y')
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -459,10 +460,10 @@ class TestProblem(unittest.TestCase):
         prob.root = Group()
         prob.root.add('C', C(), promotes=['y'])
         prob.root.add('D', D(), promotes=['y'])
-        
+
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        
+
         self.assertEqual(checks['no_unknown_comps'], ['D'])
         self.assertEqual(checks['recorders'], [])
         content = stream.getvalue()
@@ -682,7 +683,11 @@ class TestProblem(unittest.TestCase):
         prob.driver.add_desvar('p1.a', 1.0)
         prob.driver.add_constraint('x', upper=0.0)
         prob.driver.add_constraint('y', upper=0.0)
-        prob.driver.parallel_derivs(['x','y'])
+        with warnings.catch_warnings(record=True) as w:
+            if not MPI:
+                # suppress warning about not running under MPI
+                warnings.simplefilter("ignore")
+            prob.driver.parallel_derivs(['x','y'])
 
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
