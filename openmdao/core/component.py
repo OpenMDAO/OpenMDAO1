@@ -286,11 +286,11 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        to_prom = self._sysdata.to_prom = {}
-        to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
+        to_prom_name = self._sysdata.to_prom_name = {}
+        to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
-        to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
-        to_prom_pnames = self._sysdata.to_prom_pnames = OrderedDict()
+        to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
+        to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         if MPI and compute_indices and self.is_active():
             self.setup_distrib_idxs()
@@ -316,7 +316,7 @@ class Component(System):
             pathname = self._get_var_pathname(name)
             self._params_dict [pathname] = meta
             meta['pathname'] = pathname
-            to_prom_pnames[pathname] = name
+            to_prom_pname[pathname] = name
             to_abs_pnames[name] = (pathname,)
 
         self._unknowns_dict = OrderedDict()
@@ -324,11 +324,11 @@ class Component(System):
             pathname = self._get_var_pathname(name)
             self._unknowns_dict[pathname] = meta
             meta['pathname'] = pathname
-            to_prom_unames[pathname] = name
-            to_abs_unames[name] = pathname
+            to_prom_uname[pathname] = name
+            to_abs_uname[name] = pathname
 
-        to_prom.update(to_prom_unames)
-        to_prom.update(to_prom_pnames)
+        to_prom_name.update(to_prom_uname)
+        to_prom_name.update(to_prom_pname)
 
         self._post_setup_vars = True
 
@@ -369,7 +369,7 @@ class Component(System):
         self._impl = impl
 
         # create map of relative name in parent to relative name in child
-        self._relname_map = self._get_relname_map(parent._sysdata.to_prom)
+        self._relname_map = self._get_relname_map(parent._sysdata.to_prom_name)
 
         # at the Group level, we create a set of arrays for each variable of
         # interest, and we make them all subviews of the same shared array in

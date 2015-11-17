@@ -58,7 +58,7 @@ class ComplexStepTgtVecWrapper(object):
         """
         Returns
         -------
-            A dictionary iterator over the items in _access.
+            A dictionary iterator over the items in _dat.
         """
         return iter(self.vecwrap)
 
@@ -206,7 +206,7 @@ class ComplexStepSrcVecWrapper(object):
         """
         Returns
         -------
-            A dictionary iterator over the items in _access.
+            A dictionary iterator over the items in _dat.
         """
         return iter(self.vecwrap)
 

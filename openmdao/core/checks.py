@@ -111,24 +111,24 @@ class ConnectError(Exception):
         return cls(msg)
 
 
-def __make_metadata(metadata, to_prom):
+def __make_metadata(metadata, to_prom_name):
     '''
     Add type field to metadata dict.
     Returns a modified copy of `metadata`.
     '''
     metadata = dict(metadata)
     metadata['type'] = type(metadata['val'])
-    metadata['promoted_name'] = to_prom[metadata['pathname']]
+    metadata['promoted_name'] = to_prom_name[metadata['pathname']]
 
     return metadata
 
 
-def __get_metadata(paths, metadata_dict, to_prom):
+def __get_metadata(paths, metadata_dict, to_prom_name):
     metadata = []
 
     for path in paths:
         var_metadata = metadata_dict[path]
-        metadata.append(__make_metadata(var_metadata, to_prom))
+        metadata.append(__make_metadata(var_metadata, to_prom_name))
 
     return metadata
 
@@ -144,7 +144,7 @@ def _check_types_match(src, tgt):
     raise ConnectError._type_mismatch_error(src, tgt)
 
 
-def check_connections(connections, params_dict, unknowns_dict, to_prom):
+def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
     """Checks the specified connections to make sure they are valid in
     OpenMDAO.
 
@@ -158,7 +158,7 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom):
          A dictionary mapping absolute var name to its metadata for
          every unknown in the model.
 
-    to_prom : dict
+    to_prom_name : dict
         A dictionary mapping absolute var name to promoted var name.
 
     Raises
@@ -169,10 +169,10 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom):
 
     # Get metadata for all sources
     srcs = (src for src, idxs in itervalues(connections))
-    sources = __get_metadata(srcs, unknowns_dict, to_prom)
+    sources = __get_metadata(srcs, unknowns_dict, to_prom_name)
 
     #Get metadata for all targets
-    targets = __get_metadata(iterkeys(connections), params_dict, to_prom)
+    targets = __get_metadata(iterkeys(connections), params_dict, to_prom_name)
 
     for source, target in zip(sources, targets):
         _check_types_match(source, target)

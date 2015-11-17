@@ -147,7 +147,7 @@ class Relevance(object):
         compouts = {} # maps output vars to components
 
         promote_map = {}
-        to_prom = group._sysdata.to_prom
+        to_prom_name = group._sysdata.to_prom_name
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
@@ -159,7 +159,7 @@ class Relevance(object):
         for param, meta in iteritems(params_dict):
             tcomp = param.rsplit('.', 1)[0]
             compins.setdefault(tcomp, []).append(param)
-            prom = to_prom[param]
+            prom = to_prom_name[param]
             if prom != param:
                 promote_map[param] = prom
                 if param not in vgraph:
@@ -168,7 +168,7 @@ class Relevance(object):
         for unknown, meta in iteritems(unknowns_dict):
             scomp = unknown.rsplit('.', 1)[0]
             compouts.setdefault(scomp, []).append(unknown)
-            prom = to_prom[unknown]
+            prom = to_prom_name[unknown]
             if prom != unknown:
                 promote_map[unknown] = prom
                 if unknown not in vgraph:
@@ -234,19 +234,19 @@ class Relevance(object):
         relevant_systems = {}
         grev = self._sgraph.reverse()
 
-        to_abs_unames = self._sysdata.to_abs_unames
+        to_abs_uname = self._sysdata.to_abs_uname
         to_abs_pnames = self._sysdata.to_abs_pnames
 
         for voi, relvars in iteritems(self.relevant):
             rev = True if voi in self._outset else False
             if rev:
-                voicomp = to_abs_unames[voi].rsplit('.', 1)[0]
+                voicomp = to_abs_uname[voi].rsplit('.', 1)[0]
                 gpath = set([voicomp])
                 gpath.update([v for u,v in nx.dfs_edges(grev, voicomp)])
             comps = set()
             for relvar in relvars:
-                if relvar in to_abs_unames:
-                    absvars = (to_abs_unames[relvar],)
+                if relvar in to_abs_uname:
+                    absvars = (to_abs_uname[relvar],)
                 else:
                     absvars = iter(to_abs_pnames[relvar])
                 for absvar in absvars:

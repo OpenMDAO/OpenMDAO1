@@ -46,9 +46,9 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(list(params_dict.keys()), ['C1.x', 'C2.x'])
         self.assertEqual(list(unknowns_dict.keys()), ['C1.y', 'C2.y'])
 
-        to_prom = prob.root._sysdata.to_prom
-        self.assertEqual([to_prom[n] for n in params_dict], ['x', 'C2.x'])
-        self.assertEqual([to_prom[n] for n in unknowns_dict], ['C1.y', 'y'])
+        to_prom_name = prob.root._sysdata.to_prom_name
+        self.assertEqual([to_prom_name[n] for n in params_dict], ['x', 'C2.x'])
+        self.assertEqual([to_prom_name[n] for n in unknowns_dict], ['C1.y', 'y'])
 
     def test_multiple_connect(self):
         root = Group()

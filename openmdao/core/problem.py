@@ -196,7 +196,7 @@ class Problem(System):
                     input_graph.add_edge(src, tgt, idxs=idxs)
 
         # find any promoted but not connected inputs
-        for p, prom in iteritems(self.root._sysdata.to_prom_pnames):
+        for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if prom in prom_noconns:
                 for n in prom_noconns[prom]:
                     if p != n:
@@ -265,7 +265,7 @@ class Problem(System):
         connections = newconns
 
         self._dangling = {}
-        for p, prom in iteritems(self.root._sysdata.to_prom_pnames):
+        for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
                     self._dangling[prom] = \
@@ -516,28 +516,28 @@ class Problem(System):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom)
+        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
 
         # propagate top level promoted names, unit conversions,
         # and connections down to all subsystems
-        to_prom = self.root._sysdata.to_prom
-        self._probdata.to_prom = to_prom
+        to_prom_name = self.root._sysdata.to_prom_name
+        self._probdata.to_prom_name = to_prom_name
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub.connections = connections
 
         # set top_promoted_name and unit_conv in top system (all metatdata
         # is shared, so not need to propagate down the tree)
         for path, meta in iteritems(self.root._params_dict):
-            meta['top_promoted_name'] = to_prom[path]
+            meta['top_promoted_name'] = to_prom_name[path]
             unit_conv = params_dict[path].get('unit_conv')
             if unit_conv:
                 meta['unit_conv'] = unit_conv
 
         for path, meta in iteritems(self.root._unknowns_dict):
-            meta['top_promoted_name'] = to_prom[path]
+            meta['top_promoted_name'] = to_prom_name[path]
 
         # Given connection information, create mapping from system pathname
         # to the parameters that system must transfer data to
@@ -553,7 +553,7 @@ class Problem(System):
         # make sure pois and oois all refer to existing vars.
         # NOTE: all variables of interest (includeing POIs) must exist in
         #      the unknowns dict
-        promoted_unknowns = self.root._sysdata.to_abs_unames
+        promoted_unknowns = self.root._sysdata.to_abs_uname
 
         parallel_p = False
         for vnames in pois:
@@ -624,10 +624,10 @@ class Problem(System):
         """ Check for parameters that are not connected to a source/unknown.
         this includes ALL dangling params, both promoted and unpromoted.
         """
-        to_prom = self.root._sysdata.to_prom
+        to_prom_name = self.root._sysdata.to_prom_name
 
         dangling_params = sorted(set([
-            to_prom[p] for p, m in iteritems(self.root._params_dict)
+            to_prom_name[p] for p, m in iteritems(self.root._params_dict)
             if p not in self.root.connections
         ]))
         if dangling_params:
@@ -879,11 +879,11 @@ class Problem(System):
             else:
                 pset.add(pnames)
 
-        to_prom = self.root._sysdata.to_prom
+        to_prom_name = self.root._sysdata.to_prom_name
 
         for path, meta in chain(iteritems(self.root._unknowns_dict),
                                 iteritems(self.root._params_dict)):
-            prom_name = to_prom[path]
+            prom_name = to_prom_name[path]
             if prom_name in uset:
                 self._u_length += meta['size']
                 uset.remove(prom_name)
@@ -1008,9 +1008,9 @@ class Problem(System):
         unknowns = root.unknowns
         params = root.params
 
-        to_prom = root._sysdata.to_prom
+        to_prom_name = root._sysdata.to_prom_name
         to_abs_pnames = root._sysdata.to_abs_pnames
-        to_abs_unames = root._sysdata.to_abs_unames
+        to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
             dv_scale = {}
@@ -1021,7 +1021,7 @@ class Problem(System):
         for name in indep_list:
 
             if name in unknowns:
-                name = to_abs_unames[name]
+                name = to_abs_uname[name]
 
             for tgt, (src, idxs) in iteritems(root.connections):
                 if name == src:
@@ -1055,7 +1055,7 @@ class Problem(System):
                 # holds relative promoted inputs
                 if fd_ikey not in params:
                     for key, meta in iteritems(params):
-                        if to_prom[key] == fd_ikey:
+                        if to_prom_name[key] == fd_ikey:
                             fd_ikey = meta['pathname']
                             break
 
@@ -1174,7 +1174,7 @@ class Problem(System):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_unames = root._sysdata.to_abs_unames
+        to_abs_uname = root._sysdata.to_abs_uname
         comm = root.comm
         iproc = comm.rank
         nproc = comm.size
@@ -1310,7 +1310,7 @@ class Problem(System):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_unames[voi]]['size'], dtype=int)
+                    in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -1632,9 +1632,9 @@ class Problem(System):
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
-        to_prom = self.root._sysdata.to_prom
+        to_prom_name = self.root._sysdata.to_prom_name
         indep_list = [
-            to_prom[p] for p, idxs in param_srcs
+            to_prom_name[p] for p, idxs in param_srcs
         ]
 
         # Calculate all our Total Derivatives
@@ -1779,7 +1779,7 @@ class Problem(System):
             A dict of unknowns metadata for the whole `Problem`.
         """
 
-        to_prom = self.root._sysdata.to_prom
+        to_prom_name = self.root._sysdata.to_prom_name
 
         for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
@@ -1804,8 +1804,8 @@ class Problem(System):
                     msg = "Unit '{s[units]}' in source '{sprom}' "\
                         "is incompatible with unit '{t[units]}' "\
                         "in target '{tprom}'.".format(s=smeta, t=tmeta,
-                                                                 sprom=to_prom[source],
-                                                                 tprom=to_prom[target])
+                                                                 sprom=to_prom_name[source],
+                                                                 tprom=to_prom_name[target])
                     raise TypeError(msg)
                 else:
                     raise
@@ -1843,7 +1843,7 @@ class Problem(System):
         connections = {}
         dangling = {}
 
-        abs_unames = self.root._sysdata.to_abs_unames
+        abs_unames = self.root._sysdata.to_abs_uname
 
         for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
             if prom_name in abs_unames:  # param has a src in unknowns

@@ -30,12 +30,12 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom = {}
+        self.to_prom_name = {}
 
-        self.to_abs_unames = OrderedDict()  # promoted name to abs name
-        self.to_prom_unames = OrderedDict() # abs name to promoted name
+        self.to_abs_uname = OrderedDict()  # promoted name to abs name
+        self.to_prom_uname = OrderedDict() # abs name to promoted name
         self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
-        self.to_prom_pnames = OrderedDict() # abs name to promoted namep
+        self.to_prom_pname = OrderedDict() # abs name to promoted namep
 
 
 class System(object):
@@ -142,7 +142,7 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
-        abs_unames = self._sysdata.to_abs_unames
+        abs_unames = self._sysdata.to_abs_uname
         abs_pnames = self._sysdata.to_abs_pnames
 
         mybool = False
@@ -181,10 +181,10 @@ class System(object):
                             "tuple or other iterator of strings, but '%s' was specified" %
                             (self.name, self._promotes))
 
-        to_prom = self._sysdata.to_prom
+        to_prom_name = self._sysdata.to_prom_name
         for prom in self._promotes:
             for name in chain(self._params_dict, self._unknowns_dict):
-                pname = to_prom[name]
+                pname = to_prom_name[name]
                 if fnmatch(pname, prom):
                     break
             else:
@@ -401,7 +401,7 @@ class System(object):
         # column data keyed by (uname, pname, col_id).
         fd_cols = {}
 
-        to_prom = self._sysdata.to_prom
+        to_prom_name = self._sysdata.to_prom_name
 
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
@@ -414,7 +414,7 @@ class System(object):
 
                 # Have to convert to promoted name to key into unknowns
                 if param_src not in self.unknowns:
-                    param_src = to_prom[param_src]
+                    param_src = to_prom_name[param_src]
 
                 target_input = unknowns._dat[param_src].val
             else:
@@ -994,13 +994,13 @@ class System(object):
         """
         Sets up the internal dict that maps absolute name to promoted name.
         """
-        to_prom = self._sysdata.to_prom
+        to_prom_name = self._sysdata.to_prom_name
 
         for pathname, meta in iteritems(self._unknowns_dict):
-            prom = to_prom[pathname]
+            prom = to_prom_name[pathname]
 
         for pathname, meta in iteritems(self._params_dict):
-            prom = to_prom[pathname]
+            prom = to_prom_name[pathname]
 
     def list_connections(self, group_by_comp=False, stream=sys.stdout):
         """
@@ -1033,7 +1033,7 @@ class System(object):
         def _list_conns(self):
             template = "{0:<{swid}} -> {1}\n"
 
-            to_prom = self._probdata.to_prom
+            to_prom_name = self._probdata.to_prom
             scope = self.pathname + '.' if self.pathname else ''
 
             # create a dict with srcs as keys so we can more easily subsort
@@ -1041,10 +1041,10 @@ class System(object):
             by_src = {}
             for tgt, (src, idx) in iteritems(self.connections):
                 if src.startswith(scope) or tgt.startswith(scope):
-                    if to_prom[tgt] != tgt:
+                    if to_prom_name[tgt] != tgt:
                         tgt += ' *'
-                    if to_prom[src] != src:
-                        src += " (%s)" % to_prom[src]
+                    if to_prom_name[src] != src:
+                        src += " (%s)" % to_prom_name[src]
                     by_src.setdefault(src, []).append(tgt)
 
             src_max_wid = max(len(n) for n in by_src)

@@ -251,34 +251,34 @@ class Group(System):
 
         self._data_xfer = {}
 
-        to_prom = self._sysdata.to_prom = {}
-        to_abs_unames = self._sysdata.to_abs_unames = OrderedDict()
+        to_prom_name = self._sysdata.to_prom_name = {}
+        to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
-        to_prom_unames = self._sysdata.to_prom_unames = OrderedDict()
-        to_prom_pnames = self._sysdata.to_prom_pnames = OrderedDict()
+        to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
+        to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         for sub in itervalues(self._subsystems):
             subparams, subunknowns = sub._setup_variables(compute_indices)
             for p, meta in iteritems(subparams):
-                prom = self._promoted_name(sub._sysdata.to_prom_pnames[p], sub)
+                prom = self._promoted_name(sub._sysdata.to_prom_pname[p], sub)
                 params_dict[p] = meta
                 to_abs_pnames.setdefault(prom, []).append(p)
-                to_prom_pnames[p] = prom
+                to_prom_pname[p] = prom
 
             for u, meta in iteritems(subunknowns):
-                prom = self._promoted_name(sub._sysdata.to_prom_unames[u], sub)
+                prom = self._promoted_name(sub._sysdata.to_prom_uname[u], sub)
                 unknowns_dict[u] = meta
-                if prom in to_abs_unames:
+                if prom in to_abs_uname:
                     raise RuntimeError("'%s': promoted name '%s' matches "
                                        "multiple unknowns: %s" %
                                        (self.pathname, prom,
-                                        (to_abs_unames[prom], u)))
+                                        (to_abs_uname[prom], u)))
 
-                to_abs_unames[prom] = u
-                to_prom_unames[u] = prom
+                to_abs_uname[prom] = u
+                to_prom_uname[u] = prom
 
-            to_prom.update(to_prom_unames)
-            to_prom.update(to_prom_pnames)
+            to_prom_name.update(to_prom_uname)
+            to_prom_name.update(to_prom_pname)
 
             # check for any promotes that didn't match a variable
             sub._check_promotes()
@@ -286,6 +286,10 @@ class Group(System):
         return self._params_dict, self._unknowns_dict
 
     def _get_gs_outputs(self, mode, vois):
+        """
+        Linear Gauss-Siedel can limit the outputs when calling apply. This
+        calculates and caches the list of outputs to be updated for each voi.
+        """
         if self._gs_outputs is None:
             self._gs_outputs = {}
 
@@ -399,7 +403,7 @@ class Group(System):
             self._shared_dp_vec = np.zeros(max_psize)
 
             # map promoted name in parent to corresponding promoted name in this view
-            self._relname_map = self._get_relname_map(parent._sysdata.to_prom)
+            self._relname_map = self._get_relname_map(parent._sysdata.to_prom_name)
             self._create_views(top_unknowns, parent, my_params, voi=None)
 
         self._u_size_lists = self.unknowns._get_flattened_sizes()
@@ -569,13 +573,13 @@ class Group(System):
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
-        to_abs_unames = self._sysdata.to_abs_unames
+        to_abs_uname = self._sysdata.to_abs_uname
         to_abs_pnames = self._sysdata.to_abs_pnames
 
         for tgt, srcs in iteritems(self._src):
             for src, idxs in srcs:
                 try:
-                    src_pathnames = [to_abs_unames[src]]
+                    src_pathnames = [to_abs_uname[src]]
                 except KeyError as error:
                     try:
                         src_pathnames = to_abs_pnames[src]
@@ -590,7 +594,7 @@ class Group(System):
                                                                idxs))
                 except KeyError as error:
                     try:
-                        to_abs_unames[tgt]
+                        to_abs_uname[tgt]
                     except KeyError as error:
                         raise ConnectError.nonexistent_target_error(src, tgt)
                     else:
@@ -1223,7 +1227,7 @@ class Group(System):
 
         """
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
-        to_prom = self._sysdata.to_prom
+        to_prom_name = self._sysdata.to_prom_name
         uacc = self.unknowns._dat
         pacc = self.params._dat
 
@@ -1272,7 +1276,7 @@ class Group(System):
             if top_urelname not in relevant or top_prelname not in relevant:
                 continue
 
-            urelname = to_prom[unknown]
+            urelname = to_prom_name[unknown]
             prelname = name_relative_to(self.pathname, param)
 
             umeta = self.unknowns.metadata(urelname)
@@ -1410,7 +1414,7 @@ class Group(System):
 
         # use an ordered dict here so we can use this smaller dict to loop over in get_view
         umap = OrderedDict()
-        for abspath, prom in iteritems(self._sysdata.to_prom_unames):
+        for abspath, prom in iteritems(self._sysdata.to_prom_uname):
             umap[parent_proms[abspath]] = prom
 
         return umap

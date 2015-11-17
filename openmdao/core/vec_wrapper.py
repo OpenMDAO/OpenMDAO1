@@ -270,7 +270,7 @@ class VecWrapper(object):
         """
         Returns
         -------
-            A dictionary iterator over the items in _access.
+            A dictionary iterator over the items in _dat.
         """
         return self._dat.__iter__()
 
@@ -421,7 +421,7 @@ class VecWrapper(object):
 
         start = -1
 
-        # varmap is ordered, in the same order as _access
+        # varmap is ordered, in the same order as _dat
         for name, pname in iteritems(varmap):
             if name in self._dat:
                 meta = self._dat[name].meta
@@ -635,10 +635,10 @@ class SrcVecWrapper(VecWrapper):
         """
 
         vec_size = 0
-        to_prom = self._sysdata.to_prom
+        to_prom_name = self._sysdata.to_prom_name
 
         for path, meta in iteritems(unknowns_dict):
-            promname = to_prom[path]
+            promname = to_prom_name[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                     meta['top_promoted_name']):
                 if meta.get('pass_by_obj') or meta.get('remote'):
@@ -674,9 +674,9 @@ class SrcVecWrapper(VecWrapper):
                                   relevance.is_relevant(var_of_interest, meta['top_promoted_name'])):
                     if not meta.get('pass_by_obj'):
                         if meta['shape'] == 1:
-                            self._dat[to_prom[path]].val[0] = meta['val']
+                            self._dat[to_prom_name[path]].val[0] = meta['val']
                         else:
-                            self._dat[to_prom[path]].val[:] = meta['val'].flat
+                            self._dat[to_prom_name[path]].val[:] = meta['val'].flat
 
     def _get_flattened_sizes(self):
         """
@@ -736,7 +736,7 @@ class TgtVecWrapper(VecWrapper):
         if not store_byobjs:
             self.deriv_units = True
 
-        src_to_prom = srcvec._sysdata.to_prom
+        src_to_prom_name = srcvec._sysdata.to_prom_name
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for meta in itervalues(params_dict):
@@ -749,7 +749,7 @@ class TgtVecWrapper(VecWrapper):
                     if src is None:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
                     src_pathname, idxs = src
-                    src_rel_name = src_to_prom[src_pathname]
+                    src_rel_name = src_to_prom_name[src_pathname]
                     src_acc = srcvec._dat[src_rel_name]
 
                     slc, val = self._setup_var_meta(pathname, meta, vec_size,
