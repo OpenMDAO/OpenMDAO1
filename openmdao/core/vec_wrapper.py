@@ -605,7 +605,7 @@ class VecWrapper(object):
 
 
 class SrcVecWrapper(VecWrapper):
-    """ VecWrapper for params and dparams. """
+    """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
               store_byobjs=False, shared_vec=None):
@@ -690,9 +690,44 @@ class SrcVecWrapper(VecWrapper):
         """
         return [[(n, m['size']) for n, m in self._get_vecvars()]]
 
+    def backtrack(self, alpha, duvec):
+        """ Returns a new alpha so that new_u = current_u + alpha*duvec does
+        not violate any `lower` or `upper` limits if specified.
+
+
+        Args
+        -----
+        alpha: float
+            Initial value for step in gradient direction.
+        duvec: `Vecwrapper`
+            Direction to apply step. generally the gradient.
+
+        Returns
+        --------
+        float
+            New step size, backtracked to prevent violation."""
+
+        new_alpha = alpha
+        for name, meta in iteritems(self):
+            val = self[name]
+
+            upper = meta.get('upper')
+            if upper is not None:
+                alpha_bound = numpy.min((upper - val)/duvec[name])
+                if alpha_bound >= 0.0:
+                    new_alpha = min(new_alpha, alpha_bound)
+
+            lower = meta.get('lower')
+            if upper is not None:
+                alpha_bound = numpy.min((lower - val)/duvec[name])
+                if alpha_bound >= 0.0:
+                    new_alpha = min(new_alpha, alpha_bound)
+
+        return new_alpha
+
 
 class TgtVecWrapper(VecWrapper):
-    """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
+    """ VecWrapper for params and dparams. """
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevance=None, var_of_interest=None,
@@ -904,6 +939,7 @@ class TgtVecWrapper(VecWrapper):
     #             if offset != 0.0:
     #                 val += offset
     #             val *= scale
+
 
 class _PlaceholderVecWrapper(object):
     """

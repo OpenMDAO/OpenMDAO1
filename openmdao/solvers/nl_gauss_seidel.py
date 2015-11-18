@@ -22,7 +22,7 @@ class NLGaussSeidel(NonLinearSolver):
         Maximum number of iterations.
     options['rtol'] :  float(1e-06)
         Relative convergence tolerance.
-        
+
     """
 
     def __init__(self):
@@ -35,6 +35,8 @@ class NLGaussSeidel(NonLinearSolver):
                        desc='Relative convergence tolerance.')
         opt.add_option('maxiter', 100,
                        desc='Maximum number of iterations.')
+
+        self.print_name = 'NLN_GS'
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
@@ -87,7 +89,7 @@ class NLGaussSeidel(NonLinearSolver):
         basenorm = normval if normval > atol else 1.0
 
         if self.options['iprint'] > 0:
-            self.print_norm('NLN_GS', system.pathname, 0, normval, basenorm)
+            self.print_norm(self.print_name, system.pathname, 0, normval, basenorm)
 
         while self.iter_count < maxiter and \
                 normval > atol and \
@@ -106,7 +108,7 @@ class NLGaussSeidel(NonLinearSolver):
             normval = resids.norm()
 
             if self.options['iprint'] > 0:
-                self.print_norm('NLN_GS', system.pathname, self.iter_count, normval,
+                self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                                 basenorm)
 
         if self.options['iprint'] > 0:
@@ -115,5 +117,5 @@ class NLGaussSeidel(NonLinearSolver):
             else:
                 msg = 'converged'
 
-            self.print_norm('NLN_GS', system.pathname, self.iter_count, normval,
+            self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                             basenorm, msg=msg)

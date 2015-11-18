@@ -30,13 +30,15 @@ class BackTracking(LineSearch):
                        desc='Absolute convergence tolerancee for line search.')
         opt.add_option('rtol', 0.9,
                        desc='Relative convergence tolerancee for line search.')
-        opt.add_option('maxiter', 10,
+        opt.add_option('maxiter', 0,
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
 
-    def solve(self, params, unknowns, resids, system, solver, alpha, fnorm,
-              fnorm0, metadata=None):
+        self.print_name = 'BK_TKG'
+
+    def solve(self, params, unknowns, resids, system, solver, alpha, fnorm0,
+              metadata=None):
         """ Take the gradient calculated by the parent solver and figure out
         how far to go.
 
@@ -63,23 +65,49 @@ class BackTracking(LineSearch):
         alpha : float
             Initial over-relaxation factor as used in parent solver.
 
-        fnorm : float
-            Initial norm of the residual for absolute tolerance check.
-
         fnorm0 : float
             Initial norm of the residual for relative tolerance check.
+
+        Returns
+        --------
+        float
+            Norm of the final residual
         """
 
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
         result = system.dumat[None]
-
         local_meta = create_local_meta(metadata, system.pathname)
+
+        # If our step will violate any upper or lower bounds, then reduce
+        # alpha so that we only step to that boundary.
+        alpha = unknowns.backtrack(alpha, result)
+
+        # Apply step that doesn't violate bounds
+        unknowns.vec += alpha*result.vec
+
+        # Metadata update
+        update_local_meta(local_meta, (solver.iter_count, 0))
+
+        # Just evaluate the model with the new points
+        if solver.options['solve_subsystems'] is True:
+            system.children_solve_nonlinear(local_meta)
+        system.apply_nonlinear(params, unknowns, resids, local_meta)
+
+        self.recorders.record_iteration(system, local_meta)
+
+        # Initial execution really belongs to our parent driver's iteration,
+        # so use its info.
+        fnorm = resids.norm()
+        if self.options['iprint'] > 0:
+            self.print_norm(solver.print_name, system.pathname, solver.iter_count,
+                            fnorm, fnorm0)
+
         itercount = 0
         ls_alpha = alpha
 
-        # Backtracking Line Search
+        # Further backtacking if needed.
         while itercount < maxiter and \
               fnorm > atol and \
               fnorm/fnorm0 > rtol:
@@ -100,5 +128,7 @@ class BackTracking(LineSearch):
 
             fnorm = resids.norm()
             if self.options['iprint'] > 0:
-                self.print_norm('BK_TKG', system.pathname, itercount, fnorm,
-                                fnorm0, indent=1, solver='LS')
+                self.print_norm(self.print_name, system.pathname, itercount,
+                                fnorm, fnorm0, indent=1, solver='LS')
+
+        return fnorm

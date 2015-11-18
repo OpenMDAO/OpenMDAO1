@@ -60,8 +60,8 @@ class Monitor(object):
         ksp.iter_count += 1
 
         if ksp.options['iprint'] > 0:
-            ksp.print_norm('KSP', ksp.system.pathname, ksp.iter_count, norm,
-                           self._norm0, indent=1, solver='LN')
+            ksp.print_norm(ksp.print_name, ksp.system.pathname, ksp.iter_count,
+                           norm, self._norm0, indent=1, solver='LN')
 
 
 class PetscKSP(LinearSolver):
@@ -105,6 +105,7 @@ class PetscKSP(LinearSolver):
         self.mode = None
 
         self.ksp = None
+        self.print_name = 'KSP'
 
     def setup(self, system):
         """ Setup petsc problem just once."""
@@ -191,8 +192,8 @@ class PetscKSP(LinearSolver):
                     msg = 'FAILED to converge after hitting max iterations'
                 else:
                     msg = 'Converged'
-                    self.print_norm('KSP', system.pathname, self.iter_count,
-                                    0, 0, msg=msg, solver='LN')
+                    self.print_norm(self.print_name, system.pathname,
+                                    self.iter_count, 0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = sol_vec
 
