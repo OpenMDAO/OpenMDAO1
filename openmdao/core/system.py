@@ -600,7 +600,7 @@ class System(object):
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
-                for var, val in dunknowns.veciter():
+                for var, val in dunknowns.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
@@ -608,9 +608,9 @@ class System(object):
             else:
                 # This zeros out some vars that are not in the local .vec, so we can't just
                 # do dparams.vec[:] = 0.0 for example.
-                for _, val in dparams.veciter():
+                for _, val in dparams.vec_val_iter():
                     val[:] = 0.0
-                for _, val in dunknowns.veciter():
+                for _, val in dunknowns.vec_val_iter():
                     val[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
@@ -629,7 +629,7 @@ class System(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                for var, val in dresids.veciter():
+                for var, val in dresids.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
@@ -975,13 +975,13 @@ class System(object):
         if not self._probdata.top_lin_gs:
             return max_size, offsets
 
-        relevance = self._probdata.relevance
-        for vois in relevance.groups:
+        relevant = self._probdata.relevance.relevant
+        for vois in self._probdata.relevance.groups:
             vec_size = 0
             for voi in vois:
-                sz = sum([m['size'] for m in metas
+                sz = sum(m['size'] for m in metas
                                  if m['pathname'] in vdict and
-                                    relevance.is_relevant(voi, m['top_promoted_name'])])
+                                    m['top_promoted_name'] in relevant[voi])
                 offsets[voi] = vec_size
                 vec_size += sz
 

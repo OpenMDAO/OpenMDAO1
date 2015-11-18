@@ -265,7 +265,8 @@ class Component(System):
             List of names of params for this `Component` .
         """
         if self._fd_params is None:
-            self._fd_params = [k for k, m in iteritems(self.params) if not m.get('pass_by_obj')]
+            self._fd_params = [k for k, acc in iteritems(self.params._dat)
+                                   if not acc.pbo]
         return self._fd_params
 
     def _get_fd_unknowns(self):
@@ -278,7 +279,8 @@ class Component(System):
         list of str
             List of names of unknowns for this `Component`.
         """
-        return [k for k, m in iteritems(self.unknowns) if not m.get('pass_by_obj')]
+        return [k for k, acc in iteritems(self.unknowns._dat)
+                      if not acc.pbo]
 
     def _setup_variables(self, compute_indices=False):
         """

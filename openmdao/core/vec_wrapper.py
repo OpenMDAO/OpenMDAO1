@@ -27,16 +27,19 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    __slots__ = ['val', 'slice', 'meta', 'owned', 'get', 'set', 'flat']
+    __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote', 'get', 'set', 'flat']
     def __init__(self, vecwrapper, slice, val, meta, owned=True):
         self.owned = owned
 
-        if meta.get('pass_by_obj') and not isinstance(val, _ByObjWrapper):
+        self.pbo = meta.get('pass_by_obj')
+        self.remote = meta.get('remote')
+
+        if self.pbo and not isinstance(val, _ByObjWrapper):
             self.val = _ByObjWrapper(val)
         else:
             self.val = val
 
-        if meta.get('pass_by_obj') or meta.get('remote'):
+        if self.pbo or self.remote:
             self.slice = None
         else:
             self.slice = slice
@@ -54,10 +57,10 @@ class Accessor(object):
         val = meta['val']
         flatfunc = None
 
-        if meta.get('remote'):
+        if self.remote:
             return self._remote_access_error, self._remote_access_error
 
-        if meta.get('pass_by_obj'):
+        if self.pbo:
             return self._get_pbo, flatfunc
 
         shape = meta['shape']
@@ -96,9 +99,9 @@ class Accessor(object):
     def _setup_set_funct(self, meta):
         """ Sets up our fast set functions."""
 
-        if meta.get('remote'):
+        if self.remote:
             return self._remote_access_error
-        elif 'pass_by_obj' in meta and meta['pass_by_obj']:
+        elif self.pbo:
             return self._set_pbo
         else:
             if meta['shape'] == 1:
@@ -182,7 +185,6 @@ class VecWrapper(object):
         self.comm = comm
         self.vec = None
         self._dat = OrderedDict()
-        self._has_pbos = False
 
         # Automatic unit conversion in target vectors
         self.deriv_units = False
@@ -274,18 +276,15 @@ class VecWrapper(object):
         """
         return self._dat.__iter__()
 
-    def veciter(self):
+    def vec_val_iter(self):
         """
         Returns
         -------
             An iterator over names and values of all variables found in the
             flattened vector, i.e., no pass_by_obj variables.
         """
-        if self._has_pbos:
-            return ((n, acc.val) for n, acc in iteritems(self._dat)
-                           if not acc.meta.get('pass_by_obj'))
-        else:
-            return ((n, acc.val) for n, acc in iteritems(self._dat))
+        return ((n, acc.val) for n, acc in iteritems(self._dat)
+                       if not acc.pbo)
 
     def keys(self):
         """
@@ -424,15 +423,11 @@ class VecWrapper(object):
         # varmap is ordered, in the same order as _dat
         for name, pname in iteritems(varmap):
             if name in self._dat:
-                meta = self._dat[name].meta
-                pbo = meta.get('pass_by_obj')
-                if pbo or meta.get('remote'):
-                    view._dat[pname] = Accessor(view, None,
-                                                self._dat[name].val, meta)
-                    if pbo:
-                        view._has_pbos = True
+                acc = self._dat[name]
+                if acc.pbo or acc.remote:
+                    view._dat[pname] = Accessor(view, None, acc.val, acc.meta)
                 else:
-                    pstart, pend = self._dat[name].slice
+                    pstart, pend = acc.slice
                     if start == -1:
                         start = pstart
                         end = pend
@@ -441,6 +436,7 @@ class VecWrapper(object):
                                "%s not contiguous in block containing %s" % \
                                (name, varmap.keys())
                     end = pend
+                    meta = acc.meta
                     view._dat[pname] = Accessor(view,
                                         (view_size, view_size + meta['size']),
                                         self._dat[name].val, meta)
@@ -522,16 +518,6 @@ class VecWrapper(object):
         """
         return [n for n, meta in iteritems(self) if meta.get('state')]
 
-    def _get_vecvars(self):
-        """
-        Returns
-        -------
-            A list of names of variables found in our 'vec' array. This includes
-            params that are not 'owned' and remote vars, which have size 0 array values.
-        """
-        return ((n, meta) for n, meta in self.iteritems()
-                            if not meta.get('pass_by_obj'))
-
     def _scoped_abs_name(self, name):
         """
         Args
@@ -569,17 +555,20 @@ class VecWrapper(object):
         nwid = max(lens) if lens else 10
         vlens = [len(repr(self[v])) for v in self.keys()]
         vwid = max(vlens) if vlens else 1
-        if self._has_pbos: # we have some pass by obj
-            defwid = 8
+        for acc in itervalues(self._dat):
+            if acc.pbo:
+                defwid = 8
+                break
         else:
             defwid = 1
+
         slens = [len('[{0[0]}:{0[1]}]'.format(self._dat[v].slice))
                    for v in self.keys()
                        if self._dat[v].slice is not None]+[defwid]
         swid = max(slens)
 
-        for v, meta in iteritems(self):
-            if meta.get('pass_by_obj') or meta.get('remote'):
+        for v, acc in iteritems(self._dat):
+            if acc.pbo or acc.remote:
                 continue
             if self._dat[v].slice is not None:
                 uslice = '[{0[0]}:{0[1]}]'.format(self._dat[v].slice)
@@ -593,8 +582,8 @@ class VecWrapper(object):
                                              swid=swid,
                                              vwid=vwid))
 
-        for v, meta in iteritems(self):
-            if meta.get('pass_by_obj') and not meta.get('remote'):
+        for v, acc in iteritems(self._dat):
+            if acc.pbo and not acc.remote:
                 template = "{0:<{nwid}} {1:<{swid}} {2}\n"
                 out_stream.write(template.format(v, '(by obj)',
                                                  repr(self[v]),
@@ -656,15 +645,12 @@ class SrcVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, acc in iteritems(self._dat):
-            meta = acc.meta
-            if not meta.get('pass_by_obj'):
-                if meta.get('remote'):
+            if not acc.pbo:
+                if acc.remote:
                     acc.val = numpy.array([], dtype=float)
                 else:
-                    start, end = self._dat[name].slice
+                    start, end = acc.slice
                     acc.val = self.vec[start:end]
-            else:
-                self._has_pbos = True
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -688,7 +674,8 @@ class SrcVecWrapper(VecWrapper):
             A one entry list containing a list of tuples mapping var name to
             local size for 'pass by vector' variables.
         """
-        return [[(n, m['size']) for n, m in self._get_vecvars()]]
+        return [[(n, acc.meta['size']) for n, acc in iteritems(self._dat)
+                        if not acc.pbo]]
 
 
 class TgtVecWrapper(VecWrapper):
@@ -740,9 +727,9 @@ class TgtVecWrapper(VecWrapper):
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for meta in itervalues(params_dict):
-            pathname = meta['pathname']
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
+                pathname = meta['pathname']
                 if pathname in my_params:
                     # if connected, get metadata from the source
                     src = connections.get(pathname)
@@ -777,11 +764,8 @@ class TgtVecWrapper(VecWrapper):
 
         # map slices to the array
         for name, acc in iteritems(self._dat):
-            meta = acc.meta
-            if meta.get('pass_by_obj'):
-                self._has_pbos = True
-            elif not meta.get('remote'):
-                start, end = self._dat[name].slice
+            if not (acc.pbo or acc.remote):
+                start, end = acc.slice
                 acc.val = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
@@ -792,10 +776,8 @@ class TgtVecWrapper(VecWrapper):
             if newmeta['pathname'] == pathname:
                 my_abs = self._scoped_abs_name(pathname)
                 # mark this param as not 'owned' by this VW
-                self._dat[my_abs] = Accessor(self, None, parent_acc.val,
-                                             newmeta, owned=False)
-                if self._dat[my_abs].meta.get('pass_by_obj'):
-                    self._has_pbos = True
+                self._dat[my_abs] = acc = Accessor(self, None, parent_acc.val,
+                                                   newmeta, owned=False)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -840,7 +822,7 @@ class TgtVecWrapper(VecWrapper):
         if 'src_indices' not in meta and 'src_indices' not in src_meta:
             meta['size'] = src_meta['size']
 
-        if src_meta.get('pass_by_obj'):
+        if src_acc.pbo:
             if not meta.get('remote') and store_byobjs:
                 val = src_acc.val
             meta['pass_by_obj'] = True
@@ -868,7 +850,6 @@ class TgtVecWrapper(VecWrapper):
                                pathname)
 
         meta['pass_by_obj'] = True
-        self._has_pbos = True
         self._dat[sname] = Accessor(self, None, val, meta)
 
     def _get_flattened_sizes(self):
@@ -880,7 +861,7 @@ class TgtVecWrapper(VecWrapper):
             of owned, local params in this `VecWrapper`.
         """
         return [[(n, acc.meta['size']) for n, acc in iteritems(self._dat)
-                    if acc.owned and not acc.meta.get('pass_by_obj')]]
+                        if acc.owned and not acc.pbo]]
 
     def _apply_unit_derivatives(self):
         """ Applies derivative of the unit conversion factor to params

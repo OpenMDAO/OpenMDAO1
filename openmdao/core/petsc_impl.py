@@ -142,11 +142,12 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             Contains an entry for each process in this object's communicator.
         """
         sizes = []
-        for name, meta in self._get_vecvars():
-            if meta.get('remote'):
-                sizes.append((name, 0))
-            else:
-                sizes.append((name, meta['size']))
+        for name, acc in iteritems(self._dat):
+            if not acc.pbo:
+                if acc.remote:
+                    sizes.append((name, 0))
+                else:
+                    sizes.append((name, acc.meta['size']))
 
         # collect local var sizes from all of the processes that share the same comm
         # these sizes will be the same in all processes except in cases
@@ -242,12 +243,11 @@ class PetscTgtVecWrapper(TgtVecWrapper):
         """
         psizes = []
         for name, acc in iteritems(self._dat):
-            meta = acc.meta
-            if acc.owned and not meta.get('pass_by_obj'):
-                if meta.get('remote'):
+            if acc.owned and not acc.pbo:
+                if acc.remote:
                     psizes.append((name, 0))
                 else:
-                    psizes.append((name, meta['size']))
+                    psizes.append((name, acc.meta['size']))
 
         if trace:  # pragma: no cover
             msg = "'%s': allgathering param sizes.  local param sizes = %s"

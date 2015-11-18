@@ -1596,7 +1596,7 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for u_name, u_val in dresids.veciter():
+                    for u_name, u_val in dresids.vec_val_iter():
                         jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
