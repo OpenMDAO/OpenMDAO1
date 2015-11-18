@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Group, Component, IndepVarComp, Problem
+from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
@@ -87,6 +87,7 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('comp', SimpleImplicitComp())
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
@@ -110,6 +111,7 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('comp', SimpleImplicitComp())
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
@@ -292,6 +294,7 @@ class TestProblemCheckTotals(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
         prob.root.add('comp', SimpleImplicitComp())
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
