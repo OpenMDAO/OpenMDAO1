@@ -21,7 +21,7 @@ init:
   # We need to do this first as other commands may not work with older versions of conda.
   - conda update conda
   - conda install numpy scipy nose hdf5 sphinx mock --quiet
-  - cmd /k "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64
+  - cmd /k "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\amd64\vcvars64.bat"
 
 install:
   - pip install .
