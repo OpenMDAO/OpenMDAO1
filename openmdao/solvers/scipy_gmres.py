@@ -37,9 +37,9 @@ class ScipyGMRES(LinearSolver):
         super(ScipyGMRES, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-12,
+        opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('maxiter', 1000,
+        opt.add_option('maxiter', 1000, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
@@ -47,7 +47,7 @@ class ScipyGMRES(LinearSolver):
                        "let OpenMDAO determine the best mode.")
         opt.add_option('precondition', False,
                        desc='Set to True to turn on preconditioning.')
-        opt.add_option('restart', 20,
+        opt.add_option('restart', 20, lower=0,
                        desc='Number of iterations between restarts. Larger values ' +
                        'increase iteration cost, but may be necessary for convergence')
 

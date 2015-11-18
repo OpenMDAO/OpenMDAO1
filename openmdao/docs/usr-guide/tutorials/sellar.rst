@@ -156,7 +156,8 @@ for things like objectives and constraints.
 
 .. testcode:: Disciplines
 
-    from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel
+    from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel, \
+                             ScipyGMRES
 
     class SellarDerivatives(Group):
         """ Group containing the Sellar MDA. This version uses the disciplines
@@ -181,6 +182,8 @@ for things like objectives and constraints.
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
 
+            self.ln_solver = ScipyGMRES()
+
 We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
 execute, so it is important to add them in the correct order. Here, this means starting
@@ -190,7 +193,10 @@ We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
 promote '*', that means that every `param` and `unknown` is available in the
 parent system. Thus, if you wanted to connect something to variable `y1`, you
-would address it with the string `y1` instead of `dis1.y1`. The following is also valid
+would address it with the string `y1` instead of `dis1.y1`. Note that as models
+become more complicated, using promote '*' everywhere can result in connections
+that you don't intend, so be careful when using it.  The following is
+also valid
 
 ::
 
@@ -206,7 +212,8 @@ to arrive at values of `y1` and `y2` that satisfy the equations in both
 disciplines. We have selected the `NLGaussSeidel` solver (i.e., fixed point
 iteration), which will converge the model in our `Group`. We also specify a
 tighter tolerance in the solver's `options` dictionary, overriding the 1e-6
-default.
+default.  Note that we had to change our linear solver to ScipyGMRES instead
+of using the default LinearGaussSeidel solver because we have a cycle.
 
 The objective and constraints are defined with the `ExecComp`, which is really a
 shortcut for creating a `Component` that is a simple function of other
@@ -414,7 +421,7 @@ break the connection and use the `StateConnection` component.
 
 .. testcode:: Disciplines
 
-    from openmdao.api import Newton
+    from openmdao.api import Newton, ScipyGMRES
 
     class SellarStateConnection(Group):
         """ Group containing the Sellar MDA. This version uses the disciplines
@@ -442,6 +449,7 @@ break the connection and use the `StateConnection` component.
             self.connect('d2.y2', 'con_cmp2.y2')
 
             self.nl_solver = Newton()
+            self.ln_solver = ScipyGMRES()
 
 The first thing to notice is that we no longer promote the variable `y2` up
 to the group level. We need to add the connections manually because we really
@@ -452,6 +460,9 @@ manually connect `y2` to the objective and one of the constraints.
 We have also switched the solver to the Newton solver, since we no longer are
 iterating around a loop. Don't forget to change your import. The default
 settings should be fine for Sellar.
+
+Also, because we have states, we have switched the linear solver to ScipyGMRES
+instead of using the default LinearGaussSeidel solver.
 
 Otherwise, there are no other differences in the model, and the
 remaining optimization set up is the same as before. However, a small change

@@ -26,11 +26,11 @@ class BackTracking(LineSearch):
         super(BackTracking, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-10,
+        opt.add_option('atol', 1e-10, lower=0.0,
                        desc='Absolute convergence tolerancee for line search.')
-        opt.add_option('rtol', 0.9,
+        opt.add_option('rtol', 0.9, lower=0.0,
                        desc='Relative convergence tolerancee for line search.')
-        opt.add_option('maxiter', 10,
+        opt.add_option('maxiter', 10, lower=0,
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
