@@ -37,6 +37,23 @@ class _SysData(object):
         self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
         self.to_prom_pname = OrderedDict() # abs name to promoted namep
 
+    def _scoped_abs_name(self, name):
+        """
+        Args
+        ----
+        name : str
+            The absolute pathname of a variable.
+
+        Returns
+        -------
+        str
+            The given name as seen from the 'scope' of the current `System`.
+        """
+        if self.pathname:
+            return name[len(self.pathname)+1:]
+        else:
+            return name
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -787,7 +804,7 @@ class System(object):
 
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self, comm, umap)
-            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
+            self.states = set(n for n,m in iteritems(self.unknowns) if m.get('state'))
             self.resids = parent.resids.get_view(self, comm, umap)
             self.params = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,

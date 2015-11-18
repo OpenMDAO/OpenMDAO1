@@ -406,7 +406,7 @@ class Component(System):
         # create params vec entries for any unconnected params
         for meta in itervalues(self._params_dict):
             pathname = meta['pathname']
-            name = self.params._scoped_abs_name(pathname)
+            name = self._sysdata._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 

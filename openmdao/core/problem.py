@@ -1524,8 +1524,7 @@ class Problem(System):
                 out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
-            # Figure out implicit states for this comp
-            states = [n for n, m in iteritems(comp.unknowns) if m.get('state')]
+            states = comp.states
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):

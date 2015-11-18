@@ -473,7 +473,7 @@ class Group(System):
         # create implementation specific VecWrappers
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.states = set((n for n, m in iteritems(self.unknowns) if m.get('state')))
+            self.states = set(n for n, m in iteritems(self.unknowns) if m.get('state'))
             self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
 

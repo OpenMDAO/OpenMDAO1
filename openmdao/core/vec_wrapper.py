@@ -509,33 +509,6 @@ class VecWrapper(object):
 
         return numpy.concatenate(idxs)
 
-    def get_states(self):
-        """
-        Returns
-        -------
-        list
-            A list of names of state variables.
-        """
-        return [n for n, meta in iteritems(self) if meta.get('state')]
-
-    def _scoped_abs_name(self, name):
-        """
-        Args
-        ----
-        name : str
-            The absolute pathname of a variable.
-
-        Returns
-        -------
-        str
-            The given name as seen from the 'scope' of the `System` that
-            contains this `VecWrapper`.
-        """
-        if self._sysdata.pathname:
-            return name[len(self._sysdata.pathname)+1:]
-        else:
-            return name
-
     def dump(self, out_stream=sys.stdout):  # pragma: no cover
         """
         Args
@@ -724,6 +697,7 @@ class TgtVecWrapper(VecWrapper):
             self.deriv_units = True
 
         src_to_prom_name = srcvec._sysdata.to_prom_name
+        scoped_name = self._sysdata._scoped_abs_name
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
         for meta in itervalues(params_dict):
@@ -745,8 +719,7 @@ class TgtVecWrapper(VecWrapper):
                     if not meta.get('remote'):
                         vec_size += meta['size']
 
-                    my_abs = self._scoped_abs_name(pathname)
-                    self._dat[my_abs] = Accessor(self, slc, val, meta)
+                    self._dat[scoped_name(pathname)] = Accessor(self, slc, val, meta)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -769,15 +742,17 @@ class TgtVecWrapper(VecWrapper):
                 acc.val = self.vec[start:end]
 
         # fill entries for missing params with views from the parent
+        if parent_params_vec is not None:
+            parent_scoped_name = parent_params_vec._sysdata._scoped_abs_name
         for meta in missing:
             pathname = meta['pathname']
-            parent_acc = parent_params_vec._dat[parent_params_vec._scoped_abs_name(pathname)]
+            parent_acc = parent_params_vec._dat[parent_scoped_name(pathname)]
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
-                my_abs = self._scoped_abs_name(pathname)
                 # mark this param as not 'owned' by this VW
-                self._dat[my_abs] = acc = Accessor(self, None, parent_acc.val,
-                                                   newmeta, owned=False)
+                self._dat[scoped_name(pathname)] = Accessor(self, None,
+                                                           parent_acc.val,
+                                                           newmeta, owned=False)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
@@ -787,9 +762,7 @@ class TgtVecWrapper(VecWrapper):
                                                                 pathname)):
                 unitconv = meta.get('unit_conv')
                 if unitconv:
-                    scale, offset = unitconv
-                    scoped_abs = self._scoped_abs_name(pathname)
-                    self._dat[scoped_abs].meta['unit_conv'] = (scale, offset)
+                    self._dat[scoped_name(pathname)].meta['unit_conv'] = unitconv
 
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
@@ -839,7 +812,6 @@ class TgtVecWrapper(VecWrapper):
         Add an entry to this vecwrapper for the given unconnected variable so the
         component can access its value through the vecwrapper.
         """
-        sname = self._scoped_abs_name(pathname)
         if 'val' in meta:
             val = meta['val']
         elif 'shape' in meta:
@@ -850,7 +822,10 @@ class TgtVecWrapper(VecWrapper):
                                pathname)
 
         meta['pass_by_obj'] = True
-        self._dat[sname] = Accessor(self, None, val, meta)
+        self._dat[self._sysdata._scoped_abs_name(pathname)] = Accessor(self,
+                                                                       None,
+                                                                       val,
+                                                                       meta)
 
     def _get_flattened_sizes(self):
         """
