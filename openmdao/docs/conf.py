@@ -130,10 +130,12 @@ Indices and tables
                 # this line writes subpackage name e.g. "core/component.py"
                 # into the corresponding package index file (e.g. "openmdao.core.rst")
                 if sub_package not in SKIP_SUBPACKAGES:
-                    package_file.write("    " + os.path.join(package, sub_package) + "\n")
+                    #package_file.write("    " + os.path.join(package, sub_package) + "\n")
+                    package_file.write("    " + package + "/" + sub_package + "\n")
 
                     # creates and writes out one reference sheet (e.g. core/component.rst)
-                    ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
+                    #ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
+                    ref_sheet_filename = os.path.join(package_dirname, sub_package + ".rst")
                     ref_sheet = open(ref_sheet_filename, "w")
                     # get the meat of the ref sheet code done
                     filename = sub_package + ".py"
