@@ -440,6 +440,8 @@ class Problem(System):
         self._probdata.params_dict = params_dict
         self._probdata.unknowns_dict = unknowns_dict
 
+        self._probdata.to_prom_name = self.root._sysdata.to_prom_name
+
         # collect all connections, both implicit and explicit from
         # anywhere in the tree, and put them in a dict where each key
         # is an absolute param name that maps to the absolute name of

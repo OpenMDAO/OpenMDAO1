@@ -557,6 +557,11 @@ class TestProblem(unittest.TestCase):
 
         self.assertAlmostEqual(prob['G3.C4.y'], 40.)
 
+        stream = cStringIO()
+        # just make sure calling list_connections doesn't error out
+        prob.root.list_connections(stream=stream)
+        prob.root.list_connections(group_by_comp=True,stream=stream)
+
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
 

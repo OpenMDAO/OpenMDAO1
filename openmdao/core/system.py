@@ -1033,7 +1033,7 @@ class System(object):
         def _list_conns(self):
             template = "{0:<{swid}} -> {1}\n"
 
-            to_prom_name = self._probdata.to_prom
+            to_prom_name = self._probdata.to_prom_name
             scope = self.pathname + '.' if self.pathname else ''
 
             # create a dict with srcs as keys so we can more easily subsort
