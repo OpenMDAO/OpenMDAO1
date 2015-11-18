@@ -5,8 +5,6 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
-import networkx as nx
-
 from openmdao.solvers.solver_base import LinearSolver
 
 
