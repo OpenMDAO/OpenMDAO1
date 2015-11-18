@@ -7,7 +7,9 @@ import numpy as np
 from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, Component
 from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.newton import Newton
+from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.test.sellar import SellarStateConnection
+from openmdao.test.util import assert_rel_error
 
 
 class FakeSolver(NonLinearSolver):
@@ -131,6 +133,7 @@ class TestBackTracking(unittest.TestCase):
         top = Problem()
         top.root = Group()
         top.root.add('comp', SimpleImplicitComp())
+        top.root.ln_solver = ScipyGMRES()
         top.root.nl_solver = Newton()
         top.root.nl_solver.options['maxiter'] = 5
         top.root.add('px', IndepVarComp('x', 1.0))
@@ -150,6 +153,7 @@ class TestBackTracking(unittest.TestCase):
         top = Problem()
         top.root = Group()
         top.root.add('comp', SimpleImplicitComp())
+        top.root.ln_solver = ScipyGMRES()
         top.root.nl_solver = Newton()
         top.root.nl_solver.options['maxiter'] = 5
         top.root.add('px', IndepVarComp('x', 1.0))
