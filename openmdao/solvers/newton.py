@@ -34,11 +34,11 @@ class Newton(NonLinearSolver):
         super(Newton, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-12,
+        opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-10,
+        opt.add_option('rtol', 1e-10, lower=0.0,
                        desc='Relative convergence tolerance.')
-        opt.add_option('maxiter', 20,
+        opt.add_option('maxiter', 20, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('alpha', 1.0,
                        desc='Initial over-relaxation factor.')
@@ -134,4 +134,3 @@ class Newton(NonLinearSolver):
         your solver has subsolvers."""
         self.options['iprint'] = 1
         self.line_search.options['iprint'] = 1
-

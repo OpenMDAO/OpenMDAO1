@@ -1,3 +1,36 @@
+OpenMDAO Version 1.4.0 Alpha Release Notes
+November 18, 2015
+
+API Change
+* When using 'add_desvar' and 'add_constraint', there were inconsistent names for setting
+bounds.  (low, high vs. lower, upper), which was becoming confusing to users.  The new
+standard is that all are consistently set using "lower" and "upper", and the others are deprecated.
+
+Default Setting Changes
+* Recording option 'record_metadata' now defaults to True for all recorders except CSVRecorder.
+* The default linear solver will now be LinearGaussSeidel.
+
+Features
+* OpenMDAO 1.3 and onward will be pip-installable, as the project is now indexed on pypi:
+    https://pypi.python.org/pypi/openmdao/  (installation docs updated)
+* Added a "restart" option to the ScipyGMRES solver.
+* Added a new real-world example problem (beam-sizing) in the User Guide's Tutorials section.
+* Recorders now have an option to turn off recording of Params, Unknowns, Resids.
+* Recorders now include metadata for objectives, design variables, and constraints.
+* Parameters may now be declared without val or shape being given.
+* Users can now turn on 'iprint' recursively for all solvers in a Problem;
+  do this by calling 'print_all_convergence' on a problem after calling setup.
+* Users now receive a check_setup warning about any scalar integer variable or any list value.
+
+Bugfixes
+* Added a much more descriptive error message if a Jacobian item is the incorrect size.
+* Improved shape mismatch errors for connections to be much more specific.
+* Updated everything in the Examples directory to run without error.
+* Fixed a bug with SqliteRecorder that occurred when running in parallel.
+* OpenMDAO's memory footprint has been reduced by removing some data duplication.
+* 'pass_by_obj' vars may now be added to a gradient-free driver.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.3.0 Alpha Release Notes
 November 4, 2015
 

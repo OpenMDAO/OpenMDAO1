@@ -30,11 +30,11 @@ class LinearGaussSeidel(LinearSolver):
         super(LinearGaussSeidel, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-12,
+        opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-10,
+        opt.add_option('rtol', 1e-10, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('maxiter', 1,
+        opt.add_option('maxiter', 1, lower=1,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
@@ -49,16 +49,18 @@ class LinearGaussSeidel(LinearSolver):
 
         self.print_name = 'LN_GS'
 
-    def setup(self, system):
+    def setup(self, group):
         """ Solvers override to define post-setup initiailzation.
 
         Args
         ----
-        system: `System`
-            System that owns this solver.
+        group: `Group`
+            Group that owns this solver.
         """
+        super(LinearGaussSeidel, self).setup(group)
+
         self._vois = [None]
-        for vois in system._probdata.relevance.vars_of_interest():
+        for vois in group._probdata.relevance.vars_of_interest():
             self._vois.extend(vois)
 
     def solve(self, rhs_mat, system, mode):

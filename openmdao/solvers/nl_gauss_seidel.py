@@ -29,11 +29,11 @@ class NLGaussSeidel(NonLinearSolver):
         super(NLGaussSeidel, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-6,
+        opt.add_option('atol', 1e-6, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-6,
+        opt.add_option('rtol', 1e-6, lower=0.0,
                        desc='Relative convergence tolerance.')
-        opt.add_option('maxiter', 100,
+        opt.add_option('maxiter', 100, lower=0,
                        desc='Maximum number of iterations.')
 
         self.print_name = 'NLN_GS'

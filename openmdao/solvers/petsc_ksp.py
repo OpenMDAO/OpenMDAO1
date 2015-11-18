@@ -87,11 +87,11 @@ class PetscKSP(LinearSolver):
         super(PetscKSP, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-12,
+        opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-12,
+        opt.add_option('rtol', 1e-12, lower=0.0,
                        desc='Relative convergence tolerance.')
-        opt.add_option('maxiter', 100,
+        opt.add_option('maxiter', 100, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
