@@ -12,9 +12,6 @@ environment:
     - PYTHON: 3.4
 
 init:
-  - set OPENMDAO_TEST_DOCS=1
-  - copy C:\MinGW\bin\mingw32-make.exe C:\MinGW\bin\make.exe
-  - set PATH=%PATH%;C:\MinGW\bin
   - set CONDA=Miniconda
   - if "%PYTHON%" == "3.4" (set CONDA=%CONDA%3)
   - if "%PLATFORM%" == "x64" (set CONDA=%CONDA%-x64)
@@ -24,9 +21,12 @@ init:
   # We need to do this first as other commands may not work with older versions of conda.
   - conda update conda
   - conda install numpy scipy nose hdf5 sphinx mock --quiet
+  - "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64
 
 install:
   - pip install .
 
 test_script:
   - nosetests
+  - cd openmdao/docs
+  - nmake /f Makefile.nmake doctest
