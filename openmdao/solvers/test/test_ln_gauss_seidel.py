@@ -508,8 +508,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
             self.assertEqual(str(err),
                              "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
                              "[['C1', 'C2', 'C3']]. To fix this error, change to a different linear solver, "
-                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (only if you "
-                             "really know what you're doing!)")
+                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
         else:
             self.fail("Exception expected")
 
@@ -524,8 +523,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
             self.assertEqual(str(err),
                              "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
                              "implicit states ['C1.y2_command']. To fix this error, change to a different "
-                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (only "
-                             "if you really know what you're doing!)")
+                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
         else:
             self.fail("Exception expected")
 

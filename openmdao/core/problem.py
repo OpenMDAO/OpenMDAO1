@@ -624,7 +624,7 @@ class Problem(System):
 
     def _check_solvers(self):
         """
-        Raise an exception of we detect a LinearGaussSeidel solver if that
+        Raise an exception if we detect a LinearGaussSeidel solver and that
         group has either cycles or states.
         """
         for group in self.root.subgroups(recurse=True, include_self=True):
@@ -640,8 +640,8 @@ class Problem(System):
                                    "solver with maxiter==1 but it contains "
                                    "cycles %s. To fix this error, change to "
                                    "a different linear solver, e.g. ScipyGMRES "
-                                   "or PetscKSP, or increase maxiter (only "
-                                   "if you really know what you're doing!)"
+                                   "or PetscKSP, or increase maxiter (not "
+                                   "recommended)."
                                    % (group.pathname, strong))
 
                 states = [n for n,m in iteritems(group._unknowns_dict)
@@ -652,8 +652,7 @@ class Problem(System):
                                    "implicit states %s. To fix this error, "
                                    "change to a different linear solver, e.g. "
                                    "ScipyGMRES or PetscKSP, or increase maxiter "
-                                   "(only if you really know what "
-                                   "you're doing!)" % (group.pathname, states))
+                                   "(not recommended)." % (group.pathname, states))
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
