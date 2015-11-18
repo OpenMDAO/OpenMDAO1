@@ -73,7 +73,7 @@ class System(object):
                        desc="Finite difference mode. (forward, backward, central) "
                        "You can also set to 'complex_step' to peform the complex "
                        "step method if your components support it.")
-        opt.add_option("step_size", 1.0e-6,
+        opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
                        values=['absolute', 'relative'],
@@ -704,7 +704,7 @@ class System(object):
 
         if not self._jacobian_cache:
             msg = ("No derivatives defined for Component '{name}'")
-            msg = msg.format(name=self.name)
+            msg = msg.format(name=self.pathname)
             raise ValueError(msg)
 
         isvw = isinstance(dresids, VecWrapper)

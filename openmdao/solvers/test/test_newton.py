@@ -65,6 +65,7 @@ class TestNewton(unittest.TestCase):
         prob.root = SellarDerivatives()
         prob.root.nl_solver = Newton()
         prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['maxiter'] = 2
 
         prob.setup(check=False)
         prob.run()

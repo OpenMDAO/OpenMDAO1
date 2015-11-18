@@ -611,6 +611,8 @@ class Problem(System):
             sub.ln_solver.setup(sub)
             sub.precon.setup(sub)
 
+        self._check_solvers()
+
         # Prep for case recording
         self._start_recorders()
 
@@ -619,6 +621,38 @@ class Problem(System):
             return self.check_setup(out_stream)
 
         return {}
+
+    def _check_solvers(self):
+        """
+        Raise an exception if we detect a LinearGaussSeidel solver and that
+        group has either cycles or states.
+        """
+        for group in self.root.subgroups(recurse=True, include_self=True):
+            if isinstance(group.ln_solver, LinearGaussSeidel) and \
+                                     group.ln_solver.options['maxiter'] == 1:
+                # If group has a cycle and lings can't iterate, that's
+                # an error.
+                graph = group._get_sys_graph()
+                strong = [sorted(s) for s in nx.strongly_connected_components(graph)
+                          if len(s) > 1]
+                if strong:
+                    raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                                   "solver with maxiter==1 but it contains "
+                                   "cycles %s. To fix this error, change to "
+                                   "a different linear solver, e.g. ScipyGMRES "
+                                   "or PetscKSP, or increase maxiter (not "
+                                   "recommended)."
+                                   % (group.pathname, strong))
+
+                states = [n for n,m in iteritems(group._unknowns_dict)
+                                  if m.get('state')]
+                if states:
+                    raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                                   "solver with maxiter==1 but it contains "
+                                   "implicit states %s. To fix this error, "
+                                   "change to a different linear solver, e.g. "
+                                   "ScipyGMRES or PetscKSP, or increase maxiter "
+                                   "(not recommended)." % (group.pathname, states))
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
@@ -740,6 +774,7 @@ class Problem(System):
         """ Check for cycles in group w/o solver. """
         cycles = []
         ooo = []
+
         for grp in self.root.subgroups(recurse=True, include_self=True):
             graph = grp._get_sys_graph()
 
