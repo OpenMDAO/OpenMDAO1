@@ -43,10 +43,10 @@ class Relevance(object):
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
         self.relevant = self._get_relevant_vars(self._vgraph)
         # when voi is None, everything is relevant
-        self.relevant[None] = set([m['top_promoted_name']
-                                    for m in itervalues(unknowns_dict)])
-        self.relevant[None].update([m['top_promoted_name']
-                                    for m in itervalues(params_dict)])
+        self.relevant[None] = set(m['top_promoted_name']
+                                    for m in itervalues(unknowns_dict))
+        self.relevant[None].update(m['top_promoted_name']
+                                    for m in itervalues(params_dict))
         self._relevant_systems = self._get_relevant_systems()
 
         if mode == 'fwd':
