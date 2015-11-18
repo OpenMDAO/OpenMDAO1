@@ -63,10 +63,10 @@ class ScipyOptimizer(Driver):
         # User Options
         self.options.add_option('optimizer', 'SLSQP', values=_optimizers,
                                 desc='Name of optimizer to use')
-        self.options.add_option('tol', 1.0e-6,
+        self.options.add_option('tol', 1.0e-6, lower=0.0,
                                 desc='Tolerance for termination. For detailed '
                                 'control, use solver-specific options.')
-        self.options.add_option('maxiter', 200,
+        self.options.add_option('maxiter', 200, lower=0,
                                 desc='Maximum number of iterations.')
         self.options.add_option('disp', True,
                                 desc='Set to False to prevent printing of Scipy '

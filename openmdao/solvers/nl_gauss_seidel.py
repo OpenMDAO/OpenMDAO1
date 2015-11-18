@@ -22,18 +22,18 @@ class NLGaussSeidel(NonLinearSolver):
         Maximum number of iterations.
     options['rtol'] :  float(1e-06)
         Relative convergence tolerance.
-        
+
     """
 
     def __init__(self):
         super(NLGaussSeidel, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-6,
+        opt.add_option('atol', 1e-6, lower=0.0,
                        desc='Absolute convergence tolerance.')
-        opt.add_option('rtol', 1e-6,
+        opt.add_option('rtol', 1e-6, lower=0.0,
                        desc='Relative convergence tolerance.')
-        opt.add_option('maxiter', 100,
+        opt.add_option('maxiter', 100, lower=0,
                        desc='Maximum number of iterations.')
 
     def solve(self, params, unknowns, resids, system, metadata=None):
