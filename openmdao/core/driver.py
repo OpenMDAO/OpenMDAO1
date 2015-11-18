@@ -12,7 +12,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.util.options import OptionsDictionary
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
-
+from openmdao.core.vec_wrapper import _ByObjWrapper
 
 class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
@@ -398,19 +398,20 @@ class Driver(object):
         val : ndarray or float
             value to set the parameter
         """
-        if self.root.unknowns._dat[name].val.size == 0:
+        val = self.root.unknowns._dat[name].val
+        if not isinstance(val, _ByObjWrapper) and \
+                       self.root.unknowns._dat[name].val.size == 0:
             return
 
-        scaler = self._desvars[name]['scaler']
-        adder = self._desvars[name]['adder']
+        meta = self._desvars[name]
+        scaler = meta['scaler']
+        adder = meta['adder']
         if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
            or scaler != 1.0 or adder != 0.0:
             value = value/scaler - adder
-        else:
-            value = value
 
         # Only set the indices we requested when we set the parameter.
-        idx = self._desvars[name].get('indices')
+        idx = meta.get('indices')
         if idx is not None:
             self.root.unknowns[name][idx] = value
         else:
