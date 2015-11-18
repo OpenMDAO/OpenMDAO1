@@ -1,4 +1,3 @@
-""" Unit test for the Problem class. """
 
 import unittest
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, Driver
@@ -49,6 +48,9 @@ class PassByObjParaboloid(Component):
         return J
 
 class TestPBODesvar(unittest.TestCase):
+    """Test for adding pass_by_obj variables to a gradient free
+    driver.
+    """
 
     def test_pbo_desvar(self):
         top = Problem()
