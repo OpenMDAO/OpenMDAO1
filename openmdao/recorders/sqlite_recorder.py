@@ -87,10 +87,8 @@ class SqliteRecorder(BaseRecorder):
 
     def close(self):
         """Closes `out`"""
-        self.out.close()
-        self.out = None
 
-        # if self._open_close_sqlitedict:
-        #     if self.out is not None:
-        #         self.out.close()
-        #         self.out = None
+        if self._open_close_sqlitedict:
+            if self.out is not None:
+                self.out.close()
+                self.out = None
