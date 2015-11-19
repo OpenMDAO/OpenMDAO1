@@ -50,10 +50,10 @@ help:
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
 
 clean:
-	rmdir /s /q $(BUILDDIR)
+	IF EXIST $(BUILDDIR) rmdir /s /q $(BUILDDIR)
+	IF EXIST srcdocs rmdir /s /q srcdocs
 
-html:
-	rmdir /s /q srcdocs
+html:	
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)\html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)\html."
