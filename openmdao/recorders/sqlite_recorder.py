@@ -32,8 +32,10 @@ class SqliteRecorder(BaseRecorder):
         Args
         ----
         group : `System`
-            `System` containing vectors 
+            `System` containing vectors
         """
+
+        if not self._open_close_sqlitedict: return
 
         params = group.params.iteritems()
         resids = group.resids.iteritems()
@@ -65,13 +67,15 @@ class SqliteRecorder(BaseRecorder):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
+        if not self._open_close_sqlitedict: return
+
         data = OrderedDict()
         iteration_coordinate = metadata['coord']
         timestamp = metadata['timestamp']
         params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         group_name = format_iteration_coordinate(iteration_coordinate)
-        
+
         data['timestamp'] = timestamp
 
         if self.options['record_params']:
