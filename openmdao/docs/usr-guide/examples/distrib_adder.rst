@@ -149,7 +149,7 @@ Next we'll use these components to build an actual distributed model:
     :hide:
     :options: +ELLIPSIS
 
-    process 0: (1000000,)
+    process 0: (1000000...
     run time: ...
     answer:  11.0
 
