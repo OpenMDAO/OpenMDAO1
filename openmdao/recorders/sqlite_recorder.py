@@ -32,7 +32,7 @@ class SqliteRecorder(BaseRecorder):
         Args
         ----
         group : `System`
-            `System` containing vectors 
+            `System` containing vectors
         """
 
         params = group.params.iteritems()
@@ -71,7 +71,7 @@ class SqliteRecorder(BaseRecorder):
         params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         group_name = format_iteration_coordinate(iteration_coordinate)
-        
+
         data['timestamp'] = timestamp
 
         if self.options['record_params']:
@@ -87,8 +87,10 @@ class SqliteRecorder(BaseRecorder):
 
     def close(self):
         """Closes `out`"""
+        self.out.close()
+        self.out = None
 
-        if self._open_close_sqlitedict:
-            if self.out is not None:
-                self.out.close()
-                self.out = None
+        # if self._open_close_sqlitedict:
+        #     if self.out is not None:
+        #         self.out.close()
+        #         self.out = None
