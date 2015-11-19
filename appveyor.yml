@@ -23,10 +23,13 @@ init:
   - conda install numpy scipy nose hdf5 sphinx mock --quiet
 
 install:
+  - echo on
   - cd "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC"
+  - dir
   - vcvarsall amd64
   - nmake /?
-  - cd C:\projects\openmdao-w047s\OpenMDAO
+  - cd C:\projects\openmdao-w047s
+  - dir
   - pip install .
 
 test_script:
