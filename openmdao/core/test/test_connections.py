@@ -197,7 +197,7 @@ class TestConnections(unittest.TestCase):
 
                 unknowns['y1'] = x * np.array( [1.0, 2.0, 3.0])
                 unknowns['y2'] = x * np.array( [1.0, 2.0, 3.0])
-                unknowns['y3'] = x * np.array( [1.0, 2.0, 3.0])
+                unknowns['y3'] = x * 4.0
 
         class Tgt(Component):
 
@@ -209,6 +209,7 @@ class TestConnections(unittest.TestCase):
                 self.add_param('x3')
                 self.add_output('y1', 0.0)
                 self.add_output('y2', 0.0)
+                self.add_output('y3', 0.0)
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ counts up. """
@@ -228,14 +229,14 @@ class TestConnections(unittest.TestCase):
 
         top.root.connect('src.y1', 'tgt.x1', src_indices=(0, 1))
         top.root.connect('src.y2', 'tgt.x2', src_indices=(0, 1))
-        top.root.connect('src.y3', 'tgt.x3', src_indices=(0, 1))
+        top.root.connect('src.y3', 'tgt.x3')
 
         top.setup(check=False)
         top.run()
 
         self.assertEqual(top['tgt.y1'], 6.0)
         self.assertEqual(top['tgt.y2'], 6.0)
-        self.assertEqual(top['tgt.y3'], 6.0)
+        self.assertEqual(top['tgt.y3'], 8.0)
 
 
 
