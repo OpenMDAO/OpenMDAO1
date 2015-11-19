@@ -13,6 +13,10 @@ class RecordingManager(object):
 
         self._recorders = []
         self.__has_serial_recorders = False
+        if MPI:
+            self.rank = MPI.COMM_WORLD.rank
+        else:
+            self.rank = 0
 
     def append(self, recorder):
         self._recorders.append(recorder)
@@ -57,7 +61,7 @@ class RecordingManager(object):
         for recorder in self._recorders:
             # If the recorder does not support parallel recording
             # we need to make sure we only record on rank 0.
-            if recorder._parallel or root.comm.rank == 0:
+            if recorder._parallel or self.rank == 0:
                 metadata_option = recorder.options['record_metadata']
 
                 if metadata_option is False:
@@ -110,5 +114,5 @@ class RecordingManager(object):
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self._recorders:
-            if recorder._parallel or root.comm.rank == 0:
+            if recorder._parallel or self.rank == 0:
                 recorder.record_iteration(params, unknowns, resids, metadata)

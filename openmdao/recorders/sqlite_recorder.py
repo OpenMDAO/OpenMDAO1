@@ -71,7 +71,7 @@ class SqliteRecorder(BaseRecorder):
         params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         group_name = format_iteration_coordinate(iteration_coordinate)
-        
+
         data['timestamp'] = timestamp
 
         if self.options['record_params']:
