@@ -73,6 +73,7 @@ class TestParamIndicesScipy(unittest.TestCase):
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['disp'] = False
         prob.driver.options['tol'] = 1.0e-8
         prob.root.fd_options['force_fd'] = False
 
@@ -106,6 +107,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
                                     upper=np.array([10.0]), indices=[0])
@@ -158,6 +160,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
                                     upper=np.array([10.0]), indices=[0])
@@ -187,6 +190,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
                                     upper=np.array([10.0]), indices=[0])
@@ -238,6 +242,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         prob = Problem()
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.root = root = Group()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['single_voi_relevance_reduction'] = True

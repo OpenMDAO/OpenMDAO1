@@ -258,34 +258,6 @@ class System(object):
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
 
-    def solve_linear(self, dumat, drmat, vois, mode=None):
-        """
-        Single linear solution applied to whatever input is sitting in
-        the rhs vector.
-
-        Args
-        ----
-        dumat : dict of `VecWrappers`
-            In forward mode, each `VecWrapper` contains the incoming vector
-            for the states. There is one vector per quantity of interest for
-            this problem. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        drmat : `dict of VecWrappers`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. There is one vector per
-            quantity of interest for this problem. (dr)
-
-        vois : list of strings
-            List of all quantities of interest to key into the mats.
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev', but generally should be
-            called without mode so that the user can set the mode in this
-            system's ln_solver.options.
-        """
-        pass
-
     def is_active(self):
         """
         Returns

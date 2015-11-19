@@ -753,9 +753,9 @@ class TestProblem(unittest.TestCase):
 
         printed = ostream.getvalue()
         self.assertEqual(printed.count('NEWTON'), 3)
-        self.assertEqual(printed.count('GMRES'), 5)
+        self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
-        self.assertTrue('   [root] LN: GMRES   0 | ' in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
 
 class TestCheckSetup(unittest.TestCase):
 

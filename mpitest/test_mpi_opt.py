@@ -120,6 +120,7 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
         driver.add_desvar('p1.x', lower=-100, upper=100)
         driver.add_desvar('p2.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
@@ -148,6 +149,7 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
         driver.add_desvar('par.s1.p.x', lower=-100, upper=100)
         driver.add_desvar('par.s2.p.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
@@ -180,6 +182,7 @@ class TestMPIOpt(MPITestCase):
 
         driver = model.driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
         driver.add_desvar('par.s1.p.x', lower=-100, upper=100)
         driver.add_desvar('par.s2.p.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
@@ -245,6 +248,7 @@ class ParallelMPIOptAsym(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('par.ser1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('par.ser2.x', lower=-50.0, upper=50.0)
 
@@ -335,6 +339,7 @@ class ParallelMPIOptPromoted(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('par.ser1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('par.ser2.x', lower=-50.0, upper=50.0)
 
@@ -456,6 +461,7 @@ class ParallelMPIOpt(MPITestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('par.ser1.p1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('par.ser2.p1.x', lower=-50.0, upper=50.0)
 
