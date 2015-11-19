@@ -35,8 +35,6 @@ class SqliteRecorder(BaseRecorder):
             `System` containing vectors
         """
 
-        if not self._open_close_sqlitedict: return
-
         params = group.params.iteritems()
         resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()
@@ -66,8 +64,6 @@ class SqliteRecorder(BaseRecorder):
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
-
-        if not self._open_close_sqlitedict: return
 
         data = OrderedDict()
         iteration_coordinate = metadata['coord']
