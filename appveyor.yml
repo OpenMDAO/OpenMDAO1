@@ -24,12 +24,15 @@ init:
 
 install:
   - echo on
+  #We need to run these two lines to have nmake available for doctests
   - cd "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC"
   - vcvarsall amd64
+  #Return back to continue install of OpenMDAO
   - cd C:\projects\openmdao-w047s
   - pip install .
 
 test_script:
   - nosetests
+  #after tests, need to cd down so that conf.py can be found for doctest
   - cd openmdao/docs
   - nmake /f Makefile.nmake doctest
