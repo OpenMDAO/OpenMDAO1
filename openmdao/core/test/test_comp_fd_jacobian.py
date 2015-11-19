@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Component, Group, Problem, System, \
-    IndepVarComp, ExecComp
+    IndepVarComp, ExecComp, ScipyGMRES
 from openmdao.core.vec_wrapper import SrcVecWrapper
 from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
@@ -38,6 +38,7 @@ class TestProb(Problem):
         super(TestProb, self).__init__()
 
         self.root = root = Group()
+        root.ln_solver = ScipyGMRES()
         root.add('c1', SimpleArrayComp())
         root.add('p1', IndepVarComp('p', 1*np.ones(2)))
         root.connect('p1.p','c1.x')

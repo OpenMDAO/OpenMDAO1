@@ -53,7 +53,7 @@ clean:
 	IF EXIST $(BUILDDIR) rmdir /s /q $(BUILDDIR)
 	IF EXIST srcdocs rmdir /s /q srcdocs
 
-html:	
+html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)\html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)\html."

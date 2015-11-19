@@ -17,9 +17,9 @@ def collapse_nodes(graph, node_map, copy=False):
     -------
     nx.DiGraph
         The graph with the nodes collapsed.
-        
+
     """
-    nx.relabel_nodes(graph, node_map, copy=copy)
+    graph = nx.relabel_nodes(graph, node_map, copy=copy)
 
     # remove any self edges created by the relabeling
     graph.remove_edges_from([(u, v) for u, v in graph.edges_iter()

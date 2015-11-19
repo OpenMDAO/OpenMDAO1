@@ -20,10 +20,16 @@ init:
   - conda config --set always_yes yes
   # We need to do this first as other commands may not work with older versions of conda.
   - conda update conda
-  - conda install numpy scipy nose hdf5 --quiet
+  - conda install numpy scipy nose hdf5 sphinx mock --quiet
 
 install:
+  - echo on
+  - cd "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC"
+  - vcvarsall amd64
+  - cd C:\projects\openmdao-w047s
   - pip install .
 
 test_script:
   - nosetests
+  - cd openmdao/docs
+  - nmake /f Makefile.nmake doctest

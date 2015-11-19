@@ -1,7 +1,7 @@
 
 .. warning::
 
-        OpenMDAO 1.0 is in an ALPHA state.  The version that you are installing
+        OpenMDAO 1.x is in an ALPHA state.  The version that you are installing
         is under active development, and as such may be broken from time to time.
         Therefore, OpenMDAO 1.0 Alpha should be used at your own risk!
 
@@ -25,7 +25,16 @@ to use OpenMDAO, see the `OpenMDAO User Guide`_.
 .. _TL;DR: https://en.wikipedia.org/wiki/TL;DR
 
 Install Git, Python, Pip, Numpy, and Scipy. (`Anaconda Python <http://continuum.io/downloads>`_, comes
-bundled with everything you need). Next, install OpenMDAO with pip:
+bundled with everything you need). Next, install OpenMDAO with pip.
+
+To get most recent release of OpenMDAO:
+
+::
+
+    pip install openmdao
+
+
+To get the latest commit to OpenMDAO's Github master:
 
 ::
 
@@ -119,7 +128,14 @@ Quickstart
 
 Assuming you are on a supported platform (discussed below), with the proper
 prerequisites installed (discussed further below), you can quickly and easily
-install the latest OpenMDAO from its Github repository with this line:
+install the latest release of OpenMDAO with this line:
+
+::
+
+    pip install openmdao
+
+
+Or install the most recent commit to OpenMDAO from its Github repository with this:
 
 ::
 
@@ -241,6 +257,12 @@ packages, you'll either need platform-specific binaries for them, or you'll need
 
 Install OpenMDAO Using pip
 --------------------------
+To pip install OpenMDAO's most recent release from the Python Package Index (pypi):
+
+::
+
+  pip install openmdao
+
 
 To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
