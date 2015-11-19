@@ -35,4 +35,6 @@ install:
 test_script:
   - nosetests
   - cd openmdao/docs
+  - nmake /f Makefile.nmake html
+  - type srcdocs/index.html
   - nmake /f Makefile.nmake doctest
