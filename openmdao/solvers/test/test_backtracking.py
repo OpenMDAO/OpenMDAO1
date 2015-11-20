@@ -98,7 +98,6 @@ class TestBackTracking(unittest.TestCase):
                 self.atol = 1.0e-12
 
             def solve_nonlinear(self, params, unknowns, resids):
-                """ Simple iterative solve. (Babylonian method)."""
                 pass
 
             def apply_nonlinear(self, params, unknowns, resids):
@@ -202,7 +201,6 @@ class TestBackTracking(unittest.TestCase):
                 self.atol = 1.0e-12
 
             def solve_nonlinear(self, params, unknowns, resids):
-                """ Simple iterative solve. (Babylonian method)."""
                 pass
 
             def apply_nonlinear(self, params, unknowns, resids):
@@ -286,7 +284,6 @@ class TestBackTracking(unittest.TestCase):
                 self.atol = 1.0e-12
 
             def solve_nonlinear(self, params, unknowns, resids):
-                """ Simple iterative solve. (Babylonian method)."""
                 pass
 
             def apply_nonlinear(self, params, unknowns, resids):
@@ -371,7 +368,6 @@ class TestBackTracking(unittest.TestCase):
                 self.atol = 1.0e-12
 
             def solve_nonlinear(self, params, unknowns, resids):
-                """ Simple iterative solve. (Babylonian method)."""
                 pass
 
             def apply_nonlinear(self, params, unknowns, resids):
