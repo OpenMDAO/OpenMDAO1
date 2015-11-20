@@ -709,6 +709,10 @@ class SrcVecWrapper(VecWrapper):
 
         new_alpha = alpha
         for name, meta in iteritems(self):
+
+            if 'remote' in meta:
+                continue
+
             val = self[name]
 
             upper = meta.get('upper')
