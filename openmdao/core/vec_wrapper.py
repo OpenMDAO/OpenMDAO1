@@ -690,7 +690,7 @@ class SrcVecWrapper(VecWrapper):
         """
         return [[(n, m['size']) for n, m in self._get_vecvars()]]
 
-    def backtrack(self, alpha, duvec):
+    def distance_along_vector_to_limit(self, alpha, duvec):
         """ Returns a new alpha so that new_u = current_u + alpha*duvec does
         not violate any `lower` or `upper` limits if specified.
 
@@ -723,7 +723,7 @@ class SrcVecWrapper(VecWrapper):
                 if alpha_bound >= 0.0:
                     new_alpha = min(new_alpha, alpha_bound)
 
-        return new_alpha
+        return max(0.0, new_alpha)
 
 
 class TgtVecWrapper(VecWrapper):
