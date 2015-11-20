@@ -52,7 +52,7 @@ if __name__ == '__main__':
     from openmdao.devtools.debug import stats
     vec_size = 100000
     num_comps = 50
-    pts = 1
+    pts = 2
 
     if 'petsc' in sys.argv:
         from openmdao.core.petsc_impl import PetscImpl
@@ -64,9 +64,9 @@ if __name__ == '__main__':
     g = Group()
     p = Problem(impl=impl, root=g)
 
-    if 'lings' in sys.argv:
-        from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
-        p.root.ln_solver = LinearGaussSeidel()
+    if 'gmres' in sys.argv:
+        from openmdao.solvers.scipy_gmres import ScipyGMRES
+        p.root.ln_solver = ScipyGMRES()
 
     g.add("P", IndepVarComp('x', numpy.ones(vec_size)))
 
@@ -88,7 +88,8 @@ if __name__ == '__main__':
     p.setup()
     p.run()
     #g.dump(verbose=True)
-    print("Pts:", pts)
+    p.root.list_connections()
+    print("\nPts:", pts)
     print("Comps per pt:", num_comps)
     print("Var size:", vec_size)
     stats(p)
