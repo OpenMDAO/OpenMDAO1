@@ -1,6 +1,9 @@
 """ Unit test for the Nonlinear Gauss Seidel nonlinear solver. """
 
+import sys
 import unittest
+
+from six.moves import cStringIO
 
 from openmdao.api import Problem, NLGaussSeidel
 from openmdao.test.sellar import SellarNoDerivatives, SellarDerivativesGrouped
@@ -34,7 +37,13 @@ class TestNLGaussSeidel(unittest.TestCase):
         prob.root.nl_solver.options['iprint'] = 1 # so that print_norm is in coverage
 
         prob.setup(check=False)
-        prob.run()
+
+        old_stdout = sys.stdout
+        sys.stdout = cStringIO() # so we don't see the iprint output during testing
+        try:
+            prob.run()
+        finally:
+            sys.stdout = old_stdout
 
         assert_rel_error(self, prob['y1'], 25.58830273, .00001)
         assert_rel_error(self, prob['y2'], 12.05848819, .00001)
