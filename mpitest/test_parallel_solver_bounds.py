@@ -175,8 +175,10 @@ class TestParallelBounds(MPITestCase):
         top['px2.x'] = 2.0
         top.run()
 
-        self.assertEqual(top['comp1.z'], 1.5)
-        self.assertEqual(top['comp2.z'], 1.5)
+        if top.root.par.comp1.is_active():
+            self.assertEqual(top['par.comp1.z'], 1.5)
+        if top.root.par.comp2.is_active():
+            self.assertEqual(top['par.comp2.z'], 1.5)
 
 
 if __name__ == '__main__':
