@@ -694,7 +694,6 @@ class SrcVecWrapper(VecWrapper):
         """ Returns a new alpha so that new_u = current_u + alpha*duvec does
         not violate any `lower` or `upper` limits if specified.
 
-
         Args
         -----
         alpha: float
