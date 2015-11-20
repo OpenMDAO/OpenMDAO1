@@ -991,18 +991,21 @@ class System(object):
         for pathname, meta in iteritems(self._params_dict):
             prom = to_prom_name[pathname]
 
-    def list_connections(self, group_by_comp=False, stream=sys.stdout):
+    def list_connections(self, group_by_comp=True, unconnected=True,
+                         stream=sys.stdout):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
 
-        source_absolute_name (source_promoted_name) -> target
+        source_absolute_name (source_promoted_name) [units] -> target [units]
 
         Where sources that broadcast to multiple targets will be replaced with
         a blank source for all but the first of their targets, in order to help
         broadcast sources visually stand out.  The source name will be followed
         by its promoted name if it differs, and if a target is promoted it will
-        be followed by a '*'.
+        be followed by a '*', or by its promoted name if it doesn't match the
+        promoted name of the source, which indicates an explicit connection.
+        Units are also included if they exist.
 
         Sources are sorted alphabetically and targets are subsorted
         alphabetically when a source is broadcast to multiple targets.
@@ -1013,16 +1016,33 @@ class System(object):
             If True, show all sources and targets grouped by component. Note
             that this will cause repeated lines in the output since a given
             connection will always be from one component's source to a different
-            component's target.  Default is False.
+            component's target.  Default is True.
+
+        unconnected : bool, optional
+            If True, include all unconnected params and unknowns as well. Defaults to True
 
         stream : output stream, optional
             Stream to write the connection info to. Defaults to sys.stdout.
         """
 
+        def _param_str(pdict, udict, prom, tgt, src):
+            units = pdict[tgt].get('units', '')
+            if units:
+                units = '[%s]' % units
+            prom_tgt = prom[tgt]
+            if prom_tgt != tgt:
+                if src is None or prom_tgt != prom[src]: # explicit connection
+                    prom_tgt = "(%s)" % prom_tgt
+                else:
+                    prom_tgt = '(*)'
+            return ' '.join((tgt, prom_tgt, units))
+
         def _list_conns(self):
             template = "{0:<{swid}} -> {1}\n"
 
             to_prom_name = self._probdata.to_prom_name
+            top_params = self._probdata.params_dict
+            top_unknowns = self._probdata.unknowns_dict
             scope = self.pathname + '.' if self.pathname else ''
 
             # create a dict with srcs as keys so we can more easily subsort
@@ -1030,15 +1050,40 @@ class System(object):
             by_src = {}
             for tgt, (src, idx) in iteritems(self.connections):
                 if src.startswith(scope) or tgt.startswith(scope):
-                    if to_prom_name[tgt] != tgt:
-                        tgt += ' *'
-                    if to_prom_name[src] != src:
-                        src += " (%s)" % to_prom_name[src]
-                    by_src.setdefault(src, []).append(tgt)
+                    by_src.setdefault(src, []).append(_param_str(top_params,
+                                                                 top_unknowns,
+                                                                 to_prom_name,
+                                                                 tgt, src))
 
-            src_max_wid = max(len(n) for n in by_src)
+            if unconnected:
+                for p in self._params_dict:
+                    if p not in self.connections:
+                        by_src.setdefault('{unconnected}',
+                                          []).append(_param_str(top_params,
+                                                     top_unknowns, to_prom_name,
+                                                     p, None))
 
-            for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
+                for u in self._unknowns_dict:
+                    if u not in by_src:
+                        by_src[u] = ('{unconnected}',)
+
+            by_src2 = {}
+            for src, tgts in iteritems(by_src):
+                if src[0] == '{':
+                    prom_src = units = ''
+                else:
+                    units = top_unknowns[src].get('units', '')
+                    if units:
+                        units = '[%s]' % units
+                    prom_src = to_prom_name[src]
+                    prom_src = '' if prom_src == src else "(%s)" % prom_src
+
+                by_src2[' '.join((src, prom_src, units))] = tgts
+
+            if by_src2:
+                src_max_wid = max(len(n) for n in by_src2)
+
+            for src, tgts in sorted(iteritems(by_src2), key=lambda x: x[0]):
                 for i, tgt in enumerate(sorted(tgts)):
                     if i: src = ''
                     stream.write(template.format(src, tgt, swid=src_max_wid))
@@ -1047,7 +1092,9 @@ class System(object):
             for c in self.components(recurse=True, include_self=True):
                 line = "Connections for %s:" % c.pathname
                 stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
-                c.list_connections(stream=stream)
+                c.list_connections(unconnected=unconnected,
+                                   group_by_comp=False,
+                                   stream=stream)
         else:
             _list_conns(self)
 
