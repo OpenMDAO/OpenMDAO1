@@ -411,7 +411,7 @@ class Problem(System):
 
             subs = [s for s in group.subsystems()]
             graph = group._get_sys_graph()
-            strong = [s for s in nx.strongly_connected_components(graph)
+            strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                       if len(s) > 1]
             cycle_systems = set()
             for s in strong:
@@ -428,7 +428,7 @@ class Problem(System):
                 if strong:
                     print("\nIn group '%s' the following cycles should be "
                           "grouped into subgroups with a ScipyGMRES or PetscKSP "
-                          "linear solver: %s" % (group.pathname, strong),
+                          "linear solver: %s." % (group.pathname, strong),
                           file=stream)
                     problem_groups[group.pathname]['sub_cycles'] = strong
 
