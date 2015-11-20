@@ -113,6 +113,9 @@ Indices and tables
             # continue to write in the top-level index file.
             # only document non-empty packages to avoid errors
             # (e.g. at time of writing, doegenerators, drivers, are empty dirs)
+
+            #specifically don't use os.path.join here.  Even windows wants the
+            #stuff in the file to have fwd slashes.
             index.write("   packages/openmdao." + package + "\n")
 
             # make subpkg directory (e.g. srcdocs/packages/core) for ref sheets
@@ -130,10 +133,12 @@ Indices and tables
                 # this line writes subpackage name e.g. "core/component.py"
                 # into the corresponding package index file (e.g. "openmdao.core.rst")
                 if sub_package not in SKIP_SUBPACKAGES:
-                    package_file.write("    " + os.path.join(package, sub_package) + "\n")
+                    #specifically don't use os.path.join here.  Even windows wants the
+                    #stuff in the file to have fwd slashes.
+                    package_file.write("    " + package + "/" + sub_package + "\n")
 
                     # creates and writes out one reference sheet (e.g. core/component.rst)
-                    ref_sheet_filename = package_dirname + os.path.sep + sub_package + ".rst"
+                    ref_sheet_filename = os.path.join(package_dirname, sub_package + ".rst")
                     ref_sheet = open(ref_sheet_filename, "w")
                     # get the meat of the ref sheet code done
                     filename = sub_package + ".py"
@@ -255,7 +260,8 @@ SphinxDocString.__str__ = __str__
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../srcdocs'))
+absp = os.path.join('..', 'srcdocs')
+sys.path.insert(0, os.path.abspath(absp))
 
 # -- General configuration ------------------------------------------------
 
