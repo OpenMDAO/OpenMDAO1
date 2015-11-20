@@ -175,6 +175,9 @@ class TestParallelBounds(MPITestCase):
         top['px2.x'] = 2.0
         top.run()
 
+        # Comp2 has a tighter lower bound. This test makes sure that we
+        # allgathered and used the lowest alpha.
+
         if top.root.par.comp1.is_active():
             self.assertEqual(top['par.comp1.z'], 1.5)
         if top.root.par.comp2.is_active():

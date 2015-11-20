@@ -707,6 +707,11 @@ class SrcVecWrapper(VecWrapper):
         float
             New step size, backtracked to prevent violation."""
 
+        # A single index of the gradient can be zero, so we want to suppress
+        # the warnings from numpy.
+        old_warn = numpy.geterr()
+        numpy.seterr(divide='ignore')
+
         new_alpha = alpha
         for name, meta in iteritems(self):
 
@@ -726,6 +731,9 @@ class SrcVecWrapper(VecWrapper):
                 alpha_bound = numpy.min((lower - val)/duvec[name])
                 if alpha_bound >= 0.0:
                     new_alpha = min(new_alpha, alpha_bound)
+
+        # Return numpy warn to what it was
+        numpy.seterr(divide=old_warn['divide'])
 
         return max(0.0, new_alpha)
 
