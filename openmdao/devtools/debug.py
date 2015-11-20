@@ -69,7 +69,9 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
     out_stream.flush()
 
 class dec_if(object):
-    """Conditional decorator."""
+    """Conditional decorator.  If cond is True, the given decorator
+    will be applied.
+    """
     def __init__(self, dec, cond):
         self.dec = dec
         self.cond = cond
