@@ -7,6 +7,12 @@ Recording
 This tutorial is builds on the :ref:`Optimization of the Paraboloid Tutorial <paraboloid_optimization_tutorial>`
 by demonstrating how to save the data generated for future use. Consider the code below:
 
+.. testsetup:: recording_run
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
 .. testcode:: recording_run
 
     from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
@@ -99,7 +105,11 @@ by demonstrating how to save the data generated for future use. Consider the cod
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
 
-.. testsetup:: recording
+.. testsetup:: recording1
+    
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
 
     from openmdao.api import SqliteRecorder, Problem, Group
     top = Problem()
@@ -111,7 +121,7 @@ optimizer progresses. Notice that because by default, recorders only record
 set those recording options. (We could also record `Resids` by using the
 `record_metadata` option but this problem does not have residuals. )
 
-.. testcode:: recording
+.. testcode:: recording1
 
     recorder = SqliteRecorder('paraboloid')
     recorder.options['record_params'] = True
@@ -136,14 +146,31 @@ While it might not be an issue, it is good practice to close the
 recorder explicitly before the program terminates.
 For this tutorial with one recorder added to the driver, this is simply done with:
 
-.. testcode:: recording
+.. testcode:: recording1
 
     top.driver.recorders[0].close()
+
+
+.. testcleanup:: recording1
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
 
 If your model has recorders added to both drivers and solvers,
 a way to make sure all recorders are closed is to use code like this:
 
-.. testcode:: recording
+.. testsetup:: recording2
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+    from openmdao.api import SqliteRecorder, Problem, Group
+    top = Problem()
+    root = top.root = Group()
+
+.. testcode:: recording2
 
     for recorder in top.driver.recorders:
         recorder.close()
@@ -153,6 +180,12 @@ a way to make sure all recorders are closed is to use code like this:
             recorder.close()
         for recorder in sub.ln_solver.recorders:
             recorder.close()
+
+.. testcleanup:: recording2
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
 
 
 Includes and Excludes
@@ -170,17 +203,45 @@ The includes and excludes filters are set via the `options` structure in the
 recorder. If we were only interested in the variable `x` from our Paraboloid
 model, we could record that by setting the includes as follows:
 
-.. testcode:: recording
+.. testsetup:: recording3
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+    from openmdao.api import SqliteRecorder, Problem, Group
+    top = Problem()
+    root = top.root = Group()
+
+.. testcode:: recording3
 
     recorder = SqliteRecorder('paraboloid')
     recorder.options['includes'] = ['x']
 
     top.driver.add_recorder(recorder)
 
+.. testcleanup:: recording3
+
+    top.driver.recorders[0].close()
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
 Similarly, if we were interested in everything except the value of `f_xy`, we
 could exclude that by doing the following:
 
-.. testcode:: recording
+.. testsetup:: recording4
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+    from openmdao.api import SqliteRecorder, Problem, Group
+    top = Problem()
+    root = top.root = Group()
+
+.. testcode:: recording4
 
     recorder = SqliteRecorder('paraboloid')
     recorder.options['excludes'] = ['f_xy']
@@ -191,7 +252,9 @@ The includes and excludes filters will accept glob arguments. For example,
 `recorder.options['excludes'] = ['comp1.*']` would exclude any variable
 that starts with "comp1.".
 
-.. testcleanup:: recording
+.. testcleanup:: recording4
+
+    top.driver.recorders[0].close()
 
     import os
     if os.path.exists('paraboloid'):
@@ -217,6 +280,10 @@ Since our Paraboloid only has a recorder added to the driver, our
 etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
 
     from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
 
@@ -460,6 +527,7 @@ This code prints out the following:
 
 .. testcleanup:: reading
 
+    db.close()
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
