@@ -23,7 +23,8 @@ init:
   - conda install numpy scipy nose hdf5 sphinx mock --quiet
 
 install:
-  - echo on
+  #Grab testflo for running tests, to ensure examples are run
+  - pip install git+https://github.com/naylor-b/testflo.git
   #We need to run these two lines to have nmake available for doctests
   - cd "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC"
   - vcvarsall amd64
@@ -32,7 +33,7 @@ install:
   - pip install .
 
 test_script:
-  - nosetests
+  - testflo . --coverage --coverpkg openmdao -n 1
   #after tests, need to cd down so that conf.py can be found for doctest
   - cd openmdao/docs
   - nmake /f Makefile.nmake doctest
