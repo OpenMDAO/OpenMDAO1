@@ -25,6 +25,7 @@ init:
 install:
   #Grab testflo for running tests, to ensure examples are run
   - pip install git+https://github.com/naylor-b/testflo.git
+  - pip install coveralls
   #We need to run these two lines to have nmake available for doctests
   - cd "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC"
   - vcvarsall amd64
