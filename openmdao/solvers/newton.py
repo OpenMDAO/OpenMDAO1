@@ -45,8 +45,12 @@ class Newton(NonLinearSolver):
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
 
+
+        self.print_name = 'NEWTON'
+
         # Only one choice, but you can set this to None if you want.
         self.line_search = BackTracking()
+
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
@@ -88,7 +92,8 @@ class Newton(NonLinearSolver):
         f_norm0 = f_norm
 
         if self.options['iprint'] > 0:
-            self.print_norm('NEWTON', system.pathname, 0, f_norm, f_norm0)
+            self.print_norm(self.print_name, system.pathname, 0, f_norm,
+                            f_norm0)
 
         arg = system.drmat[None]
         result = system.dumat[None]
@@ -103,27 +108,10 @@ class Newton(NonLinearSolver):
             arg.vec[:] = resids.vec
             system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
 
-            unknowns.vec += alpha*result.vec
-
-            # Metadata update
+            # Step in that direction,
             self.iter_count += 1
-            update_local_meta(local_meta, (self.iter_count, 0))
-
-            # Just evaluate the model with the new points
-            if self.options['solve_subsystems'] is True:
-                system.children_solve_nonlinear(local_meta)
-            system.apply_nonlinear(params, unknowns, resids, local_meta)
-
-            self.recorders.record_iteration(system, local_meta)
-
-            f_norm = resids.norm()
-            if self.options['iprint'] > 0:
-                self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm, f_norm0)
-
-            # Backtracking Line Search
-            if self.line_search is not None:
-                self.line_search.solve(params, unknowns, resids, system, self,
-                                       alpha, f_norm, f_norm0, metadata)
+            f_norm = self.line_search.solve(params, unknowns, resids, system, self,
+                                            alpha, f_norm0, metadata)
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
@@ -138,12 +126,11 @@ class Newton(NonLinearSolver):
             else:
                 msg = 'converged'
 
-            self.print_norm('NEWTON', system.pathname, self.iter_count, f_norm,
-                            f_norm0, msg=msg)
+            self.print_norm(self.print_name, system.pathname, self.iter_count,
+                            f_norm, f_norm0, msg=msg)
 
     def print_all_convergence(self):
         """ Turns on iprint for this solver and all subsolvers. Override if
         your solver has subsolvers."""
         self.options['iprint'] = 1
-        if self.line_search is not None:
-            self.line_search.options['iprint'] = 1
+        self.line_search.options['iprint'] = 1

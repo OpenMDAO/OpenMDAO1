@@ -58,6 +58,8 @@ class ScipyGMRES(LinearSolver):
         self.mode = None
         self._norm0 = 0.0
 
+        self.print_name = 'GMRES'
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
@@ -127,7 +129,7 @@ class ScipyGMRES(LinearSolver):
                 msg = 'Converged'
 
             if self.options['iprint'] > 0:
-                self.print_norm('GMRES', system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = d_unknowns
@@ -229,6 +231,6 @@ class ScipyGMRES(LinearSolver):
                     self._norm0 = f_norm
                 else:
                     self._norm0 = 1.0
-            self.print_norm('GMRES', self.system.pathname, self.iter_count,
+            self.print_norm(self.print_name, self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
             self.iter_count += 1
