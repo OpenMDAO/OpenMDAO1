@@ -5,7 +5,7 @@ import sys
 from pprint import pformat
 from functools import wraps
 from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
-
+from six import itervalues
 
 def dump_meta(system, nest=0, out_stream=sys.stdout):
     """
@@ -57,7 +57,7 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
 
     nest += 3
     for sub in itervalues(system._subsystems):
-        sub.dump_meta(nest, out_stream=out_stream)
+        dump_meta(sub, nest, out_stream=out_stream)
 
     out_stream.flush()
 
