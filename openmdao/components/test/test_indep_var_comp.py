@@ -60,3 +60,15 @@ class TestErrors(unittest.TestCase):
         except Exception as err:
             self.assertEqual(str(err),
                              "IndepVarComp init: arg ('x',) must be a tuple of the form (name, value) or (name, value, keyword_dict).")
+
+    def test_reject_promotes_kwarg(self):               
+        try:
+            p = IndepVarComp('x', 100.0, promotes=['*'])
+        except Exception as err:            
+            self.assertEqual(str(err),
+                             "IndepVarComp init: promotes is not supported in IndepVarComp.")
+        else:
+            self.fail("Error expected")
+
+if __name__ == "__main__":
+    unittest.main()
