@@ -47,8 +47,11 @@ class LinearGaussSeidel(LinearSolver):
                               "may increase performance but will use "
                               "more memory.")
 
+        self.print_name = 'LN_GS'
+
     def setup(self, group):
-        """
+        """ Solvers override to define post-setup initiailzation.
+
         Args
         ----
         group: `Group`
@@ -197,7 +200,7 @@ class LinearGaussSeidel(LinearSolver):
                 f_norm = self._norm(system, mode, rhs_mat)
 
             if self.options['iprint'] > 0:
-                self.print_norm('LN_GS', system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
         if self.options['iprint'] > 0:
@@ -206,7 +209,7 @@ class LinearGaussSeidel(LinearSolver):
             else:
                 msg = 'converged'
 
-            self.print_norm('LN_GS', system.pathname, self.iter_count, f_norm,
+            self.print_norm(self.print_name, system.pathname, self.iter_count, f_norm,
                             f_norm0, indent=1, solver='LN', msg=msg)
 
         return sol_buf

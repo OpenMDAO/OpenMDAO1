@@ -70,7 +70,7 @@ class TestPBODesvar(unittest.TestCase):
         top.driver.add_desvar('p2.y')
         top.driver.add_objective('p.f_xy')
 
-        top.setup()
+        top.setup(check=False)
         top.run()
         # print(root.p.unknowns['f_xy'])
 

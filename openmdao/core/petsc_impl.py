@@ -178,6 +178,31 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         return view
 
+    def distance_along_vector_to_limit(self, alpha, duvec):
+        """ Returns a new alpha so that new_u = current_u + alpha*duvec does
+        not violate any `lower` or `upper` limits if specified.
+
+
+        Args
+        -----
+        alpha: float
+            Initial value for step in gradient direction.
+        duvec: `Vecwrapper`
+            Direction to apply step. generally the gradient.
+
+        Returns
+        --------
+        float
+            New step size, backtracked to prevent violation."""
+
+        # We need an alpha that violates no variables on any process, which
+        # is the min alpha over all processes.
+        local_alpha = super(PetscSrcVecWrapper,
+                            self).distance_along_vector_to_limit(alpha, duvec)
+
+        alphas = self.comm.allgather(local_alpha)
+        return min(alphas)
+
 
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
