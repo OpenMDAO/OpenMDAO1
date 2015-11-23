@@ -23,6 +23,9 @@ class IndepVarComp(Component):
     def __init__(self, name, val=None, **kwargs):
         super(IndepVarComp, self).__init__()
 
+        if 'promotes' in kwargs:
+            raise ValueError('IndepVarComp init: promotes is not supported in IndepVarComp.')
+
         if isinstance(name, string_types):
             if val is None:
                 raise ValueError('IndepVarComp init: a value must be provided as the second arg.')
