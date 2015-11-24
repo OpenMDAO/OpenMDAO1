@@ -114,17 +114,7 @@ class Driver(object):
             self.dv_conversions[name] = np.reciprocal(scaler)
 
         self.fn_conversions = {}
-        for name, meta in iteritems(objs):
-            scaler = meta.get('scaler')
-            if isinstance(scaler, np.ndarray):
-                if all(scaler == 1.0):
-                    continue
-            elif scaler == 1.0:
-                continue
-
-            self.fn_conversions[name] = scaler
-
-        for name, meta in iteritems(cons):
+        for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
                 if all(scaler == 1.0):
