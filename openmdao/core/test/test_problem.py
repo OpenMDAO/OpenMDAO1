@@ -558,9 +558,12 @@ class TestProblem(unittest.TestCase):
         self.assertAlmostEqual(prob['G3.C4.y'], 40.)
 
         stream = cStringIO()
-        # just make sure calling list_connections doesn't error out
+
+        # get test coverage for list_connections and make sure it
+        # doesn't barf
         prob.root.list_connections(stream=stream)
-        prob.root.list_connections(group_by_comp=True,stream=stream)
+        prob.root.list_connections(unconnected=False, stream=stream)
+        prob.root.list_connections(group_by_comp=False,stream=stream)
 
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
@@ -753,9 +756,9 @@ class TestProblem(unittest.TestCase):
 
         printed = ostream.getvalue()
         self.assertEqual(printed.count('NEWTON'), 3)
-        self.assertEqual(printed.count('GMRES'), 5)
+        self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
-        self.assertTrue('   [root] LN: GMRES   0 | ' in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
 
 class TestCheckSetup(unittest.TestCase):
 

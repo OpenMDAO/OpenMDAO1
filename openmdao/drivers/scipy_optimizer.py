@@ -194,8 +194,9 @@ class ScipyOptimizer(Driver):
         self.result = result
         self.exit_flag = 1 if self.result.success else 0
 
-        print('Optimization Complete')
-        print('-'*35)
+        if self.options['disp']:
+            print('Optimization Complete')
+            print('-'*35)
 
     def _objfunc(self, x_new):
         """ Function that evaluates and returns the objective function. Model

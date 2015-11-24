@@ -343,7 +343,6 @@ class Group(System):
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
-    #@diff_mem
     def _setup_vectors(self, param_owners, parent=None,
                        top_unknowns=None, impl=None):
         """Create `VecWrappers` for this `Group` and all below it in the
@@ -451,8 +450,8 @@ class Group(System):
         for s in self.subsystems(recurse=True, include_self=True):
             for voi, vec in iteritems(s.dpmat):
                 abs_inputs = {
-                    meta['pathname'] for meta in itervalues(vec)
-                        if not meta.get('pass_by_obj')
+                    acc.meta['pathname'] for acc in itervalues(vec._dat)
+                        if not acc.pbo
                 }
 
                 self._do_apply[(s.pathname, voi)] = bool(abs_inputs and
@@ -474,7 +473,7 @@ class Group(System):
         # create implementation specific VecWrappers
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.states = set((n for n, m in iteritems(self.unknowns) if m.get('state')))
+            self.states = set(n for n, m in iteritems(self.unknowns) if m.get('state'))
             self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
@@ -1044,8 +1043,8 @@ class Group(System):
                 lens = [len(n) for n in iterkeys(uvec)]
                 nwid = max(lens) if lens else 12
 
-            for v, meta in iteritems(uvec):
-                if meta.get('pass_by_obj') or meta.get('remote'):
+            for v, acc in iteritems(uvec._dat):
+                if acc.pbo or acc.remote:
                     continue
                 out_stream.write(" "*(nest+8))
                 uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._dat[v].slice)
@@ -1164,16 +1163,18 @@ class Group(System):
         """
         rev = mode == 'rev'
         fwd = not rev
-        umeta = self.unknowns.metadata(uname)
-        pmeta = self.params.metadata(pname)
+        uacc = self.unknowns._dat[uname]
+        pacc = self.params._dat[pname]
+        umeta = uacc.meta
+        pmeta = pacc.meta
 
         iproc = 0 if self.comm is None else self.comm.rank
         udist = 'src_indices' in umeta
         pdist = 'src_indices' in pmeta
 
         # FIXME: if we switch to push scatters, this check will flip
-        if ((fwd and pmeta.get('remote')) or
-            (rev and not pdist and umeta.get('remote')) or
+        if ((fwd and pacc.remote) or
+            (rev and not pdist and uacc.remote) or
                 (rev and udist and not pdist and iproc != self._owning_ranks[pname])):
             # just return empty index arrays for remote vars
             return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
@@ -1391,8 +1392,10 @@ class Group(System):
         """
         ranks = {}
 
-        local_vars = [k for k, m in iteritems(self.unknowns) if not m.get('remote')]
-        local_vars.extend([k for k, m in iteritems(self.params) if not m.get('remote')])
+        local_vars = [k for k, acc in iteritems(self.unknowns._dat)
+                              if not acc.remote]
+        local_vars.extend(k for k, acc in iteritems(self.params._dat)
+                                   if not acc.remote)
 
         if MPI:
             if trace:  # pragma: no cover

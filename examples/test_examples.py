@@ -56,6 +56,7 @@ class TestExamples(unittest.TestCase):
 
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['disp'] = False
 
         top.driver.add_desvar('p1.x', lower=-50, upper=50)
         top.driver.add_desvar('p2.y', lower=-50, upper=50)
@@ -83,6 +84,7 @@ class TestExamples(unittest.TestCase):
 
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['disp'] = False
 
         top.driver.add_desvar('p1.x', lower=-50, upper=50)
         top.driver.add_desvar('p2.y', lower=-50, upper=50)
@@ -103,6 +105,7 @@ class TestExamples(unittest.TestCase):
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-8
         top.driver.options['maxiter'] = 10000 #maximum number of solver iterations
+        top.driver.options['disp'] = False
 
         #room length and width bounds
         top.driver.add_desvar('ivc_rlength.room_length', lower=5.0*12.0, upper=50.0*12.0) #domain: 1in <= length <= 50ft

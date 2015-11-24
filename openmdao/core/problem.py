@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import os
 import sys
 import json
 import warnings
@@ -29,8 +30,9 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
-from openmdao.util.string_util import get_common_ancestor, nearest_child
+from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 
+force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 
 class _ProbData(object):
     """
@@ -397,6 +399,62 @@ class Problem(System):
 
         return ubcs
 
+    def _check_layout(self, stream=sys.stdout):
+        """
+        Check the current system tree to see if it's optimal.
+        """
+        problem_groups = {}
+        for group in self.root.subgroups(recurse=True, include_self=True):
+            problem_groups[group.pathname] = {}
+            uses_lings = isinstance(group.ln_solver, LinearGaussSeidel)
+            maxiter = group.ln_solver.options['maxiter']
+
+            subs = [s for s in group.subsystems()]
+            graph = group._get_sys_graph()
+            strong = [sorted(s) for s in nx.strongly_connected_components(graph)
+                      if len(s) > 1]
+            cycle_systems = set()
+            for s in strong:
+                cycle_systems.update(s)
+
+            if strong and len(strong[0]) == len(subs):
+                # all subsystems form a single cycle
+                if uses_lings:
+                    print("\nAll systems in group '%s' form a cycle, so the "
+                          "linear solver should be ScipyGMRES or PetscKSP." %
+                          group.pathname, file=stream)
+                    problem_groups[group.pathname]['ln_solver'] = _get_gmres_name()
+            else:
+                if strong:
+                    print("\nIn group '%s' the following cycles should be "
+                          "grouped into subgroups with a ScipyGMRES or PetscKSP "
+                          "linear solver: %s." % (group.pathname, strong),
+                          file=stream)
+                    problem_groups[group.pathname]['sub_cycles'] = strong
+
+                if (not uses_lings and (len(subs) > 1 or
+                                       (len(subs)==1 and
+                                        not _needs_iteration(subs[0])))):
+                    print("\nGroup '%s' should have a LinearGaussSeidel linear solver." %
+                           group.pathname, file=stream)
+                    problem_groups[group.pathname]['ln_solver'] = 'LinearGaussSeidel'
+
+            if len(subs) > 1 or uses_lings:
+                for s in subs:
+                    if (s.is_active() and s.name not in cycle_systems and
+                               _needs_iteration(s)):
+                        print("\nSystem '%s' has implicit states and should be "
+                              "in its own subgroup with a GMRES linear solver." %
+                              s.pathname, file=stream)
+                        problem_groups[group.pathname].setdefault(
+                                                         'sub_implicit_comps',
+                                                         []).append(s.name)
+
+            if not problem_groups[group.pathname]:
+                del problem_groups[group.pathname]
+
+        return problem_groups
+
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.
@@ -619,7 +677,7 @@ class Problem(System):
         self._start_recorders()
 
         # check for any potential issues
-        if check:
+        if check or force_check:
             return self.check_setup(out_stream)
 
         return {}
@@ -627,8 +685,13 @@ class Problem(System):
     def _check_solvers(self):
         """
         Raise an exception if we detect a LinearGaussSeidel solver and that
-        group has either cycles or states.
+        group has either cycles or uniterated states.
         """
+
+        # all states that have some maxiter>1 linear solver above them in the tree
+        iterated_states = set()
+        group_states = []
+
         for group in self.root.subgroups(recurse=True, include_self=True):
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
@@ -646,15 +709,40 @@ class Problem(System):
                                    "recommended)."
                                    % (group.pathname, strong))
 
-                states = [n for n,m in iteritems(group._unknowns_dict)
-                                  if m.get('state')]
-                if states:
-                    raise RuntimeError("Group '%s' has a LinearGaussSeidel "
-                                   "solver with maxiter==1 but it contains "
-                                   "implicit states %s. To fix this error, "
-                                   "change to a different linear solver, e.g. "
-                                   "ScipyGMRES or PetscKSP, or increase maxiter "
-                                   "(not recommended)." % (group.pathname, states))
+            states = [n for n,m in iteritems(group._unknowns_dict) if m.get('state')]
+            if states:
+                group_states.append((group, states))
+
+                # this group has an iterative lin solver, so all states in it are ok
+                if group.ln_solver.options['maxiter'] > 1:
+                    iterated_states.update(states)
+                else:
+                    # see if any states are in comps that have their own
+                    # solve_linear method
+                    for s in states:
+                        if s not in iterated_states:
+                            cname = s.rsplit('.', 1)[0]
+                            comp = self.root
+                            for name in cname.split('.'):
+                                comp = getattr(comp, name)
+                            if not _needs_iteration(comp):
+                                iterated_states.add(s)
+
+        for group, states in group_states:
+            uniterated_states = [s for s in states if s not in iterated_states]
+
+            # It's an error if we find states that don't have some
+            # iterative linear solver as a parent somewhere in the tree, or they
+            # don't live in a Component that defines its own solve_linear method.
+
+            if uniterated_states:
+                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                               "solver with maxiter==1 but it contains "
+                               "implicit states %s. To fix this error, "
+                               "change to a different linear solver, e.g. "
+                               "ScipyGMRES or PetscKSP, or increase maxiter "
+                               "(not recommended)." %
+                               (group.pathname, uniterated_states))
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
@@ -888,6 +976,7 @@ class Problem(System):
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
+        results['layout'] = self._check_layout(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
@@ -1561,8 +1650,7 @@ class Problem(System):
                 out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
-            # Figure out implicit states for this comp
-            states = [n for n, m in iteritems(comp.unknowns) if m.get('state')]
+            states = comp.states
 
             # Create all our keys and allocate Jacs
             for p_name in chain(dparams, states):
@@ -1633,7 +1721,7 @@ class Problem(System):
                     comp.apply_linear(params, unknowns, dparams,
                                       dunknowns, dresids, 'fwd')
 
-                    for u_name, u_val in dresids.veciter():
+                    for u_name, u_val in dresids.vec_val_iter():
                         jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
@@ -2035,3 +2123,23 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
+
+def _needs_iteration(comp):
+    """Return True if the given component needs an iterative
+    solver to converge it.
+    """
+    if isinstance(comp, Component) and comp.states:
+        for klass in comp.__class__.__mro__:
+            if klass is Component:
+                break
+            if 'solve_linear' in klass.__dict__:
+                # class has defined it's own solve_linear
+                return  False
+        return True
+    return False
+
+def _get_gmres_name():
+    if MPI:
+        return 'PetscKSP'
+    else:
+        return 'ScipyGMRES'

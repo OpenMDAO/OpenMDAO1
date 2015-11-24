@@ -15,6 +15,10 @@ class TraceCalls(object):
         def myfunc(n):
             # .. do stuff
 
+        If any of the environment variables specified in env_vars are truthy
+        at module import time, the decorator will be active. Otherwise the
+        decorator will not be applied at all.
+
     """
     def __init__(self, stream=sys.stdout, indent_step=2, show_return=True,
                  env_vars=()):

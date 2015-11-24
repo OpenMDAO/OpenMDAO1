@@ -177,6 +177,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
                               indices=[0])

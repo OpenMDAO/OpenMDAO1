@@ -32,8 +32,8 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'rev'
         prob.root.sub.ln_solver.options['mode'] = 'rev'
 
-        prob.driver.add_param('p1.x1')
-        prob.driver.add_param('p2.x2')
+        prob.driver.add_desvar('p1.x1')
+        prob.driver.add_desvar('p2.x2')
         prob.driver.add_objective('comp3.y')
 
         prob.setup(check=False)
@@ -56,8 +56,8 @@ class MatMatTestCase(MPITestCase):
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.root.sub.ln_solver.options['mode'] = 'fwd'
 
-        prob.driver.add_param('p1.x1')
-        prob.driver.add_param('p2.x2')
+        prob.driver.add_desvar('p1.x1')
+        prob.driver.add_desvar('p2.x2')
         prob.driver.add_objective('comp3.y')
 
         prob.setup(check=False)

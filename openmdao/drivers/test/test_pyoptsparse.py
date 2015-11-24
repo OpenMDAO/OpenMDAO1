@@ -69,6 +69,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
             prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -96,6 +97,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
             prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -123,6 +125,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SLSQP':
             prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -148,6 +151,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -172,6 +176,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -198,6 +203,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -226,6 +232,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -254,6 +261,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -282,6 +290,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -310,6 +319,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -338,6 +348,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -366,6 +377,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -394,6 +406,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.options['optimizer'] = OPTIMIZER
         if OPTIMIZER == 'SNOPT':
             prob.driver.opt_settings['Verify level'] = 3
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -420,6 +433,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('o')
@@ -443,6 +457,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('o')
@@ -466,6 +481,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0*np.ones((2, 2)), upper=50.0*np.ones((2, 2)))
 
         prob.driver.add_objective('o')
@@ -502,6 +518,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('p2.x', lower=-50.0, upper=50.0)
         prob.driver.add_objective('obj.o')
@@ -545,6 +562,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('p2.x', lower=-50.0, upper=50.0)
         prob.driver.add_objective('obj.o')
@@ -591,6 +609,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('p2.x', lower=-50.0, upper=50.0)
         prob.driver.add_objective('obj.o')
@@ -638,6 +657,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('p1.x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('p2.x', lower=-50.0, upper=50.0)
         prob.driver.add_objective('obj.o')

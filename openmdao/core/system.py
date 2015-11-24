@@ -37,6 +37,23 @@ class _SysData(object):
         self.to_abs_pnames = OrderedDict()  # promoted name to list of abs names
         self.to_prom_pname = OrderedDict() # abs name to promoted namep
 
+    def _scoped_abs_name(self, name):
+        """
+        Args
+        ----
+        name : str
+            The absolute pathname of a variable.
+
+        Returns
+        -------
+        str
+            The given name as seen from the 'scope' of the current `System`.
+        """
+        if self.pathname:
+            return name[len(self.pathname)+1:]
+        else:
+            return name
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -240,34 +257,6 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
-
-    def solve_linear(self, dumat, drmat, vois, mode=None):
-        """
-        Single linear solution applied to whatever input is sitting in
-        the rhs vector.
-
-        Args
-        ----
-        dumat : dict of `VecWrappers`
-            In forward mode, each `VecWrapper` contains the incoming vector
-            for the states. There is one vector per quantity of interest for
-            this problem. In reverse mode, it contains the outgoing vector for
-            the states. (du)
-
-        drmat : `dict of VecWrappers`
-            `VecWrapper` containing either the outgoing result in forward mode
-            or the incoming vector in reverse mode. There is one vector per
-            quantity of interest for this problem. (dr)
-
-        vois : list of strings
-            List of all quantities of interest to key into the mats.
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev', but generally should be
-            called without mode so that the user can set the mode in this
-            system's ln_solver.options.
-        """
-        pass
 
     def is_active(self):
         """
@@ -600,7 +589,7 @@ class System(object):
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     dresids.vec *= -1.0
 
-                for var, val in dunknowns.veciter():
+                for var, val in dunknowns.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
@@ -608,9 +597,9 @@ class System(object):
             else:
                 # This zeros out some vars that are not in the local .vec, so we can't just
                 # do dparams.vec[:] = 0.0 for example.
-                for _, val in dparams.veciter():
+                for _, val in dparams.vec_val_iter():
                     val[:] = 0.0
-                for _, val in dunknowns.veciter():
+                for _, val in dunknowns.vec_val_iter():
                     val[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
@@ -629,7 +618,7 @@ class System(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                for var, val in dresids.veciter():
+                for var, val in dresids.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
@@ -787,7 +776,7 @@ class System(object):
 
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self, comm, umap)
-            self.states = set((n for n,m in iteritems(self.unknowns) if m.get('state')))
+            self.states = set(n for n,m in iteritems(self.unknowns) if m.get('state'))
             self.resids = parent.resids.get_view(self, comm, umap)
             self.params = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
@@ -975,13 +964,13 @@ class System(object):
         if not self._probdata.top_lin_gs:
             return max_size, offsets
 
-        relevance = self._probdata.relevance
-        for vois in relevance.groups:
+        relevant = self._probdata.relevance.relevant
+        for vois in self._probdata.relevance.groups:
             vec_size = 0
             for voi in vois:
-                sz = sum([m['size'] for m in metas
+                sz = sum(m['size'] for m in metas
                                  if m['pathname'] in vdict and
-                                    relevance.is_relevant(voi, m['top_promoted_name'])])
+                                    m['top_promoted_name'] in relevant[voi])
                 offsets[voi] = vec_size
                 vec_size += sz
 
@@ -1002,18 +991,21 @@ class System(object):
         for pathname, meta in iteritems(self._params_dict):
             prom = to_prom_name[pathname]
 
-    def list_connections(self, group_by_comp=False, stream=sys.stdout):
+    def list_connections(self, group_by_comp=True, unconnected=True,
+                         stream=sys.stdout):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
 
-        source_absolute_name (source_promoted_name) -> target
+        source_absolute_name (source_promoted_name) [units] -> target [units]
 
         Where sources that broadcast to multiple targets will be replaced with
         a blank source for all but the first of their targets, in order to help
         broadcast sources visually stand out.  The source name will be followed
         by its promoted name if it differs, and if a target is promoted it will
-        be followed by a '*'.
+        be followed by a '*', or by its promoted name if it doesn't match the
+        promoted name of the source, which indicates an explicit connection.
+        Units are also included if they exist.
 
         Sources are sorted alphabetically and targets are subsorted
         alphabetically when a source is broadcast to multiple targets.
@@ -1024,16 +1016,33 @@ class System(object):
             If True, show all sources and targets grouped by component. Note
             that this will cause repeated lines in the output since a given
             connection will always be from one component's source to a different
-            component's target.  Default is False.
+            component's target.  Default is True.
+
+        unconnected : bool, optional
+            If True, include all unconnected params and unknowns as well. Defaults to True
 
         stream : output stream, optional
             Stream to write the connection info to. Defaults to sys.stdout.
         """
 
+        def _param_str(pdict, udict, prom, tgt, src):
+            units = pdict[tgt].get('units', '')
+            if units:
+                units = '[%s]' % units
+            prom_tgt = prom[tgt]
+            if prom_tgt != tgt:
+                if src is None or prom_tgt != prom[src]: # explicit connection
+                    prom_tgt = "(%s)" % prom_tgt
+                else:
+                    prom_tgt = '(*)'
+            return ' '.join((tgt, prom_tgt, units))
+
         def _list_conns(self):
             template = "{0:<{swid}} -> {1}\n"
 
             to_prom_name = self._probdata.to_prom_name
+            top_params = self._probdata.params_dict
+            top_unknowns = self._probdata.unknowns_dict
             scope = self.pathname + '.' if self.pathname else ''
 
             # create a dict with srcs as keys so we can more easily subsort
@@ -1041,15 +1050,40 @@ class System(object):
             by_src = {}
             for tgt, (src, idx) in iteritems(self.connections):
                 if src.startswith(scope) or tgt.startswith(scope):
-                    if to_prom_name[tgt] != tgt:
-                        tgt += ' *'
-                    if to_prom_name[src] != src:
-                        src += " (%s)" % to_prom_name[src]
-                    by_src.setdefault(src, []).append(tgt)
+                    by_src.setdefault(src, []).append(_param_str(top_params,
+                                                                 top_unknowns,
+                                                                 to_prom_name,
+                                                                 tgt, src))
 
-            src_max_wid = max(len(n) for n in by_src)
+            if unconnected:
+                for p in self._params_dict:
+                    if p not in self.connections:
+                        by_src.setdefault('{unconnected}',
+                                          []).append(_param_str(top_params,
+                                                     top_unknowns, to_prom_name,
+                                                     p, None))
 
-            for src, tgts in sorted(iteritems(by_src), key=lambda x: x[0]):
+                for u in self._unknowns_dict:
+                    if u not in by_src:
+                        by_src[u] = ('{unconnected}',)
+
+            by_src2 = {}
+            for src, tgts in iteritems(by_src):
+                if src[0] == '{':
+                    prom_src = units = ''
+                else:
+                    units = top_unknowns[src].get('units', '')
+                    if units:
+                        units = '[%s]' % units
+                    prom_src = to_prom_name[src]
+                    prom_src = '' if prom_src == src else "(%s)" % prom_src
+
+                by_src2[' '.join((src, prom_src, units))] = tgts
+
+            if by_src2:
+                src_max_wid = max(len(n) for n in by_src2)
+
+            for src, tgts in sorted(iteritems(by_src2), key=lambda x: x[0]):
                 for i, tgt in enumerate(sorted(tgts)):
                     if i: src = ''
                     stream.write(template.format(src, tgt, swid=src_max_wid))
@@ -1058,7 +1092,9 @@ class System(object):
             for c in self.components(recurse=True, include_self=True):
                 line = "Connections for %s:" % c.pathname
                 stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
-                c.list_connections(stream=stream)
+                c.list_connections(unconnected=unconnected,
+                                   group_by_comp=False,
+                                   stream=stream)
         else:
             _list_conns(self)
 

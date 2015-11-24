@@ -115,8 +115,10 @@ class SellarNoDerivatives(Group):
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
-        self.add('d1', SellarDis1(), promotes=['*'])
-        self.add('d2', SellarDis2(), promotes=['*'])
+        cycle = self.add('cycle', Group(), promotes=['*'])
+        cycle.ln_solver = ScipyGMRES()
+        cycle.add('d1', SellarDis1(), promotes=['*'])
+        cycle.add('d2', SellarDis2(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0),
@@ -126,10 +128,8 @@ class SellarNoDerivatives(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
 
         self.nl_solver = NLGaussSeidel()
-        self.d1.fd_options['force_fd'] = True
-        self.d2.fd_options['force_fd'] = True
-
-        self.ln_solver = ScipyGMRES()
+        self.cycle.d1.fd_options['force_fd'] = True
+        self.cycle.d2.fd_options['force_fd'] = True
 
 
 class SellarDerivatives(Group):
@@ -155,7 +155,6 @@ class SellarDerivatives(Group):
         self.nl_solver = NLGaussSeidel()
         self.ln_solver = ScipyGMRES()
 
-
 class SellarDerivativesGrouped(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
     without derivatives."""
@@ -165,9 +164,9 @@ class SellarDerivativesGrouped(Group):
 
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+
         mda = self.add('mda', Group(), promotes=['*'])
         mda.ln_solver = ScipyGMRES()
-
         mda.add('d1', SellarDis1withDerivatives(), promotes=['*'])
         mda.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
@@ -183,7 +182,6 @@ class SellarDerivativesGrouped(Group):
         mda.d2.fd_options['force_fd'] = True
 
         self.ln_solver = ScipyGMRES()
-
 
 class StateConnection(Component):
     """ Define connection with an explicit equation"""
@@ -230,9 +228,15 @@ class SellarStateConnection(Group):
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
-        self.add('state_eq', StateConnection())
-        self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
-        self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
+        sub = self.add('sub', Group(), promotes=['*'])
+        sub.ln_solver = ScipyGMRES()
+
+        subgrp = sub.add('state_eq_group', Group(), promotes=['*'])
+        subgrp.ln_solver = ScipyGMRES()
+        subgrp.add('state_eq', StateConnection())
+
+        sub.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
+        sub.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
 
         self.connect('state_eq.y2_command', 'd1.y2')
         self.connect('d2.y2', 'state_eq.y2_actual')
@@ -247,4 +251,3 @@ class SellarStateConnection(Group):
         self.connect('d2.y2', 'con_cmp2.y2')
 
         self.nl_solver = Newton()
-        self.ln_solver = ScipyGMRES()

@@ -469,6 +469,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -497,6 +498,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -525,6 +527,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=1/50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler=1/50.0)
 
@@ -553,6 +556,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -581,6 +585,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
@@ -609,6 +614,7 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
