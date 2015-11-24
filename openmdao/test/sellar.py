@@ -142,10 +142,8 @@ class SellarDerivatives(Group):
         self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
         self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
 
-        sub = self.add('sub', Group(), promotes=['*'])
-        sub.ln_solver = ScipyGMRES()
-        sub.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        sub.add('d2', SellarDis2withDerivatives(), promotes=['*'])
+        self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
+        self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0),
@@ -155,7 +153,7 @@ class SellarDerivatives(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
 
         self.nl_solver = NLGaussSeidel()
-
+        self.ln_solver = ScipyGMRES()
 
 class SellarDerivativesGrouped(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
