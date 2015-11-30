@@ -47,6 +47,8 @@ class VarComponent(Component):
         self.add_param('varcontainer:intvar', 7777, pass_by_obj=True)
         self.add_param('varcontainer:floatvar', 2.14543)
         self.add_param('varcontainer:textvar', "Hey", pass_by_obj=True)
+        self.add_param('varcontainer_1:boolvar_1',True,pass_by_obj=True)
+        self.add_param('varcontainer_1:intvar_1', 4444, pass_by_obj=True)
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass
@@ -374,7 +376,7 @@ class TestCase(unittest.TestCase):
 
         top = Problem()
         top.root = Group()
-        top.root.add('my_comp', VarComponent())
+        top.root.add('my_comp',VarComponent())
 
         top.setup(check=False)
         top.run()
@@ -395,6 +397,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual("floatvar = 2.14543" in contents, True)
         self.assertEqual("intvar = 7777" in contents, True)
 
+
         # now test skipping
 
         sb = Namelist(top.root.my_comp)
@@ -404,6 +407,27 @@ class TestCase(unittest.TestCase):
         sb.set_filename(self.filename)
         sb.add_group('Test')
         sb.add_container("varcontainer", skip='textvar')
+        sb.generate()
+
+        f = open(self.filename, 'r')
+        contents = f.read()
+        self.assertEqual("boolvar = T" in contents, True)
+        self.assertEqual("textvar = 'Skipme'" in contents, False)
+        self.assertEqual("intvar = 7777" in contents, True)
+
+    def test_vartree_write2(self):
+        #testing namelist_util before setup()
+        top = Problem()
+        top.root = Group()
+        myvars = VarComponent()
+        top.root.add('my_comp', myvars)
+
+
+        sb = Namelist(top.root.my_comp)
+
+        sb.set_filename(self.filename)
+        sb.add_group('Test')
+        sb.add_container("varcontainer")
 
         sb.generate()
 
@@ -411,7 +435,53 @@ class TestCase(unittest.TestCase):
         contents = f.read()
 
         self.assertEqual("boolvar = T" in contents, True)
+        self.assertEqual("textvar = 'Hey'" in contents, True)
+        self.assertEqual("floatvar = 2.14543" in contents, True)
+        self.assertEqual("intvar = 7777" in contents, True)
+        self.assertEqual("varcontainer" in contents,False) 
+
+        #ensure that containers with similar names are not confused
+        # varcontainer vs. varcontainer_1
+        self.assertEqual("boolvar_1" in contents, False)
+        self.assertEqual("intvar_1" in contents, False)
+        # now test skipping
+
+        sb = Namelist(top.root.my_comp)
+        myvars._init_params_dict['varcontainer:boolvar']['val'] = False
+        myvars._init_params_dict['varcontainer:textvar']['val'] = "Skipme"
+        myvars._init_params_dict['varcontainer:intvar']['val'] = 8888
+        myvars._init_params_dict['varcontainer:floatvar']['val'] = 3.14
+
+        sb.set_filename(self.filename)
+        sb.add_group('Test')
+        sb.add_container("varcontainer",skip='textvar')
+        sb.generate()
+
+        f = open(self.filename, 'r')
+        contents = f.read()
+        self.assertEqual("boolvar = F" in contents, True)
+        self.assertEqual("intvar = 8888" in contents, True)
+        self.assertEqual("floatvar = 3.14" in contents, True)
         self.assertEqual("textvar = 'Skipme'" in contents, False)
+        self.assertEqual("varcontainer" not in contents,True) 
+        
+
+        sb = Namelist(top.root.my_comp)
+        sb.set_filename(self.filename)
+        sb.add_group('Test')
+        sb.add_container("varcontainer_1")
+        sb.generate()
+        
+        f = open(self.filename, 'r')
+        contents = f.read()
+        self.assertEqual("boolvar_1 = T" in contents, True)
+        self.assertEqual("intvar_1 = 4444" in contents, True)
+
+
+        top.setup(check=False)
+        top.run()
+
+
 
 
     def test_1Darray_write(self):
