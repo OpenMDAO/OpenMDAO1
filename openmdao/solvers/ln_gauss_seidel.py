@@ -93,9 +93,8 @@ class LinearGaussSeidel(LinearSolver):
         fwd = mode == 'fwd'
 
         system.clear_dparams()
-        for voi in self._vois:
+        for voi in rhs_mat:
             dumat[voi].vec[:] = 0.0
-        dumat[None].vec[:] = 0.0
 
         vois = rhs_mat.keys()
         # John starts with the following. It is not necessary, but
