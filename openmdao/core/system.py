@@ -306,7 +306,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None,
+                    fd_params=None, fd_unknowns=None, pass_unknowns=None,
                     poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
@@ -358,6 +358,8 @@ class System(object):
             fd_params = self._get_fd_params()
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
+        if pass_unknowns is None:
+            pass_unknowns = []
 
         abs_pnames = self._sysdata.to_abs_pnames
 
@@ -445,6 +447,15 @@ class System(object):
 
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
 
+            # pass_through params are square
+            for u_name in pass_unknowns:
+                if qoi_indices and u_name in qoi_indices:
+                    u_size = len(qoi_indices[u_name])
+                else:
+                    u_size = np.size(unknowns[u_name])
+
+                jac[u_name, p_name] = np.zeros((u_size, u_size))
+
             # if a given param isn't present in this process, we need
             # to still run the model once for each entry in that param
             # in order to stay in sync with the other processes.
@@ -527,6 +538,12 @@ class System(object):
 
                     # Restore old residual
                     resultvec.vec[:] = cache1
+
+                # When an unknown is a parameter, it isn't calculated, so
+                # we manually fill in identity.
+                for u_name in pass_unknowns:
+                    if u_name == param_src:
+                        jac[u_name, p_name] = np.diag(np.ones(u_size))
 
         if self._num_par_fds > 1:
             if trace:  # pragma: no cover

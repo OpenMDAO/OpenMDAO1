@@ -1161,6 +1161,8 @@ class Problem(System):
             cn_scale = {}
 
         abs_params = []
+        fd_unknowns = [var for var in unknown_list if var not in indep_list]
+        pass_unknowns = [var for var in unknown_list if var in indep_list]
         for name in indep_list:
 
             if name in unknowns:
@@ -1174,7 +1176,8 @@ class Problem(System):
             abs_params.append(name)
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
-                               fd_params=abs_params, fd_unknowns=unknown_list,
+                               fd_params=abs_params, fd_unknowns=fd_unknowns,
+                               pass_unknowns=pass_unknowns,
                                poi_indices=self._poi_indices,
                                qoi_indices=self._qoi_indices)
 
@@ -1240,7 +1243,9 @@ class Problem(System):
                 else:
                     usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
-                if p in self._poi_indices:
+                if p in unknown_list:
+                    psize = usize
+                elif p in self._poi_indices:
                     idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
