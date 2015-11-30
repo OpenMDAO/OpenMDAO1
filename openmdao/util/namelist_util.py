@@ -208,10 +208,9 @@ class Namelist(object):
 
         if not skip:
             skip = []
-
         for name in sorted(iterkeys(self.comp._init_params_dict)):
-            if name.startswith(varpath):
-                sub_name = name.lstrip(varpath + ':')
+            if name.startswith(varpath+':'):
+                sub_name = name[len(varpath+':'):]
                 if sub_name not in skip:
                     self.add_var(name)
 
@@ -243,9 +242,11 @@ class Namelist(object):
                 data.append("%s\n" % group_name)
 
             for card in self.cards[i]:
-                #avoid using entire xxx:xxx:var
-                #only use 'var' as the cardname to be printed
+
+                #avoid writing 'xxx:xxx:var'
+                #write 'var' instead
                 card_name = card.name.split(":")[-1]
+
                 if card.is_comment:
                     line = "  %s\n" % (card.value)
 
