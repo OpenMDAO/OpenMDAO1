@@ -336,6 +336,11 @@ class System(object):
             calculated. This is used by problem to limit the derivatives that
             are taken.
 
+        pass_unknowns : list of strings, optional
+            List of outputs that are also finite difference inputs. OpenMDAO
+            supports specifying a design variable (or slice of one) as an objective,
+            so gradients of these are also required.
+
         poi_indices: dict of list of integers, optional
             This is a dict that contains the index values for each parameter of
             interest, so that we only finite difference those indices.
