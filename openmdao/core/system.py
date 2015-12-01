@@ -306,7 +306,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None, pass_unknowns=None,
+                    fd_params=None, fd_unknowns=None, pass_unknowns=(),
                     poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
@@ -363,8 +363,6 @@ class System(object):
             fd_params = self._get_fd_params()
         if fd_unknowns is None:
             fd_unknowns = self._get_fd_unknowns()
-        if pass_unknowns is None:
-            pass_unknowns = []
 
         abs_pnames = self._sysdata.to_abs_pnames
 
