@@ -306,7 +306,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None,
+                    fd_params=None, fd_unknowns=None, pass_unknowns=(),
                     poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
@@ -335,6 +335,11 @@ class System(object):
             List of output or state name strings for derivatives to be
             calculated. This is used by problem to limit the derivatives that
             are taken.
+
+        pass_unknowns : list of strings, optional
+            List of outputs that are also finite difference inputs. OpenMDAO
+            supports specifying a design variable (or slice of one) as an objective,
+            so gradients of these are also required.
 
         poi_indices: dict of list of integers, optional
             This is a dict that contains the index values for each parameter of
@@ -414,6 +419,7 @@ class System(object):
                     inputs = params
 
                 target_input = inputs._dat[p_name].val
+                param_src = None
 
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
@@ -437,7 +443,7 @@ class System(object):
                 p_idxs = range(p_size)
 
             # Size our Outputs
-            for u_name in fd_unknowns:
+            for u_name in chain(fd_unknowns, pass_unknowns):
                 if qoi_indices and u_name in qoi_indices:
                     u_size = len(qoi_indices[u_name])
                 else:
@@ -524,6 +530,19 @@ class System(object):
                         if self._num_par_fds > 1: # pragma: no cover
                             fd_cols[(u_name, p_name, col)] = \
                                                    jac[u_name, p_name][:, col]
+
+                    # When an unknown is a parameter, it isn't calculated, so
+                    # we manually fill in identity by placing a 1 wherever it
+                    # is needed.
+                    for u_name in pass_unknowns:
+                        if u_name == param_src:
+                            if qoi_indices and u_name in qoi_indices:
+                                q_idxs = qoi_indices[u_name]
+                                if idx in q_idxs:
+                                    row = qoi_indices[u_name].index(idx)
+                                    jac[u_name, p_name][row][col] = 1.0
+                            else:
+                                jac[u_name, p_name] = np.array([[1.0]])
 
                     # Restore old residual
                     resultvec.vec[:] = cache1
