@@ -439,22 +439,13 @@ class System(object):
                 p_idxs = range(p_size)
 
             # Size our Outputs
-            for u_name in fd_unknowns:
+            for u_name in chain(fd_unknowns, pass_unknowns):
                 if qoi_indices and u_name in qoi_indices:
                     u_size = len(qoi_indices[u_name])
                 else:
                     u_size = np.size(unknowns[u_name])
 
                 jac[u_name, p_name] = np.zeros((u_size, p_size))
-
-            # pass_through params are square
-            for u_name in pass_unknowns:
-                if qoi_indices and u_name in qoi_indices:
-                    u_size = len(qoi_indices[u_name])
-                else:
-                    u_size = np.size(unknowns[u_name])
-
-                jac[u_name, p_name] = np.zeros((u_size, u_size))
 
             # if a given param isn't present in this process, we need
             # to still run the model once for each entry in that param
@@ -536,14 +527,20 @@ class System(object):
                             fd_cols[(u_name, p_name, col)] = \
                                                    jac[u_name, p_name][:, col]
 
+                    # When an unknown is a parameter, it isn't calculated, so
+                    # we manually fill in identity.
+                    for u_name in pass_unknowns:
+                        if u_name == param_src:
+                            if qoi_indices and u_name in qoi_indices:
+                                q_idxs = qoi_indices[u_name]
+                                if idx in q_idxs:
+                                    row = qoi_indices[u_name].index(idx)
+                                    jac[u_name, p_name][row][col] = 1.0
+                            else:
+                                jac[u_name, p_name] = np.array([[1.0]])
+
                     # Restore old residual
                     resultvec.vec[:] = cache1
-
-                # When an unknown is a parameter, it isn't calculated, so
-                # we manually fill in identity.
-                for u_name in pass_unknowns:
-                    if u_name == param_src:
-                        jac[u_name, p_name] = np.diag(np.ones(u_size))
 
         if self._num_par_fds > 1:
             if trace:  # pragma: no cover

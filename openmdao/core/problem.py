@@ -1243,9 +1243,7 @@ class Problem(System):
                 else:
                     usize += self.root.unknowns.metadata(u)['size']
             for p in indep_list:
-                if p in unknown_list:
-                    psize = usize
-                elif p in self._poi_indices:
+                if p in self._poi_indices:
                     idx = self._poi_indices[p]
                     psize += len(idx)
                 else:
