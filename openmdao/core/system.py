@@ -419,6 +419,7 @@ class System(object):
                     inputs = params
 
                 target_input = inputs._dat[p_name].val
+                param_src = None
 
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
