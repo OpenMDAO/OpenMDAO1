@@ -533,7 +533,8 @@ class System(object):
                                                    jac[u_name, p_name][:, col]
 
                     # When an unknown is a parameter, it isn't calculated, so
-                    # we manually fill in identity.
+                    # we manually fill in identity by placing a 1 wherever it
+                    # is needed.
                     for u_name in pass_unknowns:
                         if u_name == param_src:
                             if qoi_indices and u_name in qoi_indices:
