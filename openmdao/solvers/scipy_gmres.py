@@ -245,4 +245,7 @@ class ScipyGMRES(LinearSolver):
                     self._norm0 = 1.0
             self.print_norm(self.print_name, self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
-            self.iter_count += 1
+
+        # The only way to counter iterations of gmres is to increment this
+        # every time monitor is called.
+        self.iter_count += 1

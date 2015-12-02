@@ -115,6 +115,8 @@ class TestNewton(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+        self.assertEqual(prob.root.ln_solver.iter_count, 0)
+        self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
 
 if __name__ == "__main__":
     unittest.main()
