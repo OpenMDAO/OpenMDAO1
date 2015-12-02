@@ -92,7 +92,7 @@ class TestNewton(unittest.TestCase):
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
 
-    def test_sellar_grouped_specify_linear_solver(self):
+    def test_sellar_specify_linear_solver(self):
 
         prob = Problem()
         prob.root = SellarStateConnection()
