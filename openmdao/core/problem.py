@@ -669,7 +669,6 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
-            sub.precon.setup(sub)
 
         self._check_solvers()
 
