@@ -50,7 +50,7 @@ class Newton(NonLinearSolver):
 
         self.print_name = 'NEWTON'
 
-        # Only one choice, but you can set this to None if you want.
+        # Only one choice, but the user could write their own.
         self.line_search = BackTracking()
 
         # User can slot a linear solver into Newton. Default is to use the
