@@ -1,6 +1,7 @@
 
 import unittest
-from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, Driver
+from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
+                         Driver, ScipyOptimizer
 from openmdao.core.checks import ConnectError
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
@@ -230,6 +231,54 @@ class TestPBODesvar(unittest.TestCase):
                              "can't be used with a gradient based driver of type 'SLSQP'.")
         else:
             self.fail("Exception expected")
+
+    def test_pbo_desvar_slsqp_scipy(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('p1', IndepVarComp('x', u'var_x', pass_by_obj=True))
+        root.add('p2', IndepVarComp('y', -4.0))
+        root.add('p', PassByObjParaboloid())
+
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+
+        top.driver.add_desvar('p1.x')
+        top.driver.add_desvar('p2.y')
+        top.driver.add_objective('p.f_xy')
+
+        try:
+            top.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "Parameter 'p1.x' is a 'pass_by_obj' variable and "
+                             "can't be used with a gradient based driver of type 'SLSQP'.")
+        else:
+            self.fail("Exception expected")
+
+    def test_pbo_desvar_scipy_grad_free(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('p1', IndepVarComp('x', u'var_x', pass_by_obj=True))
+        root.add('p2', IndepVarComp('y', -4.0))
+        root.add('p', PassByObjParaboloid())
+
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'Nelder-Mead'
+
+        top.driver.add_desvar('p1.x')
+        top.driver.add_desvar('p2.y')
+        top.driver.add_objective('p.f_xy')
+
+        top.setup(check=False)
 
 if __name__ == "__main__":
     unittest.main()
