@@ -11,7 +11,7 @@ class Comp1(Component):
 
     def __init__(self):
         super(Comp1, self).__init__()
-        self.add_param('x1', 1.0, form='central')
+        self.add_param('x1', 1.0)
         self.add_output('y1', 1.0)
         self.add_output('y2', 1.0)
 
