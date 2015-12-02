@@ -246,7 +246,7 @@ class PetscKSP(LinearSolver):
         # print("result", result.array)
 
     def apply(self, mat, arg, result):
-        """ Applies preconditioner
+        """ Applies preconditioner.
 
         Args
         ----

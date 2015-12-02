@@ -389,6 +389,10 @@ class TestPetscKSPSerial(unittest.TestCase):
 
 class TestPetscKSPPreconditioner(unittest.TestCase):
 
+    def setUp(self):
+        if impl is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
+
     def test_sellar_derivs_grouped_precon(self):
 
         prob = Problem(impl=impl)
