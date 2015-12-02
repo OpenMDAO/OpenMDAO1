@@ -15,6 +15,9 @@ from pyoptsparse import Optimization
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
+# names of optimizers that use gradients
+grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
 
 def _check_imports():
     """ Dynamically remove optimizers we don't have
@@ -40,7 +43,7 @@ class pyOptSparseDriver(Driver):
     ALPSO, CONMIN, FSQP, IPOPT, NLPQLP, NSGA2, PSQP, SLSQP,
     SNOPT, NLPY_AUGLAG, NOMAD.
     Note that some of these are not open source and therefore not included
-    in the pyoptsparse source code. 
+    in the pyoptsparse source code.
 
     pyOptSparseDriver supports the following:
         equality_constraints
@@ -103,6 +106,10 @@ class pyOptSparseDriver(Driver):
         self.exit_flag = 0
         self._problem = None
         self.sparsity = {}
+
+    def _setup(self, root):
+        self.supports['gradients'] = self.options['optimizer'] in grad_drivers
+        super(pyOptSparseDriver, self)._setup(root)
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
