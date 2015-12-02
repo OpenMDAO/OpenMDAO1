@@ -272,90 +272,112 @@ class TestDriver(unittest.TestCase):
 
     def test_index_error_messages_param(self):
 
-            prob = Problem()
-            prob.root = Group()
-            prob.root.fd_options['force_fd'] = True
-            prob.root.ln_solver.options['mode'] = 'auto'
+        prob = Problem()
+        prob.root = Group()
+        prob.root.fd_options['force_fd'] = True
+        prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
-            prob.root.add('rosen', Rosenbrock(4))
+        prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
+        prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('myparams.x', 'rosen.x')
+        prob.root.connect('myparams.x', 'rosen.x')
 
-            prob.driver = MySimpleDriver()
-            prob.driver.add_desvar('myparams.x', indices=[0, 3, 4])
-            prob.driver.add_objective('rosen.f')
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('myparams.x', indices=[0, 3, 4])
+        prob.driver.add_objective('rosen.f')
 
-            prob.setup(check=False)
+        prob.setup(check=False)
 
-            # Make sure we can't do this
-            with self.assertRaises(IndexError) as cm:
-                prob.run()
+        # Make sure we can't do this
+        with self.assertRaises(IndexError) as cm:
+            prob.run()
 
-            msg = "Index for design var 'myparams.x' is out of bounds. "
-            msg += "Requested index: [0 3 4], "
-            msg += "shape: (4,)."
-            raised_error = str(cm.exception)
-            raised_error = raised_error.replace('(4L,', '(4,')
-            self.assertEqual(msg, raised_error)
+        msg = "Index for design var 'myparams.x' is out of bounds. "
+        msg += "Requested index: [0 3 4], "
+        msg += "shape: (4,)."
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(4L,', '(4,')
+        self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_obj(self):
 
-            prob = Problem()
-            prob.root = Group()
-            prob.root.fd_options['force_fd'] = True
-            prob.root.ln_solver.options['mode'] = 'auto'
+        prob = Problem()
+        prob.root = Group()
+        prob.root.fd_options['force_fd'] = True
+        prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
-            prob.root.add('rosen', Rosenbrock(4))
+        prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
+        prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('myparams.x', 'rosen.x')
+        prob.root.connect('myparams.x', 'rosen.x')
 
-            prob.driver = MySimpleDriver()
-            prob.driver.add_desvar('myparams.x')
-            prob.driver.add_objective('rosen.xxx', indices=[4])
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('myparams.x')
+        prob.driver.add_objective('rosen.xxx', indices=[4])
 
-            prob.setup(check=False)
+        prob.setup(check=False)
 
-            # Make sure we can't do this
-            with self.assertRaises(IndexError) as cm:
-                prob.run()
+        # Make sure we can't do this
+        with self.assertRaises(IndexError) as cm:
+            prob.run()
 
-            msg = "Index for objective 'rosen.xxx' is out of bounds. "
-            msg += "Requested index: [4], "
-            msg += "shape: (4,)."
-            raised_error = str(cm.exception)
-            raised_error = raised_error.replace('(4L,', '(4,')
-            self.assertEqual(msg, raised_error)
+        msg = "Index for objective 'rosen.xxx' is out of bounds. "
+        msg += "Requested index: [4], "
+        msg += "shape: (4,)."
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(4L,', '(4,')
+        self.assertEqual(msg, raised_error)
 
     def test_index_error_messages_con(self):
 
-            prob = Problem()
-            prob.root = Group()
-            prob.root.fd_options['force_fd'] = True
-            prob.root.ln_solver.options['mode'] = 'auto'
+        prob = Problem()
+        prob.root = Group()
+        prob.root.fd_options['force_fd'] = True
+        prob.root.ln_solver.options['mode'] = 'auto'
 
-            prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
-            prob.root.add('rosen', Rosenbrock(4))
+        prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
+        prob.root.add('rosen', Rosenbrock(4))
 
-            prob.root.connect('myparams.x', 'rosen.x')
+        prob.root.connect('myparams.x', 'rosen.x')
 
-            prob.driver = MySimpleDriver()
-            prob.driver.add_desvar('myparams.x')
-            prob.driver.add_constraint('rosen.xxx', upper=0.0, indices=[4])
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('myparams.x')
+        prob.driver.add_constraint('rosen.xxx', upper=0.0, indices=[4])
 
-            prob.setup(check=False)
+        prob.setup(check=False)
 
-            # Make sure we can't do this
-            with self.assertRaises(IndexError) as cm:
-                prob.run()
+        # Make sure we can't do this
+        with self.assertRaises(IndexError) as cm:
+            prob.run()
 
-            msg = "Index for constraint 'rosen.xxx' is out of bounds. "
-            msg += "Requested index: [4], "
-            msg += "shape: (4,)."
-            raised_error = str(cm.exception)
-            raised_error = raised_error.replace('(4L,', '(4,')
-            self.assertEqual(msg, raised_error)
+        msg = "Index for constraint 'rosen.xxx' is out of bounds. "
+        msg += "Requested index: [4], "
+        msg += "shape: (4,)."
+        raised_error = str(cm.exception)
+        raised_error = raised_error.replace('(4L,', '(4,')
+        self.assertEqual(msg, raised_error)
+
+    def test_desvar_as_obj(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = MySimpleDriver()
+
+        root.add('p1', IndepVarComp([('x',100.0,{'desc':'my x'}),
+                                     ('y',100.0,{'desc':'my y'})]), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
+
+        driver.add_desvar('x')
+        driver.add_objective('x')
+        driver.add_constraint('con', lower=0.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['x'])
+        self.assertAlmostEqual(J[0][0], 1.0, 1.0e-6)
+
 
 class TestDeprecated(unittest.TestCase):
     def test_deprecated_add_param(self):

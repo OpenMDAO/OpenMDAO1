@@ -58,7 +58,6 @@ class Group(System):
         # These solvers are the default
         self.ln_solver = LinearGaussSeidel()
         self.nl_solver = RunOnce()
-        self.precon = LinearGaussSeidel()
 
         # Flag is true after order is set
         self._order_set = False
@@ -736,7 +735,7 @@ class Group(System):
             for voi in vois:
                 self._transfer_data(mode='rev', deriv=True, var_of_interest=voi)  # Full Scatter
 
-    def solve_linear(self, dumat, drmat, vois, mode=None, precon=False):
+    def solve_linear(self, dumat, drmat, vois, mode=None, solver=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -762,16 +761,14 @@ class Group(System):
             called without mode so that the user can set the mode in this
             system's ln_solver.options.
 
-        precon : bool, optional
-            Set to True to use the solver in `precon` instead of the one in
-            `ln_solver`.
+        solver : `LinearSolver`, optional
+            Solver to use for the linear solution on this system. If not
+            specified, then the system's ln_solver is used.
         """
         if not self.is_active():
             return
 
-        if precon is True:
-            solver = self.precon
-        else:
+        if solver is None:
             solver = self.ln_solver
 
         if mode is None:

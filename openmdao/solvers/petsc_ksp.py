@@ -107,6 +107,9 @@ class PetscKSP(LinearSolver):
         self.ksp = None
         self.print_name = 'KSP'
 
+        # User can specify another linear solver to use as a preconditioner
+        self.preconditioner = None
+
     def setup(self, system):
         """ Setup petsc problem just once."""
 
@@ -137,6 +140,9 @@ class PetscKSP(LinearSolver):
 
         self.rhs_buf = np.zeros((lsize, ))
         self.sol_buf = np.zeros((lsize, ))
+
+        if self.preconditioner:
+            self.preconditioner.setup(system)
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -239,23 +245,43 @@ class PetscKSP(LinearSolver):
         # print("arg", arg.array)
         # print("result", result.array)
 
-    def apply(self, mat, sol_vec, rhs_vec):
+    def apply(self, mat, arg, result):
         """ Applies preconditioner
 
         Args
         ----
-        sol_vec : PetSC Vector
+        arg : PetSC Vector
             Incoming vector
 
-        rhs_vec : PetSC Vector
-            Empty vector into which we return the preconditioned sol_vec
+        result : PetSC Vector
+            Empty vector into which we return the preconditioned arg
         """
 
-        # TODO - Preconditioning is not supported yet, so mimic an Identity
-        # matrix.
-        # if int((petsc4py.__version__).split('.')[1]) >= 6:
-        #     vec = sol_vec.getArray(readonly=True)
-        # else:
-        #     vec = sol_vec.getArray()
+        if self.preconditioner is None:
+            result.array[:] = _get_petsc_vec_array(arg)
+            return
 
-        rhs_vec.array[:] = _get_petsc_vec_array(sol_vec)
+        system = self.system
+        mode = self.mode
+
+        voi = self.voi
+        if mode == 'fwd':
+            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
+        else:
+            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
+
+        # Set incoming vector
+        rhs_vec.vec[:] = _get_petsc_vec_array(arg)
+
+        # Start with a clean slate
+        system.clear_dparams()
+
+        dumat = {}
+        dumat[voi] = system.dumat[voi]
+        drmat = {}
+        drmat[voi] = system.drmat[voi]
+
+        system.solve_linear(dumat, drmat, (voi, ), mode=mode,
+                            solver=self.preconditioner)
+
+        result.array[:] = sol_vec.vec
