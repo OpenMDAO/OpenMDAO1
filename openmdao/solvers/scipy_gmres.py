@@ -12,7 +12,7 @@ from openmdao.solvers.solver_base import LinearSolver
 
 class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so it should never be
-    used in an MPI setting. A preconditioner can be speficied by placing
+    used in an MPI setting. A preconditioner can be specified by placing
     another linear solver into `self.preconditioner`.
 
     Options
@@ -188,7 +188,7 @@ class ScipyGMRES(LinearSolver):
 
     def _precon(self, arg):
         """ GMRES Callback: applies a preconditioner by calling
-        solve_nonlinear on this system's children.
+        solve_linear on this system's children.
 
         Args
         ----
