@@ -357,27 +357,6 @@ class TestDriver(unittest.TestCase):
         raised_error = raised_error.replace('(4L,', '(4,')
         self.assertEqual(msg, raised_error)
 
-    def test_desvar_as_obj(self):
-
-        prob = Problem()
-        root = prob.root = Group()
-        driver = prob.driver = MySimpleDriver()
-
-        root.add('p1', IndepVarComp([('x',100.0,{'desc':'my x'}),
-                                     ('y',100.0,{'desc':'my y'})]), promotes=['*'])
-        root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
-
-        driver.add_desvar('x')
-        driver.add_objective('x')
-        driver.add_constraint('con', lower=0.0)
-
-        prob.setup(check=False)
-        prob.run()
-
-        J = prob.calc_gradient(['x'], ['x'])
-        self.assertAlmostEqual(J[0][0], 1.0, 1.0e-6)
-
 
 class TestDeprecated(unittest.TestCase):
     def test_deprecated_add_param(self):
