@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ScipyGMRES, \
-    DirectSolver, ExecComp
+    DirectSolver, ExecComp, LinearGaussSeidel
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -386,8 +386,9 @@ class TestScipyGMRES(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         test_string = prob.root.ln_solver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    options[\'atol\'] :  float(1e-12)\n        Absolute convergence tolerance.\n    options[\'iprint\'] :  int(0)\n        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.\n    options[\'maxiter\'] :  int(1000)\n        Maximum number of iterations.\n    options[\'mode\'] :  str(\'auto\')\n        Derivative calculation mode, set to \'fwd\' for forward mode, \'rev\' for reverse mode, or \'auto\' to let OpenMDAO determine the best mode.\n    options[\'precondition\'] :  bool(False)\n        Set to True to turn on preconditioning.\n    options[\'restart\'] :  int(20)\n        Number of iterations between restarts. Larger values increase iteration cost, but may be necessary for convergence\n\n    """\n'
+        original_string = '    """\n\n    Options\n    -------\n    options[\'atol\'] :  float(1e-12)\n        Absolute convergence tolerance.\n    options[\'iprint\'] :  int(0)\n        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.\n    options[\'maxiter\'] :  int(1000)\n        Maximum number of iterations.\n    options[\'mode\'] :  str(\'auto\')\n        Derivative calculation mode, set to \'fwd\' for forward mode, \'rev\' for reverse mode, or \'auto\' to let OpenMDAO determine the best mode.\n    options[\'restart\'] :  int(20)\n        Number of iterations between restarts. Larger values increase iteration cost, but may be necessary for convergence\n\n    """\n'
         self.assertEqual(original_string, test_string)
+
 
 class TestScipyGMRESPreconditioner(unittest.TestCase):
 
@@ -397,7 +398,7 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         prob.root = SellarDerivativesGrouped()
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
-        prob.root.ln_solver.options['precondition'] = True
+        prob.root.ln_solver.preconditioner = LinearGaussSeidel()
         prob.root.mda.ln_solver = DirectSolver()
         prob.setup(check=False)
         prob.run()
@@ -435,7 +436,7 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
         prob.root.ln_solver = ScipyGMRES()
-        prob.root.ln_solver.options['precondition'] = True
+        prob.root.ln_solver.preconditioner = LinearGaussSeidel()
 
         prob.root.sub1.ln_solver = DirectSolver()
         prob.root.sub3.ln_solver = DirectSolver()
@@ -464,7 +465,7 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         prob.root = FanOutAllGrouped()
         prob.root.ln_solver = ScipyGMRES()
 
-        prob.root.ln_solver.options['precondition'] = True
+        prob.root.ln_solver.preconditioner = LinearGaussSeidel()
         prob.root.sub1.ln_solver = DirectSolver()
         prob.root.sub2.ln_solver = DirectSolver()
         prob.root.sub3.ln_solver = DirectSolver()
@@ -482,7 +483,6 @@ class TestScipyGMRESPreconditioner(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['sub2.comp2.y']['p.x'][0][0], -6.0, 1e-6)
         assert_rel_error(self, J['sub3.comp3.y']['p.x'][0][0], 15.0, 1e-6)
-
 
 
 if __name__ == "__main__":

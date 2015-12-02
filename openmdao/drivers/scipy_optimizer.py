@@ -85,6 +85,10 @@ class ScipyOptimizer(Driver):
         self.cons = None
         self.objs = None
 
+    def _setup(self, root):
+        self.supports['gradients'] = self.options['optimizer'] in _gradient_optimizers
+        super(ScipyOptimizer, self)._setup(root)
+
     def run(self, problem):
         """Optimize the problem using your choice of Scipy optimizer.
 

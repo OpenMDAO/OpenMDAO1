@@ -33,6 +33,10 @@ class Driver(object):
         self.supports.add_option('two_sided_constraints', True)
         self.supports.add_option('integer_design_vars', True)
 
+        # inheriting Drivers should override this setting and set it to False
+        # if they don't use gradients.
+        self.supports.add_option('gradients', True)
+
         # This driver's options
         self.options = OptionsDictionary()
 
@@ -61,6 +65,11 @@ class Driver(object):
         objs = OrderedDict()
         cons = OrderedDict()
 
+        if self.__class__ is Driver:
+            has_gradients = False
+        else:
+            has_gradients = self.supports['gradients']
+
         item_tups = [
             ('Parameter', self._desvars, desvars),
             ('Objective', self._objs, objs),
@@ -88,6 +97,16 @@ class Driver(object):
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
+
+                if has_gradients and rootmeta.get('pass_by_obj'):
+                    if 'optimizer' in self.options:
+                        oname = self.options['optimizer']
+                    else:
+                        oname = self.__class__.__name__
+                    raise RuntimeError("%s '%s' is a 'pass_by_obj' variable "
+                                       "and can't be used with a gradient "
+                                       "based driver of type '%s'." %
+                                       (item_name, name, oname))
 
                 # Size is useful metadata to save
                 if 'indices' in meta:
