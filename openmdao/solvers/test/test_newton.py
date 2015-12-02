@@ -7,7 +7,6 @@ import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, LinearGaussSeidel, \
     Newton, ExecComp, ScipyGMRES
-from openmdao.solvers.solver_base import LinearSolver
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
