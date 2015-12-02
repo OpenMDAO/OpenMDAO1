@@ -12,7 +12,7 @@ class Newton(NonLinearSolver):
     next direction to step. Also uses `Backtracking` as the default line
     search algorithm, but you can choose a different one by specifying
     `self.line_search`. A linear solver can also be specified by assigning it
-    to `self.linear_solver` to use a different solver than the one in the
+    to `self.ln_solver` to use a different solver than the one in the
     parent system.
 
     Options
@@ -55,7 +55,7 @@ class Newton(NonLinearSolver):
 
         # User can slot a linear solver into Newton. Default is to use the
         # parent's solver.
-        self.linear_solver = None
+        self.ln_solver = None
 
     def setup(self, sub):
         """ Initialize sub solvers.
@@ -67,8 +67,8 @@ class Newton(NonLinearSolver):
         """
         if self.line_search:
             self.line_search.setup(sub)
-        if self.linear_solver:
-            self.linear_solver.setup(sub)
+        if self.ln_solver:
+            self.ln_solver.setup(sub)
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
@@ -124,7 +124,7 @@ class Newton(NonLinearSolver):
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec
-            system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
+            system.solve_linear(system.dumat, system.drmat, [None], mode='fwd', solver=self.ln_solver)
 
             # Step in that direction,
             self.iter_count += 1
