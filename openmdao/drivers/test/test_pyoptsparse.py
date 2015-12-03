@@ -130,7 +130,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', equals=-15.0)
+        prob.driver.add_constraint('c', equals=-15.0, linear=True)
 
         prob.setup(check=False)
         prob.run()

@@ -155,18 +155,19 @@ class pyOptSparseDriver(Driver):
             self.sparsity[name] = self.indep_list
 
         # Calculate and save gradient for any linear constraints.
-        lcons = self.get_constraints(lintype='linear').values()
+        lcons = self.get_constraints(lintype='linear').keys()
         if len(lcons) > 0:
             self.lin_jacs = problem.calc_gradient(indep_list, lcons,
                                                   return_format='dict')
-            #print("Linear Gradient")
-            #print(self.lin_jacs)
+            print("Linear Gradient")
+            print(self.lin_jacs)
 
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(iterkeys(econs))
-        for name in econs:
+
+        for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
             lower = upper = con_meta[name]['equals']
 
@@ -185,7 +186,8 @@ class pyOptSparseDriver(Driver):
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
         self.quantities += list(iterkeys(incons))
-        for name in incons:
+
+        for name in self.get_constraints(ctype='ineq'):
             size = con_meta[name]['size']
 
             # Bounds - double sided is supported
