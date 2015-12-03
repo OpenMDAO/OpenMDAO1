@@ -159,8 +159,8 @@ class pyOptSparseDriver(Driver):
         if len(lcons) > 0:
             self.lin_jacs = problem.calc_gradient(indep_list, lcons,
                                                   return_format='dict')
-            print("Linear Gradient")
-            print(self.lin_jacs)
+            #print("Linear Gradient")
+            #print(self.lin_jacs)
 
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
