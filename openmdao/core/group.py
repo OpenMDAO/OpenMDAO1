@@ -1387,24 +1387,22 @@ class Group(System):
         rank where the variable is local.
 
         """
-        ranks = {}
-
-        local_vars = [k for k, acc in iteritems(self.unknowns._dat)
-                              if not acc.remote]
-        local_vars.extend(k for k, acc in iteritems(self.params._dat)
-                                   if not acc.remote)
-
         if MPI:
+            ranks = {}
+            local_vars = [k for k, acc in iteritems(self.unknowns._dat)
+                                  if not acc.remote]
+            local_vars.extend(k for k, acc in iteritems(self.params._dat)
+                                       if not acc.remote)
             if trace:  # pragma: no cover
                 debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
-        else:
-            all_locals = [local_vars]
 
-        for rank, vnames in enumerate(all_locals):
-            for v in vnames:
-                if v not in ranks:
-                    ranks[v] = rank
+            for rank, vnames in enumerate(all_locals):
+                for v in vnames:
+                    if v not in ranks:
+                        ranks[v] = rank
+        else:
+            ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
 
         return ranks
 
