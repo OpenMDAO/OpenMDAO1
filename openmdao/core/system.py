@@ -1011,7 +1011,7 @@ class System(object):
             prom = to_prom_name[pathname]
 
     def list_connections(self, group_by_comp=True, unconnected=True,
-                         stream=sys.stdout):
+                         stream=sys.stdout, use_relnames=False):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
@@ -1038,25 +1038,39 @@ class System(object):
             component's target.  Default is True.
 
         unconnected : bool, optional
-            If True, include all unconnected params and unknowns as well. Defaults to True
+            If True, include all unconnected params and unknowns as well.
+            Defaults to True.
 
         stream : output stream, optional
             Stream to write the connection info to. Defaults to sys.stdout.
+
+        use_relnames : bool, optional
+            If True and group_by_comp is True, variable names will be expressed 
+            relative to the name of the current compnent. Default is False.
+
         """
 
-        def _param_str(pdict, udict, prom, tgt, src):
+        def _param_str(pdict, udict, prom, tgt, src, relname):
             units = pdict[tgt].get('units', '')
             if units:
                 units = '[%s]' % units
             prom_tgt = prom[tgt]
-            if prom_tgt != tgt:
+            if prom_tgt == tgt:
+                prom_tgt = ''
+            else:
                 if src is None or prom_tgt != prom[src]: # explicit connection
                     prom_tgt = "(%s)" % prom_tgt
                 else:
                     prom_tgt = '(*)'
+
+            if relname and tgt.startswith(relname+'.'):
+                tgt = tgt[len(relname):]
+                if prom_tgt.startswith(relname+'.'):
+                    prom_tgt = prom_tgt[len(relname):]
+
             return ' '.join((tgt, prom_tgt, units))
 
-        def _list_conns(self):
+        def _list_conns(self, relname):
             template = "{0:<{swid}} -> {1}\n"
 
             to_prom_name = self._probdata.to_prom_name
@@ -1072,15 +1086,18 @@ class System(object):
                     by_src.setdefault(src, []).append(_param_str(top_params,
                                                                  top_unknowns,
                                                                  to_prom_name,
-                                                                 tgt, src))
+                                                                 tgt, src,
+                                                                 relname))
 
             if unconnected:
                 for p in self._params_dict:
                     if p not in self.connections:
                         by_src.setdefault('{unconnected}',
                                           []).append(_param_str(top_params,
-                                                     top_unknowns, to_prom_name,
-                                                     p, None))
+                                                                top_unknowns,
+                                                                to_prom_name,
+                                                                p, None,
+                                                                relname))
 
                 for u in self._unknowns_dict:
                     if u not in by_src:
@@ -1088,7 +1105,7 @@ class System(object):
 
             by_src2 = {}
             for src, tgts in iteritems(by_src):
-                if src[0] == '{':
+                if src[0] == '{':  # {unconnected}
                     prom_src = units = ''
                 else:
                     units = top_unknowns[src].get('units', '')
@@ -1097,6 +1114,8 @@ class System(object):
                     prom_src = to_prom_name[src]
                     prom_src = '' if prom_src == src else "(%s)" % prom_src
 
+                    if relname and src.startswith(relname+'.'):
+                        src = src[len(relname):]
                 by_src2[' '.join((src, prom_src, units))] = tgts
 
             if by_src2:
@@ -1111,11 +1130,13 @@ class System(object):
             for c in self.components(recurse=True, include_self=True):
                 line = "Connections for %s:" % c.pathname
                 stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
-                c.list_connections(unconnected=unconnected,
-                                   group_by_comp=False,
-                                   stream=stream)
+                if use_relnames:
+                    relname = c.pathname
+                else:
+                    relname = None
+                _list_conns(c, relname)
         else:
-            _list_conns(self)
+            _list_conns(self, '')
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):
