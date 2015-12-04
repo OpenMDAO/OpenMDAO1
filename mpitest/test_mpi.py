@@ -70,13 +70,13 @@ class MPITests1(MPITestCase):
 
         prob.root.connect('A1.a', 'C1.a')
         prob.root.connect('B1.b', 'C1.b')
-        # prob.root.connect('S1:s', 'C1.in_string')
-        # prob.root.connect('L1:l', 'C1.in_list')
+        prob.root.connect('S1.s', 'C1.in_string')
+        prob.root.connect('L1.l', 'C1.in_list')
 
         prob.root.connect('C1.c', 'C2.a')
         prob.root.connect('B2.b', 'C2.b')
-        # prob.root.connect('C1.out_string', 'C2.in_string')
-        # prob.root.connect('C1.out_list',   'C2.in_list')
+        prob.root.connect('C1.out_string', 'C2.in_string')
+        prob.root.connect('C1.out_list',   'C2.in_list')
 
         prob.setup(check=False)
 
@@ -91,9 +91,8 @@ class MPITests1(MPITestCase):
         self.assertTrue(all(prob['C2.c'] == np.ones(size, float)*15.))
         self.assertTrue(all(prob['C2.d'] == np.ones(size, float)*5.))
 
-        # TODO: can't do MPI pass_by_object yet
-        # self.assertTrue(prob['C2.out_string']=='_C1_C2')
-        # self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
+        self.assertTrue(prob['C2.out_string']=='_C1_C2')
+        self.assertTrue(prob['C2.out_list']==[1.5, 1.5])
 
 
 class MPITests2(MPITestCase):

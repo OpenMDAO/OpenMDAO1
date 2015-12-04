@@ -54,7 +54,8 @@ class PetscImpl(object):
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
-                         src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
+                         src_idxs, tgt_idxs, vec_conns, byobj_conns, mode,
+                         sysdata):
         """
         Create an object for performing data transfer between source
         and target vectors.
@@ -86,13 +87,17 @@ class PetscImpl(object):
         mode : str
             Either 'fwd' or 'rev', indicating a forward or reverse scatter.
 
+        sysdata : `SysData` object
+            The `SysData` object for the Group that will contain the new
+            `DataTransfer` object.
+
         Returns
         -------
         `PetscDataTransfer`
             A `PetscDataTransfer` object.
         """
         return PetscDataTransfer(src_vec, tgt_vec, src_idxs, tgt_idxs,
-                                 vec_conns, byobj_conns, mode)
+                                 vec_conns, byobj_conns, mode, sysdata)
 
 
 class PetscSrcVecWrapper(SrcVecWrapper):
@@ -309,17 +314,23 @@ class PetscDataTransfer(object):
 
     mode : str
         Either 'fwd' or 'rev', indicating a forward or reverse scatter.
+
+    sysdata : `SysData` object
+        The `SysData` object for the Group that will contain this
+        `DataTransfer` object.
+
     """
 
     #@diff_mem
     def __init__(self, src_vec, tgt_vec,
-                 src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
+                 src_idxs, tgt_idxs, vec_conns, byobj_conns, mode, sysdata):
 
         src_idxs = src_vec.merge_idxs(src_idxs)
         tgt_idxs = tgt_vec.merge_idxs(tgt_idxs)
 
         self.byobj_conns = byobj_conns
         self.comm = comm = src_vec.comm
+        self.sysdata = sysdata
 
         uvec = src_vec.petsc_vec
         pvec = tgt_vec.petsc_vec
@@ -401,6 +412,22 @@ class PetscDataTransfer(object):
                                               tgtvec.petsc_vec.array))
 
             if not deriv:
-                for tgt, src in self.byobj_conns:
-                    raise NotImplementedError("can't transfer '%s' to '%s'" %
-                                              (src, tgt))
+                comm = self.sysdata.comm
+                iproc = comm.rank
+                mylocals = self.sysdata.all_locals[iproc]
+                for itag, (tgt, src) in enumerate(self.byobj_conns):
+                    # if we're the owning rank of the src, send it out to
+                    # systems that don't have it locally.
+                    if iproc == self.sysdata.owning_ranks[src]:
+                        # grab local value
+                        val = srcvec[src]
+                        for i, localvars in enumerate(self.sysdata.all_locals):
+                            if i != iproc and src not in localvars and tgt in localvars:
+                                comm.send(val, dest=i, tag=itag)
+                    # if we don't have the value locally, pull it across using MPI
+                    elif tgt in mylocals:
+                        if src in mylocals:
+                            tgtvec[tgt] = srcvec[src]
+                        else:
+                            val = comm.recv(source=self.sysdata.owning_ranks[src],
+                                            tag=itag)
