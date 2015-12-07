@@ -635,7 +635,7 @@ class TestProblem(unittest.TestCase):
         prob.root.list_connections(stream=stream)
         prob.root.list_connections(unconnected=False, stream=stream)
         prob.root.list_connections(group_by_comp=False, stream=stream)
-        prob.root.list_connections(use_relnames=True, stream=stream)
+        prob.root.G3.C3.list_var_connections('x', stream=stream)
 
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())

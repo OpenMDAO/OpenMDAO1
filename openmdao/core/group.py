@@ -1414,6 +1414,8 @@ class Group(System):
                     if v not in ranks:
                         ranks[v] = rank
         else:
+            self._sysdata.all_locals = [n for n in chain(self.unknowns._dat,
+                                                         self.params._dat)]
             ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
 
         return ranks

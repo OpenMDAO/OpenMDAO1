@@ -41,6 +41,80 @@ class ABCDArrayComp(Component):
         unknowns['out_string'] = params['in_string'] + '_' + self.name
         unknowns['out_list']   = params['in_list'] + [1.5]
 
+class PBOComp(Component):
+
+    def __init__(self):
+        super(PBOComp, self).__init__()
+        self.add_param('a', [0.,0.,0.,0.,0.])
+        self.add_param('b', [1.,2.,3.,4.,5.])
+
+        self.add_output('c', [1.,2.,3.,4.,5.])
+        self.add_output('d', [-1.,-2.,-3.,-4.,-5.])
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        for i in range(5):
+            unknowns['c'][i] = params['a'][i] + params['b'][i]
+            unknowns['d'][i] = params['a'][i] - params['b'][i]
+
+class PBOTestCase(MPITestCase):
+    N_PROCS=1
+
+    def test_simple(self):
+        prob = Problem(Group(), impl=impl)
+
+        A1 = prob.root.add('A1', IndepVarComp('a', [1.,1.,1.,1.,1.]))
+        B1 = prob.root.add('B1', IndepVarComp('b', [1.,1.,1.,1.,1.]))
+
+        C1 = prob.root.add('C1', PBOComp())
+        C2 = prob.root.add('C2', PBOComp())
+
+        prob.root.connect('A1.a', 'C1.a')
+        prob.root.connect('B1.b', 'C1.b')
+
+        prob.root.connect('C1.c', 'C2.a')
+        prob.root.connect('C1.d', 'C2.b')
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        self.assertEqual(prob['C2.a'], [2.,2.,2.,2.,2.])
+        self.assertEqual(prob['C2.b'], [0.,0.,0.,0.,0.])
+        self.assertEqual(prob['C2.c'], [2.,2.,2.,2.,2.])
+        self.assertEqual(prob['C2.d'], [2.,2.,2.,2.,2.])
+        self.assertEqual(prob.root.unknowns.vec.size, 0)
+
+class PBOTestCase2(MPITestCase):
+    N_PROCS=2
+
+    def test_fan_in(self):
+        prob = Problem(Group(), impl=impl)
+        par = prob.root.add('par', ParallelGroup())
+
+        G1 = par.add('G1', Group())
+        A1 = G1.add('A1', IndepVarComp('a', [1.,1.,1.,1.,1.]))
+        C1 = G1.add('C1', PBOComp())
+
+        G2 = par.add('G2', Group())
+        B1 = G2.add('B1', IndepVarComp('b', [3.,3.,3.,3.,3.]))
+        C2 = G2.add('C2', PBOComp())
+
+        C3 = prob.root.add('C3', PBOComp())
+
+        par.connect('G1.A1.a', 'G1.C1.a')
+        par.connect('G2.B1.b', 'G2.C2.a')
+        prob.root.connect('par.G1.C1.c', 'C3.a')
+        prob.root.connect('par.G2.C2.c', 'C3.b')
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        self.assertEqual(prob['C3.a'], [2.,3.,4.,5.,6.])
+        self.assertEqual(prob['C3.b'], [4.,5.,6.,7.,8.])
+        self.assertEqual(prob['C3.c'], [6.,8.,10.,12.,14.])
+        self.assertEqual(prob['C3.d'], [-2.,-2.,-2.,-2.,-2.])
+        self.assertEqual(prob.root.unknowns.vec.size, 0)
 
 class MPITests1(MPITestCase):
 

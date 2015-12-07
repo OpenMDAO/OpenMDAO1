@@ -425,9 +425,10 @@ class PetscDataTransfer(object):
                             if i != iproc and src not in localvars and tgt in localvars:
                                 comm.send(val, dest=i, tag=itag)
                     # if we don't have the value locally, pull it across using MPI
-                    elif tgt in mylocals:
+                    if tgt in mylocals:
                         if src in mylocals:
                             tgtvec[tgt] = srcvec[src]
                         else:
                             val = comm.recv(source=self.sysdata.owning_ranks[src],
                                             tag=itag)
+                            tgtvec[tgt] = val

@@ -505,6 +505,7 @@ class Problem(System):
         # is an absolute param name that maps to the absolute name of
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
+        self._probdata.connections = connections
 
         # Allow the user to omit the size of a parameter and pull the size
         # and shape from the connection source.
@@ -2008,7 +2009,6 @@ class Problem(System):
         for grp in root.subgroups(recurse=True):
             grp.ln_solver.print_all_convergence()
             grp.nl_solver.print_all_convergence()
-
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the

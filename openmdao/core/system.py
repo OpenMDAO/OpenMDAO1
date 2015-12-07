@@ -162,7 +162,6 @@ class System(object):
         abs_unames = self._sysdata.to_abs_uname
         abs_pnames = self._sysdata.to_abs_pnames
 
-        mybool = False
         for prom in self._promotes:
             if fnmatch(name, prom):
                 if name in abs_pnames or name in abs_unames:
@@ -1011,7 +1010,7 @@ class System(object):
             prom = to_prom_name[pathname]
 
     def list_connections(self, group_by_comp=True, unconnected=True,
-                         stream=sys.stdout, use_relnames=False):
+                         stream=sys.stdout):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
@@ -1039,36 +1038,12 @@ class System(object):
 
         unconnected : bool, optional
             If True, include all unconnected params and unknowns as well.
-            Defaults to True.
+            Default is True.
 
         stream : output stream, optional
-            Stream to write the connection info to. Defaults to sys.stdout.
-
-        use_relnames : bool, optional
-            If True and group_by_comp is True, variable names will be expressed 
-            relative to the name of the current compnent. Default is False.
+            Stream to write the connection info to. Default is sys.stdout.
 
         """
-
-        def _param_str(pdict, udict, prom, tgt, src, relname):
-            units = pdict[tgt].get('units', '')
-            if units:
-                units = '[%s]' % units
-            prom_tgt = prom[tgt]
-            if prom_tgt == tgt:
-                prom_tgt = ''
-            else:
-                if src is None or prom_tgt != prom[src]: # explicit connection
-                    prom_tgt = "(%s)" % prom_tgt
-                else:
-                    prom_tgt = '(*)'
-
-            if relname and tgt.startswith(relname+'.'):
-                tgt = tgt[len(relname):]
-                if prom_tgt.startswith(relname+'.'):
-                    prom_tgt = prom_tgt[len(relname):]
-
-            return ' '.join((tgt, prom_tgt, units))
 
         def _list_conns(self, relname):
             template = "{0:<{swid}} -> {1}\n"
@@ -1130,15 +1105,78 @@ class System(object):
             for c in self.components(recurse=True, include_self=True):
                 line = "Connections for %s:" % c.pathname
                 stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
-                if use_relnames:
-                    relname = c.pathname
-                else:
-                    relname = None
-                _list_conns(c, relname)
+                _list_conns(c, c.pathname)
         else:
             _list_conns(self, '')
+
+    def list_var_connections(self, name, stream=sys.stdout):
+        """List any connections to/from the given variable.
+        Args
+        ----
+        name : str
+            Variable name (absolute or promoted).
+
+        stream : output stream, optional
+            Stream to write the connection info to. Default is sys.stdout.
+
+        """
+        udict = self._probdata.unknowns_dict
+        pdict = self._probdata.params_dict
+        to_prom_name = self._probdata.to_prom_name
+
+        if name in udict or name in pdict: # name is top level absolute
+            absname = name
+        elif name in self._sysdata.to_abs_uname:
+            absnames = [self._sysdata.to_abs_uname[name]]
+        elif name in self._sysdata.to_abs_pnames:
+            absnames = self._sysdata.to_abs_pnames[name]
+        else:
+            raise KeyError("Can't find variable '%s'" % name)
+
+        by_src = {}
+        for tgt, (src, idxs) in iteritems(self._probdata.connections):
+            for absname in absnames:
+                if tgt == absname or src == absname:
+                    by_src.setdefault(src, []).append(tgt)
+
+        by_src2 = {}
+        for src, tgts in iteritems(by_src):
+            units = udict[src].get('units', '')
+            if units:
+                units = '[%s]' % units
+            prom_src = to_prom_name[src]
+            prom_src = '' if prom_src == src else "(%s)" % prom_src
+            by_src2[' '.join((src, prom_src, units))] = [
+                _param_str(pdict, udict, to_prom_name, t, src, '') for t in tgts]
+
+        for src, tgts in sorted(iteritems(by_src2), key=lambda x: x[0]):
+            swid = len(src)
+            for i, tgt in enumerate(sorted(tgts)):
+                s = '' if i else src
+                stream.write("{0:<{swid}} -> {1}\n".format(s, tgt, swid=swid))
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):
         for param, value in iteritems(subdict):
             yield (output, param), value
+
+def _param_str(pdict, udict, prom, tgt, src, relname):
+    """returns a string formatted with param name, units, and promoted name"""
+    units = pdict[tgt].get('units', '')
+    if units:
+        units = '[%s]' % units
+    prom_tgt = prom[tgt]
+    if prom_tgt == tgt:
+        prom_tgt = ''
+    else:
+        if src is None or prom_tgt != prom[src]: # explicit connection
+            prom_tgt = "(%s)" % prom_tgt
+        else:
+            prom_tgt = '(*)'
+
+    if relname and tgt.startswith(relname+'.'):
+        tgt = tgt[len(relname):]
+        if prom_tgt.startswith(relname+'.'):
+            prom_tgt = prom_tgt[len(relname):]
+
+    return ' '.join((tgt, prom_tgt, units))
