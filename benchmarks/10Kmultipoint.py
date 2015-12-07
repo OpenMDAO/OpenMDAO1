@@ -68,7 +68,7 @@ class MultiPoint(Group):
         for i,(a,s) in enumerate(zip(adders, scalars)):
             c_name = 'p%d'%i
             self.add(c_name, Point(a,s))
-            # self.connect('X', c_name+'.x', src_indices=[i,])
+            # self.connect('X', c_name+'.x', src_indices=[i])
             self.connect(c_name+'.f2','aggregate.y%d'%i)
 
         self.add('aggregate', Summer(size))
