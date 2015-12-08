@@ -57,11 +57,9 @@ def _process_card_info(card):
     namelist file. """
 
     name = card.name
-
     # Sometimes we have a 1D array declared by element
     if card.index:
         index = card.index[0]-1
-
         # Strings go into lists, not arrays
         if isinstance(card[2], str):
             val = card[2:]
@@ -69,7 +67,7 @@ def _process_card_info(card):
             value[index:] = val
         else:
             val = array(card[2:])
-            value = zeros(index+len(val))
+            value = zeros(index+len(val),dtype=val.dtype)
             value[index:] = val
 
     # Alternate array specification
