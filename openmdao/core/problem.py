@@ -2130,7 +2130,7 @@ def _needs_iteration(comp):
     """Return True if the given component needs an iterative
     solver to converge it.
     """
-    if isinstance(comp, Component) and comp.states:
+    if isinstance(comp, Component) and comp.is_active() and comp.states:
         for klass in comp.__class__.__mro__:
             if klass is Component:
                 break
