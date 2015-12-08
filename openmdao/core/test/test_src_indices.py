@@ -8,7 +8,6 @@ from numpy.testing import assert_almost_equal
 from six import PY3
 
 from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp
-from openmdao.core.checks import ConnectError
 from openmdao.test.simple_comps import SimpleComp, SimpleArrayComp
 from openmdao.test.util import assert_rel_error
 
@@ -123,11 +122,11 @@ class TestSrcIndices(unittest.TestCase):
         root.connect('P.x', 'C.x', src_indices=[2,])
 
         prob = Problem(root)
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected = py3fix("Size 1 of the indexed sub-part of source 'P.x' "
-                          "must be the same as size 2 of target 'G.A.x'")
+                          "must be the same as size 2 of target 'G.A.x'.")
         self.assertEqual(str(cm.exception), expected)
 
         # now try the same thing with promoted var
@@ -143,11 +142,11 @@ class TestSrcIndices(unittest.TestCase):
         root.connect('P.x', 'C.x', src_indices=[2,])
 
         prob = Problem(root)
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected = py3fix("Size 3 of the indexed sub-part of source 'P.x' "
-                          "must be the same as size 2 of target 'G.x'")
+                          "must be the same as size 2 of target 'G.A.x' (G.x).")
         self.assertEqual(str(cm.exception), expected)
 
     def test_inner_connection(self):

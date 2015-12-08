@@ -2,7 +2,6 @@
 import unittest
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer
-from openmdao.core.checks import ConnectError
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
 try:

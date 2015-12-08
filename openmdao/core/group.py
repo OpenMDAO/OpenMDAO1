@@ -18,7 +18,6 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
-from openmdao.core.checks import ConnectError
 
 #from openmdao.devtools.debug import diff_mem, mem_usage
 
@@ -582,8 +581,9 @@ class Group(System):
                     try:
                         src_pathnames = to_abs_pnames[src]
                     except KeyError as error:
-                        raise ConnectError.nonexistent_src_error(src, tgt)
-
+                        raise NameError("Source '%s' cannot be connected to "
+                                        "target '%s': '%s' does not exist." %
+                                        (src, tgt, src))
                 try:
                     for tgt_pathname in to_abs_pnames[tgt]:
                         for src_pathname in src_pathnames:
@@ -594,9 +594,14 @@ class Group(System):
                     try:
                         to_abs_uname[tgt]
                     except KeyError as error:
-                        raise ConnectError.nonexistent_target_error(src, tgt)
+                        raise NameError("Source '%s' cannot be connected to "
+                                        "target '%s': '%s' does not exist." %
+                                        (src, tgt, tgt))
                     else:
-                        raise ConnectError.invalid_target_error(src, tgt)
+                        raise NameError("Source '%s' cannot be connected to "
+                                        "target '%s': Target must be a "
+                                        "parameter but '%s' is an unknown." %
+                                        (src, tgt, tgt))
 
         return connections
 
