@@ -61,6 +61,7 @@ def _process_card_info(card):
     # Sometimes we have a 1D array declared by element
     if card.index:
         index = card.index[0]-1
+
         # Strings go into lists, not arrays
         if isinstance(card[2], str):
             val = card[2:]
