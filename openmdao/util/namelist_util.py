@@ -57,6 +57,7 @@ def _process_card_info(card):
     namelist file. """
 
     name = card.name
+
     # Sometimes we have a 1D array declared by element
     if card.index:
         index = card.index[0]-1
