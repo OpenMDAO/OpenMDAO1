@@ -642,7 +642,16 @@ class Problem(System):
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
             if not s._order_set:
-                s.set_order(s.list_auto_order()[0])
+                order, broken_edges = s.list_auto_order()
+                s.set_order(order)
+
+                # Mark "head" of each broken edge
+                for edge in broken_edges:
+                    cname = edge[1]
+                    head_sys = self.root
+                    for name in cname.split('.'):
+                        head_sys = getattr(head_sys, name)
+                    head_sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs

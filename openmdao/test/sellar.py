@@ -35,6 +35,8 @@ class SellarDis1(Component):
         # Coupling output
         self.add_output('y1', val=1.0)
 
+        self.execution_count = 0
+
     def solve_nonlinear(self, params, unknowns, resids):
         """Evaluates the equation
         y1 = z1**2 + z2 + x1 - 0.2*y2"""
@@ -45,6 +47,8 @@ class SellarDis1(Component):
         y2 = params['y2']
 
         unknowns['y1'] = z1**2 + z2 + x1 - 0.2*y2
+
+        self.execution_count += 1
 
 
 class SellarDis1withDerivatives(SellarDis1):
@@ -76,6 +80,8 @@ class SellarDis2(Component):
         # Coupling output
         self.add_output('y2', val=1.0)
 
+        self.execution_count = 0
+
     def solve_nonlinear(self, params, unknowns, resids):
         """Evaluates the equation
         y2 = y1**(.5) + z1 + z2"""
@@ -90,6 +96,8 @@ class SellarDis2(Component):
         y1 = abs(y1)
 
         unknowns['y2'] = y1**.5 + z1 + z2
+
+        self.execution_count += 1
 
 
 class SellarDis2withDerivatives(SellarDis2):
