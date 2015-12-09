@@ -27,7 +27,8 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote', 'get', 'set', 'flat']
+    __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote',
+                 'get', 'set', 'flat']
     def __init__(self, vecwrapper, slice, val, meta, owned=True):
         self.owned = owned
 
@@ -39,7 +40,7 @@ class Accessor(object):
         else:
             self.val = val
 
-        if self.pbo or self.remote:
+        if self.remote or self.pbo:
             self.slice = None
         else:
             self.slice = slice
@@ -219,8 +220,7 @@ class VecWrapper(object):
         try:
             return self._dat[name].meta
         except KeyError as error:
-            msg = "Variable '{name}' does not exist".format(name=name)
-            raise KeyError(msg)
+            raise KeyError("Variable '%s' does not exist" % name)
 
     def __getitem__(self, name):
         """

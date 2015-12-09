@@ -362,6 +362,8 @@ class Group(System):
             Specifies the factory object used to create `VecWrapper` and
             `DataTransfer` objects.
         """
+        self._sysdata.comm = self.comm
+
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = {}, {}, {}
         self._local_unknown_sizes = {}
@@ -407,6 +409,7 @@ class Group(System):
         self._p_size_lists = self.params._get_flattened_sizes()
 
         self._owning_ranks = self._get_owning_ranks()
+        self._sysdata.owning_ranks = self._owning_ranks
 
         self._setup_data_transfer(my_params, None)
 
@@ -1345,7 +1348,7 @@ class Group(System):
                             self._impl.create_data_xfer(self.dumat[var_of_interest],
                                                         self.dpmat[var_of_interest],
                                                         srcs, tgts, flats, byobjs,
-                                                        modename[mode])
+                                                        modename[mode], self._sysdata)
 
             # add a full scatter for the current direction
             self._data_xfer[('', modename[mode], var_of_interest)] = \
@@ -1353,7 +1356,7 @@ class Group(System):
                                             self.dpmat[var_of_interest],
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
-                                            modename[mode])
+                                            modename[mode], self._sysdata)
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
@@ -1392,24 +1395,28 @@ class Group(System):
         rank where the variable is local.
 
         """
-        ranks = {}
-
-        local_vars = [k for k, acc in iteritems(self.unknowns._dat)
-                              if not acc.remote]
-        local_vars.extend(k for k, acc in iteritems(self.params._dat)
-                                   if not acc.remote)
-
         if MPI:
+            ranks = {}
+            local_vars = [k for k, acc in iteritems(self.unknowns._dat)
+                                  if not acc.remote]
+            local_vars.extend(k for k, acc in iteritems(self.params._dat)
+                                       if not acc.remote)
             if trace:  # pragma: no cover
                 debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
-        else:
-            all_locals = [local_vars]
 
-        for rank, vnames in enumerate(all_locals):
-            for v in vnames:
-                if v not in ranks:
-                    ranks[v] = rank
+            # save all_locals for use later to determine if we can do a
+            # fully local data transfer between two vars
+            self._sysdata.all_locals = [set(lst) for lst in all_locals]
+
+            for rank, vnames in enumerate(all_locals):
+                for v in vnames:
+                    if v not in ranks:
+                        ranks[v] = rank
+        else:
+            self._sysdata.all_locals = [n for n in chain(self.unknowns._dat,
+                                                         self.params._dat)]
+            ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
 
         return ranks
 

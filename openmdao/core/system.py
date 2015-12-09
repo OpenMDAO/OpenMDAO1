@@ -162,7 +162,6 @@ class System(object):
         abs_unames = self._sysdata.to_abs_uname
         abs_pnames = self._sysdata.to_abs_pnames
 
-        mybool = False
         for prom in self._promotes:
             if fnmatch(name, prom):
                 if name in abs_pnames or name in abs_unames:
@@ -1011,7 +1010,7 @@ class System(object):
             prom = to_prom_name[pathname]
 
     def list_connections(self, group_by_comp=True, unconnected=True,
-                         stream=sys.stdout):
+                         var=None, stream=sys.stdout):
         """
         Writes out the list of all connections involving this System or any
         of its children.  The list is of the form:
@@ -1038,65 +1037,57 @@ class System(object):
             component's target.  Default is True.
 
         unconnected : bool, optional
-            If True, include all unconnected params and unknowns as well. Defaults to True
+            If True, include all unconnected params and unknowns as well.
+            Default is True.
+
+        var : None or str, optional
+            If supplied, show only connections to this var.  Wildcards are
+            permitted.
 
         stream : output stream, optional
-            Stream to write the connection info to. Defaults to sys.stdout.
-        """
+            Stream to write the connection info to. Default is sys.stdout.
 
-        def _param_str(pdict, udict, prom, tgt, src):
+        """
+        template = "{0:<{swid}} -> {1}\n"
+        udict = self._probdata.unknowns_dict
+        pdict = self._probdata.params_dict
+        to_prom_name = self._probdata.to_prom_name
+
+        def _param_str(pdict, udict, prom, tgt, src, relname):
+            """returns a string formatted with param name, units, and promoted name"""
             units = pdict[tgt].get('units', '')
             if units:
                 units = '[%s]' % units
             prom_tgt = prom[tgt]
-            if prom_tgt != tgt:
+            if prom_tgt == tgt:
+                prom_tgt = ''
+            else:
                 if src is None or prom_tgt != prom[src]: # explicit connection
                     prom_tgt = "(%s)" % prom_tgt
                 else:
                     prom_tgt = '(*)'
+
+            if relname and tgt.startswith(relname+'.'):
+                tgt = tgt[len(relname):]
+                if prom_tgt.startswith(relname+'.'):
+                    prom_tgt = prom_tgt[len(relname):]
+
             return ' '.join((tgt, prom_tgt, units))
 
-        def _list_conns(self):
-            template = "{0:<{swid}} -> {1}\n"
-
-            to_prom_name = self._probdata.to_prom_name
-            top_params = self._probdata.params_dict
-            top_unknowns = self._probdata.unknowns_dict
-            scope = self.pathname + '.' if self.pathname else ''
-
-            # create a dict with srcs as keys so we can more easily subsort
-            # targets after sorting srcs.
-            by_src = {}
-            for tgt, (src, idx) in iteritems(self.connections):
-                if src.startswith(scope) or tgt.startswith(scope):
-                    by_src.setdefault(src, []).append(_param_str(top_params,
-                                                                 top_unknowns,
-                                                                 to_prom_name,
-                                                                 tgt, src))
-
-            if unconnected:
-                for p in self._params_dict:
-                    if p not in self.connections:
-                        by_src.setdefault('{unconnected}',
-                                          []).append(_param_str(top_params,
-                                                     top_unknowns, to_prom_name,
-                                                     p, None))
-
-                for u in self._unknowns_dict:
-                    if u not in by_src:
-                        by_src[u] = ('{unconnected}',)
-
+        def _write(by_src, relname):
             by_src2 = {}
             for src, tgts in iteritems(by_src):
-                if src[0] == '{':
+                if src[0] == '{':  # {unconnected}
                     prom_src = units = ''
                 else:
-                    units = top_unknowns[src].get('units', '')
+                    units = udict[src].get('units', '')
                     if units:
                         units = '[%s]' % units
                     prom_src = to_prom_name[src]
                     prom_src = '' if prom_src == src else "(%s)" % prom_src
 
+                    if relname and src.startswith(relname+'.'):
+                        src = src[len(relname):]
                 by_src2[' '.join((src, prom_src, units))] = tgts
 
             if by_src2:
@@ -1107,15 +1098,70 @@ class System(object):
                     if i: src = ''
                     stream.write(template.format(src, tgt, swid=src_max_wid))
 
-        if group_by_comp:
+        def _list_var_connections(self, name):
+
+            absnames = set()
+            if name in udict or name in pdict: # name is top level absolute
+                absnames.add(name)
+            else:
+                # loop over all systems from here down and find all matching names
+                for s in self.subsystems(recurse=True, include_self=True):
+                    for n,acc in chain(iteritems(s.unknowns._dat), iteritems(s.params._dat)):
+                        if fnmatch(n, name):
+                            absnames.add(acc.meta['pathname'])
+
+            if not absnames:
+                raise KeyError("Can't find variable '%s'" % name)
+
+            by_src = {}
+            for tgt, (src, idxs) in iteritems(self._probdata.connections):
+                for absname in absnames:
+                    if tgt == absname or src == absname:
+                        by_src.setdefault(src, []).append(_param_str(pdict,
+                                                                     udict,
+                                                                     to_prom_name,
+                                                                     tgt, src,
+                                                                     ''))
+            _write(by_src, None)
+
+        def _list_conns(self, relname):
+            to_prom_name = self._probdata.to_prom_name
+            scope = self.pathname + '.' if self.pathname else ''
+
+            # create a dict with srcs as keys so we can more easily subsort
+            # targets after sorting srcs.
+            by_src = {}
+            for tgt, (src, idx) in iteritems(self.connections):
+                if src.startswith(scope) or tgt.startswith(scope):
+                    by_src.setdefault(src, []).append(_param_str(pdict,
+                                                                 udict,
+                                                                 to_prom_name,
+                                                                 tgt, src,
+                                                                 relname))
+            if unconnected:
+                for p in self._params_dict:
+                    if p not in self.connections:
+                        by_src.setdefault('{unconnected}',
+                                          []).append(_param_str(pdict,
+                                                                udict,
+                                                                to_prom_name,
+                                                                p, None,
+                                                                relname))
+                for u in self._unknowns_dict:
+                    if u not in by_src:
+                        by_src[u] = ('{unconnected}',)
+
+            _write(by_src, relname)
+
+        if var:
+            _list_var_connections(self, var)
+        elif group_by_comp:
             for c in self.components(recurse=True, include_self=True):
                 line = "Connections for %s:" % c.pathname
                 stream.write("\n%s\n%s\n" % (line, '-'*len(line)))
-                c.list_connections(unconnected=unconnected,
-                                   group_by_comp=False,
-                                   stream=stream)
+                _list_conns(c, c.pathname)
         else:
-            _list_conns(self)
+            _list_conns(self, '')
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):

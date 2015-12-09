@@ -634,7 +634,8 @@ class TestProblem(unittest.TestCase):
         # doesn't barf
         prob.root.list_connections(stream=stream)
         prob.root.list_connections(unconnected=False, stream=stream)
-        prob.root.list_connections(group_by_comp=False,stream=stream)
+        prob.root.list_connections(group_by_comp=False, stream=stream)
+        prob.root.G3.C3.list_connections(var='x', stream=stream)
 
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
