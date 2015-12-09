@@ -13,6 +13,7 @@ from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
+from openmdao.core.parallel_doe_group import ParallelDOEGroup
 from openmdao.core.problem import Problem
 from openmdao.core.system import System
 from openmdao.core.driver import Driver
