@@ -37,6 +37,7 @@ from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.recorders.sqlite_recorder import SqliteRecorder
+from openmdao.recorders.inmem_recorder import InMemoryRecorder
 #solvers
 from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel

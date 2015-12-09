@@ -44,14 +44,20 @@ class PredeterminedRunsDriver(Driver):
 
 
     def run(self, problem):
-        """Build a runlist and execute the Problem for each set of generated parameters.        
+        """Build a runlist and execute the Problem for each set of generated
+        parameters.
         """
+        self.iter_count = 0
 
         # For each runlist entry, run the system and record the results
         for run in self.run_list:
+
             for dv_name, dv_val in iteritems(run):
                 self.set_desvar(dv_name, dv_val)
 
             metadata = create_local_meta(None, 'Driver')
+
+            update_local_meta(metadata, (self.iter_count,))
             problem.root.solve_nonlinear(metadata=metadata)
             self.recorders.record_iteration(problem.root, metadata)
+            self.iter_count += 1
