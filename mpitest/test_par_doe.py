@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import time
 import numpy as np
 
 from openmdao.api import IndepVarComp
@@ -31,7 +32,7 @@ class DUT(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much.  Just multiply by 3"""
-        sum([j*j for j in xrange(10000000)])    # dummy delay (busy loop)
+        time.sleep(.5)
         unknowns['y'] = params['c']*params['x']
 
 class ParallelDOETestCase(MPITestCase):
@@ -43,7 +44,7 @@ class ParallelDOETestCase(MPITestCase):
         problem = Problem(impl=impl)
         root = problem.root = ParallelDOEGroup(impl.world_comm().size)
         root.add('indep_var', IndepVarComp('x', val=7.0))
-        root.add('const', IndepVarComp('c', val=3.0, pass_by_obj=False))
+        root.add('const', IndepVarComp('c', val=3.0))
         root.add('dut', DUT())
 
         root.connect('indep_var.x', 'dut.x')

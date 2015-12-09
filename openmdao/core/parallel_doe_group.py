@@ -1,5 +1,6 @@
 """ Defines the base class for a ParallelDOEGroup in OpenMDAO.
-It is used as the top-level system for running parallel DOE sweeps"""
+It is used as the top-level system for running parallel DOE sweeps
+"""
 
 from __future__ import print_function
 

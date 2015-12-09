@@ -188,7 +188,7 @@ class ParallelGroup(Group):
         -------
         list of str
             Names of subsystems listed in their current order, since
-            order is irrelevant in a ParallelSystem.
+            order is irrelevant in a ParallelGroup.
 
         list of str
             This will always be an empty list.
