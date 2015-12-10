@@ -13,6 +13,7 @@ from openmdao.core.component import Component
 from openmdao.core.group import Group
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
+from openmdao.core.parallel_doe_group import ParallelDOEGroup
 from openmdao.core.problem import Problem
 from openmdao.core.system import System
 from openmdao.core.driver import Driver
@@ -36,6 +37,7 @@ from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.recorders.sqlite_recorder import SqliteRecorder
+from openmdao.recorders.inmem_recorder import InMemoryRecorder
 #solvers
 from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
