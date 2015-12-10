@@ -62,6 +62,7 @@ class Group(System):
         self._order_set = False
 
         self._gs_outputs = None
+        self._run_apply = True
 
     def _subsystem(self, name):
         """
@@ -675,6 +676,14 @@ class Group(System):
 
         # transfer data to each subsystem and then apply_nonlinear to it
         for sub in itervalues(self._subsystems):
+
+            # Don't want to double if we don't have to. Only generate
+            # residuals on components that provide useful ones, namely comps
+            # that are targets of severed connections or have implicit
+            # states.
+            if not sub._run_apply:
+                continue
+
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
