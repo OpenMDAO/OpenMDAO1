@@ -12,8 +12,8 @@ class FullFactorialDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Full Factorial method.
     """
 
-    def __init__(self, num_levels=1):
-        super(FullFactorialDriver, self).__init__()
+    def __init__(self, num_levels=1, num_par_doe=1):
+        super(FullFactorialDriver, self).__init__(num_par_doe=num_par_doe)
         self.num_levels = num_levels
 
     def _build_runlist(self):
@@ -25,4 +25,4 @@ class FullFactorialDriver(PredeterminedRunsDriver):
 
         keys = list(value_arrays.keys())
         for combination in itertools.product(*value_arrays.values()):
-            yield dict(moves.zip(keys, combination))
+            yield moves.zip(keys, combination)

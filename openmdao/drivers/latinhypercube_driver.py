@@ -3,7 +3,8 @@ OpenMDAO design-of-experiments Driver implementing the Latin Hypercube and Optim
 """
 
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
-from six import moves, iteritems, itervalues
+from six import iteritems, itervalues
+from six.moves import range, zip
 from random import shuffle, randint, seed
 import numpy as np
 
@@ -12,16 +13,15 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Latin Hypercube method.
     """
 
-    def __init__(self, num_samples=1, seed=None):
-        super(LatinHypercubeDriver, self).__init__()
+    def __init__(self, num_samples=1, seed=None, num_par_doe=1):
+        super(LatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe)
         self.num_samples = num_samples
         self.seed = seed
 
     def _build_runlist(self):
         """Build a runlist based on the Latin Hypercube method."""
         design_vars = self.get_desvar_metadata()
-        design_vars_names = list(design_vars)
-        self.num_design_vars = len(design_vars_names)
+        self.num_design_vars = len(design_vars)
         if self.seed is not None:
             seed(self.seed)
             np.random.seed(self.seed)
@@ -30,20 +30,21 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = dict()
-        for j in range(self.num_design_vars):
-            bounds = design_vars[design_vars_names[j]]
+        buckets = {}
+        for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
-            buckets[design_vars_names[j]] = list()
-            for i in range(self.num_samples):
-                buckets[design_vars_names[j]].append(design_var_buckets[rand_lhc[i, j]])
+            buckets[name] = [design_var_buckets[rand_lhc[i, j]]
+                                for i in range(self.num_samples)]
 
         # Return random values in given buckets
-        for i in moves.xrange(self.num_samples):
-            yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
+        for i in range(self.num_samples):
+            yield ((key, np.random.uniform(bounds[i][0], bounds[i][1]))
+                              for key, bounds in iteritems(buckets))
 
     def _get_lhc(self):
-        """Generates a Latin Hypercube based on the number of samples and the number of design variables."""
+        """Generates a Latin Hypercube based on the number of samples and the
+        number of design variables.
+        """
 
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
         return rand_lhc.astype(int)
@@ -52,11 +53,12 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         """Determines the distribution of samples."""
 
         bucket_walls = np.linspace(low, high, self.num_samples + 1)
-        return list(moves.zip(bucket_walls[0:-1], bucket_walls[1:]))
+        return list(zip(bucket_walls[0:-1], bucket_walls[1:]))
 
 
 class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
-    """Design-of-experiments Driver implementing the Morris-Mitchell method for an Optimized Latin Hypercube.
+    """Design-of-experiments Driver implementing the Morris-Mitchell method for
+    an Optimized Latin Hypercube.
     """
 
     def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
@@ -99,14 +101,16 @@ class _LHC_Individual(object):
         return self.doe.shape
 
     def mmphi(self):
-        """Returns the Morris-Mitchell sampling criterion for this Latin hypercube."""
+        """Returns the Morris-Mitchell sampling criterion for this Latin
+        hypercube.
+        """
 
         if self.phi is None:
-            n, m = self.doe.shape
             distdict = {}
 
             # Calculate the norm between each pair of points in the DOE
             arr = self.doe
+            n, m = arr.shape
             for i in range(1, n):
                 nrm = np.linalg.norm(arr[i] - arr[:i], ord=self.p, axis=1)
                 for j in range(0, i):
@@ -116,10 +120,13 @@ class _LHC_Individual(object):
                     else:
                         distdict[nrmj] = 1
 
-            distinct_d = np.array(list(distdict))
+            size = len(distdict)
 
-            # Mutltiplicity array with a count of how many pairs of points have a given distance
-            J = np.array(list(itervalues(distdict)))
+            distinct_d = np.fromiter(distdict, dtype=float, count=size)
+
+            # Mutltiplicity array with a count of how many pairs of points
+            # have a given distance
+            J = np.fromiter(itervalues(distdict), dtype=int, count=size)
 
             self.phi = sum(J * (distinct_d ** (-self.q))) ** (1.0 / self.q)
 
@@ -168,10 +175,11 @@ class _LHC_Individual(object):
 
 
 def _rand_latin_hypercube(n, k):
-    # Calculates a random Latin hypercube set of n points in k dimensions within [0,n-1]^k hypercube.
+    # Calculates a random Latin hypercube set of n points in k dimensions
+    # within [0,n-1]^k hypercube.
     arr = np.zeros((n, k))
-    row = list(moves.xrange(0, n))
-    for i in moves.xrange(k):
+    row = list(range(0, n))
+    for i in range(k):
         shuffle(row)
         arr[:, i] = row
     return arr

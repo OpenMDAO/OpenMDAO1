@@ -54,13 +54,12 @@ class Driver(object):
         self.dv_conversions = {}
         self.fn_conversions = {}
 
-    def _setup(self, root):
+    def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
         check for errors. Also determines all variables that need to be
         gathered for case recording.
         """
-        self.root = root
-
+        root = self.root
         desvars = OrderedDict()
         objs = OrderedDict()
         cons = OrderedDict()
@@ -142,6 +141,28 @@ class Driver(object):
                 continue
 
             self.fn_conversions[name] = scaler
+
+    def _setup_communicators(self, root, comm):
+        """
+        Assign a communicator to the root `System`.
+
+        Args
+        ----
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the Problem.
+        """
+        self.root = root
+        root._setup_communicators(comm)
+
+    def get_req_procs(self, root):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the
+            min and max processors usable by this `Driver`.
+        """
+        return root.get_req_procs()
 
     def _map_voi_indices(self):
         poi_indices = {}
