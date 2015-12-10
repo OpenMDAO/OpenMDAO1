@@ -11,8 +11,8 @@ class UniformDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Uniform method.
     """
 
-    def __init__(self, num_samples=1):
-        super(UniformDriver, self).__init__()
+    def __init__(self, num_samples=1, num_par_doe=1):
+        super(UniformDriver, self).__init__(num_par_doe=num_par_doe)
         self.num_samples = num_samples
 
     def _build_runlist(self):

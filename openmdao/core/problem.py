@@ -18,7 +18,6 @@ from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
-from openmdao.core.parallel_doe_group import ParallelDOEGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
@@ -848,8 +847,7 @@ class Problem(System):
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if (isinstance(grp, ParallelGroup) or
-                        isinstance(grp, ParallelFDGroup) or
-                        isinstance(grp, ParallelDOEGroup)):
+                        isinstance(grp, ParallelFDGroup)):
                         break
                 else:
                     parr = False

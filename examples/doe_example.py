@@ -6,7 +6,7 @@ from __future__ import print_function
 import numpy as np
 
 from openmdao.api import IndepVarComp
-from openmdao.api import Component, Group, ParallelDOEGroup
+from openmdao.api import Component, Group
 from openmdao.api import Problem
 from openmdao.api import UniformDriver
 from openmdao.api import DumpRecorder
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         from openmdao.api import BasicImpl as impl
 
     problem = Problem(impl=impl)
-    root = problem.root = ParallelDOEGroup(impl.world_comm().size)
+    root = problem.root = Group()
     root.add('indep_var', IndepVarComp('x', val=7.0))
     root.add('const', IndepVarComp('c', val=3.0, pass_by_obj=False))
     root.add('dut', DUT())
@@ -44,7 +44,8 @@ if __name__ == "__main__":
     root.connect('indep_var.x', 'dut.x')
     root.connect('const.c', 'dut.c')
 
-    problem.driver = UniformDriver(num_samples = 10)
+    problem.driver = UniformDriver(num_samples = 10,
+                                   num_par_doe=impl.world_comm().size)
     problem.driver.add_desvar('indep_var.x', low=4410.0,  high=4450.0)
     problem.driver.add_objective('dut.y')
 

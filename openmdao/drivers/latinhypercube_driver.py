@@ -12,8 +12,8 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Latin Hypercube method.
     """
 
-    def __init__(self, num_samples=1, seed=None):
-        super(LatinHypercubeDriver, self).__init__()
+    def __init__(self, num_samples=1, seed=None, num_par_doe=1):
+        super(LatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe)
         self.num_samples = num_samples
         self.seed = seed
 
@@ -40,10 +40,13 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
         # Return random values in given buckets
         for i in moves.xrange(self.num_samples):
-            yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1])) for key, bounds in iteritems(buckets)))
+            yield dict(((key, np.random.uniform(bounds[i][0], bounds[i][1]))
+                              for key, bounds in iteritems(buckets)))
 
     def _get_lhc(self):
-        """Generates a Latin Hypercube based on the number of samples and the number of design variables."""
+        """Generates a Latin Hypercube based on the number of samples and the
+        number of design variables.
+        """
 
         rand_lhc = _rand_latin_hypercube(self.num_samples, self.num_design_vars)
         return rand_lhc.astype(int)
@@ -56,7 +59,8 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
 
 class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
-    """Design-of-experiments Driver implementing the Morris-Mitchell method for an Optimized Latin Hypercube.
+    """Design-of-experiments Driver implementing the Morris-Mitchell method for
+    an Optimized Latin Hypercube.
     """
 
     def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
@@ -99,7 +103,9 @@ class _LHC_Individual(object):
         return self.doe.shape
 
     def mmphi(self):
-        """Returns the Morris-Mitchell sampling criterion for this Latin hypercube."""
+        """Returns the Morris-Mitchell sampling criterion for this Latin
+        hypercube.
+        """
 
         if self.phi is None:
             n, m = self.doe.shape
