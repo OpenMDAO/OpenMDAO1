@@ -13,7 +13,7 @@ class GradFreeDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(GradFreeDriver, self).__init__(*args, **kwargs)
 
-    def _setup(self, ):
+    def _setup(self):
         self.supports['gradients'] = False
         super(GradFreeDriver, self)._setup()
 
