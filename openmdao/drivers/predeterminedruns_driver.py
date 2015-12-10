@@ -7,7 +7,6 @@ from six.moves import zip
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.util.array_util import evenly_distrib_idxs
-from six import iteritems
 import os
 
 from openmdao.core.mpi_wrap import MPI
@@ -31,24 +30,6 @@ class PredeterminedRunsDriver(Driver):
         super(PredeterminedRunsDriver, self).__init__()
         self._num_par_doe = num_par_doe
         self._par_doe_id = 0
-
-    def _setup(self):
-        super(PredeterminedRunsDriver, self)._setup()
-        root = self.root
-        if MPI: # pragma: no cover
-            comm = self._full_comm
-            job_list = None
-            if comm.rank == 0:
-                debug('Parallel DOE using %d procs' % (self._num_par_doe,))
-                run_list = list(self._build_runlist()) # need to run iterator
-                run_sizes, run_offsets = evenly_distrib_idxs(self._num_par_doe,
-                                                             len(run_list))
-                job_list = [run_list[o:o+s] for o, s in zip(run_offsets,
-                                                            run_sizes)]
-            self.run_list = comm.scatter(job_list, root=0)
-            debug('Number of DOE jobs: %s' % (len(self.run_list),))
-        else:
-            self.run_list = self._build_runlist()
 
     def _setup_communicators(self, root, comm):
         """
@@ -114,14 +95,16 @@ class PredeterminedRunsDriver(Driver):
         self.iter_count = 0
 
         # For each runlist entry, run the system and record the results
-        for run in self.run_list:
+        for i, run in enumerate(self._build_runlist()):
+            # if we're doing parallel DOE, only run cases targeted
+            # to this proc
+            if i % self._num_par_doe == self._par_doe_id:
+                for dv_name, dv_val in run:
+                    self.set_desvar(dv_name, dv_val)
 
-            for dv_name, dv_val in iteritems(run):
-                self.set_desvar(dv_name, dv_val)
+                metadata = create_local_meta(None, 'Driver')
 
-            metadata = create_local_meta(None, 'Driver')
-
-            update_local_meta(metadata, (self.iter_count,))
-            problem.root.solve_nonlinear(metadata=metadata)
-            self.recorders.record_iteration(problem.root, metadata)
-            self.iter_count += 1
+                update_local_meta(metadata, (self.iter_count,))
+                problem.root.solve_nonlinear(metadata=metadata)
+                self.recorders.record_iteration(problem.root, metadata)
+                self.iter_count += 1

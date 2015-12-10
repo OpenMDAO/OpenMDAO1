@@ -25,4 +25,4 @@ class FullFactorialDriver(PredeterminedRunsDriver):
 
         keys = list(value_arrays.keys())
         for combination in itertools.product(*value_arrays.values()):
-            yield dict(moves.zip(keys, combination))
+            yield moves.zip(keys, combination)
