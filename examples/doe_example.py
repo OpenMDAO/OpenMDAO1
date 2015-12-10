@@ -44,8 +44,7 @@ if __name__ == "__main__":
     root.connect('indep_var.x', 'dut.x')
     root.connect('const.c', 'dut.c')
 
-    problem.driver = UniformDriver(num_samples = 10,
-                                   num_par_doe=impl.world_comm().size)
+    problem.driver = UniformDriver(num_samples = 10, num_par_doe=5)
     problem.driver.add_desvar('indep_var.x', low=4410.0,  high=4450.0)
     problem.driver.add_objective('dut.y')
 
