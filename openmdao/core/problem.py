@@ -671,7 +671,7 @@ class Problem(System):
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
-        self.driver._setup(self.root)
+        self.driver._setup()
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -848,7 +848,7 @@ class Problem(System):
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if (isinstance(grp, ParallelGroup) or
-                        isinstance(grp, ParallelFDGroup) or 
+                        isinstance(grp, ParallelFDGroup) or
                         isinstance(grp, ParallelDOEGroup)):
                         break
                 else:
@@ -1900,7 +1900,7 @@ class Problem(System):
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.root.get_req_procs()
+        minproc, maxproc = self.driver.get_req_procs(self.root)
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -1915,7 +1915,7 @@ class Problem(System):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(self.comm)
+        self.driver._setup_communicators(self.root, self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

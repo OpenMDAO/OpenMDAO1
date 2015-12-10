@@ -27,8 +27,9 @@ class PredeterminedRunsDriver(Driver):
             raise Exception('PredeterminedRunsDriver is an abstract class')
         super(PredeterminedRunsDriver, self).__init__()
 
-    def _setup(self, root):
-        super(PredeterminedRunsDriver, self)._setup(root)
+    def _setup(self):
+        super(PredeterminedRunsDriver, self)._setup()
+        root = self.root
         if MPI and isinstance(root, ParallelDOEGroup): # pragma: no cover
             comm = root._full_comm
             job_list = None

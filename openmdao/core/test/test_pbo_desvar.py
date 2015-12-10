@@ -13,9 +13,9 @@ class GradFreeDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(GradFreeDriver, self).__init__(*args, **kwargs)
 
-    def _setup(self, root):
+    def _setup(self, ):
         self.supports['gradients'] = False
-        super(GradFreeDriver, self)._setup(root)
+        super(GradFreeDriver, self)._setup()
 
     def run(self, problem):
         self.set_desvar('p1.x', 'var_x')
