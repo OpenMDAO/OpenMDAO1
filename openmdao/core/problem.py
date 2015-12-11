@@ -44,7 +44,7 @@ class _ProbData(object):
         self.top_lin_gs = False
 
 
-class Problem(System):
+class Problem(object):
     """ The Problem is always the top object for running an OpenMDAO
     model.
 
@@ -101,6 +101,8 @@ class Problem(System):
             self.driver = Driver()
         else:
             self.driver = driver
+
+        self.pathname = ''
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -848,7 +850,7 @@ class Problem(System):
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if (isinstance(grp, ParallelGroup) or
-                        isinstance(grp, ParallelFDGroup) or 
+                        isinstance(grp, ParallelFDGroup) or
                         isinstance(grp, ParallelDOEGroup)):
                         break
                 else:
