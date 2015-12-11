@@ -1,5 +1,6 @@
 """ Testing driver LatinHypercubeDriver."""
 
+import os
 import unittest
 from random import seed
 from types import GeneratorType
@@ -7,13 +8,25 @@ from types import GeneratorType
 import numpy as np
 
 from openmdao.api import IndepVarComp, Group, Problem
+from openmdao.core.mpi_wrap import MPI
+from openmdao.test.mpi_util import MPITestCase
+
+if MPI:
+    from openmdao.core.petsc_impl import PetscImpl as impl
+else:
+    from openmdao.api import BasicImpl as impl
+
+from openmdao.test.util import assert_rel_error
+
 from openmdao.test.paraboloid import Paraboloid
 
 from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver, OptimizedLatinHypercubeDriver
 from openmdao.drivers.latinhypercube_driver import _is_latin_hypercube, _rand_latin_hypercube, _mmlhs, _LHC_Individual
 
 
-class TestLatinHypercubeDriver(unittest.TestCase):
+class TestLatinHypercubeDriver(MPITestCase):
+
+    N_PROCS = 4
 
     def setUp(self):
         self.seed()
@@ -25,44 +38,16 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         seed(self.seedval)
         np.random.seed(self.seedval)
 
-    def test_rand_latin_hypercube(self):
-        for n, k in self.hypercube_sizes:
-            test_lhc = _rand_latin_hypercube(n, k)
-
-            self.assertTrue(_is_latin_hypercube(test_lhc))
-
-    def _test_mmlhs_latin(self, n, k):
-        p = 1
-        population = 3
-        generations = 6
-
-        test_lhc = _rand_latin_hypercube(n, k)
-        best_lhc = _LHC_Individual(test_lhc, 1, p)
-        mmphi_initial = best_lhc.mmphi()
-        for q in (1, 2, 5, 10, 20, 50, 100):
-            lhc_start = _LHC_Individual(test_lhc, q, p)
-            lhc_opt = _mmlhs(lhc_start, population, generations)
-            if lhc_opt.mmphi() < best_lhc.mmphi():
-                best_lhc = lhc_opt
-
-        self.assertTrue(
-                best_lhc.mmphi() < mmphi_initial,
-                "'_mmlhs' didn't yield lower phi. Seed was {}".format(self.seedval))
-
-    def test_mmlhs_latin(self):
-        for n, k in self.hypercube_sizes:
-            self._test_mmlhs_latin(n, k)
-
     def test_algorithm_coverage_lhc(self):
 
-        prob = Problem()
+        prob = Problem(impl=impl)
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
 
-        prob.driver = LatinHypercubeDriver(100)
+        prob.driver = LatinHypercubeDriver(100, num_par_doe=self.N_PROCS)
 
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
@@ -70,32 +55,32 @@ class TestLatinHypercubeDriver(unittest.TestCase):
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)
-        runList = prob.driver._build_runlist()
         prob.run()
 
+        runList = prob.driver._distrib_build_runlist()
         # Ensure generated run list is a generator
         self.assertTrue(
                 (type(runList) == GeneratorType),
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xDict = set()
-        yDict = set()
+        xSet = set()
+        ySet = set()
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xDict.add(np.floor(x))
-            yDict.add(np.floor(y))
+            xSet.add(np.floor(x))
+            ySet.add(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
-                countRuns == 100,
+                countRuns == 25,
                 "Incorrect number of runs generated.")
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xDict | yDict:
+        for value in xSet | ySet:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
@@ -104,54 +89,55 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         # Assert a single input in each interval [n,n+1] for n = [-50,49]
         self.assertTrue(
-                len(xDict) == 100,
+                len(xSet) == 25,
                 "One of the intervals wasn't covered.")
         self.assertTrue(
-                len(yDict) == 100,
+                len(ySet) == 25,
                 "One of the intervals wasn't covered.")
 
     def test_algorithm_coverage_olhc(self):
 
-        prob = Problem()
+        prob = Problem(impl=impl)
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['*'])
 
-        prob.driver = OptimizedLatinHypercubeDriver(100, population=5)
+        prob.driver = OptimizedLatinHypercubeDriver(100, population=5,
+                                                    num_par_doe=self.N_PROCS)
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
 
         prob.setup(check=False)
-        runList = prob.driver._build_runlist()
         prob.run()
 
+        runList = prob.driver._distrib_build_runlist()
         # Ensure generated run list is a generator
         self.assertTrue(
                 (type(runList) == GeneratorType),
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xDict = set()
-        yDict = set()
+        xSet = set()
+        ySet = set()
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xDict.add(np.floor(x))
-            yDict.add(np.floor(y))
+            xSet.add(np.floor(x))
+            ySet.add(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
-                countRuns == 100,
+                countRuns == 25,
                 "Incorrect number of runs generated.")
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xDict | yDict:
+        for value in xSet | ySet:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
@@ -160,38 +146,13 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         # Assert a single input in each interval [n,n+1] for n = [-50,49]
         self.assertTrue(
-                len(xDict) == 100,
+                len(xSet) == 25,
                 "One of the intervals wasn't covered.")
         self.assertTrue(
-                len(yDict) == 100,
+                len(ySet) == 25,
                 "One of the intervals wasn't covered.")
 
-    '''
-    def test_seed_works(self):
 
-
-    def test_generate_numpydocstring(self):
-        prob = Problem()
-        prob.root = SellarStateConnection()
-        prob.driver = ScipyOptimizer()
-
-        prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.options['tol'] = 1.0e-8
-        prob.driver.options['disp'] = False
-
-        prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
-                              indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
-
-        prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1', upper=0.0)
-        prob.driver.add_constraint('con2', upper=0.0)
-        prob.driver.options['disp'] = False
-
-        test_string = prob.driver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    options[\'disp\'] :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    options[\'maxiter\'] :  int(200)\n        Maximum number of iterations.\n    options[\'optimizer\'] :  str(\'SLSQP\')\n        Name of optimizer to use\n    options[\'tol\'] :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
-        self.assertEqual(original_string, test_string)
-    '''
-
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == '__main__':
+    from openmdao.test.mpi_util import mpirun_tests
+    mpirun_tests()

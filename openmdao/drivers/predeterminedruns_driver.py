@@ -94,17 +94,32 @@ class PredeterminedRunsDriver(Driver):
         """
         self.iter_count = 0
 
+        if MPI and self._num_par_doe > 1:
+            runlist = self._distrib_build_runlist()
+        else:
+            runlist = self._build_runlist()
+
         # For each runlist entry, run the system and record the results
-        for i, run in enumerate(self._build_runlist()):
-            # if we're doing parallel DOE, only run cases targeted
-            # to this proc
+        for run in runlist:
+            for dv_name, dv_val in run:
+                self.set_desvar(dv_name, dv_val)
+
+            metadata = create_local_meta(None, 'Driver')
+
+            update_local_meta(metadata, (self.iter_count,))
+            problem.root.solve_nonlinear(metadata=metadata)
+            self.recorders.record_iteration(problem.root, metadata)
+            self.iter_count += 1
+
+    def _distrib_build_runlist(self):
+        """
+        Returns an iterator over only those cases meant to execute
+        in the current rank as part of a parallel DOE. _build_runlist
+        will be called on all ranks, but only those cases targeted to
+        this rank will run. Override this method
+        (see LatinHypercubeDriver) if your DOE generator needs to
+        create all cases on one rank and scatter them to other ranks.
+        """
+        for i, case in enumerate(self._build_runlist()):
             if i % self._num_par_doe == self._par_doe_id:
-                for dv_name, dv_val in run:
-                    self.set_desvar(dv_name, dv_val)
-
-                metadata = create_local_meta(None, 'Driver')
-
-                update_local_meta(metadata, (self.iter_count,))
-                problem.root.solve_nonlinear(metadata=metadata)
-                self.recorders.record_iteration(problem.root, metadata)
-                self.iter_count += 1
+                yield case

@@ -2,11 +2,20 @@
 OpenMDAO design-of-experiments Driver implementing the Latin Hypercube and Optimized Latin Hypercube methods.
 """
 
+import os
 from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
 from six import iteritems, itervalues
 from six.moves import range, zip
 from random import shuffle, randint, seed
 import numpy as np
+from openmdao.util.array_util import evenly_distrib_idxs
+
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace: # pragma: no cover
+    from openmdao.core.mpi_wrap import debug
+else:
+    def debug(*arg):
+        pass
 
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
@@ -41,6 +50,30 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             yield ((key, np.random.uniform(bounds[i][0], bounds[i][1]))
                               for key, bounds in iteritems(buckets))
 
+    def _distrib_build_runlist(self):
+        """
+        Returns an iterator over only those cases meant to execute
+        in the current rank as part of a parallel DOE. A latin hypercube,
+        unlike some other DOE generators, is created in one rank and then
+        the appropriate cases are scattered to the appropriate ranks.
+        """
+        comm = self._full_comm
+        job_list = None
+        if comm.rank == 0:
+            debug('Parallel DOE using %d procs' % self._num_par_doe)
+            run_list = [list(case) for case in self._build_runlist()] # need to run iterator
+
+            run_sizes, run_offsets = evenly_distrib_idxs(self._num_par_doe,
+                                                         len(run_list))
+            job_list = [run_list[o:o+s] for o, s in zip(run_offsets,
+                                                        run_sizes)]
+
+        run_list = comm.scatter(job_list, root=0)
+        debug('Number of DOE jobs: %s' % len(run_list))
+
+        for case in run_list:
+            yield case
+
     def _get_lhc(self):
         """Generates a Latin Hypercube based on the number of samples and the
         number of design variables.
@@ -51,7 +84,6 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
     def _get_buckets(self, low, high):
         """Determines the distribution of samples."""
-
         bucket_walls = np.linspace(low, high, self.num_samples + 1)
         return list(zip(bucket_walls[0:-1], bucket_walls[1:]))
 
@@ -61,8 +93,9 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
     an Optimized Latin Hypercube.
     """
 
-    def __init__(self, num_samples=1, seed=None, population=20, generations=2, norm_method=1):
-        super(OptimizedLatinHypercubeDriver, self).__init__()
+    def __init__(self, num_samples=1, seed=None, population=20, generations=2,
+                norm_method=1, num_par_doe=1):
+        super(OptimizedLatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe)
         self.qs = [1, 2, 5, 10, 20, 50, 100]  # List of qs to try for Phi_q optimization
         self.num_samples = num_samples
         self.seed = seed
