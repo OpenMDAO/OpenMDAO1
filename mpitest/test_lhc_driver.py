@@ -57,7 +57,13 @@ class TestLatinHypercubeDriver(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        runList = prob.driver._distrib_build_runlist()
+        if MPI:
+            runList = prob.driver._distrib_build_runlist()
+            expected_runs = 25
+        else:
+            runList = prob.driver._build_runlist()
+            expected_runs = 100
+
         # Ensure generated run list is a generator
         self.assertTrue(
                 (type(runList) == GeneratorType),
@@ -75,8 +81,9 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert we had the correct number of runs
         self.assertTrue(
-                countRuns == 25,
-                "Incorrect number of runs generated.")
+                countRuns == expected_runs,
+                "Incorrect number of runs generated. expected %d but got %d" %
+                        (expected_runs, countRuns))
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
@@ -89,10 +96,10 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert a single input in each interval [n,n+1] for n = [-50,49]
         self.assertTrue(
-                len(xSet) == 25,
+                len(xSet) == expected_runs,
                 "One of the intervals wasn't covered.")
         self.assertTrue(
-                len(ySet) == 25,
+                len(ySet) == expected_runs,
                 "One of the intervals wasn't covered.")
 
     def test_algorithm_coverage_olhc(self):
@@ -114,7 +121,13 @@ class TestLatinHypercubeDriver(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        runList = prob.driver._distrib_build_runlist()
+        if MPI:
+            runList = prob.driver._distrib_build_runlist()
+            expected_runs = 25
+        else:
+            runList = prob.driver._build_runlist()
+            expected_runs = 100
+
         # Ensure generated run list is a generator
         self.assertTrue(
                 (type(runList) == GeneratorType),
@@ -132,8 +145,9 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert we had the correct number of runs
         self.assertTrue(
-                countRuns == 25,
-                "Incorrect number of runs generated.")
+                countRuns == expected_runs,
+                "Incorrect number of runs generated. expected %d but got %d" %
+                        (expected_runs, countRuns))
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
@@ -146,10 +160,10 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert a single input in each interval [n,n+1] for n = [-50,49]
         self.assertTrue(
-                len(xSet) == 25,
+                len(xSet) == expected_runs,
                 "One of the intervals wasn't covered.")
         self.assertTrue(
-                len(ySet) == 25,
+                len(ySet) == expected_runs,
                 "One of the intervals wasn't covered.")
 
 
