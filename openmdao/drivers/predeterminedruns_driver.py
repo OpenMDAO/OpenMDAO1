@@ -31,7 +31,7 @@ class PredeterminedRunsDriver(Driver):
         self._num_par_doe = num_par_doe
         self._par_doe_id = 0
 
-    def _setup_communicators(self, root, comm):
+    def _setup_communicators(self, comm):
         """
         Assign a communicator to the root `System`.
 
@@ -40,7 +40,7 @@ class PredeterminedRunsDriver(Driver):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the Problem.
         """
-        self.root = root
+        root = self.root
         if self._num_par_doe < 1:
             raise ValueError("'%s': _num_par_doe must be >= 1 but value is %s." %
                               (self.pathname, self._num_par_doe))
@@ -72,7 +72,7 @@ class PredeterminedRunsDriver(Driver):
 
         root._setup_communicators(comm)
 
-    def get_req_procs(self, root):
+    def get_req_procs(self):
         """
         Returns
         -------
@@ -80,7 +80,7 @@ class PredeterminedRunsDriver(Driver):
             A tuple of the form (min_procs, max_procs), indicating the
             min and max processors usable by this `Driver`.
         """
-        minprocs, maxprocs = root.get_req_procs()
+        minprocs, maxprocs = self.root.get_req_procs()
 
         minprocs *= self._num_par_doe
         if maxprocs is not None:

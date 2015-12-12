@@ -481,6 +481,8 @@ class Problem(object):
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
+        self.driver.root = self.root
+
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
@@ -1900,7 +1902,7 @@ class Problem(object):
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.driver.get_req_procs(self.root)
+        minproc, maxproc = self.driver.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -1915,7 +1917,7 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.driver._setup_communicators(self.root, self.comm)
+        self.driver._setup_communicators(self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
