@@ -10,6 +10,15 @@ import itertools
 
 class FullFactorialDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Full Factorial method.
+
+    Args
+    ----
+    num_levels : int, optional
+        The number of evenly spaced levels between each design variable
+        lower and upper bound. Defaults to 1.
+
+    num_par_doe : int, optional
+        The number of DOE cases to run concurrently.  Defaults to 1.
     """
 
     def __init__(self, num_levels=1, num_par_doe=1):
@@ -21,7 +30,8 @@ class FullFactorialDriver(PredeterminedRunsDriver):
         for name, value in iteritems(self.get_desvar_metadata()):
             low = value['lower']
             high = value['upper']
-            value_arrays[name] = np.linspace(low, high, num=self.num_levels).tolist()
+            value_arrays[name] = np.linspace(low, high,
+                                             num=self.num_levels).tolist()
 
         keys = list(value_arrays.keys())
         for combination in itertools.product(*value_arrays.values()):

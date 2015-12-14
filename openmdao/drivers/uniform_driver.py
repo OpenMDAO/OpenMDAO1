@@ -9,6 +9,14 @@ import numpy as np
 
 class UniformDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Uniform method.
+
+    Args
+    ----
+    num_samples : int, optional
+        The number of samples to run. Defaults to 1.
+
+    num_par_doe : int, optional
+        The number of DOE cases to run concurrently.  Defaults to 1.
     """
 
     def __init__(self, num_samples=1, num_par_doe=1):

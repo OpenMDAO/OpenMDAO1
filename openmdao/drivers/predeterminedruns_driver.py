@@ -22,6 +22,11 @@ class PredeterminedRunsDriver(Driver):
     """
     Baseclass for design-of-experiments Drivers that have pre-determined
     parameter sets.
+
+    Args
+    ----
+    num_par_doe : int, optional
+        The number of DOE cases to run concurrently.  Defaults to 1.
     """
 
     def __init__(self, num_par_doe=1):

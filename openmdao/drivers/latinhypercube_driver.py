@@ -20,6 +20,18 @@ else:
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
     """Design-of-experiments Driver implementing the Latin Hypercube method.
+
+    Args
+    ----
+    num_samples : int, optional
+        The number of samples to run. Defaults to 1.
+
+    seed : int or None, optional
+        Random seed.  Defaults to None.
+        
+    num_par_doe : int, optional
+        The number of DOE cases to run concurrently.  Defaults to 1.
+
     """
 
     def __init__(self, num_samples=1, seed=None, num_par_doe=1):
