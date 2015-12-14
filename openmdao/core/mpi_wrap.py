@@ -52,6 +52,7 @@ def under_mpirun():
     for name in os.environ.keys():
         if name == 'OMPI_COMM_WORLD_RANK' or \
            name.startswith('MPIR_') or \
+           name.startswith('MSMPI_') or \
            name.startswith('MPICH_'):
             return True
     return False
