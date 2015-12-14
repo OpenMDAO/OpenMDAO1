@@ -69,7 +69,7 @@ def _process_card_info(card):
             value[index:] = val
         else:
             val = array(card[2:])
-            value = zeros(index+len(val))
+            value = zeros(index+len(val),dtype=val.dtype)
             value[index:] = val
 
     # Alternate array specification
@@ -172,8 +172,11 @@ class Namelist(object):
         varpath : string
             Variable name being added. For variable trees, include the colon
             between each level."""
-
-        value = self.comp.params[name]
+        # To support loading a model before setup so that we can interact with it.
+        if hasattr(self.comp.params, 'keys'):
+            value = self.comp.params[name]
+        else:
+            value = self.comp._init_params_dict[name]['val']
 
         self.cards[self.currentgroup].append(Card(name, value))
 
@@ -205,10 +208,9 @@ class Namelist(object):
 
         if not skip:
             skip = []
-
-        for name in iterkeys(self.comp._init_params_dict):
-            if name.startswith(varpath):
-                sub_name = name.lstrip(varpath + ':')
+        for name in sorted(iterkeys(self.comp._init_params_dict)):
+            if name.startswith(varpath+':'):
+                sub_name = name[len(varpath+':'):]
                 if sub_name not in skip:
                     self.add_var(name)
 
@@ -241,28 +243,32 @@ class Namelist(object):
 
             for card in self.cards[i]:
 
+                #avoid writing 'xxx:xxx:var'
+                #write 'var' instead
+                card_name = card.name.split(":")[-1]
+
                 if card.is_comment:
                     line = "  %s\n" % (card.value)
 
                 elif isinstance(card.value, bool):
                     fstring = "  %s = " + _boolfmt(card.value) + "\n"
-                    line = fstring % (card.name, card.value)
+                    line = fstring % (card_name, card.value)
 
                 elif isinstance(card.value, int):
                     fstring = "  %s = " + _intfmt(card.value) + "\n"
-                    line = fstring % (card.name, card.value)
+                    line = fstring % (card_name, card.value)
 
                 elif isinstance(card.value, float):
                     fstring = "  %s = " + _floatfmt(card.value) + "\n"
-                    line =  fstring % (card.name, card.value)
+                    line =  fstring % (card_name, card.value)
 
                 elif isinstance(card.value, str):
                     fstring = "  %s = " + _strfmt(card.value) + "\n"
-                    line =  fstring % (card.name, card.value)
+                    line =  fstring % (card_name, card.value)
 
                 # Lists are mainly supported for the Enum Array
                 elif isinstance(card.value, list):
-                    line = "  %s = " % (card.name)
+                    line = "  %s = " % (card_name)
                     sep = ""
                     for val in card.value:
 
@@ -299,7 +305,7 @@ class Namelist(object):
                         continue
 
                     elif len(card.value.shape) == 1:
-                        line = "  %s = " % (card.name)
+                        line = "  %s = " % (card_name)
                         sep = ""
                         for val in card.value:
                             fstring = "%s" + fmt(val)
@@ -311,7 +317,7 @@ class Namelist(object):
 
                         line = "  "
                         for row in range(0, card.value.shape[0]):
-                            line += card.name + "(1," + str(row+1) + ") ="
+                            line += card_name + "(1," + str(row+1) + ") ="
                             for col in range(0, card.value.shape[1]):
                                 val = card.value[row, col]
                                 fstring = " " + fmt(val) + "%s"
@@ -326,7 +332,7 @@ class Namelist(object):
                 else:
                     raise RuntimeError("Error generating input file. Don't"
                                        " know how to handle data in variable"
-                                       " %s in group %s." % (card.name,
+                                       " %s in group %s." % (card_name,
                                                              group_name))
 
                 data.append(line)

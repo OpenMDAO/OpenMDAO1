@@ -33,6 +33,10 @@ class Driver(object):
         self.supports.add_option('two_sided_constraints', True)
         self.supports.add_option('integer_design_vars', True)
 
+        # inheriting Drivers should override this setting and set it to False
+        # if they don't use gradients.
+        self.supports.add_option('gradients', True)
+
         # This driver's options
         self.options = OptionsDictionary()
 
@@ -50,16 +54,20 @@ class Driver(object):
         self.dv_conversions = {}
         self.fn_conversions = {}
 
-    def _setup(self, root):
+    def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
         check for errors. Also determines all variables that need to be
         gathered for case recording.
         """
-        self.root = root
-
+        root = self.root
         desvars = OrderedDict()
         objs = OrderedDict()
         cons = OrderedDict()
+
+        if self.__class__ is Driver:
+            has_gradients = False
+        else:
+            has_gradients = self.supports['gradients']
 
         item_tups = [
             ('Parameter', self._desvars, desvars),
@@ -88,6 +96,16 @@ class Driver(object):
                     raise ValueError("'%s' is a distributed variable and may "
                                      "not be used as a design var, objective, "
                                      "or constraint." % name)
+
+                if has_gradients and rootmeta.get('pass_by_obj'):
+                    if 'optimizer' in self.options:
+                        oname = self.options['optimizer']
+                    else:
+                        oname = self.__class__.__name__
+                    raise RuntimeError("%s '%s' is a 'pass_by_obj' variable "
+                                       "and can't be used with a gradient "
+                                       "based driver of type '%s'." %
+                                       (item_name, name, oname))
 
                 # Size is useful metadata to save
                 if 'indices' in meta:
@@ -123,6 +141,27 @@ class Driver(object):
                 continue
 
             self.fn_conversions[name] = scaler
+
+    def _setup_communicators(self, comm):
+        """
+        Assign a communicator to the root `System`.
+
+        Args
+        ----
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the Problem.
+        """
+        self.root._setup_communicators(comm)
+
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the
+            min and max processors usable by this `Driver`.
+        """
+        return self.root.get_req_procs()
 
     def _map_voi_indices(self):
         poi_indices = {}

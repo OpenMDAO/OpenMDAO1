@@ -1,4 +1,4 @@
-""" Testing optimizer ScipyOptimize."""
+""" Testing desvar indices, param indices, and associated derivatives.."""
 
 import os
 
@@ -311,6 +311,177 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
 
+
+class TestMiscParamIndices(unittest.TestCase):
+
+    def test_param_as_obj_scaler_explicit(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', ExecComp('y = 3.0*x'))
+        root.add('p', IndepVarComp('x', 3.0))
+        root.connect('p.x', 'comp.x')
+
+        prob.driver.add_desvar('p.x', 1.0)
+        prob.driver.add_objective('p.x')
+        prob.driver.add_constraint('comp.y', lower=-100.0)
+
+        prob.setup(check=False)
+
+        # Cheat to make Driver give derivs
+        prob.driver._problem = prob
+
+        prob.run()
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fwd', return_format='dict')
+        self.assertEqual(J['p.x']['p.x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fwd', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='rev', return_format='dict')
+        self.assertEqual(J['p.x']['p.x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='rev', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fd', return_format='dict')
+        self.assertEqual(J['p.x']['p.x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fd', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+    def test_param_as_obj_scaler_implicit(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', ExecComp('y = 3.0*x'), promotes=['x', 'y'])
+        root.add('p', IndepVarComp('x', 3.0), promotes=['x'])
+
+        prob.driver.add_desvar('x', 1.0)
+        prob.driver.add_objective('x')
+        prob.driver.add_constraint('y', lower=-100.0)
+
+        prob.setup(check=False)
+
+        # Cheat to make Driver give derivs
+        prob.driver._problem = prob
+
+        prob.run()
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fwd', return_format='dict')
+        self.assertEqual(J['x']['x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fwd', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='rev', return_format='dict')
+        self.assertEqual(J['x']['x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='rev', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fd', return_format='dict')
+        self.assertEqual(J['x']['x'][0][0], 1.0)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fd', return_format='array')
+        self.assertEqual(J[0][0], 1.0)
+
+    def test_param_as_obj_1darray_explicit(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', ExecComp('y = 3.0*x', x=np.zeros((10, )), y=np.zeros((10, )) ))
+        root.add('p', IndepVarComp('x', np.zeros((10, )) ))
+        root.connect('p.x', 'comp.x')
+
+        prob.driver.add_desvar('p.x', np.ones((8, )), indices=[1, 2, 3, 4, 5, 6, 7, 8])
+        prob.driver.add_objective('p.x', indices=[5, 6, 7])
+        prob.driver.add_constraint('comp.y', lower=-100.0)
+
+        prob.setup(check=False)
+
+        # Cheat to make Driver give derivs
+        prob.driver._problem = prob
+
+        prob.run()
+
+        Jbase = np.zeros((3, 8))
+        Jbase[0, 4] = 1.0
+        Jbase[1, 5] = 1.0
+        Jbase[2, 6] = 1.0
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fwd', return_format='dict')
+        diff = np.linalg.norm(J['p.x']['p.x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fwd', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['p.x']['p.x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='rev', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fd', return_format='dict')
+        diff = np.linalg.norm(J['p.x']['p.x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['p.x'], ['p.x'], mode='fd', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+    def test_param_as_obj_1darray_implicit(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', ExecComp('y = 3.0*x', x=np.zeros((10, )), y=np.zeros((10, )) ),
+                 promotes=['x', 'y'])
+        root.add('p', IndepVarComp('x', np.zeros((10, )) ), promotes=['x'])
+
+        prob.driver.add_desvar('x', np.ones((8, )), indices=[1, 2, 3, 4, 5, 6, 7, 8])
+        prob.driver.add_objective('x', indices=[5, 6, 7])
+        prob.driver.add_constraint('y', lower=-100.0)
+
+        prob.setup(check=False)
+
+        # Cheat to make Driver give derivs
+        prob.driver._problem = prob
+
+        prob.run()
+
+        Jbase = np.zeros((3, 8))
+        Jbase[0, 4] = 1.0
+        Jbase[1, 5] = 1.0
+        Jbase[2, 6] = 1.0
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fwd', return_format='dict')
+        diff = np.linalg.norm(J['x']['x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fwd', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['x']['x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='rev', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fd', return_format='dict')
+        diff = np.linalg.norm(J['x']['x'] - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
+
+        J = prob.driver.calc_gradient(['x'], ['x'], mode='fd', return_format='array')
+        diff = np.linalg.norm(J - Jbase)
+        assert_rel_error(self, diff, 0.0, 1.0e-9)
 
 if __name__ == "__main__":
     unittest.main()

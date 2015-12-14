@@ -55,7 +55,7 @@ class BasicImpl(object):
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
                          src_idxs, tgt_idxs, vec_conns, byobj_conns,
-                         mode):
+                         mode, sysdata):
         """
         Create an object for performing data transfer between source
         and target vectors.
@@ -87,9 +87,14 @@ class BasicImpl(object):
         mode : str
             Either 'fwd' or 'rev', indicating a forward or reverse scatter.
 
+        sysdata : `SysData` object
+            The `SysData` object for the Group that will contain the new
+            `DataTransfer` object.
+
         Returns
         -------
         `DataTransfer`
             A `DataTransfer` object.
         """
-        return DataTransfer(src_idxs, tgt_idxs, vec_conns, byobj_conns, mode)
+        return DataTransfer(src_idxs, tgt_idxs, vec_conns, byobj_conns, mode,
+                            sysdata)

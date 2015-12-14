@@ -63,6 +63,9 @@ class OptionsDictionary(object):
         except KeyError:
             raise KeyError("Option '{}' has not been added".format(name))
 
+    def __contains__(self, name):
+        return name in self._options
+
     def __setitem__(self, name, value):
         if name not in self._options:
             raise KeyError("Option '{}' has not been added".format(name))

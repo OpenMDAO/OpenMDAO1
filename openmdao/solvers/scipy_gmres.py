@@ -11,8 +11,9 @@ from openmdao.solvers.solver_base import LinearSolver
 
 
 class ScipyGMRES(LinearSolver):
-    """ Scipy's GMRES Solver. This is a serial solver, so
-    it should never be used in an MPI setting.
+    """ Scipy's GMRES Solver. This is a serial solver, so it should never be
+    used in an MPI setting. A preconditioner can be specified by placing
+    another linear solver into `self.preconditioner`.
 
     Options
     -------
@@ -26,8 +27,6 @@ class ScipyGMRES(LinearSolver):
     options['mode'] :  str('auto')
         Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse
         mode, or 'auto' to let OpenMDAO determine the best mode.
-    options['precondition'] :  bool(False)
-        Set to True to turn on preconditioning.
     options['restart'] :  int(20)
         Number of iterations between restarts. Larger values increase iteration cost,
         but may be necessary for convergence
@@ -45,8 +44,6 @@ class ScipyGMRES(LinearSolver):
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
                        "let OpenMDAO determine the best mode.")
-        opt.add_option('precondition', False,
-                       desc='Set to True to turn on preconditioning.')
         opt.add_option('restart', 20, lower=0,
                        desc='Number of iterations between restarts. Larger values ' +
                        'increase iteration cost, but may be necessary for convergence')
@@ -59,6 +56,20 @@ class ScipyGMRES(LinearSolver):
         self._norm0 = 0.0
 
         self.print_name = 'GMRES'
+
+        # User can specify another linear solver to use as a preconditioner
+        self.preconditioner = None
+
+    def setup(self, sub):
+        """ Initialize sub solvers.
+
+        Args
+        ----
+        sub: `System`
+            System that owns this solver.
+        """
+        if self.preconditioner:
+            self.preconditioner.setup(sub)
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -97,9 +108,9 @@ class ScipyGMRES(LinearSolver):
                                dtype=float)
 
             # Support a preconditioner
-            if self.options['precondition'] == True:
+            if self.preconditioner:
                 M = LinearOperator((n_edge, n_edge),
-                                   matvec=self.precon,
+                                   matvec=self._precon,
                                    dtype=float)
             else:
                 M = None
@@ -175,9 +186,9 @@ class ScipyGMRES(LinearSolver):
         #print("result", rhs_vec.vec)
         return rhs_vec.vec
 
-    def precon(self, arg):
+    def _precon(self, arg):
         """ GMRES Callback: applies a preconditioner by calling
-        solve_nonlinear on this system's children.
+        solve_linear on this system's children.
 
         Args
         ----
@@ -209,7 +220,8 @@ class ScipyGMRES(LinearSolver):
         drmat = {}
         drmat[voi] = system.drmat[voi]
 
-        system.solve_linear(dumat, drmat, (voi, ), mode=mode, precon=True)
+        system.solve_linear(dumat, drmat, (voi, ), mode=mode,
+                            solver=self.preconditioner)
 
         #print("arg", arg)
         #print("preconditioned arg", precon_rhs)
@@ -233,4 +245,7 @@ class ScipyGMRES(LinearSolver):
                     self._norm0 = 1.0
             self.print_norm(self.print_name, self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
-            self.iter_count += 1
+
+        # The only way to count iterations of gmres is to increment this
+        # every time monitor is called.
+        self.iter_count += 1

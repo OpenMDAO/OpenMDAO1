@@ -62,6 +62,7 @@ class Component(System):
         # keep a list of nondifferentiable vars without user set 'pass_by_obj'
         # metadata for use later in check_setup
         self._pbo_warns = []
+        self._run_apply = False
 
     def _get_initial_val(self, val, shape):
         """ Determines initial value based on starting val and shape."""
@@ -176,6 +177,7 @@ class Component(System):
         args = self._add_variable(name, val, **kwargs)
         args['state'] = True
         self._init_unknowns_dict[name] = args
+        self._run_apply = True
 
     def set_var_indices(self, name, val=_NotSet, shape=None,
                         src_indices=None):

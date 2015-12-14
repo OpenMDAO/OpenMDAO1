@@ -9,7 +9,6 @@ from six.moves import cStringIO
 import warnings
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel, ScipyGMRES
-from openmdao.core.checks import ConnectError
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
@@ -246,7 +245,7 @@ class TestProblem(unittest.TestCase):
         prob.root.add('B', B())
         prob.root.connect('A.y', 'B.x')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected = ("Source 'A.y' cannot be connected to target 'B.x': "
@@ -259,7 +258,7 @@ class TestProblem(unittest.TestCase):
         prob.root.add('B', B())
         prob.root.connect('A.x', 'B.y')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected = ("Source 'A.x' cannot be connected to target 'B.y': "
@@ -272,7 +271,7 @@ class TestProblem(unittest.TestCase):
         prob.root.add('B', B())
         prob.root.connect('A.x', 'A.x')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected = ("Source 'A.x' cannot be connected to target 'A.x': "
@@ -306,9 +305,9 @@ class TestProblem(unittest.TestCase):
                 self.add_param('y', 1.0)
 
         # Type mismatch error message
-        type_err = "Type <type '%s'> of source '%s'" \
+        type_err = "Type <type '%s'> of source %s" \
                    " must be the same as "             \
-                   "type <type '%s'> of target '%s'"
+                   "type <type '%s'> of target %s."
 
         # Type mismatch in explicit connection
         prob = Problem()
@@ -318,10 +317,10 @@ class TestProblem(unittest.TestCase):
 
         prob.root.connect('A.y', 'E.y')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
-        expected = py3fix(type_err % ('numpy.ndarray', 'A.y', 'float', 'E.y'))
+        expected = py3fix(type_err % ('numpy.ndarray', "'A.y'", 'float', "'E.y'"))
         self.assertEqual(str(cm.exception), expected)
 
         # Type mismatch in implicit connection
@@ -330,16 +329,16 @@ class TestProblem(unittest.TestCase):
         prob.root.add('A', A(), promotes=['y'])
         prob.root.add('E', E(), promotes=['y'])
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
-        expected = py3fix(type_err % ('numpy.ndarray', 'y', 'float', 'y'))
+        expected = py3fix(type_err % ('numpy.ndarray', "'A.y' (y)", 'float', "'E.y' (y)"))
         self.assertEqual(str(cm.exception), expected)
 
         # Shape mismatch error message
-        shape_err = "Shape %s of source '%s'" \
+        shape_err = "Shape %s of source %s" \
                     " must be the same as "     \
-                    "shape %s of target '%s'"
+                    "shape %s of target %s."
 
         # Shape mismatch in explicit connection
         prob = Problem()
@@ -349,14 +348,14 @@ class TestProblem(unittest.TestCase):
         prob.root.add('B', B())
         prob.root.connect('A.y', 'B.y')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
 
-        expected = shape_err % ('(2,)', 'A.y', '(3,)', 'B.y')
+        expected = shape_err % ('(2,)', "'A.y'", '(3,)', "'B.y'")
         self.assertEqual(raised_error, expected)
 
         # Shape mismatch in implicit connection
@@ -366,14 +365,14 @@ class TestProblem(unittest.TestCase):
         prob.root.add('A', A(), promotes=['y'])
         prob.root.add('B', B(), promotes=['y'])
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
 
-        expected = shape_err % ('(2,)', 'A.y', '(3,)', 'B.y')
+        expected = shape_err % ('(2,)', "'A.y' (y)", '(3,)', "'B.y' (y)")
         self.assertEqual(raised_error, expected)
 
         # Shape mismatch in explicit connection
@@ -383,14 +382,14 @@ class TestProblem(unittest.TestCase):
         prob.root.add('C', C())
         prob.root.connect('C.y', 'B.y')
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
 
-        expected = shape_err % ('(2,)', 'C.y', '(3,)', 'B.y')
+        expected = shape_err % ('(2,)', "'C.y'", '(3,)', "'B.y'")
         self.assertEqual(raised_error, expected)
 
         # Shape mismatch in implicit connection
@@ -399,14 +398,14 @@ class TestProblem(unittest.TestCase):
         prob.root.add('B', B(), promotes=['y'])
         prob.root.add('C', C(), promotes=['y'])
 
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         raised_error = str(cm.exception)
         raised_error = raised_error.replace('(2L,', '(2,')
         raised_error = raised_error.replace('(3L,', '(3,')
 
-        expected = shape_err % ('(2,)', 'C.y', '(3,)', 'B.y')
+        expected = shape_err % ('(2,)', "'C.y' (y)", '(3,)', "'B.y' (y)")
         self.assertEqual(raised_error, expected)
 
         # Explicit
@@ -474,6 +473,78 @@ class TestProblem(unittest.TestCase):
         content = stream.getvalue()
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
+
+    def test_src_idx_size_gt_src_size(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_state('y', np.zeros((2,)), shape=(2,))
+
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', np.zeros((3,)), shape=(3,))
+
+        # src_indices larger than src
+        prob = Problem(root=Group())
+        prob.root.add("A", A())
+        prob.root.add("B", B())
+        prob.root.connect("A.y", "B.x", src_indices=[1,4,2])
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                    "Size 3 of target indices is larger than size 2 of source 'A.y'.")
+        else:
+            self.fail("Exception expected")
+
+    def test_src_idx_neg(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_output('y', np.zeros((5,)), shape=(5,))
+
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', np.zeros((3,)), shape=(3,))
+
+        # src_indices larger than src
+        prob = Problem(root=Group())
+        prob.root.add("A", A())
+        prob.root.add("B", B())
+        prob.root.connect("A.y", "B.x", src_indices=[0, 1, -1])
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "'B.x' src_indices contains a negative index (-1).")
+        else:
+            self.fail("Exception expected")
+
+    def test_src_idx_gt_src_size(self):
+        class A(Component):
+            def __init__(self):
+                super(A, self).__init__()
+                self.add_output('y', np.zeros((5,)), shape=(5,))
+
+        class B(Component):
+            def __init__(self):
+                super(B, self).__init__()
+                self.add_param('x', np.zeros((3,)), shape=(3,))
+
+        # src_indices larger than src
+        prob = Problem(root=Group())
+        prob.root.add("A", A())
+        prob.root.add("B", B())
+        prob.root.connect("A.y", "B.x", src_indices=[1,4,5])
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "'B.x' src_indices contains an index (5) that exceeds the bounds "
+                             "of source variable 'A.y' of size 5.")
+        else:
+            self.fail("Exception expected")
 
     def test_simplest_run(self):
 
@@ -563,7 +634,35 @@ class TestProblem(unittest.TestCase):
         # doesn't barf
         prob.root.list_connections(stream=stream)
         prob.root.list_connections(unconnected=False, stream=stream)
-        prob.root.list_connections(group_by_comp=False,stream=stream)
+        prob.root.list_connections(group_by_comp=False, stream=stream)
+        prob.root.G3.C3.list_connections(var='x', stream=stream)
+
+    def test_no_vecs(self):
+        prob = Problem(root=ExampleGroup())
+        prob.setup(check=False)
+
+        # test that problem has no unknowns, params, etc.
+        try:
+            prob.unknowns['G3.C4.y']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'unknowns'")
+        else:
+            self.fail("AttributeError expected")
+
+        try:
+            prob.params['G3.C4.x']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'params'")
+        else:
+            self.fail("AttributeError expected")
+
+        try:
+            prob.resids['G3.C4.x']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'resids'")
+        else:
+            self.fail("AttributeError expected")
+
 
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
@@ -617,10 +716,10 @@ class TestProblem(unittest.TestCase):
         root.add('B1', B(), promotes=['x'])
         root.add('C1', C())
         root.connect('B1.y', 'C1.x')
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
         expected = "Shape (2,) of source 'B1.y' must be the same as " \
-                   "shape (3,) of target 'C1.x'"
+                   "shape (3,) of target 'C1.x'."
         self.assertEqual(expected, str(cm.exception))
 
         # Mismatched Scalar to Array Value
@@ -628,11 +727,11 @@ class TestProblem(unittest.TestCase):
         root = prob.root = Group()
         root.add('X', IndepVarComp('x', 0., shape=1), promotes=['x'])
         root.add('B1', B(), promotes=['x'])
-        with self.assertRaises(ConnectError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
-        expected = py3fix("Type <type 'float'> of source 'x' must be the same as "
-                          "type <type 'numpy.ndarray'> of target 'x'")
+        expected = py3fix("Type <type 'float'> of source 'X.x' (x) must be the same as "
+                          "type <type 'numpy.ndarray'> of target 'B1.x' (x).")
         self.assertEqual(expected, str(cm.exception))
 
     def test_mode_auto(self):

@@ -43,7 +43,7 @@ class _ProbData(object):
         self.top_lin_gs = False
 
 
-class Problem(System):
+class Problem(object):
     """ The Problem is always the top object for running an OpenMDAO
     model.
 
@@ -100,6 +100,8 @@ class Problem(System):
             self.driver = Driver()
         else:
             self.driver = driver
+
+        self.pathname = ''
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -479,6 +481,8 @@ class Problem(System):
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
+        self.driver.root = self.root
+
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
@@ -505,6 +509,7 @@ class Problem(System):
         # is an absolute param name that maps to the absolute name of
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
+        self._probdata.connections = connections
 
         # Allow the user to omit the size of a parameter and pull the size
         # and shape from the connection source.
@@ -641,7 +646,16 @@ class Problem(System):
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
             if not s._order_set:
-                s.set_order(s.list_auto_order()[0])
+                order, broken_edges = s.list_auto_order()
+                s.set_order(order)
+
+                # Mark "head" of each broken edge
+                for edge in broken_edges:
+                    cname = edge[1]
+                    head_sys = self.root
+                    for name in cname.split('.'):
+                        head_sys = getattr(head_sys, name)
+                    head_sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs
@@ -660,7 +674,7 @@ class Problem(System):
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
-        self.driver._setup(self.root)
+        self.driver._setup()
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -669,7 +683,6 @@ class Problem(System):
         for sub in self.root.subgroups(recurse=True, include_self=True):
             sub.nl_solver.setup(sub)
             sub.ln_solver.setup(sub)
-            sub.precon.setup(sub)
 
         self._check_solvers()
 
@@ -837,7 +850,8 @@ class Problem(System):
             # Indicate that there are no parallel systems if user is running under MPI
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
-                    if isinstance(grp, ParallelGroup) or isinstance(grp, ParallelFDGroup):
+                    if (isinstance(grp, ParallelGroup) or
+                        isinstance(grp, ParallelFDGroup)):
                         break
                 else:
                     parr = False
@@ -1161,6 +1175,8 @@ class Problem(System):
             cn_scale = {}
 
         abs_params = []
+        fd_unknowns = [var for var in unknown_list if var not in indep_list]
+        pass_unknowns = [var for var in unknown_list if var in indep_list]
         for name in indep_list:
 
             if name in unknowns:
@@ -1174,7 +1190,8 @@ class Problem(System):
             abs_params.append(name)
 
         Jfd = root.fd_jacobian(params, unknowns, root.resids, total_derivs=True,
-                               fd_params=abs_params, fd_unknowns=unknown_list,
+                               fd_params=abs_params, fd_unknowns=fd_unknowns,
+                               pass_unknowns=pass_unknowns,
                                poi_indices=self._poi_indices,
                                qoi_indices=self._qoi_indices)
 
@@ -1885,7 +1902,7 @@ class Problem(System):
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.root.get_req_procs()
+        minproc, maxproc = self.driver.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -1900,7 +1917,7 @@ class Problem(System):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(self.comm)
+        self.driver._setup_communicators(self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
@@ -2006,7 +2023,6 @@ class Problem(System):
         for grp in root.subgroups(recurse=True):
             grp.ln_solver.print_all_convergence()
             grp.nl_solver.print_all_convergence()
-
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -2128,7 +2144,7 @@ def _needs_iteration(comp):
     """Return True if the given component needs an iterative
     solver to converge it.
     """
-    if isinstance(comp, Component) and comp.states:
+    if isinstance(comp, Component) and comp.is_active() and comp.states:
         for klass in comp.__class__.__mro__:
             if klass is Component:
                 break

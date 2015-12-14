@@ -15,6 +15,9 @@ from pyoptsparse import Optimization
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
+# names of optimizers that use gradients
+grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
 
 def _check_imports():
     """ Dynamically remove optimizers we don't have
@@ -40,7 +43,7 @@ class pyOptSparseDriver(Driver):
     ALPSO, CONMIN, FSQP, IPOPT, NLPQLP, NSGA2, PSQP, SLSQP,
     SNOPT, NLPY_AUGLAG, NOMAD.
     Note that some of these are not open source and therefore not included
-    in the pyoptsparse source code. 
+    in the pyoptsparse source code.
 
     pyOptSparseDriver supports the following:
         equality_constraints
@@ -104,6 +107,10 @@ class pyOptSparseDriver(Driver):
         self._problem = None
         self.sparsity = {}
 
+    def _setup(self):
+        self.supports['gradients'] = self.options['optimizer'] in grad_drivers
+        super(pyOptSparseDriver, self)._setup()
+
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
@@ -148,7 +155,7 @@ class pyOptSparseDriver(Driver):
             self.sparsity[name] = self.indep_list
 
         # Calculate and save gradient for any linear constraints.
-        lcons = self.get_constraints(lintype='linear').values()
+        lcons = self.get_constraints(lintype='linear').keys()
         if len(lcons) > 0:
             self.lin_jacs = problem.calc_gradient(indep_list, lcons,
                                                   return_format='dict')
@@ -159,7 +166,8 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(iterkeys(econs))
-        for name in econs:
+
+        for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
             lower = upper = con_meta[name]['equals']
 
@@ -178,7 +186,8 @@ class pyOptSparseDriver(Driver):
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
         self.quantities += list(iterkeys(incons))
-        for name in incons:
+
+        for name in self.get_constraints(ctype='ineq'):
             size = con_meta[name]['size']
 
             # Bounds - double sided is supported
