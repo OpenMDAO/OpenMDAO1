@@ -107,9 +107,9 @@ class pyOptSparseDriver(Driver):
         self._problem = None
         self.sparsity = {}
 
-    def _setup(self, root):
+    def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
-        super(pyOptSparseDriver, self)._setup(root)
+        super(pyOptSparseDriver, self)._setup()
 
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the

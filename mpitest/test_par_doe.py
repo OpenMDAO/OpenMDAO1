@@ -7,13 +7,13 @@ import time
 import numpy as np
 
 from openmdao.api import IndepVarComp
-from openmdao.api import Component, Group, ParallelDOEGroup
+from openmdao.api import Component, Group
 from openmdao.api import Problem
 from openmdao.api import UniformDriver
 from openmdao.api import InMemoryRecorder
 from openmdao.api import NLGaussSeidel
 
-from openmdao.core.mpi_wrap import MPI
+from openmdao.core.mpi_wrap import MPI, MultiProcFailCheck
 from openmdao.test.mpi_util import MPITestCase
 
 if MPI: # pragma: no cover
@@ -42,7 +42,7 @@ class ParallelDOETestCase(MPITestCase):
     def test_doe(self):
 
         problem = Problem(impl=impl)
-        root = problem.root = ParallelDOEGroup(impl.world_comm().size)
+        root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=7.0))
         root.add('const', IndepVarComp('c', val=3.0))
         root.add('dut', DUT())
@@ -51,7 +51,8 @@ class ParallelDOETestCase(MPITestCase):
         root.connect('const.c', 'dut.c')
 
         num_samples = 10
-        problem.driver = UniformDriver(num_samples=num_samples)
+        problem.driver = UniformDriver(num_samples=num_samples,
+                                       num_par_doe=self.N_PROCS)
         problem.driver.add_desvar('indep_var.x', low=4410.0,  high=4450.0)
         problem.driver.add_objective('dut.y')
 

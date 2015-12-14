@@ -18,7 +18,6 @@ from openmdao.core.group import Group
 from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
-from openmdao.core.parallel_doe_group import ParallelDOEGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
@@ -482,6 +481,8 @@ class Problem(object):
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
+        self.driver.root = self.root
+
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
@@ -673,7 +674,7 @@ class Problem(object):
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
-        self.driver._setup(self.root)
+        self.driver._setup()
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -850,8 +851,7 @@ class Problem(object):
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if (isinstance(grp, ParallelGroup) or
-                        isinstance(grp, ParallelFDGroup) or
-                        isinstance(grp, ParallelDOEGroup)):
+                        isinstance(grp, ParallelFDGroup)):
                         break
                 else:
                     parr = False
@@ -1902,7 +1902,7 @@ class Problem(object):
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.root.get_req_procs()
+        minproc, maxproc = self.driver.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -1917,7 +1917,7 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(self.comm)
+        self.driver._setup_communicators(self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
