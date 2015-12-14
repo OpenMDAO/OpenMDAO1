@@ -142,7 +142,7 @@ class Driver(object):
 
             self.fn_conversions[name] = scaler
 
-    def _setup_communicators(self, root, comm):
+    def _setup_communicators(self, comm):
         """
         Assign a communicator to the root `System`.
 
@@ -151,10 +151,9 @@ class Driver(object):
         comm : an MPI communicator (real or fake)
             The communicator being offered by the Problem.
         """
-        self.root = root
-        root._setup_communicators(comm)
+        self.root._setup_communicators(comm)
 
-    def get_req_procs(self, root):
+    def get_req_procs(self):
         """
         Returns
         -------
@@ -162,7 +161,7 @@ class Driver(object):
             A tuple of the form (min_procs, max_procs), indicating the
             min and max processors usable by this `Driver`.
         """
-        return root.get_req_procs()
+        return self.root.get_req_procs()
 
     def _map_voi_indices(self):
         poi_indices = {}
