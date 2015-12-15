@@ -6,6 +6,8 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
+import sys
+
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -307,15 +309,15 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if lower is None:
-            lower = -1e99
-        elif isinstance(lower, np.ndarray):
+        if isinstance(lower, np.ndarray):
             lower = lower.flatten()
+        elif lower is None or lower == -float('inf'):
+            lower = sys.float_info.min
 
-        if upper is None:
-            upper = 1e99
-        elif isinstance(upper, np.ndarray):
+        if isinstance(upper, np.ndarray):
             upper = upper.flatten()
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
