@@ -18,6 +18,8 @@ class BaseRecorder(object):
         self.options.add_option('record_unknowns', True)
         self.options.add_option('record_params', False)
         self.options.add_option('record_resids', False)
+        self.options.add_option('record_derivs', False,
+                                desc='Set to True to record derivatives at the driver level')
         self.options.add_option('includes', ['*'],
                                 desc='Patterns for variables to include in recording')
         self.options.add_option('excludes', [],
@@ -119,6 +121,16 @@ class BaseRecorder(object):
         ----
         group : `System`
             `System` containing vectors
+        """
+        raise NotImplementedError()
+
+    def record_derivatives(self, derivs):
+        """Writes the metadata of the given group
+
+        Args
+        ----
+        derivs : Dict
+            Dictionary containing derivatives
         """
         raise NotImplementedError()
 
