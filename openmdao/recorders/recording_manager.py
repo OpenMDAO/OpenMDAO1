@@ -1,6 +1,10 @@
+""" RecordingManager class definition. """
+
 import itertools
 import time
+
 from openmdao.core.mpi_wrap import MPI
+
 
 class RecordingManager(object):
     def __init__(self, *args, **kargs):
@@ -88,15 +92,15 @@ class RecordingManager(object):
                 self._vars_to_record['rnames'].update(rnames)
 
     def record_iteration(self, root, metadata):
-        '''
-        Gathers variables for non-parallel case recorders and
-        calls record for all recorders
+        """ Gathers variables for non-parallel case recorders and calls
+        record for all recorders.
 
         Args
         ----
-        metadata: `dict`
-        Metadata for iteration coordinate
-        '''
+        metadata : dict
+            Metadata for iteration coordinate
+        """
+
         metadata['timestamp'] = time.time()
         params = root.params
         unknowns = root.unknowns
@@ -116,3 +120,26 @@ class RecordingManager(object):
         for recorder in self._recorders:
             if recorder._parallel or self.rank == 0:
                 recorder.record_iteration(params, unknowns, resids, metadata)
+
+    def record_derivatives(self, derivs, metadata):
+        """" Records derivatives if requested.
+
+        Args
+        ----
+        derivs : dict
+            Dictionary containing derivatives
+        metadata : `dict`
+            Metadata for iteration coordinate
+        """
+
+        metadata['timestamp'] = time.time()
+
+        # If the recorder does not support parallel recording
+        # we need to make sure we only record on rank 0.
+        for recorder in self._recorders:
+
+            if recorder.options['record_derivs'] is False:
+                continue
+
+            if recorder._parallel or self.rank == 0:
+                recorder.record_derivatives(self, derivs, metadata)
