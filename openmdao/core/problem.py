@@ -1789,9 +1789,11 @@ class Problem(object):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        abs_indep_list = self.root._get_fd_params()
-        param_srcs = [self.root.connections[p] for p in abs_indep_list]
-        unknown_list = self.root._get_fd_unknowns()
+        root = self.root
+        abs_indep_list = root._get_fd_params()
+        param_srcs = [root.connections[p] for p in abs_indep_list \
+                      if not root.params.metadata(p).get('pass_by_obj')]
+        unknown_list = root._get_fd_unknowns()
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.

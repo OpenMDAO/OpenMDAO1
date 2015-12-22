@@ -314,5 +314,8 @@ class TestPBODesvar(unittest.TestCase):
         data = prob.check_partial_derivatives(out_stream=None)
         self.assertEqual(data['comp'][('z', 'x')]['J_fwd'][0][0], 3.0)
 
+        data = prob.check_total_derivatives(out_stream=None)
+        self.assertEqual(data[('z', 'x')]['J_fwd'][0][0], 3.0)
+
 if __name__ == "__main__":
     unittest.main()
