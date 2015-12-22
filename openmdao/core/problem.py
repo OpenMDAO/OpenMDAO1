@@ -1657,20 +1657,24 @@ class Problem(object):
             dparams = comp.dpmat[voi]
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
+            states = comp.states
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 continue
+
+            # Work with all params that are not pbo.
+            param_list = [item for item in dparams if not \
+                          dparams.metadata(item).get('pass_by_obj')]
+            param_list.extend(states)
 
             if out_stream is not None:
                 out_stream.write('-'*(len(cname)+15) + '\n')
                 out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
-            states = comp.states
-
             # Create all our keys and allocate Jacs
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1716,13 +1720,13 @@ class Problem(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                    for p_name in chain(dparams, states):
+                    for p_name in param_list:
 
                         dinputs = dunknowns if p_name in states else dparams
                         jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
