@@ -129,8 +129,11 @@ class BaseRecorder(object):
 
         Args
         ----
-        derivs : Dict
+        derivs : dict
             Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         raise NotImplementedError()
 
