@@ -33,7 +33,7 @@ class CsvRecorder(BaseRecorder):
     Args
     ----
     out : stream
-        Output stream for file name to write the csv file.
+        Output stream or file name to write the csv file.
 
     Options
     -------
