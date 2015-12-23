@@ -11,7 +11,7 @@ from six import StringIO, iteritems
 
 import numpy as np
 
-from openmdao.api import IndepVarComp, Group, ScipyOptimizer, Problem, pyOptSparseDriver
+from openmdao.api import IndepVarComp, Group, ScipyOptimizer, Problem
 from openmdao.recorders.dump_recorder import DumpRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
@@ -19,6 +19,25 @@ from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
+
+# check that pyoptsparse is installed
+# if it is, try to use SLSQP
+OPT = None
+OPTIMIZER = None
+
+try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SLSQP')
+        OPTIMIZER = 'SLSQP'
+    except:
+        pass
+except:
+    pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
 
 def run_problem(problem):
     t0 = time.time()
@@ -522,6 +541,13 @@ class TestDumpRecorder(unittest.TestCase):
         self.assertMetadataRecorded(None)
 
     def test_root_derivs_dict(self):
+
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 

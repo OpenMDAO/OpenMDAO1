@@ -5,9 +5,28 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Problem, InMemoryRecorder, pyOptSparseDriver, ScipyOptimizer
+from openmdao.api import Problem, InMemoryRecorder, ScipyOptimizer
 from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
+
+# check that pyoptsparse is installed
+# if it is, try to use SLSQP
+OPT = None
+OPTIMIZER = None
+
+try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SLSQP')
+        OPTIMIZER = 'SLSQP'
+    except:
+        pass
+except:
+    pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
 
 class TestInMemoryRecorder(unittest.TestCase):
 
@@ -15,6 +34,13 @@ class TestInMemoryRecorder(unittest.TestCase):
         self.recorder = InMemoryRecorder()
 
     def test_root_derivs_dict(self):
+
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 
