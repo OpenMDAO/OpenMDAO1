@@ -111,7 +111,7 @@ class BracketTestComponent(Component):
         # states
         self.add_state('phi', 0.)
 
-    def solve_nonlinear(self): 
+    def solve_nonlinear(self, p, u, r): 
         pass
 
     def apply_nonlinear(self, p, u, r):

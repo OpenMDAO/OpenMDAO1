@@ -60,10 +60,13 @@ class DirectSolver(ScipyGMRES):
             ident = np.eye(n_edge)
 
             partials = np.empty((n_edge, n_edge))
+            print rhs
 
             for i in range(n_edge):
                 partials[:, i] = self.mult(ident[:, i])
+                print "test", self.mult(ident[:, i])
 
+            print "foobar", partials
             deriv = np.linalg.solve(partials, rhs)
 
             self.system = None

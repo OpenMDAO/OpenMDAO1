@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import brentq
 
 from openmdao.solvers.solver_base import NonLinearSolver
+from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
 class Brent(NonLinearSolver):
@@ -74,12 +75,15 @@ class Brent(NonLinearSolver):
         
     def _eval(self, x, params, unknowns, resids):
         """Callback function for evaluating f(x)"""
+
         unknowns[self.s_var_name] = x
+        self.sys.children_solve_nonlinear(self.local_meta)
         self.sys.apply_nonlinear(params, unknowns, resids)
         return resids[self.s_var_name]
 
     def solve(self, params, unknowns, resids, system, metadata=None): 
         self.sys = system
+        self.local_meta = create_local_meta(metadata, system.pathname)
 
         if self.var_lower_bound is not None: 
             lower = params[self.var_lower_bound]
