@@ -10,7 +10,8 @@ from six import StringIO
 from openmdao.util.options import OptionsDictionary
 
 class BaseRecorder(object):
-    """ Base class for all case recorders. """
+    """ This is a base class for all case recorders and is not a functioning
+    case recorder on its own. """
 
     def __init__(self):
         self.options = OptionsDictionary()
@@ -94,6 +95,16 @@ class BaseRecorder(object):
 
         return params, unknowns, resids
 
+    def record_metadata(self, group):
+        """Writes the metadata of the given group
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors
+        """
+        raise NotImplementedError()
+
     def record_iteration(self, params, unknowns, resids, metadata):
         """
         Writes the provided data.
@@ -114,17 +125,7 @@ class BaseRecorder(object):
         """
         raise NotImplementedError()
 
-    def record_metadata(self, group):
-        """Writes the metadata of the given group
-
-        Args
-        ----
-        group : `System`
-            `System` containing vectors
-        """
-        raise NotImplementedError()
-
-    def record_derivatives(self, derivs):
+    def record_derivatives(self, derivs, metadata):
         """Writes the metadata of the given group
 
         Args
