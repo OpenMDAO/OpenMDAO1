@@ -113,13 +113,6 @@ class CsvRecorder(BaseRecorder):
             self.writer.writerow(header)
             self._wrote_header = True
 
-        def serialize(val):
-            """ Turn every piece of data into a string; arrays are comma
-            separated."""
-            if isinstance(val, numpy.ndarray):
-                return ",".join(map(str, val))
-            return str(val)
-
         row = []
         if self.options['record_params']:
             row.extend((serialize(value) for value in params.values()))
