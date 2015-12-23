@@ -43,7 +43,7 @@ class _ProbData(object):
         self.top_lin_gs = False
 
 
-class Problem(System):
+class Problem(object):
     """ The Problem is always the top object for running an OpenMDAO
     model.
 
@@ -100,6 +100,8 @@ class Problem(System):
             self.driver = Driver()
         else:
             self.driver = driver
+
+        self.pathname = ''
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -479,6 +481,8 @@ class Problem(System):
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
+        self.driver.root = self.root
+
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
@@ -505,6 +509,7 @@ class Problem(System):
         # is an absolute param name that maps to the absolute name of
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
+        self._probdata.connections = connections
 
         # Allow the user to omit the size of a parameter and pull the size
         # and shape from the connection source.
@@ -641,7 +646,16 @@ class Problem(System):
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
             if not s._order_set:
-                s.set_order(s.list_auto_order()[0])
+                order, broken_edges = s.list_auto_order()
+                s.set_order(order)
+
+                # Mark "head" of each broken edge
+                for edge in broken_edges:
+                    cname = edge[1]
+                    head_sys = self.root
+                    for name in cname.split('.'):
+                        head_sys = getattr(head_sys, name)
+                    head_sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs
@@ -660,7 +674,7 @@ class Problem(System):
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
-        self.driver._setup(self.root)
+        self.driver._setup()
 
         # get map of vars to VOI indices
         self._poi_indices, self._qoi_indices = self.driver._map_voi_indices()
@@ -836,7 +850,8 @@ class Problem(System):
             # Indicate that there are no parallel systems if user is running under MPI
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
-                    if isinstance(grp, ParallelGroup) or isinstance(grp, ParallelFDGroup):
+                    if (isinstance(grp, ParallelGroup) or
+                        isinstance(grp, ParallelFDGroup)):
                         break
                 else:
                     parr = False
@@ -1642,20 +1657,24 @@ class Problem(System):
             dparams = comp.dpmat[voi]
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
+            states = comp.states
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 continue
+
+            # Work with all params that are not pbo.
+            param_list = [item for item in dparams if not \
+                          dparams.metadata(item).get('pass_by_obj')]
+            param_list.extend(states)
 
             if out_stream is not None:
                 out_stream.write('-'*(len(cname)+15) + '\n')
                 out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
-            states = comp.states
-
             # Create all our keys and allocate Jacs
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1701,13 +1720,13 @@ class Problem(System):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                    for p_name in chain(dparams, states):
+                    for p_name in param_list:
 
                         dinputs = dunknowns if p_name in states else dparams
                         jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1770,9 +1789,11 @@ class Problem(System):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        abs_indep_list = self.root._get_fd_params()
-        param_srcs = [self.root.connections[p] for p in abs_indep_list]
-        unknown_list = self.root._get_fd_unknowns()
+        root = self.root
+        abs_indep_list = root._get_fd_params()
+        param_srcs = [root.connections[p] for p in abs_indep_list \
+                      if not root.params.metadata(p).get('pass_by_obj')]
+        unknown_list = root._get_fd_unknowns()
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
@@ -1887,7 +1908,7 @@ class Problem(System):
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.root.get_req_procs()
+        minproc, maxproc = self.driver.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -1902,7 +1923,7 @@ class Problem(System):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.root._setup_communicators(self.comm)
+        self.driver._setup_communicators(self.comm)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
@@ -2008,7 +2029,6 @@ class Problem(System):
         for grp in root.subgroups(recurse=True):
             grp.ln_solver.print_all_convergence()
             grp.nl_solver.print_all_convergence()
-
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -2130,7 +2150,7 @@ def _needs_iteration(comp):
     """Return True if the given component needs an iterative
     solver to converge it.
     """
-    if isinstance(comp, Component) and comp.states:
+    if isinstance(comp, Component) and comp.is_active() and comp.states:
         for klass in comp.__class__.__mro__:
             if klass is Component:
                 break

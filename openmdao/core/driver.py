@@ -6,6 +6,8 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
+import sys
+
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -54,13 +56,12 @@ class Driver(object):
         self.dv_conversions = {}
         self.fn_conversions = {}
 
-    def _setup(self, root):
+    def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
         check for errors. Also determines all variables that need to be
         gathered for case recording.
         """
-        self.root = root
-
+        root = self.root
         desvars = OrderedDict()
         objs = OrderedDict()
         cons = OrderedDict()
@@ -142,6 +143,27 @@ class Driver(object):
                 continue
 
             self.fn_conversions[name] = scaler
+
+    def _setup_communicators(self, comm):
+        """
+        Assign a communicator to the root `System`.
+
+        Args
+        ----
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the Problem.
+        """
+        self.root._setup_communicators(comm)
+
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the
+            min and max processors usable by this `Driver`.
+        """
+        return self.root.get_req_procs()
 
     def _map_voi_indices(self):
         poi_indices = {}
@@ -287,15 +309,15 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if lower is None:
-            lower = -1e99
-        elif isinstance(lower, np.ndarray):
+        if isinstance(lower, np.ndarray):
             lower = lower.flatten()
+        elif lower is None or lower == -float('inf'):
+            lower = sys.float_info.min
 
-        if upper is None:
-            upper = 1e99
-        elif isinstance(upper, np.ndarray):
+        if isinstance(upper, np.ndarray):
             upper = upper.flatten()
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()

@@ -28,13 +28,19 @@ class DataTransfer(object):
         Mapping of 'pass by object' variables to the source variables that
         they are connected to.
 
+    sysdata : `SysData` object
+        The `SysData` object for the Group that will contain this
+        `DataTransfer` object.
+
     mode : str
         Either 'fwd' or 'rev', indicating a forward or reverse scatter.
     """
 
-    def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode):
+    def __init__(self, src_idxs, tgt_idxs, vec_conns, byobj_conns, mode,
+                 sysdata):
         self.vec_conns = vec_conns
         self.byobj_conns = byobj_conns
+        self.sysdata = sysdata
 
         fwd = mode == 'fwd'
 

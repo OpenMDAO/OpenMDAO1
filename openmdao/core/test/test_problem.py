@@ -634,7 +634,35 @@ class TestProblem(unittest.TestCase):
         # doesn't barf
         prob.root.list_connections(stream=stream)
         prob.root.list_connections(unconnected=False, stream=stream)
-        prob.root.list_connections(group_by_comp=False,stream=stream)
+        prob.root.list_connections(group_by_comp=False, stream=stream)
+        prob.root.G3.C3.list_connections(var='x', stream=stream)
+
+    def test_no_vecs(self):
+        prob = Problem(root=ExampleGroup())
+        prob.setup(check=False)
+
+        # test that problem has no unknowns, params, etc.
+        try:
+            prob.unknowns['G3.C4.y']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'unknowns'")
+        else:
+            self.fail("AttributeError expected")
+
+        try:
+            prob.params['G3.C4.x']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'params'")
+        else:
+            self.fail("AttributeError expected")
+
+        try:
+            prob.resids['G3.C4.x']
+        except AttributeError as err:
+            self.assertEqual(str(err), "'Problem' object has no attribute 'resids'")
+        else:
+            self.fail("AttributeError expected")
+
 
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())

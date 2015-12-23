@@ -69,7 +69,7 @@ def _process_card_info(card):
             value[index:] = val
         else:
             val = array(card[2:])
-            value = zeros(index+len(val))
+            value = zeros(index+len(val),dtype=val.dtype)
             value[index:] = val
 
     # Alternate array specification

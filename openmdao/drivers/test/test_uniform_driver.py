@@ -30,7 +30,7 @@ class TestUniformDriver(unittest.TestCase):
         prob.setup(check=False)
         runList = prob.driver._build_runlist()
         prob.run()
-        
+
         # Assert that the runList generated is of Generator Type
         self.assertTrue((type(runList) == GeneratorType),
                         "_build_runlist did not return a generator.")
@@ -43,6 +43,7 @@ class TestUniformDriver(unittest.TestCase):
         #assert that values are in range
         inRange= True
         for value in cases:
+            value = dict(value)
             if not (-10< value['x'] < 10 and -10 < value['y'] <10):
                 inRange = False
 
@@ -50,4 +51,3 @@ class TestUniformDriver(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

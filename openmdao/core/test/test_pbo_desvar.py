@@ -1,5 +1,7 @@
+""" Tests pass_by_obj variables declared as design variables for non-gradient drivers."""
 
 import unittest
+
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer
 from openmdao.util.record_util import create_local_meta, update_local_meta
@@ -9,19 +11,21 @@ try:
 except ImportError:
     pyOptSparseDriver = None
 
+
 class GradFreeDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(GradFreeDriver, self).__init__(*args, **kwargs)
 
-    def _setup(self, root):
+    def _setup(self):
         self.supports['gradients'] = False
-        super(GradFreeDriver, self)._setup(root)
+        super(GradFreeDriver, self)._setup()
 
     def run(self, problem):
         self.set_desvar('p1.x', 'var_x')
         self.set_desvar('p2.y', 123.0)
         metadata = create_local_meta(None, 'Driver')
         problem.root.solve_nonlinear(metadata=metadata)
+
 
 class GradDriver(Driver):
     def __init__(self, *args, **kwargs):
@@ -65,6 +69,7 @@ class PassByObjParaboloid(Component):
         J['f_xy', 'x'] = 2.0*x - 6.0 + y
         J['f_xy', 'y'] = 2.0*y + 8.0 + x
         return J
+
 
 class PBOobjective(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -278,6 +283,39 @@ class TestPBODesvar(unittest.TestCase):
         top.driver.add_objective('p.f_xy')
 
         top.setup(check=False)
+
+    def test_check_derivs(self):
+
+        class Comp(Component):
+            def __init__(self):
+                super(Comp, self).__init__()
+                self.add_param('x', val=0.0)
+                self.add_param('y', val=3, pass_by_obj=True)
+                self.add_output('z', val=0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['z'] = params['y']*params['x']
+
+            def linearize(self, params, unknowns, resids):
+                J = {}
+                J['z', 'x'] = params['y']
+                return J
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', Comp(), promotes=['*'])
+        prob.root.add('p1', IndepVarComp('x', 0.0), promotes=['x'])
+        prob.root.add('p2', IndepVarComp('y', 3, pass_by_obj=True), promotes=['y'])
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+        self.assertEqual(data['comp'][('z', 'x')]['J_fwd'][0][0], 3.0)
+
+        data = prob.check_total_derivatives(out_stream=None)
+        self.assertEqual(data[('z', 'x')]['J_fwd'][0][0], 3.0)
 
 if __name__ == "__main__":
     unittest.main()
