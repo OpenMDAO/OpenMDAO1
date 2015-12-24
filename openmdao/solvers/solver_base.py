@@ -29,6 +29,10 @@ class SolverBase(object):
         """
         pass
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.recorders.close()
+
     def print_norm(self, solver_string, pathname, iteration, res, res0,
                    msg=None, indent=0, solver='NL'):
         """ Prints out the norm of the residual in a neat readable format.

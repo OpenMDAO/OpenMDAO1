@@ -695,6 +695,11 @@ class Problem(object):
 
         return {}
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.driver.cleanup()
+        self.root.cleanup()
+
     def _check_solvers(self):
         """
         Raise an exception if we detect a LinearGaussSeidel solver and that

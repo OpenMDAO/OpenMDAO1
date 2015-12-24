@@ -129,7 +129,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -155,7 +155,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -184,7 +184,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1,)]
         expected_params = [
@@ -210,7 +210,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -263,7 +263,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1,)]
 
@@ -291,7 +291,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1,)]
 
@@ -315,7 +315,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1,), "root", (1,)]
 
@@ -366,7 +366,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -391,7 +391,7 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -439,7 +439,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -473,7 +473,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -488,7 +488,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         self.assertMetadataRecorded(None)
 
@@ -498,7 +498,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -512,7 +512,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         self.assertMetadataRecorded(None)
 
@@ -522,7 +522,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -536,7 +536,7 @@ class TestDumpRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # close recorders
 
         self.assertMetadataRecorded(None)
 
@@ -572,7 +572,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         sout = open(self.filename)
         lines = sout.readlines()
@@ -610,7 +610,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         sout = open(self.filename)
         lines = sout.readlines()

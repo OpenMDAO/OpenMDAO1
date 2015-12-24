@@ -165,6 +165,10 @@ class Driver(object):
         """
         return self.root.get_req_procs()
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.recorders.close()
+
     def _map_voi_indices(self):
         poi_indices = {}
         qoi_indices = {}

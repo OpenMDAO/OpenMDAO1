@@ -118,7 +118,7 @@ class TestSqliteRecorder(MPITestCase):
         prob.setup(check=False)
 
         t0, t1 = run(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, )]
 
@@ -168,7 +168,7 @@ class TestSqliteRecorder(MPITestCase):
         prob.setup(check=False)
 
         t0, t1 = run(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, )]
 
@@ -215,7 +215,7 @@ class TestSqliteRecorder(MPITestCase):
         prob.setup(check=False)
 
         t0, t1 = run(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, )]
 
@@ -254,7 +254,7 @@ class TestSqliteRecorder(MPITestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, ), "root", (1,)]
 
@@ -300,7 +300,7 @@ class TestSqliteRecorder(MPITestCase):
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
 
-        self.recorder.close()
+        prob.cleanup()
 
         expected = (
             list(prob.root.params.iteritems()),
@@ -329,7 +329,7 @@ class TestSqliteRecorder(MPITestCase):
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
 
-        self.recorder.close()
+        prob.cleanup()
 
         self.assertMetadataRecorded(None)
 

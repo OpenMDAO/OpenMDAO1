@@ -76,6 +76,11 @@ class RecordingManager(object):
                 self._vars_to_record['unames'].update(unames)
                 self._vars_to_record['rnames'].update(rnames)
 
+    def close(self):
+        """ Close all recorders. """
+        for recorder in self._recorders:
+            recorder.close()
+
     def record_metadata(self, root):
         """ Record metadata for all variables of interest.
 
