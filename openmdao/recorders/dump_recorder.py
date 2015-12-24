@@ -18,6 +18,28 @@ class DumpRecorder(BaseRecorder):
     MPI, the dumprecorder writes to a separate file for each rank, with the
     rank number appended to each filename. In this case, only variables that
     exist on all processes can be printed.
+
+    Args
+    ----
+    out : stream
+        Output stream or file name to write the data.
+
+    Options
+    -------
+    options['record_metadata'] :  bool(True)
+        Tells recorder whether to record variable attribute metadata.
+    options['record_unknowns'] :  bool(True)
+        Tells recorder whether to record the unknowns vector.
+    options['record_params'] :  bool(False)
+        Tells recorder whether to record the params vector.
+    options['record_resids'] :  bool(False)
+        Tells recorder whether to record the ressiduals vector.
+    options['record_derivs'] :  bool(False)
+        Tells recorder whether to record derivatives that are requested by a `Driver`.
+    options['includes'] :  list of strings
+        Patterns for variables to include in recording.
+    options['excludes'] :  list of strings
+        Patterns for variables to exclude in recording (processed after includes).
     """
 
     def __init__(self, out='stdout'):
@@ -55,6 +77,30 @@ class DumpRecorder(BaseRecorder):
             Group that owns this recorder.
         """
         super(DumpRecorder, self).startup(group)
+
+    def record_metadata(self, group):
+        """Dump the metadata of the given group in a "pretty" form.
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors
+        """
+        params = list(iteritems(group.params))
+        unknowns = list(iteritems(group.unknowns))
+
+        self.out.write("Metadata:\n")
+        self.out.write("Params:\n")
+
+        for name, metadata in params:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
+
+        self.out.write("Unknowns:\n")
+
+        for name, metadata in unknowns:
+            fmat = "  {0}: {1}\n"
+            self.out.write(fmat.format(name, metadata))
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """Dump the given run data in a "pretty" form.
@@ -106,26 +152,35 @@ class DumpRecorder(BaseRecorder):
         # Flush once per iteration to allow external scripts to process the data.
         self.out.flush()
 
-    def record_metadata(self, group):
-        """Dump the metadata of the given group in a "pretty" form.
+    def record_derivatives(self, derivs, metadata):
+        """Writes the derivatives that were calculated for the driver.
 
         Args
         ----
-        group : `System`
-            `System` containing vectors
+        derivs : dict
+            Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
-        params = list(iteritems(group.params))
-        unknowns = list(iteritems(group.unknowns))
 
-        self.out.write("Metadata:\n")
-        self.out.write("Params:\n")
+        iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
 
-        for name, metadata in params:
-            fmat = "  {0}: {1}\n"
-            self.out.write(fmat.format(name, metadata))
+        write = self.out.write
+        fmat = "Timestamp: {0!r}\n"
+        write(fmat.format(timestamp))
 
-        self.out.write("Unknowns:\n")
+        fmat = "Iteration Coordinate: {0:s}/Derivs\n"
+        write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
-        for name, metadata in unknowns:
-            fmat = "  {0}: {1}\n"
-            self.out.write(fmat.format(name, metadata))
+        write("Derivatives:\n")
+        if isinstance(derivs, dict):
+            for okey, sub in sorted(iteritems(derivs)):
+                for ikey, deriv in sorted(iteritems(sub)):
+                    write("  {0} wrt {1}: {2}\n".format(okey, ikey, str(deriv)))
+        else:
+            write("  {0} \n".format(str(derivs)))
+
+        # Flush once per iteration to allow external scripts to process the data.
+        self.out.flush()

@@ -6,6 +6,8 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
+import sys
+
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -313,15 +315,15 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if lower is None:
-            lower = -1e99
-        elif isinstance(lower, np.ndarray):
+        if isinstance(lower, np.ndarray):
             lower = lower.flatten()
+        elif lower is None or lower == -float('inf'):
+            lower = sys.float_info.min
 
-        if upper is None:
-            upper = 1e99
-        elif isinstance(upper, np.ndarray):
+        if isinstance(upper, np.ndarray):
             upper = upper.flatten()
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
@@ -668,7 +670,7 @@ class Driver(object):
 
         # Metadata Setup
         self.iter_count += 1
-        metadata = create_local_meta(None, 'Driver')
+        metadata = self.metadata = create_local_meta(None, 'Driver')
         system.ln_solver.local_meta = metadata
         update_local_meta(metadata, (self.iter_count,))
 
@@ -712,11 +714,14 @@ class Driver(object):
             Jacobian of unknowns with respect to params.
         """
 
-        return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
-                                           return_format=return_format,
-                                           dv_scale=self.dv_conversions,
-                                           cn_scale=self.fn_conversions,
-                                           sparsity=sparsity)
+        J = self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                        return_format=return_format,
+                                        dv_scale=self.dv_conversions,
+                                        cn_scale=self.fn_conversions,
+                                        sparsity=sparsity)
+
+        self.recorders.record_derivatives(J, self.metadata)
+        return J
 
     def generate_docstring(self):
         """
