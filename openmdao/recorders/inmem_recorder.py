@@ -107,9 +107,6 @@ class InMemoryRecorder(BaseRecorder):
         iteration_coordinate = metadata['coord']
         timestamp = metadata['timestamp']
 
-        group_name = format_iteration_coordinate(iteration_coordinate)
-        group_name = '%s/derivs' % group_name
-
         data['timestamp'] = timestamp
         data['Derivatives'] = derivs
 
