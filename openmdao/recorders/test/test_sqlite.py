@@ -150,7 +150,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -176,7 +176,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -205,7 +205,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1,)]
         expected_params = [
@@ -231,7 +231,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1, )]
 
@@ -284,7 +284,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1,)]
 
@@ -312,7 +312,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1,)]
 
@@ -336,7 +336,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1,), "root", (1,)]
 
@@ -387,7 +387,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -412,7 +412,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -458,7 +458,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -472,7 +472,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         self.assertMetadataRecorded(None)
 
@@ -482,7 +482,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -496,7 +496,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         self.assertMetadataRecorded(None)
 
@@ -506,7 +506,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -520,7 +520,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()  # closes recorders
 
         self.assertMetadataRecorded(None)
 

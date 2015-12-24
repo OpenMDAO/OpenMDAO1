@@ -85,6 +85,15 @@ class Group(System):
             s = s._subsystems[part]
         return s
 
+    def cleanup(self):
+        """
+        Clean up resources prior to exit.
+        """
+        self.ln_solver.cleanup()
+        self.nl_solver.cleanup()
+        for s in self.subsystems():
+            s.cleanup()
+
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
         that it promotes to the parent level.

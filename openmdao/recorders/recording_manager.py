@@ -87,6 +87,10 @@ class RecordingManager(object):
                 self._vars_to_record['unames'].update(unames)
                 self._vars_to_record['rnames'].update(rnames)
 
+    def close(self):
+        for recorder in self._recorders:
+            recorder.close()
+
     def record_iteration(self, root, metadata):
         '''
         Gathers variables for non-parallel case recorders and

@@ -89,6 +89,16 @@ class FileUtilTestCase(unittest.TestCase):
         self.assertEqual(set([os.path.basename(f) for f in flist]),
                          set(['d1d1f1.exe', 'd1d2f2']))
 
+    def test_dir_context(self):
+        start = os.getcwd()
+        newdir = os.path.join(start, 'foobar')
+        os.makedirs(newdir)
+        try:
+            with DirContext(newdir):
+                self.assertEqual(os.getcwd(), newdir)
+                raise RuntimeError("uh oh")
+        except:
+            self.assertEqual(os.getcwd(), start)
 
 if __name__ == '__main__':
     unittest.main()

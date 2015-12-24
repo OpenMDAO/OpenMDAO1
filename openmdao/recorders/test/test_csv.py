@@ -29,16 +29,11 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder = CsvRecorder(self.io)
         self.eps = 1e-5
 
-    def tearDown(self):
-        self.recorder.close()
-
     def assertMetadataRecorded(self, metadata):
         # TODO: implement this
         return
 
     def assertIterationDataRecorded(self, expected, tolerance):
-        # TODO: implement this
-        # return
 
         saved_results = {}
 
@@ -105,7 +100,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, )]
 
@@ -134,7 +129,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1,)]
         expected_params = [
@@ -161,7 +156,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1, )]
 
@@ -214,7 +209,7 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = False
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1,)]
 
@@ -242,7 +237,7 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = False
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1,)]
 
@@ -266,7 +261,7 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = False
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1,), "root", (1,)]
 
@@ -317,7 +312,7 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = False
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -346,7 +341,7 @@ class TestCsvRecorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup()
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -394,7 +389,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -408,7 +403,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         self.assertMetadataRecorded(None)
 
@@ -418,7 +413,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -432,7 +427,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         self.assertMetadataRecorded(None)
 
@@ -442,7 +437,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -456,7 +451,7 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup()
 
         self.assertMetadataRecorded(None)
 

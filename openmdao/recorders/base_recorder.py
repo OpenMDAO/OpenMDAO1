@@ -124,7 +124,9 @@ class BaseRecorder(object):
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout``, ``sys.stderr``, or StringIO.
-        Note that a closed recorder will do nothing in :meth:`record`."""
+        Note that a closed recorder will do nothing in :meth:`record`, and
+        closing a closed recorder also does nothing.
+        """
         # Closing a StringIO deletes its contents.
         if self.out not in (None, sys.stdout, sys.stderr):
             if not isinstance(self.out, StringIO):

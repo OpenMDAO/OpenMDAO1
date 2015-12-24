@@ -122,7 +122,7 @@ class MPITests1(MPITestCase):
 
     def test_comm(self):
         prob = Problem(Group(), impl=impl)
-        prob.setup()
+        prob.setup(check=False)
 
         if MPI:
             assert prob.comm is MPI.COMM_WORLD
