@@ -99,6 +99,8 @@ class FileUtilTestCase(unittest.TestCase):
                 raise RuntimeError("uh oh")
         except:
             self.assertEqual(os.getcwd(), start)
+        else:
+            self.fail("Exception expected")
 
 if __name__ == '__main__':
     unittest.main()
