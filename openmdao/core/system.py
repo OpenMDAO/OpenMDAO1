@@ -208,9 +208,7 @@ class System(object):
                 raise RuntimeError(msg % (self.pathname, prom))
 
     def cleanup(self):
-        """
-        Clean up resources prior to exit.
-        """
+        """ Clean up resources prior to exit. """
         pass
 
     def subsystems(self, local=False, recurse=False, include_self=False):

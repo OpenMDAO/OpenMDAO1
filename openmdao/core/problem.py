@@ -696,9 +696,7 @@ class Problem(object):
         return {}
 
     def cleanup(self):
-        """
-        Clean up resources prior to exit.
-        """
+        """ Clean up resources prior to exit. """
         self.driver.cleanup()
         self.root.cleanup()
 

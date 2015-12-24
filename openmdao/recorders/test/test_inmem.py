@@ -64,7 +64,7 @@ class TestInMemoryRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         J1 = self.recorder.deriv_iters[0]['Derivatives']
 
@@ -107,7 +107,7 @@ class TestInMemoryRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         J1 = self.recorder.deriv_iters[0]['Derivatives']
 

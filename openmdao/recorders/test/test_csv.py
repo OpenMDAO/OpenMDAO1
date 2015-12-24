@@ -509,7 +509,7 @@ class TestCsvRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         self.io.seek(0)
         csv_reader = csv.DictReader(self.io)
@@ -563,7 +563,7 @@ class TestCsvRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         self.io.seek(0)
         csv_reader = csv.DictReader(self.io)

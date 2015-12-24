@@ -575,7 +575,7 @@ class TestSqliteRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         db = SqliteDict(self.filename, self.tablename, flag='r')
         J1 = db['SLSQP/1/derivs']['Derivatives']
@@ -619,7 +619,7 @@ class TestSqliteRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         db = SqliteDict(self.filename, self.tablename, flag='r')
         J1 = db['SLSQP/1/derivs']['Derivatives']

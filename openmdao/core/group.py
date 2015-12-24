@@ -86,9 +86,7 @@ class Group(System):
         return s
 
     def cleanup(self):
-        """
-        Clean up resources prior to exit.
-        """
+        """ Clean up resources prior to exit. """
         self.ln_solver.cleanup()
         self.nl_solver.cleanup()
         for s in self.subsystems():

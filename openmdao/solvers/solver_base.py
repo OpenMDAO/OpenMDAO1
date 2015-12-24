@@ -30,9 +30,7 @@ class SolverBase(object):
         pass
 
     def cleanup(self):
-        """
-        Clean up resources prior to exit.
-        """
+        """ Clean up resources prior to exit. """
         self.recorders.close()
 
     def print_norm(self, solver_string, pathname, iteration, res, res0,

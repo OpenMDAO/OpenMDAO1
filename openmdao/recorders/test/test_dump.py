@@ -572,7 +572,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         sout = open(self.filename)
         lines = sout.readlines()
@@ -610,7 +610,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         prob.run()
 
-        self.recorder.close()
+        prob.cleanup()
 
         sout = open(self.filename)
         lines = sout.readlines()
