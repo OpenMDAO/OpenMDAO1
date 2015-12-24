@@ -8,6 +8,30 @@ from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.core.mpi_wrap import MPI
 
 class SqliteRecorder(BaseRecorder):
+    """ Recorder that saves cases in an SQLite dictionary.
+
+    Args
+    ----
+    sqlite_dict_args : dict
+        Dictionary lf any additional arguments for the SQL db.
+
+    Options
+    -------
+    options['record_metadata'] :  bool(True)
+        Tells recorder whether to record variable attribute metadata.
+    options['record_unknowns'] :  bool(True)
+        Tells recorder whether to record the unknowns vector.
+    options['record_params'] :  bool(False)
+        Tells recorder whether to record the params vector.
+    options['record_resids'] :  bool(False)
+        Tells recorder whether to record the ressiduals vector.
+    options['record_derivs'] :  bool(False)
+        Tells recorder whether to record derivatives that are requested by a `Driver`.
+    options['includes'] :  list of strings
+        Patterns for variables to include in recording.
+    options['excludes'] :  list of strings
+        Patterns for variables to exclude in recording (processed after includes).
+    """
 
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()
@@ -82,6 +106,30 @@ class SqliteRecorder(BaseRecorder):
 
         if self.options['record_resids']:
             data['Residuals'] = resids
+
+        self.out[group_name] = data
+
+    def record_derivatives(self, derivs, metadata):
+        """Writes the derivatives that were calculated for the driver.
+
+        Args
+        ----
+        derivs : dict
+            Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+
+        data = OrderedDict()
+        iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
+
+        group_name = format_iteration_coordinate(iteration_coordinate)
+        group_name = '%s/derivs' % group_name
+
+        data['timestamp'] = timestamp
+        data['Derivatives'] = derivs
 
         self.out[group_name] = data
 

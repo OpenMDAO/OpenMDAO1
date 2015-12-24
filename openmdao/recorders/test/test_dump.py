@@ -9,12 +9,35 @@ import time
 
 from six import StringIO, iteritems
 
+import numpy as np
+
 from openmdao.api import IndepVarComp, Group, ScipyOptimizer, Problem
-from openmdao.test.converge_diverge import ConvergeDiverge
-from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.example_groups import ExampleGroup
 from openmdao.recorders.dump_recorder import DumpRecorder
+from openmdao.test.converge_diverge import ConvergeDiverge
+from openmdao.test.example_groups import ExampleGroup
+from openmdao.test.paraboloid import Paraboloid
+from openmdao.test.sellar import SellarDerivativesGrouped
+from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
+
+# check that pyoptsparse is installed
+# if it is, try to use SLSQP
+OPT = None
+OPTIMIZER = None
+
+try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SLSQP')
+        OPTIMIZER = 'SLSQP'
+    except:
+        pass
+except:
+    pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
 
 def run_problem(problem):
     t0 = time.time()
@@ -516,6 +539,86 @@ class TestDumpRecorder(unittest.TestCase):
         self.recorder.close()
 
         self.assertMetadataRecorded(None)
+
+    def test_root_derivs_dict(self):
+
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        self.recorder.options['record_unknowns'] = True
+
+        prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
+
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        self.recorder.options['record_derivs'] = True
+        prob.setup(check=False)
+
+        prob.run()
+
+        self.recorder.close()
+
+        sout = open(self.filename)
+        lines = sout.readlines()
+
+        self.assertEqual(lines[12].rstrip(), 'Derivatives:')
+        self.assertTrue('  con1 wrt x:' in lines[13])
+        self.assertTrue('  con1 wrt z:' in lines[14])
+        self.assertTrue('  con2 wrt x:' in lines[15])
+        self.assertTrue('  con2 wrt z:' in lines[16])
+        self.assertTrue('  obj wrt x:' in lines[17])
+        self.assertTrue('  obj wrt z:' in lines[18])
+        self.assertTrue('1.784' in lines[18])
+
+    def test_root_derivs_array(self):
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
+
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        self.recorder.options['record_derivs'] = True
+        prob.setup(check=False)
+
+        prob.run()
+
+        self.recorder.close()
+
+        sout = open(self.filename)
+        lines = sout.readlines()
+
+        self.assertEqual(lines[12].rstrip(), 'Derivatives:')
+        self.assertTrue('9.61' in lines[13])
+        self.assertTrue('0.784' in lines[14])
+        self.assertTrue('1.077' in lines[15])
 
 
 if __name__ == "__main__":
