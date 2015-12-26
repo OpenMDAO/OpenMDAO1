@@ -209,8 +209,10 @@ treeJSON = d3.json("__graph.json", function(error, treeData) {
     }
 
     function update(source) {
-        // Compute the new height, function counts total children of root node and sets tree height accordingly.
-        // This prevents the layout looking squashed when new nodes are made visible or looking sparse when nodes are removed
+        // Compute the new height, function counts total children of root node
+		// and sets tree height accordingly.
+        // This prevents the layout looking squashed when new nodes are made
+		// visible or looking sparse when nodes are removed
         // This makes the layout more consistent.
         var levelWidth = [1];
         var childCount = function(level, n) {

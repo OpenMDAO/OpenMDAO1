@@ -28,40 +28,40 @@ def _startThread(fn):
     thread.start()
     return thread
 
-def _system_tree_dict(system, include_unknowns=True, include_params=False):
+def _system_tree_dict(system):
     """
     Returns a dict representation of the system hierarchy with
     this System as root.
     """
 
-    def _tree_dict(ss, include_unknowns, include_params):
+    def _tree_dict(ss):
         dct = { 'name': ss.name }
-        children = [_tree_dict(s, include_unknowns, include_params)
-                          for s in ss.subsystems()]
+        children = [_tree_dict(s) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
-            if include_unknowns:
-                for vname, meta in ss.unknowns.items():
-                    size = meta['size'] if meta['size'] else 1
-                    children.append({'name': vname, 'size': size })
+            for vname, meta in ss.unknowns.items():
+                size = meta['size'] if meta['size'] else 1
+                children.append({'name': vname, 'size': size })
 
-            if include_params:
-                for vname, meta in ss.params.items():
-                    size = meta['size'] if meta['size'] else 1
-                    children.append({'name': vname, 'size': size })
+            for vname, meta in ss.params.items():
+                size = meta['size'] if meta['size'] else 1
+                children.append({'name': vname, 'size': size })
 
-        dct['children'] = children
+            dct['_children'] = children # start with child var nodes toggled off
+            dct['children'] = None
+        else:
+            dct['children'] = children
+            dct['_children'] = None
 
         return dct
 
-    tree = _tree_dict(system, include_unknowns, include_params)
+    tree = _tree_dict(system)
     if not tree['name']:
         tree['name'] = 'root'
 
-    return tree  #json.dump(tree, stream)
+    return tree
 
-def view_tree(system, viewer='collapse_tree', port=8001,
-              include_unknowns=False, include_params=False):
+def view_tree(system, viewer='collapse_tree', port=8001):
     """
     Args
     ----
@@ -75,19 +75,11 @@ def view_tree(system, viewer='collapse_tree', port=8001,
     port : int, optional
         The port number for the web server that serves the tree viewing page.
 
-    include_unknowns : bool, optional
-        If True, unknown variables are included in the tree.
-        Defaults to False.
-
-    include_params : bool, optional
-        If True, input variables are included in the tree.
-        Defaults to False.
-
     """
     if not viewer.endswith('.html'):
         viewer += '.html'
 
-    tree = _system_tree_dict(system, include_unknowns, include_params)
+    tree = _system_tree_dict(system)
     try:
         startdir = os.getcwd()
         os.chdir(os.path.dirname(os.path.abspath(__file__)))

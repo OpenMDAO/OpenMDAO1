@@ -946,7 +946,7 @@ class Problem(object):
         ubcs = self._get_ubc_vars(self.root.connections)
         if ubcs:
             print("\nThe following params are connected to unknowns that are "
-                  "updated out of order, so their initial values will contain "
+                  "updated out of order, so their initial values may contain "
                   "uninitialized unknown values: %s" % ubcs, file=out_stream)
         return ubcs
 
