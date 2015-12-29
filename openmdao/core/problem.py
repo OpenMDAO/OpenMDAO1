@@ -695,6 +695,11 @@ class Problem(object):
 
         return {}
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.driver.cleanup()
+        self.root.cleanup()
+
     def _check_solvers(self):
         """
         Raise an exception if we detect a LinearGaussSeidel solver and that
@@ -1823,15 +1828,14 @@ class Problem(object):
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        exclude = set([])
 
         self.driver.recorders.startup(self.root)
-        self.driver.recorders.record_metadata(self.root, exclude=exclude)
+        self.driver.recorders.record_metadata(self.root)
 
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
-                solver.recorders.record_metadata(self.root, exclude=exclude)
+                solver.recorders.record_metadata(self.root)
 
     def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the

@@ -165,6 +165,10 @@ class Driver(object):
         """
         return self.root.get_req_procs()
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.recorders.close()
+
     def _map_voi_indices(self):
         poi_indices = {}
         qoi_indices = {}
@@ -664,7 +668,7 @@ class Driver(object):
 
         # Metadata Setup
         self.iter_count += 1
-        metadata = create_local_meta(None, 'Driver')
+        metadata = self.metadata = create_local_meta(None, 'Driver')
         system.ln_solver.local_meta = metadata
         update_local_meta(metadata, (self.iter_count,))
 
@@ -708,11 +712,14 @@ class Driver(object):
             Jacobian of unknowns with respect to params.
         """
 
-        return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
-                                           return_format=return_format,
-                                           dv_scale=self.dv_conversions,
-                                           cn_scale=self.fn_conversions,
-                                           sparsity=sparsity)
+        J = self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                        return_format=return_format,
+                                        dv_scale=self.dv_conversions,
+                                        cn_scale=self.fn_conversions,
+                                        sparsity=sparsity)
+
+        self.recorders.record_derivatives(J, self.metadata)
+        return J
 
     def generate_docstring(self):
         """

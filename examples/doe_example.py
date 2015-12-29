@@ -56,5 +56,5 @@ if __name__ == "__main__":
 
     problem['dut.y']
 
-    for recorder in problem.driver.recorders:
-        recorder.close()
+    problem.cleanup()
+    

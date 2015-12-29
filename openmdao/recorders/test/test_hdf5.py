@@ -97,7 +97,7 @@ class TestHDF5Recorder(unittest.TestCase):
                     "Unknowns" :  unknowns,
                     "Residuals" :  resids,
             }
-            
+
             if params is None:
                 self.assertIsNone(actual_group.get('Parameters', None))
                 del groupings['Parameters']
@@ -105,11 +105,11 @@ class TestHDF5Recorder(unittest.TestCase):
             if unknowns is None:
                 self.assertIsNone(actual_group.get('Unknowns', None))
                 del groupings['Unknowns']
-            
+
             if resids is None:
                 self.assertIsNone(actual_group.get('Residuals', None))
                 del groupings['Residuals']
-   
+
             timestamp = actual_group.attrs['timestamp']
             self.assertTrue(t0 <= timestamp and timestamp <= t1)
 
@@ -140,8 +140,8 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
-        
+        prob.cleanup() # closes recorders
+
         coordinate = ['Driver', (1, )]
 
         expected_resids = [
@@ -164,10 +164,10 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         prob.setup(check=False)
-        
+
         t0, t1 = run_problem(prob)
-        self.recorder.close()
-        
+        prob.cleanup() # closes recorders
+
         coordinate = ['Driver', (1, )]
 
         expected_unknowns = [
@@ -195,7 +195,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         coordinate = ['Driver', (1,)]
         expected_params = [
@@ -209,7 +209,7 @@ class TestHDF5Recorder(unittest.TestCase):
             ("comp7.x1", 36.8),
             ("comp7.x2", -46.5)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, None, None),), self.eps)
 
     def test_basic(self):
@@ -221,8 +221,8 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.setup(check=False)
 
         t0, t1 = run_problem(prob)
-        self.recorder.close()
-        
+        prob.cleanup() # closes recorders
+
         coordinate = ['Driver', (1, )]
 
         expected_params = [
@@ -274,8 +274,8 @@ class TestHDF5Recorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
-        
+        prob.cleanup() # closes recorders
+
         coordinate = ['Driver', (1,)]
 
         expected_params = [
@@ -289,7 +289,7 @@ class TestHDF5Recorder(unittest.TestCase):
             ("comp1.y1", 0.0),
             ("comp1.y2", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_includes_and_excludes(self):
@@ -302,7 +302,7 @@ class TestHDF5Recorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         coordinate = ['Driver', (1,)]
 
@@ -326,8 +326,8 @@ class TestHDF5Recorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
-        
+        prob.cleanup() # closes recorders
+
         coordinate = ['Driver', (1,), "root", (1,)]
 
         expected_params = [
@@ -377,7 +377,7 @@ class TestHDF5Recorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
@@ -390,7 +390,7 @@ class TestHDF5Recorder(unittest.TestCase):
         expected_resids = [
             ("C2.y", 0.0)
         ]
-        
+
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
 
     def test_multilevel_record(self):
@@ -402,10 +402,10 @@ class TestHDF5Recorder(unittest.TestCase):
         self.recorder.options['record_resids'] = True
         prob.setup(check=False)
         t0, t1 = run_problem(prob)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
-        
+
         g1_expected_params = [
             ("C2.x", 5.0)
         ]
@@ -437,7 +437,7 @@ class TestHDF5Recorder(unittest.TestCase):
             ("G3.C3.y", 0.0),
             ("G3.C4.y", 0.0),
         ]
-     
+
         expected = []
         expected.append((solver_coordinate, (t0, t1), g1_expected_params, g1_expected_unknowns, g1_expected_resids))
         expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
@@ -450,7 +450,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -464,7 +464,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         self.assertMetadataRecorded(None)
 
@@ -474,12 +474,12 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
-        
+
         self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
 
     def test_root_solver_doesnt_record_metadata(self):
@@ -488,7 +488,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         self.assertMetadataRecorded(None)
 
@@ -498,7 +498,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         expected_params = list(iteritems(prob.root.params))
         expected_unknowns = list(iteritems(prob.root.unknowns))
@@ -512,7 +512,7 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = False
         prob.setup(check=False)
-        self.recorder.close()
+        prob.cleanup() # closes recorders
 
         self.assertMetadataRecorded(None)
 

@@ -62,3 +62,4 @@ from openmdao.surrogate_models.surrogate_model import SurrogateModel, \
 from openmdao.units.units import get_conversion_tuple, convert_units
 #util
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.file_util import DirContext
