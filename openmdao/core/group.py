@@ -43,12 +43,12 @@ class Group(System):
     def __init__(self):
         super(Group, self).__init__()
 
-        self._src = {}
-        self._src_idxs = {}
-        self._data_xfer = {}
+        self._src = OrderedDict() #{}
+        self._src_idxs = OrderedDict() #{}
+        self._data_xfer = OrderedDict() #{}
 
-        self._local_unknown_sizes = {}
-        self._local_param_sizes = {}
+        self._local_unknown_sizes = OrderedDict() #{}
+        self._local_param_sizes = OrderedDict() #{}
 
         # put these in here to avoid circular imports
         from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
@@ -255,9 +255,9 @@ class Group(System):
         self._sysdata._params_dict = params_dict
         self._sysdata._unknowns_dict = unknowns_dict
 
-        self._data_xfer = {}
+        self._data_xfer = OrderedDict() #{}
 
-        to_prom_name = self._sysdata.to_prom_name = {}
+        to_prom_name = self._sysdata.to_prom_name = OrderedDict() #{}
         to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -297,20 +297,20 @@ class Group(System):
         calculates and caches the list of outputs to be updated for each voi.
         """
         if self._gs_outputs is None:
-            self._gs_outputs = {}
+            self._gs_outputs = OrderedDict() #{}
 
         if mode not in self._gs_outputs:
             dumat = self.dumat
-            gs_outputs = self._gs_outputs[mode] = {}
+            gs_outputs = self._gs_outputs[mode] = OrderedDict() #{}
             if mode == 'fwd':
                 for sub in self._local_subsystems:
-                    gs_outputs[sub.name] = outs = {}
+                    gs_outputs[sub.name] = outs = OrderedDict() #{}
                     for voi in vois:
                         outs[voi] = set([x for x in dumat[voi]._dat if
                                                    sub.dumat and x not in sub.dumat[voi]])
             else: # rev
                 for sub in self._local_subsystems:
-                    gs_outputs[sub.name] = outs = {}
+                    gs_outputs[sub.name] = outs = OrderedDict() #{}
                     for voi in vois:
                         outs[voi] = set([x for x in dumat[voi]._dat if
                                                    not sub.dumat or
@@ -373,9 +373,9 @@ class Group(System):
         self._sysdata.comm = self.comm
 
         self.params = self.unknowns = self.resids = None
-        self.dumat, self.dpmat, self.drmat = {}, {}, {}
-        self._local_unknown_sizes = {}
-        self._local_param_sizes = {}
+        self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict() # #{}, {}, {}
+        self._local_unknown_sizes = OrderedDict() #{}
+        self._local_param_sizes = OrderedDict() #{}
         self._owning_ranks = None
         relevance = self._probdata.relevance
 
@@ -387,7 +387,7 @@ class Group(System):
         self._impl = impl
 
         my_params = param_owners.get(self.pathname, ())
-
+        
         max_psize, self._shared_p_offsets = \
             self._get_shared_vec_info(self._params_dict, my_params=my_params)
 
@@ -441,18 +441,20 @@ class Group(System):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
+                
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
                                impl=self._impl)
+        
 
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
 
-        self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
+        self._do_apply = OrderedDict() #{} # dict of (child_pathname, voi) keyed to bool
 
-        ls_inputs = {}
+        ls_inputs = OrderedDict() #{}
         for voi in self.dumat:
             ls_inputs[voi] = self._all_params(voi)
 
@@ -465,7 +467,7 @@ class Group(System):
 
                 self._do_apply[(s.pathname, voi)] = bool(abs_inputs and
                                       len(abs_inputs.intersection(ls_inputs[voi])))
-
+        
         self._relname_map = None  # reclaim some memory
 
     def _create_vecs(self, my_params, voi, impl):
@@ -577,7 +579,7 @@ class Group(System):
             Explicit connections in this `Group`, represented as a mapping
             from the pathname of the target to the pathname of the source.
         """
-        connections = {}
+        connections = OrderedDict() #{}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
@@ -857,7 +859,7 @@ class Group(System):
         """
 
         # Make sure the new_order is valid. It must contain all subsystems
-        # in this model.
+        # in this model.        
         newset = set(new_order)
         oldset = set(iterkeys(self._subsystems))
         if oldset != newset:
@@ -881,8 +883,8 @@ class Group(System):
         new_subs = OrderedDict()
         for sub in new_order:
             new_subs[sub] = self._subsystems[sub]
-
-        self._subsystems = new_subs
+        
+        self._subsystems = new_subs        
 
         # reset locals
         self._local_subsystems = [s for s in self._local_subsystems
@@ -909,7 +911,7 @@ class Group(System):
 
         list of str
             Edges that where removed from the graph to allow sorting.
-        """
+        """        
         graph, broken_edges = self._break_cycles(self.list_order(),
                                                  self._get_sys_graph())
         order = nx.topological_sort(graph)
@@ -932,7 +934,7 @@ class Group(System):
 
             plen = len(path)+1
 
-            renames = {}
+            renames = OrderedDict() #{}
             for node in graph.nodes_iter():
                 newnode = '.'.join(node.split('.')[:plen])
                 if newnode != node:
@@ -1301,8 +1303,8 @@ class Group(System):
         fwd = 0
         rev = 1
         modename = ['fwd', 'rev']
-        xfer_dict = {}
-
+        xfer_dict = OrderedDict() #{}
+        
         for param in my_params:
             unknown, idxs = self.connections[param]
             top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
@@ -1320,8 +1322,7 @@ class Group(System):
             # and get the subsystem name from that
 
             tgt_sys = nearest_child(self.pathname, param)
-            src_sys = nearest_child(self.pathname, unknown)
-
+            src_sys = nearest_child(self.pathname, unknown)            
             for sname, mode in ((tgt_sys, fwd), (src_sys, rev)):
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                     xfer_dict.setdefault((sname, mode), ([], [], [], []))
@@ -1343,14 +1344,14 @@ class Group(System):
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataTransfer
-        # object under the name ''.
-        for mode in (fwd, rev):
+        # object under the name ''.        
+        for mode in (fwd, rev):            
             start = 0
             full_srcs = []
             full_tgts = []
             full_flats = []
-            full_byobjs = []
-            for tup, (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):
+            full_byobjs = []            
+            for tup, (srcs, tgts, flats, byobjs) in iteritems(xfer_dict):                
                 tgt_sys, direction = tup
                 if mode == direction:
                     full_srcs.extend(srcs)
@@ -1374,6 +1375,7 @@ class Group(System):
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
 
+        
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
         """
@@ -1412,7 +1414,7 @@ class Group(System):
 
         """
         if MPI:
-            ranks = {}
+            ranks = OrderedDict() #{}
             local_vars = [k for k, acc in iteritems(self.unknowns._dat)
                                   if not acc.remote]
             local_vars.extend(k for k, acc in iteritems(self.params._dat)
@@ -1434,6 +1436,7 @@ class Group(System):
                                                          self.params._dat)]
             ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
 
+        
         return ranks
 
     def _get_relname_map(self, parent_proms):

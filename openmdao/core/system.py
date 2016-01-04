@@ -30,7 +30,7 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom_name = {}
+        self.to_prom_name = OrderedDict() #{}
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -111,9 +111,9 @@ class System(object):
         self._sysdata = _SysData('')
 
         # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = {}
-        self.dpmat = {}
-        self.drmat = {}
+        self.dumat = OrderedDict() #{}
+        self.dpmat = OrderedDict() #{}
+        self.drmat = OrderedDict() #{}
 
         self._local_subsystems = []
         self._fd_params = None
@@ -374,7 +374,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = {}
+        jac = OrderedDict() #{}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -396,7 +396,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {}
+        fd_cols = OrderedDict() #{}
 
         to_prom_name = self._sysdata.to_prom_name
 
@@ -424,7 +424,7 @@ class System(object):
                 target_input = inputs._dat[p_name].val
                 param_src = None
 
-            mydict = {}
+            mydict = OrderedDict() #{}
             # since p_name is a promoted name, it could refer to multiple
             # params.  We've checked earlier to make sure that step_size,
             # step_type, and form are not defined differently for each
@@ -795,7 +795,7 @@ class System(object):
 
         # map promoted name in parent to corresponding promoted name in this view
         umap = self._relname_map
-
+        
         if voi is None:
             self.unknowns = parent.unknowns.get_view(self, comm, umap)
             self.states = set(n for n,m in iteritems(self.unknowns) if m.get('state'))
@@ -1079,7 +1079,7 @@ class System(object):
             return ' '.join((tgt, prom_tgt, units))
 
         def _write(by_src, relname):
-            by_src2 = {}
+            by_src2 = OrderedDict() #{}
             for src, tgts in iteritems(by_src):
                 if src[0] == '{':  # {unconnected}
                     prom_src = units = ''
@@ -1117,7 +1117,7 @@ class System(object):
             if not absnames:
                 raise KeyError("Can't find variable '%s'" % name)
 
-            by_src = {}
+            by_src = OrderedDict() #{}
             for tgt, (src, idxs) in iteritems(self._probdata.connections):
                 for absname in absnames:
                     if tgt == absname or src == absname:
@@ -1134,7 +1134,7 @@ class System(object):
 
             # create a dict with srcs as keys so we can more easily subsort
             # targets after sorting srcs.
-            by_src = {}
+            by_src = OrderedDict() #{}
             for tgt, (src, idx) in iteritems(self.connections):
                 if src.startswith(scope) or tgt.startswith(scope):
                     by_src.setdefault(src, []).append(_param_str(pdict,
