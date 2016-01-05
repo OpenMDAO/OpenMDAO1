@@ -192,9 +192,6 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(root.unknowns.metadata('G2.C1.x'),
                          root.G2.unknowns.metadata('C1.x'))
 
-        from openmdao.devtools.d3graph import view_tree
-        view_tree(root)
-
     def test_promotes(self):
         root = ExampleGroupWithPromotes()
         prob = Problem(root=root)
