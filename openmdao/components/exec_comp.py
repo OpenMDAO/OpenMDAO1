@@ -99,7 +99,6 @@ class ExecComp(Component):
         for expr in exprs:
             lhs, _ = expr.split('=', 1)
             outs.update(_parse_for_vars(lhs))
-            allvars.update(outs)
             allvars.update(_parse_for_vars(expr))
 
         if inits is not None:
