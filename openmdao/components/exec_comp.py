@@ -292,10 +292,11 @@ class _UPDict(object):
         self._to_colons = to_colons
 
     def __getitem__(self, name):
+        name = self._to_colons[name]
         try:
-            return self._unknowns[self._to_colons[name]]
+            return self._unknowns[name]
         except KeyError:
-            return self._params[self._to_colons[name]]
+            return self._params[name]
 
     def __setitem__(self, name, value):
         name = self._to_colons[name]
