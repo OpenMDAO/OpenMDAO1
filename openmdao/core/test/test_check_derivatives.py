@@ -1,4 +1,4 @@
-""" Testing for Problem.check_partial_derivatives."""
+""" Testing for Problem.check_partial_derivatives and check_total_derivatives."""
 
 from six import iteritems
 import unittest
