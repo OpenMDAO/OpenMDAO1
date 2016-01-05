@@ -10,8 +10,7 @@ import time
 import pprint
 
 import webbrowser
-import SimpleHTTPServer
-import SocketServer
+from six.moves import SimpleHTTPServer, socketserver 
 
 import networkx as nx
 from networkx.readwrite.json_graph import node_link_data
@@ -87,7 +86,7 @@ def view_tree(system, viewer='collapse_tree', port=8001):
         with open('__graph.json', 'w') as f:
             json.dump(tree, f)
 
-        httpd = SocketServer.TCPServer(("localhost", port),
+        httpd = socketserver.TCPServer(("localhost", port),
                            SimpleHTTPServer.SimpleHTTPRequestHandler)
 
         print("starting server on port %d" % port)
