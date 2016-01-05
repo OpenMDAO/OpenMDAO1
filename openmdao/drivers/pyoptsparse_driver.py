@@ -14,6 +14,7 @@ from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
+from collections import OrderedDict
 
 # names of optimizers that use gradients
 grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
@@ -93,19 +94,19 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = {}
+        self.opt_settings = OrderedDict() #{}
 
         # The user can set a file name here to store history
         self.hist_file = None
 
         self.pyopt_solution = None
 
-        self.lin_jacs = {}
+        self.lin_jacs = OrderedDict() #{}
         self.quantities = []
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
-        self.sparsity = {}
+        self.sparsity = OrderedDict() #{}
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -149,7 +150,7 @@ class pyOptSparseDriver(Driver):
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(iterkeys(objs))
-        self.sparsity = {}
+        self.sparsity = OrderedDict() #{}
         for name in objs:
             opt_prob.addObj(name)
             self.sparsity[name] = self.indep_list
@@ -279,7 +280,7 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        func_dict = {}
+        func_dict = OrderedDict() #{}
         metadata = self.metadata
         system = self.root
 
@@ -351,7 +352,7 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        sens_dict = {}
+        sens_dict = OrderedDict() #{}
 
         try:
             sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
