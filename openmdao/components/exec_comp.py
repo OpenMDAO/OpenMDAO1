@@ -2,6 +2,7 @@
 
 import math
 import cmath
+import re
 
 import numpy
 from numpy import ndarray, complex, imag
@@ -9,9 +10,26 @@ from numpy import ndarray, complex, imag
 from six import string_types
 
 from openmdao.core.component import Component
-from openmdao.util.string_util import parse_for_vars
 from openmdao.util.array_util import array_idx_iter
 
+# regex to check for variable names.
+var_rgx = re.compile('([_a-zA-Z]\w*(?::[_a-zA-Z]\w*)*[ ]*\(?)')
+
+def _parse_for_vars(s):
+    return set([x.strip() for x in re.findall(var_rgx, s)
+                       if not x.endswith('(') and x not in _expr_dict])
+
+def _valid_name(s, exprs):
+    """Replace colons with numbers such that the new name does not exist in any
+    of the given expressions.
+    """
+    i = 0
+    check = ' '.join(exprs)
+    while True:
+        n = s.replace(':','%d'%i)
+        if n not in check:
+            return n
+        i += 1
 
 class ExecComp(Component):
     """
@@ -20,13 +38,17 @@ class ExecComp(Component):
     appearing on the left-hand side of an assignment are outputs,
     and the rest are inputs.  Each variable is assumed to be of
     type float unless the initial value for that variable is supplied
-    in \*\*kwargs.  Derivatives are calculated using complex step.
+    in \*\*kwargs or inits.  Derivatives are calculated using complex step.
 
     Args
     ----
     exprs: str or list of str
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
+
+    inits: dict, optional
+        A mapping of names to initial values, primarily for variables with
+        names that are not valid python names, e.g., a:b:c.
 
     \*\*kwargs: dict of named args
         Initial values of variables can be set by setting a named
@@ -45,22 +67,23 @@ class ExecComp(Component):
 
     Notes
     -----
-    In order to create an ExecComp with array variables, or any other
-    variable type that is not a float, you must use a keyword arg to
-    set the initial value of each non-float variable.  For example,
-    let's say we have an ExecComp that takes an array 'x' as input and
-    outputs a float variable 'y' which is the sum of the entries in 'x'.
+    If a variable has an initial value that is anything other than 0.0,
+    either because it has a different type than float or just because its
+    initial value is nonzero, you must use a keyword arg or the 'inits' dict
+    to set the initial value.  For example, let's say we have an ExecComp that
+    takes an array 'x' as input and outputs a float variable 'y' which is the
+    sum of the entries in 'x'.
 
     >>> import numpy
     >>> from openmdao.api import ExecComp
     >>> excomp = ExecComp('y=numpy.sum(x)', x=numpy.ones(10,dtype=float))
 
     In this example, 'y' would be assumed to be the default type of float
-    and would be given an initial value of 0.0, while 'x' would be
-    initialized with a size 100 float array.
+    and would be given the default initial value of 0.0, while 'x' would be
+    initialized with a size 10 float array of ones.
     """
 
-    def __init__(self, exprs, **kwargs):
+    def __init__(self, exprs, inits=None, **kwargs):
         super(ExecComp, self).__init__()
 
         # if complex step is used for derivatives, this is the stepsize
@@ -69,21 +92,22 @@ class ExecComp(Component):
         if isinstance(exprs, string_types):
             exprs = [exprs]
 
-        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
-
         outs = set()
         allvars = set()
 
         # find all of the variables and which ones are outputs
         for expr in exprs:
             lhs, _ = expr.split('=', 1)
-            outs.update(parse_for_vars(lhs))
-            allvars.update(parse_for_vars(expr, kwargs.keys()))
+            outs.update(_parse_for_vars(lhs))
+            allvars.update(_parse_for_vars(expr))
+
+        if inits is not None:
+            kwargs.update(inits)
 
         # make sure all kwargs are legit
         for kwarg in kwargs:
             if kwarg not in allvars:
-                raise RuntimeError("Keyword arg '%s' in call to ExecComp() "
+                raise RuntimeError("Arg '%s' in call to ExecComp() "
                                    "does not refer to any variable in the "
                                    "expressions %s" % (kwarg, exprs))
 
@@ -95,6 +119,24 @@ class ExecComp(Component):
                 self.add_output(var, val)
             else:
                 self.add_param(var, val)
+
+        self._to_colons = {}
+        from_colons = {}
+        for n in allvars:
+            if ':' in n:
+                no_colon = _valid_name(n, exprs)
+            else:
+                no_colon = n
+            self._to_colons[no_colon] = n
+            from_colons[n] = no_colon
+
+        colon_names = { n for n in allvars if ':' in n }
+
+        for i in range(len(exprs)):
+            for n in colon_names:
+                exprs[i] = exprs[i].replace(n, from_colons[n])
+
+        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -113,7 +155,7 @@ class ExecComp(Component):
             `VecWrapper` containing residuals. (r)
         """
         for expr in self._codes:
-            exec(expr, _expr_dict, _UPDict(unknowns, params))
+            exec(expr, _expr_dict, _UPDict(unknowns, params, self._to_colons))
 
     def linearize(self, params, unknowns, resids):
         """
@@ -149,11 +191,11 @@ class ExecComp(Component):
             pval = params[param]
             if isinstance(pval, ndarray):
                 # replace the param array with a complex copy
-                pwrap[param] = numpy.asarray(params[param], complex)
+                pwrap[param] = numpy.asarray(pval, complex)
                 idx_iter = array_idx_iter(pwrap[param].shape)
                 psize = pval.size
             else:
-                pwrap[param] = complex(params[param])
+                pwrap[param] = complex(pval)
                 idx_iter = (None,)
                 psize = 1
 
@@ -244,17 +286,20 @@ class _UPDict(object):
     params : dict-like
         The params object to be wrapped.
     """
-    def __init__(self, unknowns, params):
+    def __init__(self, unknowns, params, to_colons):
         self._unknowns = unknowns
         self._params = params
+        self._to_colons = to_colons
 
     def __getitem__(self, name):
+        name = self._to_colons[name]
         try:
             return self._unknowns[name]
         except KeyError:
             return self._params[name]
 
     def __setitem__(self, name, value):
+        name = self._to_colons[name]
         if name in self._unknowns:
             self._unknowns[name] = value
         elif name in self._params:
