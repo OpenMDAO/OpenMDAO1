@@ -9,6 +9,7 @@ from six.moves import range, zip
 from random import shuffle, randint, seed
 import numpy as np
 from openmdao.util.array_util import evenly_distrib_idxs
+from collections import OrderedDict
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace: # pragma: no cover
@@ -51,7 +52,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = {}
+        buckets = OrderedDict() #{}
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
             buckets[name] = [design_var_buckets[rand_lhc[i, j]]
@@ -151,7 +152,7 @@ class _LHC_Individual(object):
         """
 
         if self.phi is None:
-            distdict = {}
+            distdict = OrderedDict() #{}
 
             # Calculate the norm between each pair of points in the DOE
             arr = self.doe
