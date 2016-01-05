@@ -80,7 +80,7 @@ class ExecComp(Component):
 
     In this example, 'y' would be assumed to be the default type of float
     and would be given the default initial value of 0.0, while 'x' would be
-    initialized with a size 100 float array of ones.
+    initialized with a size 10 float array of ones.
     """
 
     def __init__(self, exprs, inits=None, **kwargs):
