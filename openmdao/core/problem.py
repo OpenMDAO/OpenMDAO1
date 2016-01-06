@@ -1096,12 +1096,12 @@ class Problem(object):
 
         Args
         ----
-        indep_list : list of strings
-            List of independent variable names that derivatives are to
+        indep_list : iter of strings
+            Iterator of independent variable names that derivatives are to
             be calculated with respect to. All params must have a IndepVarComp.
 
-        unknown_list : list of strings
-            List of output or state names that derivatives are to
+        unknown_list : iter of strings
+            Iterator of output or state names that derivatives are to
             be calculated for. All must be valid unknowns in OpenMDAO.
 
         mode : string, optional
@@ -1155,12 +1155,12 @@ class Problem(object):
 
         Args
         ----
-        indep_list : list of strings
-            List of independent variable names that derivatives are to
+        indep_list : iter of strings
+            Iterator of independent variable names that derivatives are to
             be calculated with respect to. All params must have a IndepVarComp.
 
-        unknown_list : list of strings
-            List of output or state names that derivatives are to
+        unknown_list : iter of strings
+            Iterator of output or state names that derivatives are to
             be calculated for. All must be valid unknowns in OpenMDAO.
 
         return_format : string
