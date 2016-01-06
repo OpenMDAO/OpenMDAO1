@@ -102,6 +102,7 @@ class pyOptSparseDriver(Driver):
         self.pyopt_solution = None
 
         self.lin_jacs = OrderedDict() #{}
+        self.quantities = []
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
@@ -148,6 +149,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all objectives
         objs = self.get_objectives()
+        self.quantities = list(iterkeys(objs))
         self.sparsity = OrderedDict() #{}
         for name in objs:
             opt_prob.addObj(name)
@@ -164,6 +166,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
+        self.quantities += list(iterkeys(econs))
 
         for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
@@ -183,6 +186,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
+        self.quantities += list(iterkeys(incons))
 
         for name in self.get_constraints(ctype='ineq'):
             size = con_meta[name]['size']
@@ -345,7 +349,7 @@ class pyOptSparseDriver(Driver):
         fail = 1
 
         try:
-            sens_dict = self.calc_gradient(dv_dict, func_dict,
+            sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                            return_format='dict',
                                            sparsity=self.sparsity)
             #for key, value in iteritems(self.lin_jacs):
