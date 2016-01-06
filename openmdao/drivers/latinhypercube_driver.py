@@ -52,7 +52,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = OrderedDict() #{}
+        buckets = {}
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
             buckets[name] = [design_var_buckets[rand_lhc[i, j]]
@@ -153,7 +153,7 @@ class _LHC_Individual(object):
         """
 
         if self.phi is None:
-            distdict = OrderedDict() #{}
+            distdict = {}
 
             # Calculate the norm between each pair of points in the DOE
             arr = self.doe

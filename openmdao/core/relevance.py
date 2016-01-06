@@ -144,10 +144,10 @@ class Relevance(object):
         vgraph = nx.DiGraph()  # var graph
         sgraph = nx.DiGraph()  # subsystem graph
 
-        compins = OrderedDict() #{}  # maps input vars to components
-        compouts = OrderedDict() #{} # maps output vars to components
+        compins = {}  # maps input vars to components
+        compouts = {} # maps output vars to components
 
-        promote_map = OrderedDict() #{}
+        promote_map = {}
         to_prom_name = group._sysdata.to_prom_name
 
         # ensure we have system graph nodes even for unconnected subsystems
@@ -200,8 +200,8 @@ class Relevance(object):
             Dictionary that maps a variable name to all other variables in the
             graph that are relevant to it.
         """
-        relevant = OrderedDict() #{}
-        succs = OrderedDict() #{}
+        relevant = {}
+        succs = {}
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()
@@ -232,7 +232,7 @@ class Relevance(object):
         Given the dict that maps relevant vars to each VOI, find the mapping
         of each VOI to the set of systems that need to run.
         """
-        relevant_systems = OrderedDict() #{}
+        relevant_systems = {}
         grev = self._sgraph.reverse()
 
         to_abs_uname = self._sysdata.to_abs_uname

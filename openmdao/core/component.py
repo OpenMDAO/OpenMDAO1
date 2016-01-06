@@ -297,7 +297,7 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        to_prom_name = self._sysdata.to_prom_name = OrderedDict() #{}
+        to_prom_name = self._sysdata.to_prom_name = {}
         to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -381,7 +381,7 @@ class Component(System):
 
         # create map of relative name in parent to relative name in child
         self._relname_map = self._get_relname_map(parent._sysdata.to_prom_name)
-        
+
         # at the Group level, we create a set of arrays for each variable of
         # interest, and we make them all subviews of the same shared array in
         # order to conserve memory. Components don't actually own their params,

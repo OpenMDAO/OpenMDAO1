@@ -94,7 +94,7 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = OrderedDict() #{}
+        self.opt_settings = {}
 
         # The user can set a file name here to store history
         self.hist_file = None
@@ -280,7 +280,6 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        func_dict = OrderedDict() #{}
         metadata = self.metadata
         system = self.root
 
@@ -297,13 +296,8 @@ class pyOptSparseDriver(Driver):
 
             system.solve_nonlinear(metadata=metadata)
 
-            # Get the objective function evaluations
-            for name, obj in iteritems(self.get_objectives()):
-                func_dict[name] = obj
-
-            # Get the constraint evaluations
-            for name, con in iteritems(self.get_constraints()):
-                func_dict[name] = con
+            func_dict = OrderedDict(self.get_objectives())
+            func_dict.update(self.get_constraints())
 
             # Record after getting obj and constraint to assure they have
             # been gathered in MPI.
@@ -323,6 +317,7 @@ class pyOptSparseDriver(Driver):
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
             fail = 1
+            func_dict = {}
 
         #print("Functions calculated")
         #print(func_dict)
@@ -352,7 +347,6 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        sens_dict = OrderedDict() #{}
 
         try:
             sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
@@ -370,6 +364,7 @@ class pyOptSparseDriver(Driver):
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
+            sens_dict = {}
 
         #print("Derivatives calculated")
         #print(dv_dict)
