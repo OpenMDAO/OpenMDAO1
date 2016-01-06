@@ -94,19 +94,19 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = {} # Order not guaranteed.  Do not iterate.
+        self.opt_settings = {} # Order not guaranteed in python 3.
 
         # The user can set a file name here to store history
         self.hist_file = None
 
         self.pyopt_solution = None
 
-        self.lin_jacs = OrderedDict() #{}
+        self.lin_jacs = OrderedDict()
         self.quantities = []
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
-        self.sparsity = OrderedDict() #{}
+        self.sparsity = OrderedDict()
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -150,7 +150,7 @@ class pyOptSparseDriver(Driver):
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(iterkeys(objs))
-        self.sparsity = OrderedDict() #{}
+        self.sparsity = OrderedDict()
         for name in objs:
             opt_prob.addObj(name)
             self.sparsity[name] = self.indep_list

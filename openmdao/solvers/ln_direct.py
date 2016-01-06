@@ -47,7 +47,7 @@ class DirectSolver(ScipyGMRES):
         -------
         dict of ndarray : Solution vectors
         """
-        sol_buf = OrderedDict() #{}
+        sol_buf = OrderedDict()
 
         # TODO: This solver could probably work with multiple RHS
         for voi, rhs in rhs_mat.items():

@@ -146,7 +146,7 @@ class ComplexStepSrcVecWrapper(object):
         self.vec = vec.vec
         self.step_var = None
         self.step_val = None
-        self.vals = {} # Order not guaranteed.  Do not iterate.
+        self.vals = {} # Order not guaranteed in python 3.
 
         # Make complex copies of every unknown or state
         for name, val in iteritems(vec):

@@ -262,7 +262,7 @@ class Problem(object):
 
         # remove all the input to input connections, leaving just one unknown
         # connection to each param
-        newconns = OrderedDict() #{}
+        newconns = OrderedDict()
         for tgt, srcs in iteritems(connections):
             unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
             if len(unknown_srcs) > 1:
@@ -275,7 +275,7 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = OrderedDict() #{}
+        self._dangling = OrderedDict()
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
@@ -1192,9 +1192,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed.  Do not iterate.
+            dv_scale = {} # Order not guaranteed in python 3.
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed.  Do not iterate.
+            cn_scale = {} # Order not guaranteed in python 3.
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1244,9 +1244,9 @@ class Problem(object):
             return fd_ikey
 
         if return_format == 'dict':
-            J = OrderedDict() #{}
+            J = OrderedDict()
             for okey in unknown_list:
-                J[okey] = OrderedDict() #{}
+                J[okey] = OrderedDict()
                 for j, ikey in enumerate(indep_list):
 
                     # Support sparsity
@@ -1363,9 +1363,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed.  Do not iterate.
+            dv_scale = {} # Order not guaranteed in python 3.
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed.  Do not iterate.
+            cn_scale = {} # Order not guaranteed in python 3.
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1388,12 +1388,12 @@ class Problem(object):
 
         # Initialize Jacobian
         if return_format == 'dict':
-            J = OrderedDict() #{}
+            J = OrderedDict()
             for okeys in unknown_list:
                 if isinstance(okeys, str):
                     okeys = (okeys,)
                 for okey in okeys:
-                    J[okey] = OrderedDict() #{}
+                    J[okey] = OrderedDict()
                     for ikeys in indep_list:
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
@@ -1408,7 +1408,7 @@ class Problem(object):
         else:
             usize = 0
             psize = 0
-            Jslices = OrderedDict() #{}
+            Jslices = OrderedDict()
             for u in unknown_list:
                 start = usize
                 if u in self._qoi_indices:
@@ -1675,9 +1675,9 @@ class Problem(object):
                 continue
 
             data[cname] = {}
-            jac_fwd = OrderedDict() #{}
-            jac_rev = OrderedDict() #{}
-            jac_fd = OrderedDict() #{}
+            jac_fwd = OrderedDict()
+            jac_rev = OrderedDict()
+            jac_fd = OrderedDict()
 
             params = comp.params
             unknowns = comp.unknowns
@@ -2032,8 +2032,8 @@ class Problem(object):
             if a a promoted variable name matches multiple unknowns
         """
 
-        connections = OrderedDict() #{}
-        dangling = {} # Order not guaranteed.  Do not iterate.
+        connections = OrderedDict()
+        dangling = {} # Order not guaranteed in python 3.
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2061,7 +2061,7 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {} # Order not guaranteed.  Do not iterate.
+    param_owners = {} # Order not guaranteed in python 3.
 
     for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
@@ -2084,7 +2084,7 @@ def _jac_to_flat_dict(jac):
 
     dict of ndarrays"""
 
-    new_jac = OrderedDict() #{}
+    new_jac = OrderedDict()
     for key1, val1 in iteritems(jac):
         for key2, val2 in iteritems(val1):
             new_jac[(key1, key2)] = val2

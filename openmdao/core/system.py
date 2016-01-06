@@ -30,7 +30,7 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom_name = {} # Order not guaranteed.  Do not iterate.
+        self.to_prom_name = {} # Order not guaranteed in python 3.
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -111,9 +111,9 @@ class System(object):
         self._sysdata = _SysData('')
 
         # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = OrderedDict() #{}
-        self.dpmat = OrderedDict() #{}
-        self.drmat = OrderedDict() #{}
+        self.dumat = OrderedDict()
+        self.dpmat = OrderedDict()
+        self.drmat = OrderedDict()
 
         self._local_subsystems = []
         self._fd_params = None
@@ -374,7 +374,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = OrderedDict() #{}
+        jac = OrderedDict()
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -396,7 +396,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {} # Order not guaranteed.  Do not iterate.
+        fd_cols = {} # Order not guaranteed in python 3.
 
         to_prom_name = self._sysdata.to_prom_name
 

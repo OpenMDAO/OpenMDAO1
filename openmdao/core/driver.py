@@ -58,8 +58,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = {} # Order not guaranteed.  Do not iterate.
-        self.fn_conversions = {} # Order not guaranteed.  Do not iterate.
+        self.dv_conversions = {} # Order not guaranteed in python 3.
+        self.fn_conversions = {} # Order not guaranteed in python 3.
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
@@ -127,7 +127,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
-        self.dv_conversions = OrderedDict() #{}
+        self.dv_conversions = OrderedDict()
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -138,7 +138,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
-        self.fn_conversions = OrderedDict() #{}
+        self.fn_conversions = OrderedDict()
         for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -175,8 +175,8 @@ class Driver(object):
         self.recorders.close()
 
     def _map_voi_indices(self):
-        poi_indices = OrderedDict() #{}
-        qoi_indices = OrderedDict() #{}
+        poi_indices = OrderedDict()
+        qoi_indices = OrderedDict()
         for name, meta in chain(iteritems(self._cons), iteritems(self._objs)):
             # set indices of interest
             if 'indices' in meta:
@@ -337,7 +337,7 @@ class Driver(object):
         lower = (lower + adder)*scaler
         upper = (upper + adder)*scaler
 
-        param = OrderedDict() #{}
+        param = OrderedDict()
         param['lower'] = lower
         param['upper'] = upper
         param['adder'] = adder
@@ -487,7 +487,7 @@ class Driver(object):
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        obj = OrderedDict() #{}
+        obj = OrderedDict()
         obj['adder'] = adder
         obj['scaler'] = scaler
         if indices:
@@ -603,7 +603,7 @@ class Driver(object):
         if equals is not None:
             equals = (equals + adder)*scaler
 
-        con = OrderedDict() #{}
+        con = OrderedDict()
         con['lower'] = lower
         con['upper'] = upper
         con['equals'] = equals

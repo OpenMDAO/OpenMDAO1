@@ -176,7 +176,7 @@ class PetscKSP(LinearSolver):
                                atol=options['atol'],
                                rtol=options['rtol'])
 
-        unknowns_mat = OrderedDict() #{}
+        unknowns_mat = OrderedDict()
         for voi, rhs in iteritems(rhs_mat):
 
             sol_vec = np.zeros(rhs.shape)
@@ -282,9 +282,9 @@ class PetscKSP(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        dumat = OrderedDict() #{}
+        dumat = OrderedDict()
         dumat[voi] = system.dumat[voi]
-        drmat = OrderedDict() #{}
+        drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
         system.solve_linear(dumat, drmat, (voi, ), mode=mode,

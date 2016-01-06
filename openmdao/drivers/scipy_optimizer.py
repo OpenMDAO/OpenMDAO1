@@ -74,7 +74,7 @@ class ScipyOptimizer(Driver):
                                 'convergence messages')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = OrderedDict() #{}
+        self.opt_settings = OrderedDict()
 
         self.metadata = None
         self._problem = None
@@ -82,7 +82,7 @@ class ScipyOptimizer(Driver):
         self.exit_flag = 0
         self.grad_cache = None
         self.con_cache = None
-        self.con_idx = OrderedDict() #{}
+        self.con_idx = OrderedDict()
         self.cons = None
         self.objs = None
 
@@ -162,7 +162,7 @@ class ScipyOptimizer(Driver):
             for name, meta in con_meta.items():
                 size = meta['size']
                 for j in range(0, size):
-                    con_dict = OrderedDict() #{}
+                    con_dict = OrderedDict()
                     if meta['equals'] is not None:
                         con_dict['type'] = 'eq'
                     else:
