@@ -181,18 +181,18 @@ class Problem(object):
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
-        
+
         # get dictionary of implicit connections {param: [unknowns]}
         # and dictionary of params that are not implicitly connected
         # to anything {promoted_name: pathname}
         implicit_conns, prom_noconns = self._get_implicit_connections()
 
-        
+
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
-        
+
         input_graph = nx.Graph()
 
         # resolve any input to input connections
@@ -209,7 +209,7 @@ class Problem(object):
                         input_graph.add_edge(p, n, idxs=None)
 
         # store all of the connected sets of inputs for later use
-        self._input_inputs = OrderedDict() #{}
+        self._input_inputs = {} # Order not guaranteed.  Do not iterate.
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
                 # force list here, since some versions of networkx return a
@@ -221,7 +221,7 @@ class Problem(object):
         # initialize this here since we may have unit diffs for input-input
         # connections that get filtered out of the connection dict by the
         # time setup_units is called.
-        self._unit_diffs = OrderedDict() #{}
+        self._unit_diffs = {} # Order not guaranteed.  Do not iterate.
 
         # for all connections where the source is an input, we want to connect
         # the 'unknown' source for that target to all other inputs that are
@@ -285,7 +285,7 @@ class Problem(object):
         """For all sets of connected inputs, find any differences in units
         or initial value.
         """
-        input_diffs = OrderedDict() #{}
+        input_diffs = {} # Order not guaranteed.  Do not iterate.
 
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
@@ -352,7 +352,7 @@ class Problem(object):
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms = OrderedDict(), OrderedDict() ,OrderedDict() #{}, {}, {}
+                step_sizes, step_types, forms = {}, {}, {} # Order not guaranteed.  Do not iterate.
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
@@ -407,9 +407,9 @@ class Problem(object):
         """
         Check the current system tree to see if it's optimal.
         """
-        problem_groups = OrderedDict() #{}
+        problem_groups = {} # Order not guaranteed.  Do not iterate.
         for group in self.root.subgroups(recurse=True, include_self=True):
-            problem_groups[group.pathname] = OrderedDict() #{}
+            problem_groups[group.pathname] = {} # Order not guaranteed.  Do not iterate.
             uses_lings = isinstance(group.ln_solver, LinearGaussSeidel)
             maxiter = group.ln_solver.options['maxiter']
 
@@ -509,8 +509,8 @@ class Problem(object):
         # collect all connections, both implicit and explicit from
         # anywhere in the tree, and put them in a dict where each key
         # is an absolute param name that maps to the absolute name of
-        # a single source.        
-        connections = self._setup_connections(params_dict, unknowns_dict)        
+        # a single source.
+        connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
 
         # Allow the user to omit the size of a parameter and pull the size
@@ -607,7 +607,7 @@ class Problem(object):
             meta['top_promoted_name'] = to_prom_name[path]
 
         # Given connection information, create mapping from system pathname
-        # to the parameters that system must transfer data to        
+        # to the parameters that system must transfer data to
         param_owners = _assign_parameters(connections)
 
         pois = self.driver.desvars_of_interest()
@@ -654,7 +654,7 @@ class Problem(object):
                 if self.comm.rank == 0:
                     order, broken_edges = s.list_auto_order()
                 if MPI:
-                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)               
+                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)
                 s.set_order(order)
 
                 # Mark "head" of each broken edge
@@ -678,7 +678,7 @@ class Problem(object):
                 msg = "Unconnected param '{}' is missing a shape or default value."
                 raise RuntimeError(msg.format(param))
 
-        # create VecWrappers for all systems in the tree.        
+        # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
@@ -701,7 +701,7 @@ class Problem(object):
         if check or force_check:
             return self.check_setup(out_stream)
 
-        return OrderedDict() #{}
+        return {} # Order not guaranteed.  Do not iterate.
 
     def cleanup(self):
         """ Clean up resources prior to exit. """
@@ -916,7 +916,7 @@ class Problem(object):
             graph, _ = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
-            out_of_order = OrderedDict() #{}
+            out_of_order = {} # Order not guaranteed.  Do not iterate.
             for sub in itervalues(grp._subsystems):
                 visited.add(sub.pathname)
                 for u, v in nx.dfs_edges(graph, sub.pathname):
@@ -991,7 +991,7 @@ class Problem(object):
         print("##############################################", file=out_stream)
         print("Setup: Checking for potential issues...", file=out_stream)
 
-        results = OrderedDict() #{}  # dict of results for easier testing
+        results = {} # Order not guaranteed.  Do not iterate.  dict of results for easier testing
         results['unit_diffs'] = self._list_unit_conversions(out_stream)
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
@@ -1183,9 +1183,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = OrderedDict() #{}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = OrderedDict() #{}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1354,9 +1354,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = OrderedDict() #{}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = OrderedDict() #{}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1459,13 +1459,13 @@ class Problem(object):
                     # Put them in serial groups
                     voi_sets.append((item,))
 
-        voi_srcs = OrderedDict() #{}
+        voi_srcs = {} # Order not guaranteed.  Do not iterate.
 
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         for params in voi_sets:
             rhs = OrderedDict()
-            voi_idxs = OrderedDict() #{}
+            voi_idxs = {} # Order not guaranteed.  Do not iterate.
 
             old_size = None
 
@@ -1641,7 +1641,7 @@ class Problem(object):
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
 
-        data = OrderedDict() #{}
+        data = {} # Order not guaranteed.  Do not iterate.
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1659,7 +1659,7 @@ class Problem(object):
             if isinstance(comp, IndepVarComp):
                 continue
 
-            data[cname] = OrderedDict() #{}
+            data[cname] = {} # Order not guaranteed.  Do not iterate.
             jac_fwd = OrderedDict() #{}
             jac_rev = OrderedDict() #{}
             jac_fd = OrderedDict() #{}
@@ -1828,7 +1828,7 @@ class Problem(object):
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
-        data = OrderedDict() #{}
+        data = {} # Order not guaranteed.  Do not iterate.
         _assemble_deriv_data(indep_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
@@ -2018,18 +2018,18 @@ class Problem(object):
         """
 
         connections = OrderedDict() #{}
-        dangling = OrderedDict() #{}
+        dangling = {} # Order not guaranteed.  Do not iterate.
 
         abs_unames = self.root._sysdata.to_abs_uname
-        
-        for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):            
-            if prom_name in abs_unames:  # param has a src in unknowns                
-                uprom = abs_unames[prom_name]                
-                for pabs in pabs_list:                    
-                    connections[pabs] = ((uprom, None),)                    
+
+        for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
+            if prom_name in abs_unames:  # param has a src in unknowns
+                uprom = abs_unames[prom_name]
+                for pabs in pabs_list:
+                    connections[pabs] = ((uprom, None),)
             else:
                 dangling.setdefault(prom_name, set()).update(pabs_list)
-        
+
         return connections, dangling
 
     def print_all_convergence(self):
@@ -2046,7 +2046,7 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = OrderedDict() #{}
+    param_owners = {} # Order not guaranteed.  Do not iterate.
 
     for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
@@ -2093,7 +2093,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if key not in jac_fd:
                 continue
 
-            ldata = cdata[key] = OrderedDict() #{}
+            ldata = cdata[key] = {} # Order not guaranteed.  Do not iterate.
 
             Jsub_fd = jac_fd[key]
 

@@ -3,7 +3,6 @@
 from six import iteritems, iterkeys
 
 import numpy as np
-from collections import OrderedDict
 
 # Don't autodoc anything
 __all__ = []
@@ -147,7 +146,7 @@ class ComplexStepSrcVecWrapper(object):
         self.vec = vec.vec
         self.step_var = None
         self.step_val = None
-        self.vals = OrderedDict() #{}
+        self.vals = {} # Order not guaranteed.  Do not iterate.
 
         # Make complex copies of every unknown or state
         for name, val in iteritems(vec):

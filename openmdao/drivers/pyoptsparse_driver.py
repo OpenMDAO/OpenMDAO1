@@ -94,7 +94,7 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = OrderedDict() #{}
+        self.opt_settings = {} # Order not guaranteed.  Do not iterate.
 
         # The user can set a file name here to store history
         self.hist_file = None
@@ -352,7 +352,6 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        sens_dict = OrderedDict() #{}
 
         try:
             sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
@@ -370,6 +369,7 @@ class pyOptSparseDriver(Driver):
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
+            sens_dict = {} # Order not guaranteed.  Do not iterate.
 
         #print("Derivatives calculated")
         #print(dv_dict)

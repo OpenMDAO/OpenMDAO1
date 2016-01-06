@@ -205,7 +205,7 @@ class _TmpDict(object):
     """
     def __init__(self, inner, complex=False):
         self._inner = inner
-        self._changed = OrderedDict() #{}
+        self._changed = {} # Order not guaranteed.  Do not iterate.
         self._complex = complex
 
     def __getitem__(self, name):
@@ -289,7 +289,7 @@ def _import_functs(mod, dct, names=None):
 
 
 # this dict will act as the local scope when we eval our expressions
-_expr_dict = OrderedDict() #{}
+_expr_dict = {} # Order not guaranteed.  Do not iterate.
 
 # Note: no function in the math module supports complex args, so the following can only be used
 #       in ExecComps if derivatives are not required.  The functions below don't have numpy
