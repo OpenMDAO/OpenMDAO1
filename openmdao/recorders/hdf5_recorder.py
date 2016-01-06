@@ -22,6 +22,21 @@ class HDF5Recorder(BaseRecorder):
 
     **driver_kwargs
         Additional keyword args to be passed to the HDF5 driver.
+
+    Options
+    -------
+    options['record_metadata'] :  bool(True)
+        Tells recorder whether to record variable attribute metadata.
+    options['record_unknowns'] :  bool(True)
+        Tells recorder whether to record the unknowns vector.
+    options['record_params'] :  bool(False)
+        Tells recorder whether to record the params vector.
+    options['record_resids'] :  bool(False)
+        Tells recorder whether to record the ressiduals vector.
+    options['includes'] :  list of strings
+        Patterns for variables to include in recording.
+    options['excludes'] :  list of strings
+        Patterns for variables to exclude in recording (processed after includes).
     """
     def __init__(self, out, **driver_kwargs):
 
@@ -35,7 +50,7 @@ class HDF5Recorder(BaseRecorder):
         Args
         ----
         group : `System`
-            `System` containing vectors 
+            `System` containing vectors
         """
         params = group.params.iteritems()
         resids = group.resids.iteritems()
@@ -44,7 +59,7 @@ class HDF5Recorder(BaseRecorder):
         f = self.out
 
         group = f.require_group('metadata')
-        
+
         pairings = (
                 (group.create_group("Parameters"), params),
                 (group.create_group("Unknowns"), unknowns),
