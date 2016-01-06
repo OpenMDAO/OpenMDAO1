@@ -7,6 +7,7 @@ from itertools import chain
 from six import iteritems
 import warnings
 import sys
+import os
 
 import numpy as np
 
@@ -16,6 +17,10 @@ from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.core.vec_wrapper import _ByObjWrapper
 from collections import OrderedDict
+
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:
+    from openmdao.core.mpi_wrap import debug
 
 class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
@@ -401,7 +406,11 @@ class Driver(object):
 
         if nproc > 1:
             # TODO: use Bcast for improved performance
+            if trace:
+                debug("%s.driver._get_distrib_var bcast" % self.root.pathname)
             flatval = comm.bcast(flatval, root=owner)
+            if trace:
+                debug("%s.driver._get_distrib_var bcast DONE" % self.root.pathname)
 
         scaler = meta['scaler']
         adder = meta['adder']

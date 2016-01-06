@@ -34,6 +34,10 @@ from openmdao.util.string_util import get_common_ancestor, nearest_child, name_r
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:
+    from openmdao.core.mpi_wrap import debug
+
 class _ProbData(object):
     """
     A container for Problem level data that is needed by subsystems
@@ -181,18 +185,18 @@ class Problem(object):
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
-        
+
         # get dictionary of implicit connections {param: [unknowns]}
         # and dictionary of params that are not implicitly connected
         # to anything {promoted_name: pathname}
         implicit_conns, prom_noconns = self._get_implicit_connections()
 
-        
+
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
-        
+
         input_graph = nx.Graph()
 
         # resolve any input to input connections
@@ -509,8 +513,8 @@ class Problem(object):
         # collect all connections, both implicit and explicit from
         # anywhere in the tree, and put them in a dict where each key
         # is an absolute param name that maps to the absolute name of
-        # a single source.        
-        connections = self._setup_connections(params_dict, unknowns_dict)        
+        # a single source.
+        connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
 
         # Allow the user to omit the size of a parameter and pull the size
@@ -607,7 +611,7 @@ class Problem(object):
             meta['top_promoted_name'] = to_prom_name[path]
 
         # Given connection information, create mapping from system pathname
-        # to the parameters that system must transfer data to        
+        # to the parameters that system must transfer data to
         param_owners = _assign_parameters(connections)
 
         pois = self.driver.desvars_of_interest()
@@ -654,7 +658,11 @@ class Problem(object):
                 if self.comm.rank == 0:
                     order, broken_edges = s.list_auto_order()
                 if MPI:
-                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)               
+                    if trace:
+                        debug("problem setup order bcast")
+                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)
+                    if trace:
+                        debug("problem setup order bcast DONE")
                 s.set_order(order)
 
                 # Mark "head" of each broken edge
@@ -678,7 +686,7 @@ class Problem(object):
                 msg = "Unconnected param '{}' is missing a shape or default value."
                 raise RuntimeError(msg.format(param))
 
-        # create VecWrappers for all systems in the tree.        
+        # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
         # Prepare Driver
@@ -1534,7 +1542,13 @@ class Problem(object):
                                 dxval = None
                             if nproc > 1:
                                 # TODO: make this use Bcast for efficiency
+                                if trace:
+                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s"%
+                                            (dxval, owned[item]))
+                                    debug("input_list: %s, output_list: %s" % (input_list, output_list))
                                 dxval = comm.bcast(dxval, root=owned[item])
+                                if trace:
+                                    debug("dxval bcast DONE")
                         else:  # irrelevant variable.  just give'em zeros
                             if item in qoi_indices:
                                 zsize = len(qoi_indices[item])
@@ -2021,15 +2035,15 @@ class Problem(object):
         dangling = OrderedDict() #{}
 
         abs_unames = self.root._sysdata.to_abs_uname
-        
-        for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):            
-            if prom_name in abs_unames:  # param has a src in unknowns                
-                uprom = abs_unames[prom_name]                
-                for pabs in pabs_list:                    
-                    connections[pabs] = ((uprom, None),)                    
+
+        for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
+            if prom_name in abs_unames:  # param has a src in unknowns
+                uprom = abs_unames[prom_name]
+                for pabs in pabs_list:
+                    connections[pabs] = ((uprom, None),)
             else:
                 dangling.setdefault(prom_name, set()).update(pabs_list)
-        
+
         return connections, dangling
 
     def print_all_convergence(self):
