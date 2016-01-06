@@ -4,7 +4,6 @@ import collections
 from six import string_types, iteritems
 
 from openmdao.core.component import Component
-from collections import OrderedDict
 
 class IndepVarComp(Component):
     """A Component that provides an output to connect to a parameter.
@@ -40,7 +39,7 @@ class IndepVarComp(Component):
                         n, v, kw = tup
                     elif len(tup) == 2:
                         n, v = tup
-                        kw = OrderedDict() #{}
+                        kw = {} # Order not guaranteed.  Do not iterate.
                     else:
                         badtup = tup
                 else:

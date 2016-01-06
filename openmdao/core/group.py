@@ -257,7 +257,7 @@ class Group(System):
 
         self._data_xfer = OrderedDict() #{}
 
-        to_prom_name = self._sysdata.to_prom_name = {}
+        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed.  Do not iterate.
         to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -297,7 +297,7 @@ class Group(System):
         calculates and caches the list of outputs to be updated for each voi.
         """
         if self._gs_outputs is None:
-            self._gs_outputs = OrderedDict() #{}
+            self._gs_outputs = {} # Order not guaranteed.  Do not iterate.
 
         if mode not in self._gs_outputs:
             dumat = self.dumat
@@ -452,9 +452,9 @@ class Group(System):
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
 
-        self._do_apply = OrderedDict() #{} # dict of (child_pathname, voi) keyed to bool
+        self._do_apply = {} # Order not guaranteed.  Do not iterate. dict of (child_pathname, voi) keyed to bool
 
-        ls_inputs = OrderedDict() #{}
+        ls_inputs = {} # Order not guaranteed.  Do not iterate.
         for voi in self.dumat:
             ls_inputs[voi] = self._all_params(voi)
 
@@ -934,7 +934,7 @@ class Group(System):
 
             plen = len(path)+1
 
-            renames = OrderedDict() #{}
+            renames = {} # Order not guaranteed.  Do not iterate.
             for node in graph.nodes_iter():
                 newnode = '.'.join(node.split('.')[:plen])
                 if newnode != node:

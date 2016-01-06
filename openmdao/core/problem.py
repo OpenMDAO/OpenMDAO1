@@ -214,6 +214,7 @@ class Problem(object):
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
+
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
                 # force list here, since some versions of networkx return a
@@ -1191,9 +1192,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1362,9 +1363,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -2032,7 +2033,7 @@ class Problem(object):
         """
 
         connections = OrderedDict() #{}
-        dangling = {}
+        dangling = {} # Order not guaranteed.  Do not iterate.
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2060,7 +2061,7 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {}
+    param_owners = {} # Order not guaranteed.  Do not iterate.
 
     for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)

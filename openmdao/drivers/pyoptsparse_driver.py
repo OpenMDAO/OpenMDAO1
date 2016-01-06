@@ -94,7 +94,7 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = {}
+        self.opt_settings = {} # Order not guaranteed.  Do not iterate.
 
         # The user can set a file name here to store history
         self.hist_file = None

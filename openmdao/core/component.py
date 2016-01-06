@@ -297,7 +297,7 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        to_prom_name = self._sysdata.to_prom_name = {}
+        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed.  Do not iterate.
         to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -725,7 +725,7 @@ class Component(System):
             stepvec.set_complex_var(p_name)
 
             # promoted names and _init_params_dict keys are same
-            mydict = self._init_params_dict.get(p_name, OrderedDict()) #{})
+            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed.  Do not iterate.
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

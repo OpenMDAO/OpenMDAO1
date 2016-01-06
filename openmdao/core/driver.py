@@ -16,7 +16,6 @@ from openmdao.util.options import OptionsDictionary
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.core.vec_wrapper import _ByObjWrapper
-from collections import OrderedDict
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:
@@ -59,8 +58,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = OrderedDict() #{}
-        self.fn_conversions = OrderedDict() #{}
+        self.dv_conversions = {} # Order not guaranteed.  Do not iterate.
+        self.fn_conversions = {} # Order not guaranteed.  Do not iterate.
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and

@@ -9,7 +9,6 @@ from six import string_types, itervalues, iteritems
 import networkx as nx
 
 from openmdao.util.graph import collapse_nodes
-from collections import OrderedDict
 
 
 class Relevance(object):
@@ -200,8 +199,10 @@ class Relevance(object):
             Dictionary that maps a variable name to all other variables in the
             graph that are relevant to it.
         """
-        relevant = {}
+
+        relevant = {} # Order not guaranteed.  Do not iterate.
         succs = {}
+
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()

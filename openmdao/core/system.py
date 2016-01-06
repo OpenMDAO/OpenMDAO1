@@ -30,7 +30,7 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom_name = {}
+        self.to_prom_name = {} # Order not guaranteed.  Do not iterate.
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -396,7 +396,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {}
+        fd_cols = {} # Order not guaranteed.  Do not iterate.
 
         to_prom_name = self._sysdata.to_prom_name
 
