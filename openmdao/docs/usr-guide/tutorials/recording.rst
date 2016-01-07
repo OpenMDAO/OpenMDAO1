@@ -363,7 +363,7 @@ on the `db` object:
 
 .. testcode:: reading
 
-    print( db.keys() )
+    print( list( db.keys() ) ) # list() needed for compatibility with Python 3. Not needed for Python 2
 
 which will print out:
 
