@@ -43,12 +43,12 @@ class Group(System):
     def __init__(self):
         super(Group, self).__init__()
 
-        self._src = {}
-        self._src_idxs = {}
-        self._data_xfer = {}
+        self._src = OrderedDict() #{}
+        self._src_idxs = OrderedDict() #{}
+        self._data_xfer = OrderedDict() #{}
 
-        self._local_unknown_sizes = {}
-        self._local_param_sizes = {}
+        self._local_unknown_sizes = OrderedDict() #{}
+        self._local_param_sizes = OrderedDict() #{}
 
         # put these in here to avoid circular imports
         from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
@@ -84,6 +84,13 @@ class Group(System):
         for part in name.split('.'):
             s = s._subsystems[part]
         return s
+
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.ln_solver.cleanup()
+        self.nl_solver.cleanup()
+        for s in self.subsystems():
+            s.cleanup()
 
     def add(self, name, system, promotes=None):
         """Add a subsystem to this group, specifying its name and any variables
@@ -248,9 +255,9 @@ class Group(System):
         self._sysdata._params_dict = params_dict
         self._sysdata._unknowns_dict = unknowns_dict
 
-        self._data_xfer = {}
+        self._data_xfer = OrderedDict() #{}
 
-        to_prom_name = self._sysdata.to_prom_name = {}
+        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed.  Do not iterate.
         to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -290,20 +297,20 @@ class Group(System):
         calculates and caches the list of outputs to be updated for each voi.
         """
         if self._gs_outputs is None:
-            self._gs_outputs = {}
+            self._gs_outputs = {} # Order not guaranteed.  Do not iterate.
 
         if mode not in self._gs_outputs:
             dumat = self.dumat
-            gs_outputs = self._gs_outputs[mode] = {}
+            gs_outputs = self._gs_outputs[mode] = OrderedDict() #{}
             if mode == 'fwd':
                 for sub in self._local_subsystems:
-                    gs_outputs[sub.name] = outs = {}
+                    gs_outputs[sub.name] = outs = OrderedDict() #{}
                     for voi in vois:
                         outs[voi] = set([x for x in dumat[voi]._dat if
                                                    sub.dumat and x not in sub.dumat[voi]])
             else: # rev
                 for sub in self._local_subsystems:
-                    gs_outputs[sub.name] = outs = {}
+                    gs_outputs[sub.name] = outs = OrderedDict() #{}
                     for voi in vois:
                         outs[voi] = set([x for x in dumat[voi]._dat if
                                                    not sub.dumat or
@@ -366,9 +373,9 @@ class Group(System):
         self._sysdata.comm = self.comm
 
         self.params = self.unknowns = self.resids = None
-        self.dumat, self.dpmat, self.drmat = {}, {}, {}
-        self._local_unknown_sizes = {}
-        self._local_param_sizes = {}
+        self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict() # #{}, {}, {}
+        self._local_unknown_sizes = OrderedDict() #{}
+        self._local_param_sizes = OrderedDict() #{}
         self._owning_ranks = None
         relevance = self._probdata.relevance
 
@@ -434,18 +441,20 @@ class Group(System):
             if 'src_indices' in meta:
                 meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
 
+
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
                                impl=self._impl)
 
+
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
 
-        self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
+        self._do_apply = {} # Order not guaranteed.  Do not iterate. dict of (child_pathname, voi) keyed to bool
 
-        ls_inputs = {}
+        ls_inputs = {} # Order not guaranteed.  Do not iterate.
         for voi in self.dumat:
             ls_inputs[voi] = self._all_params(voi)
 
@@ -570,7 +579,7 @@ class Group(System):
             Explicit connections in this `Group`, represented as a mapping
             from the pathname of the target to the pathname of the source.
         """
-        connections = {}
+        connections = OrderedDict() #{}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
@@ -925,7 +934,7 @@ class Group(System):
 
             plen = len(path)+1
 
-            renames = {}
+            renames = {} # Order not guaranteed.  Do not iterate.
             for node in graph.nodes_iter():
                 newnode = '.'.join(node.split('.')[:plen])
                 if newnode != node:
@@ -1294,7 +1303,7 @@ class Group(System):
         fwd = 0
         rev = 1
         modename = ['fwd', 'rev']
-        xfer_dict = {}
+        xfer_dict = OrderedDict() #{}
 
         for param in my_params:
             unknown, idxs = self.connections[param]
@@ -1314,7 +1323,6 @@ class Group(System):
 
             tgt_sys = nearest_child(self.pathname, param)
             src_sys = nearest_child(self.pathname, unknown)
-
             for sname, mode in ((tgt_sys, fwd), (src_sys, rev)):
                 src_idx_list, dest_idx_list, vec_conns, byobj_conns = \
                     xfer_dict.setdefault((sname, mode), ([], [], [], []))
@@ -1367,6 +1375,7 @@ class Group(System):
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
 
+
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
         """
@@ -1405,7 +1414,7 @@ class Group(System):
 
         """
         if MPI:
-            ranks = {}
+            ranks = {} # Order not guaranteed.  Do not iterate.
             local_vars = [k for k, acc in iteritems(self.unknowns._dat)
                                   if not acc.remote]
             local_vars.extend(k for k, acc in iteritems(self.params._dat)
@@ -1426,6 +1435,7 @@ class Group(System):
             self._sysdata.all_locals = [n for n in chain(self.unknowns._dat,
                                                          self.params._dat)]
             ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
+
 
         return ranks
 

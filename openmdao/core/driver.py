@@ -6,6 +6,8 @@ from collections import OrderedDict
 from itertools import chain
 from six import iteritems
 import warnings
+import sys
+
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
@@ -51,8 +53,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = {}
-        self.fn_conversions = {}
+        self.dv_conversions = {} # Order not guaranteed.  Do not iterate.
+        self.fn_conversions = {} # Order not guaranteed.  Do not iterate.
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
@@ -120,7 +122,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
-        self.dv_conversions = {}
+        self.dv_conversions = OrderedDict() #{}
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -131,7 +133,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
-        self.fn_conversions = {}
+        self.fn_conversions = OrderedDict() #{}
         for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -163,9 +165,13 @@ class Driver(object):
         """
         return self.root.get_req_procs()
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.recorders.close()
+
     def _map_voi_indices(self):
-        poi_indices = {}
-        qoi_indices = {}
+        poi_indices = OrderedDict() #{}
+        qoi_indices = OrderedDict() #{}
         for name, meta in chain(iteritems(self._cons), iteritems(self._objs)):
             # set indices of interest
             if 'indices' in meta:
@@ -307,15 +313,15 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if lower is None:
-            lower = -1e99
-        elif isinstance(lower, np.ndarray):
+        if isinstance(lower, np.ndarray):
             lower = lower.flatten()
+        elif lower is None or lower == -float('inf'):
+            lower = sys.float_info.min
 
-        if upper is None:
-            upper = 1e99
-        elif isinstance(upper, np.ndarray):
+        if isinstance(upper, np.ndarray):
             upper = upper.flatten()
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
@@ -326,7 +332,7 @@ class Driver(object):
         lower = (lower + adder)*scaler
         upper = (upper + adder)*scaler
 
-        param = {}
+        param = OrderedDict() #{}
         param['lower'] = lower
         param['upper'] = upper
         param['adder'] = adder
@@ -472,7 +478,7 @@ class Driver(object):
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        obj = {}
+        obj = OrderedDict() #{}
         obj['adder'] = adder
         obj['scaler'] = scaler
         if indices:
@@ -588,7 +594,7 @@ class Driver(object):
         if equals is not None:
             equals = (equals + adder)*scaler
 
-        con = {}
+        con = OrderedDict() #{}
         con['lower'] = lower
         con['upper'] = upper
         con['equals'] = equals
@@ -662,7 +668,7 @@ class Driver(object):
 
         # Metadata Setup
         self.iter_count += 1
-        metadata = create_local_meta(None, 'Driver')
+        metadata = self.metadata = create_local_meta(None, 'Driver')
         system.ln_solver.local_meta = metadata
         update_local_meta(metadata, (self.iter_count,))
 
@@ -706,11 +712,14 @@ class Driver(object):
             Jacobian of unknowns with respect to params.
         """
 
-        return self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
-                                           return_format=return_format,
-                                           dv_scale=self.dv_conversions,
-                                           cn_scale=self.fn_conversions,
-                                           sparsity=sparsity)
+        J = self._problem.calc_gradient(indep_list, unknown_list, mode=mode,
+                                        return_format=return_format,
+                                        dv_scale=self.dv_conversions,
+                                        cn_scale=self.fn_conversions,
+                                        sparsity=sparsity)
+
+        self.recorders.record_derivatives(J, self.metadata)
+        return J
 
     def generate_docstring(self):
         """

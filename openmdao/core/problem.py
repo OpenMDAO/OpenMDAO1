@@ -187,9 +187,11 @@ class Problem(object):
         # to anything {promoted_name: pathname}
         implicit_conns, prom_noconns = self._get_implicit_connections()
 
+
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
+
 
         input_graph = nx.Graph()
 
@@ -207,7 +209,7 @@ class Problem(object):
                         input_graph.add_edge(p, n, idxs=None)
 
         # store all of the connected sets of inputs for later use
-        self._input_inputs = {}
+        self._input_inputs = {} # Order not guaranteed.  Do not iterate.
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
                 # force list here, since some versions of networkx return a
@@ -219,7 +221,7 @@ class Problem(object):
         # initialize this here since we may have unit diffs for input-input
         # connections that get filtered out of the connection dict by the
         # time setup_units is called.
-        self._unit_diffs = {}
+        self._unit_diffs = {} # Order not guaranteed.  Do not iterate.
 
         # for all connections where the source is an input, we want to connect
         # the 'unknown' source for that target to all other inputs that are
@@ -255,7 +257,7 @@ class Problem(object):
 
         # remove all the input to input connections, leaving just one unknown
         # connection to each param
-        newconns = {}
+        newconns = OrderedDict() #{}
         for tgt, srcs in iteritems(connections):
             unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
             if len(unknown_srcs) > 1:
@@ -268,7 +270,7 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = {}
+        self._dangling = OrderedDict() #{}
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
@@ -283,7 +285,7 @@ class Problem(object):
         """For all sets of connected inputs, find any differences in units
         or initial value.
         """
-        input_diffs = {}
+        input_diffs = {} # Order not guaranteed.  Do not iterate.
 
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
@@ -350,7 +352,7 @@ class Problem(object):
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms = {}, {}, {}
+                step_sizes, step_types, forms = {}, {}, {} # Order not guaranteed.  Do not iterate.
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
@@ -405,9 +407,9 @@ class Problem(object):
         """
         Check the current system tree to see if it's optimal.
         """
-        problem_groups = {}
+        problem_groups = {} # Order not guaranteed.  Do not iterate.
         for group in self.root.subgroups(recurse=True, include_self=True):
-            problem_groups[group.pathname] = {}
+            problem_groups[group.pathname] = {} # Order not guaranteed.  Do not iterate.
             uses_lings = isinstance(group.ln_solver, LinearGaussSeidel)
             maxiter = group.ln_solver.options['maxiter']
 
@@ -642,11 +644,17 @@ class Problem(object):
                                              unknowns_dict, connections,
                                              pois, oois, mode)
 
+
         # perform auto ordering
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
             if not s._order_set:
-                order, broken_edges = s.list_auto_order()
+                order = None
+                broken_edges = None
+                if self.comm.rank == 0:
+                    order, broken_edges = s.list_auto_order()
+                if MPI:
+                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)
                 s.set_order(order)
 
                 # Mark "head" of each broken edge
@@ -693,7 +701,12 @@ class Problem(object):
         if check or force_check:
             return self.check_setup(out_stream)
 
-        return {}
+        return {} # Order not guaranteed.  Do not iterate.
+
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.driver.cleanup()
+        self.root.cleanup()
 
     def _check_solvers(self):
         """
@@ -903,7 +916,7 @@ class Problem(object):
             graph, _ = grp._break_cycles(grp.list_order(), graph)
 
             visited = set()
-            out_of_order = {}
+            out_of_order = {} # Order not guaranteed.  Do not iterate.
             for sub in itervalues(grp._subsystems):
                 visited.add(sub.pathname)
                 for u, v in nx.dfs_edges(graph, sub.pathname):
@@ -978,7 +991,7 @@ class Problem(object):
         print("##############################################", file=out_stream)
         print("Setup: Checking for potential issues...", file=out_stream)
 
-        results = {}  # dict of results for easier testing
+        results = {} # Order not guaranteed.  Do not iterate.  dict of results for easier testing
         results['unit_diffs'] = self._list_unit_conversions(out_stream)
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
@@ -1170,9 +1183,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1222,9 +1235,9 @@ class Problem(object):
             return fd_ikey
 
         if return_format == 'dict':
-            J = {}
+            J = OrderedDict() #{}
             for okey in unknown_list:
-                J[okey] = {}
+                J[okey] = OrderedDict() #{}
                 for j, ikey in enumerate(indep_list):
 
                     # Support sparsity
@@ -1341,9 +1354,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed.  Do not iterate.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed.  Do not iterate.
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1366,12 +1379,12 @@ class Problem(object):
 
         # Initialize Jacobian
         if return_format == 'dict':
-            J = {}
+            J = OrderedDict() #{}
             for okeys in unknown_list:
                 if isinstance(okeys, str):
                     okeys = (okeys,)
                 for okey in okeys:
-                    J[okey] = {}
+                    J[okey] = OrderedDict() #{}
                     for ikeys in indep_list:
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
@@ -1386,7 +1399,7 @@ class Problem(object):
         else:
             usize = 0
             psize = 0
-            Jslices = {}
+            Jslices = OrderedDict() #{}
             for u in unknown_list:
                 start = usize
                 if u in self._qoi_indices:
@@ -1446,13 +1459,13 @@ class Problem(object):
                     # Put them in serial groups
                     voi_sets.append((item,))
 
-        voi_srcs = {}
+        voi_srcs = {} # Order not guaranteed.  Do not iterate.
 
         # If Forward mode, solve linear system for each param
         # If Adjoint mode, solve linear system for each unknown
         for params in voi_sets:
             rhs = OrderedDict()
-            voi_idxs = {}
+            voi_idxs = {} # Order not guaranteed.  Do not iterate.
 
             old_size = None
 
@@ -1628,7 +1641,7 @@ class Problem(object):
         if out_stream is not None:
             out_stream.write('Partial Derivatives Check\n\n')
 
-        data = {}
+        data = {} # Order not guaranteed.  Do not iterate.
 
         # Derivatives should just be checked without parallel adjoint for now.
         voi = None
@@ -1646,10 +1659,10 @@ class Problem(object):
             if isinstance(comp, IndepVarComp):
                 continue
 
-            data[cname] = {}
-            jac_fwd = {}
-            jac_rev = {}
-            jac_fd = {}
+            data[cname] = {} # Order not guaranteed.  Do not iterate.
+            jac_fwd = OrderedDict() #{}
+            jac_rev = OrderedDict() #{}
+            jac_fd = OrderedDict() #{}
 
             params = comp.params
             unknowns = comp.unknowns
@@ -1657,26 +1670,32 @@ class Problem(object):
             dparams = comp.dpmat[voi]
             dunknowns = comp.dumat[voi]
             dresids = comp.drmat[voi]
+            states = comp.states
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 continue
+
+            # Work with all params that are not pbo.
+            param_list = [item for item in dparams if not \
+                          dparams.metadata(item).get('pass_by_obj')]
+            param_list.extend(states)
+            unkn_list = [item for item in dunknowns if not \
+                         dunknowns.metadata(item).get('pass_by_obj')]
 
             if out_stream is not None:
                 out_stream.write('-'*(len(cname)+15) + '\n')
                 out_stream.write("Component: '%s'\n" % cname)
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
-            states = comp.states
-
             # Create all our keys and allocate Jacs
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
 
                 # Check dimensions of user-supplied Jacobian
-                for u_name in unknowns:
+                for u_name in unkn_list:
 
                     u_size = np.size(dunknowns[u_name])
                     if comp._jacobian_cache:
@@ -1700,7 +1719,7 @@ class Problem(object):
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for u_name in dresids:
+            for u_name in unkn_list:
                 u_size = np.size(dunknowns[u_name])
 
                 # Send columns of identity
@@ -1716,13 +1735,13 @@ class Problem(object):
                     finally:
                         dparams._apply_unit_derivatives()
 
-                    for p_name in chain(dparams, states):
+                    for p_name in param_list:
 
                         dinputs = dunknowns if p_name in states else dparams
                         jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
-            for p_name in chain(dparams, states):
+            for p_name in param_list:
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1785,9 +1804,13 @@ class Problem(object):
             out_stream.write('Total Derivatives Check\n\n')
 
         # Params and Unknowns that we provide at this level.
-        abs_indep_list = self.root._get_fd_params()
-        param_srcs = [self.root.connections[p] for p in abs_indep_list]
-        unknown_list = self.root._get_fd_unknowns()
+        root = self.root
+        abs_indep_list = root._get_fd_params()
+        param_srcs = [root.connections[p] for p in abs_indep_list \
+                      if not root.params.metadata(p).get('pass_by_obj')]
+        unknown_list = root._get_fd_unknowns()
+        unknown_list = [item for item in unknown_list \
+                        if not root.unknowns.metadata(item).get('pass_by_obj')]
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
@@ -1809,7 +1832,7 @@ class Problem(object):
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
-        data = {}
+        data = {} # Order not guaranteed.  Do not iterate.
         _assemble_deriv_data(indep_list, unknown_list, data,
                              Jfor, Jrev, Jfd, out_stream)
 
@@ -1817,15 +1840,14 @@ class Problem(object):
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        exclude = set([])
 
         self.driver.recorders.startup(self.root)
-        self.driver.recorders.record_metadata(self.root, exclude=exclude)
+        self.driver.recorders.record_metadata(self.root)
 
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
-                solver.recorders.record_metadata(self.root, exclude=exclude)
+                solver.recorders.record_metadata(self.root)
 
     def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the
@@ -1999,8 +2021,8 @@ class Problem(object):
             if a a promoted variable name matches multiple unknowns
         """
 
-        connections = {}
-        dangling = {}
+        connections = OrderedDict() #{}
+        dangling = {} # Order not guaranteed.  Do not iterate.
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2028,7 +2050,7 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {}
+    param_owners = {} # Order not guaranteed.  Do not iterate.
 
     for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
@@ -2051,7 +2073,7 @@ def _jac_to_flat_dict(jac):
 
     dict of ndarrays"""
 
-    new_jac = {}
+    new_jac = OrderedDict() #{}
     for key1, val1 in iteritems(jac):
         for key2, val2 in iteritems(val1):
             new_jac[(key1, key2)] = val2
@@ -2075,7 +2097,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if key not in jac_fd:
                 continue
 
-            ldata = cdata[key] = {}
+            ldata = cdata[key] = {} # Order not guaranteed.  Do not iterate.
 
             Jsub_fd = jac_fd[key]
 

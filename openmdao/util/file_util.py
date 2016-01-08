@@ -185,3 +185,19 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
 
         for name in [f for f in filelist if fmatch(f)]:
             yield join(path, name)
+
+class DirContext(object):
+    """Supports using the 'with' statement in place of try-finally to
+    change to and return from a directory.
+    """
+
+    def __init__(self, dpath):
+        self.dpath = dpath
+
+    def __enter__(self):
+        self.start = os.getcwd()
+        os.chdir(self.dpath)
+        return self.dpath
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.start)

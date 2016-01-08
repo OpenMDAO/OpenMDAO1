@@ -146,7 +146,7 @@ class ComplexStepSrcVecWrapper(object):
         self.vec = vec.vec
         self.step_var = None
         self.step_val = None
-        self.vals = {}
+        self.vals = {} # Order not guaranteed.  Do not iterate.
 
         # Make complex copies of every unknown or state
         for name, val in iteritems(vec):

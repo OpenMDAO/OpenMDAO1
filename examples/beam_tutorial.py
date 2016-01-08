@@ -11,8 +11,8 @@ from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group
 #0.5 * [(0.24305 * room_width)  + 4.83] * (room_length) / (17.1*50,000) < 1/3            (5)
 
 #constants
-E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel) 
-I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam) 
+E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel)
+I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam)
 BEAM_WEIGHT_LBS_PER_IN = 58.0 / 12.0 #self weight of beam per unit length (58 lbs/ft or 4.83 lbs/in.)
 DEAD_LOAD_PSI = 20.0 / 144 #The dead load is 20psf or 0.1389psi.
 LIVE_LOAD_PSI = 50.0 / 144 #The live load is 50psf or 0.3472psi.
@@ -24,23 +24,23 @@ CROSS_SECTIONAL_AREA_SQIN = 17.1 #sq in
 
 
 #negate the area to turn from a maximization problem to a minimization problem
-class NegativeArea(Component):    
+class NegativeArea(Component):
 
     def __init__(self):
         super(NegativeArea, self).__init__()
-        
+
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
         self.add_output('neg_room_area', val=0.0)
 
-    def solve_nonlinear(self, params, unknowns, resids):        
+    def solve_nonlinear(self, params, unknowns, resids):
 
         room_width = params['room_width']
         room_length = params['room_length']
 
         unknowns['neg_room_area'] = -(room_length * room_width)
 
-    def linearize(self, params, unknowns, resids):        
+    def linearize(self, params, unknowns, resids):
         J = {}
 
         room_width = params['room_width']
@@ -52,23 +52,23 @@ class NegativeArea(Component):
         return J
 
 
-class LengthMinusWidth(Component):    
+class LengthMinusWidth(Component):
 
     def __init__(self):
         super(LengthMinusWidth, self).__init__()
-        
+
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
         self.add_output('length_minus_width', val=0.0)
 
-    def solve_nonlinear(self, params, unknowns, resids):        
+    def solve_nonlinear(self, params, unknowns, resids):
 
         room_width = params['room_width']
         room_length = params['room_length']
 
         unknowns['length_minus_width'] = room_length - room_width
 
-    def linearize(self, params, unknowns, resids):        
+    def linearize(self, params, unknowns, resids):
         J = {}
 
         room_width = params['room_width']
@@ -77,26 +77,26 @@ class LengthMinusWidth(Component):
         J['length_minus_width','room_width'] = -1.0
         J['length_minus_width','room_length'] = 1.0
 
-        return J  
+        return J
 
 class Deflection(Component):
-    
+
     def __init__(self):
         super(Deflection, self).__init__()
-        
+
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
         self.add_output('deflection', val=0.0)
 
-    def solve_nonlinear(self, params, unknowns, resids):        
+    def solve_nonlinear(self, params, unknowns, resids):
 
         room_width = params['room_width']
         room_length = params['room_length']
 
         unknowns['deflection'] = (E * I * 384.0) / (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)
-        
 
-    def linearize(self, params, unknowns, resids):        
+
+    def linearize(self, params, unknowns, resids):
         J = {}
 
         room_width = params['room_width']
@@ -109,22 +109,22 @@ class Deflection(Component):
 
 
 class BendingStress(Component):
-    
+
     def __init__(self):
         super(BendingStress, self).__init__()
-        
+
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
         self.add_output('bending_stress_ratio', val=0.0)
 
-    def solve_nonlinear(self, params, unknowns, resids):        
+    def solve_nonlinear(self, params, unknowns, resids):
 
         room_width = params['room_width']
         room_length = params['room_length']
 
         unknowns['bending_stress_ratio'] = (0.5*BEAM_HEIGHT_IN * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length)**2) / (8.0 * YIELD_STRENGTH_PSI * I)
 
-    def linearize(self, params, unknowns, resids):        
+    def linearize(self, params, unknowns, resids):
         J = {}
 
         room_width = params['room_width']
@@ -135,23 +135,23 @@ class BendingStress(Component):
 
         return J
 
-class ShearStress(Component):    
+class ShearStress(Component):
 
     def __init__(self):
         super(ShearStress, self).__init__()
-        
+
         self.add_param('room_width', val=0.0)
         self.add_param('room_length', val=0.0)
         self.add_output('shear_stress_ratio', val=0.0)
 
-    def solve_nonlinear(self, params, unknowns, resids):        
+    def solve_nonlinear(self, params, unknowns, resids):
 
         room_width = params['room_width']
         room_length = params['room_length']
 
         unknowns['shear_stress_ratio'] = 0.5 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length) / (CROSS_SECTIONAL_AREA_SQIN * YIELD_STRENGTH_PSI)
 
-    def linearize(self, params, unknowns, resids):        
+    def linearize(self, params, unknowns, resids):
         J = {}
 
         room_width = params['room_width']
@@ -164,14 +164,14 @@ class ShearStress(Component):
 
 
 class BeamTutorial(Group):
-   
+
     def __init__(self):
         super(BeamTutorial, self).__init__()
-        
+
         #add design variables or IndepVarComp's
         self.add('ivc_rlength', IndepVarComp('room_length', 100.0))
         self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
-        
+
         #add our custom components
         self.add('d_len_minus_wid', LengthMinusWidth())
         self.add('d_deflection', Deflection())
@@ -195,7 +195,7 @@ class BeamTutorial(Group):
         self.connect('ivc_rlength.room_length','d_neg_area.room_length')
         self.connect('ivc_rwidth.room_width','d_neg_area.room_width')
 
-if __name__ == "__main__":      
+if __name__ == "__main__":
     top = Problem()
     top.root = BeamTutorial()
 
@@ -214,7 +214,6 @@ if __name__ == "__main__":
     top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >= 720
     top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
     top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
-
 
     top.setup()
     top.run()

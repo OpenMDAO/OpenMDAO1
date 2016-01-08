@@ -177,7 +177,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         return self.petsc_vec.norm()
 
     def get_view(self, sys_pathname, comm, varmap):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)        
         if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
                   (sys_pathname, len(view.vec), view.keys(), view.vec))
@@ -257,7 +257,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
                                               shared_vec=shared_vec)
-        if trace:  # pragma: no cover
+        if trace:  # pragma: no cover            
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)

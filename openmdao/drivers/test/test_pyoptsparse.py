@@ -744,6 +744,37 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertTrue('p1.x' in sens_dict['obj.o'])
         self.assertTrue('p2.x' in sens_dict['obj.o'])
 
+    def test_inf_as_desvar_bounds(self):
+
+        # User may use np.inf as a bound. It is unneccessary, but the user
+        # may do it anyway, so make sure SLSQP doesn't blow up with it (bug
+        # reported by rfalck)
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-np.inf, upper=np.inf)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
 
 if __name__ == "__main__":
     unittest.main()

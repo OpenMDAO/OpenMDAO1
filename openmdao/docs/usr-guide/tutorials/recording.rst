@@ -76,7 +76,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
     top.setup()
     top.run()
 
-    top.driver.recorders[0].close()
+    top.cleanup()  # this closes all recorders
 
     print('\n')
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
@@ -106,7 +106,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
         os.remove('paraboloid')
 
 .. testsetup:: recording1
-    
+
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
@@ -142,46 +142,19 @@ additional `driver.add_recorder` calls. Solvers also have an `add_recorder`
 method that is invoked the same way. This allows you to record the evolution
 of variables at lower levels.
 
-While it might not be an issue, it is good practice to close the
-recorder explicitly before the program terminates.
-For this tutorial with one recorder added to the driver, this is simply done with:
+While it might not be an issue, it is good practice to tell
+the `Problem` explicitly to clean things up before the program terminates.
+This will close all recorders and potentially release other operating system
+resources.
+
+This is simply done in this case by calling:
 
 .. testcode:: recording1
 
-    top.driver.recorders[0].close()
+    top.cleanup()
 
 
 .. testcleanup:: recording1
-
-    import os
-    if os.path.exists('paraboloid'):
-        os.remove('paraboloid')
-
-If your model has recorders added to both drivers and solvers,
-a way to make sure all recorders are closed is to use code like this:
-
-.. testsetup:: recording2
-
-    import os
-    if os.path.exists('paraboloid'):
-        os.remove('paraboloid')
-
-    from openmdao.api import SqliteRecorder, Problem, Group
-    top = Problem()
-    root = top.root = Group()
-
-.. testcode:: recording2
-
-    for recorder in top.driver.recorders:
-        recorder.close()
-
-    for sub in top.root.subgroups(recurse=True, include_self=True):
-        for recorder in sub.nl_solver.recorders:
-            recorder.close()
-        for recorder in sub.ln_solver.recorders:
-            recorder.close()
-
-.. testcleanup:: recording2
 
     import os
     if os.path.exists('paraboloid'):
@@ -222,7 +195,7 @@ model, we could record that by setting the includes as follows:
 
 .. testcleanup:: recording3
 
-    top.driver.recorders[0].close()
+    top.cleanup()
 
     import os
     if os.path.exists('paraboloid'):
@@ -254,7 +227,7 @@ that starts with "comp1.".
 
 .. testcleanup:: recording4
 
-    top.driver.recorders[0].close()
+    top.cleanup()
 
     import os
     if os.path.exists('paraboloid'):
@@ -352,7 +325,7 @@ etc. To access the data from our run, we can use the following code:
     top.setup()
     top.run()
 
-    top.driver.recorders[0].close()
+    top.cleanup()
 
 .. testoutput:: reading
    :hide:
@@ -384,7 +357,33 @@ is the name of the sqlite database file. The second, `'openmdao'`, is the name o
 in the sqlite database. For the SqliteRecorder in OpenMDAO, all the
 recording is done to the `'openmdao'` table.
 
-Now, we can access the data using an iteration coordinate.
+Now, we can access the data using an iteration coordinate. It is not always obvious what are the 
+iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method 
+on the `db` object:
+
+.. testcode:: reading
+
+    print( list( db.keys() ) ) # list() needed for compatibility with Python 3. Not needed for Python 2
+
+which will print out:
+
+.. testoutput:: reading
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+::
+
+    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+So for this example, the iteration coordinates are: 
+
+::
+
+  ['SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+Now we can get the values for the first iteration coordinate:
 
 .. testcode:: reading
 
