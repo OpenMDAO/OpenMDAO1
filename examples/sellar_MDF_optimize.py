@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from openmdao.api import Component, Group, IndepVarComp, ExecComp, NLGaussSeidel
+from openmdao.api import Component, Group, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES
 
 class SellarDis1(Component):
     """Component containing Discipline 1."""
@@ -106,6 +106,7 @@ class SellarDerivatives(Group):
 
         self.nl_solver = NLGaussSeidel()
         self.nl_solver.options['atol'] = 1.0e-12
+        self.ln_solver = ScipyGMRES()
 
 
 if __name__ == '__main__':
@@ -113,13 +114,19 @@ if __name__ == '__main__':
 
     from openmdao.core.problem import Problem
     from openmdao.drivers.scipy_optimizer import ScipyOptimizer
+    from openmdao.api import pyOptSparseDriver
+    from openmdao.api import SqliteRecorder
 
     top = Problem()
     top.root = SellarDerivatives()
 
-    top.driver = ScipyOptimizer()
-    top.driver.options['optimizer'] = 'SLSQP'
-    top.driver.options['tol'] = 1.0e-8
+    # top.driver = ScipyOptimizer()
+    # top.driver.options['optimizer'] = 'SLSQP'
+    # top.driver.options['tol'] = 1.0e-8
+
+    top.driver = pyOptSparseDriver()
+    top.driver.options['optimizer'] = 'SNOPT'
+
 
     top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
                          upper=np.array([10.0, 10.0]))
@@ -128,6 +135,9 @@ if __name__ == '__main__':
     top.driver.add_objective('obj')
     top.driver.add_constraint('con1', upper=0.0)
     top.driver.add_constraint('con2', upper=0.0)
+    rec = SqliteRecorder('sellar_snopt.db')
+    top.driver.add_recorder(rec)
+    rec.options['record_derivs'] = True
 
     top.setup()
     top.run()
