@@ -8,7 +8,35 @@ from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
 class Brent(NonLinearSolver):
-    """Root finding using Brent's method."""
+    """Root finding using Brent's method. This is a specialized solver that 
+    can only converge a single scalar residual. You must specify the name 
+    of the state-variable/residual via the `state_var` option. You must also 
+    give either `lower_bound` and `upper_bound` or `var_lower_bound` 
+    and `var_upper_bound`. 
+
+
+    Options
+    -------
+    options['iprint'] :  int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['lower_bound'] :  float(0.0)
+        lower bound for the root search
+    options['max_iter'] :  int(100)
+        if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.
+    options['rtol'] :  float64(4.4408920985e-16)
+        The routine converges when a root is known to lie within rtol times the value returned of the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.
+    options['state_var'] :  str('')
+        name of the state-variable/residual the solver should with
+    options['upper_bound'] :  float(100.0)
+        upper bound for the root search
+    options['var_lower_bound'] :  str('')
+        if given, name of the variable to pull the lower bound value from.This variable must be a parameter on of of the child components of the containing system
+    options['var_upper_bound'] :  str('')
+        if given, name of the variable to pull the upper bound value from.This variable must be a parameter on of of the child components of the containing system
+    options['xtol'] :  int(0)
+        The routine converges when a root is known to lie within xtol of the value return. Should be >= 0. The routine modifies this to take into account the relative precision of doubles.
+
+    """
 
     def __init__(self): 
         super(Brent, self).__init__()
