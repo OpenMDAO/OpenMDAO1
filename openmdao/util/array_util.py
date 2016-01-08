@@ -40,7 +40,7 @@ def evenly_distrib_idxs(num_divisions, arr_size):
         a tuple of (sizes, offsets), where sizes and offsets contain values for all
         divisions.
     """
-    base = arr_size / num_divisions
+    base = arr_size // num_divisions
     leftover = arr_size % num_divisions
     sizes = np.ones(num_divisions, dtype="int") * base
 

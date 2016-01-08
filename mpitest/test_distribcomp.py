@@ -8,6 +8,7 @@ from openmdao.api import Problem, Component, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.util.array_util import evenly_distrib_idxs
 from openmdao.test.mpi_util import MPITestCase
+import six
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
@@ -28,9 +29,9 @@ def take_nth(rank, size, seq):
     while True:
         for proc in range(size):
             if rank == proc:
-                yield it.next()
+                yield six.next(it)
             else:
-                it.next()
+                six.next(it)
 
 
 class InOutArrayComp(Component):
