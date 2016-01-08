@@ -53,7 +53,6 @@ def under_mpirun():
         if name == 'OMPI_COMM_WORLD_RANK' or \
            name == 'MPIEXEC_HOSTNAME' or \
            name.startswith('MPIR_') or \
-           name.startswith('MSMPI_') or \
            name.startswith('MPICH_'):
             return True
     return False
