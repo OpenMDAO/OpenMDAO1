@@ -7,7 +7,7 @@ import sys
 import json
 import warnings
 from itertools import chain
-from six import iteritems, iterkeys, itervalues
+from six import iteritems, itervalues
 from six.moves import cStringIO
 import networkx as nx
 
@@ -852,7 +852,7 @@ class Problem(object):
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
         conn_comps = set([t.rsplit('.', 1)[0]
-                          for t in iterkeys(self.root.connections)])
+                          for t in self.root.connections])
         conn_comps.update([s.rsplit('.', 1)[0]
                            for s, i in itervalues(self.root.connections)])
         noconn_comps = sorted([c.pathname

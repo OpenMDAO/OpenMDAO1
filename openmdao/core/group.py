@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 from collections import Counter, OrderedDict
-from six import iteritems, iterkeys, itervalues
+from six import iteritems, itervalues
 from six.moves import zip_longest
 from itertools import chain
 
@@ -258,7 +258,7 @@ class Group(System):
         self._data_xfer = OrderedDict()
 
         to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
-        to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
+        to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
@@ -861,7 +861,7 @@ class Group(System):
         # Make sure the new_order is valid. It must contain all subsystems
         # in this model.
         newset = set(new_order)
-        oldset = set(iterkeys(self._subsystems))
+        oldset = set(self._subsystems)
         if oldset != newset:
             missing = oldset - newset
             extra = newset - oldset
@@ -1063,7 +1063,7 @@ class Group(System):
             if lens:
                 nwid = max(lens) + 9
             else:
-                lens = [len(n) for n in iterkeys(uvec)]
+                lens = [len(n) for n in uvec]
                 nwid = max(lens) if lens else 12
 
             for v, acc in iteritems(uvec._dat):

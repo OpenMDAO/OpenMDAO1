@@ -406,7 +406,7 @@ class Driver(object):
         if nproc > 1:
             # TODO: use Bcast for improved performance
             if trace:
-                debug("%s.driver._get_distrib_var bcast" % self.root.pathname)
+                debug("%s.driver._get_distrib_var bcast: val=%s" % (self.root.pathname, flatval))
             flatval = comm.bcast(flatval, root=owner)
             if trace:
                 debug("%s.driver._get_distrib_var bcast DONE" % self.root.pathname)

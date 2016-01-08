@@ -7,7 +7,7 @@ import re
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -298,7 +298,7 @@ class Component(System):
 
         """
         to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
-        to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
+        to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
@@ -602,7 +602,7 @@ class Component(System):
         out_stream.write("\n")
 
         if verbose:  # pragma: no cover
-            lens = [len(n) for n in iterkeys(uvec)]
+            lens = [len(n) for n in uvec]
             nwid = max(lens) if lens else 12
 
             for v in uvec:

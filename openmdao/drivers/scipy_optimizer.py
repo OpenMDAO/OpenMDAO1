@@ -4,7 +4,7 @@ OpenMDAO Wrapper for the scipy.optimize.minimize family of local optimizers.
 
 from __future__ import print_function
 
-from six import iterkeys, itervalues, iteritems
+from six import itervalues, iteritems
 from six.moves import range
 
 import numpy as np
@@ -109,10 +109,10 @@ class ScipyOptimizer(Driver):
         problem.root.solve_nonlinear(metadata=self.metadata)
 
         pmeta = self.get_desvar_metadata()
-        self.params = list(iterkeys(pmeta))
-        self.objs = list(iterkeys(self.get_objectives()))
+        self.params = list(pmeta)
+        self.objs = list(self.get_objectives())
         con_meta = self.get_constraint_metadata()
-        self.cons = list(iterkeys(con_meta))
+        self.cons = list(con_meta)
         self.con_cache = self.get_constraints()
 
         self.opt_settings['maxiter'] = self.options['maxiter']

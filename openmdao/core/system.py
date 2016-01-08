@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues, iterkeys
+from six import string_types, iteritems, itervalues
 
 import numpy as np
 
@@ -724,7 +724,7 @@ class System(object):
             states = self.states
         except AttributeError:  # handle component unit test where setup has not been performed
             # TODO: should we force all component unit tests to use a Problem test harness?
-            states = set([p for u,p in iterkeys(self._jacobian_cache)
+            states = set([p for u,p in self._jacobian_cache
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):

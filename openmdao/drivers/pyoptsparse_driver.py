@@ -8,7 +8,7 @@ additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
 from __future__ import print_function
 
 import traceback
-from six import iterkeys, iteritems
+from six import iteritems
 
 from pyoptsparse import Optimization
 
@@ -137,7 +137,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
-        self.indep_list = indep_list = list(iterkeys(param_meta))
+        self.indep_list = indep_list = list(param_meta)
         param_vals = self.get_desvars()
 
         for name, meta in iteritems(param_meta):
@@ -149,7 +149,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = list(iterkeys(objs))
+        self.quantities = list(objs)
         self.sparsity = OrderedDict()
         for name in objs:
             opt_prob.addObj(name)
@@ -166,7 +166,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += list(iterkeys(econs))
+        self.quantities += list(econs)
 
         for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
@@ -186,7 +186,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += list(iterkeys(incons))
+        self.quantities += list(incons)
 
         for name in self.get_constraints(ctype='ineq'):
             size = con_meta[name]['size']
@@ -296,7 +296,7 @@ class pyOptSparseDriver(Driver):
 
             system.solve_nonlinear(metadata=metadata)
 
-            func_dict = OrderedDict(self.get_objectives())
+            func_dict = self.get_objectives() # this returns a new OrderedDict
             func_dict.update(self.get_constraints())
 
             # Record after getting obj and constraint to assure they have
