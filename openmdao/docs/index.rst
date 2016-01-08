@@ -28,6 +28,8 @@ Documentation for OpenMDAO version: |release|
    usr-guide/tutorials.rst
    usr-guide/examples.rst
    usr-guide/units.rst
+   usr-guide/mpi_linux.rst
+   usr-guide/mpi_windows.rst
 
 ===========================
 `Pre-1.0 Conversion Guide`_
