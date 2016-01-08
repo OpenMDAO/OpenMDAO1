@@ -284,7 +284,7 @@ class TestPBODesvar(unittest.TestCase):
 
         top.setup(check=False)
 
-    def test_check_derivs(self):
+    def test_check_derivs_param(self):
 
         class Comp(Component):
             def __init__(self):
@@ -316,6 +316,65 @@ class TestPBODesvar(unittest.TestCase):
 
         data = prob.check_total_derivatives(out_stream=None)
         self.assertEqual(data[('z', 'x')]['J_fwd'][0][0], 3.0)
+
+    def test_check_derivs_unknowns(self):
+
+        class Comp1(Component):
+            def __init__(self):
+                super(Comp1, self).__init__()
+                self.add_param('x', shape=1)
+                self.add_output('y', shape=1)
+                self.add_output('dz_dy', shape=1, pass_by_obj=True)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                x = params['x']
+                unknowns['y'] = 4.0*x + 1.0
+                unknowns['dz_dy'] = 2.0
+
+            def linearize(self, params, unknowns, resids):
+                J = {}
+                J['y', 'x'] = 4.0
+                return J
+
+        class Comp2(Component):
+            def __init__(self):
+                super(Comp2, self).__init__()
+                self.add_param('y', shape=1)
+                self.add_param('dz_dy', shape=1, pass_by_obj=True)
+                self.add_output('z', shape=1)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                y = params['y']
+                unknowns['z'] = y*2.0
+
+            def linearize(self, params, unknowns, resids):
+                J = {}
+                J['z', 'y'] = params['dz_dy']
+                return J
+
+        class TestGroup(Group):
+            def __init__(self):
+                super(TestGroup, self).__init__()
+                self.add('x', IndepVarComp('x', 0.0), promotes=['*'])
+                self.add('c1', Comp1(), promotes=['*'])
+                self.add('c2', Comp2(), promotes=['*'])
+
+        prob = Problem()
+        prob.root = TestGroup()
+        prob.setup(check=False)
+
+        prob['x'] = 2.0
+        prob.run()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+        self.assertEqual(data['c1'][('y', 'x')]['J_fwd'][0][0], 4.0)
+        self.assertEqual(data['c1'][('y', 'x')]['J_rev'][0][0], 4.0)
+        self.assertEqual(data['c2'][('z', 'y')]['J_fwd'][0][0], 2.0)
+        self.assertEqual(data['c2'][('z', 'y')]['J_rev'][0][0], 2.0)
+
+        data = prob.check_total_derivatives(out_stream=None)
+        self.assertEqual(data[('z', 'x')]['J_fwd'][0][0], 8.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -357,7 +357,33 @@ is the name of the sqlite database file. The second, `'openmdao'`, is the name o
 in the sqlite database. For the SqliteRecorder in OpenMDAO, all the
 recording is done to the `'openmdao'` table.
 
-Now, we can access the data using an iteration coordinate.
+Now, we can access the data using an iteration coordinate. It is not always obvious what are the 
+iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method 
+on the `db` object:
+
+.. testcode:: reading
+
+    print( list( db.keys() ) ) # list() needed for compatibility with Python 3. Not needed for Python 2
+
+which will print out:
+
+.. testoutput:: reading
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+::
+
+    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+So for this example, the iteration coordinates are: 
+
+::
+
+  ['SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+
+Now we can get the values for the first iteration coordinate:
 
 .. testcode:: reading
 

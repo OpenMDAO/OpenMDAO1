@@ -28,7 +28,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
     seed : int or None, optional
         Random seed.  Defaults to None.
-        
+
     num_par_doe : int, optional
         The number of DOE cases to run concurrently.  Defaults to 1.
 
@@ -51,7 +51,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = {}
+        buckets = {} # Order not guaranteed.  Do not iterate.
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
             buckets[name] = [design_var_buckets[rand_lhc[i, j]]
@@ -151,7 +151,7 @@ class _LHC_Individual(object):
         """
 
         if self.phi is None:
-            distdict = {}
+            distdict = {} # Order not guaranteed.  Do not iterate.
 
             # Calculate the norm between each pair of points in the DOE
             arr = self.doe

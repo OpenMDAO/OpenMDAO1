@@ -10,6 +10,7 @@ import os
 import petsc4py
 from petsc4py import PETSc
 import numpy as np
+from collections import OrderedDict
 
 from openmdao.solvers.solver_base import LinearSolver
 
@@ -172,7 +173,7 @@ class PetscKSP(LinearSolver):
                                atol=options['atol'],
                                rtol=options['rtol'])
 
-        unknowns_mat = {}
+        unknowns_mat = OrderedDict() #{}
         for voi, rhs in iteritems(rhs_mat):
 
             sol_vec = np.zeros(rhs.shape)
@@ -276,9 +277,9 @@ class PetscKSP(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        dumat = {}
+        dumat = OrderedDict() #{}
         dumat[voi] = system.dumat[voi]
-        drmat = {}
+        drmat = OrderedDict() #{}
         drmat[voi] = system.drmat[voi]
 
         system.solve_linear(dumat, drmat, (voi, ), mode=mode,
