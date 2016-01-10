@@ -51,7 +51,8 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = {} # Order not guaranteed.  Do not iterate.
+        buckets = {}
+
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
             buckets[name] = [design_var_buckets[rand_lhc[i, j]]
@@ -80,8 +81,9 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             job_list = [run_list[o:o+s] for o, s in zip(run_offsets,
                                                         run_sizes)]
 
+        if trace: debug("scattering job_list: %s" % job_list)
         run_list = comm.scatter(job_list, root=0)
-        debug('Number of DOE jobs: %s' % len(run_list))
+        if trace: debug('Number of DOE jobs: %s (scatter DONE)' % len(run_list))
 
         for case in run_list:
             yield case
@@ -151,7 +153,7 @@ class _LHC_Individual(object):
         """
 
         if self.phi is None:
-            distdict = {} # Order not guaranteed.  Do not iterate.
+            distdict = {}
 
             # Calculate the norm between each pair of points in the DOE
             arr = self.doe

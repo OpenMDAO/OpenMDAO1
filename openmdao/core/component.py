@@ -7,7 +7,7 @@ import re
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -54,7 +54,7 @@ class Component(System):
     def __init__(self):
         super(Component, self).__init__()
         self._post_setup_vars = False
-        self._jacobian_cache = OrderedDict() #{}
+        self._jacobian_cache = OrderedDict()
 
         self._init_params_dict = OrderedDict() # for storage of initial var data
         self._init_unknowns_dict = OrderedDict() # for storage of initial var data
@@ -297,8 +297,8 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed.  Do not iterate.
-        to_abs_uname = self._sysdata.to_abs_uname = OrderedDict()
+        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
+        to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
@@ -369,7 +369,7 @@ class Component(System):
             Specifies the factory object used to create `VecWrapper` objects.
         """
         self.params = self.unknowns = self.resids = None
-        self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict() #{}, {}, {}
+        self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
         relevance = self._probdata.relevance
 
         if not self.is_active():
@@ -602,7 +602,7 @@ class Component(System):
         out_stream.write("\n")
 
         if verbose:  # pragma: no cover
-            lens = [len(n) for n in iterkeys(uvec)]
+            lens = [len(n) for n in uvec]
             nwid = max(lens) if lens else 12
 
             for v in uvec:
@@ -699,7 +699,7 @@ class Component(System):
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
 
-        jac = OrderedDict() #{}
+        jac = OrderedDict()
         csparams = ComplexStepTgtVecWrapper(params)
         csunknowns = ComplexStepSrcVecWrapper(unknowns)
         csresids = ComplexStepSrcVecWrapper(resids)
@@ -725,7 +725,7 @@ class Component(System):
             stepvec.set_complex_var(p_name)
 
             # promoted names and _init_params_dict keys are same
-            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed.  Do not iterate.
+            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed in python 3.
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

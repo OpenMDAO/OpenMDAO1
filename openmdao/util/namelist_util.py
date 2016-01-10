@@ -6,7 +6,7 @@ from __future__ import print_function
 
 # pylint: disable-msg=E0611,F0401
 from collections import OrderedDict
-from six import iteritems, iterkeys
+from six import iteritems
 from six.moves import range
 
 from numpy import ndarray, array, append, vstack, zeros, \
@@ -208,7 +208,7 @@ class Namelist(object):
 
         if not skip:
             skip = []
-        for name in sorted(iterkeys(self.comp._init_params_dict)):
+        for name in sorted(self.comp._init_params_dict):
             if name.startswith(varpath+':'):
                 sub_name = name[len(varpath+':'):]
                 if sub_name not in skip:

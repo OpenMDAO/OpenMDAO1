@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues, iterkeys
+from six import string_types, iteritems, itervalues
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom_name = {} # Order not guaranteed.  Do not iterate.
+        self.to_prom_name = {} # Order not guaranteed in python 3.
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -111,9 +111,9 @@ class System(object):
         self._sysdata = _SysData('')
 
         # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = OrderedDict() #{}
-        self.dpmat = OrderedDict() #{}
-        self.drmat = OrderedDict() #{}
+        self.dumat = OrderedDict()
+        self.dpmat = OrderedDict()
+        self.drmat = OrderedDict()
 
         self._local_subsystems = []
         self._fd_params = None
@@ -374,7 +374,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = OrderedDict() #{}
+        jac = OrderedDict()
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -396,7 +396,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {} # Order not guaranteed.  Do not iterate.
+        fd_cols = {} # Order not guaranteed in python 3.
 
         to_prom_name = self._sysdata.to_prom_name
 
@@ -424,7 +424,7 @@ class System(object):
                 target_input = inputs._dat[p_name].val
                 param_src = None
 
-            mydict = {} # Order not guaranteed.  Do not iterate.
+            mydict = {}
             # since p_name is a promoted name, it could refer to multiple
             # params.  We've checked earlier to make sure that step_size,
             # step_type, and form are not defined differently for each
@@ -724,7 +724,7 @@ class System(object):
             states = self.states
         except AttributeError:  # handle component unit test where setup has not been performed
             # TODO: should we force all component unit tests to use a Problem test harness?
-            states = set([p for u,p in iterkeys(self._jacobian_cache)
+            states = set([p for u,p in self._jacobian_cache
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):
@@ -1079,7 +1079,7 @@ class System(object):
             return ' '.join((tgt, prom_tgt, units))
 
         def _write(by_src, relname):
-            by_src2 = {} # Order not guaranteed.  Do not iterate.
+            by_src2 = {}
             for src, tgts in iteritems(by_src):
                 if src[0] == '{':  # {unconnected}
                     prom_src = units = ''
@@ -1117,7 +1117,7 @@ class System(object):
             if not absnames:
                 raise KeyError("Can't find variable '%s'" % name)
 
-            by_src = {} # Order not guaranteed.  Do not iterate.
+            by_src = {}
             for tgt, (src, idxs) in iteritems(self._probdata.connections):
                 for absname in absnames:
                     if tgt == absname or src == absname:
@@ -1134,7 +1134,7 @@ class System(object):
 
             # create a dict with srcs as keys so we can more easily subsort
             # targets after sorting srcs.
-            by_src = {} # Order not guaranteed.  Do not iterate.
+            by_src = {}
             for tgt, (src, idx) in iteritems(self.connections):
                 if src.startswith(scope) or tgt.startswith(scope):
                     by_src.setdefault(src, []).append(_param_str(pdict,

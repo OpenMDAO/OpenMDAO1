@@ -116,14 +116,17 @@ class PetscKSP(LinearSolver):
 
         lsize = np.sum(system._local_unknown_sizes[None][system.comm.rank, :])
         size = np.sum(system._local_unknown_sizes[None])
+        if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
         jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
                                            comm=system.comm)
+        if trace: debug("petsc matrix creation DONE")
         jac_mat.setPythonContext(self)
         jac_mat.setUp()
 
         if trace:  # pragma: no cover
             debug("creating KSP object for system",system.pathname)
         self.ksp = PETSc.KSP().create(comm=system.comm)
+        if trace: debug("KSP creation DONE")
         self.ksp.setOperators(jac_mat)
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
@@ -173,7 +176,7 @@ class PetscKSP(LinearSolver):
                                atol=options['atol'],
                                rtol=options['rtol'])
 
-        unknowns_mat = OrderedDict() #{}
+        unknowns_mat = OrderedDict()
         for voi, rhs in iteritems(rhs_mat):
 
             sol_vec = np.zeros(rhs.shape)
@@ -183,10 +186,12 @@ class PetscKSP(LinearSolver):
             self.sol_buf_petsc = PETSc.Vec().createWithArray(sol_vec,
                                                              comm=system.comm)
             if trace:  # pragma: no cover
+                debug("sol_buf creation DONE")
                 debug("creating rhs_buf petsc vec for voi", voi)
             self.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
                                                              comm=system.comm)
-
+            if trace: debug("rhs_buf creation DONE")
+            
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
             self.system = system
@@ -277,9 +282,9 @@ class PetscKSP(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        dumat = OrderedDict() #{}
+        dumat = OrderedDict()
         dumat[voi] = system.dumat[voi]
-        drmat = OrderedDict() #{}
+        drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
         system.solve_linear(dumat, drmat, (voi, ), mode=mode,

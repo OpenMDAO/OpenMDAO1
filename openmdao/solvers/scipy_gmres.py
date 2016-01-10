@@ -97,7 +97,7 @@ class ScipyGMRES(LinearSolver):
         options = self.options
         self.mode = mode
 
-        unknowns_mat = OrderedDict() #{}
+        unknowns_mat = OrderedDict()
         for voi, rhs in iteritems(rhs_mat):
 
             # Scipy can only handle one right-hand-side at a time.
@@ -216,9 +216,9 @@ class ScipyGMRES(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        dumat = OrderedDict() #{}
+        dumat = OrderedDict()
         dumat[voi] = system.dumat[voi]
-        drmat = OrderedDict() #{}
+        drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
         system.solve_linear(dumat, drmat, (voi, ), mode=mode,

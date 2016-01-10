@@ -4,7 +4,7 @@ OpenMDAO Wrapper for the scipy.optimize.minimize family of local optimizers.
 
 from __future__ import print_function
 
-from six import iterkeys, itervalues, iteritems
+from six import itervalues, iteritems
 from six.moves import range
 
 import numpy as np
@@ -74,7 +74,7 @@ class ScipyOptimizer(Driver):
                                 'convergence messages')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = OrderedDict() #{}
+        self.opt_settings = OrderedDict()
 
         self.metadata = None
         self._problem = None
@@ -82,7 +82,7 @@ class ScipyOptimizer(Driver):
         self.exit_flag = 0
         self.grad_cache = None
         self.con_cache = None
-        self.con_idx = OrderedDict() #{}
+        self.con_idx = OrderedDict()
         self.cons = None
         self.objs = None
 
@@ -109,10 +109,10 @@ class ScipyOptimizer(Driver):
         problem.root.solve_nonlinear(metadata=self.metadata)
 
         pmeta = self.get_desvar_metadata()
-        self.params = list(iterkeys(pmeta))
-        self.objs = list(iterkeys(self.get_objectives()))
+        self.params = list(pmeta)
+        self.objs = list(self.get_objectives())
         con_meta = self.get_constraint_metadata()
-        self.cons = list(iterkeys(con_meta))
+        self.cons = list(con_meta)
         self.con_cache = self.get_constraints()
 
         self.opt_settings['maxiter'] = self.options['maxiter']
@@ -162,7 +162,7 @@ class ScipyOptimizer(Driver):
             for name, meta in con_meta.items():
                 size = meta['size']
                 for j in range(0, size):
-                    con_dict = OrderedDict() #{}
+                    con_dict = OrderedDict()
                     if meta['equals'] is not None:
                         con_dict['type'] = 'eq'
                     else:

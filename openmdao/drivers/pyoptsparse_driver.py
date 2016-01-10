@@ -8,7 +8,7 @@ additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
 from __future__ import print_function
 
 import traceback
-from six import iterkeys, iteritems
+from six import iteritems
 
 from pyoptsparse import Optimization
 
@@ -94,19 +94,19 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = {} # Order not guaranteed.  Do not iterate.
+        self.opt_settings = {} # Order not guaranteed in python 3.
 
         # The user can set a file name here to store history
         self.hist_file = None
 
         self.pyopt_solution = None
 
-        self.lin_jacs = OrderedDict() #{}
+        self.lin_jacs = OrderedDict()
         self.quantities = []
         self.metadata = None
         self.exit_flag = 0
         self._problem = None
-        self.sparsity = OrderedDict() #{}
+        self.sparsity = OrderedDict()
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -137,7 +137,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
-        self.indep_list = indep_list = list(iterkeys(param_meta))
+        self.indep_list = indep_list = list(param_meta)
         param_vals = self.get_desvars()
 
         for name, meta in iteritems(param_meta):
@@ -149,8 +149,8 @@ class pyOptSparseDriver(Driver):
 
         # Add all objectives
         objs = self.get_objectives()
-        self.quantities = list(iterkeys(objs))
-        self.sparsity = OrderedDict() #{}
+        self.quantities = list(objs)
+        self.sparsity = OrderedDict()
         for name in objs:
             opt_prob.addObj(name)
             self.sparsity[name] = self.indep_list
@@ -166,7 +166,7 @@ class pyOptSparseDriver(Driver):
         # Add all equality constraints
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
-        self.quantities += list(iterkeys(econs))
+        self.quantities += list(econs)
 
         for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
@@ -186,7 +186,7 @@ class pyOptSparseDriver(Driver):
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
-        self.quantities += list(iterkeys(incons))
+        self.quantities += list(incons)
 
         for name in self.get_constraints(ctype='ineq'):
             size = con_meta[name]['size']
@@ -280,7 +280,6 @@ class pyOptSparseDriver(Driver):
         """
 
         fail = 1
-        func_dict = OrderedDict() #{}
         metadata = self.metadata
         system = self.root
 
@@ -297,13 +296,8 @@ class pyOptSparseDriver(Driver):
 
             system.solve_nonlinear(metadata=metadata)
 
-            # Get the objective function evaluations
-            for name, obj in iteritems(self.get_objectives()):
-                func_dict[name] = obj
-
-            # Get the constraint evaluations
-            for name, con in iteritems(self.get_constraints()):
-                func_dict[name] = con
+            func_dict = self.get_objectives() # this returns a new OrderedDict
+            func_dict.update(self.get_constraints())
 
             # Record after getting obj and constraint to assure they have
             # been gathered in MPI.
@@ -323,6 +317,7 @@ class pyOptSparseDriver(Driver):
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
             fail = 1
+            func_dict = {}
 
         #print("Functions calculated")
         #print(func_dict)
@@ -354,7 +349,7 @@ class pyOptSparseDriver(Driver):
         fail = 1
 
         try:
-            sens_dict = self.calc_gradient(dv_dict.keys(), self.quantities,
+            sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                            return_format='dict',
                                            sparsity=self.sparsity)
             #for key, value in iteritems(self.lin_jacs):
@@ -369,7 +364,7 @@ class pyOptSparseDriver(Driver):
             # should give the user more info than the dreaded "segfault"
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
-            sens_dict = {} # Order not guaranteed.  Do not iterate.
+            sens_dict = {}
 
         #print("Derivatives calculated")
         #print(dv_dict)
