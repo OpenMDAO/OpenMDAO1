@@ -47,7 +47,6 @@ class Newton(NonLinearSolver):
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
 
-
         self.print_name = 'NEWTON'
 
         # Only one choice, but the user could write their own.

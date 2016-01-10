@@ -1,10 +1,10 @@
 """ Unit test for the Brent, one variable nonlinear solver. """
 
-from six import iteritems
+import unittest
 
-import numpy as np
 
-from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, IndepVarComp, Newton
+from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES
+from openmdao.test.util import assert_rel_error
 
 
 class CompPart1(Component): 
@@ -24,7 +24,7 @@ class CompPart1(Component):
 
     def apply_nonlinear(self, p, u, r): 
         r['x'] = p['a'] * u['x']**p['n'] + p['part2'] #+ p['b'] * u['x'] - p['c']
-        print self.pathname, "ap_nl", p['part2'], p['a'], u['x'], p['n'], r['x']    
+        # print self.pathname, "ap_nl", p['part2'], p['a'], u['x'], p['n'], r['x']    
 
 
 class CompPart2(Component): 
@@ -41,7 +41,7 @@ class CompPart2(Component):
     def solve_nonlinear(self, p, u, r): 
         
         u['part2'] = p['b'] * p['x'] - p['c']
-        print self.pathname, "sp_nl", p['x'], p['c'], p['b'], u['part2']
+        # print self.pathname, "sp_nl", p['x'], p['c'], p['b'], u['part2']
 
 
 class Combined(Group): 
@@ -56,17 +56,28 @@ class Combined(Group):
 
         # self.nl_solver = Newton()
         self.nl_solver = Brent()
+        # self.nl_solver.options['iprint'] = 1
         self.nl_solver.options['state_var'] = 'x'
 
         self.ln_solver = ScipyGMRES()
 
         self.set_order(('p1','p2'))
 
+
+class BrentMultiCompTestCase(unittest.TestCase): 
+    """test to make sure brent can converge multiple components 
+    in a group with a single residual across them all
+    """
+
+    def test_multi_comp(self): 
+        p = Problem()
+        p.root = Combined()
+        p.setup(check=False)
+        p.run()
+
+        assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
+        assert_rel_error(self, p.root.resids['x'], 0, .0001)
+
 if __name__ == "__main__": 
 
-    p = Problem()
-    p.root = Combined()
-    p.setup()
-    p.run()
-
-    print p['x']
+   unittest.main()

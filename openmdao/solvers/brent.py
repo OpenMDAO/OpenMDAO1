@@ -1,5 +1,7 @@
 from six import iteritems
 
+from math import isnan
+
 import numpy as np
 from scipy.optimize import brentq
 
@@ -19,8 +21,6 @@ class Brent(NonLinearSolver):
     -------
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-    options['lower_bound'] :  float(0.0)
-        lower bound for the root search
     options['max_iter'] :  int(100)
         if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.
     options['rtol'] :  float64(4.4408920985e-16)
@@ -29,6 +29,8 @@ class Brent(NonLinearSolver):
         name of the state-variable/residual the solver should with
     options['upper_bound'] :  float(100.0)
         upper bound for the root search
+    options['lower_bound'] :  float(0.0)
+        lower bound for the root search
     options['var_lower_bound'] :  str('')
         if given, name of the variable to pull the lower bound value from.This variable must be a parameter on of of the child components of the containing system
     options['var_upper_bound'] :  str('')
@@ -64,6 +66,8 @@ class Brent(NonLinearSolver):
             'This variable must be a parameter on of of the child components of the containing system')
 
         self.xstar = None
+
+        self.print_name = 'BRENT'
 
     def setup(self, sub):
         """ Initialization
@@ -107,11 +111,14 @@ class Brent(NonLinearSolver):
         unknowns[self.s_var_name] = x
         self.sys.children_solve_nonlinear(self.local_meta)
         self.sys.apply_nonlinear(params, unknowns, resids)
+
         return resids[self.s_var_name]
 
     def solve(self, params, unknowns, resids, system, metadata=None): 
         self.sys = system
         self.local_meta = create_local_meta(metadata, system.pathname)
+        system.ln_solver.local_meta = self.local_meta
+        update_local_meta(self.local_meta, (self.iter_count, 0))
 
         if self.var_lower_bound is not None: 
             lower = params[self.var_lower_bound]
@@ -135,5 +142,24 @@ class Brent(NonLinearSolver):
             kwargs['rtol'] = self.options['rtol']
 
         # Brent's method
+        self.iter_count = 0
+
+        # initial run to compute initial_norm
+        self.sys.children_solve_nonlinear(self.local_meta)
+        self.sys.apply_nonlinear(params, unknowns, resids)
+        resid_norm_0 = resids[self.s_var_name]
+
         xstar, r = brentq(self._eval, **kwargs)
-        brent_iterations = r.iterations
+        self.iter_count = r.iterations
+
+        resid_norm = resids[self.s_var_name]
+
+        if self.options['iprint'] > 0:
+
+            if self.iter_count == self.options['max_iter'] or isnan(resid_norm):
+                msg = 'FAILED to converge after max iterations'
+            else:
+                msg = 'converged'
+
+            self.print_norm(self.print_name, system.pathname, self.iter_count,
+                            resid_norm, resid_norm_0, msg=msg)

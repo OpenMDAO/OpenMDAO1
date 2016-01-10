@@ -713,8 +713,6 @@ class System(object):
         any derivative specification in any `Component` or `Group` to perform
         finite difference."""
 
-        print self.pathname
-
         if not self._jacobian_cache:
             msg = ("No derivatives defined for Component '{name}'")
             msg = msg.format(name=self.pathname)
