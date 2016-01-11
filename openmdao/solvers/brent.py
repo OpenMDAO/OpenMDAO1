@@ -107,18 +107,25 @@ class Brent(NonLinearSolver):
         
     def _eval(self, x, params, unknowns, resids):
         """Callback function for evaluating f(x)"""
+        
+        self.iter_count += 1
+        update_local_meta(self.local_meta, (self.iter_count,))
 
         unknowns[self.s_var_name] = x
         self.sys.children_solve_nonlinear(self.local_meta)
         self.sys.apply_nonlinear(params, unknowns, resids)
 
+        self.recorders.record_iteration(self.sys, self.local_meta)
+
         return resids[self.s_var_name]
 
     def solve(self, params, unknowns, resids, system, metadata=None): 
         self.sys = system
-        self.local_meta = create_local_meta(metadata, system.pathname)
-        system.ln_solver.local_meta = self.local_meta
-        update_local_meta(self.local_meta, (self.iter_count, 0))
+        self.metadata = metadata
+        self.local_meta = create_local_meta(self.metadata, self.sys.pathname)
+        self.sys.ln_solver.local_meta = self.local_meta
+
+        # update_local_meta(self.local_meta, (self.iter_count, 0))
 
         if self.var_lower_bound is not None: 
             lower = params[self.var_lower_bound]
@@ -150,8 +157,7 @@ class Brent(NonLinearSolver):
         resid_norm_0 = resids[self.s_var_name]
 
         xstar, r = brentq(self._eval, **kwargs)
-        self.iter_count = r.iterations
-
+        
         resid_norm = resids[self.s_var_name]
 
         if self.options['iprint'] > 0:
