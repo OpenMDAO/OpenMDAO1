@@ -11,7 +11,25 @@ from openmdao.util.options import OptionsDictionary
 
 class BaseRecorder(object):
     """ This is a base class for all case recorders and is not a functioning
-    case recorder on its own. """
+    case recorder on its own.
+
+    Options
+    -------
+    options['record_metadata'] :  bool(True)
+        Tells recorder whether to record variable attribute metadata.
+    options['record_unknowns'] :  bool(True)
+        Tells recorder whether to record the unknowns vector.
+    options['record_params'] :  bool(False)
+        Tells recorder whether to record the params vector.
+    options['record_resids'] :  bool(False)
+        Tells recorder whether to record the ressiduals vector.
+    options['record_derivs'] :  bool(False)
+        Tells recorder whether to record derivatives that are requested by a `Driver`.
+    options['includes'] :  list of strings
+        Patterns for variables to include in recording.
+    options['excludes'] :  list of strings
+        Patterns for variables to exclude in recording (processed after includes).
+    """
 
     def __init__(self):
         self.options = OptionsDictionary()

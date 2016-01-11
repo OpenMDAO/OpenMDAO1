@@ -208,7 +208,19 @@ else:
 def run_in_sub(testcase, testspec, options):
     mod = __import__('__main__')
 
-    cmd = "mpirun -n %d %s %s %s %s" % \
-               (testcase.N_PROCS, sys.executable,
+    from distutils import spawn
+    mpirun_exe = None
+    if spawn.find_executable("mpirun") is not None:
+        mpirun_exe = "mpirun"
+    elif spawn.find_executable("mpiexec") is not None:
+        mpirun_exe = "mpiexec"
+
+    if mpirun_exe is None:
+        raise Exception("mpirun or mpiexec was not found in the system path.")
+
+
+    cmd = "%s -n %d %s %s %s %s" % \
+               (mpirun_exe, testcase.N_PROCS, sys.executable,
                 mod.__file__, testspec, ' '.join(options))
+    
     return subprocess.call(cmd, shell=True)

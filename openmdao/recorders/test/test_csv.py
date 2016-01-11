@@ -17,6 +17,7 @@ from openmdao.test.example_groups import ExampleGroup
 from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
+from collections import OrderedDict
 
 # check that pyoptsparse is installed
 # if it is, try to use SLSQP

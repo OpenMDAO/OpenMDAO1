@@ -40,7 +40,7 @@ def evenly_distrib_idxs(num_divisions, arr_size):
         a tuple of (sizes, offsets), where sizes and offsets contain values for all
         divisions.
     """
-    base = arr_size / num_divisions
+    base = arr_size // num_divisions
     leftover = arr_size % num_divisions
     sizes = np.ones(num_divisions, dtype="int") * base
 
@@ -52,14 +52,6 @@ def evenly_distrib_idxs(num_divisions, arr_size):
     offsets[1:] = np.cumsum(sizes)[:-1]
 
     return sizes, offsets
-
-# def to_slices(sidxs, didxs):
-#     """Convert matching src and dest idxs into slices if possible.
-#     Sort the indices together to increase the likelihood of being able
-#     to represent them as slices.
-#     """
-#     sort_idxs = np.argsort(sidxs)
-#     return _to_slice(sidxs[sort_idxs]), _to_slice(didxs[sort_idxs])
 
 def to_slice(idxs):
     """Convert an index array to a slice if possible. Otherwise,
