@@ -202,6 +202,49 @@ class pyOptSparseDriver(Driver):
 
                 jac = None
 
+                # Additional sparsity for index connections
+                for param in wrt:
+                    sub_conns = sub_param_conns.get(param)
+                    if not sub_conns:
+                        continue
+
+                    rel_idx = set()
+                    for target, idx in iteritems(sub_conns):
+
+                        # If a target of the indexed desvar connection is
+                        # in the relevant path for this constraint, then
+                        # those indices are relevant.
+                        if target in rels:
+                            rel_idx = rel_idx.union(idx)
+
+                    nrel = len(rel_idx)
+                    if nrel > 0:
+
+                        if jac is None:
+                            jac = {}
+
+                        if param not in jac:
+                            # A coo matrix for the Jacobian
+                            # mat = {'coo':[row, col, data],
+                            #        'shape':[nrow, ncols]}
+                            coo = {}
+                            coo['shape'] = [size, len(param_vals[param])]
+                            jac[param] = coo
+
+                        row = []
+                        col = []
+                        for i in range(size):
+                            row.extend([i]*nrel)
+                            col.extend(rel_idx)
+                        data = np.ones((len(row), ))
+
+                        jac[param]['coo'] = [np.array(row), np.array(col), data]
+
+                        if name not in self.sub_sparsity:
+                            self.sub_sparsity[name] = {}
+                        self.sub_sparsity[name][param] = np.array(list(rel_idx))
+
+
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      wrt=wrt, jac=jac)
 
