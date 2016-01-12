@@ -4,7 +4,7 @@
 MPI on Linux
 =============
 
-This document provides the setup and usage of MPI (Message Passing Interface) in OpenMDAO on Linux. 
+This document provides the setup and usage of MPI (Message Passing Interface) in OpenMDAO on Linux.
 We start with installing the necessary packages and test them to make sure they work.
 Then we will look at a simple example of how to take advantage of MPI in OpenMDAO.
 
@@ -38,7 +38,7 @@ To make sure MPI and `petsc` are working in your environment, you can use this s
 ::
 
     from petsc4py import PETSc
-    rank = PETSc.COMM_WORLD.getRank() 
+    rank = PETSc.COMM_WORLD.getRank()
     num_ranks = PETSc.COMM_WORLD.getSize()
 
     x = PETSc.Vec().createMPI(4) # VecCreateMPI: Creates a parallel vector.  size=4
@@ -83,6 +83,6 @@ MPI in OpenMDAO
 
 There are currently two ways to use MPI in OpenMDAO.  The first way is demonstrated in the `Distributed Adder Example`_ which involves using OpenMDAO to build your own distributed components.  The second way is demonstrated in the `Parallel Multi Point Example`_ which involves using OpenMDAO to build a multi-point problem to analyze a single design at a number of different conditions.
 
-.. _Distributed Adder Example: ./examples/distrib_adder.html
+.. _Distributed Adder Example: ../usr-guide/examples/distrib_adder.html
 
-.. _Parallel Multi Point Example: ./examples/parallel_multi_point.html
+.. _Parallel Multi Point Example: ../usr-guide/examples/parallel_multi_point.html
