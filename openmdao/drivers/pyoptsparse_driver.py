@@ -10,6 +10,8 @@ from __future__ import print_function
 import traceback
 from six import iteritems
 
+import scipy as sp
+
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
@@ -92,6 +94,8 @@ class pyOptSparseDriver(Driver):
                                 desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
                                 desc='Set to True to let pyOpt calculate the gradient')
+        self.options.add_option('sparsity', {},
+                                 desc='Sparsity pattern, outer key is the constraint name, and inner key is the param name')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {} # Order not guaranteed in python 3.
@@ -167,6 +171,7 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(econs)
+        sub_sparsity = self.options['sparsity']
 
         for name in self.get_constraints(ctype='eq'):
             size = con_meta[name]['size']
@@ -181,8 +186,14 @@ class pyOptSparseDriver(Driver):
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
+
+                jac = None
+                if name in sub_sparsity:
+                    jac = sub_sparsity[name]
+                    wrt = list(jac.keys())
+
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     wrt=wrt)
+                                     wrt=wrt, jac=jac)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -204,8 +215,14 @@ class pyOptSparseDriver(Driver):
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
+
+                jac = None
+                if name in sub_sparsity:
+                    jac = sub_sparsity[name]
+                    wrt = list(jac.keys())
+
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
-                                     wrt=wrt)
+                                     wrt=wrt, jac=jac)
 
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
@@ -354,6 +371,14 @@ class pyOptSparseDriver(Driver):
                                            sparsity=self.sparsity)
             #for key, value in iteritems(self.lin_jacs):
             #    sens_dict[key] = value
+
+            # Support for sub sparsity.
+            for con, val1 in iteritems(self.options['sparsity']):
+                for desvar, val2 in iteritems(val1):
+                    jac = sp.sparse.lil_matrix(val2.shape)
+                    idx = val2.nonzero()
+                    jac[idx] = sens_dict[con][desvar][idx] + 1e-99
+                    sens_dict[con][desvar] = jac
 
             fail = 0
 
