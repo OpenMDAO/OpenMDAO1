@@ -291,6 +291,18 @@ the top level of the OpenMDAO repository, and use the following command:
     pip install -e .
 
 
+Install MPI Dependencies (optional)
+--------------------------------------
+
+In order to run OpenMDAO in parallel, you'll need `petsc4py` and `mpi4py`.  To get these packages set up on Linux, see `MPI on Linux`_.
+To get these packages set up on Windows, see `MPI on Windows`_.
+
+.. _MPI on Linux: ./mpi_linux.html
+
+.. _MPI on Windows: ./mpi_windows.html
+
+
+
 Testing
 -------
 
