@@ -28,6 +28,7 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
+        self.absdir = None
 
         # map absolute name to local promoted name
         self.to_prom_name = {} # Order not guaranteed in python 3.
@@ -74,6 +75,8 @@ class System(object):
         self._promotes = ()
 
         self.comm = None
+
+        self.directory = None # for those Systems that perform file I/O
 
         # create placeholders for all of the vectors
         self.unknowns = _PlaceholderVecWrapper('unknowns')
@@ -260,6 +263,14 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
+
+        if self.directory:
+            if os.path.isabs(self.directory):
+                self._sysdata.absdir = self.directory
+            else:
+                self._sysdata.absdir = os.path.join(os.getcwd(), self.directory)
+        else:
+            self._sysdata.absdir = os.getcwd()
 
     def is_active(self):
         """
