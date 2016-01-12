@@ -695,6 +695,11 @@ class Problem(object):
 
         return {}
 
+    def cleanup(self):
+        """ Clean up resources prior to exit. """
+        self.driver.cleanup()
+        self.root.cleanup()
+
     def _check_solvers(self):
         """
         Raise an exception if we detect a LinearGaussSeidel solver and that
@@ -1667,6 +1672,8 @@ class Problem(object):
             param_list = [item for item in dparams if not \
                           dparams.metadata(item).get('pass_by_obj')]
             param_list.extend(states)
+            unkn_list = [item for item in dunknowns if not \
+                         dunknowns.metadata(item).get('pass_by_obj')]
 
             if out_stream is not None:
                 out_stream.write('-'*(len(cname)+15) + '\n')
@@ -1680,7 +1687,7 @@ class Problem(object):
                 p_size = np.size(dinputs[p_name])
 
                 # Check dimensions of user-supplied Jacobian
-                for u_name in unknowns:
+                for u_name in unkn_list:
 
                     u_size = np.size(dunknowns[u_name])
                     if comp._jacobian_cache:
@@ -1704,7 +1711,7 @@ class Problem(object):
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for u_name in dresids:
+            for u_name in unkn_list:
                 u_size = np.size(dunknowns[u_name])
 
                 # Send columns of identity
@@ -1794,6 +1801,8 @@ class Problem(object):
         param_srcs = [root.connections[p] for p in abs_indep_list \
                       if not root.params.metadata(p).get('pass_by_obj')]
         unknown_list = root._get_fd_unknowns()
+        unknown_list = [item for item in unknown_list \
+                        if not root.unknowns.metadata(item).get('pass_by_obj')]
 
         # Convert absolute parameter names to promoted ones because it is
         # easier for the user to read.
@@ -1823,15 +1832,14 @@ class Problem(object):
 
     def _start_recorders(self):
         """ Prepare recorders for recording."""
-        exclude = set([])
 
         self.driver.recorders.startup(self.root)
-        self.driver.recorders.record_metadata(self.root, exclude=exclude)
+        self.driver.recorders.record_metadata(self.root)
 
         for group in self.root.subgroups(recurse=True, include_self=True):
             for solver in (group.nl_solver, group.ln_solver):
                 solver.recorders.startup(group)
-                solver.recorders.record_metadata(self.root, exclude=exclude)
+                solver.recorders.record_metadata(self.root)
 
     def _check_for_parallel_derivs(self, params, unknowns, par_u, par_p):
         """ Checks a system hiearchy to make sure that no settings violate the

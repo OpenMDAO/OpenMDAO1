@@ -10,7 +10,8 @@ from six import StringIO
 from openmdao.util.options import OptionsDictionary
 
 class BaseRecorder(object):
-    """ Base class for all case recorders. """
+    """ This is a base class for all case recorders and is not a functioning
+    case recorder on its own. """
 
     def __init__(self):
         self.options = OptionsDictionary()
@@ -18,6 +19,8 @@ class BaseRecorder(object):
         self.options.add_option('record_unknowns', True)
         self.options.add_option('record_params', False)
         self.options.add_option('record_resids', False)
+        self.options.add_option('record_derivs', False,
+                                desc='Set to True to record derivatives at the driver level')
         self.options.add_option('includes', ['*'],
                                 desc='Patterns for variables to include in recording')
         self.options.add_option('excludes', [],
@@ -92,6 +95,16 @@ class BaseRecorder(object):
 
         return params, unknowns, resids
 
+    def record_metadata(self, group):
+        """Writes the metadata of the given group
+
+        Args
+        ----
+        group : `System`
+            `System` containing vectors
+        """
+        raise NotImplementedError()
+
     def record_iteration(self, params, unknowns, resids, metadata):
         """
         Writes the provided data.
@@ -112,19 +125,24 @@ class BaseRecorder(object):
         """
         raise NotImplementedError()
 
-    def record_metadata(self, group):
+    def record_derivatives(self, derivs, metadata):
         """Writes the metadata of the given group
 
         Args
         ----
-        group : `System`
-            `System` containing vectors
+        derivs : dict
+            Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
         """
         raise NotImplementedError()
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout``, ``sys.stderr``, or StringIO.
-        Note that a closed recorder will do nothing in :meth:`record`."""
+        Note that a closed recorder will do nothing in :meth:`record`, and
+        closing a closed recorder also does nothing.
+        """
         # Closing a StringIO deletes its contents.
         if self.out not in (None, sys.stdout, sys.stderr):
             if not isinstance(self.out, StringIO):

@@ -52,7 +52,7 @@ class TestDumpRecorder(MPITestCase):
         prob.driver.add_recorder(rec)
 
         prob.setup(check=False)
-        rec.close()
+        prob.cleanup()
 
         with open(self.expected_filename, 'r') as dumpfile:
             params = iteritems(prob.root.params)

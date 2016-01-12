@@ -38,7 +38,7 @@ Below is an example using the component from the :ref:`paraboloid_tutorial`.
     top.setup()
     top.run()
 
-    top.driver.recorders[0].close()
+    top.cleanup()
 
 
 Here we will explain the code statements that pertain to using an Optimized Latin Hypercube (OLHC).

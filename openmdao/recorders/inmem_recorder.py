@@ -13,11 +13,34 @@ from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
 class InMemoryRecorder(BaseRecorder):
+    """ Recorder that saves cases in memory. Note, this may take up large
+    amounts of memory, so it is not recommended for large models or models
+    with lots of iterations.
+
+    Options
+    -------
+    options['record_metadata'] :  bool(True)
+        Tells recorder whether to record variable attribute metadata.
+    options['record_unknowns'] :  bool(True)
+        Tells recorder whether to record the unknowns vector.
+    options['record_params'] :  bool(False)
+        Tells recorder whether to record the params vector.
+    options['record_resids'] :  bool(False)
+        Tells recorder whether to record the ressiduals vector.
+    options['record_derivs'] :  bool(False)
+        Tells recorder whether to record derivatives that are requested by a `Driver`.
+    options['includes'] :  list of strings
+        Patterns for variables to include in recording.
+    options['excludes'] :  list of strings
+        Patterns for variables to exclude in recording (processed after includes).
+    """
+
     def __init__(self):
         super(InMemoryRecorder, self).__init__()
         self._parallel = True
 
         self.iters = []
+        self.deriv_iters = []
         self.meta = {}
 
     def record_iteration(self, params, unknowns, resids, metadata):
@@ -67,3 +90,24 @@ class InMemoryRecorder(BaseRecorder):
         """
         self.meta['unknowns'] = {n:m.copy() for n,m in iteritems(group.unknowns)}
         self.meta['params'] = {n:m.copy() for n,m in iteritems(group.params)}
+
+    def record_derivatives(self, derivs, metadata):
+        """Writes the derivatives that were calculated for the driver.
+
+        Args
+        ----
+        derivs : dict
+            Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+
+        data = {}
+        iteration_coordinate = metadata['coord']
+        timestamp = metadata['timestamp']
+
+        data['timestamp'] = timestamp
+        data['Derivatives'] = derivs
+
+        self.deriv_iters.append(data)
