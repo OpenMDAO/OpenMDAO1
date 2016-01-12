@@ -17,6 +17,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
+from openmdao.core.fileref import FileRef
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -330,6 +331,10 @@ class Component(System):
             to_prom_pname[pathname] = name
             to_abs_pnames[name] = (pathname,)
 
+            #if var is a FileRef, set its absolute directory
+            if isinstance(meta['val'], FileRef):
+                meta['val'].parent_dir = self._sysdata.absdir
+
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
             pathname = self._get_var_pathname(name)
@@ -337,6 +342,10 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_uname[pathname] = name
             to_abs_uname[name] = pathname
+
+            #if var is a FileRef, set its absolute directory
+            if isinstance(meta['val'], FileRef):
+                meta['val'].parent_dir = self._sysdata.absdir
 
         to_prom_name.update(to_prom_uname)
         to_prom_name.update(to_prom_pname)

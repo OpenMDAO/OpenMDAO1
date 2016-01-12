@@ -264,6 +264,7 @@ class System(object):
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
 
+        # figure out our absolute directory
         if self.directory:
             if os.path.isabs(self.directory):
                 self._sysdata.absdir = self.directory
