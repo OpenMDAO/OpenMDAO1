@@ -46,7 +46,7 @@
 <script src="d3/d3.min.js"></script>
 <script>
 // Get JSON data
-treeJSON = d3.json("__graph.json", function(error, treeData) {
+d3.json("__graph.json", function(treeData) {
 
     // Calculate total nodes, max label length
     var totalNodes = 0;
