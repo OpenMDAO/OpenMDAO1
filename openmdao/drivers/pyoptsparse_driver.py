@@ -9,8 +9,10 @@ from __future__ import print_function
 
 import traceback
 from six import iteritems
+from six.moves import range
 
 import scipy as sp
+import numpy as np
 
 from pyoptsparse import Optimization
 
@@ -94,8 +96,6 @@ class pyOptSparseDriver(Driver):
                                 desc='Print pyOpt results if True')
         self.options.add_option('pyopt_diff', False,
                                 desc='Set to True to let pyOpt calculate the gradient')
-        self.options.add_option('sparsity', {},
-                                 desc='Sparsity pattern, outer key is the constraint name, and inner key is the param name')
 
         # The user places optimizer-specific settings in here.
         self.opt_settings = {} # Order not guaranteed in python 3.
@@ -111,6 +111,7 @@ class pyOptSparseDriver(Driver):
         self.exit_flag = 0
         self._problem = None
         self.sparsity = OrderedDict()
+        self.sub_sparsity = OrderedDict()
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -151,10 +152,22 @@ class pyOptSparseDriver(Driver):
 
         opt_prob.finalizeDesignVariables()
 
+        # Figure out parameter subsparsity for paramcomp index connections.
+        # sub_param_conns is empty unless there are some index conns.
+        sub_param_conns = {}
+        for name in indep_list:
+            pathname = problem.root.unknowns.metadata(name)['pathname']
+            sub_param_conns[name] = {}
+            for target, info in iteritems(problem.root.connections):
+                src, indices = info
+                if indices is not None and src == pathname:
+                    sub_param_conns[name][target] = set(indices)
+
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(objs)
         self.sparsity = OrderedDict()
+        self.sub_sparsity = OrderedDict()
         for name in objs:
             opt_prob.addObj(name)
             self.sparsity[name] = self.indep_list
@@ -171,26 +184,23 @@ class pyOptSparseDriver(Driver):
         econs = self.get_constraints(ctype='eq', lintype='nonlinear')
         con_meta = self.get_constraint_metadata()
         self.quantities += list(econs)
-        sub_sparsity = self.options['sparsity']
 
         for name in self.get_constraints(ctype='eq'):
-            size = con_meta[name]['size']
-            lower = upper = con_meta[name]['equals']
+            meta = con_meta[name]
+            size = meta['size']
+            lower = upper = meta['equals']
 
             # Sparsify Jacobian via relevance
             wrt = rel.relevant[name].intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if con_meta[name]['linear'] is True:
+            if meta['linear'] is True:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
 
                 jac = None
-                if name in sub_sparsity:
-                    jac = sub_sparsity[name]
-                    wrt = list(jac.keys())
 
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      wrt=wrt, jac=jac)
@@ -200,26 +210,67 @@ class pyOptSparseDriver(Driver):
         self.quantities += list(incons)
 
         for name in self.get_constraints(ctype='ineq'):
-            size = con_meta[name]['size']
+            meta = con_meta[name]
+            size = meta['size']
 
             # Bounds - double sided is supported
-            lower = con_meta[name]['lower']
-            upper = con_meta[name]['upper']
+            lower = meta['lower']
+            upper = meta['upper']
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(indep_list)
+            rels = rel.relevant[name]
+            wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if con_meta[name]['linear'] is True:
+            if meta['linear'] is True:
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
 
                 jac = None
-                if name in sub_sparsity:
-                    jac = sub_sparsity[name]
-                    wrt = list(jac.keys())
+
+                # Additional sparsity for index connections
+                for param in wrt:
+                    sub_conns = sub_param_conns.get(param)
+                    if not sub_conns:
+                        continue
+
+                    rel_idx = set()
+                    for target, idx in iteritems(sub_conns):
+
+                        # If a target of the indexed desvar connection is
+                        # in the relevant path for this constraint, then
+                        # those indices are relevant.
+                        if target in rels:
+                            rel_idx = rel_idx.union(idx)
+
+                    nrel = len(rel_idx)
+                    if nrel > 0:
+
+                        if jac is None:
+                            jac = {}
+
+                        if param not in jac:
+                            # A coo matrix for the Jacobian
+                            # mat = {'coo':[row, col, data],
+                            #        'shape':[nrow, ncols]}
+                            coo = {}
+                            coo['shape'] = [size, len(param_vals[param])]
+                            jac[param] = coo
+
+                        row = []
+                        col = []
+                        for i in range(size):
+                            row.extend([i]*nrel)
+                            col.extend(rel_idx)
+                        data = np.ones((len(row), ))
+
+                        jac[param]['coo'] = [np.array(row), np.array(col), data]
+
+                        if name not in self.sub_sparsity:
+                            self.sub_sparsity[name] = {}
+                        self.sub_sparsity[name][param] = np.array(list(rel_idx))
 
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      wrt=wrt, jac=jac)
@@ -369,16 +420,27 @@ class pyOptSparseDriver(Driver):
             sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                            return_format='dict',
                                            sparsity=self.sparsity)
-            #for key, value in iteritems(self.lin_jacs):
-            #    sens_dict[key] = value
 
-            # Support for sub sparsity.
-            for con, val1 in iteritems(self.options['sparsity']):
-                for desvar, val2 in iteritems(val1):
-                    jac = sp.sparse.lil_matrix(val2.shape)
-                    idx = val2.nonzero()
-                    jac[idx] = sens_dict[con][desvar][idx] + 1e-99
-                    sens_dict[con][desvar] = jac
+            # Support for sub-index sparsity by returning the Jacobian in a
+            # pyopt sparse format.
+            for con, val1 in iteritems(self.sub_sparsity):
+                for desvar, rel_idx in iteritems(val1):
+                    coo = {}
+                    jac = sens_dict[con][desvar]
+                    nrow, ncol = jac.shape
+                    coo['shape'] = [nrow, ncol]
+
+                    row = []
+                    col = []
+                    data = []
+                    ncol = len(rel_idx)
+                    for i in range(nrow):
+                        row.extend([i]*ncol)
+                        col.extend(rel_idx)
+                        data.extend(jac[i][rel_idx])
+
+                    coo['coo'] = [np.array(row), np.array(col), np.array(data)]
+                    sens_dict[con][desvar] = coo
 
             fail = 0
 
