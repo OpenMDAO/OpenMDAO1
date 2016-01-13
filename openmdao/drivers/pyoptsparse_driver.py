@@ -213,8 +213,14 @@ class pyOptSparseDriver(Driver):
 
                 # Additional sparsity for index connections
                 for param in wrt:
+
                     sub_conns = sub_param_conns.get(param)
                     if not sub_conns:
+                        continue
+
+                    # If we have a simultaneous full connection, then we move on
+                    full_conns = full_param_conns.get(param)
+                    if full_conns.intersection(rels):
                         continue
 
                     rel_idx = set()
@@ -224,12 +230,7 @@ class pyOptSparseDriver(Driver):
                         # in the relevant path for this constraint, then
                         # those indices are relevant.
                         if target in rels:
-                            rel_idx = rel_idx.union(idx)
-
-                    # If we have a simultaneous full connection, then we move on
-                    full_conns = full_param_conns.get(param)
-                    if full_conns.intersection(rels):
-                        continue
+                            rel_idx.update(idx)
 
                     nrel = len(rel_idx)
                     if nrel > 0:
@@ -289,8 +290,14 @@ class pyOptSparseDriver(Driver):
 
                 # Additional sparsity for index connections
                 for param in wrt:
+
                     sub_conns = sub_param_conns.get(param)
                     if not sub_conns:
+                        continue
+
+                    # If we have a simultaneous full connection, then we move on
+                    full_conns = full_param_conns.get(param)
+                    if full_conns.intersection(rels):
                         continue
 
                     rel_idx = set()
@@ -300,12 +307,7 @@ class pyOptSparseDriver(Driver):
                         # in the relevant path for this constraint, then
                         # those indices are relevant.
                         if target in rels:
-                            rel_idx = rel_idx.union(idx)
-
-                    # If we have a simultaneous full connection, then we move on
-                    full_conns = full_param_conns.get(param)
-                    if full_conns.intersection(rels):
-                        continue
+                            rel_idx.update(idx)
 
                     nrel = len(rel_idx)
                     if nrel > 0:
