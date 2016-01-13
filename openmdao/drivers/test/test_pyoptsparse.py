@@ -1006,6 +1006,9 @@ class TestPyoptSparse(unittest.TestCase):
     def test_sub_sparsity_equality_constraints(self):
         # Need this for coverage
 
+        if OPTIMIZER == 'SLSQP':
+            raise unittest.SkipTest("SLSQP crashes on this model with eq constraints.")
+
         class SegmentComp(Component):
 
             def __init__(self, M, x0, x1, index):
