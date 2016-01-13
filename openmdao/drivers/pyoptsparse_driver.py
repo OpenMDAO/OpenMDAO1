@@ -154,6 +154,9 @@ class pyOptSparseDriver(Driver):
 
         # Figure out parameter subsparsity for paramcomp index connections.
         # sub_param_conns is empty unless there are some index conns.
+        # full_param_conns gets filled with the connections to the entire
+        # parameter so that those params can be filtered out of the sparse
+        # set if the full path is also relevant
         sub_param_conns = {}
         full_param_conns = {}
         for name in indep_list:
@@ -196,7 +199,8 @@ class pyOptSparseDriver(Driver):
             lower = upper = meta['equals']
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(indep_list)
+            rels = rel.relevant[name]
+            wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
             if meta['linear'] is True:
