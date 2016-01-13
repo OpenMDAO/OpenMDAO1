@@ -155,13 +155,18 @@ class pyOptSparseDriver(Driver):
         # Figure out parameter subsparsity for paramcomp index connections.
         # sub_param_conns is empty unless there are some index conns.
         sub_param_conns = {}
+        full_param_conns = {}
         for name in indep_list:
             pathname = problem.root.unknowns.metadata(name)['pathname']
             sub_param_conns[name] = {}
+            full_param_conns[name] = set()
             for target, info in iteritems(problem.root.connections):
                 src, indices = info
-                if indices is not None and src == pathname:
-                    sub_param_conns[name][target] = set(indices)
+                if src == pathname:
+                    if indices is not None:
+                        sub_param_conns[name][target] = set(indices)
+                    else:
+                        full_param_conns[name].add(target)
 
         # Add all objectives
         objs = self.get_objectives()
@@ -216,6 +221,11 @@ class pyOptSparseDriver(Driver):
                         # those indices are relevant.
                         if target in rels:
                             rel_idx = rel_idx.union(idx)
+
+                    # If we have a simultaneous full connection, then we move on
+                    full_conns = full_param_conns.get(param)
+                    if full_conns.intersection(rels):
+                        continue
 
                     nrel = len(rel_idx)
                     if nrel > 0:
@@ -287,6 +297,11 @@ class pyOptSparseDriver(Driver):
                         # those indices are relevant.
                         if target in rels:
                             rel_idx = rel_idx.union(idx)
+
+                    # If we have a simultaneous full connection, then we move on
+                    full_conns = full_param_conns.get(param)
+                    if full_conns.intersection(rels):
+                        continue
 
                     nrel = len(rel_idx)
                     if nrel > 0:
