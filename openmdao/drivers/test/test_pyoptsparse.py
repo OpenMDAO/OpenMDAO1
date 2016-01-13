@@ -1006,6 +1006,7 @@ class TestPyoptSparse(unittest.TestCase):
     def test_sub_sparsity_equality_constraints(self):
         # Need this for coverage
 
+        # TODO - Seems to be a Bug in pyoptsparse:SLSQP
         if OPTIMIZER == 'SLSQP':
             raise unittest.SkipTest("SLSQP crashes on this model with eq constraints.")
 
