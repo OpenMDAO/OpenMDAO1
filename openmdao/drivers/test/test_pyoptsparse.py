@@ -857,12 +857,6 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['Major step limit'] = 1.0
-        driver.opt_settings['Major feasibility tolerance'] = 1.0E-6
-        driver.opt_settings['Major optimality tolerance'] = 1.0E-6
-        driver.opt_settings['Minor feasibility tolerance'] = 1.0E-8
-        driver.opt_settings['Linesearch tolerance'] = 0.10
         driver.options['print_results'] = False
 
         driver.add_desvar(name="y_i",
@@ -885,7 +879,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
 
         prob.run()
-        assert_rel_error(self, 15.4916, prob['sum_area.area'], 1e-4)
+        assert_rel_error(self, 15.4914, prob['sum_area.area'], 1e-4)
 
         sub_sparsity = prob.driver.sub_sparsity
         self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 10)
@@ -979,12 +973,6 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['Major step limit'] = 1.0
-        driver.opt_settings['Major feasibility tolerance'] = 1.0E-4
-        driver.opt_settings['Major optimality tolerance'] = 1.0E-4
-        driver.opt_settings['Minor feasibility tolerance'] = 1.0E-4
-        driver.opt_settings['Linesearch tolerance'] = 0.10
         driver.options['print_results'] = False
 
         driver.add_desvar(name="y_i",
@@ -1010,7 +998,6 @@ class TestPyoptSparse(unittest.TestCase):
         prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
 
         prob.run()
-        assert_rel_error(self, 64.229, prob['sum_area.area'], 1e-4)
 
         sub_sparsity = prob.driver.sub_sparsity
         self.assertTrue('sum_area.fake' not in list(prob.driver.sub_sparsity.keys()))
@@ -1091,13 +1078,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = driver = pyOptSparseDriver()
         driver.options['optimizer'] = OPTIMIZER
-        driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['Major step limit'] = 1.0
-        driver.opt_settings['Major feasibility tolerance'] = 1.0E-6
-        driver.opt_settings['Major optimality tolerance'] = 1.0E-6
-        driver.opt_settings['Minor feasibility tolerance'] = 1.0E-8
-        driver.opt_settings['Linesearch tolerance'] = 0.10
-        driver.options['print_results'] = True
+        driver.options['print_results'] = False
 
         driver.add_desvar(name="y_i",
                           lower=-100.0,
@@ -1116,7 +1097,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
 
         prob.run()
-        assert_rel_error(self, 15.4916, prob['sum_area.area'], 1e-4)
+        assert_rel_error(self, 15.4914, prob['sum_area.area'], 1e-4)
 
         sub_sparsity = prob.driver.sub_sparsity
         self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 10)
