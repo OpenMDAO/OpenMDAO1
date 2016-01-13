@@ -856,9 +856,8 @@ class TestPyoptSparse(unittest.TestCase):
             yi_index = yi_index+M-1
 
         prob.driver = driver = pyOptSparseDriver()
-        driver.options['optimizer'] = 'SNOPT'
+        driver.options['optimizer'] = OPTIMIZER
         driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['iSumm'] = 6
         driver.opt_settings['Major step limit'] = 1.0
         driver.opt_settings['Major feasibility tolerance'] = 1.0E-6
         driver.opt_settings['Major optimality tolerance'] = 1.0E-6
@@ -872,8 +871,6 @@ class TestPyoptSparse(unittest.TestCase):
                           scaler=1.0,
                           adder=0.0)
 
-        yi_index = 0
-        sparsity = {}
         for i in range(N):
             driver.add_constraint(name='seg{0:d}.r_i'.format(i),
                                   lower=0,
@@ -981,9 +978,8 @@ class TestPyoptSparse(unittest.TestCase):
         root.connect('y_i', 'sum_area.bypass')
 
         prob.driver = driver = pyOptSparseDriver()
-        driver.options['optimizer'] = 'SNOPT'
+        driver.options['optimizer'] = OPTIMIZER
         driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['iSumm'] = 6
         driver.opt_settings['Major step limit'] = 1.0
         driver.opt_settings['Major feasibility tolerance'] = 1.0E-4
         driver.opt_settings['Major optimality tolerance'] = 1.0E-4
@@ -997,8 +993,6 @@ class TestPyoptSparse(unittest.TestCase):
                           scaler=1.0,
                           adder=0.0)
 
-        yi_index = 0
-        sparsity = {}
         for i in range(N):
             driver.add_constraint(name='seg{0:d}.r_i'.format(i),
                                   lower=0,
@@ -1096,15 +1090,14 @@ class TestPyoptSparse(unittest.TestCase):
             yi_index = yi_index+M-1
 
         prob.driver = driver = pyOptSparseDriver()
-        driver.options['optimizer'] = 'SNOPT'
+        driver.options['optimizer'] = OPTIMIZER
         driver.opt_settings['Major iterations limit'] = 1000
-        driver.opt_settings['iSumm'] = 6
         driver.opt_settings['Major step limit'] = 1.0
         driver.opt_settings['Major feasibility tolerance'] = 1.0E-6
         driver.opt_settings['Major optimality tolerance'] = 1.0E-6
         driver.opt_settings['Minor feasibility tolerance'] = 1.0E-8
         driver.opt_settings['Linesearch tolerance'] = 0.10
-        driver.options['print_results'] = False
+        driver.options['print_results'] = True
 
         driver.add_desvar(name="y_i",
                           lower=-100.0,
@@ -1112,8 +1105,6 @@ class TestPyoptSparse(unittest.TestCase):
                           scaler=1.0,
                           adder=0.0)
 
-        yi_index = 0
-        sparsity = {}
         for i in range(N):
             driver.add_constraint(name='seg{0:d}.r_i'.format(i),
                                   equals=np.pi)
