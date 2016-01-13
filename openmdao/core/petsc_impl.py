@@ -430,23 +430,22 @@ class PetscDataTransfer(object):
                         val = srcvec[src]
                         for i, localvars in enumerate(self.sysdata.all_locals):
                             if i != iproc and src not in localvars and tgt in localvars:
-                                # if isinstance(val, FileRef):
-                                #     val._send(comm, i, itag, tgtvec[tgt])
-                                # else:
+                                if trace: debug("sending %s" % val)
                                 comm.send(val, dest=i, tag=itag)
+                                if trace: debug("DONE sending %s" % val)
                     # if we don't have the value locally, pull it across using MPI
                     if tgt in mylocals:
                         if src in mylocals:
-                            if isinstance(srcvec[src], FileRef):
+                            if isinstance(tgtvec[tgt], FileRef):
                                 tgtvec[tgt]._assign_to(srcvec[src])
                             else:
                                 tgtvec[tgt] = srcvec[src]
                         else:
-                            # if isinstance(val, FileRef):
-                            #     tgtvec[tgt]._recv(comm,
-                            #               self.sysdata.owning_ranks[src], itag,
-                            #               srcvec[src])
-                            # else:
+                            if trace: debug("receiving to %s" % tgtvec[tgt])
                             val = comm.recv(source=self.sysdata.owning_ranks[src],
                                             tag=itag)
-                            tgtvec[tgt] = val
+                            if trace: debug("received %s" % val)
+                            if isinstance(tgtvec[tgt], FileRef):
+                                tgtvec[tgt]._assign_to(val)
+                            else:
+                                tgtvec[tgt] = val

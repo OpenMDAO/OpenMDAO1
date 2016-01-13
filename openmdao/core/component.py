@@ -298,7 +298,7 @@ class Component(System):
             'src_indices' metadata.
 
         """
-        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
+        to_prom_name = self._sysdata.to_prom_name = {}
         to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -330,10 +330,11 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_pname[pathname] = name
             to_abs_pnames[name] = (pathname,)
+            val = meta['val']
 
             #if var is a FileRef, set its absolute directory
-            if isinstance(meta['val'], FileRef):
-                meta['val'].parent_dir = self._sysdata.absdir
+            if isinstance(val, FileRef):
+                self._fileref_setup(val)
 
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
@@ -342,10 +343,11 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_uname[pathname] = name
             to_abs_uname[name] = pathname
+            val = meta['val']
 
             #if var is a FileRef, set its absolute directory
-            if isinstance(meta['val'], FileRef):
-                meta['val'].parent_dir = self._sysdata.absdir
+            if isinstance(val, FileRef):
+                self._fileref_setup(val)
 
         to_prom_name.update(to_prom_uname)
         to_prom_name.update(to_prom_pname)
@@ -356,6 +358,17 @@ class Component(System):
         self._sysdata._unknowns_dict = self._unknowns_dict
 
         return self._params_dict, self._unknowns_dict
+
+    def _fileref_setup(self, val):
+        val.parent_dir = self._sysdata.absdir
+        d = val._abspath()
+        if not os.path.exists(os.path.dirname(d)):
+            if self.create_dirs:
+                os.makedirs(os.path.dirname(d))
+            else:
+                raise RuntimeError("%s: directory '%s' doesn't exist "
+                                   "for FileRef('%s')." %
+                                   (self.pathname, os.path.dirname(d), val.path))
 
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, impl=None):

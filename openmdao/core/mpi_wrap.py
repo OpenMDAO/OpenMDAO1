@@ -4,6 +4,7 @@ import os
 import sys
 import io
 from contextlib import contextmanager
+import traceback
 
 import six
 from six import PY3
@@ -93,20 +94,14 @@ def MultiProcFailCheck():
         try:
             yield
         except:
-            exc_type, exc_val, exc_tb = sys.exc_info()
-            if exc_val is not None:
-                fail = True
-            else:
-                fail = False
+            fails = MPI.COMM_WORLD.allgather(traceback.format_exc())
+        else:
+            fails = MPI.COMM_WORLD.allgather('')
 
-            fails = MPI.COMM_WORLD.allgather(fail)
-
-            if fail or not any(fails):
-                six.reraise(exc_type, exc_val, exc_tb)
-            else:
-                for i, f in enumerate(fails):
-                    if f:
-                        raise RuntimeError("a test failed in (at least) rank %d" % i)
+        for i, f in enumerate(fails):
+            if f:
+                raise RuntimeError("a test failed in (at least) rank %d: traceback follows\n%s"
+                                    % (i, f))
 
 
 if os.environ.get('USE_PROC_FILES'):

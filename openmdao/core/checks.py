@@ -1,6 +1,7 @@
 """ Set of utilities for detecting and reporting connection errors."""
 
 from six import iteritems
+from openmdao.core.fileref import FileRef
 
 def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
     """Checks the specified connections to make sure they are valid in
@@ -32,8 +33,15 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
             _check_shapes_match(smeta, tmeta, to_prom_name)
 
 def _check_types_match(src, tgt, to_prom_name):
-    stype = type(src['val'])
-    ttype = type(tgt['val'])
+    sval = src['val']
+    tval = tgt['val']
+
+    if isinstance(sval, FileRef) or isinstance(tval, FileRef):
+        tval.validate(sval)
+        return
+
+    stype = type(sval)
+    ttype = type(tval)
 
     if stype == ttype:
         return
@@ -45,7 +53,7 @@ def _check_types_match(src, tgt, to_prom_name):
     raise TypeError("Type %s of source %s must be the same as type %s of "
                     "target %s." %  (type(src['val']),
                     _both_names(src, to_prom_name),
-                    type(tgt['val']), _both_names(tgt, to_prom_name)))
+                    type(tval), _both_names(tgt, to_prom_name)))
 
 def _check_shapes_match(source, target, to_prom_name):
     sshape = source.get('shape')

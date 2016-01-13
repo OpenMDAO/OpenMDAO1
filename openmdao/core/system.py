@@ -76,7 +76,11 @@ class System(object):
 
         self.comm = None
 
-        self.directory = None # for those Systems that perform file I/O
+        # for those Systems that perform file I/O
+        self.directory = ''
+
+        # if True, create any directories needed by this System that don't exist
+        self.create_dirs = False
 
         # create placeholders for all of the vectors
         self.unknowns = _PlaceholderVecWrapper('unknowns')
@@ -242,7 +246,7 @@ class System(object):
         if include_self:
             yield self
 
-    def _init_sys_data(self, parent_path, probdata):
+    def _init_sys_data(self, parent_path, parent_dir, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Parameter
@@ -250,6 +254,10 @@ class System(object):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
+
+        parent_dir : str
+            The absolute directory of the parent, or '' if unspecified. Used to
+            determine the absolute directory of all subsystems.
 
         probdata : `_ProbData`
             Problem level data container.
@@ -269,9 +277,12 @@ class System(object):
             if os.path.isabs(self.directory):
                 self._sysdata.absdir = self.directory
             else:
-                self._sysdata.absdir = os.path.join(os.getcwd(), self.directory)
+                self._sysdata.absdir = os.path.join(parent_dir, self.directory)
         else:
-            self._sysdata.absdir = os.getcwd()
+            self._sysdata.absdir = parent_dir
+
+        if self.create_dirs and not os.path.exists(self._sysdata.absdir):
+            os.makedirs(self._sysdata.absdir)
 
     def is_active(self):
         """

@@ -1,4 +1,5 @@
 
+import os
 import unittest
 from six import text_type, StringIO, itervalues
 
@@ -59,7 +60,7 @@ class TestGroup(unittest.TestCase):
         root.connect('C1.y',['C2.x', 'C3.x'])
 
         prob = Problem()
-        root._init_sys_data('', prob._probdata)
+        root._init_sys_data('', os.getcwd(), prob._probdata)
         params_dict, unknowns_dict = root._setup_variables()
 
         # verify we get correct connection information

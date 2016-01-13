@@ -210,22 +210,26 @@ class Group(System):
         return self.subsystems(local=local, recurse=recurse, typ=Component,
                                include_self=include_self)
 
-    def _init_sys_data(self, parent_path, probdata):
+    def _init_sys_data(self, parent_path, parent_dir, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
         ----
         parent_path : str
-            The pathname of the parent `System`, which is to be prepended to the
-            name of this child `System` and all subsystems.
+            The pathname of the parent `Group`, which is used to determine
+            the pathname of all subsystems.
+
+        parent_dir : str
+            The absolute directory of the parent. Used to determine the absolute 
+            directory of all subsystems.
 
         probdata : `_ProbData`
             Problem level data container.
         """
-        super(Group, self)._init_sys_data(parent_path, probdata)
+        super(Group, self)._init_sys_data(parent_path, parent_dir, probdata)
         self._sys_graph = None
         for sub in itervalues(self._subsystems):
-            sub._init_sys_data(self.pathname, probdata)
+            sub._init_sys_data(self.pathname, self._sysdata.absdir, probdata)
 
     def _setup_variables(self, compute_indices=False):
         """

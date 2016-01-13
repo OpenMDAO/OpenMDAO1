@@ -16,7 +16,7 @@ CHUNK = 1 << 20  # 1MB
 class FileRef(object):
     """
     A reference to a file on disk. As well as containing metadata information,
-    it supports :meth:`open` to read the file's contents.
+    it supports :meth:`open` to read and write the file's contents.
     """
 
     def __init__(self, path, binary=False):
@@ -34,6 +34,9 @@ class FileRef(object):
         # self.integer_8 = integer_8
         # self.unformatted = unformatted
         # self.recordmark_8 = recordmark_8
+
+    def __str__(self):
+        return "FileRef(%s): absolute: %s" % (self.path, self._abspath())
 
     def open(self, mode):
         """ Open file for reading or writing. """
@@ -53,7 +56,7 @@ class FileRef(object):
             raise TypeError("Source for FileRef '%s' is not a FileRef!" %
                              self.path)
         if self.binary != src_fref.binary:
-            raise ValueError("Source FileRef is (binary=%s) and dest is (binary=%s)"%
+            raise ValueError("Source FileRef is (binary=%s) and dest is (binary=%s)."%
                              (src_fref.binary, self.binary))
 
     def _same_file(self, fref):
@@ -78,26 +81,3 @@ class FileRef(object):
         with src_fref.open("r") as src, self.open("w") as dst:
             while dst.write(src.read(CHUNK)):
                 pass
-
-    def _send(self, comm, dest, tag, tgtfref):
-        """Send the referenced file to another MPI process."""
-        if not self._same_file(tgtfref):
-            size = os.path.getsize(self._abspath())
-            with self.open("r") as f:
-                # first, send total size
-                comm.send(size, dest=dest, tag=tag)
-                data = f.read(CHUNK)
-                while data:
-                    comm.send(data, dest=dest, tag=tag)
-                    data = f.read(CHUNK)
-
-    def _recv(self, comm, owning_rank, tag, srcfref):
-        """Receive a file from another MPI process."""
-        if not self._same_file(srcfref):
-            with self.open("w") as f:
-                # receive total size first
-                size = comm.recv(source=owning_rank, tag=tag)
-                while size > 0:
-                    data = comm.recv(source=owning_rank, tag=tag)
-                    f.write(data)
-                    size -= len(data)
