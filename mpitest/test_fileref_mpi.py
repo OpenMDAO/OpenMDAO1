@@ -43,7 +43,7 @@ class FileSink(Component):
         pass
 
 class FileRefTestCase(MPITestCase):
-    N_PROCS=10
+    N_PROCS=4
 
     def setUp(self):
         self.startdir = os.getcwd()

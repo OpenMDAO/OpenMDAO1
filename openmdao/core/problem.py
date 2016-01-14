@@ -1076,6 +1076,14 @@ class Problem(object):
         if self.root.is_active():
             self.driver.run(self)
 
+        # if we're running under MPI, ensure that all of the processes
+        # are finished in order to ensure that scripting code outside of
+        # Problem doesn't attempt to access variables or files that have
+        # not finished updating.  This can happen with FileRef vars and
+        # potentially other pass_by_obj variables.
+        if MPI:
+            self.comm.barrier()
+
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
         first. If that is 'auto', then the mode in root.ln_options takes

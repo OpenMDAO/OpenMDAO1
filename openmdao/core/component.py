@@ -368,7 +368,7 @@ class Component(System):
             else:
                 raise RuntimeError("%s: directory '%s' doesn't exist "
                                    "for FileRef('%s')." %
-                                   (self.pathname, os.path.dirname(d), val.path))
+                                   (self.pathname, os.path.dirname(d), val.fname))
 
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, impl=None):

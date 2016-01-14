@@ -46,7 +46,7 @@ simple calculation, then writes the result to a file.
 
 .. testcode:: FileRef1
 
-    from openmdao.api import Problem, Component, FileRef
+    from openmdao.api import Problem, Group, Component, FileRef
 
     class FoutComp(Component):
         """A component that writes out a file containing a number."""

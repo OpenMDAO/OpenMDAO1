@@ -433,6 +433,12 @@ class PetscDataTransfer(object):
                                 if trace: debug("sending %s" % val)
                                 comm.send(val, dest=i, tag=itag)
                                 if trace: debug("DONE sending %s" % val)
+
+                # ensure that all src values have been sent before we receive
+                # any in order to avoid possible race conditions
+                comm.barrier()
+
+                for itag, (tgt, src) in enumerate(self.byobj_conns):
                     # if we don't have the value locally, pull it across using MPI
                     if tgt in mylocals:
                         if src in mylocals:
