@@ -167,7 +167,17 @@ class pyOptSparseDriver(Driver):
                 src, indices = info
                 if src == pathname:
                     if indices is not None:
-                        sub_param_conns[name][target] = set(indices)
+                        # Need to map the connection indices onto the desvar
+                        # indices if both are declared.
+                        dv_idx = param_meta[name].get('indices')
+                        indices = set(indices)
+                        if dv_idx is not None:
+                            indices.intersection_update(set(dv_idx))
+                            ldv_idx = list(dv_idx)
+                            mapped_idx = [ldv_idx.index(item) for item in indices]
+                            sub_param_conns[name][target] = mapped_idx
+                        else:
+                            sub_param_conns[name][target] = indices
                     else:
                         full_param_conns[name].add(target)
 
