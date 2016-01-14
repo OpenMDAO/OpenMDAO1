@@ -172,7 +172,7 @@ class pyOptSparseDriver(Driver):
                         dv_idx = param_meta[name].get('indices')
                         indices = set(indices)
                         if dv_idx is not None:
-                            indices.intersection_update(set(dv_idx))
+                            indices.intersection_update(dv_idx)
                             ldv_idx = list(dv_idx)
                             mapped_idx = [ldv_idx.index(item) for item in indices]
                             sub_param_conns[name][target] = mapped_idx
