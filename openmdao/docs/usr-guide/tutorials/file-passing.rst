@@ -3,14 +3,14 @@ File Passing Tutorial
 
 References to files can be passed between Components in OpenMDAO using variables
 called `FileRefs`.  A `FileRef` is just an object that contains a file name and
-an absolute file path which is calculated by the framework. The 'fname' attribute
+an absolute file path which is calculated by the framework. The *fname* attribute
 can be a simple name or a name that includes a relative or absolute
 directory path.
 
 Calculation of Absolute Directory Paths
 ---------------------------------------
 
-During `setup`, OpenMDAO determines the absolute file system path for each
+During setup, OpenMDAO determines the absolute file system path for each
 `FileRef` variable based on the directory path of the `Component`
 that contains it.  The process works like this:
 
@@ -39,12 +39,31 @@ Using FileRefs
 
 So lets make some components that pass FileRefs between them.  We'll just use
 ascii files here to keep things as simple as possible, but FileRefs can be
-binary if you set their 'binary' attribute to True.
+binary if you set their *binary* attribute to True.
 
 First, we'll make a simple component that takes a single parameter, does a
 simple calculation, then writes the result to a file.
 
-.. testcode:: FileRef1
+
+.. testsetup:: FileRef1, FileRef2
+
+    import os, tempfile, shutil
+    startdir = os.getcwd()
+    tmpdir = tempfile.mkdtemp()
+    os.chdir(tmpdir)
+
+
+.. testcleanup:: FileRef1, FileRef2
+
+    os.chdir(startdir)
+    try:
+        shutil.rmtree(tmpdir)
+    except OSError as e:
+        # If directory already deleted, keep going
+        if e.errno != errno.ENOENT:
+            raise e
+
+.. testcode:: FileRef1, FileRef2
 
     from openmdao.api import Problem, Group, Component, FileRef
 
@@ -72,7 +91,7 @@ simple calculation, then writes the result to a file.
 Now we need a component to read a number from our first component's output
 file and use that to calculate a new number.
 
-.. testcode:: FileRef1
+.. testcode:: FileRef1, FileRef2
 
     class FinComp(Component):
         """A component that reads a file containing a number."""
@@ -100,8 +119,8 @@ Now we have our two file transferring components, so we can build our model.
 .. testcode:: FileRef1
 
     p = Problem(root=Group())
-    p.root.add("outfilecomp", FoutComp())
-    p.root.add("infilecomp", FinComp())
+    outfilecomp = p.root.add("outfilecomp", FoutComp())
+    infilecomp = p.root.add("infilecomp", FinComp())
 
     # connect our two FileRefs together
     p.root.connect("outfilecomp.outfile", "infilecomp.infile")
@@ -109,8 +128,8 @@ Now we have our two file transferring components, so we can build our model.
     p.setup()
 
 
-We'll set a value of 3.0 in our first component's 'x' value.  That should
-give us a 'y' value in our second component of 14.0.
+We'll set a value of 3.0 in our first component's *x* value.  That should
+give us a *y* value in our second component of 14.0.
 
 .. testcode:: FileRef1
 
@@ -120,6 +139,49 @@ give us a 'y' value in our second component of 14.0.
 
     print(p['infilecomp.y'])
 
+
 .. testoutput:: FileRef1
+
+    14.0
+
+In this example, our files were both in the same directory, but you can control
+where they are found by modifying the *directory* attribute of systems in the
+tree.  For example, if we wanted *outfilecomp.outfile* to be located in a *sub1*
+subdirectory, we could do the following:
+
+.. testcode:: FileRef2
+
+    p = Problem(root=Group())
+    outfilecomp = p.root.add("outfilecomp", FoutComp())
+
+    # specify the subdirectory here
+    outfilecomp.directory = 'sub1'
+
+    # since 'sub1' doesn't exist, we need to tell the component to create it.
+    # otherwise, we'll get an error that the directory doesn't exist.
+    outfilecomp.create_dirs = True
+
+    infilecomp = p.root.add("infilecomp", FinComp())
+
+    # connect our two FileRefs together
+    p.root.connect("outfilecomp.outfile", "infilecomp.infile")
+
+    p.setup()
+
+
+Notice that none of the code in our components or any of our other configuration
+code has changed.  When we run this problem, we get the same
+answer as before.
+
+.. testcode:: FileRef2
+
+    p['outfilecomp.x'] = 3.0
+
+    p.run()
+
+    print(p['infilecomp.y'])
+
+
+.. testoutput:: FileRef2
 
     14.0
