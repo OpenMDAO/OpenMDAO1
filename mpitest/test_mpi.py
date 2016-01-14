@@ -1,9 +1,5 @@
 import time
 import os
-from tempfile import mkdtemp
-from shutil import rmtree
-
-from six import text_type
 
 import numpy as np
 
@@ -58,36 +54,6 @@ class PBOComp(Component):
         for i in range(5):
             unknowns['c'][i] = params['a'][i] + params['b'][i]
             unknowns['d'][i] = params['a'][i] - params['b'][i]
-
-class FileSrc(Component):
-    def __init__(self, name):
-        super(FileSrc, self).__init__()
-        self.add_output("fout", FileRef(name+'.out'))
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        with self.unknowns['fout'].open('w') as f:
-            f.write("%s\n" % self.pathname)
-
-class FileMid(Component):
-    def __init__(self, name):
-        super(FileMid, self).__init__()
-        self.add_param("fin", FileRef(name+'.in'))
-        self.add_output("fout", FileRef(name+'.out'))
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        with self.params['fin'].open('r') as fin, \
-                      self.unknowns['fout'].open('w') as fout:
-            fout.write(fin.read())
-            fout.write("%s\n" % self.pathname)
-
-class FileSink(Component):
-    def __init__(self, name):
-        super(FileSink, self).__init__()
-        self.add_param("fin1", FileRef(name+'1.in'))
-        self.add_param("fin2", FileRef(name+'2.in'))
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        pass
 
 class PBOTestCase(MPITestCase):
     N_PROCS=1
@@ -148,46 +114,6 @@ class PBOTestCase2(MPITestCase):
         self.assertEqual(prob['C3.c'], [6.,8.,10.,12.,14.])
         self.assertEqual(prob['C3.d'], [-2.,-2.,-2.,-2.,-2.])
         self.assertEqual(prob.root.unknowns.vec.size, 0)
-
-
-class FileRefTestCase(MPITestCase):
-    N_PROCS=2
-
-    def setUp(self):
-        self.startdir = os.getcwd()
-        self.tmpdir = mkdtemp()
-        os.chdir(self.tmpdir)
-
-    def tearDown(self):
-        os.chdir(self.startdir)
-        try:
-            rmtree(self.tmpdir)
-        except OSError as e:
-            # If directory already deleted, keep going
-            if e.errno != errno.ENOENT:
-                raise e
-
-    def test_file_diamond(self):
-        prob = Problem(Group(), impl=impl)
-        src = prob.root.add("src", FileSrc('src'))
-        par = prob.root.add('par', ParallelGroup())
-        par.add("mid1", FileMid('mid1'))
-        par.add("mid2", FileMid('mid2'))
-        sink = prob.root.add("sink", FileSink('sink'))
-
-        prob.root.connect('src.fout', 'par.mid1.fin')
-        prob.root.connect('src.fout', 'par.mid2.fin')
-        prob.root.connect('par.mid1.fout', 'sink.fin1')
-        prob.root.connect('par.mid2.fout', 'sink.fin2')
-
-        prob.setup(check=False)
-        prob.run()
-
-        with sink.params['fin1'].open('r') as f:
-            self.assertEqual(f.read(), "src\npar.mid1\n")
-        with sink.params['fin2'].open('r') as f:
-            self.assertEqual(f.read(), "src\npar.mid2\n")
-
 
 class MPITests1(MPITestCase):
 
@@ -293,7 +219,7 @@ class MPITests2(MPITestCase):
                 x = prob['G1.P1.x']
             except Exception as error:
                 msg = "Cannot access remote Variable 'G1.P1.x' in this process."
-                self.assertEqual(text_type(error), msg)
+                self.assertEqual(str(error), msg)
             else:
                 self.fail("Error expected")
 
@@ -301,7 +227,7 @@ class MPITests2(MPITestCase):
                 prob['G1.P1.x'] = 0.
             except Exception as error:
                 msg = "Cannot access remote Variable 'G1.P1.x' in this process."
-                self.assertEqual(text_type(error), msg)
+                self.assertEqual(str(error), msg)
             else:
                 self.fail("Error expected")
 

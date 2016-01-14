@@ -19,11 +19,11 @@ class FileRef(object):
     it supports :meth:`open` to read and write the file's contents.
     """
 
-    def __init__(self, path, binary=False):
+    def __init__(self, fname, binary=False):
         #, desc='', content_type='', platform=sys.platform,
               #big_endian=_big_endian, single_precision=False,
               #integer_8=False, unformatted=False, recordmark_8=False):
-        self.path = path
+        self.fname = fname
         self.parent_dir = None
         self.binary = binary
         # self.desc = desc
@@ -36,7 +36,7 @@ class FileRef(object):
         # self.recordmark_8 = recordmark_8
 
     def __str__(self):
-        return "FileRef(%s): absolute: %s" % (self.path, self._abspath())
+        return "FileRef(%s): absolute: %s" % (self.fname, self._abspath())
 
     def open(self, mode):
         """ Open file for reading or writing. """
@@ -46,15 +46,15 @@ class FileRef(object):
 
     def _abspath(self):
         """ Return absolute path to file. """
-        if os.path.isabs(self.path):
-            return self.path
+        if os.path.isabs(self.fname):
+            return self.fname
         else:
-            return os.path.join(self.parent_dir, self.path)
+            return os.path.join(self.parent_dir, self.fname)
 
     def validate(self, src_fref):
         if not isinstance(src_fref, FileRef):
             raise TypeError("Source for FileRef '%s' is not a FileRef!" %
-                             self.path)
+                             self.fname)
         if self.binary != src_fref.binary:
             raise ValueError("Source FileRef is (binary=%s) and dest is (binary=%s)."%
                              (src_fref.binary, self.binary))

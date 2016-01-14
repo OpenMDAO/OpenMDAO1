@@ -1,0 +1,125 @@
+File Passing Tutorial
+======================
+
+References to files can be passed between Components in OpenMDAO using variables
+called `FileRefs`.  A `FileRef` is just an object that contains a file name and
+an absolute file path which is calculated by the framework. The 'fname' attribute
+can be a simple name or a name that includes a relative or absolute
+directory path.
+
+Calculation of Absolute Directory Paths
+---------------------------------------
+
+During `setup`, OpenMDAO determines the absolute file system path for each
+`FileRef` variable based on the directory path of the `Component`
+that contains it.  The process works like this:
+
+1) Starting at the root `System` of the tree, we calculate its absolute directory
+   based on its 'directory' attribute.  If the 'directory' attribute is empty,
+   then the absolute directory is just the current working directory. If
+   'directory' contains a relative pathname, then the absolute directory is
+   the current working directory plus the relative path.  If 'directory' is
+   already an absolute path, then we just use that.
+
+2) For each child `System` in the tree, we calculate its absolute directory
+   based on the absolute directory we've already calculated for its parent
+   `System`, in the same manner as in step 1, except that instead of the
+   current working directory, we use the parent absolute directory as our
+   starting point.
+
+3) In each `Component` we encounter as we traverse the tree, after we've
+   calculated its absolute directory, we look for any `FileRef` variables
+   it may have.  We set the absolute directory for each `FileRef` in a
+   similar way as in step 2, but in this case the `Component` is the parent,
+   so we use its absolute directory as our starting point in determining
+   the absolute path of the `FileRef`.
+
+Using FileRefs
+--------------
+
+So lets make some components that pass FileRefs between them.  We'll just use
+ascii files here to keep things as simple as possible, but FileRefs can be
+binary if you set their 'binary' attribute to True.
+
+First, we'll make a simple component that takes a single parameter, does a
+simple calculation, then writes the result to a file.
+
+.. testcode:: FileRef1
+
+    from openmdao.api import Problem, Component, FileRef
+
+    class FoutComp(Component):
+        """A component that writes out a file containing a number."""
+
+        def __init__(self):
+            super(FoutComp, self).__init__()
+
+            # add a simple parameter that we can use to calculate the
+            # number we write to our output file
+            self.add_param('x', 1.0)
+
+            # add an output FileRef for our output file 'dat.out'
+            self.add_output("outfile", FileRef("dat.out"))
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            # do some simple calculation
+            val = params['x'] * 2.0 + 1.0
+
+            # write the new value to our output FileRef
+            with unknowns['outfile'].open('w') as f:
+                f.write(str(val))
+
+Now we need a component to read a number from our first component's output
+file and use that to calculate a new number.
+
+.. testcode:: FileRef1
+
+    class FinComp(Component):
+        """A component that reads a file containing a number."""
+
+        def __init__(self):
+            super(FinComp, self).__init__()
+
+            # here's the output we'll calculate using the number we read
+            # from our input FileRef
+            self.add_output('y', 1.0)
+
+            # add an input FileRef for our input file 'dat.in'
+            self.add_param("infile", FileRef("dat.in"))
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            # read the number from our input FileRef
+            with params['infile'].open('r') as f:
+                val = float(f.read())
+
+            # now calculate our new output value
+            unknowns['y'] = val + 7.0
+
+Now we have our two file transferring components, so we can build our model.
+
+.. testcode:: FileRef1
+
+    p = Problem(root=Group())
+    p.root.add("outfilecomp", FoutComp())
+    p.root.add("infilecomp", FinComp())
+
+    # connect our two FileRefs together
+    p.root.connect("outfilecomp.outfile", "infilecomp.infile")
+
+    p.setup()
+
+
+We'll set a value of 3.0 in our first component's 'x' value.  That should
+give us a 'y' value in our second component of 14.0.
+
+.. testcode:: FileRef1
+
+    p['outfilecomp.x'] = 3.0
+
+    p.run()
+
+    print(p['infilecomp.y'])
+
+.. testoutput:: FileRef1
+
+    14.0
