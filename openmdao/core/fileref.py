@@ -51,6 +51,16 @@ class FileRef(object):
         else:
             return os.path.join(self.parent_dir, self.fname)
 
+    def _set_rank(self, rank):
+        """In MPI, if we are part of a parallel group and there are multiple
+        copies of us that refer to the same output file, our directory must
+        be modified so that each process has its own copy of the file.
+        """
+        if os.path.isabs(self.fname):
+            raise RuntimeError("Multiple parallel output FileRefs refer to the "
+                               "same absolute pathname: %s" % self)
+        self.fname = os.path.join("_%d_" % rank, self.fname)
+
     def validate(self, src_fref):
         if not isinstance(src_fref, FileRef):
             raise TypeError("Source for FileRef '%s' is not a FileRef!" %

@@ -269,7 +269,7 @@ class TestFileRef(unittest.TestCase):
                              "be overwritten by the following FileRef unknown(s): "
                              "['src.ascii_dat']. Files referred to by the FileRef unknowns are: "
                              "['%s']. To remove this error, make a "
-                             "connection between sink2.ascii_in and a FileVar unknown." %
+                             "connection between sink2.ascii_in and a FileRef unknown." %
                              os.path.join(self.tmpdir, 'ascii.dat'))
         else:
             self.fail("Exception expected")

@@ -308,7 +308,7 @@ class Problem(object):
                                        "overwritten by the following FileRef unknown(s): "
                                        "%s. Files referred to by the FileRef unknowns are: "
                                        "%s. To remove this error, make a connection between %s"
-                                       " and a FileVar unknown." % (ivar,
+                                       " and a FileRef unknown." % (ivar,
                                               sorted([o for o,of in outs]),
                                               sorted([of for o,of in outs]), ivar))
 
@@ -627,7 +627,8 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom_name)
+        check_connections(connections, params_dict, unknowns_dict,
+                          self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -728,6 +729,11 @@ class Problem(object):
 
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
+
+        # dynamically create subdirectories and alter abs pathnames of output
+        # FileRefs that are present in multiple processes.
+        if MPI:
+            self.root._setup_filerefs()
 
         # Prepare Driver
         self.driver._setup()

@@ -15,17 +15,17 @@ else:
 class FileSrc(Component):
     def __init__(self, name):
         super(FileSrc, self).__init__()
-        self.add_output("fout", FileRef(name+'.out'))
+        self.add_output("fout", FileRef(name+'.dat'))
 
     def solve_nonlinear(self, params, unknowns, resids):
         with self.unknowns['fout'].open('w') as f:
             f.write("%s\n" % self.pathname)
 
 class FileMid(Component):
-    def __init__(self, name):
+    def __init__(self, iname, oname):
         super(FileMid, self).__init__()
-        self.add_param("fin", FileRef(name+'.in'))
-        self.add_output("fout", FileRef(name+'.out'))
+        self.add_param("fin", FileRef(iname+'.dat'))
+        self.add_output("fout", FileRef(oname+'.out'))
 
     def solve_nonlinear(self, params, unknowns, resids):
         with self.params['fin'].open('r') as fin, \
@@ -76,7 +76,7 @@ class FileRefTestCase(MPITestCase):
         sink = prob.root.add("sink", FileSink('sink', self.N_PROCS))
 
         for i in range(self.N_PROCS):
-            par.add("mid%d"%i, FileMid('mid%d'%i))
+            par.add("mid%d"%i, FileMid('mid%d'%i,'mid%d'%i))
             prob.root.connect('src.fout', 'par.mid%d.fin'%i)
             prob.root.connect('par.mid%d.fout'%i, 'sink.fin%d'%i)
 
@@ -86,6 +86,29 @@ class FileRefTestCase(MPITestCase):
         for i in range(self.N_PROCS):
             with sink.params['fin%d'%i].open('r') as f:
                 self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
+
+    def test_file_diamond_same_names(self):
+        prob = Problem(Group(), impl=impl)
+
+        src = prob.root.add("src", FileSrc('foo'))
+        par = prob.root.add('par', ParallelGroup())
+        sink = prob.root.add("sink", FileSink('sink', self.N_PROCS))
+
+        for i in range(self.N_PROCS):
+            # all FileMids will have output file with the same name, so
+            # framework needs to create rank specific directories for
+            # each output file to avoid collisions.
+            par.add("mid%d"%i, FileMid('foo','foo'))
+            prob.root.connect('src.fout', 'par.mid%d.fin'%i)
+            prob.root.connect('par.mid%d.fout'%i, 'sink.fin%d'%i)
+
+        prob.setup(check=False)
+        prob.run()
+
+        for i in range(self.N_PROCS):
+            with sink.params['fin%d'%i].open('r') as f:
+                self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

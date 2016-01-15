@@ -16,6 +16,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
+from openmdao.core.fileref import FileRef
 from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
 
@@ -220,7 +221,7 @@ class Group(System):
             the pathname of all subsystems.
 
         parent_dir : str
-            The absolute directory of the parent. Used to determine the absolute 
+            The absolute directory of the parent. Used to determine the absolute
             directory of all subsystems.
 
         probdata : `_ProbData`
@@ -1426,6 +1427,8 @@ class Group(System):
             if trace:  # pragma: no cover
                 debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
+            if trace: # pragma: no cover
+                debug("allgather of local vars DONE")
 
             # save all_locals for use later to determine if we can do a
             # fully local data transfer between two vars
@@ -1442,6 +1445,35 @@ class Group(System):
 
 
         return ranks
+
+    def _setup_filerefs(self):
+        """
+        If we have any output FileRefs that have multiple local copies, then
+        we need to dynamically create subdirectories based on rank to prevent
+        the different processes from overwriting the same file.
+        """
+        unknowns = self.unknowns
+        fnames = {}  #  fname: [fileref...]
+        for name, acc in iteritems(unknowns._dat):
+            if acc.pbo and isinstance(acc.val.val, FileRef):
+                for locvars in self._sysdata.all_locals:
+                    if name in locvars:
+                        fnames.setdefault(unknowns._dat[name].val.val._abspath(),
+                                              []).append(name)
+
+        changed = set()
+        for fname, frefs in iteritems(fnames):
+            if len(frefs) > 1: # output file is duplicated in multiple processes
+                for name in frefs:
+                    if not unknowns._dat[name].remote:
+                        if name in changed:
+                            continue
+                        changed.add(name)
+                        unknowns[name]._set_rank(self.comm.rank)
+                        # create the directory if it isn't there
+                        dpath = os.path.dirname(unknowns[name]._abspath())
+                        if not os.path.exists(dpath):
+                            os.makedirs(dpath)
 
     def _get_relname_map(self, parent_proms):
         """
