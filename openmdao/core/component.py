@@ -248,7 +248,7 @@ class Component(System):
             raise NameError("%s: '%s' is not a valid variable name." %
                             (self.pathname, name))
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """
         Override this in your Component to set specific indices that will be
         pulled from source variables to fill your parameters.  This method
@@ -294,7 +294,7 @@ class Component(System):
         ----
 
         compute_indices : bool, optional
-            If True, call setup_distrib_idxs() to set values of
+            If True, call setup_distrib() to set values of
             'src_indices' metadata.
 
         """
@@ -305,7 +305,7 @@ class Component(System):
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         if MPI and compute_indices and self.is_active():
-            self.setup_distrib_idxs()
+            self.setup_distrib()
             # now update our distrib_size metadata for any distributed
             # unknowns
             sizes = []

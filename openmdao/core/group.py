@@ -242,7 +242,7 @@ class Group(System):
         Args
         ----
         compute_indices : bool, optional
-            If True, call setup_distrib_idxs() to set values of
+            If True, call setup_distrib() to set values of
             'src_indices' metadata.
 
         Returns

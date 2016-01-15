@@ -34,7 +34,7 @@ class DistributedAdder(Component):
         """
         return (1,self.size)
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """
         specify the local sizes of the variables and which specific indices this specific
         distributed component will handle. Indices do NOT need to be sequential or

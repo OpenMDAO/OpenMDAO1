@@ -605,8 +605,8 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
-                    # component defines its own setup_distrib_idxs, so
+                if s.setup_distrib is not Component.setup_distrib:
+                    # component defines its own setup_distrib, so
                     # the metadata will change
                     meta_changed = True
 

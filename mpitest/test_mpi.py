@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp, FileRef
+from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp
 from openmdao.core.mpi_wrap import MPI, FakeComm
 from openmdao.test.mpi_util import MPITestCase
 
