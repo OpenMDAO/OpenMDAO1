@@ -359,16 +359,19 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
-    def _fileref_setup(self, val):
-        val.parent_dir = self._sysdata.absdir
-        d = val._abspath()
+    def _fileref_setup(self, fref):
+        fref.parent_dir = self._sysdata.absdir
+        d = fref._abspath()
         if not os.path.exists(os.path.dirname(d)):
             if self.create_dirs:
                 os.makedirs(os.path.dirname(d))
             else:
-                raise RuntimeError("%s: directory '%s' doesn't exist "
-                                   "for FileRef('%s')." %
-                                   (self.pathname, os.path.dirname(d), val.fname))
+                raise RuntimeError("directory '%s' doesn't exist "
+                                   "for FileRef('%s'). Set create_dirs=True "
+                                   "in system '%s' to create the directory "
+                                   "automatically." %
+                                   (os.path.dirname(d),
+                                   fref.fname, self.pathname))
 
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, impl=None):

@@ -69,13 +69,18 @@ class FileRefTestCase(MPITestCase):
                     raise e
 
     def test_file_diamond(self):
+        if MPI:
+            num = self.N_PROCS
+        else:
+            num = 1
+
         prob = Problem(Group(), impl=impl)
 
         src = prob.root.add("src", FileSrc('src'))
         par = prob.root.add('par', ParallelGroup())
-        sink = prob.root.add("sink", FileSink('sink', self.N_PROCS))
+        sink = prob.root.add("sink", FileSink('sink', num))
 
-        for i in range(self.N_PROCS):
+        for i in range(num):
             par.add("mid%d"%i, FileMid('mid%d'%i,'mid%d'%i))
             prob.root.connect('src.fout', 'par.mid%d.fin'%i)
             prob.root.connect('par.mid%d.fout'%i, 'sink.fin%d'%i)
@@ -83,18 +88,22 @@ class FileRefTestCase(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        for i in range(self.N_PROCS):
+        for i in range(num):
             with sink.params['fin%d'%i].open('r') as f:
                 self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
 
     def test_file_diamond_same_names(self):
+        if MPI:
+            num = self.N_PROCS
+        else:
+            num = 1
         prob = Problem(Group(), impl=impl)
 
         src = prob.root.add("src", FileSrc('foo'))
         par = prob.root.add('par', ParallelGroup())
-        sink = prob.root.add("sink", FileSink('sink', self.N_PROCS))
+        sink = prob.root.add("sink", FileSink('sink', num))
 
-        for i in range(self.N_PROCS):
+        for i in range(num):
             # all FileMids will have output file with the same name, so
             # framework needs to create rank specific directories for
             # each output file to avoid collisions.
@@ -105,7 +114,7 @@ class FileRefTestCase(MPITestCase):
         prob.setup(check=False)
         prob.run()
 
-        for i in range(self.N_PROCS):
+        for i in range(num):
             with sink.params['fin%d'%i].open('r') as f:
                 self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
 
