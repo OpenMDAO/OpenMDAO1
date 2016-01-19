@@ -295,10 +295,10 @@ class TestFileRef(unittest.TestCase):
                              "referenced from FileRef param(s) ['sink.ascii_in', "
                              "'sink2.ascii_in'], which are connected to multiple output "
                              "FileRefs: ['src.ascii_dat', 'src2.ascii_dat']. Those FileRefs "
-                             "reference the following files: ['%s', '%s']." %
+                             "reference the following files: %s." %
                              (os.path.join(self.tmpdir, 'ascii_final.dat'),
-                              os.path.join(self.tmpdir, 'ascii.dat'),
-                              os.path.join(self.tmpdir, 'ascii.dat')))
+                              [os.path.join(self.tmpdir, 'ascii.dat'),
+                              os.path.join(self.tmpdir, 'ascii.dat')]))
         else:
             self.fail("Exception expected")
 
