@@ -1,5 +1,4 @@
 
-import os
 import unittest
 from six import text_type, StringIO, itervalues
 

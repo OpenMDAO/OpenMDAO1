@@ -692,11 +692,6 @@ class Problem(object):
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
 
-        # # dynamically create subdirectories and alter abs pathnames of output
-        # # FileRefs that are present in multiple processes.
-        # if MPI:
-        #     self.root._setup_filerefs()
-
         # Prepare Driver
         self.driver._setup()
 
