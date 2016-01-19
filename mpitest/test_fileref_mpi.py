@@ -53,8 +53,9 @@ class FileRefTestCase(MPITestCase):
         else:
             self.tmpdir = None
 
-        #make sure everyone is using the same temp directory
-        self.tmpdir = self.comm.bcast(self.tmpdir, root=0)
+        if MPI:
+            #make sure everyone is using the same temp directory
+            self.tmpdir = self.comm.bcast(self.tmpdir, root=0)
 
         os.chdir(self.tmpdir)
 
