@@ -62,6 +62,16 @@ class FileRef(object):
         self.fname = os.path.join("_%d_" % rank, self.fname)
 
     def validate(self, src_fref):
+        """
+        validate() is called on a target `FileRef` to ensure that it is
+        compatible with the given source `FileRef`.  If not, an exception
+        will be raised.
+
+        Args
+        ----
+        src_fref : `FileRef`
+            Source `FileRef` object.
+        """
         if not isinstance(src_fref, FileRef):
             raise TypeError("Source for FileRef '%s' is not a FileRef!" %
                              self.fname)
