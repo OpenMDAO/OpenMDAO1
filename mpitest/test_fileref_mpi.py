@@ -60,6 +60,11 @@ class FileRefTestCase(MPITestCase):
         os.chdir(self.tmpdir)
 
     def tearDown(self):
+        if MPI:
+            # make sure we're done checking file contents before anyone deletes
+            # the tmp directory
+            self.comm.barrier()
+
         os.chdir(self.startdir)
         if self.comm.rank == 0:
             try:
@@ -92,11 +97,6 @@ class FileRefTestCase(MPITestCase):
         for i in range(num):
             with sink.params['fin%d'%i].open('r') as f:
                 self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
-
-        if MPI:
-            # make sure we're done checking file contents before anyone deletes
-            # the tmp directory
-            self.comm.barrier()
 
     def test_file_diamond_same_names(self):
         if MPI:
