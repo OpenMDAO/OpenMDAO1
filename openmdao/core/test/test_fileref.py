@@ -234,7 +234,7 @@ class TestFileRef(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "directory '%s' doesn't "
+            self.assertEqual(str(err).replace('/private',''), "directory '%s' doesn't "
                                        "exist for FileRef('%s'). Set "
                                        "create_dirs=True in system 'src' to create the "
                                        "directory automatically." %
@@ -268,7 +268,7 @@ class TestFileRef(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "FileRef param 'sink2.ascii_in' is unconnected but will "
+            self.assertEqual(str(err).replace('\\\\','\\').replace('/private',''), "FileRef param 'sink2.ascii_in' is unconnected but will "
                              "be overwritten by the following FileRef unknown(s): "
                              "['src.ascii_dat']. Files referred to by the FileRef unknowns are: "
                              "['%s']. To remove this error, make a "
@@ -291,7 +291,9 @@ class TestFileRef(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "input file '%s' is "
+            # osx tacks a /private to the beginning of the tmp pathname, resulting
+            # in test diffs, so just get rid of it
+            self.assertEqual(str(err).replace('/private',''), "input file '%s' is "
                              "referenced from FileRef param(s) ['sink.ascii_in', "
                              "'sink2.ascii_in'], which are connected to multiple output "
                              "FileRefs: ['src.ascii_dat', 'src2.ascii_dat']. Those FileRefs "
