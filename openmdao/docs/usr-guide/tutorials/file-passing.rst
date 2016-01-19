@@ -17,9 +17,13 @@ that contains it.  The process works like this:
 1) Starting at the root `System` of the tree, we calculate its absolute directory
    based on its 'directory' attribute.  If the 'directory' attribute is empty,
    then the absolute directory is just the current working directory. If
-   'directory' contains a relative pathname, then the absolute directory is
-   the current working directory plus the relative path.  If 'directory' is
-   already an absolute path, then we just use that.
+   *directory* contains a relative pathname, then the absolute directory is
+   the current working directory plus the relative path.  If *directory* is
+   already an absolute path, then we just use that.  If *directory* is a
+   function, we will call that function, passing in the MPI communicator for
+   the current `System`.  That function should return a string containing
+   either a relative or absolute path, which we will resolve to an absolute
+   directory as mentioned above.
 
 2) For each child `System` in the tree, we calculate its absolute directory
    based on the absolute directory we've already calculated for its parent
@@ -33,6 +37,7 @@ that contains it.  The process works like this:
    similar way as in step 2, but in this case the `Component` is the parent,
    so we use its absolute directory as our starting point in determining
    the absolute path of the `FileRef`.
+
 
 Using FileRefs
 --------------
@@ -185,3 +190,27 @@ answer as before.
 .. testoutput:: FileRef2
 
     14.0
+
+
+FileRefs under MPI
+------------------
+
+When running under MPI, there are certain situations where you may need to
+create subdirectories dynamically based on the rank of the current MPI process.
+You can accomplish that by assigning a function to a system's directory instead
+of just a simple string.  For example, suppose we had a group in our model
+that we wanted to perform parallel finite difference on, and that group happened
+to have output `FileRefs` in it.  In that situation, different MPI processes
+would try to write to the same output file at the same time.  In order to
+prevent this, we can specify that in each MPI process, our group will have a
+directory specific to that process.  Assigning *directory* to a function
+instead of a string will let us do that.  For example, let's say we want our
+group to write its files in a subdirectory called 'foo_n', where 'n' is the
+rank of the current process.  In that case, setting our group's *directory*
+would look like this:
+
+::
+
+    mygrp.directory = lambda comm: "foo_%d" % comm.rank
+    mygrp.create_dirs = True  # create the directories if they don't exist
+    

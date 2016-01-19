@@ -322,7 +322,7 @@ class System(object):
         directory = self._get_dir()
 
         # figure out our absolute directory
-        if self.directory:
+        if directory:
             if os.path.isabs(directory):
                 self._sysdata.absdir = directory
             else:
@@ -431,7 +431,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {} # Order not guaranteed in python 3.
+        fd_cols = {}
 
         to_prom_name = self._sysdata.to_prom_name
 

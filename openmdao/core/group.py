@@ -347,8 +347,6 @@ class Group(System):
         super(Group, self)._setup_communicators(comm, parent_dir)
         self._local_subsystems = []
 
-        #self.comm = comm
-
         for sub in itervalues(self._subsystems):
             sub._setup_communicators(self.comm, self._sysdata.absdir)
             if self.is_active() and sub.is_active():
@@ -1445,35 +1443,6 @@ class Group(System):
 
 
         return ranks
-
-    # def _setup_filerefs(self):
-    #     """
-    #     If we have any output FileRefs that have multiple local copies, then
-    #     we need to dynamically create subdirectories based on rank to prevent
-    #     the different processes from overwriting the same file.
-    #     """
-    #     unknowns = self.unknowns
-    #     fnames = {}  #  fname: [fileref...]
-    #     for name, acc in iteritems(unknowns._dat):
-    #         if acc.pbo and isinstance(acc.val.val, FileRef):
-    #             for locvars in self._sysdata.all_locals:
-    #                 if name in locvars:
-    #                     fnames.setdefault(unknowns._dat[name].val.val._abspath(),
-    #                                           []).append(name)
-    #
-    #     changed = set()
-    #     for fname, frefs in iteritems(fnames):
-    #         if len(frefs) > 1: # output file is duplicated in multiple processes
-    #             for name in frefs:
-    #                 if not unknowns._dat[name].remote:
-    #                     if name in changed:
-    #                         continue
-    #                     changed.add(name)
-    #                     unknowns[name]._set_rank(self.comm.rank)
-    #                     # create the directory if it isn't there
-    #                     dpath = os.path.dirname(unknowns[name]._abspath())
-    #                     if not os.path.exists(dpath):
-    #                         os.makedirs(dpath)
 
     def _get_relname_map(self, parent_proms):
         """
