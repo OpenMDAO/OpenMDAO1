@@ -95,8 +95,11 @@ class FileRefTestCase(MPITestCase):
     def test_file_diamond_same_names(self):
         if MPI:
             num = self.N_PROCS
+            directory = lambda comm: str(self.comm.rank)
         else:
             num = 1
+            directory = ''
+
         prob = Problem(Group(), impl=impl)
 
         src = prob.root.add("src", FileSrc('foo'))
@@ -106,8 +109,10 @@ class FileRefTestCase(MPITestCase):
         for i in range(num):
             # all FileMids will have output file with the same name, so
             # framework needs to create rank specific directories for
-            # each output file to avoid collisions.
-            par.add("mid%d"%i, FileMid('foo','foo'))
+            # each rank to avoid collisions.
+            mid = par.add("mid%d"%i, FileMid('foo','foo'))
+            mid.directory = directory
+            mid.create_dirs = True
             prob.root.connect('src.fout', 'par.mid%d.fin'%i)
             prob.root.connect('par.mid%d.fout'%i, 'sink.fin%d'%i)
 

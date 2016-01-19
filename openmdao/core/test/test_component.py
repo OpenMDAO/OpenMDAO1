@@ -146,7 +146,7 @@ class TestComponent(unittest.TestCase):
         self.comp.add_param("w")
 
         prob = Problem()
-        self.comp._init_sys_data('', os.getcwd(), prob._probdata)
+        self.comp._init_sys_data('', prob._probdata)
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["x", "y", "z", "t", "u", 'w'], list(params.keys()))
@@ -179,7 +179,7 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(str(cm.exception), "Shape of output 'w' must be specified because 'val' is not set")
 
         prob = Problem()
-        self.comp._init_sys_data('', os.getcwd(), prob._probdata)
+        self.comp._init_sys_data('', prob._probdata)
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["x", "y", "z", "t", "u"], list(unknowns.keys()))
@@ -211,7 +211,7 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(str(cm.exception), "Shape of state 's6' must be specified because 'val' is not set")
 
         prob = Problem()
-        self.comp._init_sys_data('', os.getcwd(), prob._probdata)
+        self.comp._init_sys_data('', prob._probdata)
         params, unknowns = self.comp._setup_variables()
 
         self.assertEqual(["s1", "s2", "s3", "s4", "s5"], list(unknowns.keys()))

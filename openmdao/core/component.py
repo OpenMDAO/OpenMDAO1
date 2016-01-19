@@ -330,11 +330,6 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_pname[pathname] = name
             to_abs_pnames[name] = (pathname,)
-            val = meta['val']
-
-            #if var is a FileRef, set its absolute directory
-            if isinstance(val, FileRef):
-                self._fileref_setup(val)
 
         self._unknowns_dict = OrderedDict()
         for name, meta in iteritems(self._init_unknowns_dict):
@@ -343,11 +338,6 @@ class Component(System):
             meta['pathname'] = pathname
             to_prom_uname[pathname] = name
             to_abs_uname[name] = pathname
-            val = meta['val']
-
-            #if var is a FileRef, set its absolute directory
-            if isinstance(val, FileRef):
-                self._fileref_setup(val)
 
         to_prom_name.update(to_prom_uname)
         to_prom_name.update(to_prom_pname)
@@ -358,6 +348,30 @@ class Component(System):
         self._sysdata._unknowns_dict = self._unknowns_dict
 
         return self._params_dict, self._unknowns_dict
+
+    def _setup_communicators(self, comm, parent_dir):
+        """
+        Assign communicator to this `Component`.
+
+        Args
+        ----
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+
+        parent_dir : str
+            The absolute directory of the parent, or '' if unspecified. Used to
+            determine the absolute directory of all FileRefs.
+
+        """
+        super(Component, self)._setup_communicators(comm, parent_dir)
+
+        # set absolute directories of any FileRefs
+        for meta in chain(itervalues(self._init_unknowns_dict),
+                          itervalues(self._init_params_dict)):
+            val = meta['val']
+            #if var is a FileRef, set its absolute directory
+            if isinstance(val, FileRef):
+                self._fileref_setup(val)
 
     def _fileref_setup(self, fref):
         fref.parent_dir = self._sysdata.absdir

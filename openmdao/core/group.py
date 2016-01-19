@@ -211,7 +211,7 @@ class Group(System):
         return self.subsystems(local=local, recurse=recurse, typ=Component,
                                include_self=include_self)
 
-    def _init_sys_data(self, parent_path, parent_dir, probdata):
+    def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
@@ -220,17 +220,13 @@ class Group(System):
             The pathname of the parent `Group`, which is used to determine
             the pathname of all subsystems.
 
-        parent_dir : str
-            The absolute directory of the parent. Used to determine the absolute
-            directory of all subsystems.
-
         probdata : `_ProbData`
             Problem level data container.
         """
-        super(Group, self)._init_sys_data(parent_path, parent_dir, probdata)
+        super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
         for sub in itervalues(self._subsystems):
-            sub._init_sys_data(self.pathname, self._sysdata.absdir, probdata)
+            sub._init_sys_data(self.pathname, probdata)
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -336,7 +332,7 @@ class Group(System):
         else:
             return name
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `Group` and all of its subsystems.
 
@@ -344,13 +340,17 @@ class Group(System):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            Absolute directory of parent `System`.
         """
+        super(Group, self)._setup_communicators(comm, parent_dir)
         self._local_subsystems = []
 
-        self.comm = comm
+        #self.comm = comm
 
         for sub in itervalues(self._subsystems):
-            sub._setup_communicators(self.comm)
+            sub._setup_communicators(self.comm, self._sysdata.absdir)
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
@@ -1446,34 +1446,34 @@ class Group(System):
 
         return ranks
 
-    def _setup_filerefs(self):
-        """
-        If we have any output FileRefs that have multiple local copies, then
-        we need to dynamically create subdirectories based on rank to prevent
-        the different processes from overwriting the same file.
-        """
-        unknowns = self.unknowns
-        fnames = {}  #  fname: [fileref...]
-        for name, acc in iteritems(unknowns._dat):
-            if acc.pbo and isinstance(acc.val.val, FileRef):
-                for locvars in self._sysdata.all_locals:
-                    if name in locvars:
-                        fnames.setdefault(unknowns._dat[name].val.val._abspath(),
-                                              []).append(name)
-
-        changed = set()
-        for fname, frefs in iteritems(fnames):
-            if len(frefs) > 1: # output file is duplicated in multiple processes
-                for name in frefs:
-                    if not unknowns._dat[name].remote:
-                        if name in changed:
-                            continue
-                        changed.add(name)
-                        unknowns[name]._set_rank(self.comm.rank)
-                        # create the directory if it isn't there
-                        dpath = os.path.dirname(unknowns[name]._abspath())
-                        if not os.path.exists(dpath):
-                            os.makedirs(dpath)
+    # def _setup_filerefs(self):
+    #     """
+    #     If we have any output FileRefs that have multiple local copies, then
+    #     we need to dynamically create subdirectories based on rank to prevent
+    #     the different processes from overwriting the same file.
+    #     """
+    #     unknowns = self.unknowns
+    #     fnames = {}  #  fname: [fileref...]
+    #     for name, acc in iteritems(unknowns._dat):
+    #         if acc.pbo and isinstance(acc.val.val, FileRef):
+    #             for locvars in self._sysdata.all_locals:
+    #                 if name in locvars:
+    #                     fnames.setdefault(unknowns._dat[name].val.val._abspath(),
+    #                                           []).append(name)
+    #
+    #     changed = set()
+    #     for fname, frefs in iteritems(fnames):
+    #         if len(frefs) > 1: # output file is duplicated in multiple processes
+    #             for name in frefs:
+    #                 if not unknowns._dat[name].remote:
+    #                     if name in changed:
+    #                         continue
+    #                     changed.add(name)
+    #                     unknowns[name]._set_rank(self.comm.rank)
+    #                     # create the directory if it isn't there
+    #                     dpath = os.path.dirname(unknowns[name]._abspath())
+    #                     if not os.path.exists(dpath):
+    #                         os.makedirs(dpath)
 
     def _get_relname_map(self, parent_proms):
         """

@@ -246,7 +246,7 @@ class System(object):
         if include_self:
             yield self
 
-    def _init_sys_data(self, parent_path, parent_dir, probdata):
+    def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
         Parameter
@@ -254,10 +254,6 @@ class System(object):
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
-
-        parent_dir : str
-            The absolute directory of the parent, or '' if unspecified. Used to
-            determine the absolute directory of all subsystems.
 
         probdata : `_ProbData`
             Problem level data container.
@@ -271,18 +267,6 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
-
-        # figure out our absolute directory
-        if self.directory:
-            if os.path.isabs(self.directory):
-                self._sysdata.absdir = self.directory
-            else:
-                self._sysdata.absdir = os.path.join(parent_dir, self.directory)
-        else:
-            self._sysdata.absdir = parent_dir
-
-        if self.create_dirs and not os.path.exists(self._sysdata.absdir):
-            os.makedirs(self._sysdata.absdir)
 
     def is_active(self):
         """
@@ -305,7 +289,7 @@ class System(object):
         """
         return (1, 1)
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `System` and all of its subsystems.
 
@@ -313,6 +297,11 @@ class System(object):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            The absolute directory of the parent, or '' if unspecified. Used to
+            determine the absolute directory of all subsystems.
+
         """
         minp, maxp = self.get_req_procs()
         if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
@@ -320,6 +309,29 @@ class System(object):
                               (self.pathname, minp, comm.size))
 
         self.comm = comm
+
+        self._setup_dir(parent_dir)
+
+    def _get_dir(self):
+        if isinstance(self.directory, string_types):
+            return self.directory
+        else: # assume it's a function
+            return self.directory(self.comm)
+
+    def _setup_dir(self, parent_dir):
+        directory = self._get_dir()
+
+        # figure out our absolute directory
+        if self.directory:
+            if os.path.isabs(directory):
+                self._sysdata.absdir = directory
+            else:
+                self._sysdata.absdir = os.path.join(parent_dir, directory)
+        else:
+            self._sysdata.absdir = parent_dir
+
+        if self.create_dirs and not os.path.exists(self._sysdata.absdir):
+            os.makedirs(self._sysdata.absdir)
 
     def _set_vars_as_remote(self):
         """
