@@ -235,10 +235,11 @@ class TestFileRef(unittest.TestCase):
             p.setup(check=False)
         except Exception as err:
             self.assertEqual(str(err), "directory '%s' doesn't "
-                                       "exist for FileRef('nest/ascii.dat'). Set "
+                                       "exist for FileRef('%s'). Set "
                                        "create_dirs=True in system 'src' to create the "
                                        "directory automatically." %
-                                       os.path.join(self.tmpdir,'src','nest'))
+                                       (os.path.join(self.tmpdir,'src','nest'),
+                                       os.path.join('nest','ascii.dat')))
         else:
             self.fail("Exception expected")
 
