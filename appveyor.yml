@@ -23,10 +23,10 @@ init:
   - conda config --set always_yes yes
   # We need to do this first as other commands may not work with older versions of conda.
   - conda update conda
-  - conda install numpy scipy nose hdf5 h5py sphinx mock --quiet
+  - conda install numpy scipy nose hdf5 h5py sphinx mock pip --quiet
+  - python -m pip install --upgrade pip
 
 install:
-  - pip install --upgrade pip
   #Grab testflo for running tests, to ensure examples are run
   - pip install git+https://github.com/naylor-b/testflo.git
   #We need to run these two lines to have nmake available for doctests
