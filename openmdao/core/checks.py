@@ -32,6 +32,42 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
         if 'pass_by_obj' not in smeta and 'pass_by_obj' not in smeta:
             _check_shapes_match(smeta, tmeta, to_prom_name)
 
+    # FileRefs require a separate check, because if multiple input FileRefs
+    # refer to the same file, that means they're implicitly connected,
+    # even if they're not explicitly connected or connected by promotion in
+    # the framework. If multiple input FileRefs refer to the same file, they
+    # must all share the same source FileRef or we raise an exception.
+    fref_conns = {}  # dict of input varname vs ([(invar,connected)...], [(outvar, outfile)...])
+    for n, meta in iteritems(params_dict):
+        val = meta['val']
+        if isinstance(val, FileRef):
+            ins, outs = fref_conns.setdefault(val._abspath(), ([], set()))
+            if n in connections:
+                ins.append((n, True))
+                s,_ = connections[n]
+                outs.add((s, unknowns_dict[s]['val']._abspath()))
+            else:
+                ins.append((n, False))
+
+    for infile, (ins, outs) in iteritems(fref_conns):
+        if len(outs) > 1:
+            raise RuntimeError("input file '%s' is referenced from FileRef param(s) %s, "
+                               "which are connected to multiple "
+                               "output FileRefs: %s. Those FileRefs reference the following "
+                               "files: %s." % (infile, [i for i,isconn in ins],
+                                             sorted([o for o,of in outs]),
+                                             sorted([of for o,of in outs])))
+
+        for ivar, isconn in ins:
+            if not isconn and outs:
+                raise RuntimeError("FileRef param '%s' is unconnected but will be "
+                                   "overwritten by the following FileRef unknown(s): "
+                                   "%s. Files referred to by the FileRef unknowns are: "
+                                   "%s. To remove this error, make a connection between %s"
+                                   " and a FileRef unknown." % (ivar,
+                                          sorted([o for o,of in outs]),
+                                          sorted([of for o,of in outs]), ivar))
+
 def _check_types_match(src, tgt, to_prom_name):
     sval = src['val']
     tval = tgt['val']
