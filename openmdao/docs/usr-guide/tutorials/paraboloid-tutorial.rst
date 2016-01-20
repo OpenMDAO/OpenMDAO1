@@ -401,7 +401,7 @@ constraint using the `add_constraint` method. This method takes the name of
 the variable and an "upper" or "lower" bound. Here we give it a lower bound
 of 15, which completes the inequality constraint "x - y > 15".
 
-OpenMDAO also supports the speicification of double sided constraints, so if
+OpenMDAO also supports the specification of double sided constraints, so if
 you wanted to constrain x-y to lie on a band between 15 and 16 which is "16 > x-y > 15",
 you would just do the following:
 
