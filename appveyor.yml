@@ -26,6 +26,7 @@ init:
   - conda install numpy scipy nose hdf5 h5py sphinx mock --quiet
 
 install:
+  - pip install --upgrade pip
   #Grab testflo for running tests, to ensure examples are run
   - pip install git+https://github.com/naylor-b/testflo.git
   #We need to run these two lines to have nmake available for doctests
@@ -44,7 +45,7 @@ install:
       }
   #Return back to continue install of OpenMDAO
   - cd C:\projects\openmdao*
-  - pip install .
+  - pip install -e .
 
 test_script:
   - ps: |
