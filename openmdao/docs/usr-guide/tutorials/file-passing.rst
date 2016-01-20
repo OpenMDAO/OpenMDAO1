@@ -52,7 +52,7 @@ simple calculation, then writes the result to a file.
 
 .. testsetup:: FileRef1, FileRef2
 
-    import os, tempfile, shutil
+    import os, tempfile, shutil, errno
     startdir = os.getcwd()
     tmpdir = tempfile.mkdtemp()
     os.chdir(tmpdir)
@@ -213,4 +213,3 @@ would look like this:
 
     mygrp.directory = lambda comm: "foo_%d" % comm.rank
     mygrp.create_dirs = True  # create the directories if they don't exist
-    

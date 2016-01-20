@@ -4,6 +4,7 @@ import unittest
 import struct
 from tempfile import mkdtemp
 from shutil import rmtree
+import errno
 
 from openmdao.api import Problem, Component, Group, ExecComp, FileRef
 from openmdao.util.file_util import build_directory

@@ -1,6 +1,7 @@
 import os
 from tempfile import mkdtemp
 from shutil import rmtree
+import errno
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, FileRef
 from openmdao.core.mpi_wrap import MPI
