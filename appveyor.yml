@@ -40,8 +40,9 @@ install:
         $client = new-object System.Net.WebClient
         $client.DownloadFile("http://openmdao.org/dists/MSMpiSetup.exe", "$pwd\MSMpiSetup.exe")
         .\MSMpiSetup.exe -unattend -force  | Out-Null #pipe to Out-Null in order to block until install is finished
-     }
+      }
 
+  #Do these pip installs outside of powershell
   - if "%CONDA%" == "Miniconda3-x64" (pip install http://openmdao.org/dists/mpi4py-2.0.0-cp34-none-win_amd64.whl)
   - if "%CONDA%" == "Miniconda3-x64" (pip install http://openmdao.org/dists/petsc4py-3.6.0-cp34-none-win_amd64.whl)
   
