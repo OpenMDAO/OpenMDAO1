@@ -3,12 +3,12 @@ build: false
 version: 1.0.{build}
 
 platform:
-  #- x86
+  - x86
   - x64
 
 environment:
   matrix:
-    #- PYTHON: 2.7
+    - PYTHON: 2.7
     - PYTHON: 3.4
 
 init:
