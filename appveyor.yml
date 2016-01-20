@@ -14,7 +14,7 @@ environment:
 init:
   #Uncomment the following line to gain RDP access to an appveyor machine.
   #Login info will appear in the console
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  #- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - set CONDA=Miniconda
   - if "%PYTHON%" == "3.4" (set CONDA=%CONDA%3)
   - if "%PLATFORM%" == "x64" (set CONDA=%CONDA%-x64)
@@ -24,7 +24,6 @@ init:
   # We need to do this first as other commands may not work with older versions of conda.
   - conda update conda
   - conda install numpy scipy nose hdf5 h5py sphinx mock pip --quiet
-  #- python -m pip install --upgrade pip
 
 install:
   #Grab testflo for running tests, to ensure examples are run
