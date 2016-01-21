@@ -567,7 +567,10 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                if s.setup_distrib is not Component.setup_distrib:
+                # get rid of check for setup_distrib_idxs when we move to beta
+                if hasattr(s, 'setup_distrib_idxs') or (
+                         hasattr(s, 'setup_distrib') and (s.setup_distrib
+                                                is not Component.setup_distrib)):
                     # component defines its own setup_distrib, so
                     # the metadata will change
                     meta_changed = True

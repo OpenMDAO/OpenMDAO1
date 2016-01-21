@@ -308,7 +308,14 @@ class Component(System):
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         if MPI and compute_indices and self.is_active():
-            self.setup_distrib()
+            if hasattr(self, 'setup_distrib_idxs'):
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("setup_distrib_idxs is deprecated, use setup_distrib instead.",
+                              DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+                self.setup_distrib_idxs()
+            else:
+                self.setup_distrib()
             # now update our distrib_size metadata for any distributed
             # unknowns
             sizes = []
