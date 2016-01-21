@@ -112,20 +112,18 @@ class SellarDerivatives(Group):
 if __name__ == '__main__':
     # Setup and run the model.
 
-    from openmdao.core.problem import Problem
-    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
-    from openmdao.api import pyOptSparseDriver
-    from openmdao.api import SqliteRecorder
+    from openmdao.api import Problem, ScipyOptimizer, ScipyGMRES, pyOptSparseDriver, SqliteRecorder
 
     top = Problem()
     top.root = SellarDerivatives()
 
-    # top.driver = ScipyOptimizer()
-    # top.driver.options['optimizer'] = 'SLSQP'
-    # top.driver.options['tol'] = 1.0e-8
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+    top.driver.options['tol'] = 1.0e-8
+    top.root.ln_solver = ScipyGMRES()
 
-    top.driver = pyOptSparseDriver()
-    top.driver.options['optimizer'] = 'SNOPT'
+    # top.driver = pyOptSparseDriver()
+    # top.driver.options['optimizer'] = 'SNOPT'
 
 
     top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
@@ -135,7 +133,8 @@ if __name__ == '__main__':
     top.driver.add_objective('obj')
     top.driver.add_constraint('con1', upper=0.0)
     top.driver.add_constraint('con2', upper=0.0)
-    rec = SqliteRecorder('sellar_snopt.db')
+
+    rec = SqliteRecorder('sellar.db')
     top.driver.add_recorder(rec)
     rec.options['record_derivs'] = True
 
