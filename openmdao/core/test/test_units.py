@@ -605,7 +605,7 @@ class TestUnitConversionPBO(unittest.TestCase):
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtF.x2')
 
-        top.root.fd_options['force_fd'] = True
+        prob.root.fd_options['force_fd'] = True
 
         prob.setup(check=False)
         prob.run()
