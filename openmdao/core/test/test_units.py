@@ -605,18 +605,20 @@ class TestUnitConversionPBO(unittest.TestCase):
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtF.x2')
 
+        top.root.fd_options['force_fd'] = True
+
         prob.setup(check=False)
         prob.run()
 
         assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
         assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
 
-        #indep_list = ['x1']
-        #unknown_list = ['tgtF.x3']
-        #J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
-                               #return_format='dict')
+        indep_list = ['x1']
+        unknown_list = ['tgtF.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
 
-        #assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
