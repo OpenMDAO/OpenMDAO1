@@ -85,10 +85,6 @@ class FileRef(object):
         source file will be copied over to the destination path if it differs
         from the path of the source.
         """
-        if self.fname is None:
-            self.fname = src_fref._abspath()
-            self._set_meta(src_fref.meta)
-
         self.validate(src_fref)
 
         # If we refer to the same file as the source, do nothing
