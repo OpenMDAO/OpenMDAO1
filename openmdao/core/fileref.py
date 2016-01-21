@@ -10,8 +10,6 @@ from six import iteritems
 #Public Symbols
 __all__ = ['FileRef']
 
-#_big_endian = sys.byteorder == 'big'
-
 _file_meta = {
     'binary': bool,
 }
