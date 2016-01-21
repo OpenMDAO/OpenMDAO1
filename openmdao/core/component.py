@@ -112,6 +112,9 @@ class Component(System):
         self._check_name(name)
         meta = kwargs.copy()
 
+        if isinstance(val, FileRef):
+            val._set_meta(kwargs)
+
         meta['val'] = val = self._get_initial_val(val, shape)
 
         if is_differentiable(val) and not meta.get('pass_by_obj'):

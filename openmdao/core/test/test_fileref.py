@@ -13,8 +13,8 @@ class FileSrc(Component):
     def __init__(self, path=''):
         super(FileSrc, self).__init__()
         self.add_output("ascii_dat", FileRef(os.path.join(path,"ascii.dat")))
-        self.add_output("bin_dat", FileRef(os.path.join(path,"bin.dat"),
-                                           binary=True))
+        self.add_output("bin_dat", FileRef(os.path.join(path,"bin.dat")),
+                                           binary=True)
 
     def solve_nonlinear(self, params, unknowns, resids):
         # generate the output files
@@ -30,11 +30,11 @@ class FilePass(Component):
     def __init__(self, path=''):
         super(FilePass, self).__init__()
         self.add_param("ascii_in", FileRef(os.path.join(path,"ascii.dat")))
-        self.add_param("bin_in", FileRef(os.path.join(path,"bin.dat"),
-                                         binary=True))
+        self.add_param("bin_in", FileRef(os.path.join(path,"bin.dat")),
+                                         binary=True)
         self.add_output("ascii_out", FileRef(os.path.join(path,"ascii.out")))
-        self.add_output("bin_out", FileRef(os.path.join(path,"bin.out"),
-                                           binary=True))
+        self.add_output("bin_out", FileRef(os.path.join(path,"bin.out")),
+                                           binary=True)
 
     def solve_nonlinear(self, params, unknowns, resids):
         ascii_in_ref = params['ascii_in']
@@ -65,8 +65,8 @@ class FileSink(Component):
     def __init__(self, path=''):
         super(FileSink, self).__init__()
         self.add_param("ascii_in", FileRef(os.path.join(path,"ascii_final.dat")))
-        self.add_param("bin_in", FileRef(os.path.join(path,"bin_final.dat"),
-                                         binary=True))
+        self.add_param("bin_in", FileRef(os.path.join(path,"bin_final.dat")),
+                                         binary=True)
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass # nothing to do
@@ -74,7 +74,7 @@ class FileSink(Component):
 class FileBin(Component):
     def __init__(self):
         super(FileBin, self).__init__()
-        self.add_output("fout", FileRef("file.dat", binary=True))
+        self.add_output("fout", FileRef("file.dat"), binary=True)
 
 class FileNoBin(Component):
     def __init__(self):
@@ -253,7 +253,7 @@ class TestFileRef(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "Source FileRef is (binary=True) and dest is (binary=False).")
+            self.assertEqual(str(err), "Source FileRef has (binary=True) and dest has (binary=False).")
         else:
             self.fail("Exception expected")
 

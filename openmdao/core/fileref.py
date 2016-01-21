@@ -5,11 +5,16 @@ Support for file variables.
 import sys
 import copy
 import os
+from six import iteritems
 
 #Public Symbols
 __all__ = ['FileRef']
 
 #_big_endian = sys.byteorder == 'big'
+
+_file_meta = {
+    'binary': bool,
+}
 
 CHUNK = 1 << 20  # 1MB
 
@@ -19,28 +24,22 @@ class FileRef(object):
     it supports :meth:`open` to read and write the file's contents.
     """
 
-    def __init__(self, fname, binary=False):
-        #, desc='', content_type='', platform=sys.platform,
-              #big_endian=_big_endian, single_precision=False,
-              #integer_8=False, unformatted=False, recordmark_8=False):
+    def __init__(self, fname=None):
         self.fname = fname
         self.parent_dir = None
-        self.binary = binary
-        # self.desc = desc
-        # self.content_type = content_type
-        # self.platform = platform
-        # self.big_endian = big_endian
-        # self.single_precision = single_precision
-        # self.integer_8 = integer_8
-        # self.unformatted = unformatted
-        # self.recordmark_8 = recordmark_8
+        self.meta = {}
 
     def __str__(self):
         return "FileRef(%s): absolute: %s" % (self.fname, self._abspath())
 
+    def _set_meta(self, meta):
+        for name, typ in iteritems(_file_meta):
+            if name in meta:
+                self.meta[name] = typ(meta[name])
+
     def open(self, mode):
         """ Open file for reading or writing. """
-        if self.binary and 'b' not in mode:
+        if self.meta.get('binary') and 'b' not in mode:
             mode += 'b'
         return open(self._abspath(), mode)
 
@@ -50,16 +49,6 @@ class FileRef(object):
             return self.fname
         else:
             return os.path.join(self.parent_dir, self.fname)
-
-    def _set_rank(self, rank):
-        """In MPI, if we are part of a parallel group and there are multiple
-        copies of us that refer to the same output file, our directory must
-        be modified so that each process has its own copy of the file.
-        """
-        if os.path.isabs(self.fname):
-            raise RuntimeError("Multiple parallel output FileRefs refer to the "
-                               "same absolute pathname: %s" % self)
-        self.fname = os.path.join("_%d_" % rank, self.fname)
 
     def validate(self, src_fref):
         """
@@ -73,11 +62,15 @@ class FileRef(object):
             Source `FileRef` object.
         """
         if not isinstance(src_fref, FileRef):
-            raise TypeError("Source for FileRef '%s' is not a FileRef!" %
+            raise TypeError("Source for FileRef '%s' is not a FileRef." %
                              self.fname)
-        if self.binary != src_fref.binary:
-            raise ValueError("Source FileRef is (binary=%s) and dest is (binary=%s)."%
-                             (src_fref.binary, self.binary))
+        for name, typ in iteritems(_file_meta):
+            if name in self.meta or name in src_fref.meta:
+                tgtval = typ(self.meta.get(name))
+                srcval = typ(src_fref.meta.get(name))
+                if tgtval != srcval:
+                    raise ValueError("Source FileRef has (%s=%s) and dest has (%s=%s)."%
+                                     (name, srcval, name, tgtval))
 
     def _same_file(self, fref):
         """Returns True if this FileRef and the given FileRef refer to the
@@ -92,6 +85,10 @@ class FileRef(object):
         source file will be copied over to the destination path if it differs
         from the path of the source.
         """
+        if self.fname is None:
+            self.fname = src_fref._abspath()
+            self._set_meta(src_fref.meta)
+
         self.validate(src_fref)
 
         # If we refer to the same file as the source, do nothing
