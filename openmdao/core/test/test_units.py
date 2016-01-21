@@ -563,5 +563,60 @@ class TestUnitConversion(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), expected_msg)
 
+
+class PBOSrcComp(Component):
+
+    def __init__(self):
+        super(PBOSrcComp, self).__init__()
+
+        self.add_param('x1', 100.0)
+        self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
+        self.fd_options['force_fd'] = True
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ No action."""
+        unknowns['x2'] = params['x1']
+
+
+class PBOTgtCompF(Component):
+
+    def __init__(self):
+        super(PBOTgtCompF, self).__init__()
+
+        self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
+        self.add_output('x3', 100.0)
+        self.fd_options['force_fd'] = True
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ No action."""
+        unknowns['x3'] = params['x2']
+
+
+class TestUnitConversionPBO(unittest.TestCase):
+    """ Tests support for unit conversions on pass_by_obj connections."""
+
+    def test_basic(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', PBOSrcComp())
+        prob.root.add('tgtF', PBOTgtCompF())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+
+        #indep_list = ['x1']
+        #unknown_list = ['tgtF.x3']
+        #J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               #return_format='dict')
+
+        #assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+
 if __name__ == "__main__":
     unittest.main()
