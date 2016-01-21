@@ -66,7 +66,7 @@ simple calculation, then writes the result to a file.
         shutil.rmtree(tmpdir)
     except OSError as e:
         # If directory already deleted, keep going
-        if e.errno != errno.ENOENT:
+        if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
             raise e
 
 .. testcode:: FileRef1, FileRef2, FileRef3
