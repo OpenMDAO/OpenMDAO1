@@ -44,7 +44,8 @@ Using FileRefs
 
 So lets make some components that pass FileRefs between them.  We'll just use
 ascii files here to keep things as simple as possible, but FileRefs can be
-binary if you set their *binary* attribute to True.
+binary if you set *binary=True* in the metadata when you add them to a
+component.
 
 First, we'll make a simple component that takes a single parameter, does a
 simple calculation, then writes the result to a file.
@@ -68,7 +69,7 @@ simple calculation, then writes the result to a file.
         if e.errno != errno.ENOENT:
             raise e
 
-.. testcode:: FileRef1, FileRef2
+.. testcode:: FileRef1, FileRef2, FileRef3
 
     from openmdao.api import Problem, Group, Component, FileRef
 
@@ -213,3 +214,18 @@ would look like this:
 
     mygrp.directory = lambda comm: "foo_%d" % comm.rank
     mygrp.create_dirs = True  # create the directories if they don't exist
+
+The function you assign to *directory* should expect a single argument that
+is an MPI communicator, and it should return the desired directory string.
+Note that it's also valid to assign a method of your component to *directory* if
+you happen to need more information than just the communicator in order to
+determine the directory name.  For example:
+
+.. testcode:: FileRef3
+
+    class MyComp(FoutComp):
+        def get_dirname(self, comm):
+            return "%s_%d" % (self.name, comm.rank)
+
+    mycomp = MyComp()
+    mycomp.directory = mycomp.get_dirname
