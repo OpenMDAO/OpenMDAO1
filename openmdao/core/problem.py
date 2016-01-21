@@ -997,8 +997,8 @@ class Problem(object):
         return pbos
 
     def _check_relevant_pbos(self, out_stream=sys.stdout):
-        """ Warn if any pass_by_object variables are in any relevant set.
-        Warn even more sternly if top driver requires derivatives."""
+        """ Warn if any pass_by_object variables are in any relevant set if
+        top driver requires derivatives."""
 
         # Only warn if we are taking gradients across model with a pbo
         # variable.
