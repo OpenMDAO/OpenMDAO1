@@ -23,6 +23,7 @@ from openmdao.core.checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
+from openmdao.core.fileref import FileRef
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -195,7 +196,6 @@ class Problem(object):
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
-
 
         input_graph = nx.Graph()
 
@@ -493,6 +493,9 @@ class Problem(object):
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
+        # divide MPI communicators among subsystems
+        self._setup_communicators()
+
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
         # in any child of root. Metadata for each variable will contain
@@ -554,9 +557,8 @@ class Problem(object):
                         meta['src_indices'] = idxs
 
         # TODO: handle any automatic grouping of systems here...
-
-        # divide MPI communicators among subsystems
-        self._setup_communicators()
+        #       If we modify the system tree here, we'll have to call
+        #       the full setup over again...
 
         # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
@@ -566,8 +568,8 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
-                    # component defines its own setup_distrib_idxs, so
+                if s.setup_distrib is not Component.setup_distrib:
+                    # component defines its own setup_distrib, so
                     # the metadata will change
                     meta_changed = True
 
@@ -588,7 +590,8 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom_name)
+        check_connections(connections, params_dict, unknowns_dict,
+                          self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -1036,6 +1039,14 @@ class Problem(object):
         """ Runs the Driver in self.driver. """
         if self.root.is_active():
             self.driver.run(self)
+
+        # if we're running under MPI, ensure that all of the processes
+        # are finished in order to ensure that scripting code outside of
+        # Problem doesn't attempt to access variables or files that have
+        # not finished updating.  This can happen with FileRef vars and
+        # potentially other pass_by_obj variables.
+        if MPI:
+            self.comm.barrier()
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
@@ -1954,7 +1965,9 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.driver._setup_communicators(self.comm)
+        # TODO: once we have nested Problems, figure out proper Problem
+        #       directory instead of just using getcwd().
+        self.driver._setup_communicators(self.comm, os.getcwd())
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

@@ -149,7 +149,7 @@ class Driver(object):
 
             self.fn_conversions[name] = scaler
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign a communicator to the root `System`.
 
@@ -157,8 +157,11 @@ class Driver(object):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the Problem.
+
+        parent_dir : str
+            Absolute directory of the Problem.
         """
-        self.root._setup_communicators(comm)
+        self.root._setup_communicators(comm, parent_dir)
 
     def get_req_procs(self):
         """

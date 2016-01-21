@@ -28,6 +28,7 @@ class _SysData(object):
     """
     def __init__(self, pathname):
         self.pathname = pathname
+        self.absdir = None
 
         # map absolute name to local promoted name
         self.to_prom_name = {} # Order not guaranteed in python 3.
@@ -74,6 +75,12 @@ class System(object):
         self._promotes = ()
 
         self.comm = None
+
+        # for those Systems that perform file I/O
+        self.directory = ''
+
+        # if True, create any directories needed by this System that don't exist
+        self.create_dirs = False
 
         # create placeholders for all of the vectors
         self.unknowns = _PlaceholderVecWrapper('unknowns')
@@ -282,7 +289,7 @@ class System(object):
         """
         return (1, 1)
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `System` and all of its subsystems.
 
@@ -290,6 +297,11 @@ class System(object):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            The absolute directory of the parent, or '' if unspecified. Used to
+            determine the absolute directory of all subsystems.
+
         """
         minp, maxp = self.get_req_procs()
         if MPI and comm is not None and comm != MPI.COMM_NULL and comm.size < minp:
@@ -297,6 +309,29 @@ class System(object):
                               (self.pathname, minp, comm.size))
 
         self.comm = comm
+
+        self._setup_dir(parent_dir)
+
+    def _get_dir(self):
+        if isinstance(self.directory, string_types):
+            return self.directory
+        else: # assume it's a function
+            return self.directory(self.comm)
+
+    def _setup_dir(self, parent_dir):
+        directory = self._get_dir()
+
+        # figure out our absolute directory
+        if directory:
+            if os.path.isabs(directory):
+                self._sysdata.absdir = directory
+            else:
+                self._sysdata.absdir = os.path.join(parent_dir, directory)
+        else:
+            self._sysdata.absdir = parent_dir
+
+        if self.create_dirs and not os.path.exists(self._sysdata.absdir):
+            os.makedirs(self._sysdata.absdir)
 
     def _set_vars_as_remote(self):
         """
@@ -396,7 +431,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {} # Order not guaranteed in python 3.
+        fd_cols = {}
 
         to_prom_name = self._sysdata.to_prom_name
 

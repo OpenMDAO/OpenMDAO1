@@ -130,7 +130,7 @@ class MetaModel(Component):
         ----
 
         compute_indices : bool, optional
-            If True, call setup_distrib_idxs() to set values of
+            If True, call setup_distrib() to set values of
             'src_indices' metadata.
         """
         # create an instance of the default surrogate for outputs that

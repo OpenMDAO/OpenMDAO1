@@ -7,6 +7,7 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
 from collections import OrderedDict, namedtuple
+from openmdao.core.fileref import FileRef
 from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
@@ -842,7 +843,7 @@ class TgtVecWrapper(VecWrapper):
             meta['size'] = src_meta['size']
 
         if src_acc.pbo:
-            if not meta.get('remote') and store_byobjs:
+            if not meta.get('remote') and store_byobjs and not isinstance(val, FileRef):
                 val = src_acc.val
             meta['pass_by_obj'] = True
             slc = None
