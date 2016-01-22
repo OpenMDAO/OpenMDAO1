@@ -19,11 +19,7 @@ that contains it.  The process works like this:
    then the absolute directory is just the current working directory. If
    *directory* contains a relative pathname, then the absolute directory is
    the current working directory plus the relative path.  If *directory* is
-   already an absolute path, then we just use that.  If *directory* is a
-   function, we will call that function, passing in the MPI communicator for
-   the current `System`.  That function should return a string containing
-   either a relative or absolute path, which we will resolve to an absolute
-   directory as mentioned above.
+   already an absolute path, then we just use that.
 
 2) For each child `System` in the tree, we calculate its absolute directory
    based on the absolute directory we've already calculated for its parent
@@ -37,6 +33,16 @@ that contains it.  The process works like this:
    similar way as in step 2, but in this case the `Component` is the parent,
    so we use its absolute directory as our starting point in determining
    the absolute path of the `FileRef`.
+
+.. note::
+
+    Sometimes you may not want to hard-code the directory name. If you want
+    to delay picking a name until runtime, you can specify directory as a
+    function. If *directory* is a
+    function, we will call that function, passing in the MPI communicator for
+    the current `System`.  That function should return a string containing
+    either a relative or absolute path, which we will resolve to an absolute
+    directory as mentioned above.
 
 
 Using FileRefs
@@ -105,12 +111,12 @@ file and use that to calculate a new number.
         def __init__(self):
             super(FinComp, self).__init__()
 
+            # add an input FileRef for our input file 'dat.in'
+            self.add_param("infile", FileRef("dat.in"))
+
             # here's the output we'll calculate using the number we read
             # from our input FileRef
             self.add_output('y', 1.0)
-
-            # add an input FileRef for our input file 'dat.in'
-            self.add_param("infile", FileRef("dat.in"))
 
         def solve_nonlinear(self, params, unknowns, resids):
             # read the number from our input FileRef

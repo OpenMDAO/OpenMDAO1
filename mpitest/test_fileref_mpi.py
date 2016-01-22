@@ -76,6 +76,10 @@ class FileRefTestCase(MPITestCase):
                     raise e
 
     def test_file_diamond(self):
+        # connect a source FileRef to two target FileRefs on
+        # components running in parallel, and connect the outputs
+        # of those components to a common sink component.  All filenames
+        # are different, so files will actually be copied for each connection.
         if MPI:
             num = self.N_PROCS
         else:
@@ -100,6 +104,12 @@ class FileRefTestCase(MPITestCase):
                 self.assertEqual(f.read(), "src\npar.mid%d\n"%i)
 
     def test_file_diamond_same_names(self):
+        # connect a source FileRef to two target FileRefs on
+        # components running in parallel, and connect the outputs
+        # of those components to a common sink component.  The middle
+        # components are given a directory function that specifies that
+        # their files are located in a subdirectory with the same name
+        # as their rank.
         if MPI:
             num = self.N_PROCS
             directory = lambda comm: str(self.comm.rank)

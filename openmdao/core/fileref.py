@@ -50,9 +50,10 @@ class FileRef(object):
 
     def validate(self, src_fref):
         """
-        validate() is called on a target `FileRef` to ensure that it is
-        compatible with the given source `FileRef`.  If not, an exception
-        will be raised.
+        validate() is called on a target `FileRef` to ensure that the source
+        is a `FileRef` and that it has matching metadata.  Currently, the only
+        metadata is a binary flag. Other metadata may be added in the future.
+        If the metadata does not match, an exception will be raised.
 
         Args
         ----
