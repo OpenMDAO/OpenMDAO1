@@ -326,7 +326,7 @@ class Driver(object):
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
         elif lower is None or lower == -float('inf'):
-            lower = sys.float_info.min
+            lower = -sys.float_info.max
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
