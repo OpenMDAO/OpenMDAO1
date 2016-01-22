@@ -51,6 +51,9 @@ class ExecComp(Component):
         A mapping of names to initial values, primarily for variables with
         names that are not valid python names, e.g., a:b:c.
 
+    units: dict, optional
+        A mapping of variable names to their units.
+
     \*\*kwargs: dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
@@ -84,7 +87,7 @@ class ExecComp(Component):
     initialized with a size 10 float array of ones.
     """
 
-    def __init__(self, exprs, inits=None, **kwargs):
+    def __init__(self, exprs, inits=None, units=None, **kwargs):
         super(ExecComp, self).__init__()
 
         # if complex step is used for derivatives, this is the stepsize
@@ -112,14 +115,24 @@ class ExecComp(Component):
                                    "does not refer to any variable in the "
                                    "expressions %s" % (kwarg, exprs))
 
+        # make sure units are legit
+        units_dict = units if units is not None else {}
+        for unit_var in units_dict:
+            if unit_var not in allvars:
+                raise RuntimeError("Units specific for variable {0} "
+                                   "in call to ExecComp() but {0} does "
+                                   "not appear in the expression "
+                                   "{1}".format(unit_var,exprs))
+
         for var in sorted(allvars):
             # if user supplied an initial value, use it, otherwise set to 0.0
             val = kwargs.get(var, 0.0)
+            units_kwarg = { 'units':units_dict[var] } if var in units_dict else {}
 
             if var in outs:
-                self.add_output(var, val)
+                self.add_output(var, val,**units_kwarg)
             else:
-                self.add_param(var, val)
+                self.add_param(var, val,**units_kwarg)
 
         self._to_colons = {}
         from_colons = {}
