@@ -112,7 +112,7 @@ class FileRefTestCase(MPITestCase):
         # as their rank.
         if MPI:
             num = self.N_PROCS
-            directory = lambda comm: str(self.comm.rank)
+            directory = lambda rank: str(rank)
         else:
             num = 1
             directory = ''

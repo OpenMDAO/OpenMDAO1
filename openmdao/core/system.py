@@ -316,7 +316,7 @@ class System(object):
         if isinstance(self.directory, string_types):
             return self.directory
         else: # assume it's a function
-            return self.directory(self.comm)
+            return self.directory(MPI.COMM_WORLD.rank)
 
     def _setup_dir(self, parent_dir):
         directory = self._get_dir()
@@ -330,7 +330,8 @@ class System(object):
         else:
             self._sysdata.absdir = parent_dir
 
-        if self.create_dirs and not os.path.exists(self._sysdata.absdir):
+        if (self.create_dirs and self.is_active() and
+                     not os.path.exists(self._sysdata.absdir)):
             os.makedirs(self._sysdata.absdir)
 
     def _set_vars_as_remote(self):

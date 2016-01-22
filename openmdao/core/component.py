@@ -386,7 +386,7 @@ class Component(System):
     def _fileref_setup(self, fref):
         fref.parent_dir = self._sysdata.absdir
         d = fref._abspath()
-        if not os.path.exists(os.path.dirname(d)):
+        if self.is_active() and not os.path.exists(os.path.dirname(d)):
             if self.create_dirs:
                 os.makedirs(os.path.dirname(d))
             else:

@@ -38,11 +38,10 @@ that contains it.  The process works like this:
 
     Sometimes you may not want to hard-code the directory name. If you want
     to delay picking a name until runtime, you can specify directory as a
-    function. If *directory* is a
-    function, we will call that function, passing in the MPI communicator for
-    the current `System`.  That function should return a string containing
-    either a relative or absolute path, which we will resolve to an absolute
-    directory as mentioned above.
+    function. If *directory* is a function, we will call that function,
+    passing in the rank for the current process.  That function should return
+    a string containing either a relative or absolute path, which we will
+    resolve to an absolute directory as mentioned above.
 
 
 Using FileRefs
@@ -218,20 +217,21 @@ would look like this:
 
 ::
 
-    mygrp.directory = lambda comm: "foo_%d" % comm.rank
+    mygrp.directory = lambda rank: "foo_%d" % rank
     mygrp.create_dirs = True  # create the directories if they don't exist
 
-The function you assign to *directory* should expect a single argument that
-is an MPI communicator, and it should return the desired directory string.
+The function you assign to *directory* should expect a single argument that is
+the rank of the current process, and it should return the desired directory string.
 Note that it's also valid to assign a method of your component to *directory* if
-you happen to need more information than just the communicator in order to
+you happen to need more information than just the rank in order to
 determine the directory name.  For example:
 
 .. testcode:: FileRef3
 
     class MyComp(FoutComp):
-        def get_dirname(self, comm):
-            return "%s_%d" % (self.name, comm.rank)
+        def get_dirname(self, rank):
+            return "%s_%d" % (self.name, rank)
 
     mycomp = MyComp()
     mycomp.directory = mycomp.get_dirname
+    mycomp.create_dirs = True
