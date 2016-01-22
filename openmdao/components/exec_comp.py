@@ -43,18 +43,18 @@ class ExecComp(Component):
 
     Args
     ----
-    exprs: str or list of str
+    exprs : str or list of str
         An assignment statement or iter of them. These express how the
         outputs are calculated based on the inputs.
 
-    inits: dict, optional
+    inits : dict, optional
         A mapping of names to initial values, primarily for variables with
         names that are not valid python names, e.g., a:b:c.
 
-    units: dict, optional
+    units : dict, optional
         A mapping of variable names to their units.
 
-    \*\*kwargs: dict of named args
+    \*\*kwargs : dict of named args
         Initial values of variables can be set by setting a named
         arg with the var name.
 
@@ -122,7 +122,7 @@ class ExecComp(Component):
                 raise RuntimeError("Units specific for variable {0} "
                                    "in call to ExecComp() but {0} does "
                                    "not appear in the expression "
-                                   "{1}".format(unit_var,exprs))
+                                   "{1}".format(unit_var, exprs))
 
         for var in sorted(allvars):
             # if user supplied an initial value, use it, otherwise set to 0.0
@@ -130,9 +130,9 @@ class ExecComp(Component):
             units_kwarg = { 'units':units_dict[var] } if var in units_dict else {}
 
             if var in outs:
-                self.add_output(var, val,**units_kwarg)
+                self.add_output(var, val, **units_kwarg)
             else:
-                self.add_param(var, val,**units_kwarg)
+                self.add_param(var, val, **units_kwarg)
 
         self._to_colons = {}
         from_colons = {}
