@@ -43,7 +43,7 @@ class CsvRecorder(BaseRecorder):
         Tells recorder whether to record the params vector.
     options['record_resids'] :  bool(False)
         Tells recorder whether to record the ressiduals vector.
-    options['record_derivs'] :  bool(False)
+    options['record_derivs'] :  bool(True)
         Tells recorder whether to record derivatives that are requested by a `Driver`.
     options['includes'] :  list of strings
         Patterns for variables to include in recording.
