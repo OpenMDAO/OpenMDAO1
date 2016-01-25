@@ -43,10 +43,12 @@
 
 </style>
 <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
-<script src="d3/d3.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
-// Get JSON data
-d3.json("__graph.json", function(treeData) {
+
+var treeData = %s;
+
+window.onload = function() {
 
     // Calculate total nodes, max label length
     var totalNodes = 0;
@@ -393,7 +395,8 @@ d3.json("__graph.json", function(treeData) {
     // Layout the tree initially and center on the root node.
     update(root);
     centerNode(root);
-});
+}
+
 
 </script>
 <body>

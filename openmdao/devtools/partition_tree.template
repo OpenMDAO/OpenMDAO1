@@ -81,7 +81,7 @@
     }
 
     </style>
-    <script type="text/javascript" src="d3/d3.min.js"></script>
+    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
     <style type="text/css">
 
 .chart {
@@ -129,8 +129,10 @@ var vis = d3.select("#body").append("div")
 var partition = d3.layout.partition()
     .value(function(d) { return d.size; });
 
-// Get JSON data
-d3.json("__graph.json", function(root) {
+// json data
+var root = %s;
+
+window.onload = function() {
   var g = vis.selectAll("g")
       .data(partition.nodes(root))
     .enter().append("svg:g")
@@ -180,7 +182,7 @@ d3.json("__graph.json", function(root) {
   function transform(d) {
     return "translate(8," + d.dx * ky / 2 + ")";
   }
-});
+}
 
     </script>
   </body>

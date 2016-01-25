@@ -5,12 +5,10 @@ import sys
 import shutil
 import json
 import tempfile
-import threading
 import time
 import pprint
 
 import webbrowser
-from six.moves import SimpleHTTPServer, socketserver
 
 import networkx as nx
 from networkx.readwrite.json_graph import node_link_data
@@ -27,20 +25,10 @@ viewer_options = {
     }
 }
 
-def _launch_browser(port, fname):
-    time.sleep(1)
-    webbrowser.get().open('http://localhost:%s/%s' % (port,fname))
-
-def _startThread(fn):
-    thread = threading.Thread(target=fn)
-    thread.setDaemon(True)
-    thread.start()
-    return thread
-
 def _system_tree_dict(system, size_1=True, expand_level=9999):
     """
     Returns a dict representation of the system hierarchy with
-    this System as root.
+    the given System as root.
     """
 
     def _tree_dict(ss, level):
@@ -71,53 +59,65 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
 
     return tree
 
-def view_tree(system, viewer='collapse_tree', port=8001, expand_level=9999):
+def view_tree(system, viewer='collapse_tree', expand_level=9999,
+              outfile='tree.html', show_browser=True):
     """
+    Generates a self-contained html file containing a tree viewer
+    of the specified type.  Optionally pops up a web browser to
+    view the file.
+
     Args
     ----
     system : system
         The root system for the desired tree.
 
     viewer : str, optional
-        The name of web viewer used to view the tree. Options are:
+        The type of web viewer used to view the tree. Options are:
         collapse_tree and partition_tree.
-
-    port : int, optional
-        The port number for the web server that serves the tree viewing page.
 
     expand_level : int, optional
         Optionally set the level that the tree will initially be expanded to.
         This option currently only works with collapse_tree. If not set,
         the entire tree will be expanded.
+
+    outfile : str, optional
+        The name of the output html file.  Defaults to 'tree.html'.
+
+    show_browser : bool, optional
+        If True, pop up a browser to view the generated html file.
+        Defaults to True.
     """
     options = viewer_options[viewer]
     if 'expand_level' in options:
         options['expand_level'] = expand_level
 
     tree = _system_tree_dict(system, **options)
-    viewer += '.html'
+    viewer += '.template'
 
-    try:
-        startdir = os.getcwd()
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    code_dir = os.path.dirname(os.path.abspath(__file__))
 
-        with open('__graph.json', 'w') as f:
-            json.dump(tree, f)
+    with open(os.path.join(code_dir, viewer), "r") as f:
+        template = f.read()
 
-        httpd = socketserver.TCPServer(("localhost", port),
-                           SimpleHTTPServer.SimpleHTTPRequestHandler)
+    treejson = json.dumps(tree)
+    with open(outfile, 'w') as f:
+        f.write(template % treejson)
 
-        print("starting server on port %d" % port)
+    if show_browser:
+        _view(outfile)
 
-        serve_thread  = _startThread(httpd.serve_forever)
-        _launch_browser(port, viewer)
 
-        while serve_thread.isAlive():
-            serve_thread.join(timeout=1)
+def _view(outfile):
+    """pop up a web browser for the given file"""
+    if sys.platform == 'darwin':
+        os.system('open %s' % outfile)
+    else:
+        webbrowser.get().open(outfile)
 
-    finally:
-        try:
-            os.remove('__graph.json')
-        except:
-            pass
-        os.chdir(startdir)
+def webview():
+    """This is tied to a console script called webview.  It just provides
+    a convenient way to pop up a browser to view a specified html file(s).
+    """
+    for name in sys.argv[1:]:
+        if os.path.isfile(name):
+            _view(name)
