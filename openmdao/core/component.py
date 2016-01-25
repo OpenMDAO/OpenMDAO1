@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import re
+import warnings
 
 from collections import OrderedDict
 from itertools import chain
@@ -313,6 +314,7 @@ class Component(System):
                 warnings.warn("setup_distrib_idxs is deprecated, use setup_distrib instead.",
                               DeprecationWarning,stacklevel=2)
                 warnings.simplefilter('ignore', DeprecationWarning)
+
                 self.setup_distrib_idxs()
             else:
                 self.setup_distrib()
