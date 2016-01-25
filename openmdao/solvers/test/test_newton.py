@@ -1,4 +1,4 @@
-""" Unit test for the Nonlinear Gauss Seidel nonlinear solver. """
+""" Unit test for the Newton nonlinear solver. """
 
 import unittest
 from six import iteritems

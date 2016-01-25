@@ -815,8 +815,16 @@ class Problem(object):
         if self._unit_diffs:
             tuples = sorted(iteritems(self._unit_diffs))
             print("\nUnit Conversions", file=out_stream)
+
+            vec = self.root.unknowns
+            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+
             for (src, tgt), (sunit, tunit) in tuples:
-                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
+                if src in pbos:
+                    pbo_str = ' (pass_by_obj)'
+                else:
+                    pbo_str = ''
+                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
                       file=out_stream)
 
             return tuples
@@ -988,6 +996,46 @@ class Problem(object):
 
         return pbos
 
+    def _check_relevant_pbos(self, out_stream=sys.stdout):
+        """ Warn if any pass_by_object variables are in any relevant set if
+        top driver requires derivatives."""
+
+        # Only warn if we are taking gradients across model with a pbo
+        # variable.
+        if self.driver.__class__ is Driver or \
+           self.driver.supports['gradients'] is False or \
+           self.root.fd_options['force_fd'] is True:
+            return []
+
+        vec = self.root.unknowns
+        pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+
+        rels = set()
+        for key, rel in iteritems(self._probdata.relevance.relevant):
+            rels.update(rel)
+
+        rel_pbos = rels.intersection(pbos)
+        if rel_pbos:
+            print("\nThe following relevant connections are marked as pass_by_obj:",
+                  file=out_stream)
+            for src in rel_pbos:
+                val = vec[src]
+
+                # Find target(s) and print whole relevant connection
+                for tgt, src_tuple in iteritems(self.root.connections):
+                    if src_tuple[0] == src and tgt in rels:
+                        print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
+                              file=out_stream)
+
+            print("\nYour driver requires a gradient across a model with pass_by_obj "
+                  "connections. We strongly recommend either setting the root "
+                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
+                  "connection into a Group and setting its fd_options 'force_fd' "
+                  "to True.",
+                  file=out_stream)
+
+        return list(rel_pbos)
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems
         found with the current configuration of this ``Problem``.
@@ -1012,6 +1060,7 @@ class Problem(object):
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
+        results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
         results['layout'] = self._check_layout(out_stream)
 
         # TODO: Incomplete optimization driver configuration

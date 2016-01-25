@@ -1,5 +1,17 @@
 .. index:: Serial and Parallel Multi-Point Example
 
+Requirements
+----------------------------------------
+This example runs OpenMDAO in parallel which requires `petsc4py` and `mpi4py`.
+You must have these packages installed in order to proceed.
+To get these packages set up on Linux, see `MPI on Linux`_.
+To get these packages set up on Windows, see `MPI on Windows`_.
+
+.. _MPI on Linux: ../../getting-started/mpi_linux.html
+
+.. _MPI on Windows: ../../getting-started/mpi_windows.html
+
+
 Setting Up Serial Multi-Point Problems
 ----------------------------------------
 A multi-point problem is when you want to analyze a single design at a number

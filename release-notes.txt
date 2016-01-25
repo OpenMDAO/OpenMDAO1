@@ -1,3 +1,31 @@
+OpenMDAO Version 1.5.0 Alpha Release Notes
+January 19, 2016
+
+Features
+* Proper MPI/PETSC installation/testing/usage now documented in User Guide.
+* User can run a DOE in parallel.
+* Removed pyoptsparse output from our test output to declutter things.
+* User can run a model in parallel using pass_by_obj data transfer under MPI.
+* Pyoptdriver now supports saving its history file. 
+* User can call cleanup method on problem that closes all recorders.
+* Converted Brent driver from OpenMDAO Classic to OpenMDAO 1.x
+* Case recorder will (optionally) save gradient information from driver cases that requested a gradient in that run.
+* OpenMDAO now makes suggestions to user how to improve efficiency when the layout of systems in the model is not optimal.
+* OpenMDAO now uses feature of pyOptSparse that allows a single Jacobian element to be sparse.
+
+Bugfixes
+* User now gets an error if they pass `promotes` keyword arg into any System.
+* Dealt with the duplicate executions of explicit comps when using a solver.
+* Fixed bug in accessing prob.unknowns and prob.resids.
+* Fixed bug where pyOptSparse/SLSQP failed with Pointer.
+* Fixed a bug in pass_by_obj_check_derivatives.
+* Fixed MPI hangs that were related to use of Python 3.
+* Fixed a bug in ExecComp expressions that didn't allow the use of ':' notation.
+* Added missing documentation of '.keys()' in recorder documentation.
+* Fixed a bug in the pass_by_obj params.
+* Fixed a problem in recent CADRE runs.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.4.1 Alpha Release Notes
 November 24, 2015
 

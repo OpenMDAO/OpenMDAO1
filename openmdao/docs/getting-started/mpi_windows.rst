@@ -4,7 +4,7 @@
 MPI on Windows
 ===============
 
-This document provides the setup and usage of MPI (Message Passing Interface) in OpenMDAO on Windows (64-bit) using Python3 (64-bit). 
+This document provides the setup and usage of MPI (Message Passing Interface) in OpenMDAO on Windows (64-bit) using Python3 (64-bit).
 We start with installing the necessary packages and test them to make sure they work.
 Then we will look at a simple example of how to take advantage of MPI in OpenMDAO.
 
@@ -95,7 +95,7 @@ Close the Cygwin64 terminal.  Open up a new terminal window (`cmd`) and run the 
     "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64
 
     C:\cygwin64\bin\mintty.exe
-    
+
 
 Now switch to the new Cygwin terminal that `mintty.exe` opened.  This new cygwin terminal will now have the Visual Studio compilers in the path.  You should make sure the `cl` command works and that the `link` command is the Microsoft link.exe and not the Cygwin link.exe.  Also, the GNU `make` command should be in the path.  Also, make sure there is an installed version of Python in the path.  The default Anaconda python 2.7 is fine.  Now run:
 
@@ -111,7 +111,7 @@ Now switch to the new Cygwin terminal that `mintty.exe` opened.  This new cygwin
 
 
 That will take some time, and when completed you will get a make command at the end after the message "Configure stage complete. Now build PETSc libraries with (gnumake build)."  Go ahead and run that command that will look something like:
-   
+
 ::
 
     make PETSC_DIR=/cygdrive/c/path/to/petsc-3.6.3 PETSC_ARCH=arch-mswin-c-opt all
@@ -180,7 +180,7 @@ To make sure MPI and `petsc4py` are working in your environment, you can use thi
 ::
 
     from petsc4py import PETSc
-    rank = PETSc.COMM_WORLD.getRank() 
+    rank = PETSc.COMM_WORLD.getRank()
     num_ranks = PETSc.COMM_WORLD.getSize()
 
     x = PETSc.Vec().createMPI(4) # VecCreateMPI: Creates a parallel vector.  size=4
@@ -227,6 +227,6 @@ MPI in OpenMDAO
 
 There are currently two ways to use MPI in OpenMDAO.  The first way is demonstrated in the `Distributed Adder Example`_ which involves using OpenMDAO to build your own distributed components.  The second way is demonstrated in the `Parallel Multi Point Example`_ which involves using OpenMDAO to build a multi-point problem to analyze a single design at a number of different conditions.
 
-.. _Distributed Adder Example: ./examples/distrib_adder.html
+.. _Distributed Adder Example: ../usr-guide/examples/distrib_adder.html
 
-.. _Parallel Multi Point Example: ./examples/parallel_multi_point.html
+.. _Parallel Multi Point Example: ../usr-guide/examples/parallel_multi_point.html
