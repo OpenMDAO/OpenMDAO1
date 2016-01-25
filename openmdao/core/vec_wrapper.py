@@ -61,11 +61,14 @@ class Accessor(object):
         if self.remote:
             return self._remote_access_error, self._remote_access_error
 
+        scale, offset = meta.get('unit_conv', (None, None))
         if self.pbo:
-            return self._get_pbo, flatfunc
+            if scale:
+                return self._get_pbo_units, flatfunc
+            else:
+                return self._get_pbo, flatfunc
 
         shape = meta['shape']
-        scale, offset = meta.get('unit_conv', (None, None))
         if vecwrapper.deriv_units:
             offset = 0.0
         is_scalar = shape == 1
@@ -114,6 +117,13 @@ class Accessor(object):
     def _get_pbo(self):
         """pass by obj"""
         return self.val.val
+
+    def _get_pbo_units(self):
+        """Special unit conversions for pass by obj"""
+        scale, offset = self.meta['unit_conv']
+        vec = self.val.val + offset
+        vec *= scale
+        return vec
 
     def _get_arr(self):
         """Array with same shape"""

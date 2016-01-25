@@ -8,7 +8,8 @@ from six import text_type, PY3
 from six.moves import cStringIO
 import warnings
 
-from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, LinearGaussSeidel, ScipyGMRES
+from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
+                         LinearGaussSeidel, ScipyGMRES, Driver
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
@@ -920,6 +921,69 @@ class TestCheckSetup(unittest.TestCase):
         for node, afters in oo[0][1]:
             self.assertEqual(node, expected[tuple(afters)])
 
+    def test_pbo_messages(self):
+
+        class PBOSrcComp(Component):
+
+            def __init__(self):
+                super(PBOSrcComp, self).__init__()
+
+                self.add_param('x1', 100.0)
+                self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
+                self.fd_options['force_fd'] = True
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                unknowns['x2'] = params['x1']
+
+        class PBOTgtCompF(Component):
+
+            def __init__(self):
+                super(PBOTgtCompF, self).__init__()
+
+                self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
+                self.add_output('x3', 100.0)
+                self.fd_options['force_fd'] = True
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                unknowns['x3'] = params['x2']
+
+        # Don't warn for driver that doesn't need gradients.
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', PBOSrcComp())
+        prob.root.add('tgtF', PBOTgtCompF())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+
+        stream = cStringIO()
+        checks = prob.setup(out_stream=stream)
+
+        self.assertEqual(checks['relevant_pbos'], [])
+
+        class GradDriver(Driver):
+            def __init__(self):
+                super(GradDriver, self).__init__()
+                self.supports['gradients'] = True
+
+        # Do warn with a gradient driver
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', PBOSrcComp())
+        prob.root.add('tgtF', PBOTgtCompF())
+        prob.root.add('tgtF2', PBOTgtCompF())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+        prob.root.connect('src.x2', 'tgtF2.x2')
+        prob.driver = GradDriver()
+
+        stream = cStringIO()
+        checks = prob.setup(out_stream=stream)
+
+        self.assertEqual(checks['relevant_pbos'], ['src.x2'])
 
 if __name__ == "__main__":
     unittest.main()
