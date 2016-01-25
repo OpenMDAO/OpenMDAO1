@@ -128,7 +128,7 @@ class ParallelGroup(Group):
             requested_procs.append(minproc)
             max_req_procs.append(maxproc)
 
-        assigned_procs = [0]*len(requested_procs)
+        assigned_procs = [0]*len(subsystems)
 
         assigned = 0
 
