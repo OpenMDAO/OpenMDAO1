@@ -7,7 +7,7 @@ import sys
 import json
 import warnings
 from itertools import chain
-from six import iteritems, iterkeys, itervalues
+from six import iteritems, itervalues
 from six.moves import cStringIO
 import networkx as nx
 
@@ -33,6 +33,10 @@ from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
+
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:
+    from openmdao.core.mpi_wrap import debug
 
 class _ProbData(object):
     """
@@ -187,9 +191,11 @@ class Problem(object):
         # to anything {promoted_name: pathname}
         implicit_conns, prom_noconns = self._get_implicit_connections()
 
+
         # combine implicit and explicit connections
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
+
 
         input_graph = nx.Graph()
 
@@ -208,6 +214,7 @@ class Problem(object):
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
+
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
                 # force list here, since some versions of networkx return a
@@ -255,7 +262,7 @@ class Problem(object):
 
         # remove all the input to input connections, leaving just one unknown
         # connection to each param
-        newconns = {}
+        newconns = OrderedDict()
         for tgt, srcs in iteritems(connections):
             unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
             if len(unknown_srcs) > 1:
@@ -268,7 +275,7 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = {}
+        self._dangling = OrderedDict()
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
@@ -642,11 +649,21 @@ class Problem(object):
                                              unknowns_dict, connections,
                                              pois, oois, mode)
 
+
         # perform auto ordering
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
             if not s._order_set:
-                order, broken_edges = s.list_auto_order()
+                order = None
+                broken_edges = None
+                if self.comm.rank == 0:
+                    order, broken_edges = s.list_auto_order()
+                if MPI:
+                    if trace:
+                        debug("problem setup order bcast")
+                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)
+                    if trace:
+                        debug("problem setup order bcast DONE")
                 s.set_order(order)
 
                 # Mark "head" of each broken edge
@@ -835,7 +852,7 @@ class Problem(object):
     def _check_no_connect_comps(self, out_stream=sys.stdout):
         """ Check for unconnected components. """
         conn_comps = set([t.rsplit('.', 1)[0]
-                          for t in iterkeys(self.root.connections)])
+                          for t in self.root.connections])
         conn_comps.update([s.rsplit('.', 1)[0]
                            for s, i in itervalues(self.root.connections)])
         noconn_comps = sorted([c.pathname
@@ -1080,12 +1097,12 @@ class Problem(object):
 
         Args
         ----
-        indep_list : list of strings
-            List of independent variable names that derivatives are to
+        indep_list : iter of strings
+            Iterator of independent variable names that derivatives are to
             be calculated with respect to. All params must have a IndepVarComp.
 
-        unknown_list : list of strings
-            List of output or state names that derivatives are to
+        unknown_list : iter of strings
+            Iterator of output or state names that derivatives are to
             be calculated for. All must be valid unknowns in OpenMDAO.
 
         mode : string, optional
@@ -1139,12 +1156,12 @@ class Problem(object):
 
         Args
         ----
-        indep_list : list of strings
-            List of independent variable names that derivatives are to
+        indep_list : iter of strings
+            Iterator of independent variable names that derivatives are to
             be calculated with respect to. All params must have a IndepVarComp.
 
-        unknown_list : list of strings
-            List of output or state names that derivatives are to
+        unknown_list : iter of strings
+            Iterator of output or state names that derivatives are to
             be calculated for. All must be valid unknowns in OpenMDAO.
 
         return_format : string
@@ -1175,9 +1192,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed in python 3.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed in python 3.
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1227,9 +1244,9 @@ class Problem(object):
             return fd_ikey
 
         if return_format == 'dict':
-            J = {}
+            J = OrderedDict()
             for okey in unknown_list:
-                J[okey] = {}
+                J[okey] = OrderedDict()
                 for j, ikey in enumerate(indep_list):
 
                     # Support sparsity
@@ -1346,9 +1363,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {}
+            dv_scale = {} # Order not guaranteed in python 3.
         if cn_scale is None:
-            cn_scale = {}
+            cn_scale = {} # Order not guaranteed in python 3.
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1371,12 +1388,12 @@ class Problem(object):
 
         # Initialize Jacobian
         if return_format == 'dict':
-            J = {}
+            J = OrderedDict()
             for okeys in unknown_list:
                 if isinstance(okeys, str):
                     okeys = (okeys,)
                 for okey in okeys:
-                    J[okey] = {}
+                    J[okey] = OrderedDict()
                     for ikeys in indep_list:
                         if isinstance(ikeys, str):
                             ikeys = (ikeys,)
@@ -1391,7 +1408,7 @@ class Problem(object):
         else:
             usize = 0
             psize = 0
-            Jslices = {}
+            Jslices = OrderedDict()
             for u in unknown_list:
                 start = usize
                 if u in self._qoi_indices:
@@ -1526,7 +1543,13 @@ class Problem(object):
                                 dxval = None
                             if nproc > 1:
                                 # TODO: make this use Bcast for efficiency
+                                if trace:
+                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s"%
+                                            (dxval, owned[item]))
+                                    debug("input_list: %s, output_list: %s" % (input_list, output_list))
                                 dxval = comm.bcast(dxval, root=owned[item])
+                                if trace:
+                                    debug("dxval bcast DONE")
                         else:  # irrelevant variable.  just give'em zeros
                             if item in qoi_indices:
                                 zsize = len(qoi_indices[item])
@@ -1652,9 +1675,9 @@ class Problem(object):
                 continue
 
             data[cname] = {}
-            jac_fwd = {}
-            jac_rev = {}
-            jac_fd = {}
+            jac_fwd = OrderedDict()
+            jac_rev = OrderedDict()
+            jac_fd = OrderedDict()
 
             params = comp.params
             unknowns = comp.unknowns
@@ -2013,8 +2036,8 @@ class Problem(object):
             if a a promoted variable name matches multiple unknowns
         """
 
-        connections = {}
-        dangling = {}
+        connections = OrderedDict()
+        dangling = {} # Order not guaranteed in python 3.
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2042,7 +2065,7 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {}
+    param_owners = {} # Order not guaranteed in python 3.
 
     for par, (unk, idxs) in iteritems(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
@@ -2065,7 +2088,7 @@ def _jac_to_flat_dict(jac):
 
     dict of ndarrays"""
 
-    new_jac = {}
+    new_jac = OrderedDict()
     for key1, val1 in iteritems(jac):
         for key2, val2 in iteritems(val1):
             new_jac[(key1, key2)] = val2

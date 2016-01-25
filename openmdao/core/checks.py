@@ -28,7 +28,8 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
         tmeta = params_dict[tgt]
         smeta = unknowns_dict[src]
         _check_types_match(smeta, tmeta, to_prom_name)
-        _check_shapes_match(smeta, tmeta, to_prom_name)
+        if 'pass_by_obj' not in smeta and 'pass_by_obj' not in smeta:
+            _check_shapes_match(smeta, tmeta, to_prom_name)
 
 def _check_types_match(src, tgt, to_prom_name):
     stype = type(src['val'])

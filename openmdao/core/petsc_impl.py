@@ -136,6 +136,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        if trace: debug("petsc_vec creation DONE")
 
     def _get_flattened_sizes(self):
         """
@@ -182,6 +183,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
                   (sys_pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        if trace: debug("petsc_vec creation DONE")
         return view
 
     def distance_along_vector_to_limit(self, alpha, duvec):
@@ -261,6 +263,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        if trace: debug("petsc_vec creation DONE")
 
     def _get_flattened_sizes(self):
         """
@@ -341,7 +344,9 @@ class PetscDataTransfer(object):
                   (name, src_vec._sysdata.pathname, src_idxs, tgt_idxs))
 
         src_idx_set = PETSc.IS().createGeneral(src_idxs, comm=comm)
+        if trace: debug("src_idx_set DONE")
         tgt_idx_set = PETSc.IS().createGeneral(tgt_idxs, comm=comm)
+        if trace: debug("tgt_idx_set DONE")
 
         try:
             if trace:  # pragma: no cover
@@ -355,6 +360,7 @@ class PetscDataTransfer(object):
                        src_idx_set.indices, arrow, tgt_idx_set.indices))
             self.scatter = PETSc.Scatter().create(uvec, src_idx_set,
                                                   pvec, tgt_idx_set)
+            if trace: debug("scatter creation DONE")
         except Exception as err:
             raise RuntimeError("ERROR in %s (src_idxs=%s, tgt_idxs=%s, usize=%d, psize=%d): %s" %
                                (name, src_idxs, tgt_idxs,
@@ -395,8 +401,8 @@ class PetscDataTransfer(object):
                                               tgtvec.petsc_vec.array))
             self.scatter.scatter(tgtvec.petsc_vec, srcvec.petsc_vec, True, True)
             if trace:  # pragma: no cover
-                debug("%s:    tgtvec = %s" % (srcvec._sysdata.pathname,
-                                              srcvec.petsc_vec.array))
+                debug("%s:    tgtvec = %s (DONE)" % (srcvec._sysdata.pathname,
+                                                     srcvec.petsc_vec.array))
         else:
             # forward mode, source to target including pass_by_object
             if trace:  # pragma: no cover
@@ -408,8 +414,8 @@ class PetscDataTransfer(object):
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
 
             if trace:  # pragma: no cover
-                debug("%s:    tgtvec = %s" % (tgtvec._sysdata.pathname,
-                                              tgtvec.petsc_vec.array))
+                debug("%s:    tgtvec = %s (DONE)" % (tgtvec._sysdata.pathname,
+                                                     tgtvec.petsc_vec.array))
 
             if not deriv:
                 comm = self.sysdata.comm

@@ -28,7 +28,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
     seed : int or None, optional
         Random seed.  Defaults to None.
-        
+
     num_par_doe : int, optional
         The number of DOE cases to run concurrently.  Defaults to 1.
 
@@ -52,6 +52,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
         # Map LHC to buckets
         buckets = {}
+
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
             design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
             buckets[name] = [design_var_buckets[rand_lhc[i, j]]
@@ -80,8 +81,9 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
             job_list = [run_list[o:o+s] for o, s in zip(run_offsets,
                                                         run_sizes)]
 
+        if trace: debug("scattering job_list: %s" % job_list)
         run_list = comm.scatter(job_list, root=0)
-        debug('Number of DOE jobs: %s' % len(run_list))
+        if trace: debug('Number of DOE jobs: %s (scatter DONE)' % len(run_list))
 
         for case in run_list:
             yield case

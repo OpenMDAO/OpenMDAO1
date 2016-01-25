@@ -357,6 +357,55 @@ class TestDriver(unittest.TestCase):
         raised_error = raised_error.replace('(4L,', '(4,')
         self.assertEqual(msg, raised_error)
 
+    def test_add_duplicate(self):
+
+        prob = Problem()
+        root = prob.root = SellarDerivatives()
+
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+
+        # Add duplicate desvar
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_desvar('z', lower=-50.0, upper=49.0)
+
+        msg = "Desvar 'z' already exists."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+        # Add duplicate constraint
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_constraint('con1', upper=0.0)
+
+        msg = "Constraint 'con1' already exists."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+        # Add duplicate objective
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_objective('obj')
+
+        msg = "Objective 'obj' already exists."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+    def test_no_desvar_bound(self):
+
+        prob = Problem()
+        root = prob.root = SellarDerivatives()
+
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('z')
+
+        prob.setup(check=False)
+
+        meta = prob.driver._desvars['z']
+        self.assertLess(meta['lower'], -1e12)
+        self.assertGreater(meta['upper'], 1e12)
+
 
 class TestDeprecated(unittest.TestCase):
     def test_deprecated_add_param(self):

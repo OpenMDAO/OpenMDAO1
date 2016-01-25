@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues, iterkeys
+from six import string_types, iteritems, itervalues
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class _SysData(object):
         self.pathname = pathname
 
         # map absolute name to local promoted name
-        self.to_prom_name = {}
+        self.to_prom_name = {} # Order not guaranteed in python 3.
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -111,9 +111,9 @@ class System(object):
         self._sysdata = _SysData('')
 
         # dicts of vectors used for parallel solution of multiple RHS
-        self.dumat = {}
-        self.dpmat = {}
-        self.drmat = {}
+        self.dumat = OrderedDict()
+        self.dpmat = OrderedDict()
+        self.drmat = OrderedDict()
 
         self._local_subsystems = []
         self._fd_params = None
@@ -374,7 +374,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = {}
+        jac = OrderedDict()
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -396,7 +396,7 @@ class System(object):
         # if doing parallel FD, we need to save results during calculation
         # and then pass them around.  fd_cols stores the
         # column data keyed by (uname, pname, col_id).
-        fd_cols = {}
+        fd_cols = {} # Order not guaranteed in python 3.
 
         to_prom_name = self._sysdata.to_prom_name
 
@@ -724,7 +724,7 @@ class System(object):
             states = self.states
         except AttributeError:  # handle component unit test where setup has not been performed
             # TODO: should we force all component unit tests to use a Problem test harness?
-            states = set([p for u,p in iterkeys(self._jacobian_cache)
+            states = set([p for u,p in self._jacobian_cache
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):
@@ -756,7 +756,7 @@ class System(object):
             except ValueError:
                 # Provide a user-readable message that locates the problem
                 # derivative term.
-                req_shape = (len(dresids[unknown].flat), len(arg_vec[param]))
+                req_shape = (len(dresids[unknown].flat), len(arg_vec[param].flat))
                 msg = "In component '{}', the derivative of '{}' wrt '{}' should have shape '{}' "
                 msg += "but has shape '{}' instead."
                 msg = msg.format(self.pathname, unknown, param, req_shape, J.shape)

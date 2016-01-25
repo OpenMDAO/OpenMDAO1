@@ -199,8 +199,10 @@ class Relevance(object):
             Dictionary that maps a variable name to all other variables in the
             graph that are relevant to it.
         """
-        relevant = {}
+
+        relevant = {} # Order not guaranteed in python 3.
         succs = {}
+
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()

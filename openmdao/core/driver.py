@@ -7,6 +7,7 @@ from itertools import chain
 from six import iteritems
 import warnings
 import sys
+import os
 
 import numpy as np
 
@@ -15,6 +16,10 @@ from openmdao.util.options import OptionsDictionary
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.core.vec_wrapper import _ByObjWrapper
+
+trace = os.environ.get('OPENMDAO_TRACE')
+if trace:
+    from openmdao.core.mpi_wrap import debug
 
 class Driver(object):
     """ Base class for drivers in OpenMDAO. Drivers can only be placed in a
@@ -53,8 +58,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = {}
-        self.fn_conversions = {}
+        self.dv_conversions = {} # Order not guaranteed in python 3.
+        self.fn_conversions = {} # Order not guaranteed in python 3.
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
@@ -122,7 +127,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
-        self.dv_conversions = {}
+        self.dv_conversions = OrderedDict()
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -133,7 +138,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
-        self.fn_conversions = {}
+        self.fn_conversions = OrderedDict()
         for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -170,8 +175,8 @@ class Driver(object):
         self.recorders.close()
 
     def _map_voi_indices(self):
-        poi_indices = {}
-        qoi_indices = {}
+        poi_indices = OrderedDict()
+        qoi_indices = OrderedDict()
         for name, meta in chain(iteritems(self._cons), iteritems(self._objs)):
             # set indices of interest
             if 'indices' in meta:
@@ -302,6 +307,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._desvars:
+            msg = "Desvar '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if low is not None or high is not None:
             warnings.simplefilter('always', DeprecationWarning)
             warnings.warn("'low' and 'high' are deprecated. "
@@ -316,7 +326,7 @@ class Driver(object):
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
         elif lower is None or lower == -float('inf'):
-            lower = sys.float_info.min
+            lower = -sys.float_info.max
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
@@ -332,7 +342,7 @@ class Driver(object):
         lower = (lower + adder)*scaler
         upper = (upper + adder)*scaler
 
-        param = {}
+        param = OrderedDict()
         param['lower'] = lower
         param['upper'] = upper
         param['adder'] = adder
@@ -400,7 +410,11 @@ class Driver(object):
 
         if nproc > 1:
             # TODO: use Bcast for improved performance
+            if trace:
+                debug("%s.driver._get_distrib_var bcast: val=%s" % (self.root.pathname, flatval))
             flatval = comm.bcast(flatval, root=owner)
+            if trace:
+                debug("%s.driver._get_distrib_var bcast DONE" % self.root.pathname)
 
         scaler = meta['scaler']
         adder = meta['adder']
@@ -473,12 +487,16 @@ class Driver(object):
             is second in precedence.
         """
 
+        if name in self._objs:
+            msg = "Objective '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
         if isinstance(scaler, np.ndarray):
             scaler = scaler.flatten()
 
-        obj = {}
+        obj = OrderedDict()
         obj['adder'] = adder
         obj['scaler'] = scaler
         if indices:
@@ -559,6 +577,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._cons:
+            msg = "Constraint '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if equals is not None and (lower is not None or upper is not None):
             msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))
@@ -594,7 +617,7 @@ class Driver(object):
         if equals is not None:
             equals = (equals + adder)*scaler
 
-        con = {}
+        con = OrderedDict()
         con['lower'] = lower
         con['upper'] = upper
         con['equals'] = equals

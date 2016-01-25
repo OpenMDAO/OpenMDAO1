@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import IndepVarComp, Group, Problem, ExecComp
+from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
@@ -775,6 +775,421 @@ class TestPyoptSparse(unittest.TestCase):
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
+    def test_sub_sparsity(self):
+
+        class SegmentComp(Component):
+            """
+            Each segment accepts y-values of the points within that segments, and computes
+            the distance from each point to the origin, and the total area under the segment.
+            """
+
+            def __init__(self, M, x0, x1, index):
+                super(SegmentComp, self).__init__()
+                self.index = index
+                self.M = M
+                self.x0 = x0
+                self.x1 = x1
+
+                self.fd_options['force_fd'] = True
+
+                self.x_i = np.linspace(self.x0, self.x1, M)
+
+                self.add_param(name='y_i', shape=(M, ),
+                               desc='y-values of each point in the segment')
+
+                self.add_output(name='r_i', shape=(M, ),
+                                desc='distance from each point in the segment to (pi,0)')
+                self.add_output(name='area', val=0.0,
+                                desc='area under the curve approximated by the trapezodal rule')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+
+                x_i = self.x_i
+                y_i = params['y_i']
+                unknowns['r_i'] = np.sqrt( x_i**2 + y_i**2 )
+
+                from scipy.integrate import simps
+                unknowns['area'] = simps(y_i, x_i)
+
+        class SumAreaComp(Component):
+            """
+            SumAreaComp takes the area under each segment and sums them to
+            compute the total area.
+            """
+
+            def __init__(self, N):
+                super(SumAreaComp, self).__init__()
+                self.N = N
+                self.fd_options['force_fd'] = True
+                for i in range(N):
+                    self.add_param(name='area{0}'.format(i), val=0.0)
+                self.add_output(name='area', val=0.0, desc='total area')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['area'] = 0.0
+                for i in range(self.N):
+                    unknowns['area'] += params['area{0}'.format(i)]
+
+        N = M = 10
+        prob = Problem(root=Group())
+        root = prob.root
+
+        b = np.linspace(-np.pi, np.pi, N+1) # segment boundaries
+
+        num_unique_points = N*M-(N-1)
+
+        root.add(name='ivc:y_i',
+                 system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
+                 promotes=['y_i'])
+
+        root.add(name='sum_area', system=SumAreaComp(N))
+
+        yi_index = 0
+        segments = []
+        for i in range(N):
+            seg_name = 'seg{0}'.format(i)
+            segments.append(SegmentComp(M,b[i], b[i+1], i))
+            root.add(name=seg_name, system=segments[i])
+            root.connect('{0}.area'.format(seg_name), 'sum_area.area{0}'.format(i))
+            yindices = np.arange(yi_index, yi_index+M, dtype=int)
+            root.connect('y_i', '{0}.y_i'.format(seg_name), src_indices=yindices)
+            yi_index = yi_index+M-1
+
+        prob.driver = driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
+
+        driver.add_desvar(name="y_i",
+                          lower=-100.0,
+                          upper=100.0,
+                          scaler=1.0,
+                          adder=0.0)
+
+        for i in range(N):
+            driver.add_constraint(name='seg{0:d}.r_i'.format(i),
+                                  lower=0,
+                                  upper=np.pi,
+                                  scaler=1.0,
+                                  adder=0.0)
+
+        driver.add_objective(name='sum_area.area',scaler=-1.0)
+
+        prob.setup(check=False)
+
+        prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
+
+        prob.run()
+        assert_rel_error(self, 15.4914, prob['sum_area.area'], 1e-4)
+
+        sub_sparsity = prob.driver.sub_sparsity
+        self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 10)
+
+    def test_sub_sparsity_sparse_and_full_in_parallel(self):
+
+        class SegmentComp(Component):
+            """
+            Each segment accepts y-values of the points within that segments, and computes
+            the distance from each point to the origin, and the total area under the segment.
+            """
+
+            def __init__(self, M, x0, x1, index):
+                super(SegmentComp, self).__init__()
+                self.index = index
+                self.M = M
+                self.x0 = x0
+                self.x1 = x1
+
+                self.fd_options['force_fd'] = True
+
+                self.x_i = np.linspace(self.x0, self.x1, M)
+
+                self.add_param(name='y_i', shape=(M, ),
+                               desc='y-values of each point in the segment')
+
+                self.add_output(name='r_i', shape=(M, ),
+                                desc='distance from each point in the segment to (pi,0)')
+                self.add_output(name='area', val=0.0,
+                                desc='area under the curve approximated by the trapezodal rule')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+
+                x_i = self.x_i
+                y_i = params['y_i']
+                unknowns['r_i'] = np.sqrt( x_i**2 + y_i**2 )
+
+                from scipy.integrate import simps
+                unknowns['area'] = simps(y_i, x_i)
+
+        class SumAreaComp(Component):
+            """
+            SumAreaComp takes the area under each segment and sums them to
+            compute the total area.
+            """
+
+            def __init__(self, N, NNN):
+                super(SumAreaComp, self).__init__()
+                self.N = N
+                self.fd_options['force_fd'] = True
+                for i in range(N):
+                    self.add_param(name='area{0}'.format(i), val=0.0)
+                self.add_output(name='area', val=0.0, desc='total area')
+                self.add_output(name='fake', val=0.0, desc='total area')
+
+                self.add_param('bypass', shape=(NNN, ), desc='Param bypass')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['area'] = 0.0
+                for i in range(self.N):
+                    unknowns['area'] += params['area{0}'.format(i)]
+
+                unknowns['area'] += np.sum(params['bypass'])
+
+        N = M = 5
+        prob = Problem(root=Group())
+        root = prob.root
+
+        b = np.linspace(-np.pi, np.pi, N+1) # segment boundaries
+
+        num_unique_points = N*M-(N-1)
+
+        root.add(name='ivc:y_i',
+                 system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
+                 promotes=['y_i'])
+
+        root.add(name='sum_area', system=SumAreaComp(N, num_unique_points))
+
+        yi_index = 0
+        segments = []
+        for i in range(N):
+            seg_name = 'seg{0}'.format(i)
+            segments.append(SegmentComp(M,b[i], b[i+1], i))
+            root.add(name=seg_name, system=segments[i])
+            root.connect('{0}.area'.format(seg_name), 'sum_area.area{0}'.format(i))
+            yindices = np.arange(yi_index, yi_index+M, dtype=int)
+            root.connect('y_i', '{0}.y_i'.format(seg_name), src_indices=yindices)
+            yi_index = yi_index+M-1
+
+        root.connect('y_i', 'sum_area.bypass')
+
+        prob.driver = driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
+
+        driver.add_desvar(name="y_i",
+                          lower=-100.0,
+                          upper=100.0,
+                          scaler=1.0,
+                          adder=0.0)
+
+        for i in range(N):
+            driver.add_constraint(name='seg{0:d}.r_i'.format(i),
+                                  lower=0,
+                                  upper=np.pi,
+                                  scaler=1.0,
+                                  adder=0.0)
+
+        # fake constraint to test the dicts
+        driver.add_constraint(name='sum_area.fake', lower=-100.0)
+
+        driver.add_objective(name='sum_area.area',scaler=-1.0)
+
+        prob.setup(check=False)
+
+        prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
+
+        prob.run()
+
+        sub_sparsity = prob.driver.sub_sparsity
+        self.assertTrue('sum_area.fake' not in list(prob.driver.sub_sparsity.keys()))
+
+
+    def test_sub_sparsity_equality_constraints(self):
+        # Need this for coverage
+
+        # TODO - Seems to be a Bug in pyoptsparse:SLSQP
+        if OPTIMIZER == 'SLSQP':
+            raise unittest.SkipTest("SLSQP crashes on this model with eq constraints.")
+
+        class SegmentComp(Component):
+
+            def __init__(self, M, x0, x1, index):
+                super(SegmentComp, self).__init__()
+                self.index = index
+                self.M = M
+                self.x0 = x0
+                self.x1 = x1
+
+                self.fd_options['force_fd'] = True
+
+                self.x_i = np.linspace(self.x0, self.x1, M)
+
+                self.add_param(name='y_i', shape=(M, ),
+                               desc='y-values of each point in the segment')
+
+                self.add_output(name='r_i', shape=(M, ),
+                                desc='distance from each point in the segment to (pi,0)')
+                self.add_output(name='area', val=0.0,
+                                desc='area under the curve approximated by the trapezodal rule')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+
+                x_i = self.x_i
+                y_i = params['y_i']
+                unknowns['r_i'] = np.sqrt( x_i**2 + y_i**2 )
+
+                from scipy.integrate import simps
+                unknowns['area'] = simps(y_i, x_i)
+
+        class SumAreaComp(Component):
+
+            def __init__(self, N):
+                super(SumAreaComp, self).__init__()
+                self.N = N
+                self.fd_options['force_fd'] = True
+                for i in range(N):
+                    self.add_param(name='area{0}'.format(i), val=0.0)
+                self.add_output(name='area', val=0.0, desc='total area')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['area'] = 0.0
+                for i in range(self.N):
+                    unknowns['area'] += params['area{0}'.format(i)]
+
+        N = M = 10
+        prob = Problem(root=Group())
+        root = prob.root
+
+        b = np.linspace(-np.pi, np.pi, N+1) # segment boundaries
+
+        num_unique_points = N*M-(N-1)
+
+        root.add(name='ivc:y_i',
+                 system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
+                 promotes=['y_i'])
+
+        root.add(name='sum_area', system=SumAreaComp(N))
+
+        yi_index = 0
+        segments = []
+        for i in range(N):
+            seg_name = 'seg{0}'.format(i)
+            segments.append(SegmentComp(M,b[i], b[i+1], i))
+            root.add(name=seg_name, system=segments[i])
+            root.connect('{0}.area'.format(seg_name), 'sum_area.area{0}'.format(i))
+            yindices = np.arange(yi_index, yi_index+M, dtype=int)
+            root.connect('y_i', '{0}.y_i'.format(seg_name), src_indices=yindices)
+            yi_index = yi_index+M-1
+
+        prob.driver = driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
+
+        driver.add_desvar(name="y_i",
+                          lower=-100.0,
+                          upper=100.0,
+                          scaler=1.0,
+                          adder=0.0)
+
+        for i in range(N):
+            driver.add_constraint(name='seg{0:d}.r_i'.format(i),
+                                  equals=np.pi)
+
+        driver.add_objective(name='sum_area.area',scaler=-1.0)
+
+        prob.setup(check=False)
+
+        prob['y_i'] = np.linspace(0, 2*np.pi,num_unique_points)
+
+        prob.run()
+        assert_rel_error(self, 15.4914, prob['sum_area.area'], 1e-4)
+
+        sub_sparsity = prob.driver.sub_sparsity
+        self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 10)
+
+    def test_sub_sparsity_with_desvar_index(self):
+
+        class SegmentComp(Component):
+            def __init__(self,M,x0,x1,index):
+                super(SegmentComp,self).__init__()
+                self.index = index
+                self.M = M
+                self.x0 = x0
+                self.x1 = x1
+                self.fd_options['force_fd'] = True
+                self.x_i = np.linspace(self.x0,self.x1,M)
+                self.add_param(name='y_i',shape=(M,),desc='y-values of each point in the segment')
+                self.add_output(name='r_i',shape=(M,),desc='distance from each point in the segment to (pi,0)')
+                self.add_output(name='area',val=0.0,desc='area under the curve approximated by the trapezodal rule')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                x_i = self.x_i
+                y_i = params['y_i']
+                unknowns['r_i'] = np.sqrt( x_i**2 + y_i**2 )
+                from scipy.integrate import simps
+                unknowns['area'] = simps(y_i,x_i)
+
+        class SumAreaComp(Component):
+            def __init__(self,N):
+                super(SumAreaComp,self).__init__()
+                self.N = N
+                self.fd_options['force_fd'] = True
+                for i in range(N):
+                    self.add_param(name='area{0}'.format(i),val=0.0)
+                self.add_output(name='area',val=0.0,desc='total area')
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['area'] = 0.0
+                for i in range(self.N):
+                    unknowns['area'] += params['area{0}'.format(i)]
+
+        N = M = 10
+        prob = Problem(root=Group())
+        root = prob.root
+        b = np.linspace(-np.pi,np.pi,N+1) # segment boundaries
+        num_unique_points = N*M-(N-1)
+
+        root.add(name='ivc:y_i',system=IndepVarComp(name='y_i',val=np.zeros((num_unique_points,))),promotes=['y_i'])
+        root.add(name='sum_area',system=SumAreaComp(N))
+
+        yi_index = 0
+        segments = []
+        for i in range(N):
+            seg_name = 'seg{0}'.format(i)
+            segments.append( SegmentComp(M,b[i],b[i+1],i))
+            root.add(name=seg_name,system=segments[i])
+            root.connect('{0}.area'.format(seg_name),'sum_area.area{0}'.format(i))
+            yindices = np.arange(yi_index,yi_index+M,dtype=int)
+            root.connect('y_i','{0}.y_i'.format(seg_name),src_indices=yindices)
+            yi_index = yi_index+M-1
+
+        driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
+
+        prob.driver = driver
+
+        driver.add_desvar(name="y_i",
+                          lower=-100.0,
+                          upper=100.0,
+                          indices=range(1,num_unique_points-1),
+                          scaler=1.0,
+                          adder=0.0)
+
+        for i in range(N):
+            driver.add_constraint(name='seg{0:d}.r_i'.format(i),
+                                  lower=0,
+                                  upper=np.pi,
+                                  scaler=1.0,
+                                  adder=0.0)
+
+        driver.add_objective(name='sum_area.area', scaler=-1.0)
+        prob.setup(check=False)
+        prob['y_i'] = np.zeros(num_unique_points)
+        prob.run()
+        assert_rel_error(self, 15.4914, prob['sum_area.area'], 1e-4)
+
+        sub_sparsity = prob.driver.sub_sparsity
+        self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 9)
 
 if __name__ == "__main__":
     unittest.main()

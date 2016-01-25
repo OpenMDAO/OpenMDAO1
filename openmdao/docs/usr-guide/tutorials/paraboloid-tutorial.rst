@@ -401,6 +401,14 @@ constraint using the `add_constraint` method. This method takes the name of
 the variable and an "upper" or "lower" bound. Here we give it a lower bound
 of 15, which completes the inequality constraint "x - y > 15".
 
+OpenMDAO also supports the specification of double sided constraints, so if
+you wanted to constrain x-y to lie on a band between 15 and 16 which is "16 > x-y > 15",
+you would just do the following:
+
+::
+
+    top.driver.add_constraint('con.c', lower=15.0, upper=16.0)
+
 
 So now, putting it all together, we can run the model and get this:
 

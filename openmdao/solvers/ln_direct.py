@@ -4,6 +4,7 @@ linalg.solve. Inherits from ScipyGMRES just for the mult function."""
 import numpy as np
 
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from collections import OrderedDict
 
 
 class DirectSolver(ScipyGMRES):
@@ -46,7 +47,7 @@ class DirectSolver(ScipyGMRES):
         -------
         dict of ndarray : Solution vectors
         """
-        sol_buf = {}
+        sol_buf = OrderedDict()
 
         # TODO: This solver could probably work with multiple RHS
         for voi, rhs in rhs_mat.items():

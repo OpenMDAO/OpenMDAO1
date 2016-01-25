@@ -8,6 +8,7 @@ import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
 from openmdao.solvers.solver_base import LinearSolver
+from collections import OrderedDict
 
 
 class ScipyGMRES(LinearSolver):
@@ -96,7 +97,7 @@ class ScipyGMRES(LinearSolver):
         options = self.options
         self.mode = mode
 
-        unknowns_mat = {}
+        unknowns_mat = OrderedDict()
         for voi, rhs in iteritems(rhs_mat):
 
             # Scipy can only handle one right-hand-side at a time.
@@ -215,9 +216,9 @@ class ScipyGMRES(LinearSolver):
         # Start with a clean slate
         system.clear_dparams()
 
-        dumat = {}
+        dumat = OrderedDict()
         dumat[voi] = system.dumat[voi]
-        drmat = {}
+        drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
         system.solve_linear(dumat, drmat, (voi, ), mode=mode,
