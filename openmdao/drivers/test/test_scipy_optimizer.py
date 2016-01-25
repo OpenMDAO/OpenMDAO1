@@ -389,7 +389,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['tol'] = 1.0e-8
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                             upper=np.array([10.0, 10.0]))
+                               upper=np.array([10.0, 10.0]))
         prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         prob.driver.add_objective('obj')
@@ -562,6 +562,35 @@ class TestScipyOptimize(unittest.TestCase):
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
+
+        root.ln_solver.options['mode'] = 'fwd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
+
+    def test_simple_paraboloid_double_sided(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = -x + y'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=-11.0, upper=-10.0)
 
         root.ln_solver.options['mode'] = 'fwd'
 

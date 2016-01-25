@@ -310,6 +310,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._desvars:
+            msg = "Desvar '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if low is not None or high is not None:
             warnings.simplefilter('always', DeprecationWarning)
             warnings.warn("'low' and 'high' are deprecated. "
@@ -324,7 +329,7 @@ class Driver(object):
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
         elif lower is None or lower == -float('inf'):
-            lower = sys.float_info.min
+            lower = -sys.float_info.max
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
@@ -485,6 +490,10 @@ class Driver(object):
             is second in precedence.
         """
 
+        if name in self._objs:
+            msg = "Objective '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
         if isinstance(scaler, np.ndarray):
@@ -571,6 +580,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._cons:
+            msg = "Constraint '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if equals is not None and (lower is not None or upper is not None):
             msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))

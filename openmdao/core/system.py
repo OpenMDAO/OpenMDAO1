@@ -792,7 +792,7 @@ class System(object):
             except ValueError:
                 # Provide a user-readable message that locates the problem
                 # derivative term.
-                req_shape = (len(dresids[unknown].flat), len(arg_vec[param]))
+                req_shape = (len(dresids[unknown].flat), len(arg_vec[param].flat))
                 msg = "In component '{}', the derivative of '{}' wrt '{}' should have shape '{}' "
                 msg += "but has shape '{}' instead."
                 msg = msg.format(self.pathname, unknown, param, req_shape, J.shape)
