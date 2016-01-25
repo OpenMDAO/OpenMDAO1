@@ -22,6 +22,8 @@ try:
 except ImportError:
     pass
 from openmdao.core.relevance import Relevance
+from openmdao.core.fileref import FileRef
+
 #drivers
 from openmdao.drivers.scipy_optimizer import ScipyOptimizer
 try:

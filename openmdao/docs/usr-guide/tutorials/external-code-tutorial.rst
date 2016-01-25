@@ -1,3 +1,5 @@
+.. _`External-Code-Tutorial`:
+
 External Code Tutorial
 ----------------------
 
