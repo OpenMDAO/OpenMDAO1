@@ -56,6 +56,6 @@ setup(name='openmdao',
       entry_points="""
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
-      webview=openmdao.devtools.d3graph:webview
+      webview=openmdao.devtools.d3graph:webview_argv
       """
 )

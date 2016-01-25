@@ -1,17 +1,9 @@
-from __future__ import print_function
 
 import os
 import sys
-import shutil
 import json
-import tempfile
-import time
-import pprint
 
 import webbrowser
-
-import networkx as nx
-from networkx.readwrite.json_graph import node_link_data
 
 from openmdao.core.component import Component
 
@@ -107,17 +99,17 @@ def view_tree(system, viewer='collapse_tree', expand_level=9999,
         _view(outfile)
 
 
-def _view(outfile):
+def webview(outfile):
     """pop up a web browser for the given file"""
     if sys.platform == 'darwin':
         os.system('open %s' % outfile)
     else:
         webbrowser.get().open(outfile)
 
-def webview():
+def webview_argv():
     """This is tied to a console script called webview.  It just provides
     a convenient way to pop up a browser to view a specified html file(s).
     """
     for name in sys.argv[1:]:
         if os.path.isfile(name):
-            _view(name)
+            webview(name)
