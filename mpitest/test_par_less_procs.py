@@ -111,7 +111,7 @@ class Test4Par4Proc(MPITestCase):
 
     N_PROCS = 4
 
-    def test_less4(self):
+    def test_4(self):
         num_pars = 4
 
         p = Problem(root=NDiamondPar(num_pars), impl=impl)
