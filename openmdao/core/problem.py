@@ -196,7 +196,6 @@ class Problem(object):
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
-
         input_graph = nx.Graph()
 
         # resolve any input to input connections
@@ -493,6 +492,9 @@ class Problem(object):
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
+        # divide MPI communicators among subsystems
+        self._setup_communicators()
+
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
         # in any child of root. Metadata for each variable will contain
@@ -554,9 +556,8 @@ class Problem(object):
                         meta['src_indices'] = idxs
 
         # TODO: handle any automatic grouping of systems here...
-
-        # divide MPI communicators among subsystems
-        self._setup_communicators()
+        #       If we modify the system tree here, we'll have to call
+        #       the full setup over again...
 
         # mark any variables in non-local Systems as 'remote'
         for comp in self.root.components(recurse=True):
@@ -566,8 +567,11 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
-                    # component defines its own setup_distrib_idxs, so
+                # get rid of check for setup_distrib_idxs when we move to beta
+                if hasattr(s, 'setup_distrib_idxs') or (
+                         hasattr(s, 'setup_distrib') and (s.setup_distrib
+                                                is not Component.setup_distrib)):
+                    # component defines its own setup_distrib, so
                     # the metadata will change
                     meta_changed = True
 
@@ -588,7 +592,8 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom_name)
+        check_connections(connections, params_dict, unknowns_dict,
+                          self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -815,8 +820,16 @@ class Problem(object):
         if self._unit_diffs:
             tuples = sorted(iteritems(self._unit_diffs))
             print("\nUnit Conversions", file=out_stream)
+
+            vec = self.root.unknowns
+            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+
             for (src, tgt), (sunit, tunit) in tuples:
-                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
+                if src in pbos:
+                    pbo_str = ' (pass_by_obj)'
+                else:
+                    pbo_str = ''
+                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
                       file=out_stream)
 
             return tuples
@@ -968,7 +981,7 @@ class Problem(object):
         ubcs = self._get_ubc_vars(self.root.connections)
         if ubcs:
             print("\nThe following params are connected to unknowns that are "
-                  "updated out of order, so their initial values will contain "
+                  "updated out of order, so their initial values may contain "
                   "uninitialized unknown values: %s" % ubcs, file=out_stream)
         return ubcs
 
@@ -987,6 +1000,46 @@ class Problem(object):
                           type(val).__name__), file=out_stream)
 
         return pbos
+
+    def _check_relevant_pbos(self, out_stream=sys.stdout):
+        """ Warn if any pass_by_object variables are in any relevant set if
+        top driver requires derivatives."""
+
+        # Only warn if we are taking gradients across model with a pbo
+        # variable.
+        if self.driver.__class__ is Driver or \
+           self.driver.supports['gradients'] is False or \
+           self.root.fd_options['force_fd'] is True:
+            return []
+
+        vec = self.root.unknowns
+        pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+
+        rels = set()
+        for key, rel in iteritems(self._probdata.relevance.relevant):
+            rels.update(rel)
+
+        rel_pbos = rels.intersection(pbos)
+        if rel_pbos:
+            print("\nThe following relevant connections are marked as pass_by_obj:",
+                  file=out_stream)
+            for src in rel_pbos:
+                val = vec[src]
+
+                # Find target(s) and print whole relevant connection
+                for tgt, src_tuple in iteritems(self.root.connections):
+                    if src_tuple[0] == src and tgt in rels:
+                        print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
+                              file=out_stream)
+
+            print("\nYour driver requires a gradient across a model with pass_by_obj "
+                  "connections. We strongly recommend either setting the root "
+                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
+                  "connection into a Group and setting its fd_options 'force_fd' "
+                  "to True.",
+                  file=out_stream)
+
+        return list(rel_pbos)
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems
@@ -1012,6 +1065,7 @@ class Problem(object):
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
+        results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
         results['layout'] = self._check_layout(out_stream)
 
         # TODO: Incomplete optimization driver configuration
@@ -1036,6 +1090,14 @@ class Problem(object):
         """ Runs the Driver in self.driver. """
         if self.root.is_active():
             self.driver.run(self)
+
+        # if we're running under MPI, ensure that all of the processes
+        # are finished in order to ensure that scripting code outside of
+        # Problem doesn't attempt to access variables or files that have
+        # not finished updating.  This can happen with FileRef vars and
+        # potentially other pass_by_obj variables.
+        if MPI:
+            self.comm.barrier()
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
@@ -1954,7 +2016,9 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.driver._setup_communicators(self.comm)
+        # TODO: once we have nested Problems, figure out proper Problem
+        #       directory instead of just using getcwd().
+        self.driver._setup_communicators(self.comm, os.getcwd())
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

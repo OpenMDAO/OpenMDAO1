@@ -7,6 +7,7 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
 from collections import OrderedDict, namedtuple
+from openmdao.core.fileref import FileRef
 from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
@@ -61,11 +62,14 @@ class Accessor(object):
         if self.remote:
             return self._remote_access_error, self._remote_access_error
 
+        scale, offset = meta.get('unit_conv', (None, None))
         if self.pbo:
-            return self._get_pbo, flatfunc
+            if scale:
+                return self._get_pbo_units, flatfunc
+            else:
+                return self._get_pbo, flatfunc
 
         shape = meta['shape']
-        scale, offset = meta.get('unit_conv', (None, None))
         if vecwrapper.deriv_units:
             offset = 0.0
         is_scalar = shape == 1
@@ -114,6 +118,13 @@ class Accessor(object):
     def _get_pbo(self):
         """pass by obj"""
         return self.val.val
+
+    def _get_pbo_units(self):
+        """Special unit conversions for pass by obj"""
+        scale, offset = self.meta['unit_conv']
+        vec = self.val.val + offset
+        vec *= scale
+        return vec
 
     def _get_arr(self):
         """Array with same shape"""
@@ -842,7 +853,7 @@ class TgtVecWrapper(VecWrapper):
             meta['size'] = src_meta['size']
 
         if src_acc.pbo:
-            if not meta.get('remote') and store_byobjs:
+            if not meta.get('remote') and store_byobjs and not isinstance(val, FileRef):
                 val = src_acc.val
             meta['pass_by_obj'] = True
             slc = None

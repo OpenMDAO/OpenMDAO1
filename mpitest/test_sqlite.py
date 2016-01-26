@@ -77,7 +77,7 @@ class TestSqliteRecorder(MPITestCase):
             rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
-            if e.errno != errno.ENOENT:
+            if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
                 raise e
 
     def assertMetadataRecorded(self, expected):

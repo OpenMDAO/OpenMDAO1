@@ -16,6 +16,7 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
+from openmdao.core.fileref import FileRef
 from openmdao.util.string_util import nearest_child, name_relative_to
 from openmdao.util.graph import collapse_nodes
 
@@ -216,8 +217,8 @@ class Group(System):
         Args
         ----
         parent_path : str
-            The pathname of the parent `System`, which is to be prepended to the
-            name of this child `System` and all subsystems.
+            The pathname of the parent `Group`, which is used to determine
+            the pathname of all subsystems.
 
         probdata : `_ProbData`
             Problem level data container.
@@ -237,7 +238,7 @@ class Group(System):
         Args
         ----
         compute_indices : bool, optional
-            If True, call setup_distrib_idxs() to set values of
+            If True, call setup_distrib() to set values of
             'src_indices' metadata.
 
         Returns
@@ -331,7 +332,7 @@ class Group(System):
         else:
             return name
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `Group` and all of its subsystems.
 
@@ -339,13 +340,15 @@ class Group(System):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            Absolute directory of parent `System`.
         """
+        super(Group, self)._setup_communicators(comm, parent_dir)
         self._local_subsystems = []
 
-        self.comm = comm
-
         for sub in itervalues(self._subsystems):
-            sub._setup_communicators(self.comm)
+            sub._setup_communicators(self.comm, self._sysdata.absdir)
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 
@@ -1422,6 +1425,8 @@ class Group(System):
             if trace:  # pragma: no cover
                 debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
+            if trace: # pragma: no cover
+                debug("allgather of local vars DONE")
 
             # save all_locals for use later to determine if we can do a
             # fully local data transfer between two vars
