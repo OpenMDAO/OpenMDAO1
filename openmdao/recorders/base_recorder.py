@@ -23,7 +23,7 @@ class BaseRecorder(object):
         Tells recorder whether to record the params vector.
     options['record_resids'] :  bool(False)
         Tells recorder whether to record the ressiduals vector.
-    options['record_derivs'] :  bool(False)
+    options['record_derivs'] :  bool(True)
         Tells recorder whether to record derivatives that are requested by a `Driver`.
     options['includes'] :  list of strings
         Patterns for variables to include in recording.
@@ -37,7 +37,7 @@ class BaseRecorder(object):
         self.options.add_option('record_unknowns', True)
         self.options.add_option('record_params', False)
         self.options.add_option('record_resids', False)
-        self.options.add_option('record_derivs', False,
+        self.options.add_option('record_derivs', True,
                                 desc='Set to True to record derivatives at the driver level')
         self.options.add_option('includes', ['*'],
                                 desc='Patterns for variables to include in recording')

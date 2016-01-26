@@ -36,7 +36,7 @@ class PredeterminedRunsDriver(Driver):
         self._num_par_doe = num_par_doe
         self._par_doe_id = 0
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign a communicator to the root `System`.
 
@@ -44,6 +44,9 @@ class PredeterminedRunsDriver(Driver):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the Problem.
+
+        parent_dir : str
+            Absolute dir of parent `System`.
         """
         root = self.root
         if self._num_par_doe < 1:
@@ -75,7 +78,7 @@ class PredeterminedRunsDriver(Driver):
                                                     self._par_doe_id))
             comm = comm.Split(self._par_doe_id)
 
-        root._setup_communicators(comm)
+        root._setup_communicators(comm, parent_dir)
 
     def get_req_procs(self):
         """

@@ -93,7 +93,7 @@ executing the external application. These include:
 - Running the code on a remote server if required
 
 So we recommend that you always derive your file-wrapped component from the
-ExternalCode base class. This is explained in detail in its own tutorial.
+ExternalCode base class. This is explained in detail in :ref:`External-Code-Tutorial`.
 
 
 Generating the Input File - Templated File I/O

@@ -99,7 +99,7 @@ class ParallelGroup(Group):
 
         return (min_procs, max_procs)
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `ParallelGroup` and all of its subsystems.
 
@@ -107,14 +107,19 @@ class ParallelGroup(Group):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            Absolute dir of parent `System`.
         """
         self.comm = comm
         self._local_subsystems = []
 
         # If we're not runnin in MPI, make this just a serial Group
         if not MPI or not self.is_active():
-            super(ParallelGroup, self)._setup_communicators(comm)
+            super(ParallelGroup, self)._setup_communicators(comm, parent_dir)
             return
+
+        self._setup_dir(parent_dir)
 
         size = comm.size
         rank = comm.rank
@@ -242,9 +247,9 @@ class ParallelGroup(Group):
                 sub = subsystems[sub_idx]
                 if i == rank_color:
                     self._local_subsystems.append(sub)
-                    sub._setup_communicators(sub_comm)
+                    sub._setup_communicators(sub_comm, self._sysdata.absdir)
                 else:
-                    sub._setup_communicators(MPI.COMM_NULL)
+                    sub._setup_communicators(MPI.COMM_NULL, self._sysdata.absdir)
 
     def list_auto_order(self):
         """

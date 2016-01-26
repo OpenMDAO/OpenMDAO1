@@ -93,7 +93,7 @@ class DistribInputComp(Component):
         else:
             unknowns['outvec'] = params['invec'] * 2.0
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         # this is called at the beginning of _setup_variables, so we can
         # add new params/unknowns here.
         comm = self.comm
@@ -130,7 +130,7 @@ class DistribOverlappingInputComp(Component):
             unknowns['outvec'][:8] = outs[:8]
             unknowns['outvec'][4:11] += outs[4:11]
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
@@ -165,7 +165,7 @@ class DistribInputDistribOutputComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['outvec'] = params['invec']*2.0
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.
@@ -200,7 +200,7 @@ class DistribNoncontiguousComp(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['outvec'] = params['invec']*2.0
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.
@@ -237,7 +237,7 @@ class DistribGatherComp(Component):
         else:
             unknowns['outvec'] = params['invec']
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.

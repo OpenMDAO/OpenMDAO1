@@ -27,7 +27,7 @@ class DistribExecComp(ExecComp):
         super(DistribExecComp, self).__init__(exprs, **kwargs)
         self.arr_size = arr_size
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.

@@ -12,6 +12,7 @@ import numpy as np
 from petsc4py import PETSc
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
+from openmdao.core.fileref import FileRef
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
@@ -429,12 +430,28 @@ class PetscDataTransfer(object):
                         val = srcvec[src]
                         for i, localvars in enumerate(self.sysdata.all_locals):
                             if i != iproc and src not in localvars and tgt in localvars:
+                                if trace: debug("sending %s" % val)
                                 comm.send(val, dest=i, tag=itag)
+                                if trace: debug("DONE sending %s" % val)
+
+                # ensure that all src values have been sent before we receive
+                # any in order to avoid possible race conditions
+                comm.barrier()
+
+                for itag, (tgt, src) in enumerate(self.byobj_conns):
                     # if we don't have the value locally, pull it across using MPI
                     if tgt in mylocals:
                         if src in mylocals:
-                            tgtvec[tgt] = srcvec[src]
+                            if isinstance(tgtvec[tgt], FileRef):
+                                tgtvec[tgt]._assign_to(srcvec[src])
+                            else:
+                                tgtvec[tgt] = srcvec[src]
                         else:
+                            if trace: debug("receiving to %s" % tgtvec[tgt])
                             val = comm.recv(source=self.sysdata.owning_ranks[src],
                                             tag=itag)
-                            tgtvec[tgt] = val
+                            if trace: debug("received %s" % val)
+                            if isinstance(tgtvec[tgt], FileRef):
+                                tgtvec[tgt]._assign_to(val)
+                            else:
+                                tgtvec[tgt] = val
