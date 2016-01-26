@@ -25,7 +25,7 @@ class Adder(Component):
 class NDiamondPar(Group):
     """ Topology one - n - one."""
 
-    def __init__(self, n, expr="y=2.0*x"):
+    def __init__(self, n, expr="y=2.0*x", req_procs=(1,1)):
         super(NDiamondPar, self).__init__()
 
         self.add('src', IndepVarComp('x', 2.0))
@@ -33,7 +33,8 @@ class NDiamondPar(Group):
 
         sub = self.add('par', ParallelGroup())
         for i in range(1,n+1):
-            sub.add("C%d"%i, ExecComp4Test(expr, nl_delay=0.5))
+            sub.add("C%d"%i, ExecComp4Test(expr, nl_delay=0.5,
+                                           req_procs=req_procs))
             self.connect("src.x", "par.C%d.x"%i)
             self.connect("par.C%d.y"%i, "sink.x%d"%i)
 
@@ -72,6 +73,18 @@ class Test4Par2Proc(MPITestCase):
 
         expected = 4.0*num_pars
         self.assertEqual(p['sink.sum'], expected)
+
+    def test_error(self):
+        num_pars = 4
+
+        p = Problem(root=NDiamondPar(num_pars, req_procs=(3,3)), impl=impl)
+        try:
+            p.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                 "This problem was given 2 MPI processes, but it requires "
+                 "between 3 and 12.")
+
 
 class Test4Par3Proc(MPITestCase):
     """Testing when we have less processors than we need for fully parallel
