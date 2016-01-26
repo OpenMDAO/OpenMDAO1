@@ -82,7 +82,6 @@ class ParallelGroup(Group):
 
         for sub in itervalues(self._subsystems):
             sub_min, sub_max = sub.get_req_procs()
-            #min_procs += sub_min
             if sub_min > min_procs:
                 min_procs = sub_min
             if max_procs is not None:
