@@ -161,13 +161,6 @@ class ParallelGroup(Group):
                             if assigned == limit:
                                 break
 
-                for i, sub in enumerate(subsystems):
-                    if requested_procs[i] > assigned_procs[i]:
-                        raise RuntimeError("subsystem group %s requested %d "
-                                           "processes but got %s" %
-                                           (sub.pathname, requested_procs[i],
-                                           assigned_procs[i]))
-
                 # create buckets (one sub per bucket) to be consistent in how
                 # we split procs below
                 buckets = [(n,[i]) for i,n in enumerate(assigned_procs)]
