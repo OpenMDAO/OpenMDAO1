@@ -1234,17 +1234,17 @@ class Group(System):
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
 
             src_idxs = new_indices
-            var_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
+            p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
 
         else:
-            var_rank = self._owning_ranks[uname] if fwd else iproc
-            offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
+            u_rank = self._owning_ranks[uname] if fwd else iproc
+            p_rank = self._owning_ranks[pname] if rev else iproc
+
+            offset = np.sum(u_sizes[:u_rank]) + np.sum(u_sizes[u_rank, :ivar])
             src_idxs = arg_idxs + offset
 
-            var_rank = self._owning_ranks[pname] if rev else iproc
-
-        tgt_start = (np.sum(p_sizes[:var_rank]) +
-                     np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
+        tgt_start = (np.sum(p_sizes[:p_rank]) +
+                     np.sum(p_sizes[p_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
