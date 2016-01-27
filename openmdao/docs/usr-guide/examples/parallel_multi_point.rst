@@ -39,7 +39,7 @@ need.
 
         def __init__(self, adder):
             super(Plus, self).__init__()
-            self.add_param('x', np.random.random())
+            self.add_param('x', 0.0)
             self.add_output('f1', shape=1)
             self.adder = float(adder)
 
@@ -57,7 +57,7 @@ need.
 
         def __init__(self, scalar):
             super(Times, self).__init__()
-            self.add_param('f1', np.random.random())
+            self.add_param('f1', 0.0)
             self.add_output('f2', shape=1)
             self.scalar = float(scalar)
 
@@ -110,6 +110,9 @@ need.
 
             self.add('aggregate', Summer(size))
 
+            # a ParallelGroup works just like a Group if it's run in serial,
+            # so using a ParallelGroup here will make our ParallelMultipoint
+            # class work well in serial and under MPI.
             pg = self.add('multi_point', ParallelGroup())
 
             #This is where you stamp out all the points you need
@@ -135,7 +138,7 @@ need.
 
     st = time.time()
 
-    prob['X'] = np.random.random(size)
+    prob['X'] = np.ones(size) * 0.7
     st = time.time()
     print("run started")
     prob.run()
@@ -153,7 +156,7 @@ If you run this script, you should see output that looks like this:
 
     run started
     run finished ...
-    ...
+    19.0
 
 ::
 
@@ -184,7 +187,7 @@ If you run this script, you should see output that looks like this:
 
     run started
     run finished 1.03730106354
-    24.7820693986
+    19.0
 
 
 Running Multi-Point in Parallel
@@ -241,7 +244,7 @@ lots of extra output to the screen.
 
         st = time.time()
 
-        prob['X'] = np.random.random(size)
+        prob['X'] = np.ones(size) * 0.7
         st = time.time()
         mpi_print(prob, "run started")
         prob.run()
@@ -265,4 +268,4 @@ We have to allocate 10 processes, because we have 10 points in `ParallelGroup`.
 
     run started
     run finished 0.14165687561
-    23.6576931458
+    19.0
