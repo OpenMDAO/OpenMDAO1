@@ -200,7 +200,7 @@ multi-point problem needs only a few minor modifications in order to run in para
      in order to do anything in parallel.
 
 All of the changes you're going to make are in the run-script itself.
-No changes are needed to the `Component` or `Group` classes themselves.
+No changes are needed to the `Component` or `Group` classes.
 You'll need to import the PETSc based data passing implementation,
 and then to avoid getting a lot of extra print-out use a small
 helper function that only prints on the rank 0 processor.
