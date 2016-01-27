@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 from openmdao.api import Group, Component, IndepVarComp, ParallelGroup, \
-                         PetscImpl, Problem
+                         Problem
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 
@@ -181,7 +181,7 @@ class CollocationSegment(Group):
 
 def flat_earth(num_seg=3, seg_ncn=3):
 
-    prob = PointerProblem(root=Trajectory(), impl=PetscImpl)
+    prob = PointerProblem(root=Trajectory(), impl=impl)
     traj = prob.root
     rhs = FlatEarthRHS(1)
     phase0 = CollocationPhase(name='phase0', rhs=rhs, num_seg=num_seg, seg_ncn=seg_ncn,
