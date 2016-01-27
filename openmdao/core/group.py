@@ -1234,7 +1234,7 @@ class Group(System):
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
 
             src_idxs = new_indices
-            var_rank = iproc
+            var_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
 
         else:
             var_rank = self._owning_ranks[uname] if fwd else iproc
