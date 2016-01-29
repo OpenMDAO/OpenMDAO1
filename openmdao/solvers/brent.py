@@ -29,6 +29,8 @@ class Brent(NonLinearSolver):
         The routine converges when a root is known to lie within rtol times the value returned of the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.
     options['state_var'] :  str('')
         name of the state-variable/residual the solver should with
+    options['state_var_idx'] :  int(0)
+        Index into state_var if it is a vector
     options['upper_bound'] :  float(100.0)
         upper bound for the root search
     options['lower_bound'] :  float(0.0)
