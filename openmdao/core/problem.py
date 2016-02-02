@@ -45,6 +45,7 @@ class _ProbData(object):
     """
     def __init__(self):
         self.top_lin_gs = False
+        self.in_complex_step = False
 
 
 class Problem(object):

@@ -2,6 +2,7 @@
 
 import sys
 import numpy
+from numpy import real, imag
 from numpy.linalg import norm
 from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
@@ -30,11 +31,15 @@ class _ByObjWrapper(object):
 class Accessor(object):
     __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote',
                  'get', 'set', 'flat']
-    def __init__(self, vecwrapper, slice, val, meta, owned=True, alloc_complex=False):
+    def __init__(self, vecwrapper, slice, val, meta, probdata, owned=True,
+                 alloc_complex=False):
         self.owned = owned
 
         self.pbo = meta.get('pass_by_obj')
         self.remote = meta.get('remote')
+
+        if alloc_complex is True:
+            self.probdata = probdata
 
         if self.pbo and not isinstance(val, _ByObjWrapper):
             self.val = _ByObjWrapper(val)
@@ -67,6 +72,8 @@ class Accessor(object):
             return self._remote_access_error, self._remote_access_error
 
         scale, offset = meta.get('unit_conv', (None, None))
+
+        # Pass by Object methods
         if self.pbo:
             if scale:
                 return self._get_pbo_units, flatfunc
@@ -85,23 +92,43 @@ class Accessor(object):
         # No unit conversion.
         # dparams vector does no unit conversion.
         if scale is None or vecwrapper.deriv_units is True:
-            flatfunc = self._get_arr
+            if alloc_complex is True:
+                flatfunc = self._get_arr_complex
+            else:
+                flatfunc = self._get_arr
+
             if is_scalar:
-                func = self._get_scalar
+                if alloc_complex is True:
+                    func = self._get_scalar_complex
+                else:
+                    func = self._get_scalar
             elif shapes_same:
                 func = flatfunc
             else:
-                func = self._get_arr_diff_shape
+                if alloc_complex is True:
+                    func = self._get_arr_diff_shape_complex
+                else:
+                    func = self._get_arr_diff_shape
 
         # We have a unit conversion
         else:
-            flatfunc = self._get_arr_units
+            if alloc_complex is True:
+                flatfunc = self._get_arr_units_complex
+            else:
+                flatfunc = self._get_arr_units
+
             if is_scalar:
-                func = self._get_scalar_units
+                if alloc_complex is True:
+                    func = self._get_scalar_units_complex
+                else:
+                    func = self._get_scalar_units
             elif shapes_same:
                 func = flatfunc
             else:
-                func = self._get_arr_units_diff_shape
+                if alloc_complex is True:
+                    func = self._get_arr_units_diff_shape_complex
+                else:
+                    func = self._get_arr_units_diff_shape
 
         return func, flatfunc
 
@@ -114,7 +141,10 @@ class Accessor(object):
             return self._set_pbo
         else:
             if meta['shape'] == 1:
-                return self._set_scalar
+                if alloc_complex is True:
+                    return self._set_scalar_complex
+                else:
+                    return self._set_scalar
             else:
                 return self._set_arr
 
@@ -134,17 +164,51 @@ class Accessor(object):
         """Array with same shape"""
         return self.val
 
+    def _get_arr_complex(self):
+        """Array with same shape, complex support."""
+        if self.probdata.in_complex_step is True:
+            return self.val + self.imag_val*1j
+        else:
+            return self.val
+
     def _get_arr_diff_shape(self):
         """Array with different shape"""
         return self.val.reshape(self.meta['shape'])
 
+    def _get_arr_diff_shape_complex(self):
+        """Array with different shape, complex support."""
+        if self.probdata.in_complex_step is True:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        return val.reshape(self.meta['shape'])
+
     def _get_scalar(self):
+        """Fast scalar"""
         return self.val[0]
+
+    def _get_scalar_complex(self):
+        """Fast scalar, complex support."""
+        if self.probdata.in_complex_step is True:
+            return self.val[0] + self.imag_val[0]*1j
+        else:
+            return self.val[0]
 
     def _get_arr_units(self):
         """Array with same shape and unit conversion"""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
+        vec *= scale
+        return vec
+
+    def _get_arr_units_complex(self):
+        """Array with same shape and unit conversion, complex support."""
+        if self.probdata.in_complex_step is True:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        scale, offset = self.meta['unit_conv']
+        vec = val + offset
         vec *= scale
         return vec
 
@@ -155,16 +219,54 @@ class Accessor(object):
         vec *= scale
         return vec.reshape(self.meta['shape'])
 
+    def _get_arr_units_diff_shape_complex(self):
+        """Array with diff shape and unit conversion, complex support."""
+        if self.probdata.in_complex_step is True:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        scale, offset = self.meta['unit_conv']
+        vec = val + offset
+        vec *= scale
+        return vec.reshape(self.meta['shape'])
+
     def _get_scalar_units(self):
         """Scalar with unit conversion"""
         scale, offset = self.meta['unit_conv']
         return scale*(self.val[0] + offset)
 
+    def _get_scalar_units_complex(self):
+        """Scalar with unit conversion, complex support."""
+        if self.probdata.in_complex_step is True:
+            val = self.val[0] + self.imag_val[0]*1j
+        else:
+            val = self.val   [0]
+        scale, offset = self.meta['unit_conv']
+        return scale*(val + offset)
+
     def _set_arr(self, value):
+        """Set an array value."""
         self.val[:] = value.flat
 
+    def _set_arr_complex(self, value):
+        """Set an array value, complex support."""
+        if self.probdata.in_complex_step is True:
+            self.val[0] = real(value.flat)
+            self.imag_val[0] = imag(value.flat)
+        else:
+            self.val[:] = value.flat
+
     def _set_scalar(self, value):
+        """Set a scalar value."""
         self.val[0] = value
+
+    def _set_scalar_complex(self, value):
+        """Set a scalar value, complex support."""
+        if self.probdata.in_complex_step is True:
+            self.val[0] = value.real
+            self.imag_val[0] = imag(value)[0]
+        else:
+            self.val[0] = value
 
     def _set_pbo(self, value):
         self.val.val = value
@@ -462,7 +564,7 @@ class VecWrapper(object):
                     meta = acc.meta
                     view._dat[pname] = Accessor(view,
                                         (view_size, view_size + meta['size']),
-                                        self._dat[name].val, meta)
+                                        self._dat[name].val, meta, self._probdata)
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -636,7 +738,8 @@ class SrcVecWrapper(VecWrapper):
                     slc = (vec_size, vec_size + meta['size'])
                     vec_size += meta['size']
 
-                self._dat[promname] = Accessor(self, slc, meta['val'], meta)
+                self._dat[promname] = Accessor(self, slc, meta['val'], meta,
+                                               self._probdata, alloc_complex)
 
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
@@ -803,7 +906,8 @@ class TgtVecWrapper(VecWrapper):
                     if not meta.get('remote'):
                         vec_size += meta['size']
 
-                    self._dat[scoped_name(pathname)] = Accessor(self, slc, val, meta)
+                    self._dat[scoped_name(pathname)] = Accessor(self, slc, val,
+                                                                meta, self._probdata)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -838,8 +942,9 @@ class TgtVecWrapper(VecWrapper):
             if newmeta['pathname'] == pathname:
                 # mark this param as not 'owned' by this VW
                 self._dat[scoped_name(pathname)] = Accessor(self, None,
-                                                           parent_acc.val,
-                                                           newmeta, owned=False)
+                                                            parent_acc.val,
+                                                            newmeta, self._probdata,
+                                                            owned=False)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):
