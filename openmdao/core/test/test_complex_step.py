@@ -13,7 +13,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
     def test_single_comp_paraboloid(self):
         prob = Problem()
         root = prob.root = Group()
-        root.add('x', IndepVarComp('x', 0.0), promotes=['*'])
+        root.add('p1', IndepVarComp('x', 0.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 0.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
