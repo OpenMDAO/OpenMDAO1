@@ -15,7 +15,7 @@ class BasicImpl(object):
         return FakeComm()
 
     @staticmethod
-    def create_src_vecwrapper(sysdata, comm):
+    def create_src_vecwrapper(sysdata, probdata, comm):
         """
         Create a vecwrapper for source variables.
 
@@ -24,6 +24,10 @@ class BasicImpl(object):
         sysdata : _SysData
             A data object for System level data.
 
+        probdata : _ProbData
+            A data object for Problem level data that we need in order to store
+            flags that span multiple layers in the hierarchy.
+
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -31,10 +35,10 @@ class BasicImpl(object):
         -------
         `SrcVecWrapper`
         """
-        return SrcVecWrapper(sysdata, comm)
+        return SrcVecWrapper(sysdata, probdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(sysdata, comm):
+    def create_tgt_vecwrapper(sysdata, probdata, comm):
         """
         Create a vecwrapper for target variables.
 
@@ -43,6 +47,10 @@ class BasicImpl(object):
         sysdata : _SysData
             A data object for system level data
 
+        probdata : _ProbData
+            A data object for Problem level data that we need in order to store
+            flags that span multiple layers in the hierarchy.
+
         comm : a fake communicator or None.
             This arg is ignored.
 
@@ -50,7 +58,7 @@ class BasicImpl(object):
         -------
         `TgtVecWrapper`
         """
-        return TgtVecWrapper(sysdata, comm)
+        return TgtVecWrapper(sysdata, probdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,

@@ -30,7 +30,7 @@ class _ByObjWrapper(object):
 class Accessor(object):
     __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote',
                  'get', 'set', 'flat']
-    def __init__(self, vecwrapper, slice, val, meta, owned=True):
+    def __init__(self, vecwrapper, slice, val, meta, owned=True, alloc_complex=False):
         self.owned = owned
 
         self.pbo = meta.get('pass_by_obj')
@@ -38,8 +38,12 @@ class Accessor(object):
 
         if self.pbo and not isinstance(val, _ByObjWrapper):
             self.val = _ByObjWrapper(val)
+            if alloc_complex is True:
+                self.imag_val = _ByObjWrapper(val)
         else:
             self.val = val
+            if alloc_complex is True:
+                self.imag_val = val
 
         if self.remote or self.pbo:
             self.slice = None
@@ -47,10 +51,10 @@ class Accessor(object):
             self.slice = slice
         self.meta = meta
 
-        self.get, self.flat = self._setup_get_funct(vecwrapper, meta)
-        self.set = self._setup_set_funct(meta)
+        self.get, self.flat = self._setup_get_funct(vecwrapper, meta, alloc_complex)
+        self.set = self._setup_set_funct(meta, alloc_complex)
 
-    def _setup_get_funct(self, vecwrapper, meta):
+    def _setup_get_funct(self, vecwrapper, meta, alloc_complex):
         """
         Returns a tuple of efficient closures (nonflat and flat) to access
         the value contained in the metadata.
@@ -101,7 +105,7 @@ class Accessor(object):
 
         return func, flatfunc
 
-    def _setup_set_funct(self, meta):
+    def _setup_set_funct(self, meta, alloc_complex):
         """ Sets up our fast set functions."""
 
         if self.remote:
@@ -175,8 +179,12 @@ class VecWrapper(object):
 
     Args
     ----
-    pathname : str, optional
-        the pathname of the containing `System`
+    sysdata : _SysData
+        A data object for system level data
+
+    probdata : _ProbData
+        A data object for Problem level data that we need in order to store
+        flags that span multiple layers in the hierarchy.
 
     comm : an MPI communicator (real or fake)
         a communicator that can be used for distributed operations
@@ -193,7 +201,7 @@ class VecWrapper(object):
 
     idx_arr_type = 'i'
 
-    def __init__(self, sysdata, comm=None):
+    def __init__(self, sysdata, probdata, comm=None):
         self.comm = comm
         self.vec = None
         self._dat = OrderedDict()
@@ -201,7 +209,11 @@ class VecWrapper(object):
         # Automatic unit conversion in target vectors
         self.deriv_units = False
 
+        # Supports complex step
+        self.alloc_complex = False
+
         self._sysdata = sysdata
+        self._probdata = probdata
 
     def _flat(self, name):
         """
@@ -581,7 +593,7 @@ class SrcVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False, shared_vec=None):
+              store_byobjs=False, shared_vec=None, alloc_complex=False):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -605,6 +617,10 @@ class SrcVecWrapper(VecWrapper):
 
         shared_vec : ndarray, optional
             If not None, create vec as a subslice of this array.
+
+        alloc_complex : bool, optional
+            If True, allocate space for the imaginary part of the vector and
+            configure all functions to support complex computation.
         """
 
         vec_size = 0
@@ -625,16 +641,23 @@ class SrcVecWrapper(VecWrapper):
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
+            self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
+            if alloc_complex is True:
+                self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, acc in iteritems(self._dat):
             if not acc.pbo:
                 if acc.remote:
                     acc.val = numpy.array([], dtype=float)
+                    if alloc_complex is True:
+                        acc.imag_val = numpy.array([], dtype=float)
                 else:
                     start, end = acc.slice
                     acc.val = self.vec[start:end]
+                    if alloc_complex is True:
+                        acc.imag_val = self.imag_vec[start:end]
 
         # if store_byobjs is True, this is the unknowns vecwrapper,
         # so initialize all of the values from the unknowns dicts.
@@ -713,7 +736,7 @@ class TgtVecWrapper(VecWrapper):
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevance=None, var_of_interest=None,
-              store_byobjs=False, shared_vec=None):
+              store_byobjs=False, shared_vec=None, alloc_complex=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -748,6 +771,10 @@ class TgtVecWrapper(VecWrapper):
 
         shared_vec : ndarray, optional
             If not None, create vec as a subslice of this array.
+
+        alloc_complex : bool, optional
+            If True, allocate space for the imaginary part of the vector and
+            configure all functions to support complex computation.
         """
         # dparams vector has some additional behavior
         if not store_byobjs:
@@ -790,7 +817,10 @@ class TgtVecWrapper(VecWrapper):
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
+            self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
+            if alloc_complex is True:
+                self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, acc in iteritems(self._dat):
