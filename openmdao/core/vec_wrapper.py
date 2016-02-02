@@ -29,10 +29,10 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    __slots__ = ['val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-                 'get', 'set', 'flat']
-    def __init__(self, vecwrapper, slice, val, meta, probdata, owned=True,
-                 alloc_complex=False):
+    __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
+                 'get', 'set', 'flat', 'probdata']
+    def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
+                 owned=True):
         self.owned = owned
 
         self.pbo = meta.get('pass_by_obj')
@@ -264,7 +264,7 @@ class Accessor(object):
         """Set a scalar value, complex support."""
         if self.probdata.in_complex_step is True:
             self.val[0] = value.real
-            self.imag_val[0] = imag(value)[0]
+            self.imag_val[0] = imag(value)
         else:
             self.val[0] = value
 
@@ -550,7 +550,8 @@ class VecWrapper(object):
             if name in self._dat:
                 acc = self._dat[name]
                 if acc.pbo or acc.remote:
-                    view._dat[pname] = Accessor(view, None, acc.val, acc.meta)
+                    view._dat[pname] = Accessor(view, None, acc.val, acc.meta, self._probdata,
+                                                self.self.alloc_complex)
                 else:
                     pstart, pend = acc.slice
                     if start == -1:
@@ -563,8 +564,9 @@ class VecWrapper(object):
                     end = pend
                     meta = acc.meta
                     view._dat[pname] = Accessor(view,
-                                        (view_size, view_size + meta['size']),
-                                        self._dat[name].val, meta, self._probdata)
+                                                (view_size, view_size + meta['size']),
+                                                self._dat[name].val, meta, self._probdata,
+                                                self.alloc_complex)
                     view_size += meta['size']
 
         if start == -1: # no items found
@@ -907,7 +909,8 @@ class TgtVecWrapper(VecWrapper):
                         vec_size += meta['size']
 
                     self._dat[scoped_name(pathname)] = Accessor(self, slc, val,
-                                                                meta, self._probdata)
+                                                                meta, self._probdata,
+                                                                alloc_complex)
                 else:
                     if parent_params_vec is not None:
                         src = connections.get(pathname)
@@ -944,6 +947,7 @@ class TgtVecWrapper(VecWrapper):
                 self._dat[scoped_name(pathname)] = Accessor(self, None,
                                                             parent_acc.val,
                                                             newmeta, self._probdata,
+                                                            alloc_complex,
                                                             owned=False)
 
         # Finally, set up unit conversions, if any exist.
@@ -1017,7 +1021,8 @@ class TgtVecWrapper(VecWrapper):
         self._dat[self._sysdata._scoped_abs_name(pathname)] = Accessor(self,
                                                                        None,
                                                                        val,
-                                                                       meta)
+                                                                       meta,
+                                                                       self._probdata)
 
     def _get_flattened_sizes(self):
         """

@@ -560,6 +560,19 @@ class System(object):
 
                         target_input[idx] += step
 
+                    elif fdform == 'complex_step':
+
+                        probdata = unknowns._probdata
+                        probdata.in_complex_step = True
+
+                        target_input[idx] += fdstep*1j
+                        run_model(params, unknowns, resids)
+                        target_input[idx] -= fdstep*1j
+
+                        # delta resid is delta unknown
+                        resultvec.vec[:] = resultvec.vec.imag/fdstep
+                        probdata.in_complex_step = False
+
                     for u_name in fd_unknowns:
                         if qoi_indices and u_name in qoi_indices:
                             result = resultvec._dat[u_name].val[qoi_indices[u_name]]
