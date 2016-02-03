@@ -1884,7 +1884,7 @@ class Problem(object):
         root = self.root
         abs_indep_list = root._get_fd_params()
         param_srcs = [root.connections[p] for p in abs_indep_list \
-                      if not root.params.metadata(p).get('pass_by_obj')]
+                      if not root._params_dict[p].get('pass_by_obj')]
         unknown_list = root._get_fd_unknowns()
         unknown_list = [item for item in unknown_list \
                         if not root.unknowns.metadata(item).get('pass_by_obj')]
