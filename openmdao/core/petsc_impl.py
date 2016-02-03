@@ -32,26 +32,50 @@ class PetscImpl(object):
         return MPI.COMM_WORLD
 
     @staticmethod
-    def create_src_vecwrapper(sysdata, comm):
+    def create_src_vecwrapper(sysdata, probdata, comm):
         """
         Create a`PetscSrcVecWrapper`.
+
+        Args
+        ----
+        sysdata : _SysData
+            A data object for System level data.
+
+        probdata : _ProbData
+            A data object for Problem level data that we need in order to store
+            flags that span multiple layers in the hierarchy.
+
+        comm : a fake communicator or None.
+            This arg is ignored.
 
         Returns
         -------
         `PetscSrcVecWrapper`
         """
-        return PetscSrcVecWrapper(sysdata, comm)
+        return PetscSrcVecWrapper(sysdata, probdata, comm)
 
     @staticmethod
-    def create_tgt_vecwrapper(sysdata, comm):
+    def create_tgt_vecwrapper(sysdata, probdata, comm):
         """
         Create a `PetscTgtVecWrapper`.
+
+        Args
+        ----
+        sysdata : _SysData
+            A data object for System level data.
+
+        probdata : _ProbData
+            A data object for Problem level data that we need in order to store
+            flags that span multiple layers in the hierarchy.
+
+        comm : a fake communicator or None.
+            This arg is ignored.
 
         Returns
         -------
         `PetscTgtVecWrapper`
         """
-        return PetscTgtVecWrapper(sysdata, comm)
+        return PetscTgtVecWrapper(sysdata, probdata, comm)
 
     @staticmethod
     def create_data_xfer(src_vec, tgt_vec,
@@ -106,7 +130,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, unknowns_dict, relevance, var_of_interest=None,
-              store_byobjs=False, shared_vec=None):
+              store_byobjs=False, shared_vec=None, alloc_complex=False):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -128,15 +152,22 @@ class PetscSrcVecWrapper(SrcVecWrapper):
 
         shared_vec : ndarray, optional
             If not None, create vec as a subslice of this array.
+
+        alloc_complex : bool, optional
+            If True, allocate space for the imaginary part of the vector and
+            configure all functions to support complex computation.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
-                                              shared_vec=shared_vec)
+                                              shared_vec=shared_vec,
+                                              alloc_complex=alloc_complex)
         if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        if alloc_complex is True:
+            self.imag_petsc_vec = PETSc.Vec().createWithArray(self.imag_vec, comm=self.comm)
         if trace: debug("petsc_vec creation DONE")
 
     def _get_flattened_sizes(self):
@@ -184,6 +215,9 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
                   (sys_pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
+        if self.alloc_complex is True:
+            view.imag_petsc_vec = PETSc.Vec().createWithArray(view.imag_vec,
+                                                              comm=comm)
         if trace: debug("petsc_vec creation DONE")
         return view
 
@@ -218,7 +252,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevance, var_of_interest=None, store_byobjs=False,
-              shared_vec=None):
+              shared_vec=None, alloc_complex=False):
         """
         Configure this vector to store a flattened array of the variables
         in params_dict. Variable shape and value are retrieved from srcvec.
@@ -253,17 +287,25 @@ class PetscTgtVecWrapper(TgtVecWrapper):
 
         shared_vec : ndarray, optional
             If not None, create vec as a subslice of this array.
+
+        alloc_complex : bool, optional
+            If True, allocate space for the imaginary part of the vector and
+            configure all functions to support complex computation.
         """
         super(PetscTgtVecWrapper, self).setup(parent_params_vec, params_dict,
                                               srcvec, my_params,
                                               connections, relevance=relevance,
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
-                                              shared_vec=shared_vec)
+                                              shared_vec=shared_vec,
+                                              alloc_complex=alloc_complex)
         if trace:  # pragma: no cover
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
+        if alloc_complex is True:
+            self.imag_petsc_vec = PETSc.Vec().createWithArray(self.imag_vec,
+                                                              comm=self.comm)
         if trace: debug("petsc_vec creation DONE")
 
     def _get_flattened_sizes(self):
@@ -413,6 +455,9 @@ class PetscDataTransfer(object):
                 debug("%s:    srcvec = %s" % (srcvec._sysdata.pathname,
                                               srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
+            if tgtvec._probdata.in_complex_step is True:
+                self.scatter.scatter(srcvec.imag_petsc_vec, tgtvec.imag_petsc_vec,
+                                     False, False)
 
             if trace:  # pragma: no cover
                 debug("%s:    tgtvec = %s (DONE)" % (tgtvec._sysdata.pathname,
