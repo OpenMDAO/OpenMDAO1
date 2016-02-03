@@ -494,7 +494,7 @@ class Group(System):
             self.params = impl.create_tgt_vecwrapper(self._sysdata,
                                                      self._probdata, comm)
 
-            # VecWrappers must be allocate space for imaginary part if we use
+            # VecWrappers must be allocated space for imaginary part if we use
             # complex step at the top.
             opt = self.fd_options
             if opt['force_fd'] is True and opt['form']=='complex_step':
