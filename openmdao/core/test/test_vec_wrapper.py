@@ -5,6 +5,9 @@ from collections import OrderedDict
 
 from openmdao.core.vec_wrapper import SrcVecWrapper, TgtVecWrapper
 from openmdao.core.system import System, _SysData
+from openmdao.core.problem import _ProbData
+
+pbd = _ProbData()
 
 class TestVecWrapper(unittest.TestCase):
 
@@ -23,7 +26,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertEqual(u.vec.size, 10)
@@ -75,7 +78,7 @@ class TestVecWrapper(unittest.TestCase):
 
         s = _SysData('')
         s._unknowns_dict = u._dat
-        p = TgtVecWrapper(s)
+        p = TgtVecWrapper(s, pbd)
         p.setup(None, params, u, params.keys(),
                 connections, store_byobjs=True)
 
@@ -106,7 +109,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         varmap = OrderedDict([
@@ -149,7 +152,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         self.assertTrue((np.array(u._dat['C1.y1'].val)==np.array([1., 1., 1., 1., 1., 1.])).all())
@@ -167,7 +170,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         unorm = u.norm()
@@ -184,7 +187,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:
@@ -205,7 +208,7 @@ class TestVecWrapper(unittest.TestCase):
             meta['top_promoted_name'] = u
             sd.to_prom_name[u] = u
 
-        u = SrcVecWrapper(sd)
+        u = SrcVecWrapper(sd, pbd)
         u.setup(unknowns_dict, store_byobjs=True)
 
         try:

@@ -540,10 +540,13 @@ class VecWrapper(object):
         `VecWrapper`
             A new `VecWrapper` that is a view into this one.
         """
-        view = self.__class__(system._sysdata, comm)
+        view = self.__class__(system._sysdata, system._probdata, comm)
+        view.alloc_complex = self.alloc_complex
         view_size = 0
 
         start = -1
+
+        alloc_complex = self.alloc_complex
 
         # varmap is ordered, in the same order as _dat
         for name, pname in iteritems(varmap):
@@ -551,7 +554,7 @@ class VecWrapper(object):
                 acc = self._dat[name]
                 if acc.pbo or acc.remote:
                     view._dat[pname] = Accessor(view, None, acc.val, acc.meta, self._probdata,
-                                                self.alloc_complex)
+                                                alloc_complex)
                 else:
                     pstart, pend = acc.slice
                     if start == -1:
@@ -564,7 +567,7 @@ class VecWrapper(object):
                     end = pend
                     meta = acc.meta
 
-                    if self.alloc_complex is True:
+                    if alloc_complex is True:
                         imag_val = acc.imag_val
                     else:
                         imag_val = None
@@ -572,18 +575,17 @@ class VecWrapper(object):
                     view._dat[pname] = Accessor(view,
                                                 (view_size, view_size + meta['size']),
                                                 acc.val, meta, self._probdata,
-                                                self.alloc_complex,
-                                                imag_val=imag_val)
+                                                alloc_complex, imag_val=imag_val)
                     view_size += meta['size']
 
         if start == -1: # no items found
             view.vec = self.vec[0:0]
-            if self.alloc_complex is True:
+            if alloc_complex is True:
                 view.imag_vec = self.imag_vec[0:0]
 
         else:
             view.vec = self.vec[start:end]
-            if self.alloc_complex is True:
+            if alloc_complex is True:
                 view.imag_vec = self.imag_vec[start:end]
 
         return view
@@ -1043,7 +1045,8 @@ class TgtVecWrapper(VecWrapper):
                                                                        None,
                                                                        val,
                                                                        meta,
-                                                                       self._probdata)
+                                                                       self._probdata,
+                                                                       False)
 
     def _get_flattened_sizes(self):
         """
