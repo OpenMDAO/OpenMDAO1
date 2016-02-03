@@ -41,7 +41,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         root.fd_options['form'] = 'complex_step'
 
         # We can't reach our desired accuracy with this step size in fd, but
-        # we can with cs.
+        # we can with cs (where step size is irrelevant.)
         root.fd_options['step_size'] = 1.0e-4
 
         prob.setup(check=False)
