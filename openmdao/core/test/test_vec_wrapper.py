@@ -120,6 +120,7 @@ class TestVecWrapper(unittest.TestCase):
 
         s = System()
         s._sysdata = _SysData('')
+        s._probdata = pbd
         uview = u.get_view(s, None, varmap)
 
         self.assertEqual(list(uview.keys()), ['y1', 'y2', 'y3'])
