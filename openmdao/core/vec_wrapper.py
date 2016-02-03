@@ -32,7 +32,7 @@ class Accessor(object):
     __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
                  'get', 'set', 'flat', 'probdata']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
-                 owned=True):
+                 owned=True, imag_val=None):
         self.owned = owned
 
         self.pbo = meta.get('pass_by_obj')
@@ -43,12 +43,12 @@ class Accessor(object):
 
         if self.pbo and not isinstance(val, _ByObjWrapper):
             self.val = _ByObjWrapper(val)
-            if alloc_complex is True:
-                self.imag_val = _ByObjWrapper(val)
         else:
             self.val = val
             if alloc_complex is True:
-                self.imag_val = val
+                if imag_val is None:
+                    imag_val = val*0.0
+                self.imag_val = imag_val
 
         if self.remote or self.pbo:
             self.slice = None
@@ -551,7 +551,7 @@ class VecWrapper(object):
                 acc = self._dat[name]
                 if acc.pbo or acc.remote:
                     view._dat[pname] = Accessor(view, None, acc.val, acc.meta, self._probdata,
-                                                self.self.alloc_complex)
+                                                self.alloc_complex)
                 else:
                     pstart, pend = acc.slice
                     if start == -1:
@@ -563,16 +563,28 @@ class VecWrapper(object):
                                (name, varmap.keys())
                     end = pend
                     meta = acc.meta
+
+                    if self.alloc_complex is True:
+                        imag_val = acc.imag_val
+                    else:
+                        imag_val = None
+
                     view._dat[pname] = Accessor(view,
                                                 (view_size, view_size + meta['size']),
-                                                self._dat[name].val, meta, self._probdata,
-                                                self.alloc_complex)
+                                                acc.val, meta, self._probdata,
+                                                self.alloc_complex,
+                                                imag_val=imag_val)
                     view_size += meta['size']
 
         if start == -1: # no items found
             view.vec = self.vec[0:0]
+            if self.alloc_complex is True:
+                view.imag_vec = self.imag_vec[0:0]
+
         else:
             view.vec = self.vec[start:end]
+            if self.alloc_complex is True:
+                view.imag_vec = self.imag_vec[start:end]
 
         return view
 
@@ -934,6 +946,8 @@ class TgtVecWrapper(VecWrapper):
             if not (acc.pbo or acc.remote):
                 start, end = acc.slice
                 acc.val = self.vec[start:end]
+                if alloc_complex is True:
+                    acc.imag_val = self.imag_vec[start:end]
 
         # fill entries for missing params with views from the parent
         if parent_params_vec is not None:
@@ -943,12 +957,19 @@ class TgtVecWrapper(VecWrapper):
             parent_acc = parent_params_vec._dat[parent_scoped_name(pathname)]
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
+
+                if alloc_complex is True:
+                    imag_val = parent_acc.imag_val
+                else:
+                    imag_val = None
+
                 # mark this param as not 'owned' by this VW
                 self._dat[scoped_name(pathname)] = Accessor(self, None,
                                                             parent_acc.val,
                                                             newmeta, self._probdata,
                                                             alloc_complex,
-                                                            owned=False)
+                                                            owned=False,
+                                                            imag_val=imag_val)
 
         # Finally, set up unit conversions, if any exist.
         for meta in itervalues(params_dict):

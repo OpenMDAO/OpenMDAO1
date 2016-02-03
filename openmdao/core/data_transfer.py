@@ -119,6 +119,8 @@ class DataTransfer(object):
         else:
             for isrcs, itgts, _ in self.scatters:
                 tgtvec.vec[itgts] = srcvec.vec[isrcs]
+                if tgtvec._probdata.in_complex_step is True:
+                    tgtvec.imag_vec[itgts] = srcvec.imag_vec[isrcs]
 
             # forward, include byobjs if not a deriv scatter
             if not deriv:
