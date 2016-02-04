@@ -2,22 +2,17 @@
 Baseclass for design-of-experiments Drivers that have pre-determined
 parameter sets.
 """
+import os
+import traceback
 from six.moves import zip
+from six import next
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.util.array_util import evenly_distrib_idxs
-import os
-import traceback
-
-from openmdao.core.mpi_wrap import MPI
+from openmdao.core.mpi_wrap import MPI, debug
 
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace: # pragma: no cover
-    from openmdao.core.mpi_wrap import debug
-else:
-    def debug(*arg):
-        pass
 
 class PredeterminedRunsDriver(Driver):
     """
@@ -88,7 +83,8 @@ class PredeterminedRunsDriver(Driver):
 
             # create a sub-communicator for each color and
             # get the one assigned to our color/process
-            debug('%s: splitting comm, doe_id=%s' % ('.'.join((root.pathname,
+            if trace:
+                debug('%s: splitting comm, doe_id=%s' % ('.'.join((root.pathname,
                                                                'driver')),
                                                     self._par_doe_id))
             comm = comm.Split(self._par_doe_id)
@@ -122,7 +118,7 @@ class PredeterminedRunsDriver(Driver):
                 runlist = self._distrib_lb_build_runlist()
                 if self._full_comm.rank == 0:
                     try:
-                        runlist.next()
+                        next(runlist)
                     except StopIteration:
                         pass
                     return # we're done sending cases
@@ -183,7 +179,7 @@ class PredeterminedRunsDriver(Driver):
             for i in range(1, self._num_par_doe):
                 try:
                     # case is a generator, so must make a list to send
-                    case = list(runiter.next())
+                    case = list(next(runiter))
                 except StopIteration:
                     break
                 size, offset = self._id_map[i]
@@ -203,7 +199,7 @@ class PredeterminedRunsDriver(Driver):
                 if not clist:
                     # we've received case from all procs with that doe_id
                     try:
-                        case = list(runiter.next())
+                        case = list(next(runiter))
                     except StopIteration:
                         break
                     size, offset = self._id_map[doe_ids[worker]]
