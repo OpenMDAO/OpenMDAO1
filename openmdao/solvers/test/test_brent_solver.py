@@ -11,9 +11,9 @@ from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, ExecComp
 from openmdao.test.util import assert_rel_error
 
 
-class CompTest(Component): 
+class CompTest(Component):
 
-    def __init__(self): 
+    def __init__(self):
         super(CompTest, self).__init__()
         self.add_param('a', val=1.)
         self.add_param('b', val=1.)
@@ -22,29 +22,50 @@ class CompTest(Component):
 
         self.add_state('x', val=2., lower=0, upper=100)
 
-    def solve_nonlinear(self, p, u, r): 
+    def solve_nonlinear(self, p, u, r):
         pass
 
-    def apply_nonlinear(self, p, u, r): 
+    def apply_nonlinear(self, p, u, r):
         r['x'] = p['a'] * u['x']**p['n'] + p['b'] * u['x'] - p['c']
+
+
+class IndexCompTest(Component):
+    """ Same as CompTest except x is a vector. Element 2 is the state we
+    want to converge."""
+
+    def __init__(self):
+        super(IndexCompTest, self).__init__()
+        self.add_param('a', val=1.)
+        self.add_param('b', val=1.)
+        self.add_param('c', val=10.)
+        self.add_param('n', val=77.0/27.0)
+
+        self.add_state('x', val=np.array([0.0, 0.0, 2.0, 0.0]), lower=0, upper=100)
+
+    def solve_nonlinear(self, p, u, r):
+        pass
+
+    def apply_nonlinear(self, p, u, r):
+        x = u['x'][2]
+        r['x'][2] = p['a'] * x**p['n'] + p['b'] * x - p['c']
 
 
 class TestBrentDriver(unittest.TestCase):
 
-    def setUp(self): 
+    def setUp(self):
         p = Problem()
         p.root = Group()
         p.root.add('comp', CompTest(), promotes=['a','x','n','b','c'])
         p.root.nl_solver = Brent()
         self.prob = p
 
-    def test_no_state_var_err(self): 
+    def test_no_state_var_err(self):
 
-        try: 
+        try:
             self.prob.setup()
-        except ValueError as err: 
-            self.assertEqual(str(err), "'state_var' option in Brent solver of  must be specified")
-        else: 
+        except ValueError as err:
+            self.assertEqual(str(err), "'state_var' option in Brent solver of root must be specified")
+        else:
             self.fail('ValueError Expected')
 
     def test_brent_converge(self):
@@ -59,11 +80,28 @@ class TestBrentDriver(unittest.TestCase):
         assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
         assert_rel_error(self, p.root.resids['x'], 0, .0001)
 
+    def test_brent_converge_index(self):
+
+        p = Problem()
+        p.root = Group()
+        p.root.add('comp', IndexCompTest(), promotes=['a','x','n','b','c'])
+        p.root.nl_solver = Brent()
+
+        p.root.nl_solver.options['state_var'] = 'x'
+        p.root.nl_solver.options['state_var_idx'] = 2
+        p.root.ln_solver = ScipyGMRES()
+        p.setup(check=False)
+
+        p.run()
+
+        assert_rel_error(self, p.root.unknowns['x'][2], 2.06720359226, .0001)
+        assert_rel_error(self, p.root.resids['x'][2], 0, .0001)
+
     def test_data_pass_bounds(self):
 
         p = Problem()
         p.root = Group()
-       
+
         p.root.add('lower', ExecComp('low = 2*a'), promotes=['low', 'a'])
         p.root.add('upper', ExecComp('high = 2*b'), promotes=['high', 'b'])
 
@@ -79,14 +117,14 @@ class TestBrentDriver(unittest.TestCase):
         sub.nl_solver.options['var_lower_bound'] = 'flow' # bad value for testing error
         sub.nl_solver.options['var_upper_bound'] = 'high'
 
-        try: 
+        try:
             p.setup(check=False)
-        except ValueError as err: 
+        except ValueError as err:
             self.assertEqual(str(err), "'var_lower_bound' variable 'flow' was not found as a parameter on any component in sub")
-        else: 
+        else:
             self.fail('ValueError expected')
         sub.ln_solver=ScipyGMRES()
-        
+
         sub.nl_solver.options['var_lower_bound'] = 'low' # correct value
 
         p.setup(check=False)
@@ -95,12 +133,38 @@ class TestBrentDriver(unittest.TestCase):
         p.run()
 
         assert_rel_error(self, p.root.unknowns['x'], 110, .0001)
-        # assert_rel_error(self, p.root.resids['x'], 0, .0001)
+
+    def test_data_pass_bounds_idx(self):
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('lower', ExecComp('low = 2*a'), promotes=['low', 'a'])
+        p.root.add('upper', ExecComp('high = 2*b'), promotes=['high', 'b'])
+
+        sub = p.root.add('sub', Group(), promotes=['x','low', 'high'])
+        sub.add('comp', IndexCompTest(), promotes=['a','x','n','b','c'])
+        sub.add('dummy1', ExecComp('d=low'), promotes=['low'])
+        sub.add('dummy2', ExecComp('d=high'), promotes=['high'])
+        sub.nl_solver = Brent()
+
+        sub.nl_solver.options['state_var'] = 'x'
+        sub.nl_solver.options['state_var_idx'] = 2
+        sub.nl_solver.options['var_lower_bound'] = 'low'
+        sub.nl_solver.options['var_upper_bound'] = 'high'
+        sub.ln_solver=ScipyGMRES()
+
+        p.setup(check=False)
+        p['a'] = -5.
+        p['b'] = 55.
+        p.run()
+
+        assert_rel_error(self, p.root.unknowns['x'][2], 110, .0001)
 
 
 class BracketTestComponent(Component):
 
-    def __init__(self): 
+    def __init__(self):
         super(BracketTestComponent, self).__init__()
 
         # in
@@ -111,7 +175,7 @@ class BracketTestComponent(Component):
         # states
         self.add_state('phi', 0.)
 
-    def solve_nonlinear(self, p, u, r): 
+    def solve_nonlinear(self, p, u, r):
         pass
 
     def apply_nonlinear(self, p, u, r):
@@ -120,9 +184,9 @@ class BracketTestComponent(Component):
         # print u['phi'], p['a'], p['lambda_r'], 1+p['ap'], r['phi']
 
 
-class TestBrentBracketFunc(unittest.TestCase): 
+class TestBrentBracketFunc(unittest.TestCase):
 
-    def test_bracket(self): 
+    def test_bracket(self):
 
         p = Problem()
         p.root = Group()
@@ -135,7 +199,7 @@ class TestBrentBracketFunc(unittest.TestCase):
         p.root.nl_solver.options['upper_bound'] = np.pi/2 - eps
         p.root.nl_solver.options['state_var'] = 'phi'
 
-        # def resize(lower, upper, iter): 
+        # def resize(lower, upper, iter):
         #     if lower == eps and upper == np.pi/2 - eps:
         #         return -np.pi/4, -eps, True
         #     elif lower == -np.pi/4 and upper == -eps:
@@ -153,12 +217,12 @@ class TestBrentBracketFunc(unittest.TestCase):
             # print phi, p['a'], p['lambda_r'], 1+p['ap'], r
             return r
 
-        # run manually 
+        # run manually
         phi_star = brentq(manual_f, eps, np.pi/2-eps, args=(p.root.params,))
 
 
         assert_rel_error(self, p.root.unknowns['phi'], phi_star, 1e-10)
 
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
     unittest.main()

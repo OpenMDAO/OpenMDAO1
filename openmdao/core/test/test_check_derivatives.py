@@ -5,7 +5,8 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES
+from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES, \
+                          ParallelGroup
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
@@ -268,6 +269,21 @@ class TestProblemFullFD(unittest.TestCase):
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
+
+    def test_full_model_fd_double_diamond_grouped_par_sys(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        par = root.add('par', ParallelGroup())
+        par.add('sub', ConvergeDivergeGroups())
+
+        prob.setup(check=False)
+        prob.run()
+
+        prob.root.fd_options['force_fd'] = True
+
+        # Make sure we don't get a key error.
+        data = prob.check_total_derivatives(out_stream=None)
 
 
 class TestProblemCheckTotals(unittest.TestCase):
