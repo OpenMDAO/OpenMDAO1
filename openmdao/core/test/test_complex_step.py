@@ -6,7 +6,8 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Group, Problem, IndepVarComp, Newton
+from openmdao.api import Group, Problem, IndepVarComp, Newton, UnitComp, ExecComp, \
+                         Component
 from openmdao.core.test.test_units import SrcComp, TgtCompC, TgtCompF, TgtCompK
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.paraboloid import Paraboloid
@@ -173,6 +174,123 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), msg)
 
+    def test_array_values_diff_shape_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, 3)), units='degC'), promotes=['x'])
+        prob.root.add('uc', UnitComp(shape=(2, 3), param_name='x', out_name='x_out', units='degF'),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
+
+    def test_array_values_diff_shape_no_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, 3))), promotes=['x'])
+        prob.root.add('uc', ExecComp('x_out = 1.8*x', x=np.zeros((2, 3)), x_out=np.zeros((2, 3))),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'], 1.8*np.eye(6), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'], 1.8*np.eye(6), 1e-6)
+
+    def test_array_values_same_shape_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, )), units='degC'), promotes=['x'])
+        prob.root.add('uc', UnitComp(shape=(2, ), param_name='x', out_name='x_out', units='degF'),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)
+
+    def test_single_comp_paraboloid_pbo_hanging_param(self):
+
+        class ParaboloidPBO(Component):
+            """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+            def __init__(self):
+                super(ParaboloidPBO, self).__init__()
+
+                self.add_param('x', val=0.0)
+                self.add_param('y', val=0.0, pass_by_obj=True)
+
+                self.add_output('f_xy', val=0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+                Optimal solution (minimum): x = 6.6667; y = -7.3333
+                """
+
+                x = params['x']
+                y = params['y']
+
+                unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 0.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 0.0, pass_by_obj=True), promotes=['*'])
+        root.add('comp', ParaboloidPBO(), promotes=['x', 'y', 'f_xy'])
+
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        jac = prob.calc_gradient(['x'], ['f_xy'])
+
+        # Note, FD can not reach this accuracy, but CS can.
+        assert_rel_error(self, jac[0][0], -6.0, 1e-7)
 
 class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
 

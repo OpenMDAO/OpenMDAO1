@@ -33,6 +33,37 @@ class Accessor(object):
                  'get', 'set', 'flat', 'probdata']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None):
+        """ Initialize this accessor.
+
+        Args
+        ----
+        vecwrapper : `VecWrapper`
+            `VecWrapper` that owns this `Accessor`.
+
+        slice : `Slice` object
+            A slice into the vector for this variable.
+
+        val : float or ndarray
+            Initial value of variable for this accessor.
+
+        meta : dict
+            Metadata for the variable collected from components.
+
+        probdata : _ProbData
+            A data object for Problem level data that we need in order to store
+            flags that span multiple layers in the hierarchy.
+
+        alloc_complex : bool, optional
+            If True, allocate space for the imaginary part of the vector and
+            configure all functions to support complex computation.
+
+        owned : bool, optional
+            True if this parameter is owned by the vecwrapper.
+
+        imag_val : float or ndarray, optional
+            Ininitial value for imaginary part of this vector. Only used under
+            complex step, and always zero valued.
+        """
         self.owned = owned
 
         self.pbo = meta.get('pass_by_obj')
@@ -45,7 +76,7 @@ class Accessor(object):
             self.val = _ByObjWrapper(val)
         else:
             self.val = val
-            if alloc_complex is True:
+            if alloc_complex is True and not isinstance(val, _ByObjWrapper):
                 if imag_val is None:
                     imag_val = val*0.0
                 self.imag_val = imag_val
@@ -146,7 +177,10 @@ class Accessor(object):
                 else:
                     return self._set_scalar
             else:
-                return self._set_arr
+                if alloc_complex is True:
+                    return self._set_arr_complex
+                else:
+                    return self._set_arr
 
     # accessor functions
     def _get_pbo(self):
@@ -251,8 +285,8 @@ class Accessor(object):
     def _set_arr_complex(self, value):
         """Set an array value, complex support."""
         if self.probdata.in_complex_step is True:
-            self.val[0] = real(value.flat)
-            self.imag_val[0] = imag(value.flat)
+            self.val[:] = real(value.flat)
+            self.imag_val[:] = imag(value.flat)
         else:
             self.val[:] = value.flat
 
@@ -960,7 +994,7 @@ class TgtVecWrapper(VecWrapper):
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
 
-                if alloc_complex is True:
+                if alloc_complex is True and not newmeta.get('pass_by_obj'):
                     imag_val = parent_acc.imag_val
                 else:
                     imag_val = None
