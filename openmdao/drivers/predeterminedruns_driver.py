@@ -215,7 +215,7 @@ class PredeterminedRunsDriver(Driver):
 
             # tell all workers to stop
             for rank in range(1, self._full_comm.size):
-                comm.send(None, rank, tag=1)
+                comm.isend(None, rank, tag=1)
 
         else:   # worker
             while True:
