@@ -744,6 +744,12 @@ class Problem(object):
             opt = group.fd_options
             if opt['force_fd'] == True and opt['form'] == 'complex_step':
 
+                # TODO: Support using complex step on a subsystem
+                if group.name != '':
+                    msg = "Complex step is currently not supported for groups"
+                    msg += " other than root."
+                    raise RuntimeError(msg)
+
                 # Complex Step, so check for deriv requirement in subsolvers
                 for sub in self.root.subgroups(recurse=True, include_self=True):
                     if hasattr(sub.nl_solver, 'ln_solver'):

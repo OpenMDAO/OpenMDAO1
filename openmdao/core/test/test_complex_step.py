@@ -174,6 +174,23 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), msg)
 
+    def test_sub_unsupported(self):
+
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+
+        # We don't support submodel cs yet.
+        prob.root.mda.fd_options['force_fd'] = True
+        prob.root.mda.fd_options['form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        msg = "Complex step is currently not supported for groups"
+        msg += " other than root."
+
+        self.assertEqual(str(cm.exception), msg)
+
     def test_array_values_diff_shape_units(self):
         prob = Problem()
         prob.root = Group()
@@ -291,6 +308,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
 
         # Note, FD can not reach this accuracy, but CS can.
         assert_rel_error(self, jac[0][0], -6.0, 1e-7)
+
 
 class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
 
