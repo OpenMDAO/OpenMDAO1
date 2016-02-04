@@ -93,7 +93,8 @@ class SellarDis2(Component):
         # Note: this may cause some issues. However, y1 is constrained to be
         # above 3.16, so lets just let it converge, and the optimizer will
         # throw it out
-        y1 = abs(y1)
+        if y1.real < 0.0:
+            y1 *= -1
 
         unknowns['y2'] = y1**.5 + z1 + z2
 
