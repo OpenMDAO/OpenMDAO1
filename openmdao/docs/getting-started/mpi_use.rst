@@ -10,7 +10,7 @@ components in OpenMDAO.  In the `Parallel Multi Point Example`_ you'll see how
 to use OpenMDAO to build a multi-point problem to analyze a single design at a
 number of different conditions in parallel. In
 :ref:`Parallel Finite Difference <parallel_finite_difference>` you'll learn
-how to finite difference evaluations in parallel.  Finally,
+how to perform finite difference evaluations in parallel.  Finally,
 :ref:`Running a DOE Driver in Parallel <doe_driver_parallel>` describes how
 to run multiple DOE cases in parallel.
 
