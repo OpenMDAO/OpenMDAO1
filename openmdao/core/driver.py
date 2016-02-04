@@ -761,30 +761,16 @@ class Driver(object):
 
         #Put options into docstring
         firstTime = 1
-        #for py3.4, items from vars must come out in same order.
-        v = OrderedDict(sorted(vars(self).items()))
-        for key, value in v.items():
+
+        for key, value in sorted(vars(self).items()):
             if type(value)==OptionsDictionary:
                 if key == "supports":
                     continue
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
-                for (name, val) in sorted(value.items()):
-                    docstring += "    " + key + "['"
-                    docstring += name + "']"
-                    docstring += " :  " + type(val).__name__
-                    docstring += "("
-                    if type(val).__name__ == 'str':
-                        docstring += "'"
-                    docstring += str(val)
-                    if type(val).__name__ == 'str':
-                        docstring += "'"
-                    docstring += ")\n"
+                docstring += value._generate_docstring(key)
 
-                    desc = value._options[name]['desc']
-                    if(desc):
-                        docstring += "        " + desc + "\n"
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring

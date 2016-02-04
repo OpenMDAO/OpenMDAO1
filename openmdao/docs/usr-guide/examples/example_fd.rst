@@ -1,7 +1,7 @@
 .. index:: Finite Difference Tutorial
 
 Finite Difference
------------------------
+-----------------
 
 OpenMDAO allows you to specify analytic derivatives for your models, but it
 is not a requirement. You can choose instead to allow any part or all of your
@@ -309,6 +309,7 @@ Nothing else changes in the original model. When we run it, we get:
 So here, `linearize` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
 
+.. _`parallel_finite_difference`:
 
 Parallel Finite Difference
 ==========================

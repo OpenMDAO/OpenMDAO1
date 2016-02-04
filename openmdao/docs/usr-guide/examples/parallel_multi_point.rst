@@ -17,9 +17,12 @@ Setting Up Serial Multi-Point Problems
 A multi-point problem is when you want to analyze a single design at a number
 of different conditions. For example, you might model aircraft performance at
 five different flight conditions or predict at solar power generation at ten
-different times of the year. To capture this kind of problem structure,
-you define a `Group` that models your design, then stamp out as many copies as you
-need.
+different times of the year. One approach to capture this kind of problem
+structure is to define a `Group` that models your design, then stamp out as many
+copies as you need.  This approach can use a large amount of memory, depending
+on the size of your model and the number of copies you make, but it has the
+advantage of supporting the calculation of derivatives across the entire
+multi-point group.
 
 .. testcode:: serial_multi_point
 
@@ -191,7 +194,7 @@ If you run this script, you should see output that looks like this:
 
 
 Running Multi-Point in Parallel
-------------------------------------------
+-------------------------------
 
 In many multi-point problems, all of the points can be run independently of
 each other, which provides an opportunity to run things in parallel. Your serial

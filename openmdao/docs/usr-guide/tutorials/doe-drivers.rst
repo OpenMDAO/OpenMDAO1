@@ -119,6 +119,8 @@ As you can see, there is an 'x' and 'y' value in each interval. The OLHC was
 able to set up 3 of the 4 input combinations to be in different intervals from
 each other, ensuring better coverage of the parameter space.
 
+.. _doe_driver_parallel:
+
 Running a DOE Driver in Parallel
 --------------------------------
 
