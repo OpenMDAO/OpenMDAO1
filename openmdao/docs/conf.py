@@ -107,8 +107,8 @@ Indices and tables
         # the sub_listing is going into each package dir and listing what's in it
         for sub_listing in sorted(os.listdir(os.path.join("..", package))):
             # don't want to catalog files twice, nor use init files nor test dir
-            if not sub_listing.endswith('.pyc') and not sub_listing.startswith('_') \
-                    and not sub_listing.endswith('.ini') and sub_listing != "test":
+            if (os.path.isdir(sub_listing) and sub_listing != "test") or \
+               (sub_listing.endswith(".py") and not sub_listing.startswith('_')):
                 # just want the name of e.g. dataxfer not dataxfer.py
                 sub_packages.append(sub_listing.rsplit('.')[0])
 
