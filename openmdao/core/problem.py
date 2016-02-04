@@ -288,14 +288,13 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = OrderedDict()
+        self._dangling = {}
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
-                    self._dangling[prom] = \
-                        set(plain_bfs(input_graph, p))
+                    self._dangling[prom] = set(plain_bfs(input_graph, p))
                 else:
-                    self._dangling[prom] = set([p])
+                    self._dangling[prom] = set((p,))
 
         return connections
 
