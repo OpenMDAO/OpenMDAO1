@@ -2,7 +2,8 @@
 
 import sys
 import os
-from fnmatch import fnmatch
+from fnmatch import fnmatch, translate
+import re
 from itertools import chain
 import warnings
 
@@ -31,7 +32,7 @@ class _SysData(object):
         self.absdir = None
 
         # map absolute name to local promoted name
-        self.to_prom_name = {} # Order not guaranteed in python 3.
+        self.to_prom_name = {}
 
         self.to_abs_uname = OrderedDict()  # promoted name to abs name
         self.to_prom_uname = OrderedDict() # abs name to promoted name
@@ -161,18 +162,14 @@ class System(object):
         TypeError
             if the promoted variable specifications are not in a valid format
         """
-        if isinstance(self._promotes, string_types):
-            raise TypeError("'%s' promotes must be specified as a list, "
-                            "tuple or other iterator of strings, but '%s' was specified" %
-                            (self.name, self._promotes))
 
         abs_unames = self._sysdata.to_abs_uname
         abs_pnames = self._sysdata.to_abs_pnames
 
-        for prom in self._promotes:
-            if fnmatch(name, prom):
-                if name in abs_pnames or name in abs_unames:
-                    return True
+        for prom in self._prom_regex:
+            m = prom.match(name)
+            if (m is not None and m.group()==name) and (name in abs_pnames or name in abs_unames):
+                return True
 
         return False
 
@@ -205,14 +202,15 @@ class System(object):
                             (self.name, self._promotes))
 
         to_prom_name = self._sysdata.to_prom_name
-        for prom in self._promotes:
+        for i,prom in enumerate(self._prom_regex):
             for name in chain(self._params_dict, self._unknowns_dict):
                 pname = to_prom_name[name]
-                if fnmatch(pname, prom):
+                m = prom.match(pname)
+                if (m is not None and m.group()==pname):
                     break
             else:
                 msg = "'%s' promotes '%s' but has no variables matching that specification"
-                raise RuntimeError(msg % (self.pathname, prom))
+                raise RuntimeError(msg % (self.pathname, self._promotes[i]))
 
     def cleanup(self):
         """ Clean up resources prior to exit. """
@@ -259,6 +257,15 @@ class System(object):
             Problem level data container.
         """
         self._reset()
+
+        # do this check once here, rather than every time we call _promoted
+        if isinstance(self._promotes, string_types):
+            raise TypeError("'%s' promotes must be specified as a list, "
+                            "tuple or other iterator of strings, but '%s' was specified" %
+                            (self.name, self._promotes))
+
+        # pre-compile regex translations of variable glob patterns
+        self._prom_regex = [re.compile(translate(p)) for p in self._promotes]
 
         if parent_path:
             self.pathname = '.'.join((parent_path, self.name))
@@ -1006,19 +1013,19 @@ class System(object):
         # parallel vecs.
         if my_params is None:
             metas = [m for m in itervalues(vdict)
-                          if not m.get('pass_by_obj')]
+                          if 'pass_by_obj' not in m or not m['pass_by_obj']]
         else: # for params, we only include 'owned' vars in the vector
             metas = [m for m in itervalues(vdict)
-                          if m['pathname'] in my_params and
-                             not m.get('pass_by_obj')]
+                       if m['pathname'] in my_params and
+                             ('pass_by_obj' not in m or not m['pass_by_obj'])]
 
-        full_size = sum([m['size'] for m in metas])  # 'None' vecs are this size
+        full_size = sum(m['size'] for m in metas)  # 'None' vecs are this size
         max_size = full_size
 
         offsets = { None: 0 }
 
-        # no parallel rhs vecs, so biggest one will just be the one containing all
-        # vars.
+        # no parallel rhs vecs, so biggest one will just be the one containing
+        # all vars.
         if not self._probdata.top_lin_gs:
             return max_size, offsets
 
@@ -1026,11 +1033,10 @@ class System(object):
         for vois in self._probdata.relevance.groups:
             vec_size = 0
             for voi in vois:
-                sz = sum(m['size'] for m in metas
-                                 if m['pathname'] in vdict and
-                                    m['top_promoted_name'] in relevant[voi])
                 offsets[voi] = vec_size
-                vec_size += sz
+                rel_voi = relevant[voi]
+                vec_size += sum(m['size'] for m in metas
+                                 if m['top_promoted_name'] in rel_voi)
 
             if vec_size > max_size:
                 max_size = vec_size

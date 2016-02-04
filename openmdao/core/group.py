@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 import os
+import re
 from collections import Counter, OrderedDict
 from six import iteritems, itervalues
 from six.moves import zip_longest
@@ -24,6 +25,8 @@ from openmdao.util.graph import collapse_nodes
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
+# regex to check for valid variable names.
+namecheck_rgx = re.compile('[_a-zA-Z][_a-zA-Z0-9]*')
 
 class Group(System):
     """A system that contains other systems.
@@ -126,6 +129,11 @@ class Group(System):
             msg = "Group '%s' already contains an attribute with name '%s'." % \
                   (self.name, name)
             raise RuntimeError(msg)
+
+        match = namecheck_rgx.match(name)
+        if match is None or match.group() != name:
+            raise NameError("%s: '%s' is not a valid system name." %
+                            (self.pathname, name))
 
         self._subsystems[name] = system
         setattr(self, name, system)
@@ -380,6 +388,7 @@ class Group(System):
         self._local_unknown_sizes = OrderedDict()
         self._local_param_sizes = OrderedDict()
         self._owning_ranks = None
+        self.connections = self._probdata.connections
         relevance = self._probdata.relevance
 
         if not self.is_active():
@@ -403,14 +412,14 @@ class Group(System):
                 self._get_shared_vec_info(self._unknowns_dict)
 
             # other vecs will be sub-sliced from this one
-            self._shared_du_vec = np.zeros(max_usize)
-            self._shared_dr_vec = np.zeros(max_usize)
-            self._shared_dp_vec = np.zeros(max_psize)
+            self._shared_du_vec = np.empty(max_usize)
+            self._shared_dr_vec = np.empty(max_usize)
+            self._shared_dp_vec = np.empty(max_psize)
 
             self._create_vecs(my_params, voi=None, impl=impl)
             top_unknowns = self.unknowns
         else:
-            self._shared_dp_vec = np.zeros(max_psize)
+            self._shared_dp_vec = np.empty(max_psize)
 
             # map promoted name in parent to corresponding promoted name in this view
             self._relname_map = self._get_relname_map(parent._sysdata.to_prom_name)
@@ -438,12 +447,6 @@ class Group(System):
                                            voi)
 
                     self._setup_data_transfer(my_params, voi)
-
-        # convert any src_indices to index arrays
-        for meta in itervalues(self._params_dict):
-            if 'src_indices' in meta:
-                meta['src_indices'] = self.params.to_idx_array(meta['src_indices'])
-
 
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
@@ -487,7 +490,8 @@ class Group(System):
         # create implementation specific VecWrappers
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.states = set(n for n, m in iteritems(self.unknowns) if m.get('state'))
+            self.states = set(n for n, m in iteritems(self.unknowns)
+                                if 'state' in m and m['state'])
             self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
 
@@ -937,7 +941,7 @@ class Group(System):
 
             plen = len(path)+1
 
-            renames = {} # Order not guaranteed in python 3.
+            renames = {}
             for node in graph.nodes_iter():
                 newnode = '.'.join(node.split('.')[:plen])
                 if newnode != node:
@@ -1212,7 +1216,7 @@ class Group(System):
 
         ivar = u_var_idxs[uname]
         if udist or pdist:
-            new_indices = np.zeros(arg_idxs.shape, dtype=arg_idxs.dtype)
+            new_indices = np.empty(arg_idxs.shape, dtype=arg_idxs.dtype)
 
             for irank in range(self.comm.size):
                 start = np.sum(u_sizes[:irank, ivar])

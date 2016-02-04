@@ -122,7 +122,7 @@ class ScipyOptimizer(Driver):
         nparam = 0
         for param in itervalues(pmeta):
             nparam += param['size']
-        x_init = np.zeros(nparam)
+        x_init = np.empty(nparam)
 
         # Initial Parameters
         i = 0
@@ -303,7 +303,7 @@ class ScipyOptimizer(Driver):
         # which is the opposite of OpenMDAO.
         upper = meta['upper']
         lower = meta['lower']
-        if lower is None or dbl_side is True:
+        if lower is None or dbl_side:
             if isinstance(upper, np.ndarray):
                 upper = upper[idx]
             return upper - cons[name][idx]
@@ -377,7 +377,7 @@ class ScipyOptimizer(Driver):
 
         # Note, scipy defines constraints to be satisfied when positive,
         # which is the opposite of OpenMDAO.
-        if meta['lower'] is None or dbl_side is True:
+        if meta['lower'] is None or dbl_side:
             return -grad[grad_idx, :]
         else:
             return grad[grad_idx, :]

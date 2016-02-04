@@ -838,7 +838,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         num_unique_points = N*M-(N-1)
 
-        root.add(name='ivc:y_i',
+        root.add(name='ivc',
                  system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
                  promotes=['y_i'])
 
@@ -952,7 +952,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         num_unique_points = N*M-(N-1)
 
-        root.add(name='ivc:y_i',
+        root.add(name='ivc',
                  system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
                  promotes=['y_i'])
 
@@ -1063,7 +1063,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         num_unique_points = N*M-(N-1)
 
-        root.add(name='ivc:y_i',
+        root.add(name='ivc',
                  system=IndepVarComp(name='y_i', val=np.zeros((num_unique_points, ))),
                  promotes=['y_i'])
 
@@ -1148,7 +1148,7 @@ class TestPyoptSparse(unittest.TestCase):
         b = np.linspace(-np.pi,np.pi,N+1) # segment boundaries
         num_unique_points = N*M-(N-1)
 
-        root.add(name='ivc:y_i',system=IndepVarComp(name='y_i',val=np.zeros((num_unique_points,))),promotes=['y_i'])
+        root.add(name='ivc',system=IndepVarComp(name='y_i',val=np.zeros((num_unique_points,))),promotes=['y_i'])
         root.add(name='sum_area',system=SumAreaComp(N))
 
         yi_index = 0

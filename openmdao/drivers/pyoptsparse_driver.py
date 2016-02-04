@@ -213,7 +213,7 @@ class pyOptSparseDriver(Driver):
             wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if meta['linear'] is True:
+            if meta['linear']:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
@@ -241,7 +241,7 @@ class pyOptSparseDriver(Driver):
             wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if meta['linear'] is True:
+            if meta['linear']:
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
@@ -271,7 +271,7 @@ class pyOptSparseDriver(Driver):
         self._problem = problem
 
         # Execute the optimization problem
-        if self.options['pyopt_diff'] is True:
+        if self.options['pyopt_diff']:
             # Use pyOpt's internal finite difference
             fd_step = problem.root.fd_options['step_size']
             sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
@@ -282,7 +282,7 @@ class pyOptSparseDriver(Driver):
         self._problem = None
 
         # Print results
-        if self.options['print_results'] is True:
+        if self.options['print_results']:
             print(sol)
 
         # Pull optimal parameters back into framework and re-run, so that

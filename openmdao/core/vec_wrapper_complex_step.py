@@ -111,7 +111,7 @@ class ComplexStepTgtVecWrapper(object):
             Name of variable to get the metadata for.
         """
 
-        if name == None:
+        if name is None:
             self.step_var = None
             self.step_val = None
             return
@@ -284,7 +284,7 @@ class ComplexStepSrcVecWrapper(object):
             Name of variable to get the metadata for.
         """
 
-        if name == None:
+        if name is None:
             self.step_var = None
             self.step_val = None
             return
