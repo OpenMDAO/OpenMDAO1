@@ -338,8 +338,10 @@ class Problem(object):
                                           v.shape==vals[tgt_idx].shape and
                                           (v==vals[tgt_idx]).all())]
                 else:
+                    vtype = type(vals[tgt_idx])
                     diff_vals = [(connected_inputs[i],v) for i,v in
-                                     enumerate(vals) if v!=vals[tgt_idx]]
+                                     enumerate(vals) if vtype!=type(v) or
+                                                          v!=vals[tgt_idx]]
 
                 # if tgt has no unknown source, units MUST match, unless
                 # one of them is None. At this point, connections contains
