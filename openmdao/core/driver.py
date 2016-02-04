@@ -285,12 +285,12 @@ class Driver(object):
                    low=None, high=None,
                    indices=None, adder=0.0, scaler=1.0):
         """
-        Adds a parameter to this driver.
+        Adds a design variable to this driver.
 
         Args
         ----
         name : string
-           Name of the IndepVarComp in the root system.
+           Name of the design variable in the root system.
 
         lower : float or ndarray, optional
             Lower boundary for the param
@@ -369,7 +369,7 @@ class Driver(object):
                         scaler=scaler)
 
     def get_desvars(self):
-        """ Returns a dict of possibly distributed parameters.
+        """ Returns a dict of possibly distributed design variables.
 
         Returns
         -------
@@ -429,7 +429,7 @@ class Driver(object):
             return flatval
 
     def get_desvar_metadata(self):
-        """ Returns a dict of parameter metadata.
+        """ Returns a dict of design variable metadata.
 
         Returns
         -------
@@ -440,15 +440,15 @@ class Driver(object):
         return self._desvars
 
     def set_desvar(self, name, value):
-        """ Sets a parameter.
+        """ Sets a design variable.
 
         Args
         ----
         name : string
-           Name of the IndepVarComp in the root system.
+           Name of the design variable in the root system.
 
         val : ndarray or float
-            value to set the parameter
+            value to assign to the design variable.
         """
         val = self.root.unknowns._dat[name].val
         if not isinstance(val, _ByObjWrapper) and \
@@ -462,7 +462,7 @@ class Driver(object):
            or scaler != 1.0 or adder != 0.0:
             value = value/scaler - adder
 
-        # Only set the indices we requested when we set the parameter.
+        # Only set the indices we requested when we set the design variable.
         idx = meta.get('indices')
         if idx is not None:
             self.root.unknowns[name][idx] = value
