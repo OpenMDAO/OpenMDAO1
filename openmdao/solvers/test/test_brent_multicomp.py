@@ -1,4 +1,5 @@
-""" Unit test for the Brent, one variable nonlinear solver. """
+""" Unit test for the Brent, one variable nonlinear solver. In this case, the
+system has multiple components."""
 
 import unittest
 
@@ -7,9 +8,9 @@ from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 
-class CompPart1(Component): 
+class CompPart1(Component):
 
-    def __init__(self): 
+    def __init__(self):
         super(CompPart1, self).__init__()
         self.fd_options['force_fd'] = True
 
@@ -19,17 +20,17 @@ class CompPart1(Component):
 
         self.add_state('x', val=2., lower=0, upper=100)
 
-    def solve_nonlinear(self, p, u, r): 
+    def solve_nonlinear(self, p, u, r):
         pass
 
-    def apply_nonlinear(self, p, u, r): 
+    def apply_nonlinear(self, p, u, r):
         r['x'] = p['a'] * u['x']**p['n'] + p['part2'] #+ p['b'] * u['x'] - p['c']
-        # print self.pathname, "ap_nl", p['part2'], p['a'], u['x'], p['n'], r['x']    
+        # print self.pathname, "ap_nl", p['part2'], p['a'], u['x'], p['n'], r['x']
 
 
-class CompPart2(Component): 
+class CompPart2(Component):
 
-    def __init__(self): 
+    def __init__(self):
         super(CompPart2, self).__init__()
         self.fd_options['force_fd'] = True
 
@@ -38,15 +39,15 @@ class CompPart2(Component):
         self.add_param('x', val=2.)
         self.add_output('part2', val=0.)
 
-    def solve_nonlinear(self, p, u, r): 
-        
+    def solve_nonlinear(self, p, u, r):
+
         u['part2'] = p['b'] * p['x'] - p['c']
         # print self.pathname, "sp_nl", p['x'], p['c'], p['b'], u['part2']
 
 
-class Combined(Group): 
+class Combined(Group):
 
-    def __init__(self): 
+    def __init__(self):
         super(Combined, self).__init__()
 
         self.add('p1', CompPart1(), promotes=['*'])
@@ -64,12 +65,12 @@ class Combined(Group):
         self.set_order(('p1','p2'))
 
 
-class BrentMultiCompTestCase(unittest.TestCase): 
-    """test to make sure brent can converge multiple components 
+class BrentMultiCompTestCase(unittest.TestCase):
+    """test to make sure brent can converge multiple components
     in a group with a single residual across them all
     """
 
-    def test_multi_comp(self): 
+    def test_multi_comp(self):
         p = Problem()
         p.root = Combined()
         p.setup(check=False)
@@ -78,6 +79,6 @@ class BrentMultiCompTestCase(unittest.TestCase):
         assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
         assert_rel_error(self, p.root.resids['x'], 0, .0001)
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
 
    unittest.main()

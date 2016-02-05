@@ -9,13 +9,17 @@ class ExecComp4Test(ExecComp):
     A version of ExecComp for benchmarking.
     """
     def __init__(self, exprs, nl_delay=0.01, lin_delay=0.01,
-                 trace=False, **kwargs):
+                 trace=False, req_procs=(1,1), **kwargs):
         super(ExecComp4Test, self).__init__(exprs, **kwargs)
         self.nl_delay = nl_delay
         self.lin_delay = lin_delay
         self.trace = trace
         self.num_nl_solves = 0
         self.num_apply_lins = 0
+        self.req_procs = req_procs
+
+    def get_req_procs(self):
+        return self.req_procs
 
     def solve_nonlinear(self, params, unknowns, resids):
         if self.trace:
