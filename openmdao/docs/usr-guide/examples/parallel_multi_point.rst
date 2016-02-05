@@ -16,7 +16,7 @@ Setting Up Serial Multi-Point Problems
 ----------------------------------------
 A multi-point problem is when you want to analyze a single design at a number
 of different conditions. For example, you might model aircraft performance at
-five different flight conditions or predict at solar power generation at ten
+five different flight conditions or predict solar power generation at ten
 different times of the year. One approach to capture this kind of problem
 structure is to define a `Group` that models your design, then stamp out as many
 copies as you need.  This approach can use a large amount of memory, depending
@@ -65,7 +65,7 @@ multi-point group.
             self.scalar = float(scalar)
 
         def solve_nonlinear(self, params, unknowns, resids):
-            unknowns['f2'] = params['f1'] + self.scalar
+            unknowns['f2'] = params['f1'] * self.scalar
 
     class Point(Group):
         """
@@ -109,7 +109,8 @@ multi-point group.
             super(ParallelMultiPoint, self).__init__()
 
             size = len(adders)
-            self.add('desvar', IndepVarComp('X', val=np.zeros(size)), promotes=['X'])
+            self.add('desvar', IndepVarComp('x', val=np.zeros(size)),
+                                            promotes=['x'])
 
             self.add('aggregate', Summer(size))
 
@@ -122,6 +123,7 @@ multi-point group.
             for i,(a,s) in enumerate(zip(adders, scalars)):
                 c_name = 'p%d'%i
                 pg.add(c_name, Point(a,s))
+                self.connect('x', 'multi_point.%s.x'%c_name, src_indices=[i])
                 self.connect('multi_point.%s.f2'%c_name,'aggregate.f2_%d'%i)
 
 
@@ -141,7 +143,7 @@ multi-point group.
 
     st = time.time()
 
-    prob['X'] = np.ones(size) * 0.7
+    prob['x'] = np.ones(size) * 0.7
     st = time.time()
     print("run started")
     prob.run()
@@ -159,27 +161,12 @@ If you run this script, you should see output that looks like this:
 
     run started
     run finished ...
-    19.0
+    17.5
 
 ::
 
     ##############################################
     Setup: Checking for potential issues...
-
-    The following parameters have no associated unknowns:
-    multi_point.p0.x
-    multi_point.p1.x
-    multi_point.p2.x
-    multi_point.p3.x
-    multi_point.p4.x
-    multi_point.p5.x
-    multi_point.p6.x
-    multi_point.p7.x
-    multi_point.p8.x
-    multi_point.p9.x
-
-    The following components have no connections:
-    desvar
 
     No recorders have been specified, so no data will be saved.
 
@@ -190,7 +177,7 @@ If you run this script, you should see output that looks like this:
 
     run started
     run finished 1.03730106354
-    19.0
+    17.5
 
 
 Running Multi-Point in Parallel
@@ -222,7 +209,8 @@ lots of extra output to the screen.
         from openmdao.core.mpi_wrap import MPI
 
         if MPI: # pragma: no cover
-            # if you called this script with 'mpirun', then use the petsc data passing
+            # if you called this script with 'mpirun', then use the
+            # petsc data passing
             from openmdao.core.petsc_impl import PetscImpl as impl
         else:
             # if you didn't use `mpirun`, then use the numpy data passing
@@ -247,7 +235,7 @@ lots of extra output to the screen.
 
         st = time.time()
 
-        prob['X'] = np.ones(size) * 0.7
+        prob['x'] = np.ones(size) * 0.7
         st = time.time()
         mpi_print(prob, "run started")
         prob.run()
@@ -271,4 +259,4 @@ We have to allocate 10 processes, because we have 10 points in `ParallelGroup`.
 
     run started
     run finished 0.14165687561
-    19.0
+    17.5
