@@ -71,6 +71,8 @@ class ExternalCode(Component):
             desc='(optional) list of input file names to check the pressence of after solve_nonlinear')
         self.options.add_option('on_timeout', 'raise', values=['raise', 'continue'],
             desc='Timeout behvaior, either raise an exception or terminate and continue running OpenMDAO')
+        self.options.add_option('on_error', 'raise', values=['raise', 'continue'],
+                                desc='Behvaior on error returned from code, either raise an exception or terminate and continue running OpenMDAO')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
@@ -129,7 +131,7 @@ class ExternalCode(Component):
                 self.timed_out = True
                 raise RuntimeError('Timed out')
 
-            elif return_code:
+            elif return_code and self.options['on_error'] == 'raise':
                 if isinstance(self.stderr, str):
                     if os.path.exists(self.stderr):
                         stderrfile = open(self.stderr, 'r')
