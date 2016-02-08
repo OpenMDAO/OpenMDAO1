@@ -1,6 +1,6 @@
 .. _MPI on Windows:
 
-===============
+
 MPI on Windows
 ===============
 
@@ -220,13 +220,3 @@ PETSc would not be able to split our four element vector up nicely across those 
     Rank  2  has this portion of the MPI vector:  [ 40.]
     Rank  0  has this portion of the MPI vector:  [ 10.  20.]
     Sum of all elements of vector x is 100.0 and was computed using 3 MPI processes.
-
-
-MPI in OpenMDAO
------------------
-
-There are currently two ways to use MPI in OpenMDAO.  The first way is demonstrated in the `Distributed Adder Example`_ which involves using OpenMDAO to build your own distributed components.  The second way is demonstrated in the `Parallel Multi Point Example`_ which involves using OpenMDAO to build a multi-point problem to analyze a single design at a number of different conditions.
-
-.. _Distributed Adder Example: ../usr-guide/examples/distrib_adder.html
-
-.. _Parallel Multi Point Example: ../usr-guide/examples/parallel_multi_point.html

@@ -76,14 +76,18 @@ Indices and tables
 
     # look for directories in the openmdao level, one up from docs
     # those directories will be the openmdao packages
-    # auto-generate the top-level index.rst file for srcdocs, based on openmdao packages:
+    # auto-generate the top-level index.rst file for srcdocs, based on
+    # openmdao packages:
     IGNORE_LIST = ['docs', 'test', 'config', 'devtools', '__pycache__']
-    packages = []
-    listings = os.listdir(os.path.join(dir, ".."))
-    # Everything in listings that isn't discarded is appended as a source package.
-    for listing in listings:
+    # to improve the order that the user sees in the source docs, put
+    # the important packages in this list explicitly. Any new ones that
+    # get added will show up at the end.
+    packages = ['core', 'components', 'drivers', 'solvers', 'recorders',
+                'surrogate_models', 'util', 'units']
+    # Everything in dir that isn't discarded is appended as a source package.
+    for listing in os.listdir(os.path.join(dir, "..")):
         if os.path.isdir(os.path.join("..", listing)):
-            if listing not in IGNORE_LIST:
+            if listing not in IGNORE_LIST and listing not in packages:
                 packages.append(listing)
 
     # begin writing the 'srcdocs/index.rst' file at top level.
@@ -96,16 +100,15 @@ Indices and tables
         # a package is e.g. openmdao.core, that contains source files
         # a sub_package, is a src file, e.g. openmdao.core.component
         sub_packages = []
-        package_filename = os.path.join(dir, "srcdocs", "packages", "openmdao." + package + ".rst")
+        package_filename = os.path.join(dir, "srcdocs", "packages",
+                                        "openmdao." + package + ".rst")
         package_name = "openmdao." + package
-        sub_listings = os.listdir(os.path.join("..", package))
 
         # the sub_listing is going into each package dir and listing what's in it
-        for sub_listing in sub_listings:
+        for sub_listing in sorted(os.listdir(os.path.join("..", package))):
             # don't want to catalog files twice, nor use init files nor test dir
-            if not sub_listing.endswith('.pyc') and not sub_listing.startswith('__init__.') \
-                    and not sub_listing.endswith('.ini') and sub_listing != "test" \
-                    and not "__pycache__" in sub_listing:
+            if (os.path.isdir(sub_listing) and sub_listing != "test") or \
+               (sub_listing.endswith(".py") and not sub_listing.startswith('_')):
                 # just want the name of e.g. dataxfer not dataxfer.py
                 sub_packages.append(sub_listing.rsplit('.')[0])
 

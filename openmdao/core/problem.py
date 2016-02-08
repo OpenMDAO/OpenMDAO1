@@ -19,7 +19,7 @@ from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.checks import check_connections
+from openmdao.core._checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
@@ -46,6 +46,7 @@ class _ProbData(object):
     """
     def __init__(self):
         self.top_lin_gs = False
+        self.in_complex_step = False
 
 
 class Problem(object):
@@ -719,9 +720,14 @@ class Problem(object):
         self.root.cleanup()
 
     def _check_solvers(self):
-        """
-        Raise an exception if we detect a LinearGaussSeidel solver and that
-        group has either cycles or uniterated states.
+        """ Search over all solvers and raise errors for unsupported
+        configurations. These include:
+
+        Raise an exception if we detect a LinearGaussSeidel
+        solver and that group has either cycles or uniterated states.
+
+        Raise an exception if a Newton solver is found under any system that
+        is set to complex step.
         """
 
         # all states that have some maxiter>1 linear solver above them in the tree
@@ -729,6 +735,24 @@ class Problem(object):
         group_states = []
 
         for group in self.root.subgroups(recurse=True, include_self=True):
+
+            # Look for nl solvers that require derivs under Complex Step.
+            opt = group.fd_options
+            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+
+                # TODO: Support using complex step on a subsystem
+                if group.name != '':
+                    msg = "Complex step is currently not supported for groups"
+                    msg += " other than root."
+                    raise RuntimeError(msg)
+
+                # Complex Step, so check for deriv requirement in subsolvers
+                for sub in self.root.subgroups(recurse=True, include_self=True):
+                    if hasattr(sub.nl_solver, 'ln_solver'):
+                        msg = "The solver in '{}' requires derivatives. We "
+                        msg += "currently do not support complex step around it."
+                        raise RuntimeError(msg.format(sub.name))
+
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
@@ -1880,7 +1904,7 @@ class Problem(object):
         root = self.root
         abs_indep_list = root._get_fd_params()
         param_srcs = [root.connections[p] for p in abs_indep_list \
-                      if not root.params.metadata(p).get('pass_by_obj')]
+                      if not root._params_dict[p].get('pass_by_obj')]
         unknown_list = root._get_fd_unknowns()
         unknown_list = [item for item in unknown_list \
                         if not root.unknowns.metadata(item).get('pass_by_obj')]

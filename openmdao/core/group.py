@@ -489,28 +489,45 @@ class Group(System):
 
         # create implementation specific VecWrappers
         if voi is None:
-            self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
+            self.unknowns = impl.create_src_vecwrapper(self._sysdata,
+                                                       self._probdata, comm)
             self.states = set(n for n, m in iteritems(self.unknowns)
                                 if 'state' in m and m['state'])
-            self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
+            self.resids = impl.create_src_vecwrapper(self._sysdata,
+                                                     self._probdata, comm)
+            self.params = impl.create_tgt_vecwrapper(self._sysdata,
+                                                     self._probdata, comm)
+
+            # VecWrappers must be allocated space for imaginary part if we use
+            # complex step at the top.
+            opt = self.fd_options
+            if opt['force_fd'] is True and opt['form']=='complex_step':
+                alloc_complex = True
+            else:
+                alloc_complex = False
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
                                 relevance=self._probdata.relevance,
-                                var_of_interest=None, store_byobjs=True)
+                                var_of_interest=None, store_byobjs=True,
+                                alloc_complex=alloc_complex)
             self.resids.setup(unknowns_dict,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None)
+                              var_of_interest=None, alloc_complex=alloc_complex)
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None, store_byobjs=True)
+                              var_of_interest=None, store_byobjs=True,
+                              alloc_complex=alloc_complex)
 
+        # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
-            dunknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            dresids = impl.create_src_vecwrapper(self._sysdata, comm)
-            dparams = impl.create_tgt_vecwrapper(self._sysdata, comm)
+            dunknowns = impl.create_src_vecwrapper(self._sysdata,
+                                                   self._probdata, comm)
+            dresids = impl.create_src_vecwrapper(self._sysdata,
+                                                 self._probdata, comm)
+            dparams = impl.create_tgt_vecwrapper(self._sysdata,
+                                                 self._probdata, comm)
 
             dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
@@ -1238,17 +1255,17 @@ class Group(System):
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
 
             src_idxs = new_indices
-            var_rank = iproc
+            p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
 
         else:
-            var_rank = self._owning_ranks[uname] if fwd else iproc
-            offset = np.sum(u_sizes[:var_rank]) + np.sum(u_sizes[var_rank, :ivar])
+            u_rank = self._owning_ranks[uname] if fwd else iproc
+            p_rank = self._owning_ranks[pname] if rev else iproc
+
+            offset = np.sum(u_sizes[:u_rank]) + np.sum(u_sizes[u_rank, :ivar])
             src_idxs = arg_idxs + offset
 
-            var_rank = self._owning_ranks[pname] if rev else iproc
-
-        tgt_start = (np.sum(p_sizes[:var_rank]) +
-                     np.sum(p_sizes[var_rank, :p_var_idxs[pname]]))
+        tgt_start = (np.sum(p_sizes[:p_rank]) +
+                     np.sum(p_sizes[p_rank, :p_var_idxs[pname]]))
         tgt_idxs = tgt_start + self.params.make_idx_array(0, len(arg_idxs))
 
         return src_idxs, tgt_idxs
