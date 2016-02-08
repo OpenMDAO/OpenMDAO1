@@ -8,6 +8,7 @@ import numpy as np
 from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES, \
                           ParallelGroup
 from openmdao.test.converge_diverge import ConvergeDivergeGroups
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error
@@ -349,6 +350,22 @@ class TestProblemCheckTotals(unittest.TestCase):
             assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
+
+    def test_limit_to_desvar_obj_con(self):
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        prob.driver.add_desvar('x')
+        prob.driver.add_objective('f_xy')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+        self.assertTrue(('f_xy', 'x') in data)
+        self.assertTrue(('f_xy', 'y') not in data)
 
 if __name__ == "__main__":
     unittest.main()
