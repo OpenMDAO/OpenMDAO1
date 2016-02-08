@@ -57,7 +57,7 @@ class ShellProc(subprocess.Popen):
             self._inp = open(stdin, 'r')
         else:
             self._inp = stdin
-    
+
         if isinstance(stdout, str):
             self._out = open(stdout, 'w')
         else:
@@ -74,7 +74,8 @@ class ShellProc(subprocess.Popen):
             subprocess.Popen.__init__(self, args, stdin=self._inp,
                                       stdout=self._out, stderr=self._err,
                                       shell=shell, env=environ,
-                                      universal_newlines=universal_newlines)
+                                      universal_newlines=universal_newlines,
+                                      preexec_fn=os.setsid)
         except Exception:
             self.close_files()
             raise
@@ -98,7 +99,8 @@ class ShellProc(subprocess.Popen):
             A value of zero implies an infinite maximum wait.
 
         """
-        super(ShellProc, self).terminate()
+        #super(ShellProc, self).terminate()
+        os.killpg(os.getpgid(self.pid), signal.SIGTERM)
         if timeout is not None:
             return self.wait(timeout=timeout)
 
