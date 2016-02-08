@@ -266,7 +266,7 @@ class Group(System):
 
         self._data_xfer = OrderedDict()
 
-        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
+        to_prom_name = self._sysdata.to_prom_name = {}
         to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
@@ -306,7 +306,7 @@ class Group(System):
         calculates and caches the list of outputs to be updated for each voi.
         """
         if self._gs_outputs is None:
-            self._gs_outputs = {} # Order not guaranteed in python 3.
+            self._gs_outputs = {}
 
         if mode not in self._gs_outputs:
             dumat = self.dumat
@@ -460,7 +460,7 @@ class Group(System):
 
         self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
 
-        ls_inputs = {} # Order not guaranteed in python 3.
+        ls_inputs = {}
         for voi in self.dumat:
             ls_inputs[voi] = self._all_params(voi)
 
@@ -1170,7 +1170,7 @@ class Group(System):
 
         return (min_procs, max_procs)
 
-    def _get_global_idxs(self, uname, pname, top_uname, top_pname, u_var_idxs,
+    def _get_global_idxs(self, uname, pname, u_var_idxs,
                          u_sizes, p_var_idxs, p_sizes, mode):
         """
         Return the global indices into the distributed unknowns and params vectors
@@ -1279,8 +1279,8 @@ class Group(System):
         Args
         ----
 
-        my_params : list
-            List of pathnames for parameters that the `Group` is
+        my_params : set
+            Set of pathnames for parameters that the `Group` is
             responsible for propagating.
 
         var_of_interest : str or None
@@ -1294,14 +1294,14 @@ class Group(System):
 
         # create ordered dicts that map relevant vars to their index into
         # the sizes table.
-        vec_unames = OrderedDict()
+        vec_unames = {}
         i = 0
         for n, sz in self._u_size_lists[0]:
             if uacc[n].meta['top_promoted_name'] in relevant:
                 vec_unames[n] = i
                 i += 1
 
-        vec_pnames = OrderedDict()
+        vec_pnames = {}
         i = 0
         for n, sz in self._p_size_lists[0]:
             if pacc[n].meta['top_promoted_name'] in relevant:
@@ -1329,12 +1329,15 @@ class Group(System):
         modename = ['fwd', 'rev']
         xfer_dict = OrderedDict()
 
-        for param in my_params:
-            unknown, idxs = self.connections[param]
-            top_urelname = self._unknowns_dict[unknown]['top_promoted_name']
-            top_prelname = self._params_dict[param]['top_promoted_name']
+        for param in self.connections:
+            if param not in my_params:
+                continue
 
-            if top_urelname not in relevant or top_prelname not in relevant:
+            unknown, idxs = self.connections[param]
+            if self._unknowns_dict[unknown]['top_promoted_name'] not in relevant:
+                continue
+
+            if self._params_dict[param]['top_promoted_name'] not in relevant:
                 continue
 
             urelname = to_prom_name[unknown]
@@ -1357,7 +1360,6 @@ class Group(System):
                         byobj_conns.append((prelname, urelname))
                 else:  # pass by vector
                     sidxs, didxs = self._get_global_idxs(urelname, prelname,
-                                                         top_urelname, top_prelname,
                                                          vec_unames, unknown_sizes,
                                                          vec_pnames, param_sizes,
                                                          modename[mode])

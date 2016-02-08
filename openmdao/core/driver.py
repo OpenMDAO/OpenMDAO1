@@ -58,8 +58,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = {} # Order not guaranteed in python 3.
-        self.fn_conversions = {} # Order not guaranteed in python 3.
+        self.dv_conversions = {}
+        self.fn_conversions = {}
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and

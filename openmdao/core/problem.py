@@ -1274,9 +1274,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1445,9 +1445,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -2121,7 +2121,7 @@ class Problem(object):
         """
 
         connections = OrderedDict()
-        dangling = {} # Order not guaranteed in python 3.
+        dangling = {}
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2149,10 +2149,10 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {} # Order not guaranteed in python 3.
+    param_owners = {}
 
     for par, (unk, idxs) in iteritems(connections):
-        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), set()).add(par)
 
     return param_owners
 

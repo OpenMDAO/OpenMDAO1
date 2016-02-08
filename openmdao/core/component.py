@@ -428,7 +428,7 @@ class Component(System):
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
         self.connections = self._probdata.connections
-        
+
         relevance = self._probdata.relevance
 
         if not self.is_active():
@@ -784,7 +784,7 @@ class Component(System):
             stepvec.set_complex_var(p_name)
 
             # promoted names and _init_params_dict keys are same
-            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed in python 3.
+            mydict = self._init_params_dict.get(p_name, {})
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)
