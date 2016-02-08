@@ -212,7 +212,7 @@ We will show you the differences in how they are declared.
   Vartrees don't have full functionality in 1.0 yet. The most notable missing
   feature is a convenience method to connect whole vartrees between two components.
   Currently, you have to connect it one variable at a time, or write your own
-  convinence method. We'll be working to get better support for vartrees in the
+  convenience method. We'll be working to get better support for vartrees in the
   near future.
 
 For Old OpenMDAO:

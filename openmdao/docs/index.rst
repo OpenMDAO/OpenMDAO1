@@ -14,8 +14,7 @@ Documentation for OpenMDAO version: |release|
    :maxdepth: 1
 
    getting-started/install.rst
-   getting-started/mpi_linux.rst
-   getting-started/mpi_windows.rst
+   getting-started/mpi.rst
 
 =============
 `User Guide`_
