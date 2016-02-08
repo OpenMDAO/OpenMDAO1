@@ -449,7 +449,8 @@ class System(object):
                 if param_src not in self.unknowns:
                     param_src = to_prom_name[param_src]
 
-                target_input = unknowns._dat[param_src].val
+                inputs = unknowns
+                param_key = param_src
             else:
                 # Cases where the IndepVarComp is somewhere above us.
                 if p_name in states:
@@ -457,8 +458,10 @@ class System(object):
                 else:
                     inputs = params
 
-                target_input = inputs._dat[p_name].val
+                param_key = p_name
                 param_src = None
+
+            target_input = inputs._dat[param_key].val
 
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
@@ -559,6 +562,19 @@ class System(object):
                         resultvec.vec[:] *= (-0.5/step)
 
                         target_input[idx] += step
+
+                    elif fdform == 'complex_step':
+
+                        probdata = unknowns._probdata
+                        probdata.in_complex_step = True
+
+                        inputs._dat[param_key].imag_val[idx] += fdstep
+                        run_model(params, unknowns, resids)
+                        inputs._dat[param_key].imag_val[idx] -= fdstep
+
+                        # delta resid is delta unknown
+                        resultvec.vec[:] = resultvec.imag_vec/fdstep
+                        probdata.in_complex_step = False
 
                     for u_name in fd_unknowns:
                         if qoi_indices and u_name in qoi_indices:
@@ -836,14 +852,17 @@ class System(object):
             self.unknowns = parent.unknowns.get_view(self, comm, umap)
             self.states = set(n for n,m in iteritems(self.unknowns) if m.get('state'))
             self.resids = parent.resids.get_view(self, comm, umap)
-            self.params = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
+            self.params = parent._impl.create_tgt_vecwrapper(self._sysdata,
+                                                             self._probdata, comm)
             self.params.setup(parent.params, params_dict, top_unknowns,
                               my_params, self.connections, relevance=relevance,
-                              store_byobjs=True)
+                              store_byobjs=True,
+                              alloc_complex=parent.unknowns.alloc_complex)
 
         self.dumat[voi] = parent.dumat[voi].get_view(self, comm, umap)
         self.drmat[voi] = parent.drmat[voi].get_view(self, comm, umap)
-        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self._sysdata, comm)
+        self.dpmat[voi] = parent._impl.create_tgt_vecwrapper(self._sysdata,
+                                                             self._probdata, comm)
 
         self.dpmat[voi].setup(parent.dpmat[voi], params_dict, top_unknowns,
                   my_params, self.connections,

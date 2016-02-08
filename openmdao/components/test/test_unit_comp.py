@@ -97,3 +97,29 @@ class TestUnitComp(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                return_format='dict')
         assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
+
+    def test_array_values_same_shape_units(self):
+
+        # Added to improve coverage of an accessor
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, )), units='degC'), promotes=['x'])
+        prob.root.add('uc', UnitComp(shape=(2, ), param_name='x', out_name='x_out', units='degF'),
+                      promotes=['x', 'x_out'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)

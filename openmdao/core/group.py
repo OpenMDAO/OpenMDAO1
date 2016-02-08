@@ -486,27 +486,44 @@ class Group(System):
 
         # create implementation specific VecWrappers
         if voi is None:
-            self.unknowns = impl.create_src_vecwrapper(self._sysdata, comm)
+            self.unknowns = impl.create_src_vecwrapper(self._sysdata,
+                                                       self._probdata, comm)
             self.states = set(n for n, m in iteritems(self.unknowns) if m.get('state'))
-            self.resids = impl.create_src_vecwrapper(self._sysdata, comm)
-            self.params = impl.create_tgt_vecwrapper(self._sysdata, comm)
+            self.resids = impl.create_src_vecwrapper(self._sysdata,
+                                                     self._probdata, comm)
+            self.params = impl.create_tgt_vecwrapper(self._sysdata,
+                                                     self._probdata, comm)
+
+            # VecWrappers must be allocated space for imaginary part if we use
+            # complex step at the top.
+            opt = self.fd_options
+            if opt['force_fd'] is True and opt['form']=='complex_step':
+                alloc_complex = True
+            else:
+                alloc_complex = False
 
             # populate the VecWrappers with data
             self.unknowns.setup(unknowns_dict,
                                 relevance=self._probdata.relevance,
-                                var_of_interest=None, store_byobjs=True)
+                                var_of_interest=None, store_byobjs=True,
+                                alloc_complex=alloc_complex)
             self.resids.setup(unknowns_dict,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None)
+                              var_of_interest=None, alloc_complex=alloc_complex)
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None, store_byobjs=True)
+                              var_of_interest=None, store_byobjs=True,
+                              alloc_complex=alloc_complex)
 
+        # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
-            dunknowns = impl.create_src_vecwrapper(self._sysdata, comm)
-            dresids = impl.create_src_vecwrapper(self._sysdata, comm)
-            dparams = impl.create_tgt_vecwrapper(self._sysdata, comm)
+            dunknowns = impl.create_src_vecwrapper(self._sysdata,
+                                                   self._probdata, comm)
+            dresids = impl.create_src_vecwrapper(self._sysdata,
+                                                 self._probdata, comm)
+            dparams = impl.create_tgt_vecwrapper(self._sysdata,
+                                                 self._probdata, comm)
 
             dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
