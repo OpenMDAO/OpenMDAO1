@@ -1887,10 +1887,9 @@ class Problem(object):
         # been defined..
         if len(driver._desvars) > 0:
             param_srcs = list(driver._desvars.keys())
-            to_abs_name = root._sysdata.to_abs_pnames
-            indep_list = param_srcs
-            #indep_list = [p for p in param_srcs if not \
-            #              root._params_dict[to_abs_name[p][0]].get('pass_by_obj')]
+            to_abs_name = root._sysdata.to_abs_uname
+            indep_list = [p for p in param_srcs if not \
+                          root._unknowns_dict[to_abs_name[p]].get('pass_by_obj')]
 
         # Otherwise, use all available params.
         else:
