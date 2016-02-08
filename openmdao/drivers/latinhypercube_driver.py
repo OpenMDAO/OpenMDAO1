@@ -32,10 +32,15 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
     num_par_doe : int, optional
         The number of DOE cases to run concurrently.  Defaults to 1.
 
+    load_balance : bool, Optional
+        If True, use rank 0 as master and load balance cases among all of the
+        other ranks. Defaults to False.
+
     """
 
-    def __init__(self, num_samples=1, seed=None, num_par_doe=1):
-        super(LatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe)
+    def __init__(self, num_samples=1, seed=None, num_par_doe=1, load_balance=False):
+        super(LatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe,
+                                                   load_balance=load_balance)
         self.num_samples = num_samples
         self.seed = seed
 
