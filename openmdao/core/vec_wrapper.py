@@ -69,7 +69,7 @@ class Accessor(object):
         self.pbo = meta.get('pass_by_obj')
         self.remote = meta.get('remote')
 
-        if alloc_complex is True:
+        if alloc_complex:
             self.probdata = probdata
 
         if self.pbo and not isinstance(val, _ByObjWrapper):
@@ -122,42 +122,40 @@ class Accessor(object):
 
         # No unit conversion.
         # dparams vector does no unit conversion.
-        if scale is None or vecwrapper.deriv_units is True:
-            if alloc_complex is True:
+        if scale is None or vecwrapper.deriv_units:
+            if alloc_complex:
                 flatfunc = self._get_arr_complex
+                if is_scalar:
+                    func = self._get_scalar_complex
+                elif shapes_same:
+                    func = flatfunc
+                else:
+                    func = self._get_arr_diff_shape_complex
             else:
                 flatfunc = self._get_arr
-
-            if is_scalar:
-                if alloc_complex is True:
-                    func = self._get_scalar_complex
-                else:
+                if is_scalar:
                     func = self._get_scalar
-            elif shapes_same:
-                func = flatfunc
-            else:
-                if alloc_complex is True:
-                    func = self._get_arr_diff_shape_complex
+                elif shapes_same:
+                    func = flatfunc
                 else:
                     func = self._get_arr_diff_shape
 
         # We have a unit conversion
         else:
-            if alloc_complex is True:
+            if alloc_complex:
                 flatfunc = self._get_arr_units_complex
+                if is_scalar:
+                    func = self._get_scalar_units_complex
+                elif shapes_same:
+                    func = flatfunc
+                else:
+                    func = self._get_arr_units_diff_shape_complex
             else:
                 flatfunc = self._get_arr_units
-
-            if is_scalar:
-                if alloc_complex is True:
-                    func = self._get_scalar_units_complex
-                else:
+                if is_scalar:
                     func = self._get_scalar_units
-            elif shapes_same:
-                func = flatfunc
-            else:
-                if alloc_complex is True:
-                    func = self._get_arr_units_diff_shape_complex
+                elif shapes_same:
+                    func = flatfunc
                 else:
                     func = self._get_arr_units_diff_shape
 
@@ -172,12 +170,12 @@ class Accessor(object):
             return self._set_pbo
         else:
             if meta['shape'] == 1:
-                if alloc_complex is True:
+                if alloc_complex:
                     return self._set_scalar_complex
                 else:
                     return self._set_scalar
             else:
-                if alloc_complex is True:
+                if alloc_complex:
                     return self._set_arr_complex
                 else:
                     return self._set_arr
@@ -200,7 +198,7 @@ class Accessor(object):
 
     def _get_arr_complex(self):
         """Array with same shape, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             return self.val + self.imag_val*1j
         else:
             return self.val
@@ -211,7 +209,7 @@ class Accessor(object):
 
     def _get_arr_diff_shape_complex(self):
         """Array with different shape, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -223,7 +221,7 @@ class Accessor(object):
 
     def _get_scalar_complex(self):
         """Fast scalar, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             return self.val[0] + self.imag_val[0]*1j
         else:
             return self.val[0]
@@ -237,7 +235,7 @@ class Accessor(object):
 
     def _get_arr_units_complex(self):
         """Array with same shape and unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -255,7 +253,7 @@ class Accessor(object):
 
     def _get_arr_units_diff_shape_complex(self):
         """Array with diff shape and unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -271,7 +269,7 @@ class Accessor(object):
 
     def _get_scalar_units_complex(self):
         """Scalar with unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val[0] + self.imag_val[0]*1j
         else:
             val = self.val   [0]
@@ -284,7 +282,7 @@ class Accessor(object):
 
     def _set_arr_complex(self, value):
         """Set an array value, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             self.val[:] = real(value.flat)
             self.imag_val[:] = imag(value.flat)
         else:
@@ -296,7 +294,7 @@ class Accessor(object):
 
     def _set_scalar_complex(self, value):
         """Set a scalar value, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             self.val[0] = value.real
             self.imag_val[0] = imag(value)
         else:
@@ -601,7 +599,7 @@ class VecWrapper(object):
                     end = pend
                     meta = acc.meta
 
-                    if alloc_complex is True:
+                    if alloc_complex:
                         imag_val = acc.imag_val
                     else:
                         imag_val = None
@@ -614,12 +612,12 @@ class VecWrapper(object):
 
         if start == -1: # no items found
             view.vec = self.vec[0:0]
-            if alloc_complex is True:
+            if alloc_complex:
                 view.imag_vec = self.imag_vec[0:0]
 
         else:
             view.vec = self.vec[start:end]
-            if alloc_complex is True:
+            if alloc_complex:
                 view.imag_vec = self.imag_vec[start:end]
 
         return view
@@ -797,7 +795,7 @@ class SrcVecWrapper(VecWrapper):
         else:
             self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
-            if alloc_complex is True:
+            if alloc_complex:
                 self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
@@ -805,12 +803,12 @@ class SrcVecWrapper(VecWrapper):
             if not acc.pbo:
                 if acc.remote:
                     acc.val = numpy.empty(0, dtype=float)
-                    if alloc_complex is True:
+                    if alloc_complex:
                         acc.imag_val = numpy.empty(0, dtype=float)
                 else:
                     start, end = acc.slice
                     acc.val = self.vec[start:end]
-                    if alloc_complex is True:
+                    if alloc_complex:
                         acc.imag_val = self.imag_vec[start:end]
                     meta = acc.meta
                     if store_byobjs:
@@ -960,7 +958,7 @@ class TgtVecWrapper(VecWrapper):
                                                                 meta,
                                                                 self._probdata,
                                                                 alloc_complex)
-                                                                
+
                 elif parent_params_vec is not None and pathname in connections:
                     src, _ = connections[pathname]
                     common = get_common_ancestor(src, pathname)
@@ -973,7 +971,7 @@ class TgtVecWrapper(VecWrapper):
         else:
             self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
-            if alloc_complex is True:
+            if alloc_complex:
                 self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
@@ -981,7 +979,7 @@ class TgtVecWrapper(VecWrapper):
             if not (acc.pbo or acc.remote):
                 start, end = acc.slice
                 acc.val = self.vec[start:end]
-                if alloc_complex is True:
+                if alloc_complex:
                     acc.imag_val = self.imag_vec[start:end]
 
         # fill entries for missing params with views from the parent
