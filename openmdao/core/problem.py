@@ -1938,17 +1938,38 @@ class Problem(object):
             unknown_list = [item for item in unknown_list \
                             if not root.unknowns.metadata(item).get('pass_by_obj')]
 
+        # If we are using relevance reducton, then we are hard-wired for only
+        # one mode
+        if root.ln_solver.options.get('single_voi_relevance_reduction'):
+            mode = self._mode('auto', indep_list, unknown_list)
+            if mode == 'fwd':
+                fwd, rev = True, False
+                Jrev = None
+                if out_stream is not None:
+                    out_stream.write('Relevance Checking is enabled\n')
+                    out_stream.write('Only calculating fwd derviatives.\n\n')
+            else:
+                fwd, rev = False, True
+                Jfor = None
+                if out_stream is not None:
+                    out_stream.write('Relevance Checking is enabled\n')
+                    out_stream.write('Only calculating rev derviatives.\n\n')
+        else:
+            fwd = rev = True
 
         # Calculate all our Total Derivatives
-        Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
-                                  return_format='dict')
-        Jrev = self.calc_gradient(indep_list, unknown_list, mode='rev',
-                                  return_format='dict')
+        if fwd:
+            Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
+                                      return_format='dict')
+            Jfor = _jac_to_flat_dict(Jfor)
+
+        if rev:
+            Jrev = self.calc_gradient(indep_list, unknown_list, mode='rev',
+                                      return_format='dict')
+            Jrev = _jac_to_flat_dict(Jrev)
+
         Jfd = self.calc_gradient(indep_list, unknown_list, mode='fd',
                                  return_format='dict')
-
-        Jfor = _jac_to_flat_dict(Jfor)
-        Jrev = _jac_to_flat_dict(Jrev)
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
@@ -2222,32 +2243,58 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             ldata = cdata[key] = {}
 
             Jsub_fd = jac_fd[key]
-
-            Jsub_for = jac_fwd[key]
-            Jsub_rev = jac_rev[key]
-
             ldata['J_fd'] = Jsub_fd
-            ldata['J_fwd'] = Jsub_for
-            ldata['J_rev'] = Jsub_rev
-
-            magfor = np.linalg.norm(Jsub_for)
-            magrev = np.linalg.norm(Jsub_rev)
             magfd = np.linalg.norm(Jsub_fd)
+
+            if jac_fwd:
+                Jsub_for = jac_fwd[key]
+                ldata['J_fwd'] = Jsub_for
+                magfor = np.linalg.norm(Jsub_for)
+            else:
+                magfor = None
+
+            if jac_rev:
+                Jsub_rev = jac_rev[key]
+                ldata['J_rev'] = Jsub_rev
+                magrev = np.linalg.norm(Jsub_rev)
+            else:
+                magrev = None
 
             ldata['magnitude'] = (magfor, magrev, magfd)
 
-            abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
-            abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
-            abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+            if jac_fwd:
+                abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+            else:
+                abs1 = None
+            if jac_rev:
+                abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+            else:
+                abs2 = None
+
+            if jac_fwd and jac_rev:
+                abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+            else:
+                abs3 = None
 
             ldata['abs error'] = (abs1, abs2, abs3)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = float('nan')
             else:
-                rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
-                rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
-                rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+                if jac_fwd:
+                    rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                else:
+                    rel1 = None
+
+                if jac_rev:
+                    rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                else:
+                    rel2 = None
+
+                if jac_fwd and jac_rev:
+                    rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+                else:
+                    rel3 = None
 
             ldata['rel error'] = (rel1, rel2, rel3)
 
@@ -2262,24 +2309,35 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             # Optional file_like output
             out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
-            out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-            out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+            if jac_fwd:
+                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+            if jac_rev:
+                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+            if jac_fwd and jac_rev:
+                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
 
-            out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-            out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-            out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+            if jac_fwd:
+                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+            if jac_rev:
+                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+            if jac_fwd and jac_rev:
+                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
 
-            out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-            out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-            out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+            if jac_fwd:
+                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+            if jac_rev:
+                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+            if jac_fwd and jac_rev:
+                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
 
-            out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-            out_stream.write(str(Jsub_for))
-            out_stream.write('\n\n')
-            out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-            out_stream.write(str(Jsub_rev))
-            out_stream.write('\n\n')
+            if jac_fwd:
+                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                out_stream.write(str(Jsub_for))
+                out_stream.write('\n\n')
+            if jac_rev:
+                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                out_stream.write(str(Jsub_rev))
+                out_stream.write('\n\n')
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')
