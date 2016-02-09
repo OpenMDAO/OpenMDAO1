@@ -43,8 +43,13 @@ class ExternalCode(Component):
         (optional) list of input file names to check the pressence of after solve_nonlinear
     options['poll_delay'] :  float(0.0)
         Delay between polling for command completion. A value of zero will use an internally computed default
-    options['timeout'] :  float(0.0)
+    options['on_timeout'] :  float(0.0)
+        Timeout behvaior, either raise an exception or terminate process and continue running OpenMDAO
+    options['timeout'] :  str('raise')
         Maximum time to wait for command completion. A value of zero implies an infinite wait
+    options['timeout'] :  str('raise')
+        Maximum time to wait for command completion. A value of zero implies an infinite wait
+
 
     """
 
@@ -70,9 +75,9 @@ class ExternalCode(Component):
         self.options.add_option( 'external_output_files', [],
             desc='(optional) list of input file names to check the pressence of after solve_nonlinear')
         self.options.add_option('on_timeout', 'raise', values=['raise', 'continue'],
-            desc='Timeout behvaior, either raise an exception or terminate and continue running OpenMDAO')
+            desc='Timeout behvaior, either raise an exception or terminate process and continue running OpenMDAO')
         self.options.add_option('on_error', 'raise', values=['raise', 'continue'],
-                                desc='Behvaior on error returned from code, either raise an exception or terminate and continue running OpenMDAO')
+                                desc='Behvaior on error returned from code, either raise an exception or terminate process and continue running OpenMDAO')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
