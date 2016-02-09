@@ -121,6 +121,7 @@ class ExternalCode(Component):
 
         self.return_code = -12345678
         self.timed_out = False
+        self.errored_out = False
 
         if not self.options['command']:
             raise ValueError('Empty command list')
@@ -132,24 +133,27 @@ class ExternalCode(Component):
         try:
             return_code, error_msg = self._execute_local()
 
-            if return_code is None and self.options['on_timeout'] == 'raise':
+            if return_code is None:
                 self.timed_out = True
-                raise RuntimeError('Timed out')
+                if self.options['on_timeout'] == 'raise':
+                    raise RuntimeError('Timed out')
 
-            elif return_code and self.options['on_error'] == 'raise':
-                if isinstance(self.stderr, str):
-                    if os.path.exists(self.stderr):
-                        stderrfile = open(self.stderr, 'r')
-                        error_desc = stderrfile.read()
-                        stderrfile.close()
-                        err_fragment = "\nError Output:\n%s" % error_desc
+            elif return_code:
+                self.errored_out = True
+                if self.options['on_error'] == 'raise':
+                    if isinstance(self.stderr, str):
+                        if os.path.exists(self.stderr):
+                            stderrfile = open(self.stderr, 'r')
+                            error_desc = stderrfile.read()
+                            stderrfile.close()
+                            err_fragment = "\nError Output:\n%s" % error_desc
+                        else:
+                            err_fragment = "\n[stderr %r missing]" % self.stderr
                     else:
-                        err_fragment = "\n[stderr %r missing]" % self.stderr
-                else:
-                    err_fragment = error_msg
+                        err_fragment = error_msg
 
-                raise RuntimeError('return_code = %d%s' % (return_code, err_fragment))
-
+                    raise RuntimeError('return_code = %d%s' % (return_code,
+                                                               err_fragment))
 
             if self.options['check_external_outputs']:
                 missing_files = self._check_for_files(input=False)

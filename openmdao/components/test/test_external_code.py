@@ -49,6 +49,8 @@ class TestExternalCode(unittest.TestCase):
         dev_null = open(os.devnull, 'w')
         self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
+        self.assertEqual(self.extcode.timed_out, False)
+        self.assertEqual(self.extcode.errored_out, False)
 
     # def test_ls_command(self):
     #     output_filename = 'ls_output.txt'
@@ -100,6 +102,7 @@ class TestExternalCode(unittest.TestCase):
         self.top.setup(check=True, out_stream=dev_null)
 
         self.top.run()
+        self.assertEqual(self.extcode.timed_out, True)
 
     def test_error_code_raise(self):
 
@@ -116,6 +119,7 @@ class TestExternalCode(unittest.TestCase):
         except RuntimeError as exc:
             self.assertTrue('Traceback' in str(exc))
             self.assertEqual(self.extcode.return_code, 1)
+            self.assertEqual(self.extcode.errored_out, True)
         else:
             self.fail('Expected ValueError')
 
@@ -131,6 +135,7 @@ class TestExternalCode(unittest.TestCase):
         dev_null = open(os.devnull, 'w')
         self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
+        self.assertEqual(self.extcode.errored_out, True)
 
     def test_badcmd(self):
 
