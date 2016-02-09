@@ -1904,21 +1904,44 @@ class Problem(object):
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
 
-        # Params and Unknowns that we provide at this level.
         root = self.root
-        abs_indep_list = root._get_fd_params()
-        param_srcs = [root.connections[p] for p in abs_indep_list \
-                      if not root._params_dict[p].get('pass_by_obj')]
-        unknown_list = root._get_fd_unknowns()
-        unknown_list = [item for item in unknown_list \
-                        if not root.unknowns.metadata(item).get('pass_by_obj')]
+        driver = self.driver
 
-        # Convert absolute parameter names to promoted ones because it is
-        # easier for the user to read.
-        to_prom_name = self.root._sysdata.to_prom_name
-        indep_list = [
-            to_prom_name[p] for p, idxs in param_srcs
-        ]
+        # Check derivatives with respect to design variables, if they have
+        # been defined..
+        if len(driver._desvars) > 0:
+            param_srcs = list(driver._desvars.keys())
+            to_abs_name = root._sysdata.to_abs_uname
+            indep_list = [p for p in param_srcs if not \
+                          root._unknowns_dict[to_abs_name[p]].get('pass_by_obj')]
+
+        # Otherwise, use all available params.
+        else:
+            abs_indep_list = root._get_fd_params()
+            param_srcs = [root.connections[p] for p in abs_indep_list \
+                          if not root._params_dict[p].get('pass_by_obj')]
+
+            # Convert absolute parameter names to promoted ones because it is
+            # easier for the user to read.
+            to_prom_name = self.root._sysdata.to_prom_name
+            indep_list = [
+                to_prom_name[p] for p, idxs in param_srcs
+            ]
+
+        # Check derivatives of objectives and constraints, if they have
+        # been defined..
+        if len(driver._objs) > 0 or len(driver._cons) > 0:
+            unknown_list = list(driver._objs.keys())
+            unknown_list.extend(list(driver._cons.keys()))
+            unknown_list = [item for item in unknown_list \
+                            if not root.unknowns.metadata(item).get('pass_by_obj')]
+
+        # Otherwise, use all available unknowns.
+        else:
+            unknown_list = root._get_fd_unknowns()
+            unknown_list = [item for item in unknown_list \
+                            if not root.unknowns.metadata(item).get('pass_by_obj')]
+
 
         # Calculate all our Total Derivatives
         Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
