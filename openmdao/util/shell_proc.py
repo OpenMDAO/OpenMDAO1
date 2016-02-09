@@ -57,7 +57,7 @@ class ShellProc(subprocess.Popen):
             self._inp = open(stdin, 'r')
         else:
             self._inp = stdin
-    
+
         if isinstance(stdout, str):
             self._out = open(stdout, 'w')
         else:
@@ -98,7 +98,10 @@ class ShellProc(subprocess.Popen):
             A value of zero implies an infinite maximum wait.
 
         """
-        super(ShellProc, self).terminate()
+        if sys.platform == 'win32':
+            subprocess.Popen("TASKKILL /F /PID {pid} /T".format(pid=self.pid))
+        else:
+            super(ShellProc, self).terminate()
         if timeout is not None:
             return self.wait(timeout=timeout)
 

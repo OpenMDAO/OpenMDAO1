@@ -45,6 +45,11 @@ class ExternalCode(Component):
         Delay between polling for command completion. A value of zero will use an internally computed default
     options['timeout'] :  float(0.0)
         Maximum time to wait for command completion. A value of zero implies an infinite wait
+    options['on_timeout'] :  str('raise')
+        Timeout behavior, either "raise" an exception or "continue" running OpenMDAO
+    options['on_error'] :  str('raise')
+        Behavior on error returned from code, either "raise" an exception or "continue" running OpenMDAO
+
 
     """
 
@@ -69,6 +74,10 @@ class ExternalCode(Component):
             desc='(optional) list of input file names to check the pressence of before solve_nonlinear')
         self.options.add_option( 'external_output_files', [],
             desc='(optional) list of input file names to check the pressence of after solve_nonlinear')
+        self.options.add_option('on_timeout', 'raise', values=['raise', 'continue'],
+            desc='Timeout behavior, either "raise" an exception or "continue" running OpenMDAO')
+        self.options.add_option('on_error', 'raise', values=['raise', 'continue'],
+            desc='Behavior on error returned from code, either "raise" an exception or "continue" running OpenMDAO')
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
@@ -112,6 +121,7 @@ class ExternalCode(Component):
 
         self.return_code = -12345678
         self.timed_out = False
+        self.errored_out = False
 
         if not self.options['command']:
             raise ValueError('Empty command list')
@@ -124,25 +134,26 @@ class ExternalCode(Component):
             return_code, error_msg = self._execute_local()
 
             if return_code is None:
-                # if self._stop:
-                #     raise RuntimeError('Run stopped')
-                # else:
                 self.timed_out = True
-                raise RuntimeError('Timed out')
+                if self.options['on_timeout'] == 'raise':
+                    raise RuntimeError('Timed out')
 
             elif return_code:
-                if isinstance(self.stderr, str):
-                    if os.path.exists(self.stderr):
-                        stderrfile = open(self.stderr, 'r')
-                        error_desc = stderrfile.read()
-                        stderrfile.close()
-                        err_fragment = "\nError Output:\n%s" % error_desc
+                self.errored_out = True
+                if self.options['on_error'] == 'raise':
+                    if isinstance(self.stderr, str):
+                        if os.path.exists(self.stderr):
+                            stderrfile = open(self.stderr, 'r')
+                            error_desc = stderrfile.read()
+                            stderrfile.close()
+                            err_fragment = "\nError Output:\n%s" % error_desc
+                        else:
+                            err_fragment = "\n[stderr %r missing]" % self.stderr
                     else:
-                        err_fragment = "\n[stderr %r missing]" % self.stderr
-                else:
-                    err_fragment = error_msg
+                        err_fragment = error_msg
 
-                raise RuntimeError('return_code = %d%s' % (return_code, err_fragment))
+                    raise RuntimeError('return_code = %d%s' % (return_code,
+                                                               err_fragment))
 
             if self.options['check_external_outputs']:
                 missing_files = self._check_for_files(input=False)

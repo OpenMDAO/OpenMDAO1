@@ -49,6 +49,8 @@ class TestExternalCode(unittest.TestCase):
         dev_null = open(os.devnull, 'w')
         self.top.setup(check=True, out_stream=dev_null)
         self.top.run()
+        self.assertEqual(self.extcode.timed_out, False)
+        self.assertEqual(self.extcode.errored_out, False)
 
     # def test_ls_command(self):
     #     output_filename = 'ls_output.txt'
@@ -69,10 +71,10 @@ class TestExternalCode(unittest.TestCase):
     #         file_contents = out.read()
     #     self.assertTrue('external_code_for_testing.py' in file_contents)
 
-    def test_timeout(self):
+    def test_timeout_raise(self):
 
         self.extcode.options['command'] = ['python', 'external_code_for_testing.py',
-             'external_code_output.txt', '--delay', '5']
+             'external_code_output.txt', '--delay', '3']
         self.extcode.options['timeout'] = 1.0
 
         self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
@@ -86,6 +88,54 @@ class TestExternalCode(unittest.TestCase):
             self.assertEqual(self.extcode.timed_out, True)
         else:
             self.fail('Expected RunInterrupted')
+
+    def test_timeout_continue(self):
+
+        self.extcode.options['command'] = ['python', 'external_code_for_testing.py',
+             'external_code_output.txt', '--delay', '3']
+        self.extcode.options['timeout'] = 1.0
+
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
+        self.extcode.options['on_timeout'] = 'continue'
+
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
+
+        self.top.run()
+        self.assertEqual(self.extcode.timed_out, True)
+
+    def test_error_code_raise(self):
+
+        self.extcode.options['command'] = ['python', 'external_code_for_testing.py',
+             'external_code_output.txt', '--delay', '-3']
+        self.extcode.options['timeout'] = 1.0
+
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
+
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
+        try:
+            self.top.run()
+        except RuntimeError as exc:
+            self.assertTrue('Traceback' in str(exc))
+            self.assertEqual(self.extcode.return_code, 1)
+            self.assertEqual(self.extcode.errored_out, True)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_error_code_continue(self):
+
+        self.extcode.options['command'] = ['python', 'external_code_for_testing.py',
+             'external_code_output.txt', '--delay', '-3']
+        self.extcode.options['timeout'] = 1.0
+        self.extcode.options['on_error'] = 'continue'
+
+        self.extcode.options['external_input_files'] = ['external_code_for_testing.py', ]
+
+        dev_null = open(os.devnull, 'w')
+        self.top.setup(check=True, out_stream=dev_null)
+        self.top.run()
+        self.assertEqual(self.extcode.errored_out, True)
 
     def test_badcmd(self):
 
