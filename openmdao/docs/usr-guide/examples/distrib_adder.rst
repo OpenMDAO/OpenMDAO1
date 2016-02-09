@@ -1,4 +1,4 @@
-.. index:: Distributes Component Example
+.. index:: Distributed Component Example
 
 Requirements
 ----------------------------------------

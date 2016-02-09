@@ -110,7 +110,7 @@ class Component(System):
             If a valid value or shape is not specified.
         """
         shape = kwargs.get('shape')
-        self._check_name(name)
+        self._check_varname(name)
         meta = kwargs.copy()
 
         if isinstance(val, FileRef):
@@ -237,8 +237,8 @@ class Component(System):
         meta['size'] = val.size
         meta['src_indices'] = src_indices
 
-    def _check_name(self, name):
-        """ Verifies that a system name is valid. Also checks for
+    def _check_varname(self, name):
+        """ Verifies that a variable name is valid. Also checks for
         duplicates."""
         if self._post_setup_vars:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called." %
@@ -385,6 +385,12 @@ class Component(System):
             if isinstance(val, FileRef):
                 self._fileref_setup(val)
 
+        if not self.is_active():
+            for meta in itervalues(self._init_params_dict):
+                meta['remote'] = True
+            for meta in itervalues(self._init_unknowns_dict):
+                meta['remote'] = True
+
     def _fileref_setup(self, fref):
         fref.parent_dir = self._sysdata.absdir
         d = fref._abspath()
@@ -421,6 +427,8 @@ class Component(System):
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
+        self.connections = self._probdata.connections
+
         relevance = self._probdata.relevance
 
         if not self.is_active():
@@ -776,7 +784,7 @@ class Component(System):
             stepvec.set_complex_var(p_name)
 
             # promoted names and _init_params_dict keys are same
-            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed in python 3.
+            mydict = self._init_params_dict.get(p_name, {})
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

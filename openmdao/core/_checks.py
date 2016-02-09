@@ -82,9 +82,9 @@ def _check_types_match(src, tgt, to_prom_name):
     if stype == ttype:
         return
 
-    src_indices = tgt.get('src_indices')
-    if src_indices and len(src_indices) == 1 and ttype == float:
-        return
+    if 'src_indices' in tgt:
+        if len(tgt['src_indices']) == 1 and ttype == float:
+            return
 
     raise TypeError("Type %s of source %s must be the same as type %s of "
                     "target %s." %  (type(src['val']),

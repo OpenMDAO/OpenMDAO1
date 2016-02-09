@@ -19,7 +19,7 @@ from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.checks import check_connections
+from openmdao.core._checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
@@ -31,6 +31,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
+from openmdao.util.graph import plain_bfs
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 
@@ -45,6 +46,7 @@ class _ProbData(object):
     """
     def __init__(self):
         self.top_lin_gs = False
+        self.in_complex_step = False
 
 
 class Problem(object):
@@ -196,13 +198,24 @@ class Problem(object):
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
-        input_graph = nx.Graph()
+        input_graph = nx.DiGraph()
+
+        # so we can make sure we don't start our traversals at any input
+        # node that isn't connected to an unknown
+        skip = set()
+        from_unknown = set()
 
         # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
             for src, idxs in srcs:
                 if src in params_dict:
                     input_graph.add_edge(src, tgt, idxs=idxs)
+                    skip.add(tgt)
+                else:
+                    # target is connected directly to an unknown
+                    from_unknown.add(tgt)
+
+        skip = skip.difference(from_unknown)
 
         # find any promoted but not connected inputs
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
@@ -210,15 +223,14 @@ class Problem(object):
                 for n in prom_noconns[prom]:
                     if p != n:
                         input_graph.add_edge(p, n, idxs=None)
+                        skip.add(n)
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
 
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
-                # force list here, since some versions of networkx return a
-                # set here.
-                connected = list(nx.node_connected_component(input_graph, tgt))
+                connected = list(plain_bfs(input_graph, tgt))
                 for c in connected:
                     self._input_inputs[c] = connected
 
@@ -238,18 +250,21 @@ class Problem(object):
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
-                            new_idxs = idxs
+                            # make sure we start at a 'src' input
                             if compute_indices:
-                                # follow path to new target, apply src_idxs along the way
-                                path = nx.shortest_path(input_graph, tgt, new_tgt)
-                                for i, node in enumerate(path[:-1]):
-                                    next_idxs = input_graph[node][path[i+1]]['idxs']
-                                    if next_idxs is not None:
-                                        if new_idxs is not None:
-                                            new_idxs = np.array(new_idxs)[next_idxs]
-                                        else:
-                                            new_idxs = next_idxs
-                            to_add.append((new_tgt, (src, new_idxs)))
+                                if new_tgt not in skip:
+                                    # follow path to new target, apply src_idxs along the way
+                                    for s,t in nx.dfs_edges(input_graph, new_tgt):
+                                        if s == new_tgt:
+                                            new_idxs = idxs
+                                        next_idxs = input_graph[s][t]['idxs']
+                                        if next_idxs is not None:
+                                            if new_idxs is not None:
+                                                new_idxs = np.array(new_idxs)[next_idxs]
+                                            else:
+                                                new_idxs = next_idxs
+                                        to_add.append((t, (src, new_idxs)))
+                                    to_add.append((new_tgt, (src, idxs)))
 
         for tgt, (src, idxs) in to_add:
             if tgt in connections:
@@ -274,14 +289,13 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = OrderedDict()
+        self._dangling = {}
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
-                    self._dangling[prom] = \
-                        set(nx.node_connected_component(input_graph, p))
+                    self._dangling[prom] = set(plain_bfs(input_graph, p))
                 else:
-                    self._dangling[prom] = set([p])
+                    self._dangling[prom] = set((p,))
 
         return connections
 
@@ -325,8 +339,10 @@ class Problem(object):
                                           v.shape==vals[tgt_idx].shape and
                                           (v==vals[tgt_idx]).all())]
                 else:
+                    vtype = type(vals[tgt_idx])
                     diff_vals = [(connected_inputs[i],v) for i,v in
-                                     enumerate(vals) if v!=vals[tgt_idx]]
+                                     enumerate(vals) if vtype!=type(v) or
+                                                          v!=vals[tgt_idx]]
 
                 # if tgt has no unknown source, units MUST match, unless
                 # one of them is None. At this point, connections contains
@@ -508,9 +524,9 @@ class Problem(object):
         #     'val': 2.5,   # the initial value of that variable (if known)
         #  }
         params_dict, unknowns_dict = self.root._setup_variables()
+
         self._probdata.params_dict = params_dict
         self._probdata.unknowns_dict = unknowns_dict
-
         self._probdata.to_prom_name = self.root._sysdata.to_prom_name
 
         # collect all connections, both implicit and explicit from
@@ -520,50 +536,40 @@ class Problem(object):
         connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
 
-        # Allow the user to omit the size of a parameter and pull the size
-        # and shape from the connection source.
-        for tgt, src in iteritems(connections):
+        for tgt, (src, idxs) in iteritems(connections):
             tmeta = params_dict[tgt]
-            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
+            if 'pass_by_obj' not in tmeta or not tmeta['pass_by_obj']:
 
-                src_name, src_idx = src
-                smeta = unknowns_dict[src_name]
+                # Allow the user to omit the size of a parameter and pull
+                # the size and shape from the connection source.
+                if tmeta['shape'] == ():
 
-                # Connected with src_indices specified
-                if src_idx is not None:
-                    size = len(src_idx)
-                    tmeta['shape'] = (size, )
-                    tmeta['size'] = size
-                    tmeta['val'] = smeta['val'][np.array(src_idx)]
+                    smeta = unknowns_dict[src]
 
-                # Regular connection
-                else:
-                    tmeta['shape'] = smeta['shape']
-                    tmeta['size'] = smeta['size']
-                    tmeta['val'] = smeta['val']
+                    # Connected with src_indices specified
+                    if idxs is not None:
+                        size = len(idxs)
+                        tmeta['shape'] = (size, )
+                        tmeta['size'] = size
+                        tmeta['val'] = smeta['val'][np.array(idxs)]
 
-        # push connection src_indices down into the metadata for all target
-        # params in all component level systems, then flag meta_changed so
-        # it will get percolated back up to all groups in next setup_vars()
-        src_idx_conns = [(tgt, src, idxs) for tgt, (src, idxs) in
-                         iteritems(connections) if idxs is not None]
-        if src_idx_conns:
-            meta_changed = True
-            for comp in self.root.components(recurse=True):
-                for tgt, src, idxs in src_idx_conns:
-                    meta = comp._params_dict.get(tgt)
-                    if meta and meta['pathname'] == tgt:
-                        meta['src_indices'] = idxs
+                    # Regular connection
+                    else:
+                        tmeta['shape'] = smeta['shape']
+                        tmeta['size'] = smeta['size']
+                        tmeta['val'] = smeta['val']
+
+                # set src_indices into variable metadata
+                if idxs is not None:
+                    if isinstance(idxs, np.ndarray):
+                        tmeta['src_indices'] = idxs
+                    else:
+                        tmeta['src_indices'] = np.array(idxs,
+                                                  dtype=self._impl.idx_arr_type)
 
         # TODO: handle any automatic grouping of systems here...
         #       If we modify the system tree here, we'll have to call
         #       the full setup over again...
-
-        # mark any variables in non-local Systems as 'remote'
-        for comp in self.root.components(recurse=True):
-            if not comp.is_active():
-                meta_changed = True
-                comp._set_vars_as_remote()
 
         if MPI:
             for s in self.root.components(recurse=True):
@@ -602,18 +608,19 @@ class Problem(object):
         # and connections down to all subsystems
         to_prom_name = self.root._sysdata.to_prom_name
         self._probdata.to_prom_name = to_prom_name
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            sub.connections = connections
 
-        # set top_promoted_name and unit_conv in top system (all metatdata
-        # is shared, so not need to propagate down the tree)
-        for path, meta in iteritems(self.root._params_dict):
+        for path, meta in iteritems(params_dict):
+            # set top promoted name into var metadata
             meta['top_promoted_name'] = to_prom_name[path]
-            unit_conv = params_dict[path].get('unit_conv')
-            if unit_conv:
-                meta['unit_conv'] = unit_conv
 
-        for path, meta in iteritems(self.root._unknowns_dict):
+            # Check for dangling params that have no size or shape
+            if path not in connections:
+                if 'pass_by_obj' not in meta or not meta['pass_by_obj']:
+                    if meta['shape'] == ():
+                        raise RuntimeError("Unconnected param '{}' is missing "
+                                           "a shape or default value.".format(path))
+
+        for path, meta in iteritems(unknowns_dict):
             meta['top_promoted_name'] = to_prom_name[path]
 
         # Given connection information, create mapping from system pathname
@@ -654,7 +661,6 @@ class Problem(object):
                                              unknowns_dict, connections,
                                              pois, oois, mode)
 
-
         # perform auto ordering
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
@@ -682,15 +688,6 @@ class Problem(object):
         # report any differences in units or initial values for
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
-
-        # Check for dangling params that have no size or shape
-        dangling_params = set([p for p in self.root._params_dict
-                               if p not in self.root.connections])
-        for param in dangling_params:
-            tmeta = self.root._params_dict[param]
-            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
-                msg = "Unconnected param '{}' is missing a shape or default value."
-                raise RuntimeError(msg.format(param))
 
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
@@ -723,9 +720,14 @@ class Problem(object):
         self.root.cleanup()
 
     def _check_solvers(self):
-        """
-        Raise an exception if we detect a LinearGaussSeidel solver and that
-        group has either cycles or uniterated states.
+        """ Search over all solvers and raise errors for unsupported
+        configurations. These include:
+
+        Raise an exception if we detect a LinearGaussSeidel
+        solver and that group has either cycles or uniterated states.
+
+        Raise an exception if a Newton solver is found under any system that
+        is set to complex step.
         """
 
         # all states that have some maxiter>1 linear solver above them in the tree
@@ -733,6 +735,24 @@ class Problem(object):
         group_states = []
 
         for group in self.root.subgroups(recurse=True, include_self=True):
+
+            # Look for nl solvers that require derivs under Complex Step.
+            opt = group.fd_options
+            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+
+                # TODO: Support using complex step on a subsystem
+                if group.name != '':
+                    msg = "Complex step is currently not supported for groups"
+                    msg += " other than root."
+                    raise RuntimeError(msg)
+
+                # Complex Step, so check for deriv requirement in subsolvers
+                for sub in self.root.subgroups(recurse=True, include_self=True):
+                    if hasattr(sub.nl_solver, 'ln_solver'):
+                        msg = "The solver in '{}' requires derivatives. We "
+                        msg += "currently do not support complex step around it."
+                        raise RuntimeError(msg.format(sub.name))
+
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
@@ -822,7 +842,7 @@ class Problem(object):
             print("\nUnit Conversions", file=out_stream)
 
             vec = self.root.unknowns
-            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
 
             for (src, tgt), (sunit, tunit) in tuples:
                 if src in pbos:
@@ -1009,11 +1029,11 @@ class Problem(object):
         # variable.
         if self.driver.__class__ is Driver or \
            self.driver.supports['gradients'] is False or \
-           self.root.fd_options['force_fd'] is True:
+           self.root.fd_options['force_fd']:
             return []
 
         vec = self.root.unknowns
-        pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj') is True]
+        pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
 
         rels = set()
         for key, rel in iteritems(self._probdata.relevance.relevant):
@@ -1254,9 +1274,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1425,9 +1445,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1545,7 +1565,7 @@ class Problem(object):
                 vkey = self._get_voi_key(voi, params)
 
                 duvec = self.root.dumat[vkey]
-                rhs[vkey] = np.zeros((len(duvec.vec), ))
+                rhs[vkey] = np.empty((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
                 if voi in duvec:
@@ -2145,7 +2165,7 @@ class Problem(object):
         """
 
         connections = OrderedDict()
-        dangling = {} # Order not guaranteed in python 3.
+        dangling = {}
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2173,10 +2193,10 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {} # Order not guaranteed in python 3.
+    param_owners = {}
 
     for par, (unk, idxs) in iteritems(connections):
-        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), set()).add(par)
 
     return param_owners
 
@@ -2281,7 +2301,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if out_stream is None:
                 continue
 
-            if started is True:
+            if started:
                 out_stream.write(' -'*30 + '\n')
             else:
                 started = True

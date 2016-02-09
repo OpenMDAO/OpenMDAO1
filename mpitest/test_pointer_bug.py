@@ -123,7 +123,7 @@ class CollocationPhase(Group):
         parallel_segment_group = ParallelGroup()
 
         for i in range(num_seg):
-            seg_name = '{0}'.format(i)
+            seg_name = 's{0}'.format(i)
             seg = CollocationSegment(index=i, rhs=rhs,
                                      num_cardinal_nodes=2,
                                      rel_length=1)
@@ -136,7 +136,7 @@ class CollocationPhase(Group):
         # 3. Add the state and dynamic control param comps and muxing components
         eom_state_names = ['X_c:{0}'.format(state['name']) for state in rhs.eom_states]
         for i,state in enumerate(self._eom_states):
-            self.add( name='eom_state_ivar_comp:{0}'.format(state['name']),
+            self.add( name='eom_state_ivar_comp_{0}'.format(state['name']),
                       system=IndepVarComp(name=eom_state_names[i],
                                           val=np.zeros((3))),
                       promotes=[eom_state_names[i]])
@@ -146,7 +146,7 @@ class CollocationPhase(Group):
 
             for state in self._eom_states:
                 state_name = state['name']
-                self.connect( 'X_c:{0}'.format(state_name), 'segments.{0:d}.X_c:{1}'.format(i, state_name),
+                self.connect( 'X_c:{0}'.format(state_name), 'segments.s{0:d}.X_c:{1}'.format(i, state_name),
                               src_indices=idxs_states)
 
     def setup_solver(self,driver):
@@ -155,7 +155,7 @@ class CollocationPhase(Group):
 
             # Add the state defects as constraints
             for i in range(len(self._segments)):
-                driver.add_constraint(name='{0}.segments.{1:d}.defect:{2}'.format(self.name,i,eom_state['name']),
+                driver.add_constraint(name='{0}.segments.s{1:d}.defect:{2}'.format(self.name,i,eom_state['name']),
                                       equals=0.0)
 
 

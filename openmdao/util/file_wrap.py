@@ -309,7 +309,7 @@ class InputFileGenerator(object):
             Separator to use if we go beyond the template."""
 
         # Simplified input for single-line arrays
-        if row_end == None:
+        if row_end is None:
             row_end = row_start
 
         sub = _SubHelper()
@@ -878,5 +878,3 @@ class FileParser(object):
 
         self.line_parse_token = ( OneOrMore( (nan | num_float | mixed_exp | num_int |
                                               string_text) ) )
-
-

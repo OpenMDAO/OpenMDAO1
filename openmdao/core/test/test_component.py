@@ -104,6 +104,7 @@ class TestComponent(unittest.TestCase):
         self.assertFalse(self.comp._promoted('blah'))
 
         self.comp._promotes = ('x*',)
+        p.setup(check=False)
         for name in self.comp._init_params_dict:
             if name.startswith('x'):
                 self.assertTrue(self.comp._promoted(name))
@@ -116,6 +117,7 @@ class TestComponent(unittest.TestCase):
                 self.assertFalse(self.comp._promoted(name))
 
         self.comp._promotes = ('*:efg',)
+        p.setup(check=False)
         for name in self.comp._init_params_dict:
             if name.endswith(':efg'):
                 self.assertTrue(self.comp._promoted(name))

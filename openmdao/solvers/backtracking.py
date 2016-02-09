@@ -91,7 +91,7 @@ class BackTracking(LineSearch):
         update_local_meta(local_meta, (solver.iter_count, 0))
 
         # Just evaluate the model with the new points
-        if solver.options['solve_subsystems'] is True:
+        if solver.options['solve_subsystems']:
             system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids, local_meta)
 
@@ -120,7 +120,7 @@ class BackTracking(LineSearch):
             update_local_meta(local_meta, (solver.iter_count, itercount))
 
             # Just evaluate the model with the new points
-            if self.options['solve_subsystems'] is True:
+            if self.options['solve_subsystems']:
                 system.children_solve_nonlinear(local_meta)
             system.apply_nonlinear(params, unknowns, resids, local_meta)
 

@@ -22,7 +22,7 @@ class DUT(Component):
         self.add_output('y', shape=1)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much.  Just multiply by 3"""
+        """ Doesn't do much.  Just multiply x by c"""
         sum([j*j for j in xrange(10000000)])    # dummy delay (busy loop)
         unknowns['y'] = params['c']*params['x']
 
@@ -57,4 +57,3 @@ if __name__ == "__main__":
     problem['dut.y']
 
     problem.cleanup()
-    
