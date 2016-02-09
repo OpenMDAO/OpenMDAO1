@@ -6,8 +6,8 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES, \
-                          ParallelGroup
-from openmdao.test.converge_diverge import ConvergeDivergeGroups
+                          ParallelGroup, LinearGaussSeidel
+from openmdao.test.converge_diverge import ConvergeDivergeGroups, ConvergeDivergePar
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
@@ -367,5 +367,27 @@ class TestProblemCheckTotals(unittest.TestCase):
         self.assertTrue(('f_xy', 'x') in data)
         self.assertTrue(('f_xy', 'y') not in data)
 
+    def test_with_relevance(self):
+
+        prob = Problem()
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = LinearGaussSeidel()
+
+        prob.driver.add_param('p.x')
+        prob.driver.add_objective('comp7.y1')
+        prob.root.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 if __name__ == "__main__":
     unittest.main()
