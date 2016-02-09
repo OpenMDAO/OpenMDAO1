@@ -200,7 +200,7 @@ class Relevance(object):
             graph that are relevant to it.
         """
 
-        relevant = {} # Order not guaranteed in python 3.
+        relevant = {}
         succs = {}
 
         for nodes in self.inputs:

@@ -117,10 +117,13 @@ class DataTransfer(object):
                 else:
                     np.add.at(srcvec.vec, isrcs, tgtvec.vec[itgts])
         else:
-            for isrcs, itgts, _ in self.scatters:
-                tgtvec.vec[itgts] = srcvec.vec[isrcs]
-                if tgtvec._probdata.in_complex_step is True:
+            if tgtvec._probdata.in_complex_step:
+                for isrcs, itgts, _ in self.scatters:
+                    tgtvec.vec[itgts] = srcvec.vec[isrcs]
                     tgtvec.imag_vec[itgts] = srcvec.imag_vec[isrcs]
+            else:
+                for isrcs, itgts, _ in self.scatters:
+                    tgtvec.vec[itgts] = srcvec.vec[isrcs]
 
             # forward, include byobjs if not a deriv scatter
             if not deriv:

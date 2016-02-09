@@ -39,7 +39,7 @@ class IndepVarComp(Component):
                         n, v, kw = tup
                     elif len(tup) == 2:
                         n, v = tup
-                        kw = {} # Order not guaranteed in python 3.
+                        kw = {}
                     else:
                         badtup = tup
                 else:

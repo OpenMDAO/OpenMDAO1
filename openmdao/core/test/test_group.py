@@ -33,6 +33,17 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), expected_msg)
 
+    def test_bad_sysname(self):
+        group = Group()
+        try:
+            group.add('0', ExecComp('y=x*2.0'), promotes=['x'])
+        except NameError as err:
+            self.assertEqual(str(err), ": '0' is not a valid system name.")
+        try:
+            group.add('foo:bar', ExecComp('y=x*2.0'), promotes=['x'])
+        except NameError as err:
+            self.assertEqual(str(err), ": 'foo:bar' is not a valid system name.")
+
     def test_variables(self):
         group = Group()
         group.add('C1', ExecComp('y=x*2.0'), promotes=['x'])

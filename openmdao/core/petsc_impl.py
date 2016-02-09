@@ -166,7 +166,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
-        if alloc_complex is True:
+        if alloc_complex:
             self.imag_petsc_vec = PETSc.Vec().createWithArray(self.imag_vec, comm=self.comm)
         if trace: debug("petsc_vec creation DONE")
 
@@ -215,7 +215,7 @@ class PetscSrcVecWrapper(SrcVecWrapper):
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
                   (sys_pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
-        if self.alloc_complex is True:
+        if self.alloc_complex:
             view.imag_petsc_vec = PETSc.Vec().createWithArray(view.imag_vec,
                                                               comm=comm)
         if trace: debug("petsc_vec creation DONE")
@@ -303,7 +303,7 @@ class PetscTgtVecWrapper(TgtVecWrapper):
             debug("'%s': creating tgt petsc_vec: (size %d) %s: vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))
         self.petsc_vec = PETSc.Vec().createWithArray(self.vec, comm=self.comm)
-        if alloc_complex is True:
+        if alloc_complex:
             self.imag_petsc_vec = PETSc.Vec().createWithArray(self.imag_vec,
                                                               comm=self.comm)
         if trace: debug("petsc_vec creation DONE")
@@ -455,7 +455,7 @@ class PetscDataTransfer(object):
                 debug("%s:    srcvec = %s" % (srcvec._sysdata.pathname,
                                               srcvec.petsc_vec.array))
             self.scatter.scatter(srcvec.petsc_vec, tgtvec.petsc_vec, False, False)
-            if tgtvec._probdata.in_complex_step is True:
+            if tgtvec._probdata.in_complex_step:
                 self.scatter.scatter(srcvec.imag_petsc_vec, tgtvec.imag_petsc_vec,
                                      False, False)
 

@@ -36,6 +36,9 @@ class TestPetscKSP(MPITestCase):
         prob.root = FanInGrouped()
         prob.setup(check=False)
 
+        prob.root.clear_dparams()
+        prob.root.dumat[None].vec[:] = 0.0
+
         prob.root.comp3.dpmat[None]['x1'] = 7.
         prob.root.comp3.dpmat[None]['x2'] = 11.
         prob.root._transfer_data(mode='rev', deriv=True)
@@ -45,6 +48,8 @@ class TestPetscKSP(MPITestCase):
 
         if not MPI or self.comm.rank == 1:
             self.assertEqual(prob.root.sub.comp2.dumat[None]['y'], 11.)
+
+        prob.root.clear_dparams()
 
         prob.root.comp3.dpmat[None]['x1'] = 0.
         prob.root.comp3.dpmat[None]['x2'] = 0.

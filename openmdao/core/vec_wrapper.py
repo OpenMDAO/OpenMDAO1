@@ -69,7 +69,7 @@ class Accessor(object):
         self.pbo = meta.get('pass_by_obj')
         self.remote = meta.get('remote')
 
-        if alloc_complex is True:
+        if alloc_complex:
             self.probdata = probdata
 
         if self.pbo and not isinstance(val, _ByObjWrapper):
@@ -122,42 +122,40 @@ class Accessor(object):
 
         # No unit conversion.
         # dparams vector does no unit conversion.
-        if scale is None or vecwrapper.deriv_units is True:
-            if alloc_complex is True:
+        if scale is None or vecwrapper.deriv_units:
+            if alloc_complex:
                 flatfunc = self._get_arr_complex
+                if is_scalar:
+                    func = self._get_scalar_complex
+                elif shapes_same:
+                    func = flatfunc
+                else:
+                    func = self._get_arr_diff_shape_complex
             else:
                 flatfunc = self._get_arr
-
-            if is_scalar:
-                if alloc_complex is True:
-                    func = self._get_scalar_complex
-                else:
+                if is_scalar:
                     func = self._get_scalar
-            elif shapes_same:
-                func = flatfunc
-            else:
-                if alloc_complex is True:
-                    func = self._get_arr_diff_shape_complex
+                elif shapes_same:
+                    func = flatfunc
                 else:
                     func = self._get_arr_diff_shape
 
         # We have a unit conversion
         else:
-            if alloc_complex is True:
+            if alloc_complex:
                 flatfunc = self._get_arr_units_complex
+                if is_scalar:
+                    func = self._get_scalar_units_complex
+                elif shapes_same:
+                    func = flatfunc
+                else:
+                    func = self._get_arr_units_diff_shape_complex
             else:
                 flatfunc = self._get_arr_units
-
-            if is_scalar:
-                if alloc_complex is True:
-                    func = self._get_scalar_units_complex
-                else:
+                if is_scalar:
                     func = self._get_scalar_units
-            elif shapes_same:
-                func = flatfunc
-            else:
-                if alloc_complex is True:
-                    func = self._get_arr_units_diff_shape_complex
+                elif shapes_same:
+                    func = flatfunc
                 else:
                     func = self._get_arr_units_diff_shape
 
@@ -172,12 +170,12 @@ class Accessor(object):
             return self._set_pbo
         else:
             if meta['shape'] == 1:
-                if alloc_complex is True:
+                if alloc_complex:
                     return self._set_scalar_complex
                 else:
                     return self._set_scalar
             else:
-                if alloc_complex is True:
+                if alloc_complex:
                     return self._set_arr_complex
                 else:
                     return self._set_arr
@@ -200,7 +198,7 @@ class Accessor(object):
 
     def _get_arr_complex(self):
         """Array with same shape, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             return self.val + self.imag_val*1j
         else:
             return self.val
@@ -211,7 +209,7 @@ class Accessor(object):
 
     def _get_arr_diff_shape_complex(self):
         """Array with different shape, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -223,7 +221,7 @@ class Accessor(object):
 
     def _get_scalar_complex(self):
         """Fast scalar, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             return self.val[0] + self.imag_val[0]*1j
         else:
             return self.val[0]
@@ -237,7 +235,7 @@ class Accessor(object):
 
     def _get_arr_units_complex(self):
         """Array with same shape and unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -255,7 +253,7 @@ class Accessor(object):
 
     def _get_arr_units_diff_shape_complex(self):
         """Array with diff shape and unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val + self.imag_val*1j
         else:
             val = self.val
@@ -271,7 +269,7 @@ class Accessor(object):
 
     def _get_scalar_units_complex(self):
         """Scalar with unit conversion, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             val = self.val[0] + self.imag_val[0]*1j
         else:
             val = self.val   [0]
@@ -284,7 +282,7 @@ class Accessor(object):
 
     def _set_arr_complex(self, value):
         """Set an array value, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             self.val[:] = real(value.flat)
             self.imag_val[:] = imag(value.flat)
         else:
@@ -296,7 +294,7 @@ class Accessor(object):
 
     def _set_scalar_complex(self, value):
         """Set a scalar value, complex support."""
-        if self.probdata.in_complex_step is True:
+        if self.probdata.in_complex_step:
             self.val[0] = value.real
             self.imag_val[0] = imag(value)
         else:
@@ -601,7 +599,7 @@ class VecWrapper(object):
                     end = pend
                     meta = acc.meta
 
-                    if alloc_complex is True:
+                    if alloc_complex:
                         imag_val = acc.imag_val
                     else:
                         imag_val = None
@@ -614,12 +612,12 @@ class VecWrapper(object):
 
         if start == -1: # no items found
             view.vec = self.vec[0:0]
-            if alloc_complex is True:
+            if alloc_complex:
                 view.imag_vec = self.imag_vec[0:0]
 
         else:
             view.vec = self.vec[start:end]
-            if alloc_complex is True:
+            if alloc_complex:
                 view.imag_vec = self.imag_vec[start:end]
 
         return view
@@ -782,47 +780,44 @@ class SrcVecWrapper(VecWrapper):
             promname = to_prom_name[path]
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                     meta['top_promoted_name']):
-                if meta.get('pass_by_obj') or meta.get('remote'):
-                    slc = None
-                else:
+                if ('pass_by_obj' not in meta or not meta['pass_by_obj']) and \
+                       ('remote' not in meta or not meta['remote']):
                     slc = (vec_size, vec_size + meta['size'])
                     vec_size += meta['size']
-
-                self._dat[promname] = Accessor(self, slc, meta['val'], meta,
-                                               self._probdata, alloc_complex)
+                    self._dat[promname] = Accessor(self, slc, meta['val'], meta,
+                                                   self._probdata, alloc_complex)
+                else:
+                    self._dat[promname] = Accessor(self, None, meta['val'], meta,
+                                                   self._probdata, alloc_complex)
 
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
             self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
-            if alloc_complex is True:
+            if alloc_complex:
                 self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
         for name, acc in iteritems(self._dat):
             if not acc.pbo:
                 if acc.remote:
-                    acc.val = numpy.array([], dtype=float)
-                    if alloc_complex is True:
-                        acc.imag_val = numpy.array([], dtype=float)
+                    acc.val = numpy.empty(0, dtype=float)
+                    if alloc_complex:
+                        acc.imag_val = numpy.empty(0, dtype=float)
                 else:
                     start, end = acc.slice
                     acc.val = self.vec[start:end]
-                    if alloc_complex is True:
+                    if alloc_complex:
                         acc.imag_val = self.imag_vec[start:end]
-
-        # if store_byobjs is True, this is the unknowns vecwrapper,
-        # so initialize all of the values from the unknowns dicts.
-        if store_byobjs:
-            for path, meta in iteritems(unknowns_dict):
-                if 'remote' not in meta and (relevance is None or
-                                  relevance.is_relevant(var_of_interest, meta['top_promoted_name'])):
-                    if not meta.get('pass_by_obj'):
+                    meta = acc.meta
+                    if store_byobjs:
+                        # if store_byobjs is True, this is the unknowns vecwrapper,
+                        # so initialize all of the values from the unknowns dicts.
                         if meta['shape'] == 1:
-                            self._dat[to_prom_name[path]].val[0] = meta['val']
+                            acc.val[0] = meta['val']
                         else:
-                            self._dat[to_prom_name[path]].val[:] = meta['val'].flat
+                            acc.val[:] = meta['val'].flat
 
     def _get_flattened_sizes(self):
         """
@@ -937,14 +932,17 @@ class TgtVecWrapper(VecWrapper):
         scoped_name = self._sysdata._scoped_abs_name
         vec_size = 0
         missing = []  # names of our params that we don't 'own'
+        syspath = self._sysdata.pathname + '.'
+
         for meta in itervalues(params_dict):
             if relevance is None or relevance.is_relevant(var_of_interest,
                                                           meta['top_promoted_name']):
                 pathname = meta['pathname']
                 if pathname in my_params:
                     # if connected, get metadata from the source
-                    src = connections.get(pathname)
-                    if src is None:
+                    try:
+                        src = connections[pathname]
+                    except KeyError:
                         raise RuntimeError("Parameter '%s' is not connected" % pathname)
                     src_pathname, idxs = src
                     src_rel_name = src_to_prom_name[src_pathname]
@@ -953,43 +951,42 @@ class TgtVecWrapper(VecWrapper):
                     slc, val = self._setup_var_meta(pathname, meta, vec_size,
                                                     src_acc, store_byobjs)
 
-                    if not meta.get('remote'):
+                    if 'remote' not in meta or not meta['remote']:
                         vec_size += meta['size']
 
                     self._dat[scoped_name(pathname)] = Accessor(self, slc, val,
-                                                                meta, self._probdata,
+                                                                meta,
+                                                                self._probdata,
                                                                 alloc_complex)
-                else:
-                    if parent_params_vec is not None:
-                        src = connections.get(pathname)
-                        if src:
-                            src, idxs = src
-                            common = get_common_ancestor(src, pathname)
-                            if (common == self._sysdata.pathname or
-                                 (self._sysdata.pathname+'.') not in common):
-                                missing.append(meta)
+
+                elif parent_params_vec is not None and pathname in connections:
+                    src, _ = connections[pathname]
+                    common = get_common_ancestor(src, pathname)
+                    if (common == self._sysdata.pathname or
+                                                syspath not in common):
+                        missing.append(pathname)
 
         if shared_vec is not None:
             self.vec = shared_vec[:vec_size]
         else:
             self.alloc_complex = alloc_complex
             self.vec = numpy.zeros(vec_size)
-            if alloc_complex is True:
+            if alloc_complex:
                 self.imag_vec = numpy.zeros(vec_size)
 
         # map slices to the array
-        for name, acc in iteritems(self._dat):
+        for acc in itervalues(self._dat):
             if not (acc.pbo or acc.remote):
                 start, end = acc.slice
                 acc.val = self.vec[start:end]
-                if alloc_complex is True:
+                if alloc_complex:
                     acc.imag_val = self.imag_vec[start:end]
 
         # fill entries for missing params with views from the parent
         if parent_params_vec is not None:
             parent_scoped_name = parent_params_vec._sysdata._scoped_abs_name
-        for meta in missing:
-            pathname = meta['pathname']
+
+        for pathname in missing:
             parent_acc = parent_params_vec._dat[parent_scoped_name(pathname)]
             newmeta = parent_acc.meta
             if newmeta['pathname'] == pathname:
@@ -1006,16 +1003,6 @@ class TgtVecWrapper(VecWrapper):
                                                             alloc_complex,
                                                             owned=False,
                                                             imag_val=imag_val)
-
-        # Finally, set up unit conversions, if any exist.
-        for meta in itervalues(params_dict):
-            pathname = meta['pathname']
-            if pathname in my_params and (relevance is None or
-                                          relevance.is_relevant(var_of_interest,
-                                                                pathname)):
-                unitconv = meta.get('unit_conv')
-                if unitconv:
-                    self._dat[scoped_name(pathname)].meta['unit_conv'] = unitconv
 
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
