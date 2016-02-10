@@ -323,7 +323,10 @@ class System(object):
         if isinstance(self.directory, string_types):
             return self.directory
         else: # assume it's a function
-            return self.directory(MPI.COMM_WORLD.rank)
+            if MPI:
+                return self.directory(MPI.COMM_WORLD.rank)
+            else:
+                return self.directory(0)
 
     def _setup_dir(self, parent_dir):
         directory = self._get_dir()
