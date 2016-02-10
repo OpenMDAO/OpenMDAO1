@@ -310,8 +310,11 @@ class Problem(object):
             # figure out if any connected inputs have different initial
             # values or different units
             if tgt not in input_diffs:
+                found_src = False
                 for inp in connected_inputs:
                     input_diffs[inp] = ([], [])
+                    if not found_src and inp in connections:
+                        found_src = True
 
                 tgt_idx = connected_inputs.index(tgt)
                 units = [params_dict[n].get('units') for n in connected_inputs]
@@ -348,7 +351,7 @@ class Problem(object):
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if tgt not in connections:
+                if not found_src:
                     if diff_units:
                         filt = set([u for n,u in diff_units])
                         if None in filt:
