@@ -223,17 +223,6 @@ class TestComponent(unittest.TestCase):
         np.testing.assert_array_equal(unknowns["s4"]["val"], np.zeros((2,)))
         self.assertEqual(unknowns["s5"], {'val': 0.0, 'state': True, 'shape': 1, 'pathname': 's5', 'size': 1})
 
-    def test_variable_access(self):
-        self.comp.add_output("x_y_z", np.zeros(10))
-
-        try:
-            self.comp["x_y_z"]
-        except Exception as err:
-            self.assertEqual(str(err),
-                             "Variable 'x_y_z' must be accessed from a containing Group")
-        else:
-            self.fail("Exception expected")
-
     def test_generate_numpydocstring(self):
         self.comp.add_param("x", 0.0)
         self.comp.add_param("y", shape=2)
