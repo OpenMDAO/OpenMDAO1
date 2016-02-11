@@ -67,28 +67,30 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
 
         # Map LHC to buckets
         buckets = {}
+        j = 0
 
-        for j, (name, bounds) in enumerate(iteritems(design_vars)):
+        for (name, bounds) in iteritems(design_vars):
 
             # Support for array desvars
             val = self.root.unknowns._dat[name].val
             nval = len(val)
 
-            for j in range(nval):
+            for k in range(nval):
                 lowb = bounds['lower']
                 upb = bounds['upper']
                 if isinstance(lowb, np.ndarray):
-                    lowb = lowb[j]
+                    lowb = lowb[k]
                 if isinstance(upb, np.ndarray):
-                    upb = upb[j]
+                    upb = upb[k]
 
                 design_var_buckets = self._get_buckets(lowb, upb)
-                buckets[(name, j)] = [design_var_buckets[rand_lhc[i, j]]
+                buckets[(name, k)] = [design_var_buckets[rand_lhc[i, j]]
                                       for i in range(self.num_samples)]
+                j += 1
 
         # Return random values in given buckets
         for i in range(self.num_samples):
-            yield ((key[0], key[1], np.random.uniform(bounds[i][0], bounds[i][1]))
+            yield ((key, np.random.uniform(bounds[i][0], bounds[i][1]))
                    for key, bounds in iteritems(buckets))
 
     def _distrib_build_runlist(self):

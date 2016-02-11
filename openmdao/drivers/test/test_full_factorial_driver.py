@@ -37,7 +37,7 @@ class TestFullFactorial(unittest.TestCase):
         inputs = set()
         for case in runList:
             case = dict(case)
-            inputs.add((case['x'], case['y']))
+            inputs.add((case[('x', 0)], case[('y', 0)]))
 
         self.assertTrue(len(inputs) == 4,
                          "Incorrect number of runs generated.")
@@ -49,4 +49,4 @@ class TestFullFactorial(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
+

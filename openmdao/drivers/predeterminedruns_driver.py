@@ -129,7 +129,7 @@ class PredeterminedRunsDriver(Driver):
 
         # For each runlist entry, run the system and record the results
         for run in runlist:
-            for dv_name, dv_idx, dv_val in run:
+            for (dv_name, dv_idx), dv_val in run:
                 self.set_desvar_index(dv_name, dv_idx, dv_val)
 
             metadata = create_local_meta(None, 'Driver')

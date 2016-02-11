@@ -32,6 +32,24 @@ class UniformDriver(PredeterminedRunsDriver):
     def _build_runlist(self):
         """Build a runlist based on a uniform distribution."""
 
+        bounds = dict()
+        for name, meta in iteritems(self.get_desvar_metadata()):
+
+            # Support for array desvars
+            val = self.root.unknowns._dat[name].val
+            nval = len(val)
+
+            for k in range(nval):
+
+                low = meta['lower']
+                high = meta['upper']
+                if isinstance(low, np.ndarray):
+                    low = low[k]
+                if isinstance(high, np.ndarray):
+                    high = high[k]
+
+                bounds[(name, k)] = np.linspace(low, high)
+
         for i in moves.range(self.num_samples):
-            yield ((key, np.random.uniform(bound['lower'], bound['upper']))
-                        for key, bound in iteritems(self.get_desvar_metadata()))
+            yield ((key, np.random.uniform(bound[0], bound[1]))
+                        for key, bound in iteritems(bounds))

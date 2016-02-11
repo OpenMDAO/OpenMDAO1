@@ -33,11 +33,23 @@ class FullFactorialDriver(PredeterminedRunsDriver):
 
     def _build_runlist(self):
         value_arrays = dict()
-        for name, value in iteritems(self.get_desvar_metadata()):
-            low = value['lower']
-            high = value['upper']
-            value_arrays[name] = np.linspace(low, high,
-                                             num=self.num_levels).tolist()
+        for name, meta in iteritems(self.get_desvar_metadata()):
+
+            # Support for array desvars
+            val = self.root.unknowns._dat[name].val
+            nval = len(val)
+
+            for k in range(nval):
+
+                low = meta['lower']
+                high = meta['upper']
+                if isinstance(low, np.ndarray):
+                    low = low[k]
+                if isinstance(high, np.ndarray):
+                    high = high[k]
+
+                value_arrays[(name, k)] = np.linspace(low, high,
+                                                      num=self.num_levels).tolist()
 
         keys = list(value_arrays.keys())
         for combination in itertools.product(*value_arrays.values()):
