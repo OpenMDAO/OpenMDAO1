@@ -62,6 +62,44 @@ class TestConnections(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def test_diff_conn_input_units_w_src(self):
+        p = Problem(root=Group())
+        root = p.root
+
+        num_comps = 50
+
+        desvars = root.add("desvars", IndepVarComp('dvar1', 1.0))
+
+        # add a bunch of comps
+        for i in range(num_comps):
+            if i % 2 == 0:
+                units = "ft"
+            else:
+                units = "m"
+
+            root.add("C%d"%i, ExecComp('y=x*2.0', units={'x':units}))
+
+        # connect all of their inputs (which have different units)
+        for i in range(1, num_comps):
+            root.connect("C%d.x"%(i-1), "C%d.x"%i)
+
+        try:
+            p.setup(check=False)
+        except Exception as err:
+            self.assertTrue("The following sourceless connected inputs have different units" in
+                            str(err))
+        else:
+            self.fail("Exception expected")
+
+        # now, connect a source and the error should go away
+
+        p.cleanup()
+
+        root.connect('desvars.dvar1', 'C10.x')
+
+        p.setup(check=False)
+
+
     def test_no_conns(self):
         self.p.setup(check=False)
         self.assertEqual(self.p._dangling['G1.G2.C1.x'], set(['G1.G2.C1.x']))

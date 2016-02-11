@@ -1,7 +1,7 @@
 .. index:: Finite Difference Tutorial
 
 Finite Difference
------------------------
+-----------------
 
 OpenMDAO allows you to specify analytic derivatives for your models, but it
 is not a requirement. You can choose instead to allow any part or all of your
@@ -309,6 +309,7 @@ Nothing else changes in the original model. When we run it, we get:
 So here, `linearize` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
 
+.. _`parallel_finite_difference`:
 
 Parallel Finite Difference
 ==========================
@@ -360,8 +361,8 @@ and outputs.
             unknowns['y'] = 3.0*params['x']
 
 The following check is only here so that our doc tests, which don't run
-under MPI, will pass.  In practice, you would never use a `ParallelFDGroup`
-unless you were running under MPI.
+under MPI, will pass.  If you use a `ParallelFDGroup` when you're not running
+under MPI, it will behave like a regular Group.
 
 .. testcode:: fd_par_example
 
@@ -375,11 +376,12 @@ unless you were running under MPI.
 For this simple example, we'll do parallel finite difference at the top level
 of our model, by using a `ParallelFDGroup` in place of a regular `Group`,
 but you can use `ParallelFDGroup` to replace other `Groups` inside of your
-model as well.  `ParallelFDGroup` takes an arg that tells it how many finite
+model as well.  `ParallelFDGroup` takes an argument that tells it how many finite
 differences to perform in parallel.  In this case, we'll do two parallel
 finite differences.  The size of our design variable is 10, so we'll perform
 5 finite differences in each of our two processes.  Note that the number of
-design variables doesn't have to divide equally among the processes.
+design variables doesn't have to divide equally among the processes, but
+you'll get the best speedup when it does.
 
 .. testcode:: fd_par_example
 

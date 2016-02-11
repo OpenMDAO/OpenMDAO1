@@ -1,7 +1,5 @@
 import time
 
-from six import text_type
-
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp
@@ -220,7 +218,7 @@ class MPITests2(MPITestCase):
                 x = prob['G1.P1.x']
             except Exception as error:
                 msg = "Cannot access remote Variable 'G1.P1.x' in this process."
-                self.assertEqual(text_type(error), msg)
+                self.assertEqual(str(error), msg)
             else:
                 self.fail("Error expected")
 
@@ -228,7 +226,7 @@ class MPITests2(MPITestCase):
                 prob['G1.P1.x'] = 0.
             except Exception as error:
                 msg = "Cannot access remote Variable 'G1.P1.x' in this process."
-                self.assertEqual(text_type(error), msg)
+                self.assertEqual(str(error), msg)
             else:
                 self.fail("Error expected")
 
@@ -307,7 +305,6 @@ class MPITests2(MPITestCase):
             for n in range(self.comm.size):
                 expected = np.ones(size)*2*(n+1)
                 self.assertTrue(all(results[n] == expected))
-
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests

@@ -36,6 +36,9 @@ class TestPetscKSP(MPITestCase):
         prob.root = FanInGrouped()
         prob.setup(check=False)
 
+        prob.root.clear_dparams()
+        prob.root.dumat[None].vec[:] = 0.0
+
         prob.root.comp3.dpmat[None]['x1'] = 7.
         prob.root.comp3.dpmat[None]['x2'] = 11.
         prob.root._transfer_data(mode='rev', deriv=True)
@@ -45,6 +48,8 @@ class TestPetscKSP(MPITestCase):
 
         if not MPI or self.comm.rank == 1:
             self.assertEqual(prob.root.sub.comp2.dumat[None]['y'], 11.)
+
+        prob.root.clear_dparams()
 
         prob.root.comp3.dpmat[None]['x1'] = 0.
         prob.root.comp3.dpmat[None]['x2'] = 0.
@@ -142,6 +147,28 @@ class TestPetscKSP(MPITestCase):
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
+        assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+    def test_converge_diverge_comp_cs(self):
+
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = PetscKSP()
+
+        # fd the whole model
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        indep_list = ['p.x']
+        unknown_list = ['comp7.y1']
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)

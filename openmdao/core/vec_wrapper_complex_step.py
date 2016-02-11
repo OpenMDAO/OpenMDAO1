@@ -111,7 +111,7 @@ class ComplexStepTgtVecWrapper(object):
             Name of variable to get the metadata for.
         """
 
-        if name == None:
+        if name is None:
             self.step_var = None
             self.step_val = None
             return
@@ -146,7 +146,7 @@ class ComplexStepSrcVecWrapper(object):
         self.vec = vec.vec
         self.step_var = None
         self.step_val = None
-        self.vals = {} # Order not guaranteed in python 3.
+        self.vals = {}
 
         # Make complex copies of every unknown or state
         for name, val in iteritems(vec):
@@ -284,7 +284,7 @@ class ComplexStepSrcVecWrapper(object):
             Name of variable to get the metadata for.
         """
 
-        if name == None:
+        if name is None:
             self.step_var = None
             self.step_val = None
             return

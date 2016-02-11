@@ -19,7 +19,7 @@ from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core.checks import check_connections
+from openmdao.core._checks import check_connections
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun
 from openmdao.core.relevance import Relevance
@@ -31,6 +31,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 from openmdao.units.units import get_conversion_tuple
 from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
+from openmdao.util.graph import plain_bfs
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 
@@ -45,6 +46,7 @@ class _ProbData(object):
     """
     def __init__(self):
         self.top_lin_gs = False
+        self.in_complex_step = False
 
 
 class Problem(object):
@@ -196,14 +198,24 @@ class Problem(object):
         for tgt, srcs in iteritems(implicit_conns):
             connections.setdefault(tgt, []).extend(srcs)
 
+        input_graph = nx.DiGraph()
 
-        input_graph = nx.Graph()
+        # so we can make sure we don't start our traversals at any input
+        # node that isn't connected to an unknown
+        skip = set()
+        from_unknown = set()
 
         # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
             for src, idxs in srcs:
                 if src in params_dict:
                     input_graph.add_edge(src, tgt, idxs=idxs)
+                    skip.add(tgt)
+                else:
+                    # target is connected directly to an unknown
+                    from_unknown.add(tgt)
+
+        skip = skip.difference(from_unknown)
 
         # find any promoted but not connected inputs
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
@@ -211,15 +223,14 @@ class Problem(object):
                 for n in prom_noconns[prom]:
                     if p != n:
                         input_graph.add_edge(p, n, idxs=None)
+                        skip.add(n)
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
 
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
-                # force list here, since some versions of networkx return a
-                # set here.
-                connected = list(nx.node_connected_component(input_graph, tgt))
+                connected = list(plain_bfs(input_graph, tgt))
                 for c in connected:
                     self._input_inputs[c] = connected
 
@@ -239,18 +250,21 @@ class Problem(object):
                 for src, idxs in srcs:
                     if src in unknowns_dict:
                         for new_tgt in connected_inputs:
-                            new_idxs = idxs
+                            # make sure we start at a 'src' input
                             if compute_indices:
-                                # follow path to new target, apply src_idxs along the way
-                                path = nx.shortest_path(input_graph, tgt, new_tgt)
-                                for i, node in enumerate(path[:-1]):
-                                    next_idxs = input_graph[node][path[i+1]]['idxs']
-                                    if next_idxs is not None:
-                                        if new_idxs is not None:
-                                            new_idxs = np.array(new_idxs)[next_idxs]
-                                        else:
-                                            new_idxs = next_idxs
-                            to_add.append((new_tgt, (src, new_idxs)))
+                                if new_tgt not in skip:
+                                    # follow path to new target, apply src_idxs along the way
+                                    for s,t in nx.dfs_edges(input_graph, new_tgt):
+                                        if s == new_tgt:
+                                            new_idxs = idxs
+                                        next_idxs = input_graph[s][t]['idxs']
+                                        if next_idxs is not None:
+                                            if new_idxs is not None:
+                                                new_idxs = np.array(new_idxs)[next_idxs]
+                                            else:
+                                                new_idxs = next_idxs
+                                        to_add.append((t, (src, new_idxs)))
+                                    to_add.append((new_tgt, (src, idxs)))
 
         for tgt, (src, idxs) in to_add:
             if tgt in connections:
@@ -275,14 +289,13 @@ class Problem(object):
 
         connections = newconns
 
-        self._dangling = OrderedDict()
+        self._dangling = {}
         for p, prom in iteritems(self.root._sysdata.to_prom_pname):
             if p not in connections:
                 if p in input_graph:
-                    self._dangling[prom] = \
-                        set(nx.node_connected_component(input_graph, p))
+                    self._dangling[prom] = set(plain_bfs(input_graph, p))
                 else:
-                    self._dangling[prom] = set([p])
+                    self._dangling[prom] = set((p,))
 
         return connections
 
@@ -297,8 +310,11 @@ class Problem(object):
             # figure out if any connected inputs have different initial
             # values or different units
             if tgt not in input_diffs:
+                found_src = False
                 for inp in connected_inputs:
                     input_diffs[inp] = ([], [])
+                    if not found_src and inp in connections:
+                        found_src = True
 
                 tgt_idx = connected_inputs.index(tgt)
                 units = [params_dict[n].get('units') for n in connected_inputs]
@@ -326,14 +342,16 @@ class Problem(object):
                                           v.shape==vals[tgt_idx].shape and
                                           (v==vals[tgt_idx]).all())]
                 else:
+                    vtype = type(vals[tgt_idx])
                     diff_vals = [(connected_inputs[i],v) for i,v in
-                                     enumerate(vals) if v!=vals[tgt_idx]]
+                                     enumerate(vals) if vtype!=type(v) or
+                                                          v!=vals[tgt_idx]]
 
                 # if tgt has no unknown source, units MUST match, unless
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if tgt not in connections:
+                if not found_src:
                     if diff_units:
                         filt = set([u for n,u in diff_units])
                         if None in filt:
@@ -493,6 +511,9 @@ class Problem(object):
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
+        # divide MPI communicators among subsystems
+        self._setup_communicators()
+
         # Returns the parameters and unknowns metadata dictionaries
         # for the root, which has an entry for each variable contained
         # in any child of root. Metadata for each variable will contain
@@ -506,9 +527,9 @@ class Problem(object):
         #     'val': 2.5,   # the initial value of that variable (if known)
         #  }
         params_dict, unknowns_dict = self.root._setup_variables()
+
         self._probdata.params_dict = params_dict
         self._probdata.unknowns_dict = unknowns_dict
-
         self._probdata.to_prom_name = self.root._sysdata.to_prom_name
 
         # collect all connections, both implicit and explicit from
@@ -518,56 +539,48 @@ class Problem(object):
         connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
 
-        # Allow the user to omit the size of a parameter and pull the size
-        # and shape from the connection source.
-        for tgt, src in iteritems(connections):
+        for tgt, (src, idxs) in iteritems(connections):
             tmeta = params_dict[tgt]
-            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
+            if 'pass_by_obj' not in tmeta or not tmeta['pass_by_obj']:
 
-                src_name, src_idx = src
-                smeta = unknowns_dict[src_name]
+                # Allow the user to omit the size of a parameter and pull
+                # the size and shape from the connection source.
+                if tmeta['shape'] == ():
 
-                # Connected with src_indices specified
-                if src_idx is not None:
-                    size = len(src_idx)
-                    tmeta['shape'] = (size, )
-                    tmeta['size'] = size
-                    tmeta['val'] = smeta['val'][np.array(src_idx)]
+                    smeta = unknowns_dict[src]
 
-                # Regular connection
-                else:
-                    tmeta['shape'] = smeta['shape']
-                    tmeta['size'] = smeta['size']
-                    tmeta['val'] = smeta['val']
+                    # Connected with src_indices specified
+                    if idxs is not None:
+                        size = len(idxs)
+                        tmeta['shape'] = (size, )
+                        tmeta['size'] = size
+                        tmeta['val'] = smeta['val'][np.array(idxs)]
 
-        # push connection src_indices down into the metadata for all target
-        # params in all component level systems, then flag meta_changed so
-        # it will get percolated back up to all groups in next setup_vars()
-        src_idx_conns = [(tgt, src, idxs) for tgt, (src, idxs) in
-                         iteritems(connections) if idxs is not None]
-        if src_idx_conns:
-            meta_changed = True
-            for comp in self.root.components(recurse=True):
-                for tgt, src, idxs in src_idx_conns:
-                    meta = comp._params_dict.get(tgt)
-                    if meta and meta['pathname'] == tgt:
-                        meta['src_indices'] = idxs
+                    # Regular connection
+                    else:
+                        tmeta['shape'] = smeta['shape']
+                        tmeta['size'] = smeta['size']
+                        tmeta['val'] = smeta['val']
+
+                # set src_indices into variable metadata
+                if idxs is not None:
+                    if isinstance(idxs, np.ndarray):
+                        tmeta['src_indices'] = idxs
+                    else:
+                        tmeta['src_indices'] = np.array(idxs,
+                                                  dtype=self._impl.idx_arr_type)
 
         # TODO: handle any automatic grouping of systems here...
-
-        # divide MPI communicators among subsystems
-        self._setup_communicators()
-
-        # mark any variables in non-local Systems as 'remote'
-        for comp in self.root.components(recurse=True):
-            if not comp.is_active():
-                meta_changed = True
-                comp._set_vars_as_remote()
+        #       If we modify the system tree here, we'll have to call
+        #       the full setup over again...
 
         if MPI:
             for s in self.root.components(recurse=True):
-                if s.setup_distrib_idxs is not Component.setup_distrib_idxs:
-                    # component defines its own setup_distrib_idxs, so
+                # get rid of check for setup_distrib_idxs when we move to beta
+                if hasattr(s, 'setup_distrib_idxs') or (
+                         hasattr(s, 'setup_distrib') and (s.setup_distrib
+                                                is not Component.setup_distrib)):
+                    # component defines its own setup_distrib, so
                     # the metadata will change
                     meta_changed = True
 
@@ -588,7 +601,8 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict, self.root._sysdata.to_prom_name)
+        check_connections(connections, params_dict, unknowns_dict,
+                          self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -597,18 +611,19 @@ class Problem(object):
         # and connections down to all subsystems
         to_prom_name = self.root._sysdata.to_prom_name
         self._probdata.to_prom_name = to_prom_name
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            sub.connections = connections
 
-        # set top_promoted_name and unit_conv in top system (all metatdata
-        # is shared, so not need to propagate down the tree)
-        for path, meta in iteritems(self.root._params_dict):
+        for path, meta in iteritems(params_dict):
+            # set top promoted name into var metadata
             meta['top_promoted_name'] = to_prom_name[path]
-            unit_conv = params_dict[path].get('unit_conv')
-            if unit_conv:
-                meta['unit_conv'] = unit_conv
 
-        for path, meta in iteritems(self.root._unknowns_dict):
+            # Check for dangling params that have no size or shape
+            if path not in connections:
+                if 'pass_by_obj' not in meta or not meta['pass_by_obj']:
+                    if meta['shape'] == ():
+                        raise RuntimeError("Unconnected param '{}' is missing "
+                                           "a shape or default value.".format(path))
+
+        for path, meta in iteritems(unknowns_dict):
             meta['top_promoted_name'] = to_prom_name[path]
 
         # Given connection information, create mapping from system pathname
@@ -649,7 +664,6 @@ class Problem(object):
                                              unknowns_dict, connections,
                                              pois, oois, mode)
 
-
         # perform auto ordering
         for s in self.root.subgroups(recurse=True, include_self=True):
             # set auto order if order not already set
@@ -677,15 +691,6 @@ class Problem(object):
         # report any differences in units or initial values for
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
-
-        # Check for dangling params that have no size or shape
-        dangling_params = set([p for p in self.root._params_dict
-                               if p not in self.root.connections])
-        for param in dangling_params:
-            tmeta = self.root._params_dict[param]
-            if not tmeta.get('pass_by_obj') and tmeta['shape'] == ():
-                msg = "Unconnected param '{}' is missing a shape or default value."
-                raise RuntimeError(msg.format(param))
 
         # create VecWrappers for all systems in the tree.
         self.root._setup_vectors(param_owners, impl=self._impl)
@@ -718,9 +723,14 @@ class Problem(object):
         self.root.cleanup()
 
     def _check_solvers(self):
-        """
-        Raise an exception if we detect a LinearGaussSeidel solver and that
-        group has either cycles or uniterated states.
+        """ Search over all solvers and raise errors for unsupported
+        configurations. These include:
+
+        Raise an exception if we detect a LinearGaussSeidel
+        solver and that group has either cycles or uniterated states.
+
+        Raise an exception if a Newton solver is found under any system that
+        is set to complex step.
         """
 
         # all states that have some maxiter>1 linear solver above them in the tree
@@ -728,6 +738,24 @@ class Problem(object):
         group_states = []
 
         for group in self.root.subgroups(recurse=True, include_self=True):
+
+            # Look for nl solvers that require derivs under Complex Step.
+            opt = group.fd_options
+            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+
+                # TODO: Support using complex step on a subsystem
+                if group.name != '':
+                    msg = "Complex step is currently not supported for groups"
+                    msg += " other than root."
+                    raise RuntimeError(msg)
+
+                # Complex Step, so check for deriv requirement in subsolvers
+                for sub in self.root.subgroups(recurse=True, include_self=True):
+                    if hasattr(sub.nl_solver, 'ln_solver'):
+                        msg = "The solver in '{}' requires derivatives. We "
+                        msg += "currently do not support complex step around it."
+                        raise RuntimeError(msg.format(sub.name))
+
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
@@ -815,8 +843,16 @@ class Problem(object):
         if self._unit_diffs:
             tuples = sorted(iteritems(self._unit_diffs))
             print("\nUnit Conversions", file=out_stream)
+
+            vec = self.root.unknowns
+            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
+
             for (src, tgt), (sunit, tunit) in tuples:
-                print("%s -> %s : %s -> %s" % (src, tgt, sunit, tunit),
+                if src in pbos:
+                    pbo_str = ' (pass_by_obj)'
+                else:
+                    pbo_str = ''
+                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
                       file=out_stream)
 
             return tuples
@@ -968,7 +1004,7 @@ class Problem(object):
         ubcs = self._get_ubc_vars(self.root.connections)
         if ubcs:
             print("\nThe following params are connected to unknowns that are "
-                  "updated out of order, so their initial values will contain "
+                  "updated out of order, so their initial values may contain "
                   "uninitialized unknown values: %s" % ubcs, file=out_stream)
         return ubcs
 
@@ -987,6 +1023,46 @@ class Problem(object):
                           type(val).__name__), file=out_stream)
 
         return pbos
+
+    def _check_relevant_pbos(self, out_stream=sys.stdout):
+        """ Warn if any pass_by_object variables are in any relevant set if
+        top driver requires derivatives."""
+
+        # Only warn if we are taking gradients across model with a pbo
+        # variable.
+        if self.driver.__class__ is Driver or \
+           self.driver.supports['gradients'] is False or \
+           self.root.fd_options['force_fd']:
+            return []
+
+        vec = self.root.unknowns
+        pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
+
+        rels = set()
+        for key, rel in iteritems(self._probdata.relevance.relevant):
+            rels.update(rel)
+
+        rel_pbos = rels.intersection(pbos)
+        if rel_pbos:
+            print("\nThe following relevant connections are marked as pass_by_obj:",
+                  file=out_stream)
+            for src in rel_pbos:
+                val = vec[src]
+
+                # Find target(s) and print whole relevant connection
+                for tgt, src_tuple in iteritems(self.root.connections):
+                    if src_tuple[0] == src and tgt in rels:
+                        print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
+                              file=out_stream)
+
+            print("\nYour driver requires a gradient across a model with pass_by_obj "
+                  "connections. We strongly recommend either setting the root "
+                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
+                  "connection into a Group and setting its fd_options 'force_fd' "
+                  "to True.",
+                  file=out_stream)
+
+        return list(rel_pbos)
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems
@@ -1012,6 +1088,7 @@ class Problem(object):
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
+        results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
         results['layout'] = self._check_layout(out_stream)
 
         # TODO: Incomplete optimization driver configuration
@@ -1036,6 +1113,14 @@ class Problem(object):
         """ Runs the Driver in self.driver. """
         if self.root.is_active():
             self.driver.run(self)
+
+        # if we're running under MPI, ensure that all of the processes
+        # are finished in order to ensure that scripting code outside of
+        # Problem doesn't attempt to access variables or files that have
+        # not finished updating.  This can happen with FileRef vars and
+        # potentially other pass_by_obj variables.
+        if MPI:
+            self.comm.barrier()
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
@@ -1192,9 +1277,9 @@ class Problem(object):
         to_abs_uname = root._sysdata.to_abs_uname
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         abs_params = []
         fd_unknowns = [var for var in unknown_list if var not in indep_list]
@@ -1363,9 +1448,9 @@ class Problem(object):
         owned = root._owning_ranks
 
         if dv_scale is None:
-            dv_scale = {} # Order not guaranteed in python 3.
+            dv_scale = {}
         if cn_scale is None:
-            cn_scale = {} # Order not guaranteed in python 3.
+            cn_scale = {}
 
         # Respect choice of mode based on precedence.
         # Call arg > ln_solver option > auto-detect
@@ -1483,7 +1568,7 @@ class Problem(object):
                 vkey = self._get_voi_key(voi, params)
 
                 duvec = self.root.dumat[vkey]
-                rhs[vkey] = np.zeros((len(duvec.vec), ))
+                rhs[vkey] = np.empty((len(duvec.vec), ))
 
                 voi_srcs[vkey] = voi
                 if voi in duvec:
@@ -1818,32 +1903,76 @@ class Problem(object):
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
 
-        # Params and Unknowns that we provide at this level.
         root = self.root
-        abs_indep_list = root._get_fd_params()
-        param_srcs = [root.connections[p] for p in abs_indep_list \
-                      if not root.params.metadata(p).get('pass_by_obj')]
-        unknown_list = root._get_fd_unknowns()
-        unknown_list = [item for item in unknown_list \
-                        if not root.unknowns.metadata(item).get('pass_by_obj')]
+        driver = self.driver
 
-        # Convert absolute parameter names to promoted ones because it is
-        # easier for the user to read.
-        to_prom_name = self.root._sysdata.to_prom_name
-        indep_list = [
-            to_prom_name[p] for p, idxs in param_srcs
-        ]
+        # Check derivatives with respect to design variables, if they have
+        # been defined..
+        if len(driver._desvars) > 0:
+            param_srcs = list(driver._desvars.keys())
+            to_abs_name = root._sysdata.to_abs_uname
+            indep_list = [p for p in param_srcs if not \
+                          root._unknowns_dict[to_abs_name[p]].get('pass_by_obj')]
+
+        # Otherwise, use all available params.
+        else:
+            abs_indep_list = root._get_fd_params()
+            param_srcs = [root.connections[p] for p in abs_indep_list \
+                          if not root._params_dict[p].get('pass_by_obj')]
+
+            # Convert absolute parameter names to promoted ones because it is
+            # easier for the user to read.
+            to_prom_name = self.root._sysdata.to_prom_name
+            indep_list = [
+                to_prom_name[p] for p, idxs in param_srcs
+            ]
+
+        # Check derivatives of objectives and constraints, if they have
+        # been defined..
+        if len(driver._objs) > 0 or len(driver._cons) > 0:
+            unknown_list = list(driver._objs.keys())
+            unknown_list.extend(list(driver._cons.keys()))
+            unknown_list = [item for item in unknown_list \
+                            if not root.unknowns.metadata(item).get('pass_by_obj')]
+
+        # Otherwise, use all available unknowns.
+        else:
+            unknown_list = root._get_fd_unknowns()
+            unknown_list = [item for item in unknown_list \
+                            if not root.unknowns.metadata(item).get('pass_by_obj')]
+
+        # If we are using relevance reducton, then we are hard-wired for only
+        # one mode
+        if root.ln_solver.options.get('single_voi_relevance_reduction'):
+            mode = self._mode('auto', indep_list, unknown_list)
+            if mode == 'fwd':
+                fwd, rev = True, False
+                Jrev = None
+                if out_stream is not None:
+                    out_stream.write('Relevance Checking is enabled\n')
+                    out_stream.write('Only calculating fwd derviatives.\n\n')
+            else:
+                fwd, rev = False, True
+                Jfor = None
+                if out_stream is not None:
+                    out_stream.write('Relevance Checking is enabled\n')
+                    out_stream.write('Only calculating rev derviatives.\n\n')
+        else:
+            fwd = rev = True
 
         # Calculate all our Total Derivatives
-        Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
-                                  return_format='dict')
-        Jrev = self.calc_gradient(indep_list, unknown_list, mode='rev',
-                                  return_format='dict')
+        if fwd:
+            Jfor = self.calc_gradient(indep_list, unknown_list, mode='fwd',
+                                      return_format='dict')
+            Jfor = _jac_to_flat_dict(Jfor)
+
+        if rev:
+            Jrev = self.calc_gradient(indep_list, unknown_list, mode='rev',
+                                      return_format='dict')
+            Jrev = _jac_to_flat_dict(Jrev)
+
         Jfd = self.calc_gradient(indep_list, unknown_list, mode='fd',
                                  return_format='dict')
-
-        Jfor = _jac_to_flat_dict(Jfor)
-        Jrev = _jac_to_flat_dict(Jrev)
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
@@ -1954,7 +2083,9 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        self.driver._setup_communicators(self.comm)
+        # TODO: once we have nested Problems, figure out proper Problem
+        #       directory instead of just using getcwd().
+        self.driver._setup_communicators(self.comm, os.getcwd())
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
@@ -2037,7 +2168,7 @@ class Problem(object):
         """
 
         connections = OrderedDict()
-        dangling = {} # Order not guaranteed in python 3.
+        dangling = {}
 
         abs_unames = self.root._sysdata.to_abs_uname
 
@@ -2065,10 +2196,10 @@ def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
     parameters they transfer data to.
     """
-    param_owners = {} # Order not guaranteed in python 3.
+    param_owners = {}
 
     for par, (unk, idxs) in iteritems(connections):
-        param_owners.setdefault(get_common_ancestor(par, unk), []).append(par)
+        param_owners.setdefault(get_common_ancestor(par, unk), set()).add(par)
 
     return param_owners
 
@@ -2115,39 +2246,65 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             ldata = cdata[key] = {}
 
             Jsub_fd = jac_fd[key]
-
-            Jsub_for = jac_fwd[key]
-            Jsub_rev = jac_rev[key]
-
             ldata['J_fd'] = Jsub_fd
-            ldata['J_fwd'] = Jsub_for
-            ldata['J_rev'] = Jsub_rev
-
-            magfor = np.linalg.norm(Jsub_for)
-            magrev = np.linalg.norm(Jsub_rev)
             magfd = np.linalg.norm(Jsub_fd)
+
+            if jac_fwd:
+                Jsub_for = jac_fwd[key]
+                ldata['J_fwd'] = Jsub_for
+                magfor = np.linalg.norm(Jsub_for)
+            else:
+                magfor = None
+
+            if jac_rev:
+                Jsub_rev = jac_rev[key]
+                ldata['J_rev'] = Jsub_rev
+                magrev = np.linalg.norm(Jsub_rev)
+            else:
+                magrev = None
 
             ldata['magnitude'] = (magfor, magrev, magfd)
 
-            abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
-            abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
-            abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+            if jac_fwd:
+                abs1 = np.linalg.norm(Jsub_for - Jsub_fd)
+            else:
+                abs1 = None
+            if jac_rev:
+                abs2 = np.linalg.norm(Jsub_rev - Jsub_fd)
+            else:
+                abs2 = None
+
+            if jac_fwd and jac_rev:
+                abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
+            else:
+                abs3 = None
 
             ldata['abs error'] = (abs1, abs2, abs3)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = float('nan')
             else:
-                rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
-                rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
-                rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+                if jac_fwd:
+                    rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                else:
+                    rel1 = None
+
+                if jac_rev:
+                    rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                else:
+                    rel2 = None
+
+                if jac_fwd and jac_rev:
+                    rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+                else:
+                    rel3 = None
 
             ldata['rel error'] = (rel1, rel2, rel3)
 
             if out_stream is None:
                 continue
 
-            if started is True:
+            if started:
                 out_stream.write(' -'*30 + '\n')
             else:
                 started = True
@@ -2155,24 +2312,35 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             # Optional file_like output
             out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
-            out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-            out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+            if jac_fwd:
+                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+            if jac_rev:
+                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+            if jac_fwd and jac_rev:
+                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
 
-            out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-            out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-            out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+            if jac_fwd:
+                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+            if jac_rev:
+                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+            if jac_fwd and jac_rev:
+                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
 
-            out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-            out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-            out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+            if jac_fwd:
+                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+            if jac_rev:
+                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+            if jac_fwd and jac_rev:
+                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
 
-            out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-            out_stream.write(str(Jsub_for))
-            out_stream.write('\n\n')
-            out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-            out_stream.write(str(Jsub_rev))
-            out_stream.write('\n\n')
+            if jac_fwd:
+                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                out_stream.write(str(Jsub_for))
+                out_stream.write('\n\n')
+            if jac_rev:
+                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                out_stream.write(str(Jsub_rev))
+                out_stream.write('\n\n')
             out_stream.write('    Raw FD Derivative (Jfor)\n\n')
             out_stream.write(str(Jsub_fd))
             out_stream.write('\n')

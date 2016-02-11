@@ -6,6 +6,7 @@ import numpy as np
 
 from openmdao.util.array_util import to_slice
 from openmdao.core.mpi_wrap import MPI
+from openmdao.core.fileref import FileRef
 
 class DataTransfer(object):
     """
@@ -116,10 +117,18 @@ class DataTransfer(object):
                 else:
                     np.add.at(srcvec.vec, isrcs, tgtvec.vec[itgts])
         else:
-            for isrcs, itgts, _ in self.scatters:
-                tgtvec.vec[itgts] = srcvec.vec[isrcs]
+            if tgtvec._probdata.in_complex_step:
+                for isrcs, itgts, _ in self.scatters:
+                    tgtvec.vec[itgts] = srcvec.vec[isrcs]
+                    tgtvec.imag_vec[itgts] = srcvec.imag_vec[isrcs]
+            else:
+                for isrcs, itgts, _ in self.scatters:
+                    tgtvec.vec[itgts] = srcvec.vec[isrcs]
 
             # forward, include byobjs if not a deriv scatter
             if not deriv:
                 for tgt, src in self.byobj_conns:
-                    tgtvec[tgt] = srcvec[src]
+                    if isinstance(srcvec[src], FileRef):
+                        tgtvec[tgt]._assign_to(srcvec[src])
+                    else:
+                        tgtvec[tgt] = srcvec[src]

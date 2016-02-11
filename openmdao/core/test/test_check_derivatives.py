@@ -5,8 +5,10 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES
-from openmdao.test.converge_diverge import ConvergeDivergeGroups
+from openmdao.api import Group, Component, IndepVarComp, Problem, ScipyGMRES, \
+                          ParallelGroup, LinearGaussSeidel
+from openmdao.test.converge_diverge import ConvergeDivergeGroups, ConvergeDivergePar
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error
@@ -269,6 +271,21 @@ class TestProblemFullFD(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
+    def test_full_model_fd_double_diamond_grouped_par_sys(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        par = root.add('par', ParallelGroup())
+        par.add('sub', ConvergeDivergeGroups())
+
+        prob.setup(check=False)
+        prob.run()
+
+        prob.root.fd_options['force_fd'] = True
+
+        # Make sure we don't get a key error.
+        data = prob.check_total_derivatives(out_stream=None)
+
 
 class TestProblemCheckTotals(unittest.TestCase):
 
@@ -333,6 +350,62 @@ class TestProblemCheckTotals(unittest.TestCase):
             assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
+
+    def test_limit_to_desvar_obj_con(self):
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        prob.driver.add_desvar('x')
+        prob.driver.add_objective('f_xy')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+        self.assertTrue(('f_xy', 'x') in data)
+        self.assertTrue(('f_xy', 'y') not in data)
+
+    def test_with_relevance_fwd(self):
+
+        prob = Problem()
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = LinearGaussSeidel()
+
+        prob.driver.add_desvar('p.x')
+        prob.driver.add_objective('comp7.y1')
+        prob.root.ln_solver.options['mode'] = 'fwd'
+        prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+
+    def test_with_relevance_rev(self):
+
+        prob = Problem()
+        prob.root = ConvergeDivergePar()
+        prob.root.ln_solver = LinearGaussSeidel()
+
+        prob.driver.add_desvar('p.x')
+        prob.driver.add_objective('comp7.y1')
+        prob.root.ln_solver.options['mode'] = 'rev'
+        prob.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

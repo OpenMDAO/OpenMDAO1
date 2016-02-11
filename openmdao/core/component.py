@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import re
+import warnings
 
 from collections import OrderedDict
 from itertools import chain
@@ -17,6 +18,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
+from openmdao.core.fileref import FileRef
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -108,8 +110,11 @@ class Component(System):
             If a valid value or shape is not specified.
         """
         shape = kwargs.get('shape')
-        self._check_name(name)
+        self._check_varname(name)
         meta = kwargs.copy()
+
+        if isinstance(val, FileRef):
+            val._set_meta(kwargs)
 
         meta['val'] = val = self._get_initial_val(val, shape)
 
@@ -232,8 +237,8 @@ class Component(System):
         meta['size'] = val.size
         meta['src_indices'] = src_indices
 
-    def _check_name(self, name):
-        """ Verifies that a system name is valid. Also checks for
+    def _check_varname(self, name):
+        """ Verifies that a variable name is valid. Also checks for
         duplicates."""
         if self._post_setup_vars:
             raise RuntimeError("%s: can't add variable '%s' because setup has already been called." %
@@ -247,7 +252,7 @@ class Component(System):
             raise NameError("%s: '%s' is not a valid variable name." %
                             (self.pathname, name))
 
-    def setup_distrib_idxs(self):
+    def setup_distrib(self):
         """
         Override this in your Component to set specific indices that will be
         pulled from source variables to fill your parameters.  This method
@@ -293,18 +298,26 @@ class Component(System):
         ----
 
         compute_indices : bool, optional
-            If True, call setup_distrib_idxs() to set values of
+            If True, call setup_distrib() to set values of
             'src_indices' metadata.
 
         """
-        to_prom_name = self._sysdata.to_prom_name = {} # Order not guaranteed in python 3.
+        to_prom_name = self._sysdata.to_prom_name = {}
         to_abs_uname = self._sysdata.to_abs_uname = {}
         to_abs_pnames = self._sysdata.to_abs_pnames = OrderedDict()
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         if MPI and compute_indices and self.is_active():
-            self.setup_distrib_idxs()
+            if hasattr(self, 'setup_distrib_idxs'):
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("setup_distrib_idxs is deprecated, use setup_distrib instead.",
+                              DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+
+                self.setup_distrib_idxs()
+            else:
+                self.setup_distrib()
             # now update our distrib_size metadata for any distributed
             # unknowns
             sizes = []
@@ -348,6 +361,50 @@ class Component(System):
 
         return self._params_dict, self._unknowns_dict
 
+    def _setup_communicators(self, comm, parent_dir):
+        """
+        Assign communicator to this `Component`.
+
+        Args
+        ----
+        comm : an MPI communicator (real or fake)
+            The communicator being offered by the parent system.
+
+        parent_dir : str
+            The absolute directory of the parent, or '' if unspecified. Used to
+            determine the absolute directory of all FileRefs.
+
+        """
+        super(Component, self)._setup_communicators(comm, parent_dir)
+
+        # set absolute directories of any FileRefs
+        for meta in chain(itervalues(self._init_unknowns_dict),
+                          itervalues(self._init_params_dict)):
+            val = meta['val']
+            #if var is a FileRef, set its absolute directory
+            if isinstance(val, FileRef):
+                self._fileref_setup(val)
+
+        if not self.is_active():
+            for meta in itervalues(self._init_params_dict):
+                meta['remote'] = True
+            for meta in itervalues(self._init_unknowns_dict):
+                meta['remote'] = True
+
+    def _fileref_setup(self, fref):
+        fref.parent_dir = self._sysdata.absdir
+        d = fref._abspath()
+        if self.is_active() and not os.path.exists(os.path.dirname(d)):
+            if self.create_dirs:
+                os.makedirs(os.path.dirname(d))
+            else:
+                raise RuntimeError("directory '%s' doesn't exist "
+                                   "for FileRef('%s'). Set create_dirs=True "
+                                   "in system '%s' to create the directory "
+                                   "automatically." %
+                                   (os.path.dirname(d),
+                                   fref.fname, self.pathname))
+
     def _setup_vectors(self, param_owners, parent,
                        top_unknowns=None, impl=None):
         """
@@ -370,6 +427,8 @@ class Component(System):
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
+        self.connections = self._probdata.connections
+
         relevance = self._probdata.relevance
 
         if not self.is_active():
@@ -725,7 +784,7 @@ class Component(System):
             stepvec.set_complex_var(p_name)
 
             # promoted names and _init_params_dict keys are same
-            mydict = self._init_params_dict.get(p_name, {}) # Order not guaranteed in python 3.
+            mydict = self._init_params_dict.get(p_name, {})
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)

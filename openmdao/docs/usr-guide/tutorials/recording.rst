@@ -357,8 +357,8 @@ is the name of the sqlite database file. The second, `'openmdao'`, is the name o
 in the sqlite database. For the SqliteRecorder in OpenMDAO, all the
 recording is done to the `'openmdao'` table.
 
-Now, we can access the data using an iteration coordinate. It is not always obvious what are the 
-iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method 
+Now, we can access the data using an iteration coordinate. It is not always obvious what are the
+iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method
 on the `db` object:
 
 .. testcode:: reading
@@ -371,13 +371,19 @@ which will print out:
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+    ['metadata', 'SLSQP/1', 'SLSQP/1/derivs', 'SLSQP/2', 'SLSQP/2/derivs', 'SLSQP/3', 'SLSQP/4', 'SLSQP/4/derivs', 'SLSQP/5', 'SLSQP/5/derivs', 'SLSQP/6', 'SLSQP/6/derivs']
 
 ::
 
-    ['metadata', 'SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+    ['metadata', 'SLSQP/1', 'SLSQP/1/derivs', 'SLSQP/2', 'SLSQP/2/derivs', 'SLSQP/3', 'SLSQP/4', 'SLSQP/4/derivs', 'SLSQP/5', 'SLSQP/5/derivs', 'SLSQP/6', 'SLSQP/6/derivs']
 
-So for this example, the iteration coordinates are: 
+Note that we have three kinds of output data here. The entry for the key
+'metadata' contains individual variable metadata such as 'units'. Entries that
+look like 'SLSQP/1' contain the value of the recorded variables at a specific
+iteration. Finally, entries that look like 'SLSQP/1/derivs' contain the derivative
+at that iteration if one was calculated.
+
+So for this example, the iteration coordinates are:
 
 ::
 

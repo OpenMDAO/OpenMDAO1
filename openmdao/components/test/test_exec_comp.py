@@ -39,6 +39,21 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, C1.unknowns['y'], 3.0, 0.00001)
 
+    def test_units(self):
+        prob = Problem(root=Group())
+        C1 = prob.root.add('C1', ExecComp('y=x+z+1.', x=2.0, z=2.0, units={'x':'m','y':'m'}))
+
+        self.assertTrue('units' in C1._init_params_dict['x'])
+        self.assertTrue(C1._init_params_dict['x']['units'] == 'm')
+        self.assertTrue('units' in C1._init_unknowns_dict['y'])
+        self.assertTrue(C1._init_unknowns_dict['y']['units'] == 'm')
+        self.assertFalse('units' in C1._init_params_dict['z'])
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, C1.unknowns['y'], 5.0, 0.00001)
+
     def test_math(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=sin(x)', x=2.0))

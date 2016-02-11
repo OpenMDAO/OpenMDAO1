@@ -148,3 +148,29 @@ class OptionsDictionary(object):
         if value not in values:
             msg = "'{}' must be one of the following values: '{}'"
             raise ValueError(msg.format(name, values))
+
+    def _generate_docstring(self, dictname):
+        """
+        Generates a numpy-style docstring for an OptionsDictionary.
+
+        Returns
+        -------
+        docstring : str
+            string that contains part of a basic numpy docstring.
+
+        """
+        docstring = []
+        for (name, val) in sorted(self.items()):
+            docstring.extend(["    ", dictname, "['", name, "']",
+                                " :  ", type(val).__name__, "("])
+            if isinstance(val, str):
+                docstring.append("'%s'"%val)
+            else:
+                docstring.append(str(val))
+            docstring.append(")\n")
+
+            desc = self._options[name]['desc']
+            if(desc):
+                docstring.extend(["        ", desc, "\n"])
+
+        return ''.join(docstring)

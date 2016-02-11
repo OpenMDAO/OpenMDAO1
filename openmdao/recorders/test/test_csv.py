@@ -65,6 +65,10 @@ class TestCsvRecorder(unittest.TestCase):
         csv_reader = csv.DictReader(self.io)
         for row in csv_reader:
             for header_name in row:
+
+                if header_name == 'Derivatives':
+                    continue
+
                 if header_name not in saved_results:
                     saved_results[header_name] = [header_name]
 

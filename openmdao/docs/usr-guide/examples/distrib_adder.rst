@@ -1,4 +1,4 @@
-.. index:: Distributes Component Example
+.. index:: Distributed Component Example
 
 Requirements
 ----------------------------------------
@@ -54,7 +54,7 @@ a value to a large float array (1,000,000 elements).
             """
             return (1,self.size)
 
-        def setup_distrib_idxs(self):
+        def setup_distrib(self):
             """
             specify the local sizes of the variables and which specific indices this specific
             distributed component will handle. Indices do NOT need to be sequential or
@@ -104,7 +104,7 @@ a value to a large float array (1,000,000 elements).
 
             unknowns['sum'] = np.sum(params['y'])
 
-The distributed component magic happens in the `setup_distrib_idxs` method of
+The distributed component magic happens in the `setup_distrib` method of
 the `DistributedAdder` class. This is where we tell the framework how to split
 up the the big array into smaller chunks handled separately by each distributed
 process. In this case, we just split the array up one chuck at a time in order

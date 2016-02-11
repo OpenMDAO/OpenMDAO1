@@ -9,6 +9,10 @@ from __future__ import print_function
 
 import traceback
 from six import iteritems
+from six.moves import range
+
+import scipy as sp
+import numpy as np
 
 from pyoptsparse import Optimization
 
@@ -94,7 +98,7 @@ class pyOptSparseDriver(Driver):
                                 desc='Set to True to let pyOpt calculate the gradient')
 
         # The user places optimizer-specific settings in here.
-        self.opt_settings = {} # Order not guaranteed in python 3.
+        self.opt_settings = {}
 
         # The user can set a file name here to store history
         self.hist_file = None
@@ -107,6 +111,7 @@ class pyOptSparseDriver(Driver):
         self.exit_flag = 0
         self._problem = None
         self.sparsity = OrderedDict()
+        self.sub_sparsity = OrderedDict()
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -147,10 +152,40 @@ class pyOptSparseDriver(Driver):
 
         opt_prob.finalizeDesignVariables()
 
+        # Figure out parameter subsparsity for paramcomp index connections.
+        # sub_param_conns is empty unless there are some index conns.
+        # full_param_conns gets filled with the connections to the entire
+        # parameter so that those params can be filtered out of the sparse
+        # set if the full path is also relevant
+        sub_param_conns = {}
+        full_param_conns = {}
+        for name in indep_list:
+            pathname = problem.root.unknowns.metadata(name)['pathname']
+            sub_param_conns[name] = {}
+            full_param_conns[name] = set()
+            for target, info in iteritems(problem.root.connections):
+                src, indices = info
+                if src == pathname:
+                    if indices is not None:
+                        # Need to map the connection indices onto the desvar
+                        # indices if both are declared.
+                        dv_idx = param_meta[name].get('indices')
+                        indices = set(indices)
+                        if dv_idx is not None:
+                            indices.intersection_update(dv_idx)
+                            ldv_idx = list(dv_idx)
+                            mapped_idx = [ldv_idx.index(item) for item in indices]
+                            sub_param_conns[name][target] = mapped_idx
+                        else:
+                            sub_param_conns[name][target] = indices
+                    else:
+                        full_param_conns[name].add(target)
+
         # Add all objectives
         objs = self.get_objectives()
         self.quantities = list(objs)
         self.sparsity = OrderedDict()
+        self.sub_sparsity = OrderedDict()
         for name in objs:
             opt_prob.addObj(name)
             self.sparsity[name] = self.indep_list
@@ -169,43 +204,53 @@ class pyOptSparseDriver(Driver):
         self.quantities += list(econs)
 
         for name in self.get_constraints(ctype='eq'):
-            size = con_meta[name]['size']
-            lower = upper = con_meta[name]['equals']
+            meta = con_meta[name]
+            size = meta['size']
+            lower = upper = meta['equals']
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(indep_list)
+            rels = rel.relevant[name]
+            wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if con_meta[name]['linear'] is True:
+            if meta['linear']:
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
+
+                jac = self._build_sparse(name, wrt, size, param_vals,
+                                         sub_param_conns, full_param_conns, rels)
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
-                                     wrt=wrt)
+                                     wrt=wrt, jac=jac)
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
         self.quantities += list(incons)
 
         for name in self.get_constraints(ctype='ineq'):
-            size = con_meta[name]['size']
+            meta = con_meta[name]
+            size = meta['size']
 
             # Bounds - double sided is supported
-            lower = con_meta[name]['lower']
-            upper = con_meta[name]['upper']
+            lower = meta['lower']
+            upper = meta['upper']
 
             # Sparsify Jacobian via relevance
-            wrt = rel.relevant[name].intersection(indep_list)
+            rels = rel.relevant[name]
+            wrt = rels.intersection(indep_list)
             self.sparsity[name] = wrt
 
-            if con_meta[name]['linear'] is True:
+            if meta['linear']:
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      linear=True, wrt=wrt,
                                      jac=self.lin_jacs[name])
             else:
+
+                jac = self._build_sparse(name, wrt, size, param_vals,
+                                         sub_param_conns, full_param_conns, rels)
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
-                                     wrt=wrt)
+                                     wrt=wrt, jac=jac)
 
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
@@ -226,7 +271,7 @@ class pyOptSparseDriver(Driver):
         self._problem = problem
 
         # Execute the optimization problem
-        if self.options['pyopt_diff'] is True:
+        if self.options['pyopt_diff']:
             # Use pyOpt's internal finite difference
             fd_step = problem.root.fd_options['step_size']
             sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
@@ -237,7 +282,7 @@ class pyOptSparseDriver(Driver):
         self._problem = None
 
         # Print results
-        if self.options['print_results'] is True:
+        if self.options['print_results']:
             print(sol)
 
         # Pull optimal parameters back into framework and re-run, so that
@@ -258,6 +303,85 @@ class pyOptSparseDriver(Driver):
                 self.exit_flag = 0
         except KeyError: #nothing is here, so something bad happened!
             self.exit_flag = 0
+
+    def _build_sparse(self, name, wrt, consize, param_vals, sub_param_conns,
+                      full_param_conns, rels):
+        """ Build up the data structures that define a sparse Jacobian
+        matrix. Called separately on each nonlinear constraint.
+
+        Args
+        ----
+        name : str
+            Constraint name.
+        wrt : list
+            List of relevant param names.
+        consize : int
+            Width of this constraint.
+        param_vals : dict
+            Dictionary of parameter values; used for sizing.
+        sub_param_conns : dict
+            Parameter subindex connection info.
+        full_param_conns : dict
+            Parameter full connection info.
+        rels : set
+            Set of relevant nodes for this connstraint.
+
+        Returns
+        -------
+        pyoptsparse coo matrix or None
+        """
+
+        jac = None
+
+        # Additional sparsity for index connections
+        for param in wrt:
+
+            sub_conns = sub_param_conns.get(param)
+            if not sub_conns:
+                continue
+
+            # If we have a simultaneous full connection, then we move on
+            full_conns = full_param_conns.get(param)
+            if full_conns.intersection(rels):
+                continue
+
+            rel_idx = set()
+            for target, idx in iteritems(sub_conns):
+
+                # If a target of the indexed desvar connection is
+                # in the relevant path for this constraint, then
+                # those indices are relevant.
+                if target in rels:
+                    rel_idx.update(idx)
+
+            nrel = len(rel_idx)
+            if nrel > 0:
+
+                if jac is None:
+                    jac = {}
+
+                if param not in jac:
+                    # A coo matrix for the Jacobian
+                    # mat = {'coo':[row, col, data],
+                    #        'shape':[nrow, ncols]}
+                    coo = {}
+                    coo['shape'] = [consize, len(param_vals[param])]
+                    jac[param] = coo
+
+                row = []
+                col = []
+                for i in range(consize):
+                    row.extend([i]*nrel)
+                    col.extend(rel_idx)
+                data = np.ones((len(row), ))
+
+                jac[param]['coo'] = [np.array(row), np.array(col), data]
+
+                if name not in self.sub_sparsity:
+                    self.sub_sparsity[name] = {}
+                self.sub_sparsity[name][param] = np.array(list(rel_idx))
+
+        return jac
 
     def _objfunc(self, dv_dict):
         """ Function that evaluates and returns the objective function and
@@ -352,8 +476,27 @@ class pyOptSparseDriver(Driver):
             sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                            return_format='dict',
                                            sparsity=self.sparsity)
-            #for key, value in iteritems(self.lin_jacs):
-            #    sens_dict[key] = value
+
+            # Support for sub-index sparsity by returning the Jacobian in a
+            # pyopt sparse format.
+            for con, val1 in iteritems(self.sub_sparsity):
+                for desvar, rel_idx in iteritems(val1):
+                    coo = {}
+                    jac = sens_dict[con][desvar]
+                    nrow, ncol = jac.shape
+                    coo['shape'] = [nrow, ncol]
+
+                    row = []
+                    col = []
+                    data = []
+                    ncol = len(rel_idx)
+                    for i in range(nrow):
+                        row.extend([i]*ncol)
+                        col.extend(rel_idx)
+                        data.extend(jac[i][rel_idx])
+
+                    coo['coo'] = [np.array(row), np.array(col), np.array(data)]
+                    sens_dict[con][desvar] = coo
 
             fail = 0
 

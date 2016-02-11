@@ -104,6 +104,7 @@ class TestComponent(unittest.TestCase):
         self.assertFalse(self.comp._promoted('blah'))
 
         self.comp._promotes = ('x*',)
+        p.setup(check=False)
         for name in self.comp._init_params_dict:
             if name.startswith('x'):
                 self.assertTrue(self.comp._promoted(name))
@@ -116,6 +117,7 @@ class TestComponent(unittest.TestCase):
                 self.assertFalse(self.comp._promoted(name))
 
         self.comp._promotes = ('*:efg',)
+        p.setup(check=False)
         for name in self.comp._init_params_dict:
             if name.endswith(':efg'):
                 self.assertTrue(self.comp._promoted(name))
@@ -189,11 +191,13 @@ class TestComponent(unittest.TestCase):
         self.assertIsInstance(unknowns["t"]["val"], np.ndarray)
         self.assertIsInstance(unknowns["u"]["val"], float)
 
-        self.assertEqual(unknowns["x"], {'pass_by_obj': True, 'pathname': 'x', 'val': -1, 'size': 0})
+        self.assertEqual(unknowns["x"], {'pass_by_obj': True, 'pathname': 'x',
+                                         'val': -1, 'size': 0})
         self.assertEqual(list(unknowns["y"]["val"]), 10*[0])
         np.testing.assert_array_equal(unknowns["z"]["val"], np.zeros((10,)))
         np.testing.assert_array_equal(unknowns["t"]["val"], np.zeros((2,)))
-        self.assertEqual(unknowns["u"], {'shape': 1, 'pathname': 'u', 'val': 0.0, 'size': 1})
+        self.assertEqual(unknowns["u"], {'shape': 1, 'pathname': 'u',
+                                         'val': 0.0, 'size': 1})
 
     def test_add_states(self):
         self.comp.add_state("s1", 0.0)

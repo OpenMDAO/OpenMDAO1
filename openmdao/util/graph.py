@@ -26,3 +26,35 @@ def collapse_nodes(graph, node_map, copy=False):
                              if u == v])
 
     return graph
+
+# plain_bfs is taken from networkx, but it isn't present in all versions,
+# so putting it here to make sure it's available.
+#
+#    Copyright (C) 2004-2015 by
+#    Aric Hagberg <hagberg@lanl.gov>
+#    Dan Schult <dschult@colgate.edu>
+#    Pieter Swart <swart@lanl.gov>
+#    All rights reserved.
+#    BSD license.
+def plain_bfs(G, source):
+    """A fast BFS node generator
+
+    The direction of the edge between nodes is ignored.
+
+    For directed graphs only.
+
+    """
+    Gsucc = G.succ
+    Gpred = G.pred
+
+    seen = set()
+    nextlevel = {source}
+    while nextlevel:
+        thislevel = nextlevel
+        nextlevel = set()
+        for v in thislevel:
+            if v not in seen:
+                yield v
+                seen.add(v)
+                nextlevel.update(Gsucc[v])
+                nextlevel.update(Gpred[v])

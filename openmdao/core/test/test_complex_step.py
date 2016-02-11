@@ -1,143 +1,73 @@
 """ Testing out complex step capability."""
 
+from __future__ import print_function
+
 import unittest
 
 import numpy as np
 
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.core.group import Group
-from openmdao.core.problem import Problem
+from openmdao.api import Group, Problem, IndepVarComp, Newton, UnitComp, ExecComp, \
+                         Component
 from openmdao.core.test.test_units import SrcComp, TgtCompC, TgtCompF, TgtCompK
-from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
-                                                   ComplexStepTgtVecWrapper
+from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.paraboloid import Paraboloid
-from openmdao.test.simple_comps import ArrayComp2D, SimpleComp
+from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 
+try:
+    from openmdao.solvers.petsc_ksp import PetscKSP
+    from openmdao.core.petsc_impl import PetscImpl as petsc_impl
+except ImportError:
+    petsc_impl = None
 
-class ComplexStepVectorUnitTests(unittest.TestCase):
 
-    def test_param_vec(self):
+class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', ArrayComp2D(), promotes=['x', 'y'])
-        top.root.add('p1', IndepVarComp('x', np.array([[1.0, 2.0], [3.0, 4.0]])),
-                     promotes=['x'])
-        top.root.add('comp2', SimpleComp())
-        top.root.add('p2', IndepVarComp('x', 3.0))
-        top.root.connect('p2.x', 'comp2.x')
+    def test_single_comp_paraboloid(self):
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 0.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 0.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
-        top.setup(check=False)
-        top.run()
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
 
-        params = ComplexStepTgtVecWrapper(top.root.comp.params)
+        prob.setup(check=False)
+        prob.run()
 
-        # Get a param that isn't complex-stepped
-        x = params['x']
-        self.assertTrue(x.dtype == np.float)
-        self.assertEquals(x[0, 1], 2.0)
+        jac = prob.calc_gradient(['x', 'y'], ['f_xy'])
 
-        # Get a param that is now complex
-        params.set_complex_var('x')
-        x = params['x']
-        self.assertTrue(x.dtype == np.complex)
-        self.assertEquals(x[0, 1], 2.0 + 0j)
+        # Note, FD can not reach this accuracy, but CS can.
+        assert_rel_error(self, jac[0][0], -6.0, 1e-7)
+        assert_rel_error(self, jac[0][1], 8.0, 1e-7)
 
-        # Apply complex step and get param
-        params.step_complex(1, 4.0)
-        x = params['x']
-        self.assertEquals(x[0, 1], 2.0 + 4j)
+    def test_converge_diverge_groups(self):
 
-        # Unset complex
-        params.set_complex_var(None)
-        x = params['x']
-        self.assertEquals(x[0, 1], 2.0)
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('sub', ConvergeDivergeGroups())
 
-        params = ComplexStepTgtVecWrapper(top.root.comp2.params)
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
 
-        # Get a param that isn't complex-stepped
-        x = params['x']
-        self.assertTrue(x.dtype == np.float)
-        self.assertEquals(x, 3.0)
+        # We can't reach our desired accuracy with this step size in fd, but
+        # we can with cs (where step size is irrelevant.)
+        root.fd_options['step_size'] = 1.0e-4
 
-        # Get a param that is now complex
-        params.set_complex_var('x')
-        x = params['x']
-        self.assertTrue(x.dtype == np.complex)
-        self.assertEquals(x, 3.0 + 0j)
+        prob.setup(check=False)
+        prob.run()
 
-        # Apply complex step and get param
-        params.step_complex(0, 4.0)
-        self.assertEquals(x, 3.0 + 4j)
+        indep_list = ['sub.p.x']
+        unknown_list = ['sub.comp7.y1']
 
-        # Make sure all other functions work for coverage
-        self.assertEquals(len(params), 1)
-        self.assertTrue('x' in params)
-        plist = [z for z in params]
-        self.assertEquals(plist, ['x'])
-        self.assertEquals(params.keys(), top.root.comp2.params.keys())
-        self.assertEquals(params.metadata('x'), top.root.comp2.params.metadata('x'))
-        plist1 = [z for z in params.iterkeys()]
-        plist2 = [z for z in top.root.comp2.params.iterkeys()]
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
-    def test_unknown_vec(self):
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
 
-        top = Problem()
-        top.root = Group()
-        top.root.add('comp', ArrayComp2D(), promotes=['x', 'y'])
-        top.root.add('p1', IndepVarComp('x', np.array([[1.0, 2.0], [3.0, 4.0]])),
-                     promotes=['x'])
-        top.root.add('comp2', SimpleComp())
-        top.root.add('p2', IndepVarComp('x', 3.0))
-        top.root.connect('p2.x', 'comp2.x')
-
-        top.setup(check=False)
-        top.run()
-
-        unknowns = ComplexStepSrcVecWrapper(top.root.comp.unknowns)
-
-        # Unknowns are always complex
-        y = unknowns['y']
-        self.assertTrue(y.dtype == np.complex)
-        self.assertEquals(y[0, 1], 46.0 + 0j)
-
-        # Set an unknown
-        unknowns['y'][0, 1]= 13.0 + 17.0j
-        self.assertEquals(unknowns['y'][0, 1], 13.0 + 17.0j)
-
-        # Extract flat var
-        cval = unknowns.flat('y')
-        self.assertEquals(cval[1], 13.0 + 17.0j)
-        self.assertEquals(cval.shape[0], 4)
-
-        unknowns = ComplexStepSrcVecWrapper(top.root.comp2.unknowns)
-
-        # Unknowns are always complex
-        y = unknowns['y']
-        self.assertTrue(y.dtype == np.complex)
-        self.assertEquals(y, 6.0 + 0j)
-
-        # Set an unknown
-        unknowns['y'] = 13.0 + 17.0j
-        self.assertEquals(unknowns['y'], 13.0 + 17.0j)
-
-        # Extract flat var
-        cval = unknowns.flat('y')
-        self.assertEquals(cval, 13.0 + 17.0j)
-        self.assertEquals(cval.shape[0], 1)
-
-        # Make sure all other functions work for coverage
-        self.assertEquals(len(unknowns), 1)
-        self.assertTrue('y' in unknowns)
-        plist = [z for z in unknowns]
-        self.assertEquals(plist, ['y'])
-        self.assertEquals(unknowns.keys(), top.root.comp2.unknowns.keys())
-        self.assertEquals(unknowns.metadata('y'), top.root.comp2.unknowns.metadata('y'))
-        plist1 = [z for z in unknowns.iterkeys()]
-        plist2 = [z for z in top.root.comp2.unknowns.iterkeys()]
-
-    def test_unit_convert(self):
+    def test_unit_conversion(self):
 
         prob = Problem()
         prob.root = Group()
@@ -151,61 +81,369 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
         prob.root.connect('src.x2', 'tgtC.x2')
         prob.root.connect('src.x2', 'tgtK.x2')
 
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
         prob.setup(check=False)
         prob.run()
 
-        p1 = ComplexStepTgtVecWrapper(prob.root.tgtF.params)
-        p2 = ComplexStepTgtVecWrapper(prob.root.tgtC.params)
-        p3 = ComplexStepTgtVecWrapper(prob.root.tgtK.params)
+        indep_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
 
-        assert_rel_error(self, p1['x2'], 212.0, 1.0e-6)
-        assert_rel_error(self, p2['x2'], 100.0, 1.0e-6)
-        assert_rel_error(self, p3['x2'], 373.15, 1.0e-6)
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
 
-class ComplexStepComponentTests(unittest.TestCase):
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
 
-    def test_simple_float(self):
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+    def test_sellar_derivs_grouped(self):
 
         prob = Problem()
-        prob.root = root = Group()
-        root.add('x_param', IndepVarComp('x', 17.0), promotes=['x'])
-        root.add('y_param', IndepVarComp('y', 19.0), promotes=['y'])
-        root.add('mycomp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
+        prob.root = SellarDerivativesGrouped()
 
-        # This will give poor FD, but good CS
-        root.mycomp.fd_options['step_size'] = 1.0e1
-        root.mycomp.fd_options['force_fd'] = True
-        root.mycomp.fd_options['form'] = 'complex_step'
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
 
+        prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['x'], ['f_xy'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['f_xy']['x'][0][0], 47.0, 1e-6)
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
 
-    def test_array2D(self):
+        indep_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        prob.root.fd_options['form'] = 'central'
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+    def test_complex_step_around_newton_error(self):
 
         prob = Problem()
-        prob.root = root = Group()
-        root.add('x_param', IndepVarComp('x', np.ones((2, 2))), promotes=['*'])
-        root.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+        prob.root = SellarDerivativesGrouped()
 
-        root.mycomp.fd_options['step_size'] = 1.0e-1
-        root.mycomp.fd_options['force_fd'] = True
-        root.mycomp.fd_options['form'] = 'complex_step'
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.root.mda.nl_solver = Newton()
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        msg = "The solver in 'mda' requires derivatives. We "
+        msg += "currently do not support complex step around it."
+
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_sub_unsupported(self):
+
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+
+        # We don't support submodel cs yet.
+        prob.root.mda.fd_options['force_fd'] = True
+        prob.root.mda.fd_options['form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        msg = "Complex step is currently not supported for groups"
+        msg += " other than root."
+
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_array_values_diff_shape_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, 3)), units='degC'), promotes=['x'])
+        prob.root.add('uc', UnitComp(shape=(2, 3), param_name='x', out_name='x_out', units='degF'),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
 
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        Jbase = prob.root.mycomp._jacobian_cache
-        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
-        assert_rel_error(self, diff, 0.0, 1e-8)
+        indep_list = ['x']
+        unknown_list = ['x_out']
 
-        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
-        assert_rel_error(self, diff, 0.0, 1e-8)
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(6), 1e-6)
+
+    def test_array_values_diff_shape_no_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, 3))), promotes=['x'])
+        prob.root.add('uc', ExecComp('x_out = 1.8*x', x=np.zeros((2, 3)), x_out=np.zeros((2, 3))),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'], 1.8*np.eye(6), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'], 1.8*np.eye(6), 1e-6)
+
+    def test_array_values_same_shape_units(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('pc', IndepVarComp('x', np.zeros((2, )), units='degC'), promotes=['x'])
+        prob.root.add('uc', UnitComp(shape=(2, ), param_name='x', out_name='x_out', units='degF'),
+                      promotes=['x', 'x_out'])
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x']
+        unknown_list = ['x_out']
+
+        # Forward Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)
+
+        # Reverse Mode
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+        assert_rel_error(self, J['x_out']['x'],1.8*np.eye(2), 1e-6)
+
+    def test_single_comp_paraboloid_pbo_hanging_param(self):
+
+        class ParaboloidPBO(Component):
+            """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+            def __init__(self):
+                super(ParaboloidPBO, self).__init__()
+
+                self.add_param('x', val=0.0)
+                self.add_param('y', val=0.0, pass_by_obj=True)
+
+                self.add_output('f_xy', val=0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+                Optimal solution (minimum): x = 6.6667; y = -7.3333
+                """
+
+                x = params['x']
+                y = params['y']
+
+                unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 0.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 0.0, pass_by_obj=True), promotes=['*'])
+        root.add('comp', ParaboloidPBO(), promotes=['x', 'y', 'f_xy'])
+
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        jac = prob.calc_gradient(['x'], ['f_xy'])
+
+        # Note, FD can not reach this accuracy, but CS can.
+        assert_rel_error(self, jac[0][0], -6.0, 1e-7)
+
+
+class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
+
+    def test_single_comp_paraboloid(self):
+        prob = Problem(impl=petsc_impl)
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 0.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 0.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
+
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        jac = prob.calc_gradient(['x', 'y'], ['f_xy'])
+
+        # Note, FD can not reach this accuracy, but CS can.
+        assert_rel_error(self, jac[0][0], -6.0, 1e-7)
+        assert_rel_error(self, jac[0][1], 8.0, 1e-7)
+
+    def test_converge_diverge_groups(self):
+
+        prob = Problem(impl=petsc_impl)
+        root = prob.root = Group()
+        root.add('sub', ConvergeDivergeGroups())
+
+        root.fd_options['force_fd'] = True
+        root.fd_options['form'] = 'complex_step'
+
+        # We can't reach our desired accuracy with this step size in fd, but
+        # we can with cs (where step size is irrelevant.)
+        root.fd_options['step_size'] = 1.0e-4
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['sub.p.x']
+        unknown_list = ['sub.comp7.y1']
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
+        assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
+
+    def test_unit_conversion(self):
+
+        prob = Problem(impl=petsc_impl)
+        prob.root = Group()
+        prob.root.add('src', SrcComp())
+        prob.root.add('tgtF', TgtCompF())
+        prob.root.add('tgtC', TgtCompC())
+        prob.root.add('tgtK', TgtCompK())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+        prob.root.connect('src.x2', 'tgtC.x2')
+        prob.root.connect('src.x2', 'tgtK.x2')
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+    def test_sellar_derivs_grouped(self):
+
+        prob = Problem(impl=petsc_impl)
+        prob.root = SellarDerivativesGrouped()
+
+        prob.root.fd_options['force_fd'] = True
+        prob.root.fd_options['form'] = 'complex_step'
+
+        prob.root.mda.nl_solver.options['atol'] = 1e-12
+        prob.setup(check=False)
+        prob.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        indep_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        prob.root.fd_options['form'] = 'central'
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J[key1][key2], val2, .00001)
 
 if __name__ == "__main__":
     unittest.main()

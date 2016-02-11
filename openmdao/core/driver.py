@@ -58,8 +58,8 @@ class Driver(object):
         self.root = None
 
         self.iter_count = 0
-        self.dv_conversions = {} # Order not guaranteed in python 3.
-        self.fn_conversions = {} # Order not guaranteed in python 3.
+        self.dv_conversions = {}
+        self.fn_conversions = {}
 
     def _setup(self):
         """ Updates metadata for params, constraints and objectives, and
@@ -149,7 +149,7 @@ class Driver(object):
 
             self.fn_conversions[name] = scaler
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign a communicator to the root `System`.
 
@@ -157,8 +157,11 @@ class Driver(object):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the Problem.
+
+        parent_dir : str
+            Absolute directory of the Problem.
         """
-        self.root._setup_communicators(comm)
+        self.root._setup_communicators(comm, parent_dir)
 
     def get_req_procs(self):
         """
@@ -282,12 +285,12 @@ class Driver(object):
                    low=None, high=None,
                    indices=None, adder=0.0, scaler=1.0):
         """
-        Adds a parameter to this driver.
+        Adds a design variable to this driver.
 
         Args
         ----
         name : string
-           Name of the IndepVarComp in the root system.
+           Name of the design variable in the root system.
 
         lower : float or ndarray, optional
             Lower boundary for the param
@@ -307,6 +310,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._desvars:
+            msg = "Desvar '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if low is not None or high is not None:
             warnings.simplefilter('always', DeprecationWarning)
             warnings.warn("'low' and 'high' are deprecated. "
@@ -321,7 +329,7 @@ class Driver(object):
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
         elif lower is None or lower == -float('inf'):
-            lower = sys.float_info.min
+            lower = -sys.float_info.max
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
@@ -361,7 +369,7 @@ class Driver(object):
                         scaler=scaler)
 
     def get_desvars(self):
-        """ Returns a dict of possibly distributed parameters.
+        """ Returns a dict of possibly distributed design variables.
 
         Returns
         -------
@@ -421,7 +429,7 @@ class Driver(object):
             return flatval
 
     def get_desvar_metadata(self):
-        """ Returns a dict of parameter metadata.
+        """ Returns a dict of design variable metadata.
 
         Returns
         -------
@@ -432,15 +440,15 @@ class Driver(object):
         return self._desvars
 
     def set_desvar(self, name, value):
-        """ Sets a parameter.
+        """ Sets a design variable.
 
         Args
         ----
         name : string
-           Name of the IndepVarComp in the root system.
+           Name of the design variable in the root system.
 
         val : ndarray or float
-            value to set the parameter
+            value to assign to the design variable.
         """
         val = self.root.unknowns._dat[name].val
         if not isinstance(val, _ByObjWrapper) and \
@@ -454,7 +462,7 @@ class Driver(object):
            or scaler != 1.0 or adder != 0.0:
             value = value/scaler - adder
 
-        # Only set the indices we requested when we set the parameter.
+        # Only set the indices we requested when we set the design variable.
         idx = meta.get('indices')
         if idx is not None:
             self.root.unknowns[name][idx] = value
@@ -481,6 +489,10 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._objs:
+            msg = "Objective '{}' already exists."
+            raise RuntimeError(msg.format(name))
 
         if isinstance(adder, np.ndarray):
             adder = adder.flatten()
@@ -568,6 +580,11 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+
+        if name in self._cons:
+            msg = "Constraint '{}' already exists."
+            raise RuntimeError(msg.format(name))
+
         if equals is not None and (lower is not None or upper is not None):
             msg = "Constraint '{}' cannot be both equality and inequality."
             raise RuntimeError(msg.format(name))
@@ -744,30 +761,16 @@ class Driver(object):
 
         #Put options into docstring
         firstTime = 1
-        #for py3.4, items from vars must come out in same order.
-        v = OrderedDict(sorted(vars(self).items()))
-        for key, value in v.items():
+
+        for key, value in sorted(vars(self).items()):
             if type(value)==OptionsDictionary:
                 if key == "supports":
                     continue
                 if firstTime:  #start of Options docstring
                     docstring += '\n    Options\n    -------\n'
                     firstTime = 0
-                for (name, val) in sorted(value.items()):
-                    docstring += "    " + key + "['"
-                    docstring += name + "']"
-                    docstring += " :  " + type(val).__name__
-                    docstring += "("
-                    if type(val).__name__ == 'str':
-                        docstring += "'"
-                    docstring += str(val)
-                    if type(val).__name__ == 'str':
-                        docstring += "'"
-                    docstring += ")\n"
+                docstring += value._generate_docstring(key)
 
-                    desc = value._options[name]['desc']
-                    if(desc):
-                        docstring += "        " + desc + "\n"
         #finish up docstring
         docstring += '\n    \"\"\"\n'
         return docstring

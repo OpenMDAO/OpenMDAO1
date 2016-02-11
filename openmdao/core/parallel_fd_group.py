@@ -44,7 +44,7 @@ class ParallelFDGroup(Group):
         self._num_par_fds = num_par_fds
         self._par_fd_id = 0
 
-    def _setup_communicators(self, comm):
+    def _setup_communicators(self, comm, parent_dir):
         """
         Assign communicator to this `Group` and all of its subsystems.
 
@@ -52,6 +52,9 @@ class ParallelFDGroup(Group):
         ----
         comm : an MPI communicator (real or fake)
             The communicator being offered by the parent system.
+
+        parent_dir : str
+            Absolute dir of parent `System`.
         """
         if self._num_par_fds < 1:
             raise ValueError("'%s': num_par_fds must be >= 1 but value is %s." %
@@ -86,8 +89,10 @@ class ParallelFDGroup(Group):
 
         self.comm = comm
 
+        self._setup_dir(parent_dir)
+
         for sub in itervalues(self._subsystems):
-            sub._setup_communicators(comm)
+            sub._setup_communicators(comm, self._sysdata.absdir)
             if self.is_active() and sub.is_active():
                 self._local_subsystems.append(sub)
 

@@ -2,7 +2,7 @@
 from distutils.core import setup
 
 setup(name='openmdao',
-      version='1.4.1',
+      version='1.5.0',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
       """,
@@ -56,5 +56,6 @@ setup(name='openmdao',
       entry_points="""
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
+      webview=openmdao.devtools.d3graph:webview_argv
       """
 )
