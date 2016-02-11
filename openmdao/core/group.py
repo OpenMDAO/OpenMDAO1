@@ -603,7 +603,7 @@ class Group(System):
             Explicit connections in this `Group`, represented as a mapping
             from the pathname of the target to the pathname of the source.
         """
-        connections = OrderedDict()
+        connections = {}
         for sub in self.subgroups():
             connections.update(sub._get_explicit_connections())
 
