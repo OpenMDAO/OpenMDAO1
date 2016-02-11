@@ -3,11 +3,14 @@ OpenMDAO design-of-experiments Driver implementing the Latin Hypercube and Optim
 """
 
 import os
-from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
+from random import shuffle, randint, seed
+
 from six import iteritems, itervalues
 from six.moves import range, zip
-from random import shuffle, randint, seed
+
 import numpy as np
+
+from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
 from openmdao.util.array_util import evenly_distrib_idxs
 
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -47,7 +50,14 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
     def _build_runlist(self):
         """Build a runlist based on the Latin Hypercube method."""
         design_vars = self.get_desvar_metadata()
-        self.num_design_vars = len(design_vars)
+
+        # Add up sizes
+        ntot = 0
+        for (name, _) in iteritems(design_vars):
+            val = self.root.unknowns._dat[name].val
+            ntot += len(val)
+        self.num_design_vars = ntot
+
         if self.seed is not None:
             seed(self.seed)
             np.random.seed(self.seed)
@@ -59,14 +69,27 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         buckets = {}
 
         for j, (name, bounds) in enumerate(iteritems(design_vars)):
-            design_var_buckets = self._get_buckets(bounds['lower'], bounds['upper'])
-            buckets[name] = [design_var_buckets[rand_lhc[i, j]]
-                                for i in range(self.num_samples)]
+
+            # Support for array desvars
+            val = self.root.unknowns._dat[name].val
+            nval = len(val)
+
+            for j in range(nval):
+                lowb = bounds['lower']
+                upb = bounds['upper']
+                if isinstance(lowb, np.ndarray):
+                    lowb = lowb[j]
+                if isinstance(upb, np.ndarray):
+                    upb = upb[j]
+
+                design_var_buckets = self._get_buckets(lowb, upb)
+                buckets[(name, j)] = [design_var_buckets[rand_lhc[i, j]]
+                                      for i in range(self.num_samples)]
 
         # Return random values in given buckets
         for i in range(self.num_samples):
-            yield ((key, np.random.uniform(bounds[i][0], bounds[i][1]))
-                              for key, bounds in iteritems(buckets))
+            yield ((key[0], key[1], np.random.uniform(bounds[i][0], bounds[i][1]))
+                   for key, bounds in iteritems(buckets))
 
     def _distrib_build_runlist(self):
         """

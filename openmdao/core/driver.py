@@ -445,7 +445,7 @@ class Driver(object):
         Args
         ----
         name : string
-           Name of the design variable in the root system.
+            Name of the design variable in the root system.
 
         val : ndarray or float
             value to assign to the design variable.
@@ -468,6 +468,35 @@ class Driver(object):
             self.root.unknowns[name][idx] = value
         else:
             self.root.unknowns[name] = value
+
+    def set_desvar_index(self, name, idx, value):
+        """ Sets a single index of a design variable.
+
+        Args
+        ----
+        name : string
+            Name of the design variable in the root system.
+
+        idx : int
+            Index of value to set.
+        val : float
+            Value to assign to the design variable.
+        """
+        if self.root.unknowns._dat[name].val.size == 0:
+            return
+
+        meta = self._desvars[name]
+        scaler = meta['scaler']
+        adder = meta['adder']
+        if isinstance(scaler, np.ndarray):
+            scaler = scaler[idx]
+        if isinstance(adder, np.ndarray):
+            adder = adder[idx]
+
+        if scaler != 1.0 or adder != 0.0:
+            value = value/scaler - adder
+
+        self.root.unknowns._dat[name].val[idx] = value
 
     def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
         """ Adds an objective to this driver.
