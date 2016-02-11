@@ -126,23 +126,6 @@ class System(object):
         self._local_subsystems = []
         self._fd_params = None
 
-    def __getitem__(self, name):
-        """
-        Return the variable of the given name from this system.
-
-        Args
-        ----
-        name : str
-            The name of the variable.
-
-        Returns
-        -------
-        value
-            The unflattened value of the given variable.
-        """
-        msg = "Variable '%s' must be accessed from a containing Group"
-        raise RuntimeError(msg % name)
-
     def _promoted(self, name):
         """Determine if the given variable name is being promoted from this
         `System`.
