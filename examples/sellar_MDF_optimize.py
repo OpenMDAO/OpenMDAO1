@@ -148,3 +148,4 @@ if __name__ == '__main__':
                                              top['x']))
     print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
     print("Minimum objective: ", top['obj'])
+    
