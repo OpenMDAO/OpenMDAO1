@@ -210,7 +210,8 @@ class Problem(object):
                 # include connections in the graph due to multiple params that
                 # are promoted to the same name
                 start = plist[0]
-                input_graph.add_edges_from(((start,p) for p in plist[1:]), idxs=None)
+                input_graph.add_edges_from(((start,p) for p in plist[1:]),
+                                           idxs=None)
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
@@ -226,24 +227,24 @@ class Problem(object):
         # loop over srcs that are unknowns
         for src in usrcs:
             newconns[src] = None
+            src_idxs = {src:None}
             # walk depth first from each unknown src to each connected input,
             # updating src_indices if necessary
             for s, t in nx.dfs_edges(input_graph, src):
-                edata = input_graph[s][t]
-                next_idxs = edata['idxs']
-                if s == src:
-                    # if an edge starts at our original source, reset the idx
-                    new_idxs = next_idxs
-                elif next_idxs is not None:
-                    if new_idxs is not None:
-                        new_idxs = np.array(new_idxs)[next_idxs]
-                        edata['idxs'] = new_idxs
-                    else:
-                        new_idxs = next_idxs
+                tidxs = input_graph[s][t]['idxs']
+                sidxs = src_idxs[s]
+
+                if tidxs is None:
+                    tidxs = sidxs
+                elif sidxs is not None:
+                    tidxs = np.array(sidxs)[tidxs]
+
+                src_idxs[t] = tidxs
+
                 if t in newconns:
-                    newconns[t].append((src, new_idxs))
+                    newconns[t].append((src, tidxs))
                 else:
-                    newconns[t] = [(src, new_idxs)]
+                    newconns[t] = [(src, tidxs)]
 
         # now all nodes that are downstream of an unknown source have been
         # marked.  Anything left must be an input that is either dangling or
@@ -264,7 +265,7 @@ class Problem(object):
                         break
                     else:
                         nosrc.append(t)
-                else: # didn't find an unknown src, so must be dandgling
+                else: # didn't find an unknown src, so must be dangling
                     set_nosrc = set(nosrc)
                     for n in nosrc:
                         self._dangling[to_prom_name[n]] = set_nosrc
