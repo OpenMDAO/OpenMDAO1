@@ -226,10 +226,13 @@ class Problem(object):
         # loop over srcs that are unknowns
         for src in usrcs:
             newconns[src] = None
+            # walk depth first from each unknown src to each connected input,
+            # updating src_indices if necessary
             for s, t in nx.dfs_edges(input_graph, src):
                 edata = input_graph[s][t]
                 next_idxs = edata['idxs']
                 if s == src:
+                    # if an edge starts at our original source, reset the idx
                     new_idxs = next_idxs
                 elif next_idxs is not None:
                     if new_idxs is not None:
@@ -242,7 +245,11 @@ class Problem(object):
                 else:
                     newconns[t] = [(src, new_idxs)]
 
+        # now all nodes that are downstream of an unknown source have been
+        # marked.  Anything left must be an input that is either dangling or
+        # upstream of an input that does have an unknown source.
         for node in input_graph.nodes_iter():
+            # only look at unmarked nodes that have 0 in_degree
             if node not in newconns and len(input_graph.pred[node]) == 0:
                 nosrc = [node]
                 # walk dfs from this input 'src' node until we hit a param
@@ -250,16 +257,20 @@ class Problem(object):
                 for s, t in nx.dfs_edges(input_graph, node):
                     if t in newconns:  # found param with unknown src
                         src = newconns[t][0][0]
+                        # connect the unknown src to all of the inputs connected
+                        # to the current node that have no unknown src
                         for n in nosrc:
                             newconns[n] = [(src, None)]
                         break
                     else:
                         nosrc.append(t)
-                else: # didn't find an unknown src
+                else: # didn't find an unknown src, so must be dandgling
                     set_nosrc = set(nosrc)
                     for n in nosrc:
                         self._dangling[to_prom_name[n]] = set_nosrc
 
+        # connections must be in order across processes, so use an OrderedDict
+        # and sort targets before adding them
         connections = OrderedDict()
         for tgt, srcs in sorted(newconns.items()):
             if srcs is not None:
@@ -268,11 +279,6 @@ class Problem(object):
                     raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
                                        (tgt, sorted(src_names)))
                 connections[tgt] = srcs[0]
-
-        # initialize this here since we may have unit diffs for input-input
-        # connections that get filtered out of the connection dict by the
-        # time setup_units is called.
-        self._unit_diffs = {}
 
         return connections
 
@@ -2077,6 +2083,7 @@ class Problem(object):
         unknowns_dict : OrderedDict
             A dict of unknowns metadata for the whole `Problem`.
         """
+        self._unit_diffs = {}
 
         to_prom_name = self.root._sysdata.to_prom_name
 
