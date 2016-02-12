@@ -38,11 +38,11 @@ class FullFactorialDriver(PredeterminedRunsDriver):
             # Support for array desvars
             val = self.root.unknowns._dat[name].val
             nval = len(val)
+            low = meta['lower']
+            high = meta['upper']
 
             for k in range(nval):
 
-                low = meta['lower']
-                high = meta['upper']
                 if isinstance(low, np.ndarray):
                     low = low[k]
                 if isinstance(high, np.ndarray):
