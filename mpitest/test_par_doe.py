@@ -35,43 +35,43 @@ class Mult(Component):
         unknowns['y'] = params['c']*params['x']
 
 
-class ParallelDOETestCase(MPITestCase):
+#class ParallelDOETestCase(MPITestCase):
 
-    N_PROCS = 4
+    #N_PROCS = 4
 
-    def test_doe(self):
+    #def test_doe(self):
 
-        problem = Problem(impl=impl)
-        root = problem.root = Group()
-        root.add('indep_var', IndepVarComp('x', val=1.0))
-        root.add('const', IndepVarComp('c', val=2.0))
-        root.add('mult', Mult())
+        #problem = Problem(impl=impl)
+        #root = problem.root = Group()
+        #root.add('indep_var', IndepVarComp('x', val=1.0))
+        #root.add('const', IndepVarComp('c', val=2.0))
+        #root.add('mult', Mult())
 
-        root.connect('indep_var.x', 'mult.x')
-        root.connect('const.c', 'mult.c')
+        #root.connect('indep_var.x', 'mult.x')
+        #root.connect('const.c', 'mult.c')
 
-        num_levels = 25
-        problem.driver = FullFactorialDriver(num_levels=num_levels,
-                                       num_par_doe=self.N_PROCS)
-        problem.driver.add_desvar('indep_var.x',
-                                  lower=1.0, upper=float(num_levels))
-        problem.driver.add_objective('mult.y')
+        #num_levels = 25
+        #problem.driver = FullFactorialDriver(num_levels=num_levels,
+                                       #num_par_doe=self.N_PROCS)
+        #problem.driver.add_desvar('indep_var.x',
+                                  #lower=1.0, upper=float(num_levels))
+        #problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
+        #problem.driver.add_recorder(InMemoryRecorder())
 
-        problem.setup(check=False)
-        problem.run()
+        #problem.setup(check=False)
+        #problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+        #for data in problem.driver.recorders[0].iters:
+            #self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                             #data['unknowns']['mult.y'])
 
-        num_cases = len(problem.driver.recorders[0].iters)
-        if MPI:
-            lens = problem.comm.allgather(num_cases)
-            self.assertEqual(sum(lens), num_levels)
-        else:
-            self.assertEqual(num_cases, num_levels)
+        #num_cases = len(problem.driver.recorders[0].iters)
+        #if MPI:
+            #lens = problem.comm.allgather(num_cases)
+            #self.assertEqual(sum(lens), num_levels)
+        #else:
+            #self.assertEqual(num_cases, num_levels)
 
 class LBParallelDOETestCase(MPITestCase):
 
