@@ -129,14 +129,8 @@ class PredeterminedRunsDriver(Driver):
 
         # For each runlist entry, run the system and record the results
         for run in runlist:
-            for dv, dv_val in run:
-
-                if isinstance(dv, tuple):
-                    (dv_name, dv_idx) = dv
-                    self.set_desvar_index(dv_name, dv_idx, dv_val)
-                else:
-                    self.set_desvar(dv, dv_val)
-
+            for (dv_name, dv_idx), dv_val in run:
+                self.set_desvar_index(dv_name, dv_idx, dv_val)
 
             metadata = create_local_meta(None, 'Driver')
 
