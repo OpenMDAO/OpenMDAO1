@@ -167,7 +167,7 @@ class Problem(object):
         else:
             raise KeyError("Variable '%s' not found." % name)
 
-    def _setup_connections(self, params_dict, unknowns_dict, compute_indices=True):
+    def _setup_connections(self, params_dict, unknowns_dict):
         """Generate a mapping of absolute param pathname to the pathname
         of its unknown.
 
@@ -180,122 +180,106 @@ class Problem(object):
         unknowns_dict : OrderedDict
             A dict of unknowns metadata for the whole `Problem`.
 
-        compute_indices : bool, optional
-            If True, perform mapping of src_indices for input to input
-            connections.
         """
+        to_prom_name = self._probdata.to_prom_name
 
         # Get all explicit connections (stated with absolute pathnames)
         connections = self.root._get_explicit_connections()
 
-        # get dictionary of implicit connections {param: [unknowns]}
-        # and dictionary of params that are not implicitly connected
-        # to anything {promoted_name: pathname}
-        implicit_conns, prom_noconns = self._get_implicit_connections()
-
-
-        # combine implicit and explicit connections
-        for tgt, srcs in iteritems(implicit_conns):
-            connections.setdefault(tgt, []).extend(srcs)
+        # get set of promoted params that are not *implicitly* connected
+        # to anything, and add all implicit connections to the connections dict.
+        prom_noconns = self._add_implicit_connections(connections)
 
         input_graph = nx.DiGraph()
+        self._dangling = {}
 
-        # so we can make sure we don't start our traversals at any input
-        # node that isn't connected to an unknown
-        skip = set()
-        from_unknown = set()
+        to_abs_pnames = self.root._sysdata.to_abs_pnames
+
+        usrcs = set()
 
         # resolve any input to input connections
         for tgt, srcs in iteritems(connections):
             for src, idxs in srcs:
-                if src in params_dict:
-                    input_graph.add_edge(src, tgt, idxs=idxs)
-                    skip.add(tgt)
-                else:
-                    # target is connected directly to an unknown
-                    from_unknown.add(tgt)
+                input_graph.add_edge(src, tgt, idxs=idxs)
+                if src in unknowns_dict:
+                    usrcs.add(src)
 
-        skip = skip.difference(from_unknown)
-
-        # find any promoted but not connected inputs
-        for p, prom in iteritems(self.root._sysdata.to_prom_pname):
+        for prom, plist in iteritems(to_abs_pnames):
+            input_graph.add_nodes_from(plist)
             if prom in prom_noconns:
-                for n in prom_noconns[prom]:
-                    if p != n:
-                        input_graph.add_edge(p, n, idxs=None)
-                        skip.add(n)
+                # include connections in the graph due to multiple params that
+                # are promoted to the same name
+                start = plist[0]
+                input_graph.add_edges_from(((start,p) for p in plist[1:]),
+                                           idxs=None)
 
         # store all of the connected sets of inputs for later use
         self._input_inputs = {}
 
         for tgt in connections:
             if tgt in input_graph and tgt not in self._input_inputs:
-                connected = list(plain_bfs(input_graph, tgt))
+                connected = [n for n in plain_bfs(input_graph, tgt)
+                                if n not in usrcs]
                 for c in connected:
                     self._input_inputs[c] = connected
 
-        # initialize this here since we may have unit diffs for input-input
-        # connections that get filtered out of the connection dict by the
-        # time setup_units is called.
-        self._unit_diffs = {}
+        newconns = {}
+        # loop over srcs that are unknowns
+        for src in usrcs:
+            newconns[src] = None
+            src_idxs = {src:None}
+            # walk depth first from each unknown src to each connected input,
+            # updating src_indices if necessary
+            for s, t in nx.dfs_edges(input_graph, src):
+                tidxs = input_graph[s][t]['idxs']
+                sidxs = src_idxs[s]
 
-        # for all connections where the source is an input, we want to connect
-        # the 'unknown' source for that target to all other inputs that are
-        # connected to it
-        to_add = []
-        for tgt, srcs in iteritems(connections):
-            if tgt in input_graph:
-                connected_inputs = self._input_inputs[tgt]
+                if tidxs is None:
+                    tidxs = sidxs
+                elif sidxs is not None:
+                    tidxs = np.array(sidxs)[tidxs]
 
-                for src, idxs in srcs:
-                    if src in unknowns_dict:
-                        for new_tgt in connected_inputs:
-                            # make sure we start at a 'src' input
-                            if compute_indices:
-                                if new_tgt not in skip:
-                                    # follow path to new target, apply src_idxs along the way
-                                    for s,t in nx.dfs_edges(input_graph, new_tgt):
-                                        if s == new_tgt:
-                                            new_idxs = idxs
-                                        next_idxs = input_graph[s][t]['idxs']
-                                        if next_idxs is not None:
-                                            if new_idxs is not None:
-                                                new_idxs = np.array(new_idxs)[next_idxs]
-                                            else:
-                                                new_idxs = next_idxs
-                                        to_add.append((t, (src, new_idxs)))
-                                    to_add.append((new_tgt, (src, idxs)))
+                src_idxs[t] = tidxs
 
-        for tgt, (src, idxs) in to_add:
-            if tgt in connections:
-                srcs = connections[tgt]
-                if (src, idxs) not in srcs:
-                    srcs.append((src, idxs))
-            else:
-                connections[tgt] = [(src, idxs)]
-
-        # remove all the input to input connections, leaving just one unknown
-        # connection to each param
-        newconns = OrderedDict()
-        for tgt, srcs in iteritems(connections):
-            unknown_srcs = [src for src in srcs if src[0] in unknowns_dict]
-            if len(unknown_srcs) > 1:
-                src_names = (name for name, idx in unknown_srcs)
-                raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                   (tgt, sorted(src_names)))
-
-            if unknown_srcs:
-                newconns[tgt] = unknown_srcs[0]
-
-        connections = newconns
-
-        self._dangling = {}
-        for p, prom in iteritems(self.root._sysdata.to_prom_pname):
-            if p not in connections:
-                if p in input_graph:
-                    self._dangling[prom] = set(plain_bfs(input_graph, p))
+                if t in newconns:
+                    newconns[t].append((src, tidxs))
                 else:
-                    self._dangling[prom] = set((p,))
+                    newconns[t] = [(src, tidxs)]
+
+        # now all nodes that are downstream of an unknown source have been
+        # marked.  Anything left must be an input that is either dangling or
+        # upstream of an input that does have an unknown source.
+        for node in input_graph.nodes_iter():
+            # only look at unmarked nodes that have 0 in_degree
+            if node not in newconns and len(input_graph.pred[node]) == 0:
+                nosrc = [node]
+                # walk dfs from this input 'src' node until we hit a param
+                # that has an unknown src
+                for s, t in nx.dfs_edges(input_graph, node):
+                    if t in newconns:  # found param with unknown src
+                        src = newconns[t][0][0]
+                        # connect the unknown src to all of the inputs connected
+                        # to the current node that have no unknown src
+                        for n in nosrc:
+                            newconns[n] = [(src, None)]
+                        break
+                    else:
+                        nosrc.append(t)
+                else: # didn't find an unknown src, so must be dangling
+                    set_nosrc = set(nosrc)
+                    for n in nosrc:
+                        self._dangling[to_prom_name[n]] = set_nosrc
+
+        # connections must be in order across processes, so use an OrderedDict
+        # and sort targets before adding them
+        connections = OrderedDict()
+        for tgt, srcs in sorted(newconns.items()):
+            if srcs is not None:
+                if len(srcs) > 1:
+                    src_names = (n for n, idx in srcs)
+                    raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
+                                       (tgt, sorted(src_names)))
+                connections[tgt] = srcs[0]
 
         return connections
 
@@ -310,8 +294,11 @@ class Problem(object):
             # figure out if any connected inputs have different initial
             # values or different units
             if tgt not in input_diffs:
+                found_src = False
                 for inp in connected_inputs:
                     input_diffs[inp] = ([], [])
+                    if not found_src and inp in connections:
+                        found_src = True
 
                 tgt_idx = connected_inputs.index(tgt)
                 units = [params_dict[n].get('units') for n in connected_inputs]
@@ -348,7 +335,7 @@ class Problem(object):
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if tgt not in connections:
+                if not found_src:
                     if diff_units:
                         filt = set([u for n,u in diff_units])
                         if None in filt:
@@ -584,14 +571,9 @@ class Problem(object):
         # All changes to the system tree or variable metadata
         # must be complete at this point.
 
-        # if the system tree has changed, we need to recompute pathnames,
-        # variable metadata, and connections
+        # if the system tree has changed, we have to redo the entire setup
         if tree_changed:
-            self.root._init_sys_data(self.pathname, self._probdata)
-            params_dict, unknowns_dict = \
-                self.root._setup_variables(compute_indices=True)
-            connections = self._setup_connections(params_dict, unknowns_dict,
-                                                  compute_indices=False)
+            return self.setup(check=check, out_stream=out_stream)
         elif meta_changed:
             params_dict, unknowns_dict = \
                 self.root._setup_variables(compute_indices=True)
@@ -2102,6 +2084,7 @@ class Problem(object):
         unknowns_dict : OrderedDict
             A dict of unknowns metadata for the whole `Problem`.
         """
+        self._unit_diffs = {}
 
         to_prom_name = self.root._sysdata.to_prom_name
 
@@ -2141,43 +2124,38 @@ class Problem(object):
                 self._unit_diffs[(source, target)] = (smeta.get('units'),
                                                       tmeta.get('units'))
 
-    def _get_implicit_connections(self):
+    def _add_implicit_connections(self, connections):
         """
         Finds all matches between promoted names of parameters and unknowns
         in this `Problem`.  Any matches imply an implicit connection.
-        All connections are expressed using absolute pathnames.
+        All connections are expressed using absolute pathnames and are
+        added to the dict of explicit connections passed in.
+
+        Args
+        ----
+        connections : dict
+            A dict containing all explicit connections.
 
         Returns
         -------
-        dict
-            implicit connections in this `Problem`, represented as a mapping
-            from the pathname of the target to the pathname of the source
+        set
+            promoted parameters in this `Problem` that are not implicitly
+            connected
 
-        dict
-            parameters in this `Problem` that are not implicitly connected,
-            represented as a mapping from the promoted name of the parameter
-            to it's pathname
-
-        Raises
-        ------
-        RuntimeError
-            if a a promoted variable name matches multiple unknowns
         """
 
-        connections = OrderedDict()
-        dangling = {}
+        dangling = set()
 
         abs_unames = self.root._sysdata.to_abs_uname
 
         for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
             if prom_name in abs_unames:  # param has a src in unknowns
-                uprom = abs_unames[prom_name]
                 for pabs in pabs_list:
-                    connections[pabs] = ((uprom, None),)
+                    connections.setdefault(pabs, []).append((abs_unames[prom_name], None))
             else:
-                dangling.setdefault(prom_name, set()).update(pabs_list)
+                dangling.add(prom_name)
 
-        return connections, dangling
+        return dangling
 
     def print_all_convergence(self):
         """ Sets iprint to True for all solvers and subsolvers in the model."""

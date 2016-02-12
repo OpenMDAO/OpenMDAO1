@@ -138,8 +138,9 @@ class OptimizedLatinHypercubeDriver(LatinHypercubeDriver):
     """
 
     def __init__(self, num_samples=1, seed=None, population=20, generations=2,
-                norm_method=1, num_par_doe=1):
-        super(OptimizedLatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe)
+                norm_method=1, num_par_doe=1, load_balance=False):
+        super(OptimizedLatinHypercubeDriver, self).__init__(num_par_doe=num_par_doe,
+                                                            load_balance=load_balance)
         self.qs = [1, 2, 5, 10, 20, 50, 100]  # List of qs to try for Phi_q optimization
         self.num_samples = num_samples
         self.seed = seed
