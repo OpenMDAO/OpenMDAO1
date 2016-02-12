@@ -317,8 +317,10 @@ class System(object):
                 self._sysdata.absdir = directory
             else:
                 self._sysdata.absdir = os.path.join(parent_dir, directory)
+            self._dircontext = DirContext(self._sysdata.absdir)
         else:
             self._sysdata.absdir = parent_dir
+            self._dircontext = None
 
         if (self.create_dirs and self.is_active() and
                      not os.path.exists(self._sysdata.absdir)):
