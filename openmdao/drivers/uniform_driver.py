@@ -24,14 +24,28 @@ class UniformDriver(PredeterminedRunsDriver):
 
     """
 
-    def __init__(self, num_samples=1, num_par_doe=1, load_balance=False):
+    def __init__(self, num_samples=1, seed=None, num_par_doe=1, load_balance=False):
         super(UniformDriver, self).__init__(num_par_doe=num_par_doe,
                                             load_balance=load_balance)
         self.num_samples = num_samples
+        self.seed = seed
 
     def _build_runlist(self):
         """Build a runlist based on a uniform distribution."""
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         for i in moves.range(self.num_samples):
-            yield ((key, np.random.uniform(bound['lower'], bound['upper']))
-                        for key, bound in iteritems(self.get_desvar_metadata()))
+            sample = []
+            for key, bounds in iteritems(self.get_desvar_metadata()):
+                if isinstance(bounds['lower'], np.ndarray) \
+                   and isinstance(bounds['upper'], np.ndarray):
+                    values = [np.random.uniform(bounds['lower'][k],
+                                                bounds['upper'][k])
+                              for k in range(bounds['size'])]
+                    sample.append([key, np.array(values)])
+                else:
+                    sample.append([key, np.random.uniform(bounds['lower'], bounds['upper'])])
+
+            yield sample
+

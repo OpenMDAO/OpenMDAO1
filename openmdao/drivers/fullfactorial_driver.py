@@ -33,12 +33,20 @@ class FullFactorialDriver(PredeterminedRunsDriver):
 
     def _build_runlist(self):
         value_arrays = dict()
-        for name, value in iteritems(self.get_desvar_metadata()):
-            low = value['lower']
-            high = value['upper']
-            value_arrays[name] = np.linspace(low, high,
-                                             num=self.num_levels).tolist()
-
+        for name, bounds in iteritems(self.get_desvar_metadata()):
+            value_arrays[name] = []
+            for k in range(bounds['size']):
+                if isinstance(bounds['lower'], np.ndarray) \
+                   and isinstance(bounds['upper'], np.ndarray):
+                    lower, upper = bounds['lower'][k], bounds['upper'][k]
+                else:
+                    lower, upper = bounds['lower'], bounds['upper']
+                value_arrays[name].append(np.linspace(lower, upper,
+                                                      num=self.num_levels).tolist())
         keys = list(value_arrays.keys())
+
+        for name in keys:
+            value_arrays[name] = [np.array(x) for x in itertools.product(*value_arrays[name])]
+
         for combination in itertools.product(*value_arrays.values()):
             yield moves.zip(keys, combination)
