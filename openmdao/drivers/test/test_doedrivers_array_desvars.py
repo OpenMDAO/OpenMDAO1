@@ -76,9 +76,15 @@ class TestAllDOEDrivers(unittest.TestCase):
     def assertExpectedDoe(self, expected, doe):
         for i, sample in enumerate(doe):
             for j, v in enumerate(sample):
-                val1 = np.array(expected[i][j])
-                if not isinstance(v, np.ndarray):
+                val1 = expected[i][j]
+                if isinstance(val1, list):
+                    val1 = np.array(val1)
+                else:
+                    val1 = np.array([val1])
+                if isinstance(v, list):
                     v = np.array(v)
+                else:
+                    v = np.array([v])
                 assert_rel_error(self, val1, v, 1e-6)
 
     def runTestProblem1(self, driver):
