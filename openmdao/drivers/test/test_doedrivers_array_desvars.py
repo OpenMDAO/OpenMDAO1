@@ -9,6 +9,7 @@ from openmdao.api import IndepVarComp, Group, Problem, Component
 from openmdao.drivers.latinhypercube_driver import LatinHypercubeDriver
 from openmdao.drivers.fullfactorial_driver import FullFactorialDriver
 from openmdao.drivers.uniform_driver import UniformDriver
+from openmdao.test.util import assert_rel_error
 
 SEED = 0
 LHS1 = [[-11.2796624 ,  17.87973416,  -9.9309156 ],
@@ -75,7 +76,10 @@ class TestAllDOEDrivers(unittest.TestCase):
     def assertExpectedDoe(self, expected, doe):
         for i, sample in enumerate(doe):
             for j, v in enumerate(sample):
-                self.assertAlmostEqual(expected[i][j], v)
+                val1 = np.array(expected[i][j])
+                if not isinstance(v, np.ndarray):
+                    v = np.array(v)
+                assert_rel_error(self, val1, v, 1e-6)
 
     def runTestProblem1(self, driver):
         prob = Problem()
