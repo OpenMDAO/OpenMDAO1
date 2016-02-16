@@ -136,7 +136,8 @@ class pyOptSparseDriver(Driver):
         update_local_meta(self.metadata, (self.iter_count,))
 
         # Initial Run
-        problem.root.solve_nonlinear(metadata=self.metadata)
+        with problem.root._dircontext:
+            problem.root.solve_nonlinear(metadata=self.metadata)
 
         opt_prob = Optimization(self.options['title'], self._objfunc)
 
@@ -292,7 +293,8 @@ class pyOptSparseDriver(Driver):
             val = dv_dict[name]
             self.set_desvar(name, val)
 
-        self.root.solve_nonlinear(metadata=self.metadata)
+        with self.root._dircontext:
+            self.root.solve_nonlinear(metadata=self.metadata)
 
         # Save the most recent solution.
         self.pyopt_solution = sol
@@ -418,7 +420,8 @@ class pyOptSparseDriver(Driver):
             self.iter_count += 1
             update_local_meta(metadata, (self.iter_count,))
 
-            system.solve_nonlinear(metadata=metadata)
+            with self.root._dircontext:
+                system.solve_nonlinear(metadata=metadata)
 
             func_dict = self.get_objectives() # this returns a new OrderedDict
             func_dict.update(self.get_constraints())

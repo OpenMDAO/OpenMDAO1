@@ -18,6 +18,7 @@ from openmdao.core.vec_wrapper import VecWrapper
 from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
 from openmdao.util.type_util import real_types
 from openmdao.util.string_util import name_relative_to
+from openmdao.util.file_util import DirContext
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
@@ -65,6 +66,7 @@ class System(object):
     def __init__(self):
         self.name = ''
         self.pathname = ''
+        self._dircontext = _DummyContext()
 
         self._subsystems = OrderedDict()
 
@@ -323,7 +325,6 @@ class System(object):
             self._dircontext = DirContext(self._sysdata.absdir)
         else:
             self._sysdata.absdir = parent_dir
-            self._dircontext = None
 
         if (self.create_dirs and self.is_active() and
                      not os.path.exists(self._sysdata.absdir)):
@@ -714,44 +715,45 @@ class System(object):
             None allows the system to choose whats appropriate for itself
 
         """
-        if self.fd_options['force_fd']:
-            #force_fd should compute semi-totals across all children,
-            #    unless total_derivs=False is specifically requested
-            if self._local_subsystems and total_derivs is None:
-                self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
-                                                        total_derivs=True)
-            else:
-
-                # Component can request to use complex step.
-                if self.fd_options['form'] == 'complex_step':
-                    fd_func = self.complex_step_jacobian
+        with self._dircontext:
+            if self.fd_options['force_fd']:
+                #force_fd should compute semi-totals across all children,
+                #    unless total_derivs=False is specifically requested
+                if self._local_subsystems and total_derivs is None:
+                    self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
+                                                            total_derivs=True)
                 else:
-                    fd_func = self.fd_jacobian
-                self._jacobian_cache = fd_func(params, unknowns, resids,
-                                               total_derivs=False)
 
-        else:
-            try:
-                linearize = self.jacobian
-            except AttributeError:
-                linearize = self.linearize
+                    # Component can request to use complex step.
+                    if self.fd_options['form'] == 'complex_step':
+                        fd_func = self.complex_step_jacobian
+                    else:
+                        fd_func = self.fd_jacobian
+                    self._jacobian_cache = fd_func(params, unknowns, resids,
+                                                   total_derivs=False)
+
             else:
-                warnings.simplefilter('always', DeprecationWarning)
-                warnings.warn("%s: The 'jacobian' method is deprecated. Please "
-                              "rename 'jacobian' to 'linearize'." %
-                              self.pathname, DeprecationWarning,stacklevel=2)
-                warnings.simplefilter('ignore', DeprecationWarning)
+                try:
+                    linearize = self.jacobian
+                except AttributeError:
+                    linearize = self.linearize
+                else:
+                    warnings.simplefilter('always', DeprecationWarning)
+                    warnings.warn("%s: The 'jacobian' method is deprecated. Please "
+                                  "rename 'jacobian' to 'linearize'." %
+                                  self.pathname, DeprecationWarning,stacklevel=2)
+                    warnings.simplefilter('ignore', DeprecationWarning)
 
-            self._jacobian_cache = linearize(params, unknowns, resids)
+                self._jacobian_cache = linearize(params, unknowns, resids)
 
-        if self._jacobian_cache is not None:
-            jc = self._jacobian_cache
-            for key, J in iteritems(jc):
-                if isinstance(J, real_types):
-                    jc[key] = np.array([[J]])
-                shape = jc[key].shape
-                if len(shape) < 2:
-                    jc[key] = jc[key].reshape((shape[0], 1))
+            if self._jacobian_cache is not None:
+                jc = self._jacobian_cache
+                for key, J in iteritems(jc):
+                    if isinstance(J, real_types):
+                        jc[key] = np.array([[J]])
+                    shape = jc[key].shape
+                    if len(shape) < 2:
+                        jc[key] = jc[key].reshape((shape[0], 1))
 
         return self._jacobian_cache
 
@@ -1200,6 +1202,20 @@ class System(object):
                 _list_conns(c, c.pathname)
         else:
             _list_conns(self, '')
+
+class _DummyContext(object):
+    """Used in place of DirContext for those systems that don't define their
+    own directory.
+    """
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
 
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):

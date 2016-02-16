@@ -127,17 +127,18 @@ class PredeterminedRunsDriver(Driver):
         else:
             runlist = self._build_runlist()
 
-        # For each runlist entry, run the system and record the results
-        for run in runlist:
-            for dv_name, dv_val in run:
-                self.set_desvar(dv_name, dv_val)
+        with problem.root._dircontext:
+            # For each runlist entry, run the system and record the results
+            for run in runlist:
+                for dv_name, dv_val in run:
+                    self.set_desvar(dv_name, dv_val)
 
-            metadata = create_local_meta(None, 'Driver')
+                metadata = create_local_meta(None, 'Driver')
 
-            update_local_meta(metadata, (self.iter_count,))
-            problem.root.solve_nonlinear(metadata=metadata)
-            self.recorders.record_iteration(problem.root, metadata)
-            self.iter_count += 1
+                update_local_meta(metadata, (self.iter_count,))
+                problem.root.solve_nonlinear(metadata=metadata)
+                self.recorders.record_iteration(problem.root, metadata)
+                self.iter_count += 1
 
     def _distrib_build_runlist(self):
         """

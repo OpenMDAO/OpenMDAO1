@@ -63,11 +63,12 @@ class ParallelGroup(Group):
         self._transfer_data()
 
         for sub in self._local_subsystems:
-            if isinstance(sub, Component):
-                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-            else:
-                sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids,
-                                    metadata)
+            with sub._dircontext:
+                if isinstance(sub, Component):
+                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                else:
+                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids,
+                                        metadata)
 
     def get_req_procs(self):
         """
