@@ -151,7 +151,7 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xSet and ySet:
+        for value in xSet + ySet:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
