@@ -53,7 +53,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         design_vars = self.get_desvar_metadata()
 
         # Add up sizes
-        self.num_design_vars = sum(meta['size'] for _, meta in iteritems(design_vars))
+        self.num_design_vars = sum(meta['size'] for meta in itervalues(design_vars))
 
         if self.seed is not None:
             seed(self.seed)
