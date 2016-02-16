@@ -102,6 +102,35 @@ class TestAllDOEDrivers(unittest.TestCase):
         samples = self.runTestProblem1(UniformDriver(num_samples=4, seed=SEED))
         self.assertExpectedDoe(UNIFORM1, samples)
 
+    def runTestProblem1_idx(self, driver):
+        prob = Problem()
+        root = prob.root = Group()
+
+        comp = FakeCompWithArrayParam()
+        root.add('comp', comp, promotes=['*'])
+        root.add('p1', IndepVarComp('X', np.array([50., 50., 50.])), promotes=['*'])
+
+        prob.driver = driver
+        prob.driver.add_desvar('X',
+                               lower=np.array([-50.0, -50.0]),
+                               upper=np.array([50.0, 50.0]), indices=[1, 2])
+        prob.setup(check=False)
+        prob.run()
+
+        return comp.callargs
+
+    def test_array_desvar_idx(self):
+        samples = self.runTestProblem1_idx(FullFactorialDriver(num_levels=2))
+        self.assertExpectedDoe(FACT1[4:], samples)
+        samples = self.runTestProblem1_idx(UniformDriver(num_samples=4, seed=SEED))
+        #self.assertExpectedDoe(UNIFORM1, samples)
+        self.assertAlmostEqual(samples[0][1], UNIFORM1[0][0])
+        self.assertAlmostEqual(samples[0][2], UNIFORM1[0][1])
+        self.assertAlmostEqual(samples[1][1], UNIFORM1[0][2])
+        self.assertAlmostEqual(samples[1][2], UNIFORM1[1][0])
+        self.assertAlmostEqual(samples[2][1], UNIFORM1[1][1])
+        self.assertAlmostEqual(samples[2][2], UNIFORM1[1][2])
+
     def runTestProblem2(self, driver):
         prob = Problem()
         root = prob.root = Group()
@@ -157,11 +186,11 @@ class TestAllDOEDrivers(unittest.TestCase):
         return comp.callargs
 
     def test_mixed_array_float_desvar_scalar_bounds(self):
-        samples = self.runTestProblem2(LatinHypercubeDriver(num_samples=4, seed=SEED))
+        samples = self.runTestProblem2_scalar_bounds(LatinHypercubeDriver(num_samples=4, seed=SEED))
         self.assertExpectedDoe(LHS2, samples)
-        samples = self.runTestProblem2(FullFactorialDriver(num_levels=2))
+        samples = self.runTestProblem2_scalar_bounds(FullFactorialDriver(num_levels=2))
         self.assertExpectedDoe(FACT2, samples)
-        samples = self.runTestProblem2(UniformDriver(num_samples=4, seed=SEED))
+        samples = self.runTestProblem2_scalar_bounds(UniformDriver(num_samples=4, seed=SEED))
         self.assertExpectedDoe(UNIFORM2, samples)
 if __name__ == "__main__":
     unittest.main()

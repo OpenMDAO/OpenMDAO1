@@ -40,8 +40,6 @@ class UniformDriver(PredeterminedRunsDriver):
             np.random.seed(self.seed)
 
         for i in moves.range(self.num_samples):
-            #yield ((key, np.random.uniform(bound[0], bound[1]))
-            #            for key, bound in iteritems(bounds))
             sample = []
             for key, meta in iteritems(self.get_desvar_metadata()):
                 nval = meta['size']
