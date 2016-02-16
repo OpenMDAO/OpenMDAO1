@@ -15,6 +15,9 @@ class UniformDriver(PredeterminedRunsDriver):
     num_samples : int, optional
         The number of samples to run. Defaults to 1.
 
+    seed : iint, optional
+        Seed for randon number generator.
+
     num_par_doe : int, optional
         The number of DOE cases to run concurrently.  Defaults to 1.
 
@@ -24,32 +27,35 @@ class UniformDriver(PredeterminedRunsDriver):
 
     """
 
-    def __init__(self, num_samples=1, num_par_doe=1, load_balance=False):
+    def __init__(self, num_samples=1, seed=None, num_par_doe=1, load_balance=False):
         super(UniformDriver, self).__init__(num_par_doe=num_par_doe,
                                             load_balance=load_balance)
         self.num_samples = num_samples
+        self.seed = seed
 
     def _build_runlist(self):
         """Build a runlist based on a uniform distribution."""
 
-        bounds = dict()
-        for name, meta in iteritems(self.get_desvar_metadata()):
-
-            # Support for array desvars
-            val = self.root.unknowns._dat[name].val
-            nval = len(val)
-
-            for k in range(nval):
-
-                low = meta['lower']
-                high = meta['upper']
-                if isinstance(low, np.ndarray):
-                    low = low[k]
-                if isinstance(high, np.ndarray):
-                    high = high[k]
-
-                bounds[(name, k)] = np.linspace(low, high)
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         for i in moves.range(self.num_samples):
-            yield ((key, np.random.uniform(bound[0], bound[1]))
-                        for key, bound in iteritems(bounds))
+            #yield ((key, np.random.uniform(bound[0], bound[1]))
+            #            for key, bound in iteritems(bounds))
+            sample = []
+            for key, meta in iteritems(self.get_desvar_metadata()):
+                nval = meta['size']
+                values = []
+                for k in range(nval):
+
+                    low = meta['lower']
+                    high = meta['upper']
+                    if isinstance(low, np.ndarray):
+                        low = low[k]
+                    if isinstance(high, np.ndarray):
+                        high = high[k]
+
+                    values.append(np.random.uniform(low, high))
+                sample.append([key, np.array(values)])
+
+            yield sample

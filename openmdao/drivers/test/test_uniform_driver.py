@@ -44,7 +44,7 @@ class TestUniformDriver(unittest.TestCase):
         inRange= True
         for value in cases:
             value = dict(value)
-            if not (-10< value[('x', 0)] < 10 and -10 < value[('y', 0)] <10):
+            if not (-10< value['x'] < 10 and -10 < value['y'] <10):
                 inRange = False
 
         self.assertTrue(inRange,"Not in range.")

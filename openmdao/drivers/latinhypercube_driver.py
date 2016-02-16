@@ -2,6 +2,7 @@
 OpenMDAO design-of-experiments Driver implementing the Latin Hypercube and Optimized Latin Hypercube methods.
 """
 
+from collections import OrderedDict
 import os
 from random import shuffle, randint, seed
 
@@ -52,11 +53,7 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         design_vars = self.get_desvar_metadata()
 
         # Add up sizes
-        ntot = 0
-        for (name, _) in iteritems(design_vars):
-            val = self.root.unknowns._dat[name].val
-            ntot += len(val)
-        self.num_design_vars = ntot
+        self.num_design_vars = sum(meta['size'] for _, meta in iteritems(design_vars))
 
         if self.seed is not None:
             seed(self.seed)
@@ -66,16 +63,18 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         rand_lhc = self._get_lhc()
 
         # Map LHC to buckets
-        buckets = {}
+        buckets = OrderedDict()
         j = 0
 
         for (name, bounds) in iteritems(design_vars):
+            buckets[name] = []
 
             # Support for array desvars
             val = self.root.unknowns._dat[name].val
-            nval = len(val)
+            nval = bounds['size']
 
             for k in range(nval):
+
                 lowb = bounds['lower']
                 upb = bounds['upper']
                 if isinstance(lowb, np.ndarray):
@@ -84,14 +83,19 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
                     upb = upb[k]
 
                 design_var_buckets = self._get_buckets(lowb, upb)
-                buckets[(name, k)] = [design_var_buckets[rand_lhc[i, j]]
-                                      for i in range(self.num_samples)]
+                buckets[name].append([design_var_buckets[rand_lhc[i, j]]
+                                      for i in range(self.num_samples)])
                 j += 1
 
         # Return random values in given buckets
         for i in range(self.num_samples):
-            yield ((key, np.random.uniform(bounds[i][0], bounds[i][1]))
-                   for key, bounds in iteritems(buckets))
+            sample = []
+            for key, bounds in iteritems(buckets):
+                sample.append([key, np.array([np.random.uniform(bounds[k][i][0],
+                                                                bounds[k][i][1])
+                                              for k in range(design_vars[key]['size'])])
+                               ])
+            yield sample
 
     def _distrib_build_runlist(self):
         """

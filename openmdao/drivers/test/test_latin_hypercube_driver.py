@@ -80,14 +80,14 @@ class TestLatinHypercubeDriver(unittest.TestCase):
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xDict = set()
-        yDict = set()
+        xDict = []
+        yDict = []
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xDict.add(np.floor(x))
-            yDict.add(np.floor(y))
+            xDict.append(np.floor(x))
+            yDict.append(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
@@ -96,7 +96,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xDict | yDict:
+        for value in xDict + yDict:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
@@ -136,14 +136,14 @@ class TestLatinHypercubeDriver(unittest.TestCase):
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xDict = set()
-        yDict = set()
+        xDict = []
+        yDict = []
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xDict.add(np.floor(x))
-            yDict.add(np.floor(y))
+            xDict.append(np.floor(x))
+            yDict.append(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
@@ -152,7 +152,7 @@ class TestLatinHypercubeDriver(unittest.TestCase):
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xDict | yDict:
+        for value in xDict + yDict:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
