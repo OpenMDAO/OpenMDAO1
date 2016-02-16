@@ -2,6 +2,7 @@
 OpenMDAO design-of-experiments driver implementing the Full Factorial method.
 """
 
+from collections import OrderedDict
 import itertools
 from six import moves, iteritems
 
@@ -34,7 +35,7 @@ class FullFactorialDriver(PredeterminedRunsDriver):
         self.num_levels = num_levels
 
     def _build_runlist(self):
-        value_arrays = dict()
+        value_arrays = OrderedDict()
         for name, meta in iteritems(self.get_desvar_metadata()):
             value_arrays[name] = []
 
