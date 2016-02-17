@@ -105,7 +105,7 @@ class TestAllDOEDrivers(unittest.TestCase):
         return comp.callargs
 
     def test_array_desvar(self):
-        #samples = self.runTestProblem1(LatinHypercubeDriver(num_samples=4, seed=SEED))
+        samples = self.runTestProblem1(LatinHypercubeDriver(num_samples=4, seed=SEED))
         #self.assertExpectedDoe(LHS1, samples)
         samples = self.runTestProblem1(FullFactorialDriver(num_levels=2))
         self.assertExpectedDoe(FACT1, samples)
@@ -164,7 +164,7 @@ class TestAllDOEDrivers(unittest.TestCase):
         return comp.callargs
 
     def test_mixed_array_float_desvar(self):
-        #samples = self.runTestProblem2(LatinHypercubeDriver(num_samples=4, seed=SEED))
+        samples = self.runTestProblem2(LatinHypercubeDriver(num_samples=4, seed=SEED))
         #self.assertExpectedDoe(LHS2, samples)
         samples = self.runTestProblem2(FullFactorialDriver(num_levels=2))
         self.assertExpectedDoe(FACT2, samples)
@@ -195,7 +195,7 @@ class TestAllDOEDrivers(unittest.TestCase):
         return comp.callargs
 
     def test_mixed_array_float_desvar_scalar_bounds(self):
-        #samples = self.runTestProblem2_scalar_bounds(LatinHypercubeDriver(num_samples=4, seed=SEED))
+        samples = self.runTestProblem2_scalar_bounds(LatinHypercubeDriver(num_samples=4, seed=SEED))
         #self.assertExpectedDoe(LHS2, samples)
         samples = self.runTestProblem2_scalar_bounds(FullFactorialDriver(num_levels=2))
         self.assertExpectedDoe(FACT2, samples)
