@@ -119,9 +119,9 @@ class TestEmptyJacobian(unittest.TestCase):
 
         try:
             prob.run()
-        except ValueError as e:
-            if e.message == "No derivatives defined for Component 'g.input'":
-                self.fail("Raised an error for a component with an empty Jacobian")
+        except Exception:
+            self.fail("Unexpected exception encountered")
+
 
     def test_none_jacobian(self):
 
@@ -149,10 +149,11 @@ class TestEmptyJacobian(unittest.TestCase):
 
         try:
             prob.run()
-        except ValueError as e:
-            assert(e.message == "No derivatives defined for Component 'g.input'")
+        except ValueError as err:
+            self.assertEqual(str(err), "No derivatives defined for Component 'g.input'")
         else:
-            self.fail("Failed to raise an exception for a jacobian returning None")
+            self.fail("expecting ValueError due to linearize returning None")
+
 
     def test_undefined_jacobian(self):
 
@@ -180,10 +181,10 @@ class TestEmptyJacobian(unittest.TestCase):
 
         try:
             prob.run()
-        except ValueError as e:
-            assert(e.message == "No derivatives defined for Component 'g.input'")
+        except ValueError as err:
+            self.assertEqual(str(err), "No derivatives defined for Component 'g.input'")
         else:
-            self.fail("Failed to raise an exception for an undefined jacobian")
+            self.fail("expecting ValueError due to undefined linearize")
 
 
 if __name__ == "__main__":
