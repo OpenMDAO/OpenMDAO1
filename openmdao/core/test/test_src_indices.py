@@ -334,6 +334,29 @@ class TestSrcIndices(unittest.TestCase):
                 assert_almost_equal(seg_cardinal_values, eomc_cardinal_values, decimal=12)
                 idx = idx+seg_ncn-1
 
+    def test_slice_conversion(self):
+        p = Problem(root=Group())
+        size = 11
+        c1 = p.root.add("C1", ExecComp(["c=a+b","d=a-b"],
+                                            a=np.zeros(size),
+                                            b=np.zeros(size),
+                                            c=np.zeros(size),
+                                            d=np.zeros(size)))
+
+        size = 3
+        c2 = p.root.add("C2", ExecComp(["c=a+b","d=a-b"],
+                                            a=np.zeros(size),
+                                            b=np.zeros(size),
+                                            c=np.zeros(size),
+                                            d=np.zeros(size)))
+
+        # make two array connections with src_indices having stride > 1
+        p.root.connect("C1.c", "C2.a", src_indices=[1,3,5])  # slice (1,7,2)
+        p.root.connect("C1.c", "C2.b", src_indices=[6,8,10])  # slice(6,12,2)
+
+        p.setup(check=False)
+        p.run()
+
 
 if __name__ == "__main__":
     unittest.main()

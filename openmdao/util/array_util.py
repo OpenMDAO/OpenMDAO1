@@ -72,4 +72,6 @@ def to_slice(idxs):
     if any(idxs[1:]-idxs[:-1] != stride):
         return idxs
 
-    return slice(idxs[0], idxs[-1]+1, stride)
+    # set the upper bound to idxs[-1]+stride instead of idxs[-1]+1 because
+    # later, we compare upper and lower bounds when collapsing slices
+    return slice(idxs[0], idxs[-1]+stride, stride)
