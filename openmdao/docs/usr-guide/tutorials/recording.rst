@@ -237,7 +237,7 @@ that starts with "comp1.".
 Accessing Recorded Data
 =======================
 
-While each recorder stores data slightly differently in order to match the
+While each recorder stores data differently in order to match the
 file format, the common theme for accessing data is the iteration coordinate.
 The iteration coordinate describes where and when in the execution hierarchy
 the data was collected. Iteration coordinates are strings formatted as pairs

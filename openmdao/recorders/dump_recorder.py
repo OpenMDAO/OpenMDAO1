@@ -125,7 +125,6 @@ class DumpRecorder(BaseRecorder):
 
         iteration_coordinate = metadata['coord']
         timestamp = metadata['timestamp']
-        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         write = self.out.write
         fmat = "Timestamp: {0!r}\n"
@@ -136,17 +135,20 @@ class DumpRecorder(BaseRecorder):
 
         if self.options['record_params']:
             write("Params:\n")
-            for param, val in sorted(iteritems(params)):
+            for param, val in sorted(iteritems(self._filter_vector(params,
+                                                   'p',iteration_coordinate))):
                 write("  {0}: {1}\n".format(param, str(val)))
 
         if self.options['record_unknowns']:
             write("Unknowns:\n")
-            for unknown, val in sorted(iteritems(unknowns)):
+            for unknown, val in sorted(iteritems(self._filter_vector(unknowns,
+                                                   'u',iteration_coordinate))):
                 write("  {0}: {1}\n".format(unknown, str(val)))
 
         if self.options['record_resids']:
             write("Resids:\n")
-            for resid, val in sorted(iteritems(resids)):
+            for resid, val in sorted(iteritems(self._filter_vector(resids,
+                                                   'r',iteration_coordinate))):
                 write("  {0}: {1}\n".format(resid, str(val)))
 
         # Flush once per iteration to allow external scripts to process the data.

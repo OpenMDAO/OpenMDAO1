@@ -73,7 +73,7 @@ class BaseRecorder(object):
         unknowns = list(filter(self._check_path, group.unknowns))
         resids = list(filter(self._check_path, group.resids))
 
-        self._filtered[group.pathname] = (params, unknowns, resids)
+        self._filtered[group.pathname] = { 'p': params, 'u': unknowns, 'r': resids }
 
     def _check_path(self, path):
         """ Return True if `path` should be recorded. """
@@ -100,18 +100,12 @@ class BaseRecorder(object):
         '''
         return '.'.join(iteration_coordinate[4::2])
 
-    def _filter_vectors(self, params, unknowns, resids, iteration_coordinate):
+    def _filter_vector(self, vecwrapper, key, iteration_coordinate):
         '''
-        Returns subset of `params`, `unknowns` and `resids` to be recoder
+        Returns subset of the given vecwrapper to be recorded
         '''
         pathname = self._get_pathname(iteration_coordinate)
-        pnames, unames, rnames = self._filtered[pathname]
-
-        params = {key: params[key] for key in pnames}
-        unknowns = {key: unknowns[key] for key in unames}
-        resids = {key: resids[key] for key in rnames}
-
-        return params, unknowns, resids
+        return {k: vecwrapper[k] for k in self._filtered[pathname][key]}
 
     def record_metadata(self, group):
         """Writes the metadata of the given group

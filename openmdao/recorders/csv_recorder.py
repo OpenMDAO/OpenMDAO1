@@ -97,15 +97,17 @@ class CsvRecorder(BaseRecorder):
         """
 
         iteration_coordinate = metadata['coord']
-        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         if self._wrote_header is False:
             header = []
             if self.options['record_params']:
+                params = self._filter_vector(params, 'p', iteration_coordinate)
                 header.extend(params)
             if self.options['record_unknowns']:
+                unknowns = self._filter_vector(unknowns, 'u', iteration_coordinate)
                 header.extend(unknowns)
             if self.options['record_resids']:
+                resids = self._filter_vector(resids, 'r', iteration_coordinate)
                 header.extend(resids)
             if self.options['record_derivs']:
                 header.append('Derivatives')

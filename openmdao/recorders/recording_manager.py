@@ -40,17 +40,12 @@ class RecordingManager(object):
         return iter(self._recorders)
 
     def _local_vars(self, root, vec, varnames):
-        local_vars = []
-
-        for name in varnames:
-            if root.comm.rank == root._owning_ranks[name]:
-                local_vars.append((name, vec[name]))
-
-        return local_vars
+        rrank = root.comm.rank
+        return [(n,vec[n]) for n in varnames if rrank == root._owning_ranks[n]]
 
     def _gather_vars(self, root, local_vars):
         """Gathers and returns only variables listed in
-        `varnames` from the vector `vec`"""
+        `local_vars` from the `root` VecWrapper."""
 
         all_vars = root.comm.gather(local_vars, root=0)
 
@@ -65,12 +60,16 @@ class RecordingManager(object):
         root : `System`
            System containing variables.
         """
+        pathname = root.pathname
+
         for recorder in self._recorders:
             recorder.startup(root)
 
             if not recorder._parallel:
                 self.__has_serial_recorders = True
-                pnames, unames, rnames = recorder._filtered[root.pathname]
+                pnames = recorder._filtered[pathname]['p']
+                unames = recorder._filtered[pathname]['u']
+                rnames = recorder._filtered[pathname]['r']
 
                 self._vars_to_record['pnames'].update(pnames)
                 self._vars_to_record['unames'].update(unames)
@@ -123,15 +122,18 @@ class RecordingManager(object):
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']
 
-            params = self._gather_vars(root, self._local_vars(root, params, pnames))
-            unknowns = self._gather_vars(root, self._local_vars(root, unknowns, unames))
-            resids = self._gather_vars(root, self._local_vars(root, resids, rnames))
+            gathered_params = self._gather_vars(root, self._local_vars(root, params, pnames))
+            gathered_unknowns = self._gather_vars(root, self._local_vars(root, unknowns, unames))
+            gathered_resids = self._gather_vars(root, self._local_vars(root, resids, rnames))
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self._recorders:
-            if recorder._parallel or self.rank == 0:
+            if recorder._parallel or MPI is None:
                 recorder.record_iteration(params, unknowns, resids, metadata)
+            elif self.rank == 0:
+                recorder.record_iteration(gathered_params, gathered_unknowns,
+                                          gathered_resids, metadata)
 
     def record_derivatives(self, derivs, metadata):
         """" Records derivatives if requested.
