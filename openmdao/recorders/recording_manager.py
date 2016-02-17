@@ -41,7 +41,8 @@ class RecordingManager(object):
 
     def _local_vars(self, root, vec, varnames):
         rrank = root.comm.rank
-        return [(n,vec[n]) for n in varnames if rrank == root._owning_ranks[n]]
+        rowned = root._owning_ranks
+        return [(n,vec[n]) for n in varnames if rrank == rowned[n]]
 
     def _gather_vars(self, root, local_vars):
         """Gathers and returns only variables listed in
@@ -93,12 +94,8 @@ class RecordingManager(object):
             # If the recorder does not support parallel recording
             # we need to make sure we only record on rank 0.
             if recorder._parallel or self.rank == 0:
-                metadata_option = recorder.options['record_metadata']
-
-                if metadata_option is False:
-                    continue
-
-                recorder.record_metadata(root)
+                if recorder.options['record_metadata']:
+                    recorder.record_metadata(root)
 
     def record_iteration(self, root, metadata):
         """ Gathers variables for non-parallel case recorders and calls
@@ -151,9 +148,6 @@ class RecordingManager(object):
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
         for recorder in self._recorders:
-
-            if recorder.options['record_derivs'] is False:
-                continue
-
-            if recorder._parallel or self.rank == 0:
-                recorder.record_derivatives(derivs, metadata)
+            if recorder.options['record_derivs']:
+                if recorder._parallel or self.rank == 0:
+                    recorder.record_derivatives(derivs, metadata)

@@ -33,6 +33,7 @@ class PredeterminedRunsDriver(Driver):
         if type(self) == PredeterminedRunsDriver:
             raise Exception('PredeterminedRunsDriver is an abstract class')
         super(PredeterminedRunsDriver, self).__init__()
+
         self._num_par_doe = num_par_doe
         self._par_doe_id = 0
         self._load_balance = load_balance
@@ -74,12 +75,30 @@ class PredeterminedRunsDriver(Driver):
             # an entry for each processor it will be given
             # e.g. [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
             color = []
+
+            rank0color = []
             self._id_map = {}
             for i in range(self._num_par_doe):
                 color.extend([i]*sizes[i])
+                if sizes[i] > 0:
+                    rank0color.append(1)
+                    rank0color.extend([MPI.UNDEFINED]*(sizes[i]-1))
                 self._id_map[i] = (sizes[i], offsets[i])
 
             self._par_doe_id = color[comm.rank]
+
+            # we need a comm that has all the 0 ranks of the subcomms so
+            # we can gather multiple cases run as part of parallel DOE.
+            if trace:
+                debug('%s: splitting rank0comm, doe_id=%s' % ('.'.join((root.pathname,
+                                                               'driver')),
+                                                    self._par_doe_id))
+            self._rank0comm = comm.Split(rank0color[comm.rank])
+            if trace: debug('%s: rank0comm split done' % '.'.join((root.pathname,
+                                                           'driver')))
+
+            if self._rank0comm == MPI.COMM_NULL:
+                self._rank0comm = None
 
             # create a sub-communicator for each color and
             # get the one assigned to our color/process
@@ -88,6 +107,13 @@ class PredeterminedRunsDriver(Driver):
                                                                'driver')),
                                                     self._par_doe_id))
             comm = comm.Split(self._par_doe_id)
+            if trace: debug('%s: comm split done' % '.'.join((root.pathname,
+                                                           'driver')))
+        else:
+            self._rank0comm = None
+
+        # tell RecordingManager it needs to do a multicase gather
+        self._recorders._rank0comm = self._rank0comm
 
         root._setup_communicators(comm, parent_dir)
 
