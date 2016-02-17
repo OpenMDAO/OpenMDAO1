@@ -2,10 +2,13 @@
 OpenMDAO design-of-experiments driver implementing the Full Factorial method.
 """
 
-from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
-from six import moves, iteritems
-import numpy as np
+from collections import OrderedDict
 import itertools
+from six import moves, iteritems
+
+import numpy as np
+
+from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
 
 
 class FullFactorialDriver(PredeterminedRunsDriver):
@@ -32,13 +35,29 @@ class FullFactorialDriver(PredeterminedRunsDriver):
         self.num_levels = num_levels
 
     def _build_runlist(self):
-        value_arrays = dict()
-        for name, value in iteritems(self.get_desvar_metadata()):
-            low = value['lower']
-            high = value['upper']
-            value_arrays[name] = np.linspace(low, high,
-                                             num=self.num_levels).tolist()
+        value_arrays = OrderedDict()
+        for name, meta in iteritems(self.get_desvar_metadata()):
+            value_arrays[name] = []
+
+            # Support for array desvars
+            val = self.root.unknowns._dat[name].val
+            nval = meta['size']
+
+            for k in range(nval):
+
+                low = meta['lower']
+                high = meta['upper']
+                if isinstance(low, np.ndarray):
+                    low = low[k]
+                if isinstance(high, np.ndarray):
+                    high = high[k]
+
+                value_arrays[name].append(np.linspace(low, high,
+                                                      num=self.num_levels).tolist())
 
         keys = list(value_arrays.keys())
+        for name in keys:
+            value_arrays[name] = [np.array(x) for x in itertools.product(*value_arrays[name])]
+
         for combination in itertools.product(*value_arrays.values()):
             yield moves.zip(keys, combination)
