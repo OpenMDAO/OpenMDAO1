@@ -70,14 +70,14 @@ class TestLatinHypercubeDriver(MPITestCase):
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xSet = set()
-        ySet = set()
+        xSet = []
+        ySet = []
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xSet.add(np.floor(x))
-            ySet.add(np.floor(y))
+            xSet.append(np.floor(x))
+            ySet.append(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
@@ -87,7 +87,7 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xSet | ySet:
+        for value in xSet + ySet:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(
@@ -134,14 +134,14 @@ class TestLatinHypercubeDriver(MPITestCase):
                 "_build_runlist did not return a generator.")
 
         # Add run list to dictionaries
-        xSet = set()
-        ySet = set()
+        xSet = []
+        ySet = []
         countRuns = 0
         for inputLine in runList:
             countRuns += 1
             x, y = dict(inputLine).values()
-            xSet.add(np.floor(x))
-            ySet.add(np.floor(y))
+            xSet.append(np.floor(x))
+            ySet.append(np.floor(y))
 
         # Assert we had the correct number of runs
         self.assertTrue(
@@ -151,7 +151,7 @@ class TestLatinHypercubeDriver(MPITestCase):
 
         # Assert all input values in range [-50,50]
         valuesInRange = True
-        for value in xSet | ySet:
+        for value in xSet + ySet:
             if value < (-50) or value > 49:
                 valuesInRange = False
         self.assertTrue(

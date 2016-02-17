@@ -445,7 +445,7 @@ class Driver(object):
         Args
         ----
         name : string
-           Name of the design variable in the root system.
+            Name of the design variable in the root system.
 
         val : ndarray or float
             value to assign to the design variable.
