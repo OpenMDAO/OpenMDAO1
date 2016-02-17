@@ -72,4 +72,4 @@ def to_slice(idxs):
     if any(idxs[1:]-idxs[:-1] != stride):
         return idxs
 
-    return slice(idxs[0], idxs[-1]+1, stride)
+    return slice(idxs[0], idxs[-1]+stride, stride)
