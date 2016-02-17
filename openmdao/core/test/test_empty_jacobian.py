@@ -117,10 +117,7 @@ class TestEmptyJacobian(unittest.TestCase):
 
         prob.setup(check=False)
 
-        try:
-            prob.run()
-        except Exception:
-            self.fail("Unexpected exception encountered")
+        prob.run()
 
 
     def test_none_jacobian(self):
