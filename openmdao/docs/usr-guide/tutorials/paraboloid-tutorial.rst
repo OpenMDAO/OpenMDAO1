@@ -257,17 +257,20 @@ The output should look like this:
 
    -15.0
 
-The `IndepVarComp` component is used to define a source for a parameter that
-we want to use as a design variable for a driver. In our case, we want to
-optimize the Paraboloid model, finding values for 'x' and 'y' that minimize
-the output 'f_xy.' Sometimes we just want to run our component once to see
-the result. Similiarly, sometimes we have `params` that will be constant
-through our optimization, and thus don't need to be design variables. In
-either case, the `IndepVarComp` is not required, and we can build our model
-while leaving those parameters unonnected. All unconnected params use their
-default value as the initial value. You can specify new values for
-unconnected params by indexing into your problem using the full pathname of
-the param of interest. This can only be done after `setup` is called.
+The `IndepVarComp` component is used to define a source for an unconnected
+`param` that we want to use as an independent variable that can be decared as
+a design variabe for a driver. In our case, we want to optimize the
+Paraboloid model, finding values for 'x' and 'y' that minimize the output
+'f_xy.'
+
+Sometimes we just want to run our component once to see the result.
+Similiarly, sometimes we have `params` that will be constant through our
+optimization, and thus don't need to be design variables. In either of these
+cases, the `IndepVarComp` is not required, and we can build our model while
+leaving those parameters unconnected. All unconnected params use their default
+value as the initial value. You can specify new values for unconnected params
+by indexing into your problem using the full pathname of the param of
+interest. This can only be done after `setup` is called.
 
 .. testcode:: parab
 
