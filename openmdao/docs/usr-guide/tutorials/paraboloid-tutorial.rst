@@ -63,7 +63,7 @@ this code into a file, and run it directly.
         top.setup()
         top.run()
 
-        print(root.p.unknowns['f_xy'])
+        print(root['p.f_xy'])
 
 
 Now we will go through each section and explain how this code works.
@@ -227,10 +227,10 @@ Now we can run the model using the `run` method of `Problem`.
 
 ::
 
-    print(root.p.unknowns['f_xy'])
+    print(top['p.f_xy'])
 
 Finally, we print the output of the `Paraboloid` Component using the
-dictionary-style method of accessing the outputs from a `Component` instance.
+dictionary-style method of accessing variables on the problem instance.
 Putting it all together:
 
 .. testcode:: parab
@@ -248,7 +248,7 @@ Putting it all together:
     top.setup()
     top.run()
 
-    print(root.p.unknowns['f_xy'])
+    print(top['p.f_xy'])
 
 The output should look like this:
 
@@ -256,6 +256,47 @@ The output should look like this:
    :options: +ELLIPSIS
 
    -15.0
+
+The `IndepVarComp` component is used to define a source for an unconnected
+`param` that we want to use as an independent variable that can be decared as
+a design variabe for a driver. In our case, we want to optimize the
+Paraboloid model, finding values for 'x' and 'y' that minimize the output
+'f_xy.'
+
+Sometimes we just want to run our component once to see the result.
+Similiarly, sometimes we have `params` that will be constant through our
+optimization, and thus don't need to be design variables. In either of these
+cases, the `IndepVarComp` is not required, and we can build our model while
+leaving those parameters unconnected. All unconnected params use their default
+value as the initial value. You can set the values of any unconnected params
+the same way as any other variables by doing the following:
+
+.. testcode:: parab
+
+    top = Problem()
+    root = top.root = Group()
+
+    root.add('p', Paraboloid(), promotes=['x', 'y'])
+
+    top.setup()
+
+    # Set values for x and y
+    top['x'] = 5.0
+    top['y'] = 2.0
+
+    top.run()
+
+    print(top['p.f_xy'])
+
+This can only be done after `setup` is called. Note that the promoted names
+'x' and 'y' are used.
+
+The new output should look like this:
+
+.. testoutput:: parab
+   :options: +ELLIPSIS
+
+   47.0
 
 Future tutorials will show more complex `Problems`.
 
@@ -286,8 +327,9 @@ SLSQP because it supports OpenMDAO-supplied gradients.
 
         root = top.root = Group()
 
-        root.add('p1', IndepVarComp('x', 3.0))
-        root.add('p2', IndepVarComp('y', -4.0))
+        # Initial value of x and y set in the IndepVarComp.
+        root.add('p1', IndepVarComp('x', 13.0))
+        root.add('p2', IndepVarComp('y', -14.0))
         root.add('p', Paraboloid())
 
         root.connect('p1.x', 'p.x')
@@ -301,6 +343,11 @@ SLSQP because it supports OpenMDAO-supplied gradients.
         top.driver.add_objective('p.f_xy')
 
         top.setup()
+
+        # You can also specify initial values post-setup
+        top['p1.x'] = 3.0
+        top['p2.y'] = -4.0
+
         top.run()
 
         print('\n')
@@ -319,6 +366,9 @@ a good idea.
 
 Finally, we add the objective. You can use any `unknown` in your model as the
 objective.
+
+Once we have called setup on the model, we can specify the initial conditions
+for the design variables just like we did with unconnected params.
 
 Since SLSQP is a gradient optimizer, OpenMDAO will call the `linearize` method
 on the `Paraboloid` while calculating the total gradient of the objective
