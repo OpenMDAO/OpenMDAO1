@@ -279,6 +279,11 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
         top.driver.add_constraint('con2', upper=0.0)
 
         top.setup()
+
+        # Setting initial values for design variables
+        top['x'] = 1.0
+        top['z'] = np.array([5.0, 2.0])
+
         top.run()
 
         print("\n")
