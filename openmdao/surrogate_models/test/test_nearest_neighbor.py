@@ -313,8 +313,8 @@ class TestRBFInterpolator1D(unittest.TestCase):
         assert_rel_error(self, mu, expected_y, 1e-8)
 
     def test_jacobian(self):
-        test_x = np.array([[0.5], [2.5]])
-        expected_deriv = np.array([[2.34609214],  [-2.34609214]])
+        test_x = np.array([[0.5], [2.5], [1.0]])
+        expected_deriv = np.array([[2.34609214],  [-2.34609214], [1.5121989]])
 
         for x0, y0 in zip(test_x, expected_deriv):
             jac = self.surrogate.linearize(x0)
