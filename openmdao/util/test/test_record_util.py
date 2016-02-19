@@ -25,13 +25,6 @@ class RecordUtilTest(unittest.TestCase):
         self.assertEqual(self.meta['name'], '')
         self.assertEqual(self.meta['coord'], [0, '', coord])
 
-    def test_invalid_access(self):
-        with self.assertRaises(KeyError):
-            self.meta['non_existant_key']
-
-        with self.assertRaises(KeyError):
-            self.meta['non_existant_key'] = 1
-
     def test_format_coord(self):
         name = 'Sub'
         coord = (1, 2, 3)

@@ -3,26 +3,6 @@ from six.moves import map, zip
 
 from openmdao.core.mpi_wrap import MPI
 
-class _ExecutionMetadata(object):
-    def __init__(self, name='', coord=None, timestamp=None):
-        self.name = name
-        self.coord = coord
-        self.timestamp = timestamp
-
-    def __getitem__(self, key):
-        try:
-            return getattr(self, key)
-        except AttributeError:
-            msg = "KeyError: '{0}'.".format(key)
-            raise KeyError(msg)
-
-    def __setitem__(self, key, value):
-        if not hasattr(self, key):
-            msg = "KeyError: '{0}'.".format(key)
-            raise KeyError(msg)
-        setattr(self, key, value)
-
-
 def create_local_meta(metadata, name):
     """
     Creates the metadata dictionary for this level of execution.
@@ -50,7 +30,11 @@ def create_local_meta(metadata, name):
     if len(parent_coordinate) == 3 and name == '':
         name = 'root'
 
-    local_meta = _ExecutionMetadata(name, parent_coordinate + [name, (0,)])
+    local_meta = {
+        'name': name,
+        'coord': parent_coordinate + [name, (0,)],
+        'timestamp': None,
+    }
 
     return local_meta
 
@@ -71,7 +55,7 @@ def update_local_meta(local_meta, iteration):
         Tuple of integers representing the current iteration and any sub-iterations.
     """
     # Construct needed structures
-    iter_coord = local_meta.coord
+    iter_coord = local_meta['coord']
 
     # Last entry in the iteration coordinate should be the iteration number
     # for this level.

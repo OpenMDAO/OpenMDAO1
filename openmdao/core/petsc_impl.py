@@ -209,11 +209,11 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         self.petsc_vec.assemble()
         return self.petsc_vec.norm()
 
-    def get_view(self, sys_pathname, comm, varmap):
-        view = super(PetscSrcVecWrapper, self).get_view(sys_pathname, comm, varmap)
+    def get_view(self, system, comm, varmap):
+        view = super(PetscSrcVecWrapper, self).get_view(system, comm, varmap)
         if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec (view): (size %d )%s: vec=%s" %
-                  (sys_pathname, len(view.vec), view.keys(), view.vec))
+                  (system.pathname, len(view.vec), view.keys(), view.vec))
         view.petsc_vec = PETSc.Vec().createWithArray(view.vec, comm=comm)
         if self.alloc_complex:
             view.imag_petsc_vec = PETSc.Vec().createWithArray(view.imag_vec,

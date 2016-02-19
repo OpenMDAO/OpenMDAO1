@@ -101,7 +101,8 @@ class RecordingManager(object):
                 unames = {n for n in unames if rrank==rowned[n]}
                 rnames = {n for n in rnames if rrank==rowned[n]}
 
-                # reduce the filter set for any parallel recorders
+                # reduce the filter set for any parallel recorders to only
+                # those variables that are owned by that rank
                 if recorder._parallel:
                     recorder._filtered[pathname]['p'] = pnames
                     recorder._filtered[pathname]['u'] = unames
@@ -131,6 +132,27 @@ class RecordingManager(object):
             if recorder._parallel or self.rank == 0:
                 if recorder.options['record_metadata']:
                     recorder.record_metadata(root)
+
+    def _get_local_case_data(self, root):
+        """get names and values of all locally owned variables."""
+        params = root.params
+        unknowns = root.unknowns
+        resids = root.resids
+        params = {p: params[p] for p in self._vars_to_record['pnames']}
+        unknowns = {u: unknowns[u] for u in self._vars_to_record['unames']}
+        resids = {r: resids[r] for r in self._vars_to_record['rnames']}
+
+        return params, unknowns, resids
+
+    def record_case(self, root, metadata, case):
+        """Record the variables in the given case."""
+        if not self._recorders:
+            return
+
+        metadata['timestamp'] = time.time()
+
+        for recorder in self._recorders:
+            recorder.record_iteration(case['p'], case['u'], case['r'], metadata)
 
     def record_iteration(self, root, metadata, dummy=False):
         """ Gathers variables for non-parallel case recorders and calls
@@ -202,7 +224,6 @@ class RecordingManager(object):
                 if recorder._parallel or MPI is None or self.rank == 0:
                     recorder.record_iteration(params, unknowns, resids, meta)
 
-
     def record_derivatives(self, derivs, metadata):
         """" Records derivatives if requested.
 
@@ -210,11 +231,11 @@ class RecordingManager(object):
         ----
         derivs : dict
             Dictionary containing derivatives
-        metadata : `_ExecutionMetadata`
+        metadata : dict
             Metadata for iteration coordinate
         """
 
-        metadata.timestamp = time.time()
+        metadata['timestamp'] = time.time()
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.

@@ -144,14 +144,8 @@ class PredeterminedRunsDriver(Driver):
         if MPI and self._num_par_doe > 1:
             if self._load_balance:
                 runlist = self._distrib_lb_build_runlist()
-                if self._full_comm.rank == 0:
-                    try:
-                        next(runlist)
-                    except StopIteration:
-                        pass
-                    return # we're done sending cases
             else:
-                runlist = self._get_case_w_none(self._distrib_build_runlist())
+                runlist = self._get_case_w_nones(self._distrib_build_runlist())
         else:
             runlist = self._build_runlist()
 
@@ -161,17 +155,22 @@ class PredeterminedRunsDriver(Driver):
                 metadata = create_local_meta(None, 'Driver')
                 update_local_meta(metadata, (self.iter_count,))
 
-                if case is not None: # dummy cases have case == None
+                if MPI and self._load_balance and self._full_comm.rank == 0:
+                    # we're the master rank and case is a completed case
+                    self.recorders.record_case(problem.root, metadata, case)
+                elif case is not None: # dummy cases have case == None
                     for dv_name, dv_val in case:
                         self.set_desvar(dv_name, dv_val)
 
                     problem.root.solve_nonlinear(metadata=metadata)
 
-                self.recorders.record_iteration(problem.root, metadata,
-                                                dummy=(case is None))
+                if not MPI or not self._load_balance:
+                    self.recorders.record_iteration(problem.root, metadata,
+                                                    dummy=(case is None))
+
                 self.iter_count += 1
 
-    def _get_case_w_none(self, it):
+    def _get_case_w_nones(self, it):
         """A wrapper around a case generator that returns None cases if
         any of the other members of the MPI comm have any cases left to run,
         so that we can prevent hanging calls to gather.
@@ -226,7 +225,7 @@ class PredeterminedRunsDriver(Driver):
             sent = 0
 
             # cases left for each par doe
-            cases = {n:[] for n in self._id_map}
+            cases = {n:[0, {'p':{}, 'u':{}, 'r':{}}] for n in self._id_map}
 
             # create a mapping of ranks to doe_ids
             doe_ids = {}
@@ -245,32 +244,38 @@ class PredeterminedRunsDriver(Driver):
                 size, offset = self._id_map[i]
                 for j in range(size):
                     comm.send(case, j+offset, tag=1)
-                    cases[i].append(case)
+                    cases[i][0] += 1
                     sent += 1
 
             # send the rest of the cases
             if sent > 0:
+                more_cases = True
                 while True:
-                    worker = comm.recv()
+                    worker, p, u, r = comm.recv()
                     received += 1
-                    clist = cases[doe_ids[worker]]
-                    clist.pop()
-                    if not clist:
+                    caseinfo = cases[doe_ids[worker]]
+                    caseinfo[0] -= 1
+                    caseinfo[1]['p'].update(p)
+                    caseinfo[1]['u'].update(u)
+                    caseinfo[1]['r'].update(r)
+                    if caseinfo[0] == 0:
                         # we've received case from all procs with that doe_id
-                        try:
-                            case = list(next(runiter))
-                        except StopIteration:
-                            break
-                        size, offset = self._id_map[doe_ids[worker]]
-                        for j in range(size):
-                            comm.send(case, j+offset, tag=1)
-                            cases[doe_ids[worker]].append(case)
-                            sent += 1
+                        # so the case is complete.  Send it to recorders
+                        yield caseinfo[1]
+                        if more_cases:
+                            try:
+                                case = list(next(runiter))
+                            except StopIteration:
+                                more_cases = False
+                            else:
+                                size, offset = self._id_map[doe_ids[worker]]
+                                for j in range(size):
+                                    comm.send(case, j+offset, tag=1)
+                                    cases[doe_ids[worker]][0] += 1
+                                    sent += 1
 
-            # receive all leftover worker replies
-            while received < sent:
-                worker = comm.recv()
-                received += 1
+                    if received == sent:
+                        break
 
             # tell all workers to stop
             for rank in range(1, self._full_comm.size):
@@ -280,9 +285,12 @@ class PredeterminedRunsDriver(Driver):
             while True:
                 # wait on a case from the master
                 case = comm.recv(source=0, tag=1)
-                if case is None:
+                if case is None: # we're done
                     break
                 # yield the case so it can be executed
                 yield case
-                # tell the master we're done with that case
-                comm.isend(comm.rank, 0)
+                # get local vars from RecordingManager
+                params, unknowns, resids = self.recorders._get_local_case_data(self.root)
+
+                # tell the master we're done with that case and send local vars
+                comm.send((comm.rank, params, unknowns, resids), 0)
