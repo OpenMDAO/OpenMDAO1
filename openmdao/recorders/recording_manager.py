@@ -1,10 +1,14 @@
 """ RecordingManager class definition. """
 
+import os
 import itertools
 import time
 
-from openmdao.core.mpi_wrap import MPI
+from six import iteritems
 
+from openmdao.core.mpi_wrap import MPI, debug
+
+trace = os.environ.get('OPENMDAO_TRACE')
 
 class RecordingManager(object):
     """ Object that routes function calls to all attached recorders. """
@@ -17,7 +21,9 @@ class RecordingManager(object):
             }
 
         self._recorders = []
-        self.__has_serial_recorders = False
+        self._has_serial_recorders = False
+        self._casecomm = None  # comm used to gather parallel DOE cases
+
         if MPI:
             self.rank = MPI.COMM_WORLD.rank
         else:
@@ -39,22 +45,25 @@ class RecordingManager(object):
     def __iter__(self):
         return iter(self._recorders)
 
-    def _local_vars(self, root, vec, varnames):
-        rrank = root.comm.rank
-        rowned = root._owning_ranks
-        return [(n,vec[n]) for n in varnames if rrank == rowned[n]]
-
     def _gather_vars(self, root, local_vars):
         """Gathers and returns only variables listed in
-        `local_vars` from the `root` VecWrapper."""
+        `local_vars` from the `root` System.
+        """
 
+        if trace:
+            debug("gathering vars for recording in %s" % root.pathname)
         all_vars = root.comm.gather(local_vars, root=0)
+        if trace:
+            debug("DONE gathering rec vars for %s" % root.pathname)
 
         if root.comm.rank == 0:
-            return dict(itertools.chain(*all_vars))
+            dct = all_vars[-1]
+            for d in all_vars[:-1]:
+                dct.update(d)
+            return dct
 
     def startup(self, root):
-        """ Initial startup for this recorder.
+        """ Initialization during setup.
 
         Args
         ----
@@ -62,19 +71,45 @@ class RecordingManager(object):
            System containing variables.
         """
         pathname = root.pathname
+        if MPI and root.is_active():
+            rrank = root.comm.rank
+            rowned = root._owning_ranks
+
+        self._record_p = self._record_u = self._record_r = False
 
         for recorder in self._recorders:
             recorder.startup(root)
 
             if not recorder._parallel:
-                self.__has_serial_recorders = True
-                pnames = recorder._filtered[pathname]['p']
-                unames = recorder._filtered[pathname]['u']
-                rnames = recorder._filtered[pathname]['r']
+                self._has_serial_recorders = True
 
-                self._vars_to_record['pnames'].update(pnames)
-                self._vars_to_record['unames'].update(unames)
-                self._vars_to_record['rnames'].update(rnames)
+            pnames = recorder._filtered[pathname]['p']
+            unames = recorder._filtered[pathname]['u']
+            rnames = recorder._filtered[pathname]['r']
+
+            if pnames: self._record_p = True
+            if unames: self._record_u = True
+            if rnames: self._record_r = True
+
+            # now localize the lists to only
+            # include local vars.  We need to do this after determining
+            # if any mpi procs need to record each of params, unknowns,
+            # and resids.  If none of them do, we can skip the mpi gather
+            # for that group of vars.
+            if MPI:
+                pnames = {n for n in pnames if rrank==rowned[n]}
+                unames = {n for n in unames if rrank==rowned[n]}
+                rnames = {n for n in rnames if rrank==rowned[n]}
+
+                # reduce the filter set for any parallel recorders
+                if recorder._parallel:
+                    recorder._filtered[pathname]['p'] = pnames
+                    recorder._filtered[pathname]['u'] = unames
+                    recorder._filtered[pathname]['r'] = rnames
+
+            self._vars_to_record['pnames'].update(pnames)
+            self._vars_to_record['unames'].update(unames)
+            self._vars_to_record['rnames'].update(rnames)
 
     def close(self):
         """ Close all recorders. """
@@ -97,7 +132,7 @@ class RecordingManager(object):
                 if recorder.options['record_metadata']:
                     recorder.record_metadata(root)
 
-    def record_iteration(self, root, metadata):
+    def record_iteration(self, root, metadata, dummy=False):
         """ Gathers variables for non-parallel case recorders and calls
         record for all recorders.
 
@@ -105,32 +140,68 @@ class RecordingManager(object):
         ----
         root : `System`
            System containing variables.
+
         metadata : dict
             Metadata for iteration coordinate
+
+        dummy : bool, optional
+            If True, this is a dummy iteration, so no data will be colllected
+            from the model, but collective gather call will still be made.
         """
+        if not self._recorders:
+            return
 
         metadata['timestamp'] = time.time()
         params = root.params
         unknowns = root.unknowns
         resids = root.resids
 
-        if MPI and self.__has_serial_recorders:
+        if MPI:
+            if dummy and self._casecomm is not None:
+                case = (None, None, None, None)
+                if trace: debug("DUMMY gathering cases")
+                cases = self._casecomm.gather(case, root=0)
+                if trace: debug("DUMMY done gathering cases:")
+                return
+
             pnames = self._vars_to_record['pnames']
             unames = self._vars_to_record['unames']
             rnames = self._vars_to_record['rnames']
 
-            gathered_params = self._gather_vars(root, self._local_vars(root, params, pnames))
-            gathered_unknowns = self._gather_vars(root, self._local_vars(root, unknowns, unames))
-            gathered_resids = self._gather_vars(root, self._local_vars(root, resids, rnames))
+            # get names and values of all locally owned variables
+            params = {p: params[p] for p in pnames}
+            unknowns = {u: unknowns[u] for u in unames}
+            resids = {r: resids[r] for r in rnames}
+
+            if self._has_serial_recorders:
+
+                params = self._gather_vars(root, params) if self._record_p else {}
+                unknowns = self._gather_vars(root, unknowns) if self._record_u else {}
+                resids = self._gather_vars(root, resids) if self._record_r else {}
+
+            if self._casecomm is not None:
+                # our parent driver is running a parallel DOE, so we need to
+                # gather all of the cases to this rank and loop over them
+                case = (params, unknowns, resids, metadata)
+                if trace: debug("gathering cases")
+                cases = self._casecomm.gather(case, root=0)
+                if trace: debug("done gathering cases")
+                if cases is None:
+                    cases = []
+            else:
+                cases = [(params, unknowns, resids, metadata)]
+        else:
+            cases = [(params, unknowns, resids, metadata)]
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.
-        for recorder in self._recorders:
-            if recorder._parallel or MPI is None:
-                recorder.record_iteration(params, unknowns, resids, metadata)
-            elif self.rank == 0:
-                recorder.record_iteration(gathered_params, gathered_unknowns,
-                                          gathered_resids, metadata)
+        for params, unknowns, resids, meta in cases:
+            if params is None: # dummy cases have None in place of params, etc.
+                continue
+            for recorder in self._recorders:
+                if recorder._parallel or MPI is None or self.rank == 0:
+                    recorder.record_iteration(params, unknowns, resids, meta)
+
 
     def record_derivatives(self, derivs, metadata):
         """" Records derivatives if requested.
@@ -139,11 +210,11 @@ class RecordingManager(object):
         ----
         derivs : dict
             Dictionary containing derivatives
-        metadata : `dict`
+        metadata : `_ExecutionMetadata`
             Metadata for iteration coordinate
         """
 
-        metadata['timestamp'] = time.time()
+        metadata.timestamp = time.time()
 
         # If the recorder does not support parallel recording
         # we need to make sure we only record on rank 0.

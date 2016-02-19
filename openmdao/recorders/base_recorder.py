@@ -5,9 +5,10 @@ from fnmatch import fnmatch
 import sys
 
 from six.moves import filter
-from six import StringIO
+from six import StringIO, iteritems
 
 from openmdao.util.options import OptionsDictionary
+from openmdao.core.mpi_wrap import MPI
 
 class BaseRecorder(object):
     """ This is a base class for all case recorders and is not a functioning
@@ -68,21 +69,33 @@ class BaseRecorder(object):
             Group that owns this recorder.
         """
 
-        # Compute the inclusion lists for recording
-        params = list(filter(self._check_path, group.params))
-        unknowns = list(filter(self._check_path, group.unknowns))
-        resids = list(filter(self._check_path, group.resids))
+        myparams = myunknowns = myresids = set()
 
-        self._filtered[group.pathname] = { 'p': params, 'u': unknowns, 'r': resids }
+        if MPI:
+            rank = group.comm.rank
+            owned = group._owning_ranks
+
+        # Compute the inclusion lists for recording
+        if self.options['record_params']:
+            myparams = set(filter(self._check_path, group.params))
+        if self.options['record_unknowns']:
+            myunknowns = set(filter(self._check_path, group.unknowns))
+        if self.options['record_resids']:
+            myresids = set(filter(self._check_path, group.resids))
+
+        self._filtered[group.pathname] = {
+            'p': myparams,
+            'u': myunknowns,
+            'r': myresids
+        }
 
     def _check_path(self, path):
         """ Return True if `path` should be recorded. """
 
-        includes = self.options['includes']
         excludes = self.options['excludes']
 
         # First see if it's included
-        for pattern in includes:
+        for pattern in self.options['includes']:
             if fnmatch(path, pattern):
                 # We found a match. Check to see if it is excluded.
                 for ex_pattern in excludes:
@@ -96,16 +109,21 @@ class BaseRecorder(object):
     def _get_pathname(self, iteration_coordinate):
         '''
         Converts an iteration coordinate to key to index
-        `_filtered` to retrieve names of variables to be recorder
+        `_filtered` to retrieve names of variables to be recorded.
         '''
-        return '.'.join(iteration_coordinate[4::2])
+        return '.'.join(iteration_coordinate[5::2])
 
     def _filter_vector(self, vecwrapper, key, iteration_coordinate):
         '''
-        Returns subset of the given vecwrapper to be recorded
+        Returns a dict that is a subset of the given vecwrapper
+        to be recorded.
         '''
+        if not vecwrapper:
+            return vecwrapper
+
         pathname = self._get_pathname(iteration_coordinate)
-        return {k: vecwrapper[k] for k in self._filtered[pathname][key]}
+        filt = self._filtered[pathname][key]
+        return {k: vecwrapper[k] for k in filt}
 
     def record_metadata(self, group):
         """Writes the metadata of the given group

@@ -68,16 +68,6 @@ class DumpRecorder(BaseRecorder):
 
         self.out = out
 
-    def startup(self, group):
-        """ Write out info that applies to the entire run.
-
-        Args
-        ----
-        group : `Group`
-            Group that owns this recorder.
-        """
-        super(DumpRecorder, self).startup(group)
-
     def record_metadata(self, group):
         """Dump the metadata of the given group in a "pretty" form.
 

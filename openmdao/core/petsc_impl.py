@@ -463,7 +463,7 @@ class PetscDataTransfer(object):
                 debug("%s:    tgtvec = %s (DONE)" % (tgtvec._sysdata.pathname,
                                                      tgtvec.petsc_vec.array))
 
-            if not deriv:
+            if not deriv and self.byobj_conns:
                 comm = self.sysdata.comm
                 iproc = comm.rank
                 mylocals = self.sysdata.all_locals[iproc]
@@ -481,7 +481,9 @@ class PetscDataTransfer(object):
 
                 # ensure that all src values have been sent before we receive
                 # any in order to avoid possible race conditions
+                if trace: debug("waiting on comm.barrier")
                 comm.barrier()
+                if trace: debug("comm.barrier DONE")
 
                 for itag, (tgt, src) in enumerate(self.byobj_conns):
                     # if we don't have the value locally, pull it across using MPI

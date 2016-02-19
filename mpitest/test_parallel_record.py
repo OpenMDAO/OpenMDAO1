@@ -89,9 +89,10 @@ class TestDumpRecorder(MPITestCase):
         with open(self.expected_filename, 'r') as dumpfile:
             dump = dumpfile.readlines()
 
-        self.assertEqual(dump[4], '  comp3.y: 29.0\n')
-        self.assertEqual(dump[5], '  p1.x1: 1.0\n')
-        self.assertEqual(dump[6], '  p2.x2: 1.0\n')
+        if MPI and self.comm.rank == 0:  # rank 1 doesn't 'own' any vars
+            self.assertEqual(dump[4], '  comp3.y: 29.0\n')
+            self.assertEqual(dump[5], '  p1.x1: 1.0\n')
+            self.assertEqual(dump[6], '  p2.x2: 1.0\n')
 
 
 if __name__ == '__main__':

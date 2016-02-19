@@ -4,7 +4,7 @@ import csv
 import numpy
 import sys
 
-from six import string_types
+from six import string_types, itervalues
 
 from openmdao.recorders.base_recorder import BaseRecorder
 
@@ -98,16 +98,26 @@ class CsvRecorder(BaseRecorder):
 
         iteration_coordinate = metadata['coord']
 
+        if self.options['record_params']:
+            params = self._filter_vector(params, 'p', iteration_coordinate)
+        else:
+            params = None
+        if self.options['record_unknowns']:
+            unknowns = self._filter_vector(unknowns, 'u', iteration_coordinate)
+        else:
+            unknowns = None
+        if self.options['record_resids']:
+            resids = self._filter_vector(resids, 'r', iteration_coordinate)
+        else:
+            resids = None
+
         if self._wrote_header is False:
             header = []
-            if self.options['record_params']:
-                params = self._filter_vector(params, 'p', iteration_coordinate)
+            if params is not None:
                 header.extend(params)
-            if self.options['record_unknowns']:
-                unknowns = self._filter_vector(unknowns, 'u', iteration_coordinate)
+            if unknowns is not None:
                 header.extend(unknowns)
-            if self.options['record_resids']:
-                resids = self._filter_vector(resids, 'r', iteration_coordinate)
+            if resids is not None:
                 header.extend(resids)
             if self.options['record_derivs']:
                 header.append('Derivatives')
@@ -116,12 +126,12 @@ class CsvRecorder(BaseRecorder):
             self._wrote_header = True
 
         row = []
-        if self.options['record_params']:
-            row.extend((serialize(value) for value in params.values()))
-        if self.options['record_unknowns']:
-            row.extend((serialize(value) for value in unknowns.values()))
-        if self.options['record_resids']:
-            row.extend((serialize(value) for value in resids.values()))
+        if params is not None:
+            row.extend(serialize(value) for value in itervalues(params))
+        if unknowns is not None:
+            row.extend(serialize(value) for value in itervalues(unknowns))
+        if resids is not None:
+            row.extend(serialize(value) for value in itervalues(resids))
         if self.options['record_derivs']:
             row.append(None)
         self.writer.writerow(row)

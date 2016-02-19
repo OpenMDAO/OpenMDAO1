@@ -131,7 +131,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_resids = [
             ("comp1.y1", 0.0),
@@ -157,7 +157,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_unknowns = [
             ("comp1.y1", 8.0),
@@ -186,7 +186,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
         expected_params = [
             ("comp1.x1", 2.0),
             ("comp2.x1", 8.0),
@@ -212,7 +212,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_params = [
             ("comp1.x1", 2.0),
@@ -265,7 +265,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0)
@@ -293,7 +293,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0)
@@ -317,7 +317,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1,), "root", (1,)]
+        coordinate = [0, 'Driver', (1,), "root", (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0),
@@ -368,7 +368,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
+        coordinate = [0, 'Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
         expected_params = [
             ("C2.x", 5.0)
@@ -393,7 +393,7 @@ class TestDumpRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup() # close recorders
 
-        solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
+        solver_coordinate = [0, 'Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
         g1_expected_params = [
             ("C2.x", 5.0)
@@ -407,7 +407,7 @@ class TestDumpRecorder(unittest.TestCase):
 
         g1_expected = (g1_expected_params, g1_expected_unknowns, g1_expected_resids)
 
-        driver_coordinate = ['Driver', (1,)]
+        driver_coordinate = [0, 'Driver', (1,)]
 
         driver_expected_params = [
             ("G3.C3.x", 10.0)

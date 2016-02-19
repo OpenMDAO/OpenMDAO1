@@ -104,7 +104,7 @@ class TestCsvRecorder(unittest.TestCase):
 
         t0, t1 = run_problem(prob)
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_resids = [
             ("comp1.y1", 0.0),
@@ -130,7 +130,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_unknowns = [
             ("comp1.y1", 8.0),
@@ -159,7 +159,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
         expected_params = [
             ("comp1.x1", 2.0),
             ("comp2.x1", 8.0),
@@ -186,7 +186,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1, )]
+        coordinate = [0, 'Driver', (1, )]
 
         expected_params = [
             ("comp1.x1", 2.0),
@@ -239,7 +239,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0)
@@ -267,7 +267,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1,)]
+        coordinate = [0, 'Driver', (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0)
@@ -291,7 +291,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1,), "root", (1,)]
+        coordinate = [0, 'Driver', (1,), "root", (1,)]
 
         expected_params = [
             ("comp1.x1", 2.0),
@@ -342,7 +342,7 @@ class TestCsvRecorder(unittest.TestCase):
         t0, t1 = run_problem(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
+        coordinate = [0, 'Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
 
         expected_params = [
             ("C2.x", 5.0)
