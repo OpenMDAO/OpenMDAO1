@@ -251,6 +251,9 @@ class RBFInterpolator(NNBase):
 
         dRp = frnt * np.polyval(dRp_poly, T)
 
+        # dt/dx becomes unstable at the training points, so perturb T slightly.
+        zero_idx = np.where(T==0.0)
+        T[zero_idx] += 1.0e-11
 
         # Now need dt/dx
         xpi = np.subtract(PrdPts, self._tp[ploc[:, :-1], :])
