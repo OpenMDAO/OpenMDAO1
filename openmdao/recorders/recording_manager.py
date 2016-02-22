@@ -144,15 +144,15 @@ class RecordingManager(object):
 
         return params, unknowns, resids
 
-    def record_case(self, root, metadata, case):
+    def record_case(self, root, case):
         """Record the variables in the given case."""
         if not self._recorders:
             return
 
-        metadata['timestamp'] = time.time()
+        case['meta']['timestamp'] = time.time()
 
         for recorder in self._recorders:
-            recorder.record_iteration(case['p'], case['u'], case['r'], metadata)
+            recorder.record_iteration(case['p'], case['u'], case['r'], case['meta'])
 
     def record_iteration(self, root, metadata, dummy=False):
         """ Gathers variables for non-parallel case recorders and calls

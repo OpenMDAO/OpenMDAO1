@@ -78,29 +78,34 @@ class PredeterminedRunsDriver(Driver):
             # e.g. [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
             color = []
 
-            casecolor = []
             self._id_map = {}
             for i in range(self._num_par_doe):
                 color.extend([i]*sizes[i])
-                if sizes[i] > 0:
-                    casecolor.append(1)
-                    casecolor.extend([MPI.UNDEFINED]*(sizes[i]-1))
                 self._id_map[i] = (sizes[i], offsets[i])
 
             self._par_doe_id = color[comm.rank]
 
-            # we need a comm that has all the 0 ranks of the subcomms so
-            # we can gather multiple cases run as part of parallel DOE.
-            if trace:
-                debug('%s: splitting casecomm, doe_id=%s' % ('.'.join((root.pathname,
-                                                               'driver')),
-                                                    self._par_doe_id))
-            self._casecomm = comm.Split(casecolor[comm.rank])
-            if trace: debug('%s: casecomm split done' % '.'.join((root.pathname,
-                                                           'driver')))
-
-            if self._casecomm == MPI.COMM_NULL or self._load_balance:
+            if self._load_balance:
                 self._casecomm = None
+            else:
+                casecolor = []
+                for i in range(self._num_par_doe):
+                    if sizes[i] > 0:
+                        casecolor.append(1)
+                        casecolor.extend([MPI.UNDEFINED]*(sizes[i]-1))
+
+                # we need a comm that has all the 0 ranks of the subcomms so
+                # we can gather multiple cases run as part of parallel DOE.
+                if trace:
+                    debug('%s: splitting casecomm, doe_id=%s' % ('.'.join((root.pathname,
+                                                                   'driver')),
+                                                        self._par_doe_id))
+                self._casecomm = comm.Split(casecolor[comm.rank])
+                if trace: debug('%s: casecomm split done' % '.'.join((root.pathname,
+                                                               'driver')))
+
+                if self._casecomm == MPI.COMM_NULL:
+                    self._casecomm = None
 
             # create a sub-communicator for each color and
             # get the one assigned to our color/process
@@ -152,17 +157,21 @@ class PredeterminedRunsDriver(Driver):
         with problem.root._dircontext:
             # For each runlist entry, run the system and record the results
             for case in runlist:
-                metadata = create_local_meta(None, 'Driver')
-                update_local_meta(metadata, (self.iter_count,))
 
                 if MPI and self._load_balance and self._full_comm.rank == 0:
                     # we're the master rank and case is a completed case
-                    self.recorders.record_case(problem.root, metadata, case)
+                    self.recorders.record_case(problem.root, case)
                 elif case is not None: # dummy cases have case == None
+                    metadata = create_local_meta(None, 'Driver')
+                    update_local_meta(metadata, (self.iter_count,))
                     for dv_name, dv_val in case:
                         self.set_desvar(dv_name, dv_val)
 
                     problem.root.solve_nonlinear(metadata=metadata)
+
+                    if self._load_balance:
+                        # keep meta for worker to send to master
+                        self._last_meta = metadata
 
                 if not MPI or not self._load_balance:
                     self.recorders.record_iteration(problem.root, metadata,
@@ -225,7 +234,8 @@ class PredeterminedRunsDriver(Driver):
             sent = 0
 
             # cases left for each par doe
-            cases = {n:[0, {'p':{}, 'u':{}, 'r':{}}] for n in self._id_map}
+            cases = {n:{'count': 0, 'p':{}, 'u':{}, 'r':{}, 'meta':{}}
+                                    for n in self._id_map}
 
             # create a mapping of ranks to doe_ids
             doe_ids = {}
@@ -244,24 +254,25 @@ class PredeterminedRunsDriver(Driver):
                 size, offset = self._id_map[i]
                 for j in range(size):
                     comm.send(case, j+offset, tag=1)
-                    cases[i][0] += 1
+                    cases[i]['count'] += 1
                     sent += 1
 
             # send the rest of the cases
             if sent > 0:
                 more_cases = True
                 while True:
-                    worker, p, u, r = comm.recv()
+                    worker, p, u, r, meta = comm.recv()
                     received += 1
                     caseinfo = cases[doe_ids[worker]]
-                    caseinfo[0] -= 1
-                    caseinfo[1]['p'].update(p)
-                    caseinfo[1]['u'].update(u)
-                    caseinfo[1]['r'].update(r)
-                    if caseinfo[0] == 0:
+                    caseinfo['count'] -= 1
+                    caseinfo['p'].update(p)
+                    caseinfo['u'].update(u)
+                    caseinfo['r'].update(r)
+                    caseinfo['meta'].update(meta)
+                    if caseinfo['count'] == 0:
                         # we've received case from all procs with that doe_id
                         # so the case is complete.  Send it to recorders
-                        yield caseinfo[1]
+                        yield caseinfo
                         if more_cases:
                             try:
                                 case = list(next(runiter))
@@ -271,7 +282,7 @@ class PredeterminedRunsDriver(Driver):
                                 size, offset = self._id_map[doe_ids[worker]]
                                 for j in range(size):
                                     comm.send(case, j+offset, tag=1)
-                                    cases[doe_ids[worker]][0] += 1
+                                    cases[doe_ids[worker]]['count'] += 1
                                     sent += 1
 
                     if received == sent:
@@ -293,4 +304,4 @@ class PredeterminedRunsDriver(Driver):
                 params, unknowns, resids = self.recorders._get_local_case_data(self.root)
 
                 # tell the master we're done with that case and send local vars
-                comm.send((comm.rank, params, unknowns, resids), 0)
+                comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0)
