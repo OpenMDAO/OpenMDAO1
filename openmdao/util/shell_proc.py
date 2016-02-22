@@ -1,4 +1,4 @@
-import os.path
+import os
 import signal
 import subprocess
 import sys
@@ -71,10 +71,20 @@ class ShellProc(subprocess.Popen):
         shell = isinstance(args, str)
 
         try:
-            subprocess.Popen.__init__(self, args, stdin=self._inp,
-                                      stdout=self._out, stderr=self._err,
-                                      shell=shell, env=environ,
-                                      universal_newlines=universal_newlines)
+            if sys.platform == 'win32':
+                subprocess.Popen.__init__(self, args, stdin=self._inp,
+                                          stdout=self._out, stderr=self._err,
+                                          shell=shell, env=environ,
+                                          universal_newlines=universal_newlines)
+            else:
+                subprocess.Popen.__init__(self, args, stdin=self._inp,
+                                          stdout=self._out, stderr=self._err,
+                                          shell=shell, env=environ,
+                                          universal_newlines=universal_newlines,
+                                          # setsid to put this and any children in
+                                          # same process group so we can kill them
+                                          # all if necessary
+                                          preexec_fn=os.setsid)
         except Exception:
             self.close_files()
             raise
@@ -101,7 +111,8 @@ class ShellProc(subprocess.Popen):
         if sys.platform == 'win32':
             subprocess.Popen("TASKKILL /F /PID {pid} /T".format(pid=self.pid))
         else:
-            super(ShellProc, self).terminate()
+            os.killpg(os.getpgid(self.pid), signal.SIGTERM)
+
         if timeout is not None:
             return self.wait(timeout=timeout)
 
@@ -234,4 +245,3 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
     return_code, error_msg = process.wait(poll_delay, timeout)
     if return_code:
         raise CalledProcessError(return_code, args, error_msg)
-
