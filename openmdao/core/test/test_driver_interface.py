@@ -128,6 +128,11 @@ class ScaleAddDriverArray(Driver):
     def run(self, problem):
         """ Save away scaled info."""
 
+        self._problem = problem
+        self.metadata = create_local_meta(None, 'test')
+        self.iter_count = 0
+        update_local_meta(self.metadata, (self.iter_count,))
+
         params = self.get_desvars()
         param_meta = self.get_desvar_metadata()
 
@@ -232,11 +237,11 @@ class TestDriver(unittest.TestCase):
                  promotes=['*'])
 
         driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
-                         adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+                         adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
-        driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+        driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
-        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
+        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
                               scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
 
         prob.setup(check=False)
@@ -311,6 +316,17 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.con_scaled[1], (conval[0, 1] + 100.0)*2.0)
         self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
         self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
+
+        J = driver.calc_gradient(['x'], ['y', 'con'])
+        Jbase = np.array([[  2.,   1.,   3.,   7.],
+                          [  4.,   2.,   6.,   5.],
+                          [  3.,   6.,   9.,   8.],
+                          [  1.,   3.,   2.,   4.],
+                          [  3.,   1.,   3.,   7.],
+                          [  4.,   3.,   6.,   5.],
+                          [  3.,   6.,  10.,   8.],
+                          [  1.,   3.,   2.,   5.]])
+        assert_rel_error(self, J, Jbase, 1e-6)
 
     def test_eq_ineq_error_messages(self):
 
