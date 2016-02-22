@@ -7,10 +7,12 @@ import warnings
 import numpy as np
 
 from openmdao.api import ExecComp, IndepVarComp, Component, Driver, Group, Problem
+from openmdao.test.util import assert_rel_error
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import ArrayComp2D
 from openmdao.test.sellar import SellarDerivatives
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
 class MySimpleDriver(Driver):
@@ -94,6 +96,54 @@ class Rosenbrock(Component):
         unknowns['f'] = rosen(params['x'])
 
 
+class ScaleAddDriver(Driver):
+
+    def run(self, problem):
+        """ Save away scaled info."""
+
+        self._problem = problem
+        self.metadata = create_local_meta(None, 'test')
+        self.iter_count = 0
+        update_local_meta(self.metadata, (self.iter_count,))
+
+        params = self.get_desvars()
+        param_meta = self.get_desvar_metadata()
+
+        self.set_desvar('x', 0.5)
+        problem.root.solve_nonlinear()
+
+        objective = self.get_objectives()
+        constraint = self.get_constraints()
+
+        # Stuff we saved should be in the scaled coordinates.
+        self.param = params['x']
+        self.obj_scaled = objective['f_xy']
+        self.con_scaled = constraint['con']
+        self.param_high = param_meta['x']['upper']
+        self.param_low = param_meta['x']['lower']
+
+
+class ScaleAddDriverArray(Driver):
+
+    def run(self, problem):
+        """ Save away scaled info."""
+
+        params = self.get_desvars()
+        param_meta = self.get_desvar_metadata()
+
+        self.set_desvar('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
+        problem.root.solve_nonlinear()
+
+        objective = self.get_objectives()
+        constraint = self.get_constraints()
+
+        # Stuff we saved should be in the scaled coordinates.
+        self.param = params['x']
+        self.obj_scaled = objective['y']
+        self.con_scaled = constraint['con']
+        self.param_low = param_meta['x']['lower']
+
+
 class TestDriver(unittest.TestCase):
 
     def test_mydriver(self):
@@ -115,27 +165,6 @@ class TestDriver(unittest.TestCase):
         self.assertLess(obj, 28.0)
 
     def test_scaler_adder(self):
-
-        class ScaleAddDriver(Driver):
-
-            def run(self, problem):
-                """ Save away scaled info."""
-
-                params = self.get_desvars()
-                param_meta = self.get_desvar_metadata()
-
-                self.set_desvar('x', 0.5)
-                problem.root.solve_nonlinear()
-
-                objective = self.get_objectives()
-                constraint = self.get_constraints()
-
-                # Stuff we saved should be in the scaled coordinates.
-                self.param = params['x']
-                self.obj_scaled = objective['f_xy']
-                self.con_scaled = constraint['con']
-                self.param_high = param_meta['x']['upper']
-                self.param_low = param_meta['x']['lower']
 
         prob = Problem()
         root = prob.root = Group()
@@ -160,32 +189,38 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.obj_scaled[0], 1.0)
         self.assertEqual(driver.con_scaled[0], 1.0)
 
-    def test_scaler_adder_array(self):
-
-
-        class ScaleAddDriver(Driver):
-
-            def run(self, problem):
-                """ Save away scaled info."""
-
-                params = self.get_desvars()
-                param_meta = self.get_desvar_metadata()
-
-                self.set_desvar('x', np.array([22.0, 404.0, 9009.0, 121000.0]))
-                problem.root.solve_nonlinear()
-
-                objective = self.get_objectives()
-                constraint = self.get_constraints()
-
-                # Stuff we saved should be in the scaled coordinates.
-                self.param = params['x']
-                self.obj_scaled = objective['y']
-                self.con_scaled = constraint['con']
-                self.param_low = param_meta['x']['lower']
+    def test_scaler_adder_int(self):
 
         prob = Problem()
         root = prob.root = Group()
         driver = prob.driver = ScaleAddDriver()
+
+        root.add('p1', IndepVarComp([('x',12.0,{'desc':'my x'}),
+                                     ('y',13.0,{'desc':'my y'})]), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
+
+        driver.add_desvar('x', adder=-10, scaler=20.0)
+        driver.add_objective('f_xy', adder=-10, scaler=20)
+        driver.add_constraint('con', upper=0, adder=-10, scaler=20)
+
+        prob.setup(check=False)
+        prob.run()
+
+        self.assertEqual(driver.param, 40.0)
+        self.assertEqual(prob['x'], 10.025)
+        assert_rel_error(self, driver.obj_scaled[0], 9113.5125, 1e-6)
+        assert_rel_error(self, driver.con_scaled[0], 9574.0125, 1e-6)
+
+        J = driver.calc_gradient(['x', 'y'], ['f_xy'])
+        assert_rel_error(self, J[0][0], 27.05, 1e-6)
+        assert_rel_error(self, J[0][1], 880.5, 1e-6)
+
+    def test_scaler_adder_array(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriverArray()
 
         root.add('p1', IndepVarComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
                  promotes=['*'])
@@ -203,6 +238,54 @@ class TestDriver(unittest.TestCase):
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
         driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10.0, 100.0], [1000.0,10000.0]]),
                               scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+        prob.setup(check=False)
+        prob.run()
+
+        self.assertEqual(driver.param[0], 11.0)
+        self.assertEqual(driver.param[1], 202.0)
+        self.assertEqual(driver.param[2], 3003.0)
+        self.assertEqual(driver.param[3], 40004.0)
+        self.assertEqual(prob['x'][0, 0], 12.0)
+        self.assertEqual(prob['x'][0, 1], 102.0)
+        self.assertEqual(prob['x'][1, 0], 2003.0)
+        self.assertEqual(prob['x'][1, 1], 20250.0)
+        self.assertEqual(driver.obj_scaled[0], (prob['y'][0, 0] + 10.0)*1.0)
+        self.assertEqual(driver.obj_scaled[1], (prob['y'][0, 1] + 100.0)*2.0)
+        self.assertEqual(driver.obj_scaled[2], (prob['y'][1, 0] + 1000.0)*3.0)
+        self.assertEqual(driver.obj_scaled[3], (prob['y'][1, 1] + 10000.0)*4.0)
+        self.assertEqual(driver.param_low[0], (-1e5 + 10.0)*1.0)
+        self.assertEqual(driver.param_low[1], (-1e5 + 100.0)*2.0)
+        self.assertEqual(driver.param_low[2], (-1e5 + 1000.0)*3.0)
+        self.assertEqual(driver.param_low[3], (-1e5 + 10000.0)*4.0)
+        conval = prob['x'] + prob['y']
+        self.assertEqual(driver.con_scaled[0], (conval[0, 0] + 10.0)*1.0)
+        self.assertEqual(driver.con_scaled[1], (conval[0, 1] + 100.0)*2.0)
+        self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
+        self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
+
+    def test_scaler_adder_array_int(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriverArray()
+
+        root.add('p1', IndepVarComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+        root.add('comp', ArrayComp2D(), promotes=['*'])
+        root.add('constraint', ExecComp('con = x + y',
+                                        x=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        y=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        con=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+
+        driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
+                          adder=np.array([[10, 100], [1000,10000]]),
+                          scaler=np.array([[1, 2], [3, 4]]))
+        driver.add_objective('y', adder=np.array([[10, 100], [1000, 10000]]),
+                             scaler=np.array([[1, 2], [3, 4]]))
+        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10, 100], [1000,10000]]),
+                              scaler=np.array([[1, 2], [3, 4]]))
 
         prob.setup(check=False)
         prob.run()
