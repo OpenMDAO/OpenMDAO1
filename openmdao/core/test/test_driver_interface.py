@@ -194,6 +194,33 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.obj_scaled[0], 1.0)
         self.assertEqual(driver.con_scaled[0], 1.0)
 
+    def test_scaler_adder_int(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriver()
+
+        root.add('p1', IndepVarComp([('x',12.0,{'desc':'my x'}),
+                                     ('y',13.0,{'desc':'my y'})]), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
+
+        driver.add_desvar('x', adder=-10, scaler=20.0)
+        driver.add_objective('f_xy', adder=-10, scaler=20)
+        driver.add_constraint('con', upper=0, adder=-10, scaler=20)
+
+        prob.setup(check=False)
+        prob.run()
+
+        self.assertEqual(driver.param, 40.0)
+        self.assertEqual(prob['x'], 10.025)
+        assert_rel_error(self, driver.obj_scaled[0], 9113.5125, 1e-6)
+        assert_rel_error(self, driver.con_scaled[0], 9574.0125, 1e-6)
+
+        J = driver.calc_gradient(['x', 'y'], ['f_xy'])
+        assert_rel_error(self, J[0][0], 27.05, 1e-6)
+        assert_rel_error(self, J[0][1], 880.5, 1e-6)
+
     def test_scaler_adder_array(self):
 
         prob = Problem()
@@ -210,6 +237,7 @@ class TestDriver(unittest.TestCase):
                  promotes=['*'])
 
         driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
+                          upper=np.array([1e25, 1e25, 1e25, 1e25]),
                          adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
                          scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
         driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
@@ -241,33 +269,6 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.con_scaled[1], (conval[0, 1] + 100.0)*2.0)
         self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
         self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
-
-    def test_scaler_adder_int(self):
-
-        prob = Problem()
-        root = prob.root = Group()
-        driver = prob.driver = ScaleAddDriver()
-
-        root.add('p1', IndepVarComp([('x',12.0,{'desc':'my x'}),
-                                     ('y',13.0,{'desc':'my y'})]), promotes=['*'])
-        root.add('comp', Paraboloid(), promotes=['*'])
-        root.add('constraint', ExecComp('con=f_xy + x + y'), promotes=['*'])
-
-        driver.add_desvar('x', adder=-10, scaler=20.0)
-        driver.add_objective('f_xy', adder=-10, scaler=20)
-        driver.add_constraint('con', upper=0, adder=-10, scaler=20)
-
-        prob.setup(check=False)
-        prob.run()
-
-        self.assertEqual(driver.param, 40.0)
-        self.assertEqual(prob['x'], 10.025)
-        assert_rel_error(self, driver.obj_scaled[0], 9113.5125, 1e-6)
-        assert_rel_error(self, driver.con_scaled[0], 9574.0125, 1e-6)
-
-        J = driver.calc_gradient(['x', 'y'], ['f_xy'])
-        assert_rel_error(self, J[0][0], 27.05, 1e-6)
-        assert_rel_error(self, J[0][1], 880.5, 1e-6)
 
     def test_scaler_adder_array_int(self):
 
