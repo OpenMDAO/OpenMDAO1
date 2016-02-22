@@ -280,11 +280,11 @@ class TestDriver(unittest.TestCase):
                  promotes=['*'])
 
         driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-1e5, -1e5]]),
-                          adder=np.array([[10, 100], [1000,10000]]),
+                          adder=np.array([[10, 100], [1000, 10000]]),
                           scaler=np.array([[1, 2], [3, 4]]))
         driver.add_objective('y', adder=np.array([[10, 100], [1000, 10000]]),
                              scaler=np.array([[1, 2], [3, 4]]))
-        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10, 100], [1000,10000]]),
+        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10, 100], [1000, 10000]]),
                               scaler=np.array([[1, 2], [3, 4]]))
 
         prob.setup(check=False)
