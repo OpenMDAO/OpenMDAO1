@@ -337,9 +337,14 @@ class Driver(object):
             upper = sys.float_info.max
 
         if isinstance(adder, np.ndarray):
-            adder = adder.flatten()
+            adder = adder.flatten().astype('float')
+        else:
+            adder = float(adder)
+
         if isinstance(scaler, np.ndarray):
-            scaler = scaler.flatten()
+            scaler = scaler.flatten().astype('float')
+        else:
+            scaler = float(scaler)
 
         # Scale the lower and upper values
         lower = (lower + adder)*scaler
@@ -495,9 +500,14 @@ class Driver(object):
             raise RuntimeError(msg.format(name))
 
         if isinstance(adder, np.ndarray):
-            adder = adder.flatten()
+            adder = adder.flatten().astype('float')
+        else:
+            adder = float(adder)
+
         if isinstance(scaler, np.ndarray):
-            scaler = scaler.flatten()
+            scaler = scaler.flatten().astype('float')
+        else:
+            scaler = float(scaler)
 
         obj = OrderedDict()
         obj['adder'] = adder
@@ -602,9 +612,15 @@ class Driver(object):
             raise RuntimeError(msg.format(name))
 
         if isinstance(scaler, np.ndarray):
-            scaler = scaler.flatten()
+            scaler = scaler.flatten().astype('float')
+        else:
+            scaler = float(scaler)
+
         if isinstance(adder, np.ndarray):
-            adder = adder.flatten()
+            adder = adder.flatten().astype('float')
+        else:
+            adder = float(adder)
+
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
         if isinstance(upper, np.ndarray):
