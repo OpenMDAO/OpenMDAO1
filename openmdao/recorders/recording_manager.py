@@ -87,9 +87,12 @@ class RecordingManager(object):
             unames = recorder._filtered[pathname]['u']
             rnames = recorder._filtered[pathname]['r']
 
-            if pnames: self._record_p = True
-            if unames: self._record_u = True
-            if rnames: self._record_r = True
+            if pnames:
+                self._record_p = True
+            if unames:
+                self._record_u = True
+            if rnames:
+                self._record_r = True
 
             # now localize the lists to only
             # include local vars.  We need to do this after determining
