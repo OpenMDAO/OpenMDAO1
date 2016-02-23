@@ -570,7 +570,9 @@ class Group(System):
                         if isinstance(src_comp, IndepVarComp):
                             params.append(tgt[mplen:])
                     else:
-                        params.append(tgt[mplen:])
+                        scoped_tgt = tgt[mplen:]
+                        if not self.params._dat[tgt[mplen:]].pbo:
+                            params.append(scoped_tgt)
 
         return self._fd_params
 

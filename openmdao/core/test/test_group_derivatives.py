@@ -116,6 +116,55 @@ class TestGroupDerivatves(unittest.TestCase):
         J = prob.calc_gradient(['px.x'], ['comp4.y'])
         assert_rel_error(self, J[0][0], 81.0, 1e-6)
 
+    def test_group_fd_pbo(self):
+
+        # Bug report and test from Ry10.
+
+        class C1(Component):
+            def __init__(self):
+                super(C1, self).__init__()
+                self.add_param('x', shape=1)
+                self.add_param('B', val=0, pass_by_obj=True)
+                self.add_output('y', shape=1)
+                self.fd_options['force_fd'] = True
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['y'] = 4.0*params['x']*params['B']
+
+        class C2(Component):
+            def __init__(self):
+                super(C2, self).__init__()
+                self.add_param('y', shape=1)
+                self.add_output('z', shape=1)
+                self.fd_options['force_fd'] = True
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                unknowns['z'] = 2.0*params['y']
+
+        class FDGroup(Group):
+            def __init__(self):
+                super(FDGroup, self).__init__()
+                self.add('c1', C1(), promotes=['*'])
+                self.add('c2', C2(), promotes=['*'])
+                self.fd_options['force_fd'] = True # Comment and then it works
+
+        class RootGroup(Group):
+            def __init__(self):
+                super(RootGroup, self).__init__()
+                self.add('x', IndepVarComp('x', 0.0), promotes=['*'])
+                self.add('B', IndepVarComp('B', 0, pass_by_obj=True), promotes=['*'])
+                self.add('fd_group', FDGroup(), promotes=['*'])
+
+        p = Problem()
+        p.root = RootGroup()
+        p.setup(check=False)
+        p['x'] = 1.5
+        p['B'] = 2
+        p.run()
+
+        J = p.calc_gradient(['x'], ['y', 'z'], mode='fwd')
+        assert_rel_error(self, J[0][0], 8.0, 1e-6)
+        assert_rel_error(self, J[1][0], 16.0, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()
