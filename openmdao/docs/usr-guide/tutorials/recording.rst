@@ -242,14 +242,14 @@ file format, the common theme for accessing data is the iteration coordinate.
 The iteration coordinate describes where and when in the execution hierarchy
 the data was collected. Iteration coordinates are strings formatted as pairs
 of names and iteration numbers separated by '/'. For example,
-'SLSQP/1/root/2/G1/3' would describe the third iteration of 'G1' during the
+'rank0:SLSQP/1/root/2/G1/3' would describe the third iteration of 'G1' during the
 second iteration of 'root' during the first iteration of 'SLSQP'. Some solvers
 and drivers may have sub-steps that are recorded. In those cases, the
 iteration number may be of the form '1-3', indicating the third sub-step of the
 first iteration.
 
 Since our Paraboloid only has a recorder added to the driver, our
-'paraboloid' sqlite file will contain keys of the form 'SLSQP/1', 'SLSQP/2',
+'paraboloid' sqlite file will contain keys of the form 'rank0:SLSQP/1', 'rank0:SLSQP/2',
 etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
@@ -371,29 +371,29 @@ which will print out:
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    ['metadata', 'SLSQP/1', 'SLSQP/1/derivs', 'SLSQP/2', 'SLSQP/2/derivs', 'SLSQP/3', 'SLSQP/4', 'SLSQP/4/derivs', 'SLSQP/5', 'SLSQP/5/derivs', 'SLSQP/6', 'SLSQP/6/derivs']
+    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/1/derivs', 'rank0:SLSQP/2', 'rank0:SLSQP/2/derivs', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/4/derivs', 'rank0:SLSQP/5', 'rank0:SLSQP/5/derivs', 'rank0:SLSQP/6', 'rank0:SLSQP/6/derivs']
 
 ::
 
-    ['metadata', 'SLSQP/1', 'SLSQP/1/derivs', 'SLSQP/2', 'SLSQP/2/derivs', 'SLSQP/3', 'SLSQP/4', 'SLSQP/4/derivs', 'SLSQP/5', 'SLSQP/5/derivs', 'SLSQP/6', 'SLSQP/6/derivs']
+    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/1/derivs', 'rank0:SLSQP/2', 'rank0:SLSQP/2/derivs', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/4/derivs', 'rank0:SLSQP/5', 'rank0:SLSQP/5/derivs', 'rank0:SLSQP/6', 'rank0:SLSQP/6/derivs']
 
 Note that we have three kinds of output data here. The entry for the key
 'metadata' contains individual variable metadata such as 'units'. Entries that
-look like 'SLSQP/1' contain the value of the recorded variables at a specific
-iteration. Finally, entries that look like 'SLSQP/1/derivs' contain the derivative
+look like 'rank0:SLSQP/1' contain the value of the recorded variables at a specific
+iteration. Finally, entries that look like 'rank0:SLSQP/1/derivs' contain the derivative
 at that iteration if one was calculated.
 
 So for this example, the iteration coordinates are:
 
 ::
 
-  ['SLSQP/1', 'SLSQP/2', 'SLSQP/3', 'SLSQP/4', 'SLSQP/5', 'SLSQP/6']
+  ['rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
 
 Now we can get the values for the first iteration coordinate:
 
 .. testcode:: reading
 
-    data = db['SLSQP/1']
+    data = db['rank0:SLSQP/1']
 
 This `data` variable has four keys, 'timestamp', 'Parameters', 'Unknowns', and 'Residuals'. 'timestamp'
 yields the time at which data was recorded:
