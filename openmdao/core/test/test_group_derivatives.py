@@ -126,6 +126,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 self.add_param('x', shape=1)
                 self.add_param('B', val=0, pass_by_obj=True)
                 self.add_output('y', shape=1)
+                self.add_output('BB', val=0, pass_by_obj=True)
                 self.fd_options['force_fd'] = True
 
             def solve_nonlinear(self, params, unknowns, resids):

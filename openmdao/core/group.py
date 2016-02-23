@@ -593,7 +593,8 @@ class Group(System):
             # look up the subsystem containing the unknown
             sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, IndepVarComp):
-                fd_unknowns.append(name)
+                if not self.unknowns._dat[name].pbo:
+                    fd_unknowns.append(name)
 
         return fd_unknowns
 
