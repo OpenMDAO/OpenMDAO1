@@ -571,7 +571,7 @@ class Group(System):
                             params.append(tgt[mplen:])
                     else:
                         scoped_tgt = tgt[mplen:]
-                        if not self.params._dat[tgt[mplen:]].pbo:
+                        if not self.params._dat[scoped_tgt].pbo:
                             params.append(scoped_tgt)
 
         return self._fd_params
