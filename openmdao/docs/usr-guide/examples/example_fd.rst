@@ -248,6 +248,12 @@ There is no change to the execution code. The result looks like this:
 Here we see that, instead of calling 'linearize', comp2 and comp3 execute
 during finite differnce of the group that owns them. This is as we expect.
 
+Complex Step on Groups of Components
+====================================
+Complex step on a sub-group of components is currently not supported, though
+support is planned. You can perform complex step on your whole model under
+certain conditions, as is explained later in this example.
+
 Finite Difference on an Entire Model
 ====================================
 
@@ -308,6 +314,87 @@ Nothing else changes in the original model. When we run it, we get:
 
 So here, `linearize` is never called in any component as the finite difference
 just executes the components in sequence. This is also as expected.
+
+Complex Step on an Entire Model
+====================================
+
+If your model supports it, you can use complex step instead of finite
+difference in your root system to calculate the system gradient. Do this by
+setting the form in `fd_options` to "complex_step".
+
+.. testcode:: fd_example
+
+    class Model(Group):
+        """ Simple model to experiment with finite difference."""
+
+        def __init__(self):
+            super(Model, self).__init__()
+
+            self.add('px', IndepVarComp('x', 2.0))
+
+            self.add('comp1', SimpleComp())
+            self.add('comp2', SimpleComp())
+            self.add('comp3', SimpleComp())
+            self.add('comp4', SimpleComp())
+
+            self.connect('px.x', 'comp1.x')
+            self.connect('comp1.y', 'comp2.x')
+            self.connect('comp2.y', 'comp3.x')
+            self.connect('comp3.y', 'comp4.x')
+
+            # Tell the whole model to complex step
+            self.fd_options['force_fd'] = True
+            self.fd_options['form'] = 'complex_step'
+
+Nothing else changes in the original model. When we run it, we get:
+
+.. testcode:: fd_example
+    :hide:
+
+    # Setup and run the model.
+    top = Problem()
+    top.root = Model()
+    top.setup()
+    top.run()
+
+    print('\n\nStart Calc Gradient')
+    print ('-'*25)
+
+    J = top.calc_gradient(['px.x'], ['comp4.y'])
+    print(J)
+
+.. testoutput:: fd_example
+   :options: +ELLIPSIS
+
+   ...
+   Start Calc Gradient
+   -------------------------
+   Execute comp1
+   Execute comp2
+   Execute comp3
+   Execute comp4
+   [[ 81.]]
+
+Notice that the derivative we get is exactly 81, highlighting the accuracy of
+complex step over finiite difference.
+
+However, you can only use complex step if your model is compatible:
+
+**All components must support complex calculations in solve_nonlinear**:
+  Under complex step, a component's `params` are complex, all stages of
+  the calculation will operate on complex inputs to produce complex outputs,
+  and the final value placed into `unknowns` is complex. Most Python functions
+  already support complex numbers, so pure Python components will generally
+  satisfy this requirement. Take care with functions like `abs`, which effectively
+  squelches the complex part of the argument.
+
+**Solvers like Newton that require gradients are not supported**:
+  Complex stepping a model causes it to run with complex inputs. When there is
+  a nonlinear solver at some level, the solver must be able to converge. Some
+  solvers such as `NLGaussSeidel` can handle this. However, the Newton solver
+  must linearize and initiate a gradient solve about a complex point. This is
+  not possible to do at present (though we are working on some ideas to make
+  this work.)
 
 .. _`parallel_finite_difference`:
 
