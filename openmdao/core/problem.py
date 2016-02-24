@@ -213,16 +213,6 @@ class Problem(object):
                 input_graph.add_edges_from(((start,p) for p in plist[1:]),
                                            idxs=None)
 
-        # store all of the connected sets of inputs for later use
-        self._input_inputs = {}
-
-        for tgt in connections:
-            if tgt in input_graph and tgt not in self._input_inputs:
-                connected = [n for n in plain_bfs(input_graph, tgt)
-                                if n not in usrcs]
-                for c in connected:
-                    self._input_inputs[c] = connected
-
         newconns = {}
         # loop over srcs that are unknowns
         for src in usrcs:
@@ -245,6 +235,8 @@ class Problem(object):
                     newconns[t].append((src, tidxs))
                 else:
                     newconns[t] = [(src, tidxs)]
+
+        self._input_inputs = {}
 
         # now all nodes that are downstream of an unknown source have been
         # marked.  Anything left must be an input that is either dangling or
@@ -269,6 +261,7 @@ class Problem(object):
                     set_nosrc = set(nosrc)
                     for n in nosrc:
                         self._dangling[to_prom_name[n]] = set_nosrc
+                        self._input_inputs[n] = nosrc
 
         # connections must be in order across processes, so use an OrderedDict
         # and sort targets before adding them
@@ -289,16 +282,12 @@ class Problem(object):
         """
         input_diffs = {}
 
+        # loop over all dangling inputs
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
             # figure out if any connected inputs have different initial
             # values or different units
             if tgt not in input_diffs:
-                found_src = False
-                for inp in connected_inputs:
-                    input_diffs[inp] = ([], [])
-                    if not found_src and inp in connections:
-                        found_src = True
 
                 tgt_idx = connected_inputs.index(tgt)
                 units = [params_dict[n].get('units') for n in connected_inputs]
@@ -335,25 +324,25 @@ class Problem(object):
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if not found_src:
-                    if diff_units:
-                        filt = set([u for n,u in diff_units])
-                        if None in filt:
-                            filt.remove(None)
-                        if filt:
-                            raise RuntimeError("The following sourceless "
-                                "connected inputs have different units: %s" %
-                                sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                    diff_units))
-                    if diff_vals:
-                        msg = ("The following sourceless connected inputs have "
-                               "different initial values: "
-                               "%s.  Connect one of them to the output of "
-                               "an IndepVarComp to ensure that they have the "
-                               "same initial value." %
-                               (sorted([(tgt,params_dict[tgt]['val'])]+
-                                                 diff_vals)))
-                        raise RuntimeError(msg)
+
+                if diff_units:
+                    filt = set([u for n,u in diff_units])
+                    if None in filt:
+                        filt.remove(None)
+                    if filt:
+                        raise RuntimeError("The following sourceless "
+                            "connected inputs have different units: %s" %
+                            sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                diff_units))
+                if diff_vals:
+                    msg = ("The following sourceless connected inputs have "
+                           "different initial values: "
+                           "%s.  Connect one of them to the output of "
+                           "an IndepVarComp to ensure that they have the "
+                           "same initial value." %
+                           (sorted([(tgt,params_dict[tgt]['val'])]+
+                                             diff_vals)))
+                    raise RuntimeError(msg)
 
         # now check for differences in step_size, step_type, or form for
         # promoted inputs
