@@ -308,15 +308,6 @@ class Problem(object):
 
                 for i, u in enumerate(units):
                     if i != tgt_idx and u != units[tgt_idx]:
-                        if units[tgt_idx] is None:
-                            sname, s = connected_inputs[i], u
-                            tname, t = connected_inputs[tgt_idx], units[tgt_idx]
-                        else:
-                            sname, s = connected_inputs[tgt_idx], units[tgt_idx]
-                            tname, t = connected_inputs[i], u
-
-                        # report these in check_setup later
-                        self._unit_diffs[(sname, tname)] = (s, t)
                         diff_units.append((connected_inputs[i], u))
 
                 if isinstance(vals[tgt_idx], np.ndarray):
