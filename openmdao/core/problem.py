@@ -1010,16 +1010,24 @@ class Problem(object):
 
         rel_pbos = rels.intersection(pbos)
         if rel_pbos:
-            print("\nThe following relevant connections are marked as pass_by_obj:",
-                  file=out_stream)
-            for src in rel_pbos:
-                val = vec[src]
+            rel_conns = []
 
+            for src in rel_pbos:
                 # Find target(s) and print whole relevant connection
                 for tgt, src_tuple in iteritems(self.root.connections):
                     if src_tuple[0] == src and tgt in rels:
-                        print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
-                              file=out_stream)
+                        rel_conns.append((src, tgt))
+
+            if rel_conns:
+                print("\nThe following relevant connections are marked as pass_by_obj:",
+                      file=out_stream)
+                for src, tgt in rel_conns:
+                    val = vec[src]
+                    print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
+                          file=out_stream)
+            else:
+                print("\nThe following pass_by_obj variables are relevant to "
+                      "a derivative calculation:", sorted(rel_pbos))
 
             print("\nYour driver requires a gradient across a model with pass_by_obj "
                   "connections. We strongly recommend either setting the root "

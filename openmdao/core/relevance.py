@@ -150,11 +150,7 @@ class Relevance(object):
         to_prom_name = group._sysdata.to_prom_name
 
         # ensure we have system graph nodes even for unconnected subsystems
-        sgraph.add_nodes_from([s.pathname for s in group.subsystems(recurse=True)])
-
-        for target, (source, idxs) in iteritems(connections):
-            vgraph.add_edge(source, target)
-            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
+        sgraph.add_nodes_from(s.pathname for s in group.subsystems(recurse=True))
 
         for param, meta in iteritems(params_dict):
             tcomp = param.rsplit('.', 1)[0]
@@ -162,8 +158,7 @@ class Relevance(object):
             prom = to_prom_name[param]
             if prom != param:
                 promote_map[param] = prom
-                if param not in vgraph:
-                    vgraph.add_node(param)
+                vgraph.add_node(param)
 
         for unknown, meta in iteritems(unknowns_dict):
             scomp = unknown.rsplit('.', 1)[0]
@@ -171,8 +166,11 @@ class Relevance(object):
             prom = to_prom_name[unknown]
             if prom != unknown:
                 promote_map[unknown] = prom
-                if unknown not in vgraph:
-                    vgraph.add_node(unknown)
+                vgraph.add_node(unknown)
+
+        for target, (source, idxs) in iteritems(connections):
+            vgraph.add_edge(source, target)
+            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
@@ -208,16 +206,16 @@ class Relevance(object):
                 relevant[node] = set()
                 succs[node] = set((node,))
                 if node in g:
-                    succs[node].update([v for u, v in nx.dfs_edges(g, node)])
+                    succs[node].update(v for u, v in nx.dfs_edges(g, node))
 
         grev = g.reverse()
         self._outset = set()
         for nodes in self.outputs:
+            self._outset.update(nodes)
             for node in nodes:
                 relevant[node] = set()
-                self._outset.add(node)
                 if node in g:
-                    preds = set([v for u, v in nx.dfs_edges(grev, node)])
+                    preds = set(v for u, v in nx.dfs_edges(grev, node))
                     preds.add(node)
                     for inps in self.inputs:
                         for inp in inps:

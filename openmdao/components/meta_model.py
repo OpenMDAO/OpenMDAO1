@@ -73,7 +73,7 @@ class MetaModel(Component):
             by the problem later.
         """
         if training_data is None:
-            training_data = list()
+            training_data = []
 
         super(MetaModel, self).add_param(name, val, **kwargs)
         super(MetaModel, self).add_param('train:'+name, val=training_data, pass_by_obj=True)
@@ -101,10 +101,10 @@ class MetaModel(Component):
             by the problem later.
         """
         if training_data is None:
-            training_data = list()
+            training_data = []
 
         super(MetaModel, self).add_output(name, val, **kwargs)
-        super(MetaModel, self).add_output('train:'+name, val=training_data, pass_by_obj=True)
+        super(MetaModel, self).add_param('train:'+name, val=training_data, pass_by_obj=True)
 
         try:
             output_shape = self._init_unknowns_dict[name]['shape']
@@ -278,7 +278,7 @@ class MetaModel(Component):
                 raise RuntimeError(msg)
 
         for name, shape in self._surrogate_output_names:
-            val = self.unknowns['train:' + name]
+            val = self.params['train:' + name]
             if len(val) != num_sample:
                 msg = "MetaModel: Each variable must have the same number" \
                       " of training points. Expected {0} but found {1} " \
@@ -330,7 +330,7 @@ class MetaModel(Component):
                     self._training_output[name] = outputs
                     new_output = outputs
 
-                val = self.unknowns['train:' + name]
+                val = self.params['train:' + name]
 
                 if isinstance(val[0], float):
                     new_output[:, 0] = val
