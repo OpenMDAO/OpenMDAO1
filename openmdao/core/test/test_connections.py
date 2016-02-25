@@ -431,5 +431,35 @@ class TestUBCS(unittest.TestCase):
         # means to fix the issue, uncomment this.
         #assert_rel_error(self, p['C1.y'], 5.0, 1e-6)
 
+
+class Sink1(Component):
+    def __init__(self):
+        super(Sink1, self).__init__()
+        self.add_param('x', val=0.0, units='m')
+
+
+class Sink2(Component):
+    def __init__(self):
+        super(Sink2, self).__init__()
+        self.add_param('x', val=0.0, units='mm')
+
+class TestConnSetup(unittest.TestCase):
+
+    def test_setup(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('src1', IndepVarComp('x', 0.0, units='m'))
+        root.add('sink1', Sink1())
+        root.add('sink2', Sink2())
+
+        root.connect('src1.x', 'sink1.x')
+        root.connect('src1.x', 'sink2.x')
+
+        stream = cStringIO()
+        results = top.setup(check=True, out_stream=stream)
+        self.assertEqual(results['unit_diffs'], [(('src1.x', 'sink2.x'), ('m', 'mm'))])
+
 if __name__ == "__main__":
     unittest.main()

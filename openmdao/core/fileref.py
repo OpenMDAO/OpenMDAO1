@@ -5,6 +5,7 @@ Support for file variables.
 import sys
 import copy
 import os
+import shutil
 from six import iteritems
 
 #Public Symbols
@@ -13,8 +14,6 @@ __all__ = ['FileRef']
 _file_meta = {
     'binary': bool,
 }
-
-CHUNK = 1 << 20  # 1MB
 
 class FileRef(object):
     """
@@ -91,5 +90,4 @@ class FileRef(object):
             return
 
         with src_fref.open("r") as src, self.open("w") as dst:
-            while dst.write(src.read(CHUNK)):
-                pass
+            shutil.copyfileobj(src, dst)
