@@ -357,6 +357,28 @@ class TestSrcIndices(unittest.TestCase):
         p.setup(check=False)
         p.run()
 
+    def test_duplicate_src_indices(self):
+        size = 10
+
+        root = Group()
+
+        root.add('P1', IndepVarComp('x', np.zeros(size//2)))
+        root.add('C1', ExecComp('y = x**2', y=np.zeros(size), x=np.zeros(size)))
+
+        root.connect('P1.x', "C1.x", src_indices=2*list(range(size//2)))
+
+        prob = Problem(root)
+        prob.setup(check=False)
+
+        prob["P1.x"] = np.arange(5,dtype=float)
+
+        prob.run()
+
+        r = np.arange(5, dtype=float)**2
+        expected = np.concatenate((r, r))
+
+        assert_almost_equal( prob["C1.y"], expected, decimal=7)
+
 
 if __name__ == "__main__":
     unittest.main()
