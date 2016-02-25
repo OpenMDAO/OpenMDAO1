@@ -1199,6 +1199,30 @@ class System(object):
         else:
             _list_conns(self, '')
 
+    def list_states(self, stream=sys.stdout):
+        """
+        Recursively list all states and their initial values.
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the connection info to. Default is sys.stdout.
+        """
+
+        for uname, meta in iteritems(self._unknowns_dict):
+            states = []
+            if meta.get('state'):
+                states.append(uname)
+
+        if states:
+            stream.write("\nStates in model:\n")
+            unknowns = self.unknowns
+            for uname in states:
+                stream.write("%s: %f\n" % (uname, unknowns[uname]))
+            stream.write("\n")
+        else:
+            stream.write("\nNo states in model.\n")
+
 def _iter_J_nested(J):
     for output, subdict in iteritems(J):
         for param, value in iteritems(subdict):
