@@ -10,8 +10,8 @@ import traceback
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
-import networkx as nx
 
+import networkx as nx
 import numpy as np
 
 from openmdao.core.system import System
