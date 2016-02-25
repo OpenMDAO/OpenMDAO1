@@ -4,7 +4,8 @@ OpenMDAO design-of-experiments driver implementing the Full Factorial method.
 
 from collections import OrderedDict
 import itertools
-from six import moves, iteritems
+from six import iteritems
+from six.moves import zip
 
 import numpy as np
 
@@ -60,4 +61,4 @@ class FullFactorialDriver(PredeterminedRunsDriver):
             value_arrays[name] = [np.array(x) for x in itertools.product(*value_arrays[name])]
 
         for combination in itertools.product(*value_arrays.values()):
-            yield moves.zip(keys, combination)
+            yield zip(keys, combination)

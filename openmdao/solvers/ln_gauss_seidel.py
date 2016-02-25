@@ -143,7 +143,8 @@ class LinearGaussSeidel(LinearSolver):
                         drmat[voi].vec += rhs_mat[voi]
                         dpmat[voi].vec[:] = 0.0
 
-                    sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
+                    with sub._dircontext:
+                        sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
 
                     # for voi in vois:
                     #    print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
@@ -175,7 +176,8 @@ class LinearGaussSeidel(LinearSolver):
                     if not active:
                         continue
 
-                    sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
+                    with sub._dircontext:
+                        sub.solve_linear(sub.dumat, sub.drmat, vois, mode=mode)
                     #for voi in vois:
                         #print('post solve', dpmat[voi].vec, dumat[voi].vec, drmat[voi].vec)
 

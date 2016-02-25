@@ -475,7 +475,7 @@ class TestProblem(unittest.TestCase):
         self.assertTrue("The following components have no unknowns:\nD\n" in content)
         self.assertTrue("No recorders have been specified, so no data will be saved." in content)
 
-    def test_src_idx_size_gt_src_size(self):
+    def test_src_idx_gt_src_size(self):
         class A(Component):
             def __init__(self):
                 super(A, self).__init__()
@@ -495,7 +495,8 @@ class TestProblem(unittest.TestCase):
             prob.setup(check=False)
         except Exception as err:
             self.assertEqual(str(err),
-                    "Size 3 of target indices is larger than size 2 of source 'A.y'.")
+                    "'B.x' src_indices contains an index (4) that exceeds "
+                    "the bounds of source variable 'A.y' of size 2.")
         else:
             self.fail("Exception expected")
 

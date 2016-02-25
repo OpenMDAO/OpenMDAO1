@@ -63,20 +63,24 @@ class InMemoryRecorder(BaseRecorder):
 
         data = {}
         iteration_coordinate = metadata['coord']
-        params, unknowns, resids = self._filter_vectors(params, unknowns, resids,
-                                                        iteration_coordinate)
 
         data['timestamp'] = metadata['timestamp']
         data['iter'] = format_iteration_coordinate(iteration_coordinate)
 
         if self.options['record_params']:
-            data['params'] = {p:v for p,v in iteritems(params)}
+            data['params'] = {p:v for p,v in
+                                 iteritems(self._filter_vector(params,'p',
+                                                        iteration_coordinate))}
 
         if self.options['record_unknowns']:
-            data['unknowns'] = {u:v for u,v in iteritems(unknowns)}
+            data['unknowns'] = {u:v for u,v in
+                                  iteritems(self._filter_vector(unknowns,'u',
+                                                        iteration_coordinate))}
 
         if self.options['record_resids']:
-            data['resids'] = {r:v for r,v in iteritems(resids)}
+            data['resids'] = {r:v for r,v in
+                                  iteritems(self._filter_vector(resids,'r',
+                                                         iteration_coordinate))}
 
         self.iters.append(data)
 

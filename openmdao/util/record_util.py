@@ -1,26 +1,7 @@
 """ Utility functions related to recording or execution metadata. """
 from six.moves import map, zip
 
-
-class _ExecutionMetadata(object):
-    def __init__(self, name='', coord=None, timestamp=None):
-        self.name = name
-        self.coord = coord
-        self.timestamp = timestamp
-
-    def __getitem__(self, key):
-        try:
-            return getattr(self, key)
-        except AttributeError:
-            msg = "KeyError: '{0}'.".format(key)
-            raise KeyError(msg)
-
-    def __setitem__(self, key, value):
-        if not hasattr(self, key):
-            msg = "KeyError: '{0}'.".format(key)
-            raise KeyError(msg)
-        setattr(self, key, value)
-
+from openmdao.core.mpi_wrap import MPI
 
 def create_local_meta(metadata, name):
     """
@@ -34,17 +15,26 @@ def create_local_meta(metadata, name):
     name : str
         String to describe the current level of execution.
     """
+    if MPI:
+        rank = MPI.COMM_WORLD.rank
+    else:
+        rank = 0
+
     # Create new metadata if parent's isn't available
     if metadata is None:
-        parent_coordinate = []
+        parent_coordinate = [rank]
     else:
         parent_coordinate = metadata['coord']
 
     # The root group has no name, but we want the iteration coordinate to have one.
-    if len(parent_coordinate) == 2 and name == '':
+    if len(parent_coordinate) == 3 and name == '':
         name = 'root'
 
-    local_meta = _ExecutionMetadata(name, parent_coordinate + [name, (0,)])
+    local_meta = {
+        'name': name,
+        'coord': parent_coordinate + [name, (0,)],
+        'timestamp': None,
+    }
 
     return local_meta
 
@@ -90,10 +80,10 @@ def format_iteration_coordinate(coord):
 
     iteration_coordinate = []
 
-    for name, local_coord in zip(coord[::2], coord[1::2]):
+    for name, local_coord in zip(coord[1::2], coord[2::2]):
         iteration_coordinate.append(name)
         iter_str = map(str, local_coord)
         coord_str = iteration_number_separator.join(iter_str)
         iteration_coordinate.append(coord_str)
 
-    return separator.join(iteration_coordinate)
+    return ':'.join(["rank%d"%coord[0], separator.join(iteration_coordinate)])

@@ -6,11 +6,12 @@ import os
 import sys
 import json
 import warnings
+import traceback
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
-import networkx as nx
 
+import networkx as nx
 import numpy as np
 
 from openmdao.core.system import System
@@ -21,7 +22,7 @@ from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core._checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpi_wrap import MPI, under_mpirun
+from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
@@ -34,10 +35,7 @@ from openmdao.util.string_util import get_common_ancestor, nearest_child, name_r
 from openmdao.util.graph import plain_bfs
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
-
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace:
-    from openmdao.core.mpi_wrap import debug
 
 class _ProbData(object):
     """
@@ -213,16 +211,6 @@ class Problem(object):
                 input_graph.add_edges_from(((start,p) for p in plist[1:]),
                                            idxs=None)
 
-        # store all of the connected sets of inputs for later use
-        self._input_inputs = {}
-
-        for tgt in connections:
-            if tgt in input_graph and tgt not in self._input_inputs:
-                connected = [n for n in plain_bfs(input_graph, tgt)
-                                if n not in usrcs]
-                for c in connected:
-                    self._input_inputs[c] = connected
-
         newconns = {}
         # loop over srcs that are unknowns
         for src in usrcs:
@@ -245,6 +233,8 @@ class Problem(object):
                     newconns[t].append((src, tidxs))
                 else:
                     newconns[t] = [(src, tidxs)]
+
+        self._input_inputs = {}
 
         # now all nodes that are downstream of an unknown source have been
         # marked.  Anything left must be an input that is either dangling or
@@ -269,6 +259,7 @@ class Problem(object):
                     set_nosrc = set(nosrc)
                     for n in nosrc:
                         self._dangling[to_prom_name[n]] = set_nosrc
+                        self._input_inputs[n] = nosrc
 
         # connections must be in order across processes, so use an OrderedDict
         # and sort targets before adding them
@@ -289,16 +280,12 @@ class Problem(object):
         """
         input_diffs = {}
 
+        # loop over all dangling inputs
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
             # figure out if any connected inputs have different initial
             # values or different units
             if tgt not in input_diffs:
-                found_src = False
-                for inp in connected_inputs:
-                    input_diffs[inp] = ([], [])
-                    if not found_src and inp in connections:
-                        found_src = True
 
                 tgt_idx = connected_inputs.index(tgt)
                 units = [params_dict[n].get('units') for n in connected_inputs]
@@ -335,25 +322,25 @@ class Problem(object):
                 # one of them is None. At this point, connections contains
                 # only unknown to input connections, so if the target is
                 # in connections, it has an unknown source.
-                if not found_src:
-                    if diff_units:
-                        filt = set([u for n,u in diff_units])
-                        if None in filt:
-                            filt.remove(None)
-                        if filt:
-                            raise RuntimeError("The following sourceless "
-                                "connected inputs have different units: %s" %
-                                sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                    diff_units))
-                    if diff_vals:
-                        msg = ("The following sourceless connected inputs have "
-                               "different initial values: "
-                               "%s.  Connect one of them to the output of "
-                               "an IndepVarComp to ensure that they have the "
-                               "same initial value." %
-                               (sorted([(tgt,params_dict[tgt]['val'])]+
-                                                 diff_vals)))
-                        raise RuntimeError(msg)
+
+                if diff_units:
+                    filt = set([u for n,u in diff_units])
+                    if None in filt:
+                        filt.remove(None)
+                    if filt:
+                        raise RuntimeError("The following sourceless "
+                            "connected inputs have different units: %s" %
+                            sorted([(tgt,params_dict[tgt].get('units'))]+
+                                                                diff_units))
+                if diff_vals:
+                    msg = ("The following sourceless connected inputs have "
+                           "different initial values: "
+                           "%s.  Connect one of them to the output of "
+                           "an IndepVarComp to ensure that they have the "
+                           "same initial value." %
+                           (sorted([(tgt,params_dict[tgt]['val'])]+
+                                             diff_vals)))
+                    raise RuntimeError(msg)
 
         # now check for differences in step_size, step_type, or form for
         # promoted inputs
@@ -1023,16 +1010,24 @@ class Problem(object):
 
         rel_pbos = rels.intersection(pbos)
         if rel_pbos:
-            print("\nThe following relevant connections are marked as pass_by_obj:",
-                  file=out_stream)
-            for src in rel_pbos:
-                val = vec[src]
+            rel_conns = []
 
+            for src in rel_pbos:
                 # Find target(s) and print whole relevant connection
                 for tgt, src_tuple in iteritems(self.root.connections):
                     if src_tuple[0] == src and tgt in rels:
-                        print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
-                              file=out_stream)
+                        rel_conns.append((src, tgt))
+
+            if rel_conns:
+                print("\nThe following relevant connections are marked as pass_by_obj:",
+                      file=out_stream)
+                for src, tgt in rel_conns:
+                    val = vec[src]
+                    print("%s -> %s: type %s" % (src, tgt, type(val).__name__),
+                          file=out_stream)
+            else:
+                print("\nThe following pass_by_obj variables are relevant to "
+                      "a derivative calculation:", sorted(rel_pbos))
 
             print("\nYour driver requires a gradient across a model with pass_by_obj "
                   "connections. We strongly recommend either setting the root "
@@ -1093,13 +1088,15 @@ class Problem(object):
         if self.root.is_active():
             self.driver.run(self)
 
-        # if we're running under MPI, ensure that all of the processes
-        # are finished in order to ensure that scripting code outside of
-        # Problem doesn't attempt to access variables or files that have
-        # not finished updating.  This can happen with FileRef vars and
-        # potentially other pass_by_obj variables.
-        if MPI:
-            self.comm.barrier()
+            # if we're running under MPI, ensure that all of the processes
+            # are finished in order to ensure that scripting code outside of
+            # Problem doesn't attempt to access variables or files that have
+            # not finished updating.  This can happen with FileRef vars and
+            # potentially other pass_by_obj variables.
+            if MPI:
+                if trace: debug("waiting on problem run() comm.barrier")
+                self.root.comm.barrier()
+                if trace: debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is

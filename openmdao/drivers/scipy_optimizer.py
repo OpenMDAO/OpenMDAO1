@@ -106,7 +106,8 @@ class ScipyOptimizer(Driver):
         update_local_meta(self.metadata, (self.iter_count,))
 
         # Initial Run
-        problem.root.solve_nonlinear(metadata=self.metadata)
+        with problem.root._dircontext:
+            problem.root.solve_nonlinear(metadata=self.metadata)
 
         pmeta = self.get_desvar_metadata()
         self.params = list(pmeta)
@@ -244,7 +245,8 @@ class ScipyOptimizer(Driver):
         self.iter_count += 1
         update_local_meta(metadata, (self.iter_count,))
 
-        system.solve_nonlinear(metadata=metadata)
+        with system._dircontext:
+            system.solve_nonlinear(metadata=metadata)
 
         # Get the objective function evaluations
         for name, obj in self.get_objectives().items():

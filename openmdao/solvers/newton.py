@@ -123,12 +123,14 @@ class Newton(NonLinearSolver):
 
             # Calculate direction to take step
             arg.vec[:] = resids.vec
-            system.solve_linear(system.dumat, system.drmat, [None], mode='fwd', solver=self.ln_solver)
+            with system._dircontext:
+                system.solve_linear(system.dumat, system.drmat,
+                                    [None], mode='fwd', solver=self.ln_solver)
 
             # Step in that direction,
             self.iter_count += 1
-            f_norm = self.line_search.solve(params, unknowns, resids, system, self,
-                                            alpha, f_norm0, metadata)
+            f_norm = self.line_search.solve(params, unknowns, resids, system,
+                                            self, alpha, f_norm0, metadata)
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.

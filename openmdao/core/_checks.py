@@ -112,11 +112,6 @@ def __check_shapes_match(src, target, to_prom_name):
                                  _both_names(src, to_prom_name),
                                  target['size'],
                                  _both_names(target, to_prom_name)))
-            if len(src_idxs) > src['size']:
-                raise ValueError("Size %d of target indices is larger than size"
-                                 " %d of source %s." %
-                                 (len(src_idxs), src['size'],
-                                 _both_names(src, to_prom_name)))
         elif 'src_indices' in src:
             if target['size'] != src['distrib_size']:
                 raise ValueError("Total size %d of  distributed source "

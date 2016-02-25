@@ -305,6 +305,53 @@ class TestFileRef(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+class FileComp(Component):
+    def __init__(self, *args, **kwargs):
+        super(FileComp, self).__init__(*args, **kwargs)
+        self.add_output("out", 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        with open(self.name+".in", 'r') as f:
+            unknowns['out'] = float(f.read())
+
+
+class TestDirectory(unittest.TestCase):
+
+    def setUp(self):
+        self.startdir = os.getcwd()
+        self.tmpdir = mkdtemp()
+        os.chdir(self.tmpdir)
+        build_directory({
+            'top': {
+                'nest1': {
+                    'c1.in': '3.14'
+                },
+                'c2.in': '5.0'
+            }
+        })
+
+    def tearDown(self):
+        os.chdir(self.startdir)
+        try:
+            rmtree(self.tmpdir)
+        except OSError as e:
+            # If directory already deleted, keep going
+            if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
+                raise e
+
+    def test_sysdirs(self):
+        p = Problem(root=Group())
+        p.root.directory = 'top'
+        nest1 = p.root.add('nest1', Group())
+        nest1.directory = 'nest1'
+        nest1.add('c1', FileComp())
+        nest2 = p.root.add('nest2', Group())
+        nest2.add('c2', FileComp())
+        p.setup(check=False)
+        p.run()
+        self.assertEqual(p['nest1.c1.out'], 3.14)
+        self.assertEqual(p['nest2.c2.out'], 5.0)
+
 
 if __name__ == '__main__':
     unittest.main()
