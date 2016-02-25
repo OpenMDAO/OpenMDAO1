@@ -221,8 +221,9 @@ class ScipyGMRES(LinearSolver):
         drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
-        system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                            solver=self.preconditioner)
+        with system._dircontext:
+            system.solve_linear(dumat, drmat, (voi, ), mode=mode,
+                                solver=self.preconditioner)
 
         #print("arg", arg)
         #print("preconditioned arg", precon_rhs)

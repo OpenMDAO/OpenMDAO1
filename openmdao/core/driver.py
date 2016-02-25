@@ -715,7 +715,8 @@ class Driver(object):
         update_local_meta(metadata, (self.iter_count,))
 
         # Solve the system once and record results.
-        system.solve_nonlinear(metadata=metadata)
+        with system._dircontext:
+            system.solve_nonlinear(metadata=metadata)
 
         self.recorders.record_iteration(system, metadata)
 

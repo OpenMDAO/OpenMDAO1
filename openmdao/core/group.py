@@ -684,10 +684,11 @@ class Group(System):
         for sub in itervalues(self._subsystems):
             self._transfer_data(sub.name)
             if sub.is_active():
-                if isinstance(sub, Component):
-                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-                else:
-                    sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+                with sub._dircontext:
+                    if isinstance(sub, Component):
+                        sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                    else:
+                        sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
     def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """

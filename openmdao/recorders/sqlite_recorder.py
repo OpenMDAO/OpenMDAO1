@@ -41,7 +41,6 @@ class SqliteRecorder(BaseRecorder):
         else:
             self._open_close_sqlitedict = True
 
-
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
             sqlite_dict_args.setdefault('tablename', 'openmdao')
@@ -92,20 +91,19 @@ class SqliteRecorder(BaseRecorder):
         data = OrderedDict()
         iteration_coordinate = metadata['coord']
         timestamp = metadata['timestamp']
-        params, unknowns, resids = self._filter_vectors(params, unknowns, resids, iteration_coordinate)
 
         group_name = format_iteration_coordinate(iteration_coordinate)
 
         data['timestamp'] = timestamp
 
         if self.options['record_params']:
-            data['Parameters'] = params
+            data['Parameters'] = self._filter_vector(params, 'p', iteration_coordinate)
 
         if self.options['record_unknowns']:
-            data['Unknowns'] = unknowns
+            data['Unknowns'] = self._filter_vector(unknowns, 'u', iteration_coordinate)
 
         if self.options['record_resids']:
-            data['Residuals'] = resids
+            data['Residuals'] = self._filter_vector(resids, 'r', iteration_coordinate)
 
         self.out[group_name] = data
 

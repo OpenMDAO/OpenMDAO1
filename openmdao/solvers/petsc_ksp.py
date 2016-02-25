@@ -191,7 +191,7 @@ class PetscKSP(LinearSolver):
             self.rhs_buf_petsc = PETSc.Vec().createWithArray(rhs,
                                                              comm=system.comm)
             if trace: debug("rhs_buf creation DONE")
-            
+
             # Petsc can only handle one right-hand-side at a time for now
             self.voi = voi
             self.system = system
@@ -287,7 +287,8 @@ class PetscKSP(LinearSolver):
         drmat = OrderedDict()
         drmat[voi] = system.drmat[voi]
 
-        system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                            solver=self.preconditioner)
+        with system._dircontext:
+            system.solve_linear(dumat, drmat, (voi, ), mode=mode,
+                                solver=self.preconditioner)
 
         result.array[:] = sol_vec.vec

@@ -21,8 +21,10 @@ from openmdao.test.mpi_util import MPITestCase
 
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
+    coordinate = [MPI.COMM_WORLD.rank, 'Driver', (1, )]
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
+    coordinate = [0, 'Driver', (1, )]
 
 
 class ABCDArrayComp(Component):
@@ -120,8 +122,6 @@ class TestSqliteRecorder(MPITestCase):
         t0, t1 = run(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1, )]
-
         expected_params = [
             ("C1.a", [1.0, 1.0, 1.0]),
             ("C1.b", [2.0, 2.0, 2.0]),
@@ -144,7 +144,10 @@ class TestSqliteRecorder(MPITestCase):
             ("C1.out_list", []),
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1),
+                                           expected_params, expected_unknowns,
+                                           expected_resids),),
+                                           self.eps, prob.root)
 
     def test_includes(self):
         size = 3
@@ -169,8 +172,6 @@ class TestSqliteRecorder(MPITestCase):
 
         t0, t1 = run(prob)
         prob.cleanup()
-
-        coordinate = ['Driver', (1, )]
 
         expected_params = [
             ("C1.a", [1.0, 1.0, 1.0]),
@@ -217,8 +218,6 @@ class TestSqliteRecorder(MPITestCase):
         t0, t1 = run(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1, )]
-
         expected_params = [
             ("C1.a", [1.0, 1.0, 1.0]),
             ("C1.b", [2.0, 2.0, 2.0]),
@@ -256,7 +255,10 @@ class TestSqliteRecorder(MPITestCase):
         t0, t1 = run(prob)
         prob.cleanup()
 
-        coordinate = ['Driver', (1, ), "root", (1,)]
+        if MPI:
+            coord = [MPI.COMM_WORLD.rank, 'Driver', (1, ), "root", (1,)]
+        else:
+            coord = [0, 'Driver', (1, ), "root", (1,)]
 
         expected_params = [
             ("C1.a", [1.0, 1.0, 1.0]),
@@ -279,7 +281,7 @@ class TestSqliteRecorder(MPITestCase):
             ("C1.out_list", []),
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
+        self.assertIterationDataRecorded(((coord, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
     def test_driver_records_metadata(self):
         size = 3

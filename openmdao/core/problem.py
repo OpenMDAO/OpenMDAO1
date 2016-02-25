@@ -6,11 +6,12 @@ import os
 import sys
 import json
 import warnings
+import traceback
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
-import networkx as nx
 
+import networkx as nx
 import numpy as np
 
 from openmdao.core.system import System
@@ -21,7 +22,7 @@ from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
 from openmdao.core._checks import check_connections
 from openmdao.core.driver import Driver
-from openmdao.core.mpi_wrap import MPI, under_mpirun
+from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
@@ -34,10 +35,7 @@ from openmdao.util.string_util import get_common_ancestor, nearest_child, name_r
 from openmdao.util.graph import plain_bfs
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
-
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace:
-    from openmdao.core.mpi_wrap import debug
 
 class _ProbData(object):
     """
@@ -1082,13 +1080,15 @@ class Problem(object):
         if self.root.is_active():
             self.driver.run(self)
 
-        # if we're running under MPI, ensure that all of the processes
-        # are finished in order to ensure that scripting code outside of
-        # Problem doesn't attempt to access variables or files that have
-        # not finished updating.  This can happen with FileRef vars and
-        # potentially other pass_by_obj variables.
-        if MPI:
-            self.comm.barrier()
+            # if we're running under MPI, ensure that all of the processes
+            # are finished in order to ensure that scripting code outside of
+            # Problem doesn't attempt to access variables or files that have
+            # not finished updating.  This can happen with FileRef vars and
+            # potentially other pass_by_obj variables.
+            if MPI:
+                if trace: debug("waiting on problem run() comm.barrier")
+                self.root.comm.barrier()
+                if trace: debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
