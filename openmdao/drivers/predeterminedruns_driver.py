@@ -191,7 +191,7 @@ class PredeterminedRunsDriver(Driver):
                 yield case
         else:
 
-            cases_remain = numpy.array(True, dtype=bool)
+            cases_remain = numpy.array(1, dtype=int)
 
             while True:
                 try:
@@ -199,10 +199,11 @@ class PredeterminedRunsDriver(Driver):
                 except StopIteration:
                     case = None
 
-                comm.Allreduce(numpy.array(case is not None, dtype=bool),
-                               cases_remain, op=MPI.LOR)
+                val = 1 if case is not None else 0
+                comm.Allreduce(numpy.array(val, dtype=int),
+                               cases_remain, op=MPI.SUM)
 
-                if cases_remain:
+                if cases_remain > 0:
                     yield case
                 else:
                     break
