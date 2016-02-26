@@ -74,7 +74,7 @@ class Parabola(Component):
 
 
 class Balance(Component):
-    """Evaluates y = 3x^2 - 5"""
+    """Evaluates the residual y1-y2"""
 
     def __init__(self):
         super(Balance, self).__init__()
