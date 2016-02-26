@@ -63,7 +63,7 @@ this code into a file, and run it directly.
         top.setup()
         top.run()
 
-        print(root['p.f_xy'])
+        print(top['p.f_xy'])
 
 
 Now we will go through each section and explain how this code works.

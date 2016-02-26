@@ -5,9 +5,12 @@
 """
 
 import unittest
+from six.moves import cStringIO
+
 import numpy as np
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
+     Newton, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 from paraboloid_example import Paraboloid
@@ -128,6 +131,43 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self,top['d_deflection.deflection'], 720, .01)
         assert_rel_error(self,top['d_bending.bending_stress_ratio'], 0.148863, .001)
         assert_rel_error(self,top['d_shear.shear_stress_ratio'], 0.007985, .0001)
+
+    def test_line_parabola_intersect(self):
+
+        from intersect_parabola_line import Line, Parabola, Balance
+
+        top = Problem()
+        root = top.root = Group()
+        root.add('line', Line())
+        root.add('parabola', Parabola())
+        root.add('bal', Balance())
+
+        root.connect('line.y', 'bal.y1')
+        root.connect('parabola.y', 'bal.y2')
+        root.connect('bal.x', 'line.x')
+        root.connect('bal.x', 'parabola.x')
+
+        root.nl_solver = Newton()
+        root.ln_solver = ScipyGMRES()
+
+        top.setup()
+
+        stream = cStringIO()
+
+        # Positive solution
+        top['bal.x'] = 7.0
+        root.list_states(stream)
+        top.run()
+        assert_rel_error(self, top['bal.x'], 1.430501, 1e-5)
+        assert_rel_error(self, top['line.y'], 1.138998, 1e-5)
+
+        # Negative solution
+        top['bal.x'] = -7.0
+        root.list_states(stream)
+        top.run()
+        assert_rel_error(self, top['bal.x'], -2.097168, 1e-5)
+        assert_rel_error(self, top['line.y'], 8.194335, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()
