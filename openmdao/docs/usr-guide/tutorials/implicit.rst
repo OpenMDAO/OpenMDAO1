@@ -160,6 +160,8 @@ is indirectly a function via y1 and y2. The partial derivative of the
 residual with respect to 'x' is zero, though the total derivative calculated
 by OpenMDAO of the residual with respect to 'x' is nonzero.
 
+Finally, lets set up the model.
+
 .. testcode:: Solver1
 
     top = Problem()
@@ -178,6 +180,31 @@ by OpenMDAO of the residual with respect to 'x' is nonzero.
 
     top.setup()
 
+Here we connect the output of the Line and Parabola component to the params
+of the Balance component. The state on "Balance" feeds the params on both
+components.
+
+To solve this system, we need to slot a specify a solver in "root.nl_solver".
+The Newton solver is well-suited for solving this sort of problem, and is the
+solver you will generally use when solving any system with an implicit state. The Newton solver requires gradients
+
+.. testcode:: Solver1
+
+   top.run()
+   print('Solution x=%.2f, line.y=%.2f, parabola.y=%.2f' % (top['bal.x'], top['line.y'], top['parabola.y']))
+
+.. testoutput:: Solver1
+   :options: +ELLIPSIS
+
+   Solution x=1.43, line.y=1.14, parabola.y=1.14
+
+
+On Initial Values for States
+----------------------------
+
+Our problem has two solutions, and we have found one of them.
+
+
     # Positive solution
     top['bal.x'] = 7.0
     root.list_states()
@@ -190,13 +217,6 @@ by OpenMDAO of the residual with respect to 'x' is nonzero.
     top.run()
     print('Negative Solution x=%f, line.y=%f, parabola.y=%f' % (top['bal.x'], top['line.y'], top['parabola.y']))
 
-.. testoutput:: Solver1
-   :hide:
-   :options: +ELLIPSIS
 
    Positive Solution x=1.430501, line.y=1.138998, parabola.y=1.138998
    Negative Solution x=-2.097168, line.y=8.194335, parabola.y=8.194335
-
-
-On Initial Values for States
-----------------------------
