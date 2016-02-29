@@ -1,6 +1,6 @@
 """ Testing for Problem.check_partial_derivatives and check_total_derivatives."""
 
-from six import iteritems
+from six import iteritems, StringIO
 import unittest
 
 import numpy as np
@@ -406,6 +406,70 @@ class TestProblemCheckTotals(unittest.TestCase):
         for key, val in iteritems(data):
             assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+
+    def test_check_partials_calls_run_once(self):
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 1.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        prob.driver.add_desvar('x')
+        prob.driver.add_desvar('y')
+        prob.driver.add_objective('f_xy')
+
+        prob.setup(check=False)
+
+        prob['x'] = 5.0
+        prob['y'] = 2.0
+
+        iostream = StringIO()
+
+        data = prob.check_partial_derivatives(out_stream=iostream)
+
+        self.assertAlmostEqual(first=prob["f_xy"],
+                               second= (prob['x']-3.0)**2 \
+                                       + prob['x']*prob['y'] \
+                                       + (prob['y']+4.0)**2 - 3.0,
+                               places=5,
+                               msg="check partial derivatives did not call"
+                                   "run_once on the driver as expected.")
+
+        self.assertEqual(first=iostream.getvalue()[:39],
+                         second="Executing model to populate unknowns...",
+                         msg="check partial derivatives failed to run driver once")
+
+    def test_check_totals_calls_run_once(self):
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 1.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        prob.driver.add_desvar('x')
+        prob.driver.add_desvar('y')
+        prob.driver.add_objective('f_xy')
+
+        prob.setup(check=False)
+
+        prob['x'] = 5.0
+        prob['y'] = 2.0
+
+        iostream = StringIO()
+
+        data = prob.check_total_derivatives(out_stream=iostream)
+
+        self.assertAlmostEqual(first=prob["f_xy"],
+                               second= (prob['x']-3.0)**2 \
+                                       + prob['x']*prob['y'] \
+                                       + (prob['y']+4.0)**2 - 3.0,
+                               places=5,
+                               msg="check partial derivatives did not call"
+                                   "run_once on the driver as expected.")
+
+        self.assertEqual(first=iostream.getvalue()[:39],
+                         second="Executing model to populate unknowns...",
+                         msg="check partial derivatives failed to run driver once")
 
 if __name__ == "__main__":
     unittest.main()

@@ -699,7 +699,17 @@ class Driver(object):
         return self._cons
 
     def run(self, problem):
-        """ Runs the driver. This function should be overriden when inheriting.
+        """ Runs the driver. This function should be overridden when inheriting.
+
+        Args
+        ----
+        problem : `Problem`
+            Our parent `Problem`.
+        """
+        self.run_once(problem)
+
+    def run_once(self, problem):
+        """ Runs root's solve_nonlinear one time
 
         Args
         ----
