@@ -1711,6 +1711,10 @@ class Problem(object):
 
         root = self.root
 
+        if self.driver.iter_count < 1:
+            out_stream.write('Executing model to populate unknowns...\n\n')
+            self.driver.run_once(self)
+
         # Linearize the model
         root._sys_linearize(root.params, root.unknowns, root.resids)
 
@@ -1875,12 +1879,15 @@ class Problem(object):
         norms for forward - fd, adjoint - fd, forward - adjoint using the
         best case fdstep.
         """
+        root = self.root
+        driver = self.driver
+
+        if driver.iter_count < 1:
+            out_stream.write('Executing model to populate unknowns...\n\n')
+            driver.run_once(self)
 
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
-
-        root = self.root
-        driver = self.driver
 
         # Check derivatives with respect to design variables, if they have
         # been defined..
