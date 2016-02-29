@@ -14,6 +14,9 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
 from openmdao.test.util import assert_rel_error
 
 from beam_tutorial import BeamTutorial
+from implicit import SimpleImplicitComp
+from implicit_ext_solve import SimpleImplicitComp as SIC2
+from intersect_parabola_line import Balance, Parabola, Line
 from paraboloid_example import Paraboloid
 from paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
 from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
@@ -221,6 +224,76 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self, top['z'][1], 0.0, 1e-5)
         assert_rel_error(self, top['x'], 0.0, 1e-5)
         assert_rel_error(self, top['obj'], 3.1833940, 1e-5)
+
+    def test_intersect_parabola_line(self):
+
+        top = Problem()
+        root = top.root = Group()
+        root.add('line', Line())
+        root.add('parabola', Parabola())
+        root.add('bal', Balance())
+
+        root.connect('line.y', 'bal.y1')
+        root.connect('parabola.y', 'bal.y2')
+        root.connect('bal.x', 'line.x')
+        root.connect('bal.x', 'parabola.x')
+
+        root.nl_solver = Newton()
+        root.ln_solver = ScipyGMRES()
+
+        top.setup(check=False)
+
+        # Positive solution
+        top['bal.x'] = 7.0
+        top.run()
+        assert_rel_error(self, top['bal.x'], 1.430501, 1e-5)
+        assert_rel_error(self, top['line.y'], 1.1389998, 1e-5)
+
+        # Negative solution
+        top['bal.x'] = -7.0
+        top.run()
+        assert_rel_error(self, top['bal.x'], -2.097168, 1e-5)
+        assert_rel_error(self, top['line.y'], 8.194335, 1e-5)
+
+    def test_implicit(self):
+        top = Problem()
+        root = top.root = Group()
+        root.add('comp', SimpleImplicitComp())
+
+        root.ln_solver = ScipyGMRES()
+        top.setup(check=False)
+
+        top.run()
+        assert_rel_error(self, top['comp.z'], 2.666667, 1e-5)
+
+    def test_implicit_ext_solve(self):
+        top = Problem()
+        root = top.root = Group()
+        root.add('p1', IndepVarComp('x', 0.5))
+        root.add('comp', SimpleImplicitComp())
+        root.add('comp2', ExecComp('zz = 2.0*z'))
+
+        root.connect('p1.x', 'comp.x')
+        root.connect('comp.z', 'comp2.z')
+
+        root.ln_solver = ScipyGMRES()
+        root.nl_solver = Newton()
+        top.setup(check=False)
+
+        top.run()
+        assert_rel_error(self, top['comp.z'], 2.666667, 1e-5)
+
+    def test_fd_comp_example(self):
+        from fd_comp_example import Model
+
+        top = Problem()
+        top.root = Model()
+
+        top.setup()
+        top.run()
+
+        J = top.calc_gradient(['px.x'], ['comp4.y'])
+        assert_rel_error(self, J[0][0], 81.0, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

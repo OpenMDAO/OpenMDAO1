@@ -81,13 +81,15 @@ class SimpleImplicitComp(Component):
 
         return J
 
-top = Problem()
-root = top.root = Group()
-root.add('comp', SimpleImplicitComp())
+if __name__ == '__main__':
 
-root.ln_solver = ScipyGMRES()
-top.setup()
+    top = Problem()
+    root = top.root = Group()
+    root.add('comp', SimpleImplicitComp())
 
-top.run()
+    root.ln_solver = ScipyGMRES()
+    top.setup()
 
-print('Solution: x = %f, z = %f' % (top['comp.x'], top['comp.z']))
+    top.run()
+
+    print('Solution: x = %f, z = %f' % (top['comp.x'], top['comp.z']))

@@ -67,20 +67,22 @@ class SimpleImplicitComp(Component):
 
         return J
 
-top = Problem()
-root = top.root = Group()
-root.add('p1', IndepVarComp('x', 0.5))
-root.add('comp', SimpleImplicitComp())
-root.add('comp2', ExecComp('zz = 2.0*z'))
+if __name__ == '__main__':
 
-root.connect('p1.x', 'comp.x')
-root.connect('comp.z', 'comp2.z')
+    top = Problem()
+    root = top.root = Group()
+    root.add('p1', IndepVarComp('x', 0.5))
+    root.add('comp', SimpleImplicitComp())
+    root.add('comp2', ExecComp('zz = 2.0*z'))
 
-root.ln_solver = ScipyGMRES()
-root.nl_solver = Newton()
-top.setup()
-top.print_all_convergence()
+    root.connect('p1.x', 'comp.x')
+    root.connect('comp.z', 'comp2.z')
 
-top.run()
+    root.ln_solver = ScipyGMRES()
+    root.nl_solver = Newton()
+    top.setup()
+    top.print_all_convergence()
 
-print('Solution: x = %f, z = %f, zz = %f' % (top['comp.x'], top['comp.z'], top['comp2.zz']))
+    top.run()
+
+    print('Solution: x = %f, z = %f, zz = %f' % (top['comp.x'], top['comp.z'], top['comp2.zz']))
