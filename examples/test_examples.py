@@ -13,10 +13,12 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
      Newton, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
+from beam_tutorial import BeamTutorial
 from paraboloid_example import Paraboloid
 from paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
 from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
-from beam_tutorial import BeamTutorial
+from sellar_MDF_optimize import SellarDerivatives
+from sellar_state_MDF_optimize import SellarStateConnection
 
 
 class TestExamples(unittest.TestCase):
@@ -150,7 +152,7 @@ class TestExamples(unittest.TestCase):
         root.nl_solver = Newton()
         root.ln_solver = ScipyGMRES()
 
-        top.setup()
+        top.setup(check=False)
 
         stream = cStringIO()
 
@@ -168,6 +170,57 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self, top['bal.x'], -2.097168, 1e-5)
         assert_rel_error(self, top['line.y'], 8.194335, 1e-5)
 
+    def test_sellar_MDF_optimize(self):
+
+        top = Problem()
+        top.root = SellarDerivatives()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-8
+        top.driver.options['disp'] = False
+
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['z'][0], 1.977639, 1e-5)
+        assert_rel_error(self, top['z'][1], 0.0, 1e-5)
+        assert_rel_error(self, top['x'], 0.0, 1e-5)
+        assert_rel_error(self, top['obj'], 3.1833940, 1e-5)
+
+    def test_sellar_state_connection(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-8
+        top.driver.options['disp'] = False
+
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['z'][0], 1.977639, 1e-5)
+        assert_rel_error(self, top['z'][1], 0.0, 1e-5)
+        assert_rel_error(self, top['x'], 0.0, 1e-5)
+        assert_rel_error(self, top['obj'], 3.1833940, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

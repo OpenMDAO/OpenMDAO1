@@ -186,37 +186,69 @@ components.
 
 To solve this system, we need to slot a specify a solver in "root.nl_solver".
 The Newton solver is well-suited for solving this sort of problem, and is the
-solver you will generally use when solving any system with an implicit state. The Newton solver requires gradients
+solver you will generally use when solving any system with an implicit state.
+The Newton solver requires gradients and calculates them through use of the
+solver in "root.ln_solver". The default solver is LinearGaussSeidel, but to
+calculate the gradients across a system with implicit states, we should use
+the `ScipyGMRES` linear solver, which handles the coupled problem by solving
+a system of linear equations.
 
 .. testcode:: Solver1
 
    top.run()
    print('Solution x=%.2f, line.y=%.2f, parabola.y=%.2f' % (top['bal.x'], top['line.y'], top['parabola.y']))
 
+Running our code should give us an answer:
+
 .. testoutput:: Solver1
    :options: +ELLIPSIS
 
    Solution x=1.43, line.y=1.14, parabola.y=1.14
 
-
 On Initial Values for States
 ----------------------------
 
-Our problem has two solutions, and we have found one of them.
+Our problem has two solutions, and we have found one of them. Which solution
+you arrive at is determined by the initial condition you chose, specifically
+the solution follows the gradient from the initial point to the solution.
 
+We can find both solutions then:
+
+.. testcode:: Solver1
 
     # Positive solution
     top['bal.x'] = 7.0
     root.list_states()
     top.run()
-    print('Positive Solution x=%f, line.y=%f, parabola.y=%f' % (top['bal.x'], top['line.y'], top['parabola.y']))
+    print('Positive Solution x=%.2f, line.y=%.2f, parabola.y=%.2f' % (top['bal.x'], top['line.y'], top['parabola.y']))
 
     # Negative solution
     top['bal.x'] = -7.0
     root.list_states()
     top.run()
-    print('Negative Solution x=%f, line.y=%f, parabola.y=%f' % (top['bal.x'], top['line.y'], top['parabola.y']))
+    print('Negative Solution x=%.2f, line.y=%.2f, parabola.y=%.2f' % (top['bal.x'], top['line.y'], top['parabola.y']))
 
+.. testoutput:: Solver1
+   :options: +ELLIPSIS
+   :hide:
 
-   Positive Solution x=1.430501, line.y=1.138998, parabola.y=1.138998
-   Negative Solution x=-2.097168, line.y=8.194335, parabola.y=8.194335
+   Positive Solution x=1.43, line.y=1.14, parabola.y=1.14
+   Negative Solution x=-2.10, line.y=8.19, parabola.y=8.19
+
+OpenMDAO provides a function `list_states` that lists all the states
+contained in a group and all of its subgroups. This can be useful in larger
+nested models that have lots of implicit components. Since your initial state
+potentially feeds the initial params in other components, it is important to
+inspect them to make sure they are correct.
+
+::
+
+   States in model:
+   bal.x: 7.000000
+
+   Positive Solution x=1.43, line.y=1.14, parabola.y=1.14
+
+   States in model:
+   bal.x: -7.000000
+
+   Negative Solution x=-2.10, line.y=8.19, parabola.y=8.19

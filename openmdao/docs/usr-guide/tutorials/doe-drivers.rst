@@ -27,9 +27,9 @@ Below is an example using the component from the :ref:`paraboloid_tutorial`.
     top = Problem()
     root = top.root = Group()
 
-    root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
-    root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-    root.add('comp', Paraboloid(), promotes=['*'])
+    root.add('p1', IndepVarComp('x', 50.0), promotes=['x'])
+    root.add('p2', IndepVarComp('y', 50.0), promotes=['y'])
+    root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
     top.driver = OptimizedLatinHypercubeDriver(num_samples=4, seed=0, population=20, generations=4, norm_method=2)
     top.driver.add_desvar('x', lower=-50.0, upper=50.0)
@@ -61,9 +61,9 @@ In order to setup a model to utilize the OLHC, we need to import
 
 ::
 
-    root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
-    root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-    root.add('comp', Paraboloid(), promotes=['*'])
+    root.add('p1', IndepVarComp('x', 50.0), promotes=['x'])
+    root.add('p2', IndepVarComp('y', 50.0), promotes=['y'])
+    root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
 By promoting the variables x and y to the group level, no *connect* statement is
 needed for the paraboloid component to receive these as input variables.
