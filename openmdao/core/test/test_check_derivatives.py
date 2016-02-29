@@ -439,18 +439,6 @@ class TestProblemCheckTotals(unittest.TestCase):
                          second="Executing model to populate unknowns...",
                          msg="check partial derivatives failed to run driver once")
 
-        self.assertAlmostEqual(first=data["comp"]["f_xy","x"]["J_fd"],
-                               second=2.0*prob["x"] - 6.0 + prob["y"],
-                               places=5,
-                               msg="Paraboloid derivative incorrect at the "
-                                   "expected design point.")
-
-        self.assertAlmostEqual(first=data["comp"]["f_xy","y"]["J_fd"],
-                               second=2.0*prob["y"] + 8.0 + prob["x"],
-                               places=5,
-                               msg="Paraboloid derivative incorrect at the "
-                                   "expected design point.")
-
     def test_check_totals_calls_run_once(self):
         prob = Problem()
         root = prob.root = Group()
@@ -482,18 +470,6 @@ class TestProblemCheckTotals(unittest.TestCase):
         self.assertEqual(first=iostream.getvalue()[:39],
                          second="Executing model to populate unknowns...",
                          msg="check partial derivatives failed to run driver once")
-
-        self.assertAlmostEqual(first=data["f_xy","x"]["J_fd"],
-                               second=2.0*prob["x"] - 6.0 + prob["y"],
-                               places=5,
-                               msg="Paraboloid derivative incorrect at the "
-                                   "expected design point.")
-
-        self.assertAlmostEqual(first=data["f_xy","y"]["J_fd"],
-                               second=2.0*prob["y"] + 8.0 + prob["x"],
-                               places=5,
-                               msg="Paraboloid derivative incorrect at the "
-                                   "expected design point.")
 
 if __name__ == "__main__":
     unittest.main()
