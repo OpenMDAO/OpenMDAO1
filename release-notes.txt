@@ -8,16 +8,16 @@ Backwards-Incompatible Change
 Features
 *User now has the ability to call check_total_derivs and have it just do the driver-relevant params/cons/objs instead of every param/unknown in the model.
 *Multiple local components are now allowable in a parallel system.
-*User can complex step for total derivatives.
-*Created an NPSS wrapper for OpenMDAO 1.0.
-*We now account for Jacobian sparsity patern that arises from src_indices connections.
+*User can choose to complex step a full model for total derivatives.
+*We now account for Jacobian sparsity patern that arises from src_indices connections. This is available for the pyoptsparse driver.
 *Documented more of our MPI functionality.
 *Added support for File variables.
-*Made the case-recording default to save derivatives.
-*Add unit conversion capability to pass-by-object.
+*Case recorders now save derivative information by default. You can turn this off in the recorder options.
+*Pass-by-object connections will now convert units if the object is numeric.
 *Now raise an error if a user tries to add the same constraint/param twice.
 *Made Brent solver work for when state variable is an element of an array variable.
-*Sped up setup of model test nsga2 with pyoptsparse wrapper.
+*Sped up setup of model 
+*Test nsga2 with pyoptsparse wrapper.
 *Added dynamic load balancing option for PredeterminedRunsDriver.
 *Removed getitem() function from System class.
 *Added complex step example to the FD tutorial.
@@ -26,7 +26,6 @@ Features
 Bugfixes
 *Components without outputs now allow linearize to return an empty dict ({}).
 *User can now specify units for ExecComp values.
-*Fixed a bug in pyopt/SNOPT wherein it requires at least one nonlinear constraint.
 *Two_sided_constraints are now supported in ScipyOptimizer.
 *Unit conversions were being reported for pass-by-object variables.
 *Fixed bug in check_setup when connecting array_src to scalar target.
@@ -35,7 +34,7 @@ Bugfixes
 *DOE des-vars with array variables didn't work.
 *optlatinhypercube was missing the load_balance arg.￼ 
 *Fixed bug where RBF interpolator returned NaN when a Jacobian is requested at a point in the training set.
-*Group Finite-Difference with pass-by-object.
+*Fixed a bug where finite difference of a group would error out if there was a pass-by-object param or unknown in any sub-component.
 *All metamodel training data is now params.
 *Bogus unit conversion msg when inputs that share a source have different units.
 *Fixed bug where the size of src_indices could exceed the size of the source.
