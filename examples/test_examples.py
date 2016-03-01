@@ -14,6 +14,9 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
 from openmdao.test.util import assert_rel_error
 
 from beam_tutorial import BeamTutorial
+from fd_comp_example import Model as Model1
+from fd_group_example import Model as Model2
+from fd_model_example import Model as Model3
 from implicit import SimpleImplicitComp
 from implicit_ext_solve import SimpleImplicitComp as SIC2
 from intersect_parabola_line import Balance, Parabola, Line
@@ -285,10 +288,9 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self, top['comp.z'], 2.666667, 1e-5)
 
     def test_fd_comp_example(self):
-        from fd_comp_example import Model
 
         top = Problem()
-        top.root = Model()
+        top.root = Model1()
 
         top.setup(check=False)
         top.root.comp1.print_output = False
@@ -301,10 +303,9 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self, J[0][0], 81.0, 1e-5)
 
     def test_fd_group_example(self):
-        from fd_group_example import Model
 
         top = Problem()
-        top.root = Model()
+        top.root = Model2()
 
         top.setup(check=False)
         top.root.comp1.print_output = False
@@ -317,10 +318,9 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self, J[0][0], 81.0, 1e-5)
 
     def test_fd_model_example(self):
-        from fd_model_example import Model
 
         top = Problem()
-        top.root = Model()
+        top.root = Model3()
 
         top.setup(check=False)
         top.root.comp1.print_output = False
