@@ -4,9 +4,9 @@ Solving an Implicit Relationship with a Newton Solver
 =====================================================
 
 This tutorial will show how to use a solver to drive some unknown in your
-model to zero by varying a param. In the OpenMDAO 0.x, you did this by adding
-a driver (e.g., Newton), putting the relevant components into its workflow,
-and adding parameters for the driven params and equality constraints for the
+model to zero by varying a param. In OpenMDAO 0.x, you did this by adding a
+driver (e.g., Newton), putting the relevant components into its workflow, and
+adding parameters for the driven params and equality constraints for the
 expression to be driven to zero. In OpenMDAO 1.x, you do this by adding a
 component with an implicit equation.
 

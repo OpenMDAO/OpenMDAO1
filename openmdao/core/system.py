@@ -7,7 +7,7 @@ import re
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -1210,16 +1210,21 @@ class System(object):
         Args
         ----
         stream : output stream, optional
-            Stream to write the connection info to. Default is sys.stdout.
+            Stream to write the state info to. Default is sys.stdout.
         """
 
-        for uname, meta in iteritems(self._unknowns_dict):
-            states = []
+        unknowns = self.unknowns
+        states = []
+        for uname in iterkeys(unknowns):
+            meta = unknowns.metadata(uname)
             if meta.get('state'):
                 states.append(uname)
 
         if states:
-            stream.write("\nStates in model:\n")
+            pathname = self.pathname
+            if pathname == '':
+                pathname = 'model'
+            stream.write("\nStates in %s:\n" % pathname)
             unknowns = self.unknowns
             for uname in states:
                 stream.write("%s: %f\n" % (uname, unknowns[uname]))

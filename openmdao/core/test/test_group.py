@@ -545,14 +545,22 @@ class TestGroup(unittest.TestCase):
 
         top = Problem()
         root = top.root = Group()
-        root.add('comp', SimpleImplicitComp())
-        root.ln_solver = ScipyGMRES()
+        sub = root.add('sub', Group())
+        sub.add('comp', SimpleImplicitComp())
+        sub.ln_solver = ScipyGMRES()
         top.setup(check=False)
-        top['comp.z'] = 7.7
+        top['sub.comp.z'] = 7.7
 
         stream = cStringIO()
         root.list_states(stream=stream)
+        self.assertTrue('sub.comp.z: 7.7' in stream.getvalue())
+        self.assertTrue('States in model:' in stream.getvalue())
+
+        stream = cStringIO()
+        sub.list_states(stream=stream)
         self.assertTrue('comp.z: 7.7' in stream.getvalue())
+        self.assertTrue('sub.comp.z' not in stream.getvalue())
+        self.assertTrue('States in sub:' in stream.getvalue())
 
         top = Problem()
         root = top.root = ExampleGroupWithPromotes()
