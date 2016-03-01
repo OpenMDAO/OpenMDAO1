@@ -174,10 +174,10 @@ for things like objectives and constraints.
 
             self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                          z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                     promotes=['z', 'x', 'y1', 'y2'])
+                     promotes=['obj', 'z', 'x', 'y1', 'y2'])
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['y1', 'con1'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['y2', 'con2'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
 
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
@@ -443,7 +443,7 @@ break the connection and use the `StateConnection` component.
             self.connect('d2.y2', 'obj_cmp.y2')
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
             self.connect('d2.y2', 'con_cmp2.y2')
 
             self.nl_solver = Newton()

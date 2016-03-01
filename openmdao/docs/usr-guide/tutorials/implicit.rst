@@ -153,7 +153,7 @@ This component holds both our state and the residual. This component produces
 no explicit outputs, so the `solve_nonlinear` method doesn't do anything (but
 it still must be declared). In the `apply_nonlinear` method, we take the
 difference "y1-y2" and place it in the residual for "x". The derivatives are
-stragithforward.
+straightforward.
 
 Note that the residual equation is not a direct function of the state, but it
 is indirectly a function via y1 and y2. The partial derivative of the

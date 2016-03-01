@@ -1,10 +1,9 @@
-# Simple implicit component example. OpenMDAO solves it.
+# Simple implicit component example. Component and OpenMDAO work together to solve this.
 
 from __future__ import print_function
-
 import numpy as np
 
-from openmdao.api import Component, Group, Problem, ScipyGMRES, Newton, ExecComp, IndepVarComp
+from openmdao.api import Component, Group, Problem, ScipyGMRES, Newton
 
 class SimpleImplicitComp(Component):
     """ A Simple Implicit Component with an additional output equation.
@@ -35,12 +34,30 @@ class SimpleImplicitComp(Component):
         # States
         self.add_state('z', 0.0)
 
+        self.maxiter = 25
+        self.atol = 1.0e-2
+
     def solve_nonlinear(self, params, unknowns, resids):
         """ Simple iterative solve. (Babylonian method)."""
 
         x = params['x']
         z = unknowns['z']
-        unknowns['y'] = x + 2.0*z
+        znew = z
+
+        itercount = 0
+        eps = 1.0e99
+        while itercount < self.maxiter and abs(eps) > self.atol:
+            z = znew
+            znew = 4.0 - x*z
+
+            eps = x*znew + znew - 4.0
+            itercount += 1
+
+        # Our State
+        unknowns['z'] = znew
+
+        # Our Output
+        unknowns['y'] = x + 2.0*znew
 
     def apply_nonlinear(self, params, unknowns, resids):
         """ Don't solve; just calculate the residual."""
@@ -71,12 +88,7 @@ if __name__ == '__main__':
 
     top = Problem()
     root = top.root = Group()
-    root.add('p1', IndepVarComp('x', 0.5))
     root.add('comp', SimpleImplicitComp())
-    root.add('comp2', ExecComp('zz = 2.0*z'))
-
-    root.connect('p1.x', 'comp.x')
-    root.connect('comp.z', 'comp2.z')
 
     root.ln_solver = ScipyGMRES()
     root.nl_solver = Newton()

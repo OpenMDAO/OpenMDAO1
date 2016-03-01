@@ -291,6 +291,42 @@ class TestExamples(unittest.TestCase):
         top.root = Model()
 
         top.setup(check=False)
+        top.root.comp1.print_output = False
+        top.root.comp2.print_output = False
+        top.root.comp3.print_output = False
+        top.root.comp4.print_output = False
+        top.run()
+
+        J = top.calc_gradient(['px.x'], ['comp4.y'])
+        assert_rel_error(self, J[0][0], 81.0, 1e-5)
+
+    def test_fd_group_example(self):
+        from fd_group_example import Model
+
+        top = Problem()
+        top.root = Model()
+
+        top.setup(check=False)
+        top.root.comp1.print_output = False
+        top.root.sub.comp2.print_output = False
+        top.root.sub.comp3.print_output = False
+        top.root.comp4.print_output = False
+        top.run()
+
+        J = top.calc_gradient(['px.x'], ['comp4.y'])
+        assert_rel_error(self, J[0][0], 81.0, 1e-5)
+
+    def test_fd_model_example(self):
+        from fd_model_example import Model
+
+        top = Problem()
+        top.root = Model()
+
+        top.setup(check=False)
+        top.root.comp1.print_output = False
+        top.root.comp2.print_output = False
+        top.root.comp3.print_output = False
+        top.root.comp4.print_output = False
         top.run()
 
         J = top.calc_gradient(['px.x'], ['comp4.y'])

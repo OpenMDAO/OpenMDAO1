@@ -1,6 +1,7 @@
 # Simple implicit component example. Component solves itself.
 
 from __future__ import print_function
+import numpy as np
 
 from openmdao.api import Component, Group, Problem, ScipyGMRES
 
@@ -33,7 +34,7 @@ class SimpleImplicitComp(Component):
         # States
         self.add_state('z', 0.0)
 
-        self.maxiter = 10
+        self.maxiter = 25
         self.atol = 1.0e-12
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -43,18 +44,20 @@ class SimpleImplicitComp(Component):
         z = unknowns['z']
         znew = z
 
-        iter = 0
+        itercount = 0
         eps = 1.0e99
-        while iter < self.maxiter and abs(eps) > self.atol:
+        while itercount < self.maxiter and abs(eps) > self.atol:
             z = znew
             znew = 4.0 - x*z
 
             eps = x*znew + znew - 4.0
+            itercount += 1
 
+        # Our State
         unknowns['z'] = znew
-        unknowns['y'] = x + 2.0*znew
 
-        resids['z'] = eps
+        # Our Output
+        unknowns['y'] = x + 2.0*znew
 
     def apply_nonlinear(self, params, unknowns, resids):
         """ Don't solve; just calculate the residual."""
@@ -92,4 +95,4 @@ if __name__ == '__main__':
 
     top.run()
 
-    print('Solution: x = %f, z = %f' % (top['comp.x'], top['comp.z']))
+    print('Solution: x = %f, z = %f, y = %f' % (top['comp.x'], top['comp.z'], top['comp.y']))
