@@ -17,6 +17,7 @@ from beam_tutorial import BeamTutorial
 from implicit import SimpleImplicitComp
 from implicit_ext_solve import SimpleImplicitComp as SIC2
 from intersect_parabola_line import Balance, Parabola, Line
+from krig_sin import TrigMM
 from paraboloid_example import Paraboloid
 from paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
 from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
@@ -289,11 +290,29 @@ class TestExamples(unittest.TestCase):
         top = Problem()
         top.root = Model()
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         J = top.calc_gradient(['px.x'], ['comp4.y'])
         assert_rel_error(self, J[0][0], 81.0, 1e-5)
+
+    def test_krig_sin(self):
+
+        prob = Problem()
+        prob.root = TrigMM()
+        prob.setup(check=False)
+
+        #traning data is just set manually. No connected input needed, since
+        #  we're assuming the data is pre-existing
+        prob['sin_mm.train:x'] = np.linspace(0,10,20)
+        prob['sin_mm.train:f_x:float'] = np.sin(prob['sin_mm.train:x'])
+        prob['sin_mm.train:f_x:norm_dist'] = np.cos(prob['sin_mm.train:x'])
+
+        prob['sin_mm.x'] = 2.1 #prediction happens at this value
+        prob.run()
+
+        assert_rel_error(self, prob['sin_mm.f_x:float'], 0.8632, 1e-3)
+        assert_rel_error(self, prob['sin_mm.f_x:norm_dist'][0], -0.5048, 1e-3)
 
 if __name__ == "__main__":
     unittest.main()

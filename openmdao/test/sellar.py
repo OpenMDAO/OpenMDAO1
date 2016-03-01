@@ -121,20 +121,20 @@ class SellarNoDerivatives(Group):
     def __init__(self):
         super(SellarNoDerivatives, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        cycle = self.add('cycle', Group(), promotes=['*'])
+        cycle = self.add('cycle', Group(), promotes=['x', 'z', 'y1', 'y2'])
         cycle.ln_solver = ScipyGMRES()
-        cycle.add('d1', SellarDis1(), promotes=['*'])
-        cycle.add('d2', SellarDis2(), promotes=['*'])
+        cycle.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
+        cycle.add('d2', SellarDis2(), promotes=['z', 'y1', 'y2'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0),
-                 promotes=['*'])
+                 promotes=['x', 'z', 'y1', 'y2', 'obj'])
 
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         self.nl_solver = NLGaussSeidel()
         self.cycle.d1.fd_options['force_fd'] = True
@@ -148,18 +148,18 @@ class SellarDerivatives(Group):
     def __init__(self):
         super(SellarDerivatives, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        self.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        self.add('d2', SellarDis2withDerivatives(), promotes=['*'])
+        self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1', 'y2'])
+        self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1', 'y2'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0),
-                 promotes=['*'])
+                 promotes=['obj', 'x', 'z', 'y1', 'y2'])
 
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         self.nl_solver = NLGaussSeidel()
         self.ln_solver = ScipyGMRES()
@@ -171,20 +171,20 @@ class SellarDerivativesGrouped(Group):
     def __init__(self):
         super(SellarDerivativesGrouped, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        mda = self.add('mda', Group(), promotes=['*'])
+        mda = self.add('mda', Group(), promotes=['x', 'z', 'y1', 'y2'])
         mda.ln_solver = ScipyGMRES()
-        mda.add('d1', SellarDis1withDerivatives(), promotes=['*'])
-        mda.add('d2', SellarDis2withDerivatives(), promotes=['*'])
+        mda.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1', 'y2'])
+        mda.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1', 'y2'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                 promotes=['*'])
+                 promotes=['obj', 'x', 'z', 'y1', 'y2'])
 
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         mda.nl_solver = NLGaussSeidel()
         mda.d1.fd_options['force_fd'] = True
@@ -234,13 +234,13 @@ class SellarStateConnection(Group):
     def __init__(self):
         super(SellarStateConnection, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        sub = self.add('sub', Group(), promotes=['*'])
+        sub = self.add('sub', Group(), promotes=['x', 'z', 'y1', 'state_eq.y2_actual', 'state_eq.y2_command', 'd1.y2', 'd2.y2'])
         sub.ln_solver = ScipyGMRES()
 
-        subgrp = sub.add('state_eq_group', Group(), promotes=['*'])
+        subgrp = sub.add('state_eq_group', Group(), promotes=['state_eq.y2_actual', 'state_eq.y2_command'])
         subgrp.ln_solver = ScipyGMRES()
         subgrp.add('state_eq', StateConnection())
 

@@ -443,7 +443,7 @@ break the connection and use the `StateConnection` component.
             self.connect('d2.y2', 'obj_cmp.y2')
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
             self.connect('d2.y2', 'con_cmp2.y2')
 
             self.nl_solver = Newton()
