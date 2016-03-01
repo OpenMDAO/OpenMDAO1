@@ -1,9 +1,13 @@
+""" Unit test for Groups."""
 
 import unittest
 from six import text_type, StringIO, itervalues
+from six.moves import cStringIO
 
 from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, ScipyGMRES
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
+from openmdao.test.simple_comps import SimpleImplicitComp
+
 
 class TestGroup(unittest.TestCase):
 
@@ -537,6 +541,25 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(p.root.list_auto_order()[0], ['C1', 'C3', 'C2'])
 
+    def test_list_states(self):
 
+        top = Problem()
+        root = top.root = Group()
+        root.add('comp', SimpleImplicitComp())
+        root.ln_solver = ScipyGMRES()
+        top.setup(check=False)
+        top['comp.z'] = 7.7
+
+        stream = cStringIO()
+        root.list_states(stream=stream)
+        self.assertTrue('comp.z: 7.7' in stream.getvalue())
+
+        top = Problem()
+        root = top.root = ExampleGroupWithPromotes()
+        top.setup(check=False)
+
+        stream = cStringIO()
+        root.list_states(stream=stream)
+        self.assertTrue('No states in model.' in stream.getvalue())
 if __name__ == "__main__":
     unittest.main()
