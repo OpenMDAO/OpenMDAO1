@@ -100,9 +100,6 @@ class Balance(Component):
     def linearize(self, params, unknowns, resids):
         """ Jacobian for our parabola."""
 
-        y1 = params['y1']
-        y2 = params['y2']
-
         J = {}
         J['x', 'y1'] = 1.0
         J['x', 'y2'] = -1.0

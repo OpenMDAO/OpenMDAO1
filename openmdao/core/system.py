@@ -1220,17 +1220,17 @@ class System(object):
             if meta.get('state'):
                 states.append(uname)
 
+        pathname = self.pathname
+        if pathname == '':
+            pathname = 'model'
         if states:
-            pathname = self.pathname
-            if pathname == '':
-                pathname = 'model'
             stream.write("\nStates in %s:\n" % pathname)
             unknowns = self.unknowns
             for uname in states:
                 stream.write("%s: %f\n" % (uname, unknowns[uname]))
             stream.write("\n")
         else:
-            stream.write("\nNo states in model.\n")
+            stream.write("\nNo states in %s.\n" % pathname)
 
 
 class _DummyContext(object):

@@ -570,5 +570,9 @@ class TestGroup(unittest.TestCase):
         root.list_states(stream=stream)
         self.assertTrue('No states in model.' in stream.getvalue())
 
+        stream = cStringIO()
+        root.G2.list_states(stream=stream)
+        self.assertTrue('No states in G2.' in stream.getvalue())
+
 if __name__ == "__main__":
     unittest.main()
