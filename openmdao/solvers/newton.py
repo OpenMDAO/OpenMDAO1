@@ -52,8 +52,8 @@ class Newton(NonLinearSolver):
         # Only one choice, but the user could write their own.
         self.line_search = BackTracking()
 
-        # User can slot a linear solver into Newton. Default is to use the
-        # parent's solver.
+        # User can specify a different linear solver for Newton. Default is
+        # to use the parent's solver.
         self.ln_solver = None
 
     def setup(self, sub):

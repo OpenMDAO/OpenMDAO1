@@ -1152,7 +1152,7 @@ class Problem(object):
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', dv_scale=None, cn_scale=None,
                       sparsity=None):
-        """ Returns the gradient for the system that is slotted in
+        """ Returns the gradient for the system that is specified in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
 
@@ -1212,8 +1212,8 @@ class Problem(object):
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
                           dv_scale=None, cn_scale=None, sparsity=None):
-        """ Returns the finite differenced gradient for the system that is slotted in
-        self.root.
+        """ Returns the finite differenced gradient for the system that is
+        specified in self.root.
 
         Args
         ----
@@ -1375,7 +1375,7 @@ class Problem(object):
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
                                  dv_scale=None, cn_scale=None, sparsity=None):
-        """ Returns the gradient for the system that is slotted in
+        """ Returns the gradient for the system that is specified in
         self.root. The gradient is calculated using root.ln_solver.
 
         Args

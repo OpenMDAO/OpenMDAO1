@@ -4,11 +4,9 @@ Solving an Implicit Relationship with a Newton Solver
 =====================================================
 
 This tutorial will show how to use a solver to drive some unknown in your
-model to zero by varying a param. In OpenMDAO 0.x, you did this by adding a
-driver (e.g., Newton), putting the relevant components into its workflow, and
-adding parameters for the driven params and equality constraints for the
-expression to be driven to zero. In OpenMDAO 1.x, you do this by adding a
-component with an implicit equation.
+model to zero by varying a param. In OpenMDAO you do this by adding a
+component with an implicit equation, and specifying a nonlinear solver in the
+containing group.
 
 We will illustrate this with a simple problem.
 
@@ -181,10 +179,32 @@ Here we connect the output of the Line and Parabola component to the params
 of the Balance component. The state on "Balance" feeds the params on both
 components.
 
-To solve this system, we need to slot a specify a solver in "root.nl_solver".
-The Newton solver is well-suited for solving this sort of problem, and is the
-solver you will generally use when solving any system with an implicit state.
-The Newton solver requires gradients and calculates them through use of the
+To solve this system, we need to specify a nonlinear solver in
+"root.nl_solver". There are two types of solvers in OpenMDAO: nonlinear
+solvers and linear solvers.
+
+A nonlinear solver is used to drive residuals to zero by varying other
+quantities in your model. The quantities that are varied by the nonlinear
+solver include all states, but also include any cyclic params on the first
+component in a cycle. Every unknown in OpenMDAO has a corresponding residual
+and the nonlinear solver seeks to drive the norm of all the residuals to
+zero.
+
+A linear solver solves the linearized system of equations in order to
+calculate a gradient (though there are some other uses too such as
+preconditioning.)
+
+Every `Group` contains a linear solver in `ln_solver` and a nonlinear solver
+in `nl_solver'.` The default nonliinear solver is called `RunOnce` which just
+runs the components in the group one time without driving the residuals to
+zero. The default linear solver is `LinearGaussSeidel`, which is an adequate
+chain rule solution for the gradient, but must be replaced if your model has
+cycles or states.
+
+The Newton solver is well-suited for solving this sort of
+problem, and is the solver you will generally use when solving any system
+with an implicit state, so we specify Newton in "root.nl_solver". The Newton
+solver requires gradients and calculates them through use of the linear
 solver in "root.ln_solver". The default solver is LinearGaussSeidel, but to
 calculate the gradients across a system with implicit states, we should use
 the `ScipyGMRES` linear solver, which handles the coupled problem by solving
@@ -234,7 +254,7 @@ We can find both solutions then:
 
 OpenMDAO provides a function `list_states` that lists all the states
 contained in a group and all of its subgroups. This can be useful in larger
-nested models that have lots of implicit components. Since your initial state
+nested models that have many implicit components. Since your initial state
 potentially feeds the initial params in other components, it is important to
 inspect them to make sure they are correct.
 

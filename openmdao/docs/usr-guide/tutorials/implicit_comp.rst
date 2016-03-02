@@ -26,7 +26,7 @@ the state is typically determined by numerically solving the residual
 equation, or in other words, iterating on the state until the residual is
 driven to zero.
 
-Some equations can easily be converted from explicit to implicit, but there
+Some equations can easily be converted from implicit to explicit, but there
 are cases that are difficult or impossible to represent in an explicit form,
 so for that reason we support implicit equations.
 
@@ -209,7 +209,7 @@ Now, let's put the implicit component into a simple model and run it.
 Note that we need to specify ScipyGMRES as our linear solver as we need one
 that can handle implicit states. We aren't actually calculating any
 derivatives here, but if we wanted to, for example, place this in a larger
-model and optimizer it, GMRES would be needed here so we add it.
+model and optimize it, GMRES would be needed here so we add it.
 
 .. testoutput:: Implicit
    :options: +ELLIPSIS
