@@ -157,7 +157,7 @@ class SellarDerivativesSuperGroup(Group):
 
 class MPITests2(MPITestCase):
 
-    N_PROCS = 2
+    N_PROCS = 4
 
     def setUp(self):
         if impl is None:
