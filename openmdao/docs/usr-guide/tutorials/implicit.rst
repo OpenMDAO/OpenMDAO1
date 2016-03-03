@@ -18,10 +18,10 @@ We would like to find their intersection.
 
 .. figure:: intersect.png
    :align: center
-   :alt: Intersection of a line and parabola (courtesy of Wolfram Alpha).
+   :alt: Intersection of a line and parabola.
 
-Plugging this into Wolfram Alpha gives the solution above. We will implement
-this in OpenMDAO and find both solutions.
+Thie figure above shows that there are two solutions to this problem. We will
+implement this in OpenMDAO and find both solutions.
 
 For our approach, we will consider the line and parabola as separate
 disciplines, each requiring its own `Component` definition that takes a value
