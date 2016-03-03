@@ -191,7 +191,7 @@ class MPITests2(MPITestCase):
 
         top.driver = ScipyOptimizer()
         top.driver = pyOptSparseDriver()
-        if OPTIMIZER == 'SLSQP':
+        if OPTIMIZER == 'SNOPT':
             top.driver.options['optimizer'] = 'SNOPT'
             top.driver.opt_settings['Verify level'] = 0
             top.driver.opt_settings['Print file'] = 'SNOPT_print_petsctest.out'
