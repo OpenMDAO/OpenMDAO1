@@ -8,6 +8,7 @@ from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel, \
                          Component, ParallelGroup, ScipyGMRES
 from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver
 from openmdao.test.mpi_util import MPITestCase
+from openmdao.test.util import assert_rel_error
 
 try:
     from openmdao.solvers.petsc_ksp import PetscKSP
@@ -15,7 +16,6 @@ try:
 except ImportError:
     impl = None
 
-from openmdao.test.util import assert_rel_error
 
 
 class SellarDis1(Component):
@@ -161,6 +161,7 @@ class MPITests2(MPITestCase):
 
     def setUp(self):
         if impl is None:
+            import unittest
             raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
     def test_run(self):
