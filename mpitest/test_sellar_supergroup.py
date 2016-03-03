@@ -124,8 +124,8 @@ class SellarDerivativesSubGroup(Group):
         self.nl_solver = NLGaussSeidel()
         self.nl_solver.options['atol'] = 1.0e-12
 
-        self.ln_solver = PetscKSP()
-        # self.ln_solver = ScipyGMRES()
+        if impl is not None:
+            self.ln_solver = PetscKSP()
 
 
 class SellarDerivativesSuperGroup(Group):
