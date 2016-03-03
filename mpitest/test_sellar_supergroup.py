@@ -7,7 +7,7 @@ import numpy as np
 
 from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel, \
                          Component, ParallelGroup, ScipyGMRES
-from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver
+from openmdao.api import Problem, ScipyOptimizer
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error
 
@@ -17,6 +17,22 @@ try:
 except ImportError:
     impl = None
 
+try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SNOPT')
+        OPTIMIZER = 'SNOPT'
+    except:
+        try:
+            OPT('SLSQP')
+            OPTIMIZER = 'SLSQP'
+        except:
+            pass
+except:
+    pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class SellarDis1(Component):
@@ -164,6 +180,9 @@ class MPITests2(MPITestCase):
         if impl is None:
             raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
     def test_run(self):
 
         nProblems = 4
@@ -172,11 +191,14 @@ class MPITests2(MPITestCase):
 
         top.driver = ScipyOptimizer()
         top.driver = pyOptSparseDriver()
-        top.driver.options['optimizer'] = 'SNOPT'
-        top.driver.opt_settings['Verify level'] = 0
-        top.driver.opt_settings['Print file'] = 'SNOPT_print_petsctest.out'
-        top.driver.opt_settings['Summary file'] = 'SNOPT_summary_petsctest.out'
-        top.driver.opt_settings['Major iterations limit'] = 1000
+        if OPTIMIZER == 'SLSQP':
+            top.driver.options['optimizer'] = 'SNOPT'
+            top.driver.opt_settings['Verify level'] = 0
+            top.driver.opt_settings['Print file'] = 'SNOPT_print_petsctest.out'
+            top.driver.opt_settings['Summary file'] = 'SNOPT_summary_petsctest.out'
+            top.driver.opt_settings['Major iterations limit'] = 1000
+        else:
+            top.driver.options['optimizer'] = 'SLSQP'
 
         top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
                              upper=np.array([10.0, 10.0]))
