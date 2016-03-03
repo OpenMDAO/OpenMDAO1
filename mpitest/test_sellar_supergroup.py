@@ -1,4 +1,4 @@
-""" Test from Andrew Ning's student, who found a bug in the Petsc KSP setup."""
+""" Test from Andrew Ning's student, who found a bug in the Petsc KSP setup. """
 
 from __future__ import print_function
 import unittest
