@@ -114,6 +114,9 @@ class PetscKSP(LinearSolver):
     def setup(self, system):
         """ Setup petsc problem just once."""
 
+        if not system.is_active():
+            return
+
         lsize = np.sum(system._local_unknown_sizes[None][system.comm.rank, :])
         size = np.sum(system._local_unknown_sizes[None])
         if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
