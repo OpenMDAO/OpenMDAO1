@@ -1,6 +1,7 @@
 """ Test from Andrew Ning's student, who found a bug in the Petsc KSP setup."""
 
 from __future__ import print_function
+import unittest
 
 import numpy as np
 
@@ -161,7 +162,6 @@ class MPITests2(MPITestCase):
 
     def setUp(self):
         if impl is None:
-            import unittest
             raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
     def test_run(self):
