@@ -17,6 +17,8 @@ try:
 except ImportError:
     impl = None
 
+OPT = None
+OPTIMIZER = None
 try:
     from pyoptsparse import OPT
     try:
