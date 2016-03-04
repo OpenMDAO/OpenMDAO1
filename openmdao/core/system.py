@@ -7,7 +7,7 @@ import re
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -1202,6 +1202,36 @@ class System(object):
                 _list_conns(c, c.pathname)
         else:
             _list_conns(self, '')
+
+    def list_states(self, stream=sys.stdout):
+        """
+        Recursively list all states and their initial values.
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the state info to. Default is sys.stdout.
+        """
+
+        unknowns = self.unknowns
+        states = []
+        for uname in iterkeys(unknowns):
+            meta = unknowns.metadata(uname)
+            if meta.get('state'):
+                states.append(uname)
+
+        pathname = self.pathname
+        if pathname == '':
+            pathname = 'model'
+        if states:
+            stream.write("\nStates in %s:\n" % pathname)
+            unknowns = self.unknowns
+            for uname in states:
+                stream.write("%s: %f\n" % (uname, unknowns[uname]))
+            stream.write("\n")
+        else:
+            stream.write("\nNo states in %s.\n" % pathname)
+
 
 class _DummyContext(object):
     """Used in place of DirContext for those systems that don't define their

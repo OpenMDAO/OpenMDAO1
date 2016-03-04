@@ -17,17 +17,21 @@ class SimpleComp(Component):
         # Unknowns
         self.add_output('y', 0.0)
 
+        self.print_output = True
+
     def solve_nonlinear(self, params, unknowns, resids):
         """ Doesn't do much.  Just multiply by 3"""
         unknowns['y'] = 3.0*params['x']
-        print('Execute', self.name)
+        if self.print_output:
+            print('Execute', self.name)
 
     def linearize(self, params, unknowns, resids):
         """Analytical derivatives."""
 
         J = {}
         J[('y', 'x')] = 3.0
-        print('Calculate Derivatives:', self.name)
+        if self.print_output:
+            print('Calculate Derivatives:', self.name)
         return J
 
 

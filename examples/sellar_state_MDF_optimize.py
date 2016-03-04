@@ -4,7 +4,7 @@ and replaces it with an implicit component."""
 import numpy as np
 
 from openmdao.api import Component, Group, IndepVarComp, \
-    ExecComp, Newton
+    ExecComp, Newton, ScipyGMRES
 
 
 class SellarDis1(Component):
@@ -130,8 +130,8 @@ class SellarStateConnection(Group):
     def __init__(self):
         super(SellarStateConnection, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
         self.add('state_eq', StateConnection())
         self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
@@ -145,11 +145,12 @@ class SellarStateConnection(Group):
                   promotes=['x', 'z', 'y1', 'obj'])
         self.connect('d2.y2', 'obj_cmp.y2')
 
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
         self.connect('d2.y2', 'con_cmp2.y2')
 
         self.nl_solver = Newton()
+        self.ln_solver = ScipyGMRES()
 
 
 if __name__ == '__main__':

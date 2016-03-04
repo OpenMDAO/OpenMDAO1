@@ -647,7 +647,7 @@ class Group(System):
 
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
         """
-        Solves the group using the slotted nl_solver.
+        Solves the group using the nonlinear solver specified in self.nl_solver.
 
         Args
         ----

@@ -91,18 +91,18 @@ class SellarDerivatives(Group):
     def __init__(self):
         super(SellarDerivatives, self).__init__()
 
-        self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        self.add('d1', SellarDis1(), promotes=['*'])
-        self.add('d2', SellarDis2(), promotes=['*'])
+        self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
+        self.add('d2', SellarDis2(), promotes=['z', 'y1', 'y2'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]) ),
-                 promotes=['*'])
+                 promotes=['obj', 'x', 'z', 'y1', 'y2'])
 
-        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         self.nl_solver = NLGaussSeidel()
         self.nl_solver.options['atol'] = 1.0e-12
@@ -148,4 +148,3 @@ if __name__ == '__main__':
                                              top['x']))
     print("Coupling vars: %f, %f" % (top['y1'], top['y2']))
     print("Minimum objective: ", top['obj'])
-    

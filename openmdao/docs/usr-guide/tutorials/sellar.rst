@@ -166,18 +166,18 @@ for things like objectives and constraints.
         def __init__(self):
             super(SellarDerivatives, self).__init__()
 
-            self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+            self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-            self.add('d1', SellarDis1(), promotes=['*'])
-            self.add('d2', SellarDis2(), promotes=['*'])
+            self.add('d1', SellarDis1(), promotes=['z', 'x', 'y1', 'y2'])
+            self.add('d2', SellarDis2(), promotes=['z', 'y1', 'y2'])
 
             self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                          z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                     promotes=['*'])
+                     promotes=['obj', 'z', 'x', 'y1', 'y2'])
 
-            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
+            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['y1', 'con1'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
 
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
@@ -191,16 +191,9 @@ with the IndepVarComps, then adding our disciplines, and finishing with the obje
 
 We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
-promote '*', that means that every `param` and `unknown` is available in the
+promote a variable, that means that it is available in the
 parent system. Thus, if you wanted to connect something to variable `y1`, you
-would address it with the string `y1` instead of `dis1.y1`. Note that as models
-become more complicated, using promote '*' everywhere can result in connections
-that you don't intend, so be careful when using it.  The following is
-also valid
-
-::
-
-    self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
+would address it with the string `y1` instead of `dis1.y1`.
 
 In this case, our two disciplines both promote `y1` and `y2.` Discipline 1 provides
 `y1` as a source and discipline 2 needs it as a `param`, so when both of them
@@ -225,7 +218,7 @@ outputs objective and constraint variables.
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                 promotes=['*'])
+                 promotes=['z', 'x', 'y1', 'y2'])
 
 This creates a component named 'obj_comp' with inputs 'x', 'z', 'y1', and
 'y2', and with output 'obj'. The first argument is a string expression that contains the function.
@@ -435,8 +428,8 @@ break the connection and use the `StateConnection` component.
         def __init__(self):
             super(SellarStateConnection, self).__init__()
 
-            self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
+            self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
             self.add('state_eq', StateConnection())
             self.add('d1', SellarDis1(), promotes=['x', 'z', 'y1'])
@@ -449,7 +442,7 @@ break the connection and use the `StateConnection` component.
                       promotes=['x', 'z', 'y1', 'obj'])
             self.connect('d2.y2', 'obj_cmp.y2')
 
-            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
+            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
             self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
             self.connect('d2.y2', 'con_cmp2.y2')
 

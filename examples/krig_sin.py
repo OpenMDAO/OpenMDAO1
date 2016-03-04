@@ -18,19 +18,21 @@ class TrigMM(Group):
         sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
 
 
-prob = Problem()
-prob.root = TrigMM()
-prob.setup()
+if __name__ == '__main__':
 
-#traning data is just set manually. No connected input needed, since
-#  we're assuming the data is pre-existing
-prob['sin_mm.train:x'] = np.linspace(0,10,20)
-prob['sin_mm.train:f_x:float'] = np.sin(prob['sin_mm.train:x'])
-prob['sin_mm.train:f_x:norm_dist'] = np.cos(prob['sin_mm.train:x'])
+    prob = Problem()
+    prob.root = TrigMM()
+    prob.setup()
 
-prob['sin_mm.x'] = 2.1 #prediction happens at this value
-prob.run()
-print('float predicted:', '%3.4f'%prob['sin_mm.f_x:float']) #predicted value
-print('float actual: ', '%3.4f'%np.sin(2.1))
-print('norm_dist predicted:', '%3.4f,'%prob['sin_mm.f_x:norm_dist'][0], '%3.4e'%prob['sin_mm.f_x:norm_dist'][1]) #predicted value
-print('norm_dist actual: ', '%3.4f'%np.cos(2.1))
+    #traning data is just set manually. No connected input needed, since
+    #  we're assuming the data is pre-existing
+    prob['sin_mm.train:x'] = np.linspace(0,10,20)
+    prob['sin_mm.train:f_x:float'] = np.sin(prob['sin_mm.train:x'])
+    prob['sin_mm.train:f_x:norm_dist'] = np.cos(prob['sin_mm.train:x'])
+
+    prob['sin_mm.x'] = 2.1 #prediction happens at this value
+    prob.run()
+    print('float predicted:', '%3.4f'%prob['sin_mm.f_x:float']) #predicted value
+    print('float actual: ', '%3.4f'%np.sin(2.1))
+    print('norm_dist predicted:', '%3.4f,'%prob['sin_mm.f_x:norm_dist'][0], '%3.4e'%prob['sin_mm.f_x:norm_dist'][1]) #predicted value
+    print('norm_dist actual: ', '%3.4f'%np.cos(2.1))

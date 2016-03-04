@@ -732,7 +732,7 @@ class Driver(object):
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', sparsity=None):
-        """ Returns the scaled gradient for the system that is slotted in
+        """ Returns the scaled gradient for the system that is contained in
         self.root, scaled by all scalers that were specified when the desvars
         and constraints were added.
 

@@ -12,6 +12,8 @@ Tutorials
    tutorials/sellar.rst
    tutorials/recording.rst
    tutorials/doe-drivers.rst
+   tutorials/implicit_comp.rst
+   tutorials/implicit.rst
    tutorials/file-passing.rst
    tutorials/external-code-tutorial.rst
    tutorials/file-wrapping-tutorial.rst
