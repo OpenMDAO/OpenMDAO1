@@ -211,7 +211,7 @@ class MPITests2(MPITestCase):
         top.driver.add_constraint('con2', upper=0.0)
 
         top.root.ln_solver.options['single_voi_relevance_reduction'] = True
-        top.setup(check=True)
+        top.setup(check=False)
 
         # Setting initial values for design variables
         top['x'] = 1.0
