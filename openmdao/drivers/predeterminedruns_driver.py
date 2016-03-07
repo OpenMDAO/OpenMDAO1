@@ -254,7 +254,11 @@ class PredeterminedRunsDriver(Driver):
                     break
                 size, offset = self._id_map[i]
                 for j in range(size):
+                    if trace:
+                        debug('Sending Seed case %d, %d' % (i, j))
                     comm.send(case, j+offset, tag=1)
+                    if trace:
+                        debug('Seed Case Sent %d, %d' % (i, j))
                     cases[i]['count'] += 1
                     sent += 1
 
@@ -262,7 +266,11 @@ class PredeterminedRunsDriver(Driver):
             if sent > 0:
                 more_cases = True
                 while True:
-                    worker, p, u, r, meta = comm.recv()
+                    if trace:
+                        debug("Waiting on case")
+                    worker, p, u, r, meta = comm.recv(tag=2)
+                    if trace:
+                        debug("Case Recieved from Worker %d" % worker )
                     received += 1
                     caseinfo = cases[doe_ids[worker]]
                     caseinfo['count'] -= 1
@@ -282,7 +290,11 @@ class PredeterminedRunsDriver(Driver):
                             else:
                                 size, offset = self._id_map[doe_ids[worker]]
                                 for j in range(size):
+                                    if trace:
+                                        debug("Sending New Case to Worker %d" % worker )
                                     comm.send(case, j+offset, tag=1)
+                                    if trace:
+                                        debug("Case Sent to Worker %d" % worker )
                                     cases[doe_ids[worker]]['count'] += 1
                                     sent += 1
 
@@ -291,12 +303,20 @@ class PredeterminedRunsDriver(Driver):
 
             # tell all workers to stop
             for rank in range(1, self._full_comm.size):
+                if trace:
+                    debug("Make Worker Stop on Rank %d" % rank )
                 comm.isend(None, rank, tag=1)
+                if trace:
+                    debug("Worker has Stopped on Rank %d" % rank )
 
         else:   # worker
             while True:
                 # wait on a case from the master
+                if trace:
+                    debug("Receiving Case from Master")
                 case = comm.recv(source=0, tag=1)
+                if trace:
+                    debug("Case Received from Master")
                 if case is None: # we're done
                     break
                 # yield the case so it can be executed
@@ -305,4 +325,8 @@ class PredeterminedRunsDriver(Driver):
                 params, unknowns, resids = self.recorders._get_local_case_data(self.root)
 
                 # tell the master we're done with that case and send local vars
-                comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0)
+                if trace:
+                    debug("Send Master Local Vars")
+                comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0, tag=2)
+                if trace:
+                    debug("Local Vars Sent to Master")
