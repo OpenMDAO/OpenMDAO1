@@ -1214,6 +1214,7 @@ class System(object):
         """
 
         unknowns = self.unknowns
+        resids = self.resids
         states = []
         for uname in iterkeys(unknowns):
             meta = unknowns.metadata(uname)
@@ -1224,11 +1225,16 @@ class System(object):
         if pathname == '':
             pathname = 'model'
         if states:
-            stream.write("\nStates in %s:\n" % pathname)
+            stream.write("\nStates in %s:\n\n" % pathname)
             unknowns = self.unknowns
             for uname in states:
-                stream.write("%s: %f\n" % (uname, unknowns[uname]))
-            stream.write("\n")
+                stream.write("%s\n" % uname)
+                stream.write("Value: ")
+                stream.write(str(unknowns[uname]))
+                stream.write('\n')
+                stream.write("Residual: ")
+                stream.write(str(resids[uname]))
+                stream.write('\n\n')
         else:
             stream.write("\nNo states in %s.\n" % pathname)
 
