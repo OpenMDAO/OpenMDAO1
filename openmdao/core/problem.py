@@ -328,10 +328,14 @@ class Problem(object):
                     if None in filt:
                         filt.remove(None)
                     if filt:
-                        raise RuntimeError("The following sourceless "
-                            "connected inputs have different units: %s" %
-                            sorted([(tgt,params_dict[tgt].get('units'))]+
-                                                                diff_units))
+                        msg = "The following sourceless connected inputs have different " + \
+                              "units: %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
+                                                   diff_units)
+                        correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
+                        msg += " Connect '%s' to the output of an IndepVarComp" % correct_src + \
+                               " to ensure that units are converted properly."
+
+                        raise RuntimeError(msg)
                 if diff_vals:
                     msg = ("The following sourceless connected inputs have "
                            "different initial values: "

@@ -56,9 +56,24 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "The following sourceless connected inputs have different units: "
-                             "[('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]")
+            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]. Connect 'G1.G2.C1.x' to the output of an IndepVarComp to ensure that units are converted properly."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
+    def test_diff_conn_input_units_swap(self):
+        # set different but compatible units
+        self.C1._init_params_dict['x']['units'] = 'ft'
+        self.C3._init_params_dict['x']['units'] = 'in'
+
+        # connect two inputs
+        self.p.root.connect('G3.G4.C3.x', 'G1.G2.C1.x')
+
+        try:
+            self.p.setup(check=False)
+        except Exception as err:
+            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]. Connect 'G3.G4.C3.x' to the output of an IndepVarComp to ensure that units are converted properly."
+            self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
 
@@ -389,6 +404,36 @@ class TestConnectionsPromoted(unittest.TestCase):
         p.run()
         self.assertEqual(p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(p.root.G3.G4.C4.params['x'], 999.)
+
+    def test_unit_conv_message(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add("C1", ExecComp('y=x*2.0', units={'x':'ft'}), promotes=['x'])
+        root.add("C2", ExecComp('y=x*2.0', units={'x':'in'}), promotes=['x'])
+        root.add("C3", ExecComp('y=x*2.0', units={'x':'m'}), promotes=['x'])
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            msg = "The following sourceless connected inputs have different units: [('C1.x', 'ft'), ('C2.x', 'in'), ('C3.x', 'm')]. Connect 'x' to the output of an IndepVarComp to ensure that units are converted properly."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
+        # Remedy the problem with an Indepvarcomp
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add("C1", ExecComp('y=x*2.0', units={'x':'ft'}), promotes=['x'])
+        root.add("C2", ExecComp('y=x*2.0', units={'x':'in'}), promotes=['x'])
+        root.add("C3", ExecComp('y=x*2.0', units={'x':'m'}), promotes=['x'])
+        root.add('p', IndepVarComp('x', 1.0), promotes=['x'])
+
+        prob.setup(check=False)
+
 
 class TestUBCS(unittest.TestCase):
 
