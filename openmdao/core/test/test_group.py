@@ -4,7 +4,10 @@ import unittest
 from six import text_type, StringIO, itervalues
 from six.moves import cStringIO
 
-from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, ScipyGMRES
+import numpy as np
+
+from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, ScipyGMRES, \
+     Component
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 from openmdao.test.simple_comps import SimpleImplicitComp
 
@@ -553,12 +556,16 @@ class TestGroup(unittest.TestCase):
 
         stream = cStringIO()
         root.list_states(stream=stream)
-        self.assertTrue('sub.comp.z: 7.7' in stream.getvalue())
+        self.assertTrue('sub.comp.z' in stream.getvalue())
+        self.assertTrue('Value: 7.7' in stream.getvalue())
+        self.assertTrue('Residual: 0.0' in stream.getvalue())
         self.assertTrue('States in model:' in stream.getvalue())
 
         stream = cStringIO()
         sub.list_states(stream=stream)
-        self.assertTrue('comp.z: 7.7' in stream.getvalue())
+        self.assertTrue('comp.z' in stream.getvalue())
+        self.assertTrue('Value: 7.7' in stream.getvalue())
+        self.assertTrue('Residual: 0.0' in stream.getvalue())
         self.assertTrue('sub.comp.z' not in stream.getvalue())
         self.assertTrue('States in sub:' in stream.getvalue())
 
@@ -573,6 +580,43 @@ class TestGroup(unittest.TestCase):
         stream = cStringIO()
         root.G2.list_states(stream=stream)
         self.assertTrue('No states in G2.' in stream.getvalue())
+
+        class ArrayImplicitComp(Component):
+            """ Needed to test arrays here. """
+
+            def __init__(self):
+                super(ArrayImplicitComp, self).__init__()
+
+                # Params
+                self.add_param('x', np.zeros((3, 1)))
+
+                # Unknowns
+                self.add_output('y', np.zeros((3, 1)))
+
+                # States
+                self.add_state('z', 2.0*np.ones((3, 1)), lower=1.5, upper=np.array([2.5, 2.6, 2.7]))
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                pass
+
+            def apply_nonlinear(self, params, unknowns, resids):
+                """ Don't solve; just calculate the residual."""
+                pass
+
+            def linearize(self, params, unknowns, resids):
+                """Analytical derivatives."""
+                pass
+
+        top = Problem()
+        root = top.root = Group()
+        root.add('comp', ArrayImplicitComp())
+        root.ln_solver.options['maxiter'] = 2
+        top.setup(check=False)
+
+        stream = cStringIO()
+        root.list_states(stream=stream)
+        base = 'States in model:\n\ncomp.z\nValue: [[ 2.]\n [ 2.]\n [ 2.]]\nResidual: [[ 0.]\n [ 0.]\n [ 0.]]'
+        self.assertTrue(base in stream.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
