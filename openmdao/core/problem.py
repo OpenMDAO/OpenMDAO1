@@ -1098,6 +1098,22 @@ class Problem(object):
                 self.root.comm.barrier()
                 if trace: debug("problem run() comm.barrier DONE")
 
+    def run_once(self):
+        """ Execute run_once in the driver, executing the model at the
+        the current design point. """
+        if self.root.is_active():
+            self.driver.run_once(self)
+
+            # if we're running under MPI, ensure that all of the processes
+            # are finished in order to ensure that scripting code outside of
+            # Problem doesn't attempt to access variables or files that have
+            # not finished updating.  This can happen with FileRef vars and
+            # potentially other pass_by_obj variables.
+            if MPI:
+                if trace: debug("waiting on problem run() comm.barrier")
+                self.root.comm.barrier()
+                if trace: debug("problem run() comm.barrier DONE")
+
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
         first. If that is 'auto', then the mode in root.ln_options takes
@@ -1713,7 +1729,7 @@ class Problem(object):
 
         if self.driver.iter_count < 1:
             out_stream.write('Executing model to populate unknowns...\n\n')
-            self.driver.run_once(self)
+            self.run_once()
 
         # Linearize the model
         root._sys_linearize(root.params, root.unknowns, root.resids)
@@ -1884,7 +1900,7 @@ class Problem(object):
 
         if driver.iter_count < 1:
             out_stream.write('Executing model to populate unknowns...\n\n')
-            driver.run_once(self)
+            self.run_once()
 
         if out_stream is not None:
             out_stream.write('Total Derivatives Check\n\n')
