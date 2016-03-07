@@ -328,12 +328,22 @@ class Problem(object):
                     if None in filt:
                         filt.remove(None)
                     if filt:
-                        msg = "The following sourceless connected inputs have different " + \
-                              "units: %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
-                                                   diff_units)
+                        proms = set([params_dict[item]['top_promoted_name'] \
+                                     for item in connected_inputs])
+
+                        # All params are promoted, so extra message for clarity.
+                        if len(proms) == 1:
+                            msg = "The following connected inputs are promoted to " + \
+                                "'%s', but have different units" % proms.pop()
+                        else:
+                            msg = "The following sourceless connected inputs have different " + \
+                                  "units"
+
+                        msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
+                                                diff_units)
                         correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
-                        msg += " Connect '%s' to the output of an IndepVarComp" % correct_src + \
-                               " to ensure that units are converted properly."
+                        msg += " Connect '%s' to src (such as an IndepVarComp)" % correct_src + \
+                               " with defined units."
 
                         raise RuntimeError(msg)
                 if diff_vals:

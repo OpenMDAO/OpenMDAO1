@@ -56,7 +56,7 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G1.G2.C1.x' to the output of an IndepVarComp to ensure that units are converted properly."
+            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G1.G2.C1.x' to src (such as an IndepVarComp) with defined units."
             self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
@@ -72,7 +72,7 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G3.G4.C3.x' to the output of an IndepVarComp to ensure that units are converted properly."
+            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G3.G4.C3.x' to src (such as an IndepVarComp) with defined units."
             self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
@@ -417,7 +417,7 @@ class TestConnectionsPromoted(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            msg = "The following sourceless connected inputs have different units: [('C1.x', 'ft'), ('C2.x', 'inch'), ('C3.x', 'm')]. Connect 'x' to the output of an IndepVarComp to ensure that units are converted properly."
+            msg = "The following connected inputs are promoted to 'x', but have different units: [('C1.x', 'ft'), ('C2.x', 'inch'), ('C3.x', 'm')]. Connect 'x' to src (such as an IndepVarComp) with defined units."
             self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
