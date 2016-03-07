@@ -72,7 +72,7 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]. Connect 'G3.G4.C3.x' to the output of an IndepVarComp to ensure that units are converted properly."
+            msg = "The following sourceless connected inputs have different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G3.G4.C3.x' to the output of an IndepVarComp to ensure that units are converted properly."
             self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")

@@ -19,7 +19,7 @@ class TestUnitComp(unittest.TestCase):
     def test_invalid_unit(self):
         prob = Problem()
         prob.root = Group()
-        prob.root.add('uc', UnitComp(shape=1, param_name='inch', out_name='out', units='junk'))
+        prob.root.add('uc', UnitComp(shape=1, param_name='in', out_name='out', units='junk'))
         prob.root.add('pc', IndepVarComp('x', 0., units='ft'))
         prob.root.connect('pc.x', 'uc.in')
 
