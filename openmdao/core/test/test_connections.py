@@ -459,7 +459,9 @@ class TestConnSetup(unittest.TestCase):
 
         stream = cStringIO()
         results = top.setup(check=True, out_stream=stream)
-        self.assertEqual(results['unit_diffs'], [(('src1.x', 'sink2.x'), ('m', 'mm'))])
+
+        # Not in standard setup anymore
+        self.assertTrue('unit_diffs' not in results)
 
 if __name__ == "__main__":
     unittest.main()
