@@ -336,7 +336,7 @@ class Problem(object):
                             msg = "The following connected inputs are promoted to " + \
                                 "'%s', but have different units" % proms.pop()
                         else:
-                            msg = "The following sourceless connected inputs have different " + \
+                            msg = "The following connected inputs have no source and different " + \
                                   "units"
 
                         msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
