@@ -397,62 +397,6 @@ class Problem(object):
 
         return ubcs
 
-    def _check_layout(self, stream=sys.stdout):
-        """
-        Check the current system tree to see if it's optimal.
-        """
-        problem_groups = {}
-        for group in self.root.subgroups(recurse=True, include_self=True):
-            problem_groups[group.pathname] = {}
-            uses_lings = isinstance(group.ln_solver, LinearGaussSeidel)
-            maxiter = group.ln_solver.options['maxiter']
-
-            subs = [s for s in group.subsystems()]
-            graph = group._get_sys_graph()
-            strong = [sorted(s) for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
-            cycle_systems = set()
-            for s in strong:
-                cycle_systems.update(s)
-
-            if strong and len(strong[0]) == len(subs):
-                # all subsystems form a single cycle
-                if uses_lings:
-                    print("\nAll systems in group '%s' form a cycle, so the "
-                          "linear solver should be ScipyGMRES or PetscKSP." %
-                          group.pathname, file=stream)
-                    problem_groups[group.pathname]['ln_solver'] = _get_gmres_name()
-            else:
-                if strong:
-                    print("\nIn group '%s' the following cycles should be "
-                          "grouped into subgroups with a ScipyGMRES or PetscKSP "
-                          "linear solver: %s." % (group.pathname, strong),
-                          file=stream)
-                    problem_groups[group.pathname]['sub_cycles'] = strong
-
-                if (not uses_lings and (len(subs) > 1 or
-                                       (len(subs)==1 and
-                                        not _needs_iteration(subs[0])))):
-                    print("\nGroup '%s' should have a LinearGaussSeidel linear solver." %
-                           group.pathname, file=stream)
-                    problem_groups[group.pathname]['ln_solver'] = 'LinearGaussSeidel'
-
-            if len(subs) > 1 or uses_lings:
-                for s in subs:
-                    if (s.is_active() and s.name not in cycle_systems and
-                               _needs_iteration(s)):
-                        print("\nSystem '%s' has implicit states and should be "
-                              "in its own subgroup with a GMRES linear solver." %
-                              s.pathname, file=stream)
-                        problem_groups[group.pathname].setdefault(
-                                                         'sub_implicit_comps',
-                                                         []).append(s.name)
-
-            if not problem_groups[group.pathname]:
-                del problem_groups[group.pathname]
-
-        return problem_groups
-
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
         necessary to perform calculations.
@@ -1063,7 +1007,6 @@ class Problem(object):
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
         results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
-        results['layout'] = self._check_layout(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
