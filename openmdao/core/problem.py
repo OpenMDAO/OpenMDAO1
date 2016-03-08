@@ -342,7 +342,7 @@ class Problem(object):
                         msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
                                                 diff_units)
                         correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
-                        msg += " Connect '%s' to src (such as an IndepVarComp)" % correct_src + \
+                        msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
                                " with defined units."
 
                         raise RuntimeError(msg)
