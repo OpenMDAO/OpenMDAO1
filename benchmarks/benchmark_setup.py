@@ -2,7 +2,8 @@
 import unittest
 
 from openmdao.api import Problem, Group
-from openmdao.test.test_builder import DynComp
+from openmdao.test.test_builder import DynComp, create_dyncomps
+
 
 class BenchmarkCompVars(unittest.TestCase):
     """Some tests for setup of a component with a large
@@ -37,3 +38,16 @@ class BenchmarkCompVars(unittest.TestCase):
     def benchmark_2000vars(self):
         prob = self._build_comp(1000, 1000)
         prob.setup(check=False)
+
+class BenchmarkManySystems(unittest.TestCase):
+    """Setup of models with lots of systems"""
+
+    def benchmark_flat_100_systems(self):
+        p = Problem(root=Group())
+        create_dyncomps(p.root, 100, 20, 5)
+        p.setup(check=False)
+
+    def benchmark_flat_1000_systems(self):
+        p = Problem(root=Group())
+        create_dyncomps(p.root, 1000, 20, 5)
+        p.setup(check=False)

@@ -35,7 +35,7 @@ class DynComp(Component):
             self.add_param('p%d'%i, var_factory(*vf_args))
 
         for i in range(noutputs):
-            self.add_output("u%d"%i, var_factory(*vf_args))
+            self.add_output("o%d"%i, var_factory(*vf_args))
 
         for i in range(nstates):
             self.add_state("s%d"%i, var_factory(*vf_args))
@@ -46,6 +46,18 @@ class DynComp(Component):
     def solve_linear(self, dumat, drmat, vois, mode=None):
         time.sleep(self.ln_sleep)
 
+def create_dyncomps(parent, ncomps, nvars, nconns):
+    """Create a specified number of DynComps and add them to the
+    given parent and add the number of specified connections.
+    """
+    for i in range(ncomps):
+        nparams = nvars//2
+        nunknowns = nvars//2
+        parent.add("C%d" % i, DynComp(nparams, nunknowns))
+
+        if i > 0:
+            for j in range(nconns):
+                parent.connect("C%d.o%d" % (i-1,j), "C%d.p%d" % (i, j))
 
 def _child_name(child, i):
     if isinstance(child, Group):
