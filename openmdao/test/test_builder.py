@@ -22,6 +22,30 @@ class ABCDArrayComp(ExecComp4Test):
                                             c=numpy.zeros(size),
                                             d=numpy.zeros(size))
 
+class DynComp(Component):
+    def __init__(self, nparams, noutputs, nstates=0,
+                 nl_sleep=0.001, ln_sleep=0.001,
+                 var_factory=float, vf_args=()):
+        super(DynComp, self).__init__()
+
+        self.nl_sleep = nl_sleep
+        self.ln_sleep = ln_sleep
+
+        for i in range(nparams):
+            self.add_param('p%d'%i, var_factory(*vf_args))
+
+        for i in range(noutputs):
+            self.add_output("u%d"%i, var_factory(*vf_args))
+
+        for i in range(nstates):
+            self.add_state("s%d"%i, var_factory(*vf_args))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        time.sleep(self.nl_sleep)
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
+        time.sleep(self.ln_sleep)
+
 
 def _child_name(child, i):
     if isinstance(child, Group):

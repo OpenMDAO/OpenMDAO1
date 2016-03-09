@@ -41,7 +41,7 @@ class Relevance(object):
             self.outputs.append(tuple(out))
 
         self._vgraph, self._sgraph = self._setup_graphs(group, connections)
-        self.relevant = self._get_relevant_vars(self._vgraph)
+        self.relevant = self._get_relevant_vars(group, self._vgraph)
         # when voi is None, everything is relevant
         self.relevant[None] = set(m['top_promoted_name']
                                     for m in itervalues(unknowns_dict))
@@ -56,9 +56,7 @@ class Relevance(object):
 
     def __getitem__(self, name):
         # if name is None, everything is relevant
-        if name is None:
-            return set(self._vgraph.nodes_iter())
-        elif name in self.relevant:
+        if name in self.relevant:
             return self.relevant[name]
         return ()
 
@@ -143,30 +141,19 @@ class Relevance(object):
         vgraph = nx.DiGraph()  # var graph
         sgraph = nx.DiGraph()  # subsystem graph
 
-        compins = {}  # maps input vars to components
-        compouts = {} # maps output vars to components
-
-        promote_map = {}
-        to_prom_name = group._sysdata.to_prom_name
+        self._compins = compins = {}  # maps input vars to components
+        self._compouts = compouts = {} # maps output vars to components
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from(s.pathname for s in group.subsystems(recurse=True))
 
         for param, meta in iteritems(params_dict):
             tcomp = param.rsplit('.', 1)[0]
-            compins.setdefault(tcomp, []).append(param)
-            prom = to_prom_name[param]
-            if prom != param:
-                promote_map[param] = prom
-                vgraph.add_node(param)
+            compins.setdefault(tcomp, set()).add(param)
 
         for unknown, meta in iteritems(unknowns_dict):
             scomp = unknown.rsplit('.', 1)[0]
-            compouts.setdefault(scomp, []).append(unknown)
-            prom = to_prom_name[unknown]
-            if prom != unknown:
-                promote_map[unknown] = prom
-                vgraph.add_node(unknown)
+            compouts.setdefault(scomp, set()).add(unknown)
 
         for target, (source, idxs) in iteritems(connections):
             vgraph.add_edge(source, target)
@@ -175,19 +162,20 @@ class Relevance(object):
         # connect inputs to outputs on same component in order to fully
         # connect the variable graph.
         for comp, inputs in iteritems(compins):
+            outs = compouts.get(comp, ())
             for inp in inputs:
-                for out in compouts.get(comp, ()):
+                for out in outs:
                     vgraph.add_edge(inp, out)
-
-        # now collapse any var nodes with implicit connections
-        collapse_nodes(vgraph, promote_map, copy=False)
 
         return vgraph, sgraph
 
-    def _get_relevant_vars(self, g):
+    def _get_relevant_vars(self, group, g):
         """
         Args
         ----
+        group : Group
+            The top level group.
+
         g : nx.DiGraph
             A graph of variable dependencies.
 
@@ -201,25 +189,35 @@ class Relevance(object):
         relevant = {}
         succs = {}
 
+        compins = self._compins
+        compouts = self._compouts
+
+        to_prom_name = group._sysdata.to_prom_name
+        to_abs_uname = group._sysdata.to_abs_uname
+
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()
                 succs[node] = set((node,))
-                if node in g:
-                    succs[node].update(v for u, v in nx.dfs_edges(g, node))
+                pnode = to_abs_uname[node]
+                if pnode in g:
+                    comp = pnode.rsplit('.', 1)[0]
+                    succs[node].update(to_prom_name[v]
+                                        for u, v in nx.dfs_edges(g, pnode))
 
-        grev = g.reverse()
+        grev = g.reverse(copy=False)
         self._outset = set()
         for nodes in self.outputs:
             self._outset.update(nodes)
             for node in nodes:
+                unode = to_abs_uname[node]
                 relevant[node] = set()
-                if node in g:
-                    preds = set(v for u, v in nx.dfs_edges(grev, node))
+                if unode in g:
+                    preds = set(to_prom_name[v] for u, v in nx.dfs_edges(grev, unode))
                     preds.add(node)
                     for inps in self.inputs:
                         for inp in inps:
-                            if inp in g:
+                            if to_abs_uname[inp] in g:
                                 common = preds.intersection(succs[inp])
                                 relevant[node].update(common)
                                 relevant[inp].update(common)
@@ -263,31 +261,3 @@ class Relevance(object):
             relevant_systems[voi] = tuple(comps)
 
         return relevant_systems
-
-    def json_dependencies(self):
-        """ Returns a json representation of a model's data dependency graph.
-
-        Returns
-        -------
-        A json string with a dependency matrix and a list of variable
-        name labels.
-        """
-        idxs = OrderedDict()
-        matrix = []
-        size = len(self._vgraph)
-
-        for i, node in enumerate(self._vgraph.nodes_iter()):
-            idxs[node] = i
-            matrix.append([0]*size)
-
-        for u, v in self._vgraph.edges_iter():
-            matrix[idxs[u]][idxs[v]] = 1
-
-        dct = {
-            'dependencies': {
-                'matrix' : matrix,
-                'labels' : self._vgraph.nodes()
-            }
-        }
-
-        return json.dumps(dct)

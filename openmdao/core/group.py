@@ -1291,6 +1291,9 @@ class Group(System):
             The name of a variable of interest.
 
         """
+        # if not self.is_active():
+        #     return
+            
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
         to_prom_name = self._sysdata.to_prom_name
         uacc = self.unknowns._dat
