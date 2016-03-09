@@ -2,6 +2,7 @@
 
 import unittest
 from six import iteritems
+from six.moves import cStringIO
 
 import numpy as np
 
@@ -183,6 +184,11 @@ class TestUnitConversion(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-6)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-6)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
+
+        stream = cStringIO()
+        conv = prob.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
+        self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
 
     def test_basic_input_input(self):
 

@@ -803,12 +803,24 @@ class Problem(object):
 
         return (self.root._probdata.relevance.mode, self._calculated_mode)
 
-    def _list_unit_conversions(self, out_stream=sys.stdout):
-        """ List all unit conversions being made (including only units on one
-        side)"""
+    def list_unit_conv(self, stream=sys.stdout):
+        """ List all unit conversions that are being handled by OpenMDAO
+        (including those with units defined only on one side of the
+        connection.)
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the state info to. Default is sys.stdout.
+
+        Returns
+        -------
+            List of unit conversions.
+        """
+
         if self._unit_diffs:
             tuples = sorted(iteritems(self._unit_diffs))
-            print("\nUnit Conversions", file=out_stream)
+            print("\nUnit Conversions", file=stream)
 
             vec = self.root.unknowns
             pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
@@ -819,7 +831,7 @@ class Problem(object):
                 else:
                     pbo_str = ''
                 print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
-                      file=out_stream)
+                      file=stream)
 
             return tuples
         return []
@@ -1051,7 +1063,6 @@ class Problem(object):
         print("Setup: Checking for potential issues...", file=out_stream)
 
         results = {}  # dict of results for easier testing
-        results['unit_diffs'] = self._list_unit_conversions(out_stream)
         results['recorders'] = self._check_no_recorders(out_stream)
         results['mpi'] = self._check_mpi(out_stream)
         results['dangling_params'] = self._check_dangling_params(out_stream)
