@@ -40,14 +40,14 @@ class Relevance(object):
             output_groups.append(tuple(out))
             self.outputs.append(tuple(out))
 
-        self._vgraph, self._sgraph = self._setup_graphs(group, connections)
-        self.relevant = self._get_relevant_vars(group, self._vgraph)
+        self._sgraph = self._setup_sys_graph(group, connections)
+        self._compute_relevant_vars(group, connections)
+
         # when voi is None, everything is relevant
         self.relevant[None] = set(m['top_promoted_name']
                                     for m in itervalues(unknowns_dict))
         self.relevant[None].update(m['top_promoted_name']
                                     for m in itervalues(params_dict))
-        self._relevant_systems = self._get_relevant_systems()
 
         if mode == 'fwd':
             self.groups = param_groups
@@ -55,10 +55,10 @@ class Relevance(object):
             self.groups = output_groups
 
     def __getitem__(self, name):
-        # if name is None, everything is relevant
-        if name in self.relevant:
+        try:
             return self.relevant[name]
-        return ()
+        except KeyError:
+            return ()
 
     def is_relevant(self, var_of_interest, varname):
         """ Returns True if a variable is relevant to a particular variable
@@ -121,76 +121,47 @@ class Relevance(object):
             True if the given system is relevant for the given variable of
             interest.
         """
-        if var_of_interest is None:
-            return True
-        return system.pathname in self._relevant_systems[var_of_interest]
+        return var_of_interest is None or system.pathname in self._relevant_systems[var_of_interest]
 
-    def _setup_graphs(self, group, connections):
+    def _setup_sys_graph(self, group, connections):
         """
-        Set up dependency graphs for variables and components in the Problem.
+        Set up dependency graph for systems in the Problem.
 
         Returns
         -------
-        tuple of (nx.DiGraph, nx.DiGraph)
-            The variable graph and the component graph.
+        nx.DiGraph
+            The system graph.
 
         """
-        params_dict = self.params_dict
-        unknowns_dict = self.unknowns_dict
-
-        vgraph = nx.DiGraph()  # var graph
         sgraph = nx.DiGraph()  # subsystem graph
-
-        self._compins = compins = {}  # maps input vars to components
-        self._compouts = compouts = {} # maps output vars to components
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from(s.pathname for s in group.subsystems(recurse=True))
 
-        for param, meta in iteritems(params_dict):
-            tcomp = param.rsplit('.', 1)[0]
-            compins.setdefault(tcomp, set()).add(param)
-
-        for unknown, meta in iteritems(unknowns_dict):
-            scomp = unknown.rsplit('.', 1)[0]
-            compouts.setdefault(scomp, set()).add(unknown)
-
         for target, (source, idxs) in iteritems(connections):
-            vgraph.add_edge(source, target)
             sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
 
-        # connect inputs to outputs on same component in order to fully
-        # connect the variable graph.
-        for comp, inputs in iteritems(compins):
-            outs = compouts.get(comp, ())
-            for inp in inputs:
-                for out in outs:
-                    vgraph.add_edge(inp, out)
+        return sgraph
 
-        return vgraph, sgraph
-
-    def _get_relevant_vars(self, group, g):
+    def _compute_relevant_vars(self, group, connections):
         """
+        Calculate the relevant variables and relevant systems for the
+        current variables of interest.
+
         Args
         ----
         group : Group
             The top level group.
 
-        g : nx.DiGraph
-            A graph of variable dependencies.
+        connections : OrderedDict
+            Dict of targets mapped to (src, idxs)
 
-        Returns
-        -------
-        dict
-            Dictionary that maps a variable name to all other variables in the
-            graph that are relevant to it.
         """
 
         relevant = {}
         succs = {}
 
-        compins = self._compins
-        compouts = self._compouts
+        sgraph = self._sgraph      # system graph
 
         to_prom_name = group._sysdata.to_prom_name
         to_abs_uname = group._sysdata.to_abs_uname
@@ -198,66 +169,61 @@ class Relevance(object):
         for nodes in self.inputs:
             for node in nodes:
                 relevant[node] = set()
-                succs[node] = set((node,))
                 pnode = to_abs_uname[node]
-                if pnode in g:
-                    comp = pnode.rsplit('.', 1)[0]
-                    succs[node].update(to_prom_name[v]
-                                        for u, v in nx.dfs_edges(g, pnode))
+                comp = pnode.rsplit('.', 1)[0]
+                succs[node] = []
+                if comp in sgraph:
+                    succs[node].append(comp)
+                    succs[node].extend(v for u,v in nx.dfs_edges(sgraph, comp))
 
-        grev = g.reverse(copy=False)
+        grev = sgraph.reverse()
         self._outset = set()
         for nodes in self.outputs:
             self._outset.update(nodes)
             for node in nodes:
                 unode = to_abs_uname[node]
+                comp = unode.rsplit('.', 1)[0]
                 relevant[node] = set()
-                if unode in g:
-                    preds = set(to_prom_name[v] for u, v in nx.dfs_edges(grev, unode))
-                    preds.add(node)
+                if comp in sgraph:
+                    preds = set((comp,))
+                    preds.update(v for u, v in nx.dfs_edges(grev, comp))
                     for inps in self.inputs:
                         for inp in inps:
-                            if to_abs_uname[inp] in g:
-                                common = preds.intersection(succs[inp])
-                                relevant[node].update(common)
-                                relevant[inp].update(common)
+                            common = preds.intersection(succs[inp])
+                            relevant[node].update(common)
+                            relevant[inp].update(common)
 
-        return relevant
+        # at this point, relevant contains the relevent *systems*, so now
+        # we have to determine the relevant variables based on those systems
+        # and our connections
+        relvars = {}
+        rcomps = [to_abs_uname[n].rsplit('.', 1)[0] for n in relevant]
 
-    def _get_relevant_systems(self):
-        """
-        Given the dict that maps relevant vars to each VOI, find the mapping
-        of each VOI to the set of systems that need to run.
-        """
-        relevant_systems = {}
-        grev = self._sgraph.reverse()
+        # make sure we don't miss any other VOIs that are relevant but are not
+        # part of a connection
+        for name, relcomps in iteritems(relevant):
+            relvars[name] = set()
+            for i, n in enumerate(relevant):
+                if rcomps[i] in relcomps:
+                    relvars[name].add(n)
 
-        to_abs_uname = self._sysdata.to_abs_uname
-        to_abs_pnames = self._sysdata.to_abs_pnames
+        for tgt, (src, idxs) in iteritems(connections):
+            prom_tgt = to_prom_name[tgt]
+            prom_src = to_prom_name[src]
+            tcomp = tgt.rsplit('.', 1)[0]
+            scomp = src.rsplit('.', 1)[0]
+            for n, relcomps in iteritems(relevant):
+                if tcomp in relcomps and scomp in relcomps:
+                    relvars[n].update((prom_tgt, prom_src))
 
-        for voi, relvars in iteritems(self.relevant):
-            rev = True if voi in self._outset else False
-            if rev:
-                voicomp = to_abs_uname[voi].rsplit('.', 1)[0]
-                gpath = set([voicomp])
-                gpath.update([v for u,v in nx.dfs_edges(grev, voicomp)])
-            comps = set()
-            for relvar in relvars:
-                if relvar in to_abs_uname:
-                    absvars = (to_abs_uname[relvar],)
-                else:
-                    absvars = iter(to_abs_pnames[relvar])
-                for absvar in absvars:
-                    parts = absvar.split('.')
-                    for i in range(len(parts)-1):
-                        cname = '.'.join(parts[:i+1])
-                        # in rev mode, need to eliminate irrelevant systems that
-                        # have shared promoted vars
-                        if rev:
-                            if cname in gpath:
-                                comps.add(cname)
-                        else:
-                            comps.add(cname)
-            relevant_systems[voi] = tuple(comps)
+        # finally, add ancestors of relevant systems to the relevant set
+        for voi, relsystems in iteritems(relevant):
+            to_add = set()
+            for system in relsystems:
+                parts = system.split('.')[:-1]
+                for i in range(0, len(parts)):
+                    to_add.add('.'.join(parts[:i+1]))
+            relsystems.update(to_add)
 
-        return relevant_systems
+        self._relevant_systems = relevant
+        self.relevant = relvars
