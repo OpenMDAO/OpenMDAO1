@@ -48,7 +48,7 @@ class TestConnections(unittest.TestCase):
     def test_diff_conn_input_units(self):
         # set different but compatible units
         self.C1._init_params_dict['x']['units'] = 'ft'
-        self.C3._init_params_dict['x']['units'] = 'in'
+        self.C3._init_params_dict['x']['units'] = 'inch'
 
         # connect two inputs
         self.p.root.connect('G1.G2.C1.x', 'G3.G4.C3.x')
@@ -56,9 +56,24 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "The following sourceless connected inputs have different units: "
-                             "[('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'in')]")
+            msg = "The following connected inputs have no source and different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G1.G2.C1.x' to a source (such as an IndepVarComp) with defined units."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
+    def test_diff_conn_input_units_swap(self):
+        # set different but compatible units
+        self.C1._init_params_dict['x']['units'] = 'ft'
+        self.C3._init_params_dict['x']['units'] = 'inch'
+
+        # connect two inputs
+        self.p.root.connect('G3.G4.C3.x', 'G1.G2.C1.x')
+
+        try:
+            self.p.setup(check=False)
+        except Exception as err:
+            msg = "The following connected inputs have no source and different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G3.G4.C3.x' to a source (such as an IndepVarComp) with defined units."
+            self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
 
@@ -86,7 +101,7 @@ class TestConnections(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertTrue("The following sourceless connected inputs have different units" in
+            self.assertTrue("The following connected inputs have no source and different units" in
                             str(err))
         else:
             self.fail("Exception expected")
@@ -390,6 +405,36 @@ class TestConnectionsPromoted(unittest.TestCase):
         self.assertEqual(p.root.G3.G4.C3.params['x'], 999.)
         self.assertEqual(p.root.G3.G4.C4.params['x'], 999.)
 
+    def test_unit_conv_message(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add("C1", ExecComp('y=x*2.0', units={'x':'ft'}), promotes=['x'])
+        root.add("C2", ExecComp('y=x*2.0', units={'x':'inch'}), promotes=['x'])
+        root.add("C3", ExecComp('y=x*2.0', units={'x':'m'}), promotes=['x'])
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            msg = "The following connected inputs are promoted to 'x', but have different units: [('C1.x', 'ft'), ('C2.x', 'inch'), ('C3.x', 'm')]. Connect 'x' to a source (such as an IndepVarComp) with defined units."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
+        # Remedy the problem with an Indepvarcomp
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add("C1", ExecComp('y=x*2.0', units={'x':'ft'}), promotes=['x'])
+        root.add("C2", ExecComp('y=x*2.0', units={'x':'inch'}), promotes=['x'])
+        root.add("C3", ExecComp('y=x*2.0', units={'x':'m'}), promotes=['x'])
+        root.add('p', IndepVarComp('x', 1.0, units='cm'), promotes=['x'])
+
+        prob.setup(check=False)
+
+
 class TestUBCS(unittest.TestCase):
 
     def test_ubcs(self):
@@ -459,7 +504,9 @@ class TestConnSetup(unittest.TestCase):
 
         stream = cStringIO()
         results = top.setup(check=True, out_stream=stream)
-        self.assertEqual(results['unit_diffs'], [(('src1.x', 'sink2.x'), ('m', 'mm'))])
+
+        # Not in standard setup anymore
+        self.assertTrue('unit_diffs' not in results)
 
 if __name__ == "__main__":
     unittest.main()

@@ -460,19 +460,13 @@ class Group(System):
 
         self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
 
-        ls_inputs = {}
-        for voi in self.dumat:
-            ls_inputs[voi] = self._all_params(voi)
-
         for s in self.subsystems(recurse=True, include_self=True):
             for voi, vec in iteritems(s.dpmat):
                 abs_inputs = {
                     acc.meta['pathname'] for acc in itervalues(vec._dat)
                         if not acc.pbo
                 }
-
-                self._do_apply[(s.pathname, voi)] = bool(abs_inputs and
-                                      len(abs_inputs.intersection(ls_inputs[voi])))
+                self._do_apply[(s.pathname, voi)] = bool(abs_inputs)
 
         self._relname_map = None  # reclaim some memory
 
@@ -1020,19 +1014,6 @@ class Group(System):
                       if len(s) > 1]
 
         return graph, broken_edges
-
-    def _all_params(self, voi=None):
-        """ Returns the set of all parameters in this system and all
-        subsystems that are relevant to the given variable of interest.
-
-        Args
-        ----
-        voi: string
-            Variable of interest, default is None.
-        """
-        relevant = self._probdata.relevance.relevant[voi]
-        return set(n for n,m in iteritems(self._params_dict)
-                          if m['top_promoted_name'] in relevant)
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
              sizes=False):

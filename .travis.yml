@@ -13,16 +13,16 @@ os:
 language: generic
 
 env:
-- HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=
+- HDF5=h5py PY=2.7 MPI=1
 - HDF5=h5py PY=2.7 MPI=
 - HDF5=h5py PY=3.4 MPI=
-- HFF5= PY=2.7 MPI=
-- HFF5= PY=3.4 MPI=
+- HDF5= PY=2.7 MPI=
+- HDF5= PY=3.4 MPI=
 
 matrix:
   exclude:
   - os: osx
-    env: HDF5=h5py PY=2.7 MPI=1 USE_PROC_FILES=
+    env: HDF5=h5py PY=2.7 MPI=1
 
 addons:
   apt:
@@ -58,7 +58,7 @@ before_install:
 - conda update --yes conda
 
 install:
-- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx==1.3.1 mock swig
+- conda install --yes python=$PY numpy scipy=0.16.1 nose $HDF5 sphinx==1.3.1 mock swig
 - if [ "$OS" = "Linux" ]; then
     if [ "$PY" = "2.7" ]; then
         pip install https://openmdao.org/dists/pyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
