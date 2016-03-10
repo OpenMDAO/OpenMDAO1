@@ -220,13 +220,6 @@ class TestProblemCheckPartials(unittest.TestCase):
                 self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD sucks
                 self.add_output('f', val=0.)
 
-                # NOTE: we currently don't run check_partials on anything with force_fd=True.
-                # but we should only skip it if force_fd==True and form!="complex_step"
-
-                # NOTE: need to update the docs to tell people to use 'check_partials_form'
-                # when they want to use CS for checking partials! Explain that form controls
-                # what is used during actual runs, and check_partials_form is used during checking!
-
             def solve_nonlinear(self, p, u, r):
                 x = p['x']
                 u['f'] = np.exp(x)/np.sqrt(np.sin(x)**3 + np.cos(x)**3)
