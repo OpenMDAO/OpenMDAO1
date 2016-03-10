@@ -41,6 +41,10 @@ class Group(System):
         Default finite difference stepsize
     fd_options['step_type'] :  str('absolute')
         Set to absolute, relative
+    fd_options['extra_check_partials_form'] :  None or str
+        Finite difference mode: ("forward", "backward", "central", "complex_step")
+        During check_partial_derivatives, you can optionally do a
+        second finite difference with a different mode.
 
     """
 
