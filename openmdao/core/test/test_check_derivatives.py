@@ -51,7 +51,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        data = prob.check_partial_derivatives(out_stream=None)
+        data = prob.check_partial_derivatives()
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):

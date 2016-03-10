@@ -51,7 +51,7 @@ Here is example code for a model that consists of a single `Component`,
 This code generates output that looks like this:
 
 .. testoutput:: check_partial_derivatives_example
-   :options: +REPORT_NDIFF
+   :options: +ELLIPSIS, +REPORT_NDIFF
 
    Partial Derivatives Check
 
@@ -82,10 +82,11 @@ This code generates output that looks like this:
    [[ 2.  7.]
     [ 5. -3.]]
 
-       Raw FD Derivative (Jfor)
+       Raw FD Derivative (Jfd)
 
    [[ 2.  7.]
     [ 5. -3.]]
+   ...
 
 
 Return Value of check_partial_derivatives
