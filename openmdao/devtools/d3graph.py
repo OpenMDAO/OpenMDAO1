@@ -156,7 +156,7 @@ def _graph_tree_dict(system, recurse=False):
     # return dct[''], links
 
 def view_graph(system, viewer='edge_map',
-              outfile='graph.html', show_browser=True):
+               outfile='graph.html', show_browser=True):
     """
     Generates a self-contained html file containing a graph viewer
     of the specified type.  Optionally pops up a web browser to
@@ -178,9 +178,8 @@ def view_graph(system, viewer='edge_map',
         If True, pop up a browser to view the generated html file.
         Defaults to True.
     """
-    #graphdata = {}
-    #graphdata['nodes'], graphdata['links'] = _graph_tree_dict(system)
-    classes = _graph_tree_dict(system)
+    connections = system._probdata.connections
+    conns = [{'source':s, 'target':t} for t,(s,_) in iteritems(connections)]
 
     viewer += '.html'
 
@@ -189,7 +188,7 @@ def view_graph(system, viewer='edge_map',
     with open(os.path.join(code_dir, viewer), "r") as f:
         template = f.read()
 
-    graphjson = json.dumps(classes)
+    graphjson = json.dumps(conns)
     with open(outfile, 'w') as f:
         f.write(template % graphjson)
 
