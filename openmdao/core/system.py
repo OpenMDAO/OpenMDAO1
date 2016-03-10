@@ -105,6 +105,11 @@ class System(object):
         opt.add_option("step_type", 'absolute',
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
+        opt.add_option('extra_check_partials_form', None,
+                       values=[None, 'forward', 'backward', 'central', 'complex_step'],
+                       desc="Finite difference mode. (forward, backward, central) "
+                       "During check_partial_derivatives, you can optionally do a "
+                       "second finite difference with a different type.")
 
         self._impl = None
 

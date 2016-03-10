@@ -1714,10 +1714,24 @@ class Problem(object):
         # system hierarchy.
         for comp in root.components(recurse=True):
             cname = comp.pathname
+            opt = comp.fd_options
 
-            # No need to check comps that don't have any derivs.
-            if comp.fd_options['force_fd']:
-                continue
+            fwd_rev = True
+            if opt['extra_check_partials_form']:
+                f_d_2 = True
+                fd_desc = opt['form']
+                fd_desc2 = opt['extra_check_partials_form']
+            else:
+                f_d_2 = False
+                fd_desc = None
+                fd_desc2 = None
+
+            # If we don't have analytic, then only continue of we are
+            # comparing 2 different fds.
+            if opt['force_fd']:
+                if not f_d_2:
+                    continue
+                fwd_rev = False
 
             # IndepVarComps are just clutter too.
             if isinstance(comp, IndepVarComp):
@@ -1727,6 +1741,7 @@ class Problem(object):
             jac_fwd = OrderedDict()
             jac_rev = OrderedDict()
             jac_fd = OrderedDict()
+            jac_fd2 = OrderedDict()
 
             params = comp.params
             unknowns = comp.unknowns
@@ -1754,6 +1769,10 @@ class Problem(object):
 
             # Create all our keys and allocate Jacs
             for p_name in param_list:
+
+                # No need to pre-allocate if we are not calculating them
+                if not fwd_rev:
+                    break
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1783,46 +1802,48 @@ class Problem(object):
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for u_name in unkn_list:
-                u_size = np.size(dunknowns[u_name])
+            if fwd_rev:
+                for u_name in unkn_list:
+                    u_size = np.size(dunknowns[u_name])
 
-                # Send columns of identity
-                for idx in range(u_size):
-                    dresids.vec[:] = 0.0
-                    root.clear_dparams()
-                    dunknowns.vec[:] = 0.0
+                    # Send columns of identity
+                    for idx in range(u_size):
+                        dresids.vec[:] = 0.0
+                        root.clear_dparams()
+                        dunknowns.vec[:] = 0.0
 
-                    dresids._dat[u_name].val[idx] = 1.0
-                    try:
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'rev')
-                    finally:
-                        dparams._apply_unit_derivatives()
+                        dresids._dat[u_name].val[idx] = 1.0
+                        try:
+                            comp.apply_linear(params, unknowns, dparams,
+                                              dunknowns, dresids, 'rev')
+                        finally:
+                            dparams._apply_unit_derivatives()
 
-                    for p_name in param_list:
+                        for p_name in param_list:
 
-                        dinputs = dunknowns if p_name in states else dparams
-                        jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
+                            dinputs = dunknowns if p_name in states else dparams
+                            jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
-            for p_name in param_list:
+            if fwd_rev:
+                for p_name in param_list:
 
-                dinputs = dunknowns if p_name in states else dparams
-                p_size = np.size(dinputs[p_name])
+                    dinputs = dunknowns if p_name in states else dparams
+                    p_size = np.size(dinputs[p_name])
 
-                # Send columns of identity
-                for idx in range(p_size):
-                    dresids.vec[:] = 0.0
-                    root.clear_dparams()
-                    dunknowns.vec[:] = 0.0
+                    # Send columns of identity
+                    for idx in range(p_size):
+                        dresids.vec[:] = 0.0
+                        root.clear_dparams()
+                        dunknowns.vec[:] = 0.0
 
-                    dinputs._dat[p_name].val[idx] = 1.0
-                    dparams._apply_unit_derivatives()
-                    comp.apply_linear(params, unknowns, dparams,
-                                      dunknowns, dresids, 'fwd')
+                        dinputs._dat[p_name].val[idx] = 1.0
+                        dparams._apply_unit_derivatives()
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'fwd')
 
-                    for u_name, u_val in dresids.vec_val_iter():
-                        jac_fwd[(u_name, p_name)][:, idx] = u_val
+                        for u_name, u_val in dresids.vec_val_iter():
+                            jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
             dresids.vec[:] = 0.0
@@ -1830,17 +1851,38 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if comp.fd_options['form'] == 'complex_step':
+            if opt['form'] == 'complex_step':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
             jac_fd = fd_func(params, unknowns, resids)
 
+            # Extra Finite Difference if requested
+            if f_d_2:
+                dresids.vec[:] = 0.0
+                root.clear_dparams()
+                dunknowns.vec[:] = 0.0
+
+                # Component can request to use complex step.
+                if opt['extra_check_partials_form'] == 'complex_step':
+                    fd_func = comp.complex_step_jacobian
+                else:
+                    fd_func = comp.fd_jacobian
+
+                # Cache old form so we can overide temporarily
+                save_form = opt['form']
+                opt['form'] = opt['extra_check_partials_form']
+
+                jac_fd2 = fd_func(params, unknowns, resids)
+
+                opt['form'] = save_form
+
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
-                                 c_name=cname)
+                                 c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
+                                 fd_desc2=fd_desc2)
 
         return data
 
@@ -2191,7 +2233,8 @@ def _jac_to_flat_dict(jac):
 
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, c_name='root'):
+                         out_stream, c_name='root', jac_fd2=None, fd_desc=None,
+                         fd_desc2=None):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""
@@ -2226,6 +2269,13 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 magrev = None
 
+            if jac_fd2:
+                Jsub_fd2 = jac_fd2[key]
+                ldata['J_fd2'] = Jsub_fd2
+                magfd2 = np.linalg.norm(Jsub_fd2)
+            else:
+                magfd2 = None
+
             ldata['magnitude'] = (magfor, magrev, magfd)
 
             if jac_fwd:
@@ -2241,6 +2291,11 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 abs3 = np.linalg.norm(Jsub_for - Jsub_rev)
             else:
                 abs3 = None
+
+            if jac_fd2:
+                abs4 = np.linalg.norm(Jsub_fd2 - Jsub_fd)
+            else:
+                abs4 = None
 
             ldata['abs error'] = (abs1, abs2, abs3)
 
@@ -2262,6 +2317,11 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 else:
                     rel3 = None
 
+                if jac_fd2:
+                    rel4 = np.linalg.norm(Jsub_fd2 - Jsub_fd)/magfd
+                else:
+                    rel4 = None
+
             ldata['rel error'] = (rel1, rel2, rel3)
 
             if out_stream is None:
@@ -2279,22 +2339,39 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
             if jac_rev:
                 out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            if jac_fwd and jac_rev:
-                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+            if not jac_fwd and not jac_rev:
+                out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
+            if jac_fd:
+                out_stream.write('         Fd Magnitude : %.6e' % magfd)
+                if fd_desc:
+                    out_stream.write(' (%s)' % fd_desc)
+                out_stream.write('\n')
+            if jac_fd2:
+                out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
+                if fd_desc2:
+                    out_stream.write(' (%s)' % fd_desc2)
+                out_stream.write('\n')
+            out_stream.write('\n')
 
             if jac_fwd:
                 out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
             if jac_rev:
                 out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
             if jac_fwd and jac_rev:
-                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
+            if jac_fd2:
+                out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
+            out_stream.write('\n')
 
             if jac_fwd:
                 out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
             if jac_rev:
                 out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
             if jac_fwd and jac_rev:
-                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
+            if jac_fd2:
+                out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
+            out_stream.write('\n')
 
             if jac_fwd:
                 out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
@@ -2304,9 +2381,13 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
                 out_stream.write(str(Jsub_rev))
                 out_stream.write('\n\n')
-            out_stream.write('    Raw FD Derivative (Jfor)\n\n')
+            out_stream.write('    Raw FD Derivative (Jfd)\n\n')
             out_stream.write(str(Jsub_fd))
-            out_stream.write('\n')
+            out_stream.write('\n\n')
+            if jac_fd2:
+                out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
+                out_stream.write(str(Jsub_fd2))
+                out_stream.write('\n\n')
 
 def _needs_iteration(comp):
     """Return True if the given component needs an iterative
