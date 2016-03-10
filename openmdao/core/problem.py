@@ -1730,7 +1730,7 @@ class Problem(object):
                 fd_desc = None
                 fd_desc2 = None
 
-            # If we don't have analytic, then only continue of we are
+            # If we don't have analytic, then only continue if we are
             # comparing 2 different fds.
             if opt['force_fd']:
                 if not f_d_2:
