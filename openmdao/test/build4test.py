@@ -13,6 +13,9 @@ from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 
 class DynComp(Component):
+    """
+    A component with a settable number of params, outputs, and states.
+    """
     def __init__(self, nparams, noutputs, nstates=0,
                  nl_sleep=0.001, ln_sleep=0.001,
                  var_factory=float, vf_args=()):
