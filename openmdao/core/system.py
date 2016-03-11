@@ -110,6 +110,8 @@ class System(object):
                        desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
                        " During check_partial_derivatives, you can optionally do a "
                        "second finite difference with a different mode.")
+        opt.add_option('linearize', False,
+                       desc='Set to true if you want linearize to be called, even though your using FD.')
 
         self._impl = None
 
@@ -721,6 +723,17 @@ class System(object):
 
         """
         with self._dircontext:
+            try:
+                linearize = self.jacobian
+            except AttributeError:
+                linearize = self.linearize
+            else:
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("%s: The 'jacobian' method is deprecated. Please "
+                              "rename 'jacobian' to 'linearize'." %
+                              self.pathname, DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+
             if self.fd_options['force_fd']:
                 #force_fd should compute semi-totals across all children,
                 #    unless total_derivs=False is specifically requested
@@ -736,19 +749,9 @@ class System(object):
                         fd_func = self.fd_jacobian
                     self._jacobian_cache = fd_func(params, unknowns, resids,
                                                    total_derivs=False)
-
+                if self.fd_options['linearize']: 
+                    linearize(params, unknowns, resids) #call it, just in case user was doing something in prep for solve_linear
             else:
-                try:
-                    linearize = self.jacobian
-                except AttributeError:
-                    linearize = self.linearize
-                else:
-                    warnings.simplefilter('always', DeprecationWarning)
-                    warnings.warn("%s: The 'jacobian' method is deprecated. Please "
-                                  "rename 'jacobian' to 'linearize'." %
-                                  self.pathname, DeprecationWarning,stacklevel=2)
-                    warnings.simplefilter('ignore', DeprecationWarning)
-
                 self._jacobian_cache = linearize(params, unknowns, resids)
 
             if self._jacobian_cache is not None:
