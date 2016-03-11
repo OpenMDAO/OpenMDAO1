@@ -210,6 +210,39 @@ class TestProblemCheckPartials(unittest.TestCase):
         self.assertTrue(('y', 'x1') in data['comp'])
         self.assertTrue(('y', 'x2') in data['comp'])
 
+    def test_extra_fd(self):
+
+        class CSTestComp(Component):
+
+            def __init__(self):
+                super(CSTestComp, self).__init__()
+
+                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD sucks
+                self.add_output('f', val=0.)
+
+            def solve_nonlinear(self, p, u, r):
+                x = p['x']
+                u['f'] = np.exp(x)/np.sqrt(np.sin(x)**3 + np.cos(x)**3)
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('des_vars', IndepVarComp('x', 1.5), promotes=['*'])
+        c = p.root.add('comp', CSTestComp(), promotes=["*"])
+        c.fd_options['force_fd'] = True
+        c.fd_options['form'] = "complex_step"
+        c.fd_options['extra_check_partials_form'] = "forward"
+
+        p.setup(check=False)
+        p.run_once()
+
+        check_data = p.check_partial_derivatives(out_stream=None)
+        cs_val = check_data['comp']['f','x']['J_fd'][0,0] # should be the complex steped value!
+        assert_rel_error(self, cs_val, 4.05289181447, 1e-8)
+
+        fd2_val = check_data['comp']['f','x']['J_fd2'][0,0] # should be the real-fd'd value!
+        assert_rel_error(self, fd2_val, 4.10128351131, 1e-8)
+
 class TestProblemFullFD(unittest.TestCase):
 
     def test_full_model_fd_simple_comp(self):

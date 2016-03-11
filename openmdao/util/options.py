@@ -114,16 +114,18 @@ class OptionsDictionary(object):
         values = self._options[name]['values']
         _type = type(self._options[name]['val'])
 
-        self._check_type(name, value, _type)
-
-        if lower is not None:
-            self._check_low(name, value, lower)
-
-        if upper is not None:
-            self._check_high(name, value, upper)
-
         if values is not None:
+            # Only need to check if we are in the list if we are an enum
             self._check_values(name, value, values)
+
+        else:
+            self._check_type(name, value, _type)
+
+            if lower is not None:
+                self._check_low(name, value, lower)
+
+            if upper is not None:
+                self._check_high(name, value, upper)
 
     def _check_type(self, name, value, _type):
         """ Check for type. """
