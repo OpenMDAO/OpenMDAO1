@@ -2304,7 +2304,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             ldata['abs error'] = (abs1, abs2, abs3)
 
             if magfd == 0.0:
-                rel1 = rel2 = rel3 = float('nan')
+                rel1 = rel2 = rel3 = rel4 = float('nan')
             else:
                 if jac_fwd:
                     rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
