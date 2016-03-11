@@ -1270,25 +1270,39 @@ class System(object):
 
         # Find all unit conversions
         unit_diffs = {}
+        pbos = []
         for target, (source, idxs) in iteritems(connections):
+
+            # Unfortunately, we don't know our own connections. If any end is
+            # not in the vectors, then skip it.
+            if target not in params_dict or source not in unknowns_dict:
+                continue
+
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
 
+            source = name_relative_to(self.pathname, source)
+            target = name_relative_to(self.pathname, target)
+
+            if smeta.get('pass_by_obj'):
+                pbos.append(source)
+
             # If we have a conversion, there should be a conversion factor
-            # tucked away in the params meta
+            # tucked away in the params meta. Otherwise, if one end has units
+            # and the other doesn't, add those too.
+            t_units = tmeta.get('units')
+            s_units = smeta.get('units')
             conv = tmeta.get('unit_conv')
-            if conv:
-                unit_diffs[(source, target)] = (smeta.get('units'),
-                                                tmeta.get('units'))
+            if conv or (bool(t_units) != bool(s_units)):
+                unit_diffs[(source, target)] = (s_units,
+                                                t_units)
 
         if unit_diffs:
             tuples = sorted(iteritems(unit_diffs))
             print("\nUnit Conversions", file=stream)
 
-            vec = self.unknowns
-            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
-
             for (src, tgt), (sunit, tunit) in tuples:
+
                 if src in pbos:
                     pbo_str = ' (pass_by_obj)'
                 else:
@@ -1298,7 +1312,6 @@ class System(object):
 
             return tuples
         return []
-
 
 
 class _DummyContext(object):
