@@ -45,6 +45,8 @@ class Group(System):
         Finite difference mode: ("forward", "backward", "central", "complex_step")
         During check_partial_derivatives, you can optionally do a
         second finite difference with a different mode.
+    fd_options['linearize'] : bool(False)
+        Set to True if you want linearize to be called even though you are using FD.
 
     """
 

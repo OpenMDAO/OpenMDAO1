@@ -111,7 +111,7 @@ class System(object):
                        " During check_partial_derivatives, you can optionally do a "
                        "second finite difference with a different mode.")
         opt.add_option('linearize', False,
-                       desc='Set to true if you want linearize to be called, even though your using FD.')
+                       desc='Set to True if you want linearize to be called even though you are using FD.')
 
         self._impl = None
 
@@ -749,7 +749,7 @@ class System(object):
                         fd_func = self.fd_jacobian
                     self._jacobian_cache = fd_func(params, unknowns, resids,
                                                    total_derivs=False)
-                if self.fd_options['linearize']: 
+                if self.fd_options['linearize']:
                     linearize(params, unknowns, resids) #call it, just in case user was doing something in prep for solve_linear
             else:
                 self._jacobian_cache = linearize(params, unknowns, resids)
