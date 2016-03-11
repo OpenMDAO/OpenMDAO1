@@ -1268,7 +1268,7 @@ class System(object):
         unknowns_dict = self._unknowns_dict
         connections = self.connections
 
-        # Find all out unit conversion
+        # Find all unit conversions
         unit_diffs = {}
         for target, (source, idxs) in iteritems(connections):
             tmeta = params_dict[target]
