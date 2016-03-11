@@ -1274,23 +1274,10 @@ class System(object):
             tmeta = params_dict[target]
             smeta = unknowns_dict[source]
 
-            # units must be in both src and target to have a conversion
-            if 'units' not in tmeta or 'units' not in smeta:
-                # for later reporting in check_setup, keep track of any unit differences,
-                # even for connections where one side has units and the other doesn't
-                if 'units' in tmeta or 'units' in smeta:
-                    unit_diffs[(source, target)] = (smeta.get('units'),
-                                                    tmeta.get('units'))
-                continue
-
-            src_unit = smeta['units']
-            tgt_unit = tmeta['units']
-
-            scale, offset = get_conversion_tuple(src_unit, tgt_unit)
-
-            # If units are not equivalent, then we have a conversion
-            if scale != 1.0 or offset != 0.0:
-                tmeta['unit_conv'] = (scale, offset)
+            # If we have a conversion, there should be a conversion factor
+            # tucked away in the params meta
+            conv = tmeta.get('unit_conv')
+            if conv:
                 unit_diffs[(source, target)] = (smeta.get('units'),
                                                 tmeta.get('units'))
 
