@@ -1,9 +1,12 @@
 """ Base class for all systems in OpenMDAO."""
 
+from __future__ import print_function
+
 import sys
 import os
-from fnmatch import fnmatch, translate
 import re
+from collections import OrderedDict
+from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
@@ -12,17 +15,17 @@ from six import string_types, iteritems, itervalues, iterkeys
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
-from openmdao.util.options import OptionsDictionary
-from collections import OrderedDict
-from openmdao.core.vec_wrapper import VecWrapper
-from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
-from openmdao.util.type_util import real_types
-from openmdao.util.string_util import name_relative_to
+from openmdao.core.vec_wrapper import VecWrapper, _PlaceholderVecWrapper
+from openmdao.units.units import get_conversion_tuple
 from openmdao.util.file_util import DirContext
+from openmdao.util.options import OptionsDictionary
+from openmdao.util.string_util import name_relative_to
+from openmdao.util.type_util import real_types
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
+
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -1245,6 +1248,70 @@ class System(object):
                 stream.write('\n\n')
         else:
             stream.write("\nNo states in %s.\n" % pathname)
+
+    def list_unit_conv(self, stream=sys.stdout):
+        """ List all unit conversions that are being handled by OpenMDAO
+        (including those with units defined only on one side of the
+        connection.)
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the state info to. Default is sys.stdout.
+
+        Returns
+        -------
+            List of unit conversions.
+        """
+
+        params_dict = self._params_dict
+        unknowns_dict = self._unknowns_dict
+        connections = self.connections
+
+        # Find all out unit conversion
+        unit_diffs = {}
+        for target, (source, idxs) in iteritems(connections):
+            tmeta = params_dict[target]
+            smeta = unknowns_dict[source]
+
+            # units must be in both src and target to have a conversion
+            if 'units' not in tmeta or 'units' not in smeta:
+                # for later reporting in check_setup, keep track of any unit differences,
+                # even for connections where one side has units and the other doesn't
+                if 'units' in tmeta or 'units' in smeta:
+                    unit_diffs[(source, target)] = (smeta.get('units'),
+                                                    tmeta.get('units'))
+                continue
+
+            src_unit = smeta['units']
+            tgt_unit = tmeta['units']
+
+            scale, offset = get_conversion_tuple(src_unit, tgt_unit)
+
+            # If units are not equivalent, then we have a conversion
+            if scale != 1.0 or offset != 0.0:
+                tmeta['unit_conv'] = (scale, offset)
+                unit_diffs[(source, target)] = (smeta.get('units'),
+                                                tmeta.get('units'))
+
+        if unit_diffs:
+            tuples = sorted(iteritems(unit_diffs))
+            print("\nUnit Conversions", file=stream)
+
+            vec = self.unknowns
+            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
+
+            for (src, tgt), (sunit, tunit) in tuples:
+                if src in pbos:
+                    pbo_str = ' (pass_by_obj)'
+                else:
+                    pbo_str = ''
+                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
+                      file=stream)
+
+            return tuples
+        return []
+
 
 
 class _DummyContext(object):
