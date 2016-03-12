@@ -1,3 +1,19 @@
+OpenMDAO Version 1.6.1 Alpha Release Notes
+March 12, 2016
+
+Features
+* Problem has run_once method, which (surprisingly!) runs through a model one time.  
+* Problem.check_partial_derivatives() and Problem.check_total_derivatives() call run_once() automatically, if model has not been run.
+* Improved error msg when you have multiple connected parameters with no ultimate src, but different units or initial values.
+* Internal refactor of relevance reduction in the LinearGaussSeidel solver.
+* Added Implicit Components tutorials.
+* Added a secondary validation option for check_partial_derivatives via fd_options['extra_check_partials_form'], useful to compare complex-step with FD.  
+
+BugFixes
+* Bug fix for petscKSP in parallel.
+* Integer values for scalar and adder are supported.
+---------------------------------------------------------------------------------------------------
+
 OpenMDAO Version 1.6.0 Alpha Release Notes
 March 1, 2016
 
