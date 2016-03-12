@@ -1,9 +1,12 @@
 """ Unit test for the Gauss Seidel linear solver. """
 
 import unittest
-import numpy as np
 
-from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp
+import numpy as np
+from scipy.optimize import fsolve
+
+from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp, \
+                         Component, ScipyGMRES
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives, StateConnection
@@ -527,6 +530,92 @@ class TestLinearGaussSeidel(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+
+class SimpleImplicit(Component):
+
+    def __init__(self):
+        super(SimpleImplicit, self).__init__()
+
+        self.add_param('a', shape=1., step_size=1e-3)
+        self.add_param('b', shape=1)
+
+        self.add_state('x', val=np.ones(2))
+        # self.fd_options['force_fd'] = True
+        # self.fd_options['form'] = 'complex_step'
+
+    def apply_nonlinear(self, p, u, r):
+
+        x0,x1 = u['x']
+        r['x'][0] = x0**2 - x1**2 + p['a']
+        r['x'][1] = p['b']*x0*x1
+
+    def _r(self, x, p, u, r):
+        u['x'] = x
+        self.apply_nonlinear(p, u, r)
+        return r['x']
+
+    def solve_nonlinear(self, p, u, r):
+        x = fsolve(self._r, u['x'], args=(p, u, r))
+        u['x'] = x
+        # u['x'] = np.array([0., 3.])
+
+        # self.apply_nonlinear(p, u, r)
+
+    def linearize(self, p, u, r):
+        J = {}
+        x0,x1 = u['x']
+
+        J['x','a'] = np.array([[1.],
+                               [0.]])
+        J['x','b'] = np.array([[0.],
+                               [x0*x1]])
+        J['x','x'] = np.array([[2.*x0, -2.*x1],
+                               [p['b']*x1, p['b']*x0]])
+        self.J = J
+
+        return J
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
+        if mode == 'fwd':
+            sol_vec, rhs_vec = self.dumat, self.drmat
+        else:
+            sol_vec, rhs_vec = self.drmat, self.dumat
+
+        # print "soofoo", self.J['x','x']
+        for voi in vois:
+            if mode == "fwd":
+                sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'], -rhs_vec[voi].vec)
+            else:
+                sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'].T, -rhs_vec[voi].vec)
+
+
+class TestLinearGaussSeidelAsPrecon(unittest.TestCase):
+
+    def test_relevance_issue(self):
+
+        p = Problem()
+        p.root = Group()
+
+        dvars = ( ('a', 3.), ('b', 10.))
+        p.root.add('desvars', IndepVarComp(dvars), promotes=['a', 'b'])
+
+        sg = p.root.add('sg', Group(), promotes=["*"])
+        sg.add('si', SimpleImplicit(), promotes=['a', 'b', 'x'])
+
+        p.root.add('func', ExecComp('f = 2*x0+a'), promotes=['f', 'x0', 'a'])
+        p.root.connect('x', 'x0', src_indices=[1])
+
+        p.root.ln_solver = ScipyGMRES()
+        p.root.ln_solver.preconditioner = LinearGaussSeidel()
+
+        p.driver.add_objective('f')
+        p.driver.add_desvar('a')
+
+        p.setup(check=False)
+        p.run_once()
+
+        # Make sure we don't get a KeyError
+        p.check_total_derivatives(out_stream=None)
 
 if __name__ == "__main__":
     unittest.main()

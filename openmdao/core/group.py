@@ -321,13 +321,15 @@ class Group(System):
                 for sub in self._local_subsystems:
                     gs_outputs[sub.name] = outs = OrderedDict()
                     for voi in vois:
-                        outs[voi] = set([x for x in dumat[voi]._dat if
+                        if voi in dumat:
+                            outs[voi] = set([x for x in dumat[voi]._dat if
                                                    sub.dumat and x not in sub.dumat[voi]])
             else: # rev
                 for sub in self._local_subsystems:
                     gs_outputs[sub.name] = outs = OrderedDict()
                     for voi in vois:
-                        outs[voi] = set([x for x in dumat[voi]._dat if
+                        if voi in dumat:
+                            outs[voi] = set([x for x in dumat[voi]._dat if
                                                    not sub.dumat or
                                                    (sub.dumat and x not in sub.dumat[voi])])
         return self._gs_outputs
