@@ -531,8 +531,8 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict,
-                          self.root._sysdata.to_prom_name)
+        errors = check_connections(connections, params_dict, unknowns_dict,
+                                   self.root._sysdata.to_prom_name)
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -2147,8 +2147,8 @@ class Problem(object):
                     msg = "Unit '{s[units]}' in source '{sprom}' "\
                         "is incompatible with unit '{t[units]}' "\
                         "in target '{tprom}'.".format(s=smeta, t=tmeta,
-                                                                 sprom=to_prom_name[source],
-                                                                 tprom=to_prom_name[target])
+                                                     sprom=to_prom_name[source],
+                                                     tprom=to_prom_name[target])
                     raise TypeError(msg)
                 else:
                     raise

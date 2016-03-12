@@ -1,5 +1,6 @@
 """ Set of utilities for detecting and reporting connection errors."""
 
+import traceback
 from six import iteritems
 from openmdao.core.fileref import FileRef
 
@@ -25,12 +26,17 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
     TypeError, or ValueError
         Any invalidity in the connection raises an error.
     """
+    errors = []
+
     for tgt, (src, idxs) in iteritems(connections):
-        tmeta = params_dict[tgt]
-        smeta = unknowns_dict[src]
-        _check_types_match(smeta, tmeta, to_prom_name)
-        if 'pass_by_obj' not in smeta and 'pass_by_obj' not in smeta:
-            _check_shapes_match(smeta, tmeta, to_prom_name)
+        try:
+            tmeta = params_dict[tgt]
+            smeta = unknowns_dict[src]
+            _check_types_match(smeta, tmeta, to_prom_name)
+            if 'pass_by_obj' not in smeta and 'pass_by_obj' not in smeta:
+                _check_shapes_match(smeta, tmeta, to_prom_name)
+        except:
+            errors.append(traceback.format_exc())
 
     # FileRefs require a separate check, because if multiple input FileRefs
     # refer to the same file, that means they're implicitly connected,
@@ -51,22 +57,30 @@ def check_connections(connections, params_dict, unknowns_dict, to_prom_name):
 
     for infile, (ins, outs) in iteritems(fref_conns):
         if len(outs) > 1:
-            raise RuntimeError("input file '%s' is referenced from FileRef param(s) %s, "
-                               "which are connected to multiple "
-                               "output FileRefs: %s. Those FileRefs reference the following "
-                               "files: %s." % (infile, [i for i,isconn in ins],
-                                             sorted([o for o,of in outs]),
-                                             sorted([of for o,of in outs])))
+            try:
+                raise RuntimeError("input file '%s' is referenced from FileRef param(s) %s, "
+                                   "which are connected to multiple "
+                                   "output FileRefs: %s. Those FileRefs reference the following "
+                                   "files: %s." % (infile, [i for i,isconn in ins],
+                                                 sorted([o for o,of in outs]),
+                                                 sorted([of for o,of in outs])))
+            except:
+                errors.append(traceback.format_exc())
 
         for ivar, isconn in ins:
             if not isconn and outs:
-                raise RuntimeError("FileRef param '%s' is unconnected but will be "
-                                   "overwritten by the following FileRef unknown(s): "
-                                   "%s. Files referred to by the FileRef unknowns are: "
-                                   "%s. To remove this error, make a connection between %s"
-                                   " and a FileRef unknown." % (ivar,
-                                          sorted([o for o,of in outs]),
-                                          sorted([of for o,of in outs]), ivar))
+                try:
+                    raise RuntimeError("FileRef param '%s' is unconnected but will be "
+                                       "overwritten by the following FileRef unknown(s): "
+                                       "%s. Files referred to by the FileRef unknowns are: "
+                                       "%s. To remove this error, make a connection between %s"
+                                       " and a FileRef unknown." % (ivar,
+                                              sorted([o for o,of in outs]),
+                                              sorted([of for o,of in outs]), ivar))
+                except:
+                    errors.append(traceback.format_exc())
+
+    return errors
 
 def _check_types_match(src, tgt, to_prom_name):
     sval = src['val']
