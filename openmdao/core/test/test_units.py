@@ -6,7 +6,7 @@ from six.moves import cStringIO
 
 import numpy as np
 
-from openmdao.api import IndepVarComp, Component, Group, Problem
+from openmdao.api import IndepVarComp, Component, Group, Problem, ExecComp
 from openmdao.test.util import assert_rel_error
 
 
@@ -186,9 +186,25 @@ class TestUnitConversion(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
 
         stream = cStringIO()
-        conv = prob.list_unit_conv(stream=stream)
+        conv = prob.root.list_unit_conv(stream=stream)
         self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
         self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
+
+    def test_list_unit_conversions_no_unit(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.add('src', SrcComp())
+        prob.root.add('tgt', ExecComp('yy=xx', xx=0.0))
+        prob.root.connect('src.x2', 'tgt.xx')
+
+        prob.setup(check=False)
+        prob.run()
+
+        stream = cStringIO()
+        conv = prob.root.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgt.xx'), ('degC', None)) in conv)
 
     def test_basic_input_input(self):
 
@@ -334,6 +350,34 @@ class TestUnitConversion(unittest.TestCase):
         assert_rel_error(self, J['sub2.tgtF.x3']['x1'][0][0], 1.8, 1e-6)
         assert_rel_error(self, J['sub2.tgtC.x3']['x1'][0][0], 1.0, 1e-6)
         assert_rel_error(self, J['sub2.tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        stream = cStringIO()
+        conv = prob.root.sub1.list_unit_conv(stream=stream)
+        self.assertTrue(len(conv) == 0)
+
+
+    def test_list_unit_connections_sub(self):
+
+        prob = Problem()
+        prob.root = Group()
+        sub1 = prob.root.add('sub1', Group())
+        sub2 = prob.root.add('sub2', Group())
+        sub1.add('src', SrcComp())
+        sub1.add('tgtF', TgtCompF())
+        sub2.add('tgtC', TgtCompC())
+        sub2.add('tgtK', TgtCompK())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'sub1.src.x1')
+        prob.root.connect('sub1.src.x2', 'sub1.tgtF.x2')
+        prob.root.connect('sub1.src.x2', 'sub2.tgtC.x2')
+        prob.root.connect('sub1.src.x2', 'sub2.tgtK.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        stream = cStringIO()
+        conv = prob.root.sub1.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
 
     def test_basic_grouped_bug_from_pycycle(self):
 
@@ -625,6 +669,11 @@ class TestUnitConversionPBO(unittest.TestCase):
                                return_format='dict')
 
         assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+
+        stream = cStringIO()
+        conv = prob.root.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
+
 
 if __name__ == "__main__":
     unittest.main()
