@@ -351,7 +351,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None, pass_unknowns=(),
+                    fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
                     poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
@@ -380,6 +380,10 @@ class System(object):
             List of output or state name strings for derivatives to be
             calculated. This is used by problem to limit the derivatives that
             are taken.
+
+        fd_states : list of strings, optional
+            List of state name strings for derivatives to be taken with respect to.
+            This is used by problem to limit the derivatives that are taken.
 
         pass_unknowns : list of strings, optional
             List of outputs that are also finite difference inputs. OpenMDAO
@@ -428,6 +432,8 @@ class System(object):
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
+            if fd_states is not None: # have to do this after the states check, so we get the right vec first
+                states = fd_states
 
         cache1 = resultvec.vec.copy()
 
@@ -535,7 +541,7 @@ class System(object):
 
                         # delta resid is delta unknown
                         resultvec.vec[:] -= cache1
-                        resultvec.vec[:] *= (1.0/step)
+                        resultvec.vec[:] /= step
 
                     elif fdform == 'backward':
 

@@ -278,7 +278,7 @@ class Accessor(object):
 
     def _set_arr(self, value):
         """Set an array value."""
-        self.val[:] = value.flat
+        self.val[:] = value.real.flat
 
     def _set_arr_complex(self, value):
         """Set an array value, complex support."""
@@ -290,7 +290,7 @@ class Accessor(object):
 
     def _set_scalar(self, value):
         """Set a scalar value."""
-        self.val[0] = value
+        self.val[0] = value.real
 
     def _set_scalar_complex(self, value):
         """Set a scalar value, complex support."""
