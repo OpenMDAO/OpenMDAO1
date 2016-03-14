@@ -113,7 +113,6 @@ class PetscKSP(LinearSolver):
 
     def setup(self, system):
         """ Setup petsc problem just once."""
-
         if not system.is_active():
             return
 

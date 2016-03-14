@@ -711,7 +711,7 @@ class Component(System):
         return umap
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
-                              fd_params=None, fd_unknowns=None,
+                              fd_params=None, fd_states=None, fd_unknowns=None,
                               poi_indices=None, qoi_indices=None):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
@@ -739,6 +739,10 @@ class Component(System):
             List of output or state name strings for derivatives to be
             calculated. This is used by problem to limit the derivatives that
             are taken.
+
+        fd_states : list of strings, optional
+            List of state name strings for derivatives to be taken with respect to.
+            This is used by problem to limit the derivatives that are taken.
 
         poi_indices: dict of list of integers, optional
             Should be an empty list, as there is no subcomponent relevance reduction.
@@ -775,8 +779,13 @@ class Component(System):
         else:
             resultvec = csunknowns
 
+        # Manual override of states.
+        if fd_states is not None:
+            states = fd_states
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
+
 
             # States are stepped in unknowns, not params
             if p_name in states:

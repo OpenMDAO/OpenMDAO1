@@ -305,8 +305,6 @@ class Problem(object):
                         sname, s = connected_inputs[tgt_idx], units[tgt_idx]
                         tname, t = connected_inputs[i], u
 
-                    # report these in check_setup later
-                    self._unit_diffs[(sname, tname)] = (s, t)
                     diff_units.append((connected_inputs[i], u))
 
             if isinstance(vals[tgt_idx], np.ndarray):
@@ -349,7 +347,6 @@ class Problem(object):
                            " with defined units."
 
                     self._setup_errors.append(msg)
-
             if diff_vals:
                 msg = ("The following sourceless connected inputs have "
                        "different initial values: "
@@ -773,39 +770,6 @@ class Problem(object):
                   file=out_stream)
 
         return (self.root._probdata.relevance.mode, self._calculated_mode)
-
-    def list_unit_conv(self, stream=sys.stdout):
-        """ List all unit conversions that are being handled by OpenMDAO
-        (including those with units defined only on one side of the
-        connection.)
-
-        Args
-        ----
-        stream : output stream, optional
-            Stream to write the state info to. Default is sys.stdout.
-
-        Returns
-        -------
-            List of unit conversions.
-        """
-
-        if self._unit_diffs:
-            tuples = sorted(iteritems(self._unit_diffs))
-            print("\nUnit Conversions", file=stream)
-
-            vec = self.root.unknowns
-            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
-
-            for (src, tgt), (sunit, tunit) in tuples:
-                if src in pbos:
-                    pbo_str = ' (pass_by_obj)'
-                else:
-                    pbo_str = ''
-                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
-                      file=stream)
-
-            return tuples
-        return []
 
     def _check_no_unknown_comps(self, out_stream=sys.stdout):
         """ Check for components without unknowns. """
@@ -2074,17 +2038,6 @@ class Problem(object):
         tree['root'] = _tree_dict(self.root)
         return json.dumps(tree)
 
-    def _json_dependencies(self):
-        """ Returns a json representation of the data dependency graph for
-        the model in root..
-
-        Returns
-        -------
-        A json string with a dependency matrix and a list of variable
-        name labels.
-        """
-        return self.root._probdata.relevance.json_dependencies()
-
     def _setup_communicators(self):
         if self.comm is None:
             self.comm = self._impl.world_comm()
@@ -2127,8 +2080,6 @@ class Problem(object):
         unknowns_dict : OrderedDict
             A dict of unknowns metadata for the whole `Problem`.
         """
-        self._unit_diffs = {}
-
         to_prom_name = self.root._sysdata.to_prom_name
 
         for target, (source, idxs) in iteritems(connections):
@@ -2137,11 +2088,6 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
-                # for later reporting in check_setup, keep track of any unit differences,
-                # even for connections where one side has units and the other doesn't
-                if 'units' in tmeta or 'units' in smeta:
-                    self._unit_diffs[(source, target)] = (smeta.get('units'),
-                                                          tmeta.get('units'))
                 continue
 
             src_unit = smeta['units']
@@ -2166,8 +2112,6 @@ class Problem(object):
             # in the parameter metadata
             if scale != 1.0 or offset != 0.0:
                 tmeta['unit_conv'] = (scale, offset)
-                self._unit_diffs[(source, target)] = (smeta.get('units'),
-                                                      tmeta.get('units'))
 
     def _add_implicit_connections(self, connections):
         """

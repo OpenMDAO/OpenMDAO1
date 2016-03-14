@@ -7,7 +7,7 @@ import os
 import sys
 from itertools import chain
 from pprint import pformat
-from functools import wraps
+import functools
 from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
 from six import itervalues
 
@@ -70,8 +70,8 @@ def dump_meta(system, nest=0, out_stream=sys.stdout):
     out_stream.flush()
 
 class dec_if(object):
-    """Conditional decorator.  If cond is True, the given decorator
-    will be applied.
+    """Conditional decorator.  If cond is True at import time,
+    the given decorator will be applied.
     """
     def __init__(self, dec, cond):
         self.dec = dec
@@ -116,7 +116,7 @@ try:
         This gives the difference in memory before and after the
         decorated function is called. Requires psutil to be installed.
         """
-        @wraps(fn)
+        @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             startmem = mem_usage()
             ret = fn(*args, **kwargs)
@@ -139,14 +139,42 @@ def num_systems(root):
     Return the total number of systems in the tree starting at the given
     root.
     """
-    return len([s for s in root.subsystems(recurse=True, include_self=True)])
+    return functools.reduce(lambda x,y: x+1,
+                            root.subsystems(recurse=True, include_self=True), 0)
 
-def max_tree_depth(root):
+def num_groups(root):
     """
-    Return the max depth of the tree starting from root.
+    Return the total number of groups in the tree starting at the given
+    root.
+    """
+    return functools.reduce(lambda x,y: x+1,
+                            root.subgroups(recurse=True, include_self=True), 0)
+
+def num_components(root):
+    """
+    Return the total number of components in the tree starting at the given
+    root.
+    """
+    return functools.reduce(lambda x,y: x+1,
+                            root.components(recurse=True, include_self=True), 0)
+
+def total_var_size(root):
+    """
+    Returns the total of the reported sizes for all float variables.  Note that
+    this corresponds to the number of entries in the params and unknowns vectors,
+    not the total memory size of the various vectors that contain the values,
+    derivatives, residuals, etc. of the variables.
+    """
+    return functools.reduce(lambda x,y: x+y['size'],
+                            chain(itervalues(root._unknowns_dict),
+                                  itervalues(root._params_dict)), 0)
+
+def tree_depth(root):
+    """
+    Return the depth of the tree starting from root.
     """
     return max(len(s.pathname.split('.'))
-                   for s in root.subsystems(recurse=True))
+                   for s in root.subsystems(recurse=True) if not s._subsystems)
 
 def _f2mb(fsize):
     """Returns the size of an array of floats (double precision)
@@ -160,8 +188,14 @@ def stats(problem):
     """
     root = problem.root
 
-    print("Num systems:", num_systems(root))
-    print("Max tree depth:", max_tree_depth(root))
+    print("Num groups:", num_groups(root))
+    print("Num components:", num_components(root))
+    print("Num variables:", len(root._params_dict)+len(root._unknowns_dict))
+    print("Num connections:", len(problem._probdata.connections))
+
+    print("\nNum entries (params + unknowns):", total_var_size(root))
+
+    print("\nTree depth:", tree_depth(root))
 
     print("\nMax mem usage: %s MB" % max_mem_usage())
     print("Current mem usage: %s MB" % mem_usage())
