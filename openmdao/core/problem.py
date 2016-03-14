@@ -1048,7 +1048,7 @@ class Problem(object):
             # Make sure our residuals are up-to-date
             with root._dircontext:
                 root.apply_nonlinear(root.params, root.unknowns, root.resids,
-                                       metadata=driver.metadata)
+                                     metadata=driver.metadata)
 
             # if we're running under MPI, ensure that all of the processes
             # are finished in order to ensure that scripting code outside of
