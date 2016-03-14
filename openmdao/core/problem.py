@@ -2032,17 +2032,6 @@ class Problem(object):
         tree['root'] = _tree_dict(self.root)
         return json.dumps(tree)
 
-    def _json_dependencies(self):
-        """ Returns a json representation of the data dependency graph for
-        the model in root..
-
-        Returns
-        -------
-        A json string with a dependency matrix and a list of variable
-        name labels.
-        """
-        return self.root._probdata.relevance.json_dependencies()
-
     def _setup_communicators(self):
         if self.comm is None:
             self.comm = self._impl.world_comm()

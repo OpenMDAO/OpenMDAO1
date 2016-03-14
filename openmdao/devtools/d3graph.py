@@ -96,7 +96,7 @@ def view_tree(system, viewer='collapse_tree', expand_level=9999,
         f.write(template % treejson)
 
     if show_browser:
-        _view(outfile)
+        webview(outfile)
 
 
 def webview(outfile):
