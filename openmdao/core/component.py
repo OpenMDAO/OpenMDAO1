@@ -778,7 +778,9 @@ class Component(System):
             resultvec = csresids
         else:
             resultvec = csunknowns
-        if fd_states is not None: # have to do this after the states check, so we get the right vec first
+
+        # Manual override of states.
+        if fd_states is not None:
             states = fd_states
 
         # Compute gradient for this param or state.

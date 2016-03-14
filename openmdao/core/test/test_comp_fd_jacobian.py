@@ -170,6 +170,27 @@ class CompFDTestCase(unittest.TestCase):
 
         assert_equal_jacobian(self, jac, expected_jac, 1e-5)
 
+    def test_override_states(self):
+
+        expected_keys=[('y', 'x'), ('y', 'z'), ('z', 'x'), ('z', 'z')]
+
+        params = self.p.root.ci1.params
+        unknowns = self.p.root.ci1.unknowns
+        resids = self.p.root.ci1.resids
+
+        jac = self.p.root.ci1.fd_jacobian(params, unknowns, resids)
+        self.assertEqual(set(expected_keys), set(jac.keys()))
+
+        # Don't compute derivs wrt 'z'
+        expected_keys=[('y', 'x'), ('z', 'x')]
+
+        params = self.p.root.ci1.params
+        unknowns = self.p.root.ci1.unknowns
+        resids = self.p.root.ci1.resids
+
+        jac = self.p.root.ci1.fd_jacobian(params, unknowns, resids, fd_states=[])
+        self.assertEqual(set(expected_keys), set(jac.keys()))
+
 
 class CompFDinSystemTestCase(unittest.TestCase):
     """ Tests automatic finite difference of a component in a full problem."""

@@ -432,7 +432,9 @@ class System(object):
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
-            if fd_states is not None: # have to do this after the states check, so we get the right vec first
+
+            # Manual override of states.
+            if fd_states is not None:
                 states = fd_states
 
         cache1 = resultvec.vec.copy()
@@ -541,7 +543,8 @@ class System(object):
 
                         # delta resid is delta unknown
                         resultvec.vec[:] -= cache1
-                        resultvec.vec[:] /= step
+                        resultvec.vec[:] *= (1.0/step)
+                        # Note: vector division is slower than vector mult.
 
                     elif fdform == 'backward':
 
@@ -554,6 +557,7 @@ class System(object):
                         # delta resid is delta unknown
                         resultvec.vec[:] -= cache1
                         resultvec.vec[:] *= (-1.0/step)
+                        # Note: vector division is slower than vector mult.
 
                     elif fdform == 'central':
 
@@ -572,6 +576,7 @@ class System(object):
                         # central difference formula
                         resultvec.vec[:] -= cache2
                         resultvec.vec[:] *= (-0.5/step)
+                        # Note: vector division is slower than vector mult.
 
                         target_input[idx] += step
 
@@ -585,7 +590,8 @@ class System(object):
                         inputs._dat[param_key].imag_val[idx] -= fdstep
 
                         # delta resid is delta unknown
-                        resultvec.vec[:] = resultvec.imag_vec/fdstep
+                        resultvec.vec[:] = resultvec.imag_vec*(1.0/fdstep)
+                        # Note: vector division is slower than vector mult.
                         probdata.in_complex_step = False
 
                     for u_name in fd_unknowns:
