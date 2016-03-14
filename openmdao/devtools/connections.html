@@ -1,0 +1,86 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+<style>
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+</style>
+</head>
+<body>
+<script type="text/javascript">
+
+var data = %s;
+
+window.onload = function() {
+
+    var w=900, h=500;
+    var RIGHT_MARGIN=100;
+    var LEFT_MARGIN=100;
+    var diagonal = d3.svg.diagonal();
+
+    var left_data = []
+    var right_data = []
+    var link_data = []
+
+    var count = data.length;
+    for (i=0; i<count; ++i) {
+        left_data[i] = {
+            "name": data[i]['source'],
+            "x": LEFT_MARGIN-35,
+            "y": i*10+50
+        }
+        right_data[i] = {
+            "name": data[i]['target'],
+            "x": w-RIGHT_MARGIN,
+            "y": i*10+50
+        }
+        link_data[i] = { 'source': left_data[i], 'target': right_data[i] }
+    }
+
+    var svg = d3.select("body").append("div")
+        .attr("class", "chart")
+        .style("width", w + "px")
+        .style("height", h + "px")
+      .append("svg:svg")
+        .attr("width", w)
+        .attr("height", h);
+
+    left_labels = svg.selectAll('.left_labels')
+    	.data(left_data).enter().append('svg:text')
+    		.attr('x', function(d,i) { return d.x; })
+    		.attr('y', function(d,i) { return d.y; })
+    		.attr('dy', '.35em')
+    		.attr('font-size', 10)
+    		.attr('font-weight', 'bold')
+    		.attr('text-anchor', 'end')
+    		.text(function(d,i){ return d.name})
+    		.attr('fill', 'black');
+
+    right_labels = svg.selectAll('.right_labels')
+    	.data(right_data).enter().append('svg:text')
+            .attr('x', function(d,i) { return d.x; })
+            .attr('y', function(d,i) { return d.y; })
+    		.attr('dy', '.35em')
+    		.attr('dx', 35)
+    		.attr('font-weight', 'bold')
+    		.attr('font-size', 10)
+            .attr('text-anchor', 'start')
+    		.text(function(d,i){ return d.name})
+    		.attr('fill', 'black');
+
+    var links = svg.selectAll(".link")
+        .data(link_data)
+      .enter().append("path")
+        .attr("class", "link")
+        .attr("d", diagonal);
+
+}
+</script>
+</body>
+</html>
