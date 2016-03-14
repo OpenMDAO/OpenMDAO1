@@ -729,8 +729,8 @@ class Driver(object):
             system.solve_nonlinear(metadata=metadata)
 
             # Make sure our residuals are up-to-date
-            #system.apply_nonlinear(system.params, system.unknowns, system.resids,
-            #                       metadata=metadata)
+            system.apply_nonlinear(system.params, system.unknowns, system.resids,
+                                   metadata=metadata)
 
 
         self.recorders.record_iteration(system, metadata)

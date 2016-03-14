@@ -61,12 +61,13 @@ class TestNewton(unittest.TestCase):
         self.assertLess(prob.root.nl_solver.iter_count, 8)
 
         # Make sure we only call apply_linear on 'heads'
+        # Notes: head comps run 2n+1 times body comps
         nd1 = prob.root.d1.execution_count
         nd2 = prob.root.d2.execution_count
         if prob.root.d1._run_apply == True:
-            self.assertEqual(nd1, 2*nd2)
+            self.assertEqual(nd1, 2*nd2+1)
         else:
-            self.assertEqual(2*nd1, nd2)
+            self.assertEqual(2*nd1+1, nd2)
 
     def test_sellar_derivs_with_Lin_GS(self):
 
