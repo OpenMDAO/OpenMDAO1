@@ -13,7 +13,6 @@ BugFixes
 * Bug fix for petscKSP in parallel.
 * Integer values for scalar and adder are supported.
 ---------------------------------------------------------------------------------------------------
-
 OpenMDAO Version 1.6.0 Alpha Release Notes
 March 1, 2016
 
