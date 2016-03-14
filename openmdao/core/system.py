@@ -437,6 +437,7 @@ class System(object):
             if fd_states is not None:
                 states = fd_states
 
+        #run_model(params, unknowns, resids)
         cache1 = resultvec.vec.copy()
 
         gather_jac = False

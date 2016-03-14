@@ -109,6 +109,146 @@ class TestProblemCheckPartials(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
+    def test_simple_implicit_run_once(self):
+
+        class Circulations(Component):
+            """ Calculates circulations. """
+
+            def __init__(self, n):
+                super(Circulations, self).__init__()
+                self.add_param('v', val=10.)
+                self.add_param('alpha', val=3.)
+                self.add_param('mesh', val=np.zeros((2, n, 3)))
+                self.add_param('normals', val=np.zeros((n-1, 3)))
+                self.add_param('b_pts', val=np.zeros((n, 3)))
+                self.add_param('c_pts', val=np.zeros((n-1, 3)))
+                self.add_state('circulations', val=np.zeros((n-1)))
+
+                # self.fd_options['force_fd'] = True
+                # self.fd_options['linearize'] = True # only for circulations
+                #used for checking
+                self.fd_options['form'] = 'forward'
+                self.fd_options['step_size'] = 1.0e-8
+
+                self.fd_options['extra_check_partials_form'] = "backward" # forward and backwards seem to mess this component up!
+
+                size = n - 1
+                self.num_y = n
+                self.mtx = np.zeros((size, size), dtype="complex")
+                self.rhs = np.zeros((size), dtype="complex")
+
+            def solve_nonlinear(self, params, unknowns, resids):
+
+                self.apply_nonlinear(params, unknowns, resids)
+
+                unknowns['circulations'] = np.linalg.solve(self.mtx, self.rhs)
+                #print('solve', params['alpha'], params['v'], unknowns['circulations'])
+
+            def apply_nonlinear(self, params, unknowns, resids):
+                mesh = params['mesh']
+
+                alpha = params['alpha'] * np.pi / 180.
+                v_inf = params['v'] * np.array([np.cos(alpha), 0., np.sin(alpha)]) # TODO: clean this up a bit
+
+                self.mtx, self.rhs = _calc_mtx_coeffs(self.mtx, mesh, self.num_y,
+                                                      params['normals'], params['c_pts'], params['b_pts'],
+                                                      tref=False, rhs=self.rhs, v_inf=v_inf)
+                resids['circulations'] = np.dot(self.mtx, unknowns['circulations']) - self.rhs
+                #print('resids', params['alpha'], params['v'], unknowns['circulations'])
+
+            def linearize(self, params, unknowns, resids):
+                """ Jacobian for circulations."""
+
+                jac = self.complex_step_jacobian(params, unknowns, resids,
+                                                 fd_params=('v', 'alpha', 'mesh', 'normals', 'b_pts', 'c_pts'), # exclude any you want to skip from this list
+                                                 fd_states=tuple()) # Don't pass None!!
+
+                jac['circulations', 'circulations'] = self.mtx.real
+
+                self.lup = lu_factor(self.mtx.real)
+
+                return jac
+
+            def solve_linear(self, dumat, drmat, vois, mode=None):
+
+                if mode == 'fwd':
+                    sol_vec, rhs_vec = self.dumat, self.drmat
+                else:
+                    sol_vec, rhs_vec = self.drmat, self.dumat
+
+                for voi in vois:
+                    if mode == "fwd":
+                        sol_vec[voi].vec[:] = lu_solve(self.lup, -rhs_vec[voi].vec)
+                    else:
+                        sol_vec[voi].vec[:] = lu_solve(self.lup, -rhs_vec[voi].vec, trans=1)
+
+        def _biot_savart(N, A, B, P, infinite=False, reverse=False, eps=1e-5):
+            rPA = np.linalg.norm(A - P)
+            rPB = np.linalg.norm(B - P)
+            rAB = np.linalg.norm(B - A)
+            rH = np.linalg.norm(P - A - np.dot((B - A), (P - A)) / np.dot((B - A), (B - A)) * (B - A)) + eps
+            cosA = np.dot((P - A), (B - A)) / (rPA * rAB)
+            cosB = np.dot((P - B), (A - B)) / (rPB * rAB)
+            C = np.cross(B - P, A - P)
+            C /= np.linalg.norm(C)
+
+            if infinite:
+                vdn = -np.dot(N, C) / rH * (cosA + 1) / (4 * np.pi)
+            else:
+                vdn = -np.dot(N, C) / rH * (cosA + cosB) / (4 * np.pi)
+            if reverse:
+                vdn = -vdn
+            return vdn
+
+        def _calc_mtx_coeffs(mtx, mesh, num_y, normals, points, b_pts, tref=False, trefftz_plane=None, rhs=None, v_inf=None):
+            # loop through intersection points and calculate coeffs for mtx
+            mtx[:] = 0.
+            for ind_iy in xrange(num_y - 1):
+                if tref:
+                    # project N onto the trefftz plane
+                    N = normals[ind_iy] - np.dot(normals[ind_iy], trefftz_plane) * trefftz_plane / np.linalg.norm(trefftz_plane)
+                    P = points[ind_iy, :]
+                else:
+                    N = normals[ind_iy]
+                    rhs[ind_iy] = -np.dot(N, v_inf)
+                    P = points[ind_iy]
+
+                for ind_jy in xrange(num_y - 1):
+                    A = b_pts[ind_jy + 0, :]
+                    B = b_pts[ind_jy + 1, :]
+                    D = mesh[-1, ind_jy + 0, :]
+                    E = mesh[-1, ind_jy + 1, :]
+
+                    if not tref:
+                        mtx[ind_iy, ind_jy] += _biot_savart(N, A, B, P)
+                    mtx[ind_iy, ind_jy] += _biot_savart(N, B, E, P, infinite=True, reverse=False)
+                    mtx[ind_iy, ind_jy] += _biot_savart(N, A, D, P, infinite=True, reverse=True)
+            return mtx, rhs
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', Circulations(5))
+        prob.root.add('p1', IndepVarComp('v', 10.0))
+        prob.root.add('p2', IndepVarComp('alpha', 0.3))
+
+        prob.root.connect('p1.v', 'comp.v')
+        prob.root.connect('p2.alpha', 'comp.alpha')
+
+        prob.setup(check=False)
+        prob.run_once()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
     def test_simple_implicit_complex_step(self):
 
         prob = Problem()
