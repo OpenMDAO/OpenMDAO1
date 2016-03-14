@@ -1040,8 +1040,15 @@ class Problem(object):
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
         the current design point. """
-        if self.root.is_active():
-            self.driver.run_once(self)
+        root = self.root
+        driver = self.driver
+        if root.is_active():
+            driver.run_once(self)
+
+            # Make sure our residuals are up-to-date
+            with root._dircontext:
+                root.apply_nonlinear(root.params, root.unknowns, root.resids,
+                                       metadata=driver.metadata)
 
             # if we're running under MPI, ensure that all of the processes
             # are finished in order to ensure that scripting code outside of
