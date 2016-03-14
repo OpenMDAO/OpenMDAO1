@@ -1062,12 +1062,8 @@ class TgtVecWrapper(VecWrapper):
                                pathname)
 
         meta['pass_by_obj'] = True
-        self._dat[self._sysdata._scoped_abs_name(pathname)] = Accessor(self,
-                                                                       None,
-                                                                       val,
-                                                                       meta,
-                                                                       self._probdata,
-                                                                       False)
+        self._dat[self._sysdata._scoped_abs_name(pathname)] = \
+                 Accessor(self, None, val, meta, self._probdata, False)
 
     def _get_flattened_sizes(self):
         """

@@ -57,7 +57,7 @@ class TestConnections(unittest.TestCase):
             self.p.setup(check=False)
         except Exception as err:
             msg = "The following connected inputs have no source and different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G1.G2.C1.x' to a source (such as an IndepVarComp) with defined units."
-            self.assertEqual(str(err), msg)
+            self.assertTrue(msg in str(err))
         else:
             self.fail("Exception expected")
 
@@ -73,7 +73,7 @@ class TestConnections(unittest.TestCase):
             self.p.setup(check=False)
         except Exception as err:
             msg = "The following connected inputs have no source and different units: [('G1.G2.C1.x', 'ft'), ('G3.G4.C3.x', 'inch')]. Connect 'G3.G4.C3.x' to a source (such as an IndepVarComp) with defined units."
-            self.assertEqual(str(err), msg)
+            self.assertTrue(msg in str(err))
         else:
             self.fail("Exception expected")
 

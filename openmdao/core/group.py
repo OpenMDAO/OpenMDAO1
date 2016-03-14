@@ -54,7 +54,6 @@ class Group(System):
         super(Group, self).__init__()
 
         self._src = OrderedDict()
-        self._src_idxs = OrderedDict()
         self._data_xfer = OrderedDict()
 
         self._local_unknown_sizes = OrderedDict()
@@ -239,6 +238,7 @@ class Group(System):
         """
         super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
+        self._gs_outputs = None
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
@@ -261,11 +261,8 @@ class Group(System):
             A dictionary of metadata for parameters and for unknowns
             for all subsystems.
         """
-        params_dict = OrderedDict()
-        unknowns_dict = OrderedDict()
-
-        self._params_dict = params_dict
-        self._unknowns_dict = unknowns_dict
+        self._params_dict = params_dict = OrderedDict()
+        self._unknowns_dict = unknowns_dict = OrderedDict()
 
         self._sysdata._params_dict = params_dict
         self._sysdata._unknowns_dict = unknowns_dict
