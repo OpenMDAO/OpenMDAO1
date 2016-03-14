@@ -1057,7 +1057,7 @@ class Problem(object):
             # potentially other pass_by_obj variables.
             if MPI:
                 if trace: debug("waiting on problem run() comm.barrier")
-                self.root.comm.barrier()
+                root.comm.barrier()
                 if trace: debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
