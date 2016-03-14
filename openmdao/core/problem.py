@@ -507,7 +507,7 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                # get rid of check for setup_distrib_idxs when we move to beta
+                # TODO: get rid of check for setup_distrib_idxs when we move to beta
                 if hasattr(s, 'setup_distrib_idxs') or (
                          hasattr(s, 'setup_distrib') and (s.setup_distrib
                                                 is not Component.setup_distrib)):
