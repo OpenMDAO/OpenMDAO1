@@ -550,24 +550,24 @@ class TestUnitConversion(unittest.TestCase):
         prob.root.add('src', SrcComp())
         prob.root.add('dest', BadComp())
         prob.root.connect('src.x2', 'dest.x2')
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected_msg = "Unit 'degC' in source 'src.x2' is incompatible with unit 'm' in target 'dest.x2'."
 
-        self.assertEqual(str(cm.exception), expected_msg)
+        self.assertTrue(expected_msg in str(cm.exception))
 
         # Implicit Connection
         prob = Problem()
         prob.root = Group()
         prob.root.add('src', SrcComp(), promotes=['x2'])
         prob.root.add('dest', BadComp(),promotes=['x2'])
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
-        expected_msg = "Unit 'degC' in source 'x2' is incompatible with unit 'm' in target 'x2'."
+        expected_msg = "Unit 'degC' in source 'src.x2' (x2) is incompatible with unit 'm' in target 'dest.x2' (x2)."
 
-        self.assertEqual(str(cm.exception), expected_msg)
+        self.assertTrue(expected_msg in str(cm.exception))
 
 
 class PBOSrcComp(Component):

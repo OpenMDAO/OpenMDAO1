@@ -38,10 +38,10 @@ class TestConnections(unittest.TestCase):
         try:
             self.p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
+            self.assertTrue(
                 "The following sourceless connected inputs have different initial values: "
                 "[('G1.G2.C1.x', 7.0), ('G3.G4.C3.x', 5.0)].  Connect one of them to the output of "
-                "an IndepVarComp to ensure that they have the same initial value.")
+                "an IndepVarComp to ensure that they have the same initial value." in str(err))
         else:
             self.fail("Exception expected")
 
@@ -418,7 +418,7 @@ class TestConnectionsPromoted(unittest.TestCase):
             prob.setup(check=False)
         except Exception as err:
             msg = "The following connected inputs are promoted to 'x', but have different units: [('C1.x', 'ft'), ('C2.x', 'inch'), ('C3.x', 'm')]. Connect 'x' to a source (such as an IndepVarComp) with defined units."
-            self.assertEqual(str(err), msg)
+            self.assertTrue(msg in str(err))
         else:
             self.fail("Exception expected")
 

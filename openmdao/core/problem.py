@@ -2151,12 +2151,14 @@ class Problem(object):
                 scale, offset = get_conversion_tuple(src_unit, tgt_unit)
             except TypeError as err:
                 if str(err) == "Incompatible units":
-                    msg = "Unit '{0}' in source '{1}' "\
+                    msg = "Unit '{0}' in source {1} "\
                         "is incompatible with unit '{2}' "\
-                        "in target '{3}'.".format(src_unit, tgt_unit,
+                        "in target {3}.".format(src_unit,
                                                   _both_names(smeta, to_prom_name),
+                                                  tgt_unit,
                                                   _both_names(tmeta, to_prom_name))
                     self._setup_errors.append(msg)
+                    continue
                 else:
                     raise
 

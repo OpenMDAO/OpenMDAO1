@@ -465,11 +465,12 @@ class Group(System):
 
         for s in self.subsystems(recurse=True, include_self=True):
             for voi, vec in iteritems(s.dpmat):
-                abs_inputs = {
-                    acc.meta['pathname'] for acc in itervalues(vec._dat)
-                        if not acc.pbo
-                }
-                self._do_apply[(s.pathname, voi)] = bool(abs_inputs)
+                for acc in itervalues(vec._dat):
+                    if not acc.pbo:
+                        self._do_apply[(s.pathname, voi)] = True
+                        break
+                else:
+                    self._do_apply[(s.pathname, voi)] = False
 
         self._relname_map = None  # reclaim some memory
 

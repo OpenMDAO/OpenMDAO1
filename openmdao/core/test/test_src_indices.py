@@ -127,7 +127,7 @@ class TestSrcIndices(unittest.TestCase):
 
         expected = py3fix("Size 1 of the indexed sub-part of source 'P.x' "
                           "must be the same as size 2 of target 'G.A.x'.")
-        self.assertEqual(str(cm.exception), expected)
+        self.assertTrue(expected in str(cm.exception))
 
         # now try the same thing with promoted var
         root = Group()
@@ -147,7 +147,7 @@ class TestSrcIndices(unittest.TestCase):
 
         expected = py3fix("Size 3 of the indexed sub-part of source 'P.x' "
                           "must be the same as size 2 of target 'G.A.x' (G.x).")
-        self.assertEqual(str(cm.exception), expected)
+        self.assertTrue(expected in str(cm.exception))
 
     def test_inner_connection(self):
         class Squarer(Component):
