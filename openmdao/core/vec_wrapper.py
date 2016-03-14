@@ -32,7 +32,7 @@ class Accessor(object):
     __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
                  'get', 'set', 'flat', 'probdata']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
-                 owned=True, imag_val=None):
+                 owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
 
         Args
@@ -63,10 +63,13 @@ class Accessor(object):
         imag_val : float or ndarray, optional
             Ininitial value for imaginary part of this vector. Only used under
             complex step, and always zero valued.
+
+        dangling : bool, optional
+            If True, this variable is an unconnected param.
         """
         self.owned = owned
 
-        self.pbo = meta.get('pass_by_obj')
+        self.pbo = bool(dangling or meta.get('pass_by_obj'))
         self.remote = meta.get('remote')
 
         if alloc_complex:
@@ -585,7 +588,8 @@ class VecWrapper(object):
             if name in self._dat:
                 acc = self._dat[name]
                 if acc.pbo or acc.remote:
-                    view._dat[pname] = Accessor(view, None, acc.val, acc.meta, self._probdata,
+                    view._dat[pname] = Accessor(view, None, acc.val, acc.meta,
+                                                self._probdata,
                                                 alloc_complex)
                 else:
                     pstart, pend = acc.slice
@@ -1061,13 +1065,13 @@ class TgtVecWrapper(VecWrapper):
             raise RuntimeError("Unconnected param '%s' has no specified val or shape" %
                                pathname)
 
-        meta['pass_by_obj'] = True
         self._dat[self._sysdata._scoped_abs_name(pathname)] = Accessor(self,
                                                                        None,
                                                                        val,
                                                                        meta,
                                                                        self._probdata,
-                                                                       False)
+                                                                       False,
+                                                                       dangling=True)
 
     def _get_flattened_sizes(self):
         """
