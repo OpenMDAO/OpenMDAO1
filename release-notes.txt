@@ -1,3 +1,15 @@
+OpenMDAO Version 1.6.2 Alpha Release Notes
+March 14, 2016
+
+Features: 
+*Added ability to limit FD'd state variables.
+*group.list_unit_conversions() method replaces the old unit conversion output from check_setup.
+
+Bug fixes: 
+*run_once now calls apply_nonlinear at the end.
+*Bug fix for relevance reduction when using precoditioner with gmres.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.6.1 Alpha Release Notes
 March 12, 2016
 
