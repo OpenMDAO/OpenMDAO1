@@ -416,7 +416,7 @@ class System(object):
         abs_pnames = self._sysdata.to_abs_pnames
 
         # Use settings in the system dict unless variables override.
-        step_size = self.fd_options.get('step_size', 1.0e-20)
+        step_size = self.fd_options.get('step_size', 1.0e-6)
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
