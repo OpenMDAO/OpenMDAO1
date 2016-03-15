@@ -2,6 +2,8 @@
 Baseclass for design-of-experiments Drivers that have pre-determined
 parameter sets.
 """
+from __future__ import print_function
+
 import os
 import traceback
 from six.moves import zip
@@ -12,7 +14,7 @@ import numpy
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.util.array_util import evenly_distrib_idxs
-from openmdao.core.mpi_wrap import MPI, debug
+from openmdao.core.mpi_wrap import MPI, debug, any_proc_is_true
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
@@ -58,6 +60,7 @@ class PredeterminedRunsDriver(Driver):
                               (self.pathname, self._num_par_doe))
         if not MPI:
             self._num_par_doe = 1
+            self._load_balance = False
 
         self._full_comm = comm
 
@@ -167,11 +170,38 @@ class PredeterminedRunsDriver(Driver):
                     for dv_name, dv_val in case:
                         self.set_desvar(dv_name, dv_val)
 
-                    problem.root.solve_nonlinear(metadata=metadata)
+                    try:
+                        terminate = False
+                        exc = None
+                        problem.root.solve_nonlinear(metadata=metadata)
+                    except AnalysisError:
+                        metadata['msg'] = traceback.format_exc()
+                        metadata['success'] = 0
+                    except Exception:
+                        # any exception besides AnalysisError causes termination
+                        if self._load_balance:
+                            metadata['msg'] = traceback.format_exc()
+                            sys.stderr.write(metadata['msg'])
+                            # this will tell master to stop sending cases
+                            metadata['terminate'] = True
+                        else:
+                            exc = sys.exc_info()
+                            terminate = True
+                    else:
+                        metadata['msg'] = ''
+                        metadata['success'] = 1
 
                     if self._load_balance:
                         # keep meta for worker to send to master
                         self._last_meta = metadata
+                    elif MPI and any_proc_is_true(self._full_comm, terminate):
+                        if exc:
+                            raise exc
+                        else:
+                            raise RuntimeError("an exception was raised by another MPI process.")
+                elif MPI and case is None:
+                    # must take part in collective Allreduce call
+                    any_proc_is_true(self._full_comm, False)
 
                 if not MPI or not self._load_balance:
                     self.recorders.record_iteration(problem.root, metadata,
@@ -280,23 +310,33 @@ class PredeterminedRunsDriver(Driver):
                     caseinfo['meta'].update(meta)
                     if caseinfo['count'] == 0:
                         # we've received case from all procs with that doe_id
-                        # so the case is complete.  Send it to recorders
-                        yield caseinfo
-                        if more_cases:
-                            try:
-                                case = list(next(runiter))
-                            except StopIteration:
-                                more_cases = False
-                            else:
-                                size, offset = self._id_map[doe_ids[worker]]
-                                for j in range(size):
-                                    if trace:
-                                        debug("Sending New Case to Worker %d" % worker )
-                                    comm.send(case, j+offset, tag=1)
-                                    if trace:
-                                        debug("Case Sent to Worker %d" % worker )
-                                    cases[doe_ids[worker]]['count'] += 1
-                                    sent += 1
+                        # so the case is complete.
+
+                        if meta.get('terminate'):
+                            more_cases = False
+                            print("Worker %d has requested termination. No more new "
+                                  "cases will be distributed. Worker traceback was:\n%s" %
+                                  meta['msg'])
+                        else:
+
+                            # Send case to recorders
+                            yield caseinfo
+
+                            if more_cases:
+                                try:
+                                    case = list(next(runiter))
+                                except StopIteration:
+                                    more_cases = False
+                                else:
+                                    size, offset = self._id_map[doe_ids[worker]]
+                                    for j in range(size):
+                                        if trace:
+                                            debug("Sending New Case to Worker %d" % worker )
+                                        comm.send(case, j+offset, tag=1)
+                                        if trace:
+                                            debug("Case Sent to Worker %d" % worker )
+                                        cases[doe_ids[worker]]['count'] += 1
+                                        sent += 1
 
                     if received == sent:
                         break
@@ -305,7 +345,7 @@ class PredeterminedRunsDriver(Driver):
             for rank in range(1, self._full_comm.size):
                 if trace:
                     debug("Make Worker Stop on Rank %d" % rank )
-                comm.isend(None, rank, tag=1)
+                comm.send(None, rank, tag=1)
                 if trace:
                     debug("Worker has Stopped on Rank %d" % rank )
 
