@@ -191,9 +191,6 @@ class PredeterminedRunsDriver(Driver):
                 exc = sys.exc_info()
                 print(traceback.format_exc())
                 terminate = True
-        else:
-            metadata['msg'] = ''
-            metadata['success'] = 1
 
         return terminate, exc
 
@@ -313,8 +310,8 @@ class PredeterminedRunsDriver(Driver):
             sent = 0
 
             # cases left for each par doe
-            cases = {n:{'count': 0, 'terminate': 0,
-                             'p':{}, 'u':{}, 'r':{}, 'meta':{}}
+            cases = {n:{'count': 0, 'terminate': 0, 'p':{}, 'u':{}, 'r':{},
+                        'meta':{'success': 1, 'msg': ''}}
                                     for n in self._id_map}
 
             # create a mapping of ranks to doe_ids, to handle those cases
@@ -348,18 +345,29 @@ class PredeterminedRunsDriver(Driver):
             if sent > 0:
                 more_cases = True
                 while True:
-                    if trace:
-                        debug("Waiting on case")
+                    if trace: debug("Waiting on case")
                     worker, p, u, r, meta = comm.recv(tag=2)
-                    if trace:
-                        debug("Case Recieved from Worker %d" % worker )
+                    if trace: debug("Case Recieved from Worker %d" % worker )
+
                     received += 1
+
                     caseinfo = cases[doe_ids[worker]]
                     caseinfo['count'] -= 1
                     caseinfo['p'].update(p)
                     caseinfo['u'].update(u)
                     caseinfo['r'].update(r)
-                    caseinfo['meta'].update(meta)
+
+                    # save certain parts of existing metadata so we don't hide failures
+                    oldmeta = caseinfo['meta']
+                    success = oldmeta['success']
+                    if not success:
+                        msg = oldmeta['msg']
+                        oldmeta.update(meta)
+                        oldmeta['success'] = success
+                        oldmeta['msg'] = msg
+                    else:
+                        oldmeta.update(meta)
+
                     caseinfo['terminate'] += meta.get('terminate', 0)
 
                     if caseinfo['count'] == 0:
@@ -372,7 +380,7 @@ class PredeterminedRunsDriver(Driver):
                             more_cases = False
                             print("Worker %d has requested termination. No more new "
                                   "cases will be distributed. Worker traceback was:\n%s" %
-                                  meta['msg'])
+                                  (worker, meta['msg']))
                         else:
 
                             # Send case to recorders
@@ -389,6 +397,7 @@ class PredeterminedRunsDriver(Driver):
                                     doe = doe_ids[worker]
                                     size, offset = self._id_map[doe]
                                     cases[doe]['terminate'] = 0
+                                    cases[doe]['meta'] = {'success': 1, 'msg': ''}
                                     for j in range(size):
                                         if trace:
                                             debug("Sending New Case to Worker %d" % worker )
@@ -414,11 +423,11 @@ class PredeterminedRunsDriver(Driver):
         else:   # worker
             while True:
                 # wait on a case from the master
-                if trace:
-                    debug("Receiving Case from Master")
+                if trace: debug("Receiving Case from Master")
+
                 case = comm.recv(source=0, tag=1)
-                if trace:
-                    debug("Case Received from Master")
+
+                if trace: debug("Case Received from Master")
                 if case is None: # we're done
                     break
 
@@ -429,8 +438,8 @@ class PredeterminedRunsDriver(Driver):
                 params, unknowns, resids = self.recorders._get_local_case_data(self.root)
 
                 # tell the master we're done with that case and send local vars
-                if trace:
-                    debug("Send Master Local Vars")
+                if trace: debug("Send Master Local Vars")
+
                 comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0, tag=2)
-                if trace:
-                    debug("Local Vars Sent to Master")
+
+                if trace: debug("Local Vars Sent to Master")

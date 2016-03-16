@@ -41,7 +41,7 @@ class Mult(Component):
                 if self.critical:
                     raise RuntimeError("OMG, a critical error!")
                 else:
-                    raise AnalysisError("just an analysis error: %d" % MPI.COMM_WORLD.rank)
+                    raise AnalysisError("just an analysis error")
         finally:
             self.iter_count += 1
 
@@ -94,7 +94,7 @@ class ParallelDOETestCase(MPITestCase):
             fail_rank = 1  # raise exception from this rank
         else:
             fail_rank = 0
-            
+
         if self.comm.rank == fail_rank:
             root.add('mult', Mult(fails=[3], critical=True))
         else:
@@ -143,7 +143,6 @@ class ParallelDOETestCase(MPITestCase):
 
         fail_rank = 1  # raise exception from this rank
         if self.comm.rank == fail_rank:
-            debug("fail rank!", self.comm.rank)
             root.add('mult', Mult(fails=[3, 4]))
         else:
             root.add('mult', Mult())
@@ -179,9 +178,7 @@ class ParallelDOETestCase(MPITestCase):
         for data in problem.driver.recorders[0].iters:
             if not data['success']:
                 nfails += 1
-                debug(data['msg'])
 
-        debug("nfails:",nfails)
         if self.comm.rank == fail_rank:
             self.assertEqual(nfails, 2)
         else:
@@ -226,6 +223,120 @@ class LBParallelDOETestCase(MPITestCase):
             self.assertEqual(sum(lens), num_levels)
         else:
             self.assertEqual(num_cases, num_levels)
+
+    def test_load_balanced_doe_crit_fail(self):
+
+        problem = Problem(impl=impl)
+        root = problem.root = Group()
+        root.add('indep_var', IndepVarComp('x', val=1.0))
+        root.add('const', IndepVarComp('c', val=2.0))
+
+        if MPI:
+            fail_rank = 1  # raise exception from this rank
+        else:
+            fail_rank = 0
+
+        if self.comm.rank == fail_rank:
+            root.add('mult', Mult(fails=[3], critical=True))
+        else:
+            root.add('mult', Mult())
+
+        root.connect('indep_var.x', 'mult.x')
+        root.connect('const.c', 'mult.c')
+
+        num_levels = 25
+        problem.driver = FullFactorialDriver(num_levels=num_levels,
+                                       num_par_doe=self.N_PROCS,
+                                       load_balance=True)
+        problem.driver.add_desvar('indep_var.x',
+                                  lower=1.0, upper=float(num_levels))
+        problem.driver.add_objective('mult.y')
+
+        problem.driver.add_recorder(InMemoryRecorder())
+
+        problem.setup(check=False)
+        if MPI:
+            problem.run()
+        else:
+            try:
+                problem.run()
+            except Exception as err:
+                self.assertEqual(str(err), "OMG, a critical error!")
+            else:
+                self.fail("expected exception")
+
+        for data in problem.driver.recorders[0].iters:
+            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                             data['unknowns']['mult.y'])
+
+        num_cases = len(problem.driver.recorders[0].iters)
+
+        if MPI:
+            # in load balanced mode, we can't really predict how many cases
+            # will actually run before we terminate, so just check to see if
+            # we at least have less than the full set we'd have if nothing
+            # went wrong.
+            lens = problem.comm.allgather(num_cases)
+            self.assertTrue(sum(lens) < num_levels)
+        else:
+            self.assertEqual(num_cases, 3)
+
+    def test_load_balanced_doe_soft_fail(self):
+
+        problem = Problem(impl=impl)
+        root = problem.root = Group()
+        root.add('indep_var', IndepVarComp('x', val=1.0))
+        root.add('const', IndepVarComp('c', val=2.0))
+
+        if MPI:
+            fail_rank = 1  # raise exception from this rank
+        else:
+            fail_rank = 0
+
+        if self.comm.rank == fail_rank:
+            root.add('mult', Mult(fails=[3,4,5], critical=False))
+        else:
+            root.add('mult', Mult())
+
+        root.connect('indep_var.x', 'mult.x')
+        root.connect('const.c', 'mult.c')
+
+        num_levels = 25
+        problem.driver = FullFactorialDriver(num_levels=num_levels,
+                                       num_par_doe=self.N_PROCS,
+                                       load_balance=True)
+        problem.driver.add_desvar('indep_var.x',
+                                  lower=1.0, upper=float(num_levels))
+        problem.driver.add_objective('mult.y')
+
+        problem.driver.add_recorder(InMemoryRecorder())
+
+        problem.setup(check=False)
+        problem.run()
+
+        for data in problem.driver.recorders[0].iters:
+            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                             data['unknowns']['mult.y'])
+
+        num_cases = len(problem.driver.recorders[0].iters)
+
+        if MPI:
+            lens = problem.comm.allgather(num_cases)
+            self.assertEqual(sum(lens), num_levels)
+        else:
+            self.assertEqual(num_cases, num_levels)
+
+        nfails = 0
+        for data in problem.driver.recorders[0].iters:
+            if not data['success']:
+                nfails += 1
+
+        if self.comm.rank == 0:
+            # FIXME: for now, all cases get sent back to the master process (0),
+            # even when recorders are parallel.
+            self.assertEqual(nfails, 3)
+        else:
+            self.assertEqual(nfails, 0)
 
 class LBParallelDOETestCase6(MPITestCase):
 
