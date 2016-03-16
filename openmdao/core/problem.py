@@ -20,7 +20,7 @@ from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core._checks import check_connections
+from openmdao.core._checks import check_connections, _both_names
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
@@ -274,8 +274,9 @@ class Problem(object):
             if srcs is not None:
                 if len(srcs) > 1:
                     src_names = (n for n, idx in srcs)
-                    raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                       (tgt, sorted(src_names)))
+                    self._setup_errors.append("Target '%s' is connected to "
+                                              "multiple unknowns: %s" %
+                                               (tgt, sorted(src_names)))
                 connections[tgt] = srcs[0]
 
         return connections
@@ -284,81 +285,77 @@ class Problem(object):
         """For all sets of connected inputs, find any differences in units
         or initial value.
         """
-        input_diffs = {}
-
         # loop over all dangling inputs
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
             # figure out if any connected inputs have different initial
             # values or different units
-            if tgt not in input_diffs:
+            tgt_idx = connected_inputs.index(tgt)
+            units = [params_dict[n].get('units') for n in connected_inputs]
+            vals = [params_dict[n]['val'] for n in connected_inputs]
 
-                tgt_idx = connected_inputs.index(tgt)
-                units = [params_dict[n].get('units') for n in connected_inputs]
-                vals = [params_dict[n]['val'] for n in connected_inputs]
+            diff_units = []
 
-                diff_units = []
+            for i, u in enumerate(units):
+                if i != tgt_idx and u != units[tgt_idx]:
+                    if units[tgt_idx] is None:
+                        sname, s = connected_inputs[i], u
+                        tname, t = connected_inputs[tgt_idx], units[tgt_idx]
+                    else:
+                        sname, s = connected_inputs[tgt_idx], units[tgt_idx]
+                        tname, t = connected_inputs[i], u
 
-                for i, u in enumerate(units):
-                    if i != tgt_idx and u != units[tgt_idx]:
-                        if units[tgt_idx] is None:
-                            sname, s = connected_inputs[i], u
-                            tname, t = connected_inputs[tgt_idx], units[tgt_idx]
-                        else:
-                            sname, s = connected_inputs[tgt_idx], units[tgt_idx]
-                            tname, t = connected_inputs[i], u
+                    diff_units.append((connected_inputs[i], u))
 
-                        diff_units.append((connected_inputs[i], u))
+            if isinstance(vals[tgt_idx], np.ndarray):
+                diff_vals = [(connected_inputs[i],v) for i,v in
+                               enumerate(vals) if not
+                                   (isinstance(v, np.ndarray) and
+                                      v.shape==vals[tgt_idx].shape and
+                                      (v==vals[tgt_idx]).all())]
+            else:
+                vtype = type(vals[tgt_idx])
+                diff_vals = [(connected_inputs[i],v) for i,v in
+                                 enumerate(vals) if vtype!=type(v) or
+                                                      v!=vals[tgt_idx]]
 
-                if isinstance(vals[tgt_idx], np.ndarray):
-                    diff_vals = [(connected_inputs[i],v) for i,v in
-                                   enumerate(vals) if not
-                                       (isinstance(v, np.ndarray) and
-                                          v.shape==vals[tgt_idx].shape and
-                                          (v==vals[tgt_idx]).all())]
-                else:
-                    vtype = type(vals[tgt_idx])
-                    diff_vals = [(connected_inputs[i],v) for i,v in
-                                     enumerate(vals) if vtype!=type(v) or
-                                                          v!=vals[tgt_idx]]
+            # if tgt has no unknown source, units MUST match, unless
+            # one of them is None. At this point, connections contains
+            # only unknown to input connections, so if the target is
+            # in connections, it has an unknown source.
 
-                # if tgt has no unknown source, units MUST match, unless
-                # one of them is None. At this point, connections contains
-                # only unknown to input connections, so if the target is
-                # in connections, it has an unknown source.
+            if diff_units:
+                filt = set([u for n,u in diff_units])
+                if None in filt:
+                    filt.remove(None)
+                if filt:
+                    proms = set([params_dict[item]['top_promoted_name'] \
+                                 for item in connected_inputs])
 
-                if diff_units:
-                    filt = set([u for n,u in diff_units])
-                    if None in filt:
-                        filt.remove(None)
-                    if filt:
-                        proms = set([params_dict[item]['top_promoted_name'] \
-                                     for item in connected_inputs])
+                    # All params are promoted, so extra message for clarity.
+                    if len(proms) == 1:
+                        msg = "The following connected inputs are promoted to " + \
+                            "'%s', but have different units" % proms.pop()
+                    else:
+                        msg = "The following connected inputs have no source and different " + \
+                              "units"
 
-                        # All params are promoted, so extra message for clarity.
-                        if len(proms) == 1:
-                            msg = "The following connected inputs are promoted to " + \
-                                "'%s', but have different units" % proms.pop()
-                        else:
-                            msg = "The following connected inputs have no source and different " + \
-                                  "units"
+                    msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
+                                            diff_units)
+                    correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
+                    msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
+                           " with defined units."
 
-                        msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
-                                                diff_units)
-                        correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
-                        msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
-                               " with defined units."
-
-                        raise RuntimeError(msg)
-                if diff_vals:
-                    msg = ("The following sourceless connected inputs have "
-                           "different initial values: "
-                           "%s.  Connect one of them to the output of "
-                           "an IndepVarComp to ensure that they have the "
-                           "same initial value." %
-                           (sorted([(tgt,params_dict[tgt]['val'])]+
-                                             diff_vals)))
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
+            if diff_vals:
+                msg = ("The following sourceless connected inputs have "
+                       "different initial values: "
+                       "%s.  Connect one of them to the output of "
+                       "an IndepVarComp to ensure that they have the "
+                       "same initial value." %
+                       (sorted([(tgt,params_dict[tgt]['val'])]+
+                                         diff_vals)))
+                self._setup_errors.append(msg)
 
         # now check for differences in step_size, step_type, or form for
         # promoted inputs
@@ -378,24 +375,23 @@ class Problem(object):
                         forms[f] = name
 
                 if len(step_sizes) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
                                   "'step_size' values: %s" % (promname,
                                   sorted([(v,k) for k,v in step_sizes.items()])))
 
                 if len(step_types) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
                                   "'step_type' values: %s" % (promname,
                                  sorted([(v,k) for k,v in step_types.items()])))
 
                 if len(forms) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different 'form' "
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
 
-        return input_diffs
 
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they
@@ -428,6 +424,8 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
+        self._setup_errors = []
+
         # if we modify the system tree, we'll need to call _init_sys_data,
         # _setup_variables and _setup_connections again
         tree_changed = False
@@ -509,7 +507,7 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                # get rid of check for setup_distrib_idxs when we move to beta
+                # TODO: get rid of check for setup_distrib_idxs when we move to beta
                 if hasattr(s, 'setup_distrib_idxs') or (
                          hasattr(s, 'setup_distrib') and (s.setup_distrib
                                                 is not Component.setup_distrib)):
@@ -529,8 +527,9 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict,
-                          self.root._sysdata.to_prom_name)
+        self._setup_errors.extend(check_connections(connections, params_dict,
+                                               unknowns_dict,
+                                               self.root._sysdata.to_prom_name))
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -548,7 +547,7 @@ class Problem(object):
             if path not in connections:
                 if 'pass_by_obj' not in meta or not meta['pass_by_obj']:
                     if meta['shape'] == ():
-                        raise RuntimeError("Unconnected param '{}' is missing "
+                        self._setup_errors.append("Unconnected param '{}' is missing "
                                            "a shape or default value.".format(path))
 
         for path, meta in iteritems(unknowns_dict):
@@ -639,6 +638,13 @@ class Problem(object):
         # Prep for case recording
         self._start_recorders()
 
+        if self._setup_errors:
+            stream = cStringIO()
+            stream.write("\nThe following errors occurred during setup:\n")
+            for err in self._setup_errors:
+                stream.write("%s\n" % err)
+            raise RuntimeError(stream.getvalue())
+
         # check for any potential issues
         if check or force_check:
             return self.check_setup(out_stream)
@@ -675,14 +681,14 @@ class Problem(object):
                 if group.name != '':
                     msg = "Complex step is currently not supported for groups"
                     msg += " other than root."
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
 
                 # Complex Step, so check for deriv requirement in subsolvers
                 for sub in self.root.subgroups(recurse=True, include_self=True):
                     if hasattr(sub.nl_solver, 'ln_solver'):
                         msg = "The solver in '{}' requires derivatives. We "
                         msg += "currently do not support complex step around it."
-                        raise RuntimeError(msg.format(sub.name))
+                        self._setup_errors.append(msg.format(sub.name))
 
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
@@ -692,7 +698,7 @@ class Problem(object):
                 strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                           if len(s) > 1]
                 if strong:
-                    raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                    self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
                                    "solver with maxiter==1 but it contains "
                                    "cycles %s. To fix this error, change to "
                                    "a different linear solver, e.g. ScipyGMRES "
@@ -727,7 +733,7 @@ class Problem(object):
             # don't live in a Component that defines its own solve_linear method.
 
             if uniterated_states:
-                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
                                "solver with maxiter==1 but it contains "
                                "implicit states %s. To fix this error, "
                                "change to a different linear solver, e.g. "
@@ -2008,7 +2014,7 @@ class Problem(object):
                     msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
                           " Modes must match to use parallel derivative groups."
                     msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
 
         return mode
 
@@ -2098,12 +2104,14 @@ class Problem(object):
                 scale, offset = get_conversion_tuple(src_unit, tgt_unit)
             except TypeError as err:
                 if str(err) == "Incompatible units":
-                    msg = "Unit '{s[units]}' in source '{sprom}' "\
-                        "is incompatible with unit '{t[units]}' "\
-                        "in target '{tprom}'.".format(s=smeta, t=tmeta,
-                                                                 sprom=to_prom_name[source],
-                                                                 tprom=to_prom_name[target])
-                    raise TypeError(msg)
+                    msg = "Unit '{0}' in source {1} "\
+                        "is incompatible with unit '{2}' "\
+                        "in target {3}.".format(src_unit,
+                                                  _both_names(smeta, to_prom_name),
+                                                  tgt_unit,
+                                                  _both_names(tmeta, to_prom_name))
+                    self._setup_errors.append(msg)
+                    continue
                 else:
                     raise
 
