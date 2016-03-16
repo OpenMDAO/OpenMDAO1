@@ -14,12 +14,6 @@ from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error
 
-if PY3:
-    def py3fix(s):
-        return s.replace('<type', '<class')
-else:
-    def py3fix(s):
-        return s
 
 class TestProblemCheckPartials(unittest.TestCase):
 
@@ -56,7 +50,7 @@ class TestProblemCheckPartials(unittest.TestCase):
             data = prob.check_partial_derivatives(out_stream=None,
                                                   comps=['sub1', 'bogus'])
 
-        expected_msg = py3fix("The following are not valid comp names: ['bogus', 'sub1']")
+        expected_msg = "The following are not valid comp names: ['bogus', 'sub1']"
         self.assertEqual(str(cm.exception), expected_msg)
 
         # This is a good test to piggyback the compact_print test
