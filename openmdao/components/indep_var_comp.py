@@ -89,11 +89,11 @@ class IndepVarComp(Component):
 
         for voi in vois:
             if gs_outputs is None:
-                rhs_vec[voi].vec[:] += sol_vec[voi].vec
+                rhs_vec[voi].vec[:] -= sol_vec[voi].vec
             else:
                 for var, meta in iteritems(self.dumat[voi]):
                     if var in gs_outputs[voi]:
-                        rhs_vec[voi][var] += sol_vec[voi][var]
+                        rhs_vec[voi][var] -= sol_vec[voi][var]
 
     def _sys_linearize(self, params, unknowns, resids, force_fd=False):
         """ No linearization needed for this one"""
