@@ -1635,7 +1635,7 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_output=False):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_print=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1863,7 +1863,7 @@ class Problem(object):
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
                                  c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
-                                 fd_desc2=fd_desc2)
+                                 fd_desc2=fd_desc2, compact_print=compact_print)
 
         return data
 
@@ -2294,7 +2294,9 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 started = True
 
             if compact_print: 
-                pass
+                print (c_name, u_name, p_name, magfor, magrev, magfd, abs1, abs2)
+                if jac_fwd: 
+                    out_stream.write("  %s: '%s' wrt '%s' %.6e %.6e %.6e %.6e %.6e" % (c_name, u_name, p_name, magfor, magrev, magfd, abs1, abs2))
             else: 
                 # Optional file_like output
                 out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
