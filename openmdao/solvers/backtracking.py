@@ -85,7 +85,7 @@ class BackTracking(LineSearch):
         alpha = unknowns.distance_along_vector_to_limit(alpha, result)
 
         # Apply step that doesn't violate bounds
-        unknowns.vec += alpha*result.vec
+        unknowns.vec -= alpha*result.vec
 
         # Metadata update
         update_local_meta(local_meta, (solver.iter_count, 0))
@@ -113,7 +113,7 @@ class BackTracking(LineSearch):
               fnorm/fnorm0 > rtol:
 
             ls_alpha *= 0.5
-            unknowns.vec -= ls_alpha*result.vec
+            unknowns.vec += ls_alpha*result.vec
             itercount += 1
 
             # Metadata update
