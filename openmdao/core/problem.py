@@ -1642,7 +1642,8 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_print=False):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
+                                  compact_print=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
