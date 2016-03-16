@@ -1642,7 +1642,7 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_output=False):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_print=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1870,7 +1870,7 @@ class Problem(object):
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
                                  c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
-                                 fd_desc2=fd_desc2)
+                                 fd_desc2=fd_desc2, compact_print=compact_print)
 
         return data
 
@@ -2200,6 +2200,20 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 
+def _pad_name(name, pad_num=13, quotes=True):
+    l_name = len(name)
+    if l_name < pad_num: 
+        pad = pad_num - l_name
+        if quotes: 
+            pad_str = "'{name}'{sep:<{pad}}"
+        else: 
+            pad_str = "{name}{sep:<{pad}}"
+        pad_name = pad_str.format(name=name, sep='', pad=pad)
+        return pad_name
+    else: 
+        return '{0}'.format(name)
+
+
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root', jac_fd2=None, fd_desc=None,
                          fd_desc2=None, compact_print=False):
@@ -2295,14 +2309,43 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if out_stream is None:
                 continue
 
-            if started:
-                out_stream.write(' -'*30 + '\n')
-            else:
-                started = True
-
             if compact_print: 
-                pass
+                if jac_fwd and jac_rev: 
+                    if not started:
+                        out_str_tmpl = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
+                        out_str = out_str_tmpl.format(_pad_name('<unknown>'), _pad_name('<param>'), 
+                            _pad_name('fwd mag.', 10, quotes=False), _pad_name('rev mag.', 10, quotes=False), 
+                            _pad_name('fd mag.', 10, quotes=False), _pad_name('a(fwd-fd)', 10, quotes=False), 
+                            _pad_name('a(rev-fd)', 10, quotes=False), _pad_name('r(fwd-rev)', 10, quotes=False), 
+                            _pad_name('r(rev-fd)', 10, quotes=False) 
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    out_str_tmpl = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {6:.4e} | {6:.4e}\n"
+                    out_stream.write(out_str_tmpl.format(_pad_name(u_name), _pad_name(p_name), magfor, magrev, magfd, abs1, abs2, rel1, rel2))
+                    # out_stream.write("'%s' wrt '%s' | %.6e | %.6e |  %.6e | %.6e | %.6e\n" % (u_name.ljust(10), p_name, magfor, magrev, magfd, abs1, abs2))
+                elif jac_fd and jac_fd2: 
+                    if not started:
+                        out_str_tmpl = "{0} wrt {1} | {2} | {3} | {4}\n"
+                        out_str = out_str_tmpl.format(_pad_name('<unknown>'), _pad_name('<param>'), 
+                            _pad_name('fd1 mag.', 13, quotes=False), _pad_name('fd2 mag.', 12, quotes=False), 
+                            _pad_name('abs(fd2 - fd1)', 12, quotes=False)
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    out_str_tmpl = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e}\n"
+                    out_stream.write(out_str_tmpl.format(_pad_name(u_name), _pad_name(p_name), magfd, magfd2, abs4))
             else: 
+
+                if started:
+                    out_stream.write(' -'*30 + '\n')
+                else:
+                    started = True
+
                 # Optional file_like output
                 out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
