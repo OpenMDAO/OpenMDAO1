@@ -1635,7 +1635,7 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None, compact_output=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1645,6 +1645,10 @@ class Problem(object):
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to suppress.
+
+        comps : None or list_like
+            List of component names to check the partials of (all others will be skipped). 
+            Set to None (default) to run all components
 
         Returns
         -------
@@ -1683,7 +1687,13 @@ class Problem(object):
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for comp in root.components(recurse=True):
+        if comps is None: 
+            comps = root.components(recurse=True)
+        else: 
+
+            comps = [root._subsystem(c_name) for c_name in comps]
+
+        for comp in comps:
             cname = comp.pathname
             opt = comp.fd_options
 
@@ -2196,7 +2206,7 @@ def _jac_to_flat_dict(jac):
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root', jac_fd2=None, fd_desc=None,
-                         fd_desc2=None):
+                         fd_desc2=None, compact_print=False):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks."""
@@ -2294,62 +2304,65 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 started = True
 
-            # Optional file_like output
-            out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
+            if compact_print: 
+                pass
+            else: 
+                # Optional file_like output
+                out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
-            if jac_fwd:
-                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-            if jac_rev:
-                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            if not jac_fwd and not jac_rev:
-                out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
-            if jac_fd:
-                out_stream.write('         Fd Magnitude : %.6e' % magfd)
-                if fd_desc:
-                    out_stream.write(' (%s)' % fd_desc)
+                if jac_fwd:
+                    out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                if jac_rev:
+                    out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                if not jac_fwd and not jac_rev:
+                    out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
+                if jac_fd:
+                    out_stream.write('         Fd Magnitude : %.6e' % magfd)
+                    if fd_desc:
+                        out_stream.write(' (%s)' % fd_desc)
+                    out_stream.write('\n')
+                if jac_fd2:
+                    out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
+                    if fd_desc2:
+                        out_stream.write(' (%s)' % fd_desc2)
+                    out_stream.write('\n')
                 out_stream.write('\n')
-            if jac_fd2:
-                out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
-                if fd_desc2:
-                    out_stream.write(' (%s)' % fd_desc2)
+
+                if jac_fwd:
+                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                if jac_rev:
+                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
+                if jac_fd2:
+                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
                 out_stream.write('\n')
-            out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-            if jac_rev:
-                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
-            if jac_fd2:
-                out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
-            out_stream.write('\n')
+                if jac_fwd:
+                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                if jac_rev:
+                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
+                if jac_fd2:
+                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
+                out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-            if jac_rev:
-                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
-            if jac_fd2:
-                out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
-            out_stream.write('\n')
-
-            if jac_fwd:
-                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-                out_stream.write(str(Jsub_for))
+                if jac_fwd:
+                    out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                    out_stream.write(str(Jsub_for))
+                    out_stream.write('\n\n')
+                if jac_rev:
+                    out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                    out_stream.write(str(Jsub_rev))
+                    out_stream.write('\n\n')
+                out_stream.write('    Raw FD Derivative (Jfd)\n\n')
+                out_stream.write(str(Jsub_fd))
                 out_stream.write('\n\n')
-            if jac_rev:
-                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-                out_stream.write(str(Jsub_rev))
-                out_stream.write('\n\n')
-            out_stream.write('    Raw FD Derivative (Jfd)\n\n')
-            out_stream.write(str(Jsub_fd))
-            out_stream.write('\n\n')
-            if jac_fd2:
-                out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
-                out_stream.write(str(Jsub_fd2))
-                out_stream.write('\n\n')
+                if jac_fd2:
+                    out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
+                    out_stream.write(str(Jsub_fd2))
+                    out_stream.write('\n\n')
 
 def _needs_iteration(comp):
     """Return True if the given component needs an iterative
