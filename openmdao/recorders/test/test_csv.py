@@ -416,14 +416,10 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "Recording of metadata is not supported by CsvRecorder.")
 
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
@@ -440,14 +436,10 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "Recording of metadata is not supported by CsvRecorder.")
 
     def test_root_solver_doesnt_record_metadata(self):
         prob = Problem()
@@ -464,14 +456,10 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ExampleGroup()
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err), "Recording of metadata is not supported by CsvRecorder.")
 
     def test_subsolver_doesnt_record_metadata(self):
         prob = Problem()

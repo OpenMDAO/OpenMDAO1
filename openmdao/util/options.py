@@ -47,15 +47,17 @@ class OptionsDictionary(object):
             print("raising an error")
             raise ValueError("Option '{}' already exists".format(name))
 
-        self._options[name] = {
+        opt = {
             'val':    value,
-            'lower':    lower,
-            'upper':   upper,
+            'lower':  lower,
+            'upper':  upper,
             'values': values,
-            'desc' : desc,
+            'desc' :  desc,
         }
 
-        self._check(name, value)
+        self._check(name, value, opt)
+
+        self._options[name] = opt
 
     def __getitem__(self, name):
         try:
@@ -70,8 +72,9 @@ class OptionsDictionary(object):
         if name not in self._options:
             raise KeyError("Option '{}' has not been added".format(name))
 
-        self._check(name, value)
-        self._options[name]['val'] = value
+        opt = self._options[name]
+        self._check(name, value, opt)
+        opt['val'] = value
 
     def __setattr__(self, name, value):
         """ To prevent user error, disallow direct setting."""
@@ -107,18 +110,20 @@ class OptionsDictionary(object):
     def get_desc(self, name):
         return self._options[name]['desc']
 
-    def _check(self, name, value):
+    def _check(self, name, value, opt):
         """ Type checking happens here. """
-        lower = self._options[name]['lower']
-        upper = self._options[name]['upper']
-        values = self._options[name]['values']
-        _type = type(self._options[name]['val'])
+
+        values = opt['values']
 
         if values is not None:
             # Only need to check if we are in the list if we are an enum
             self._check_values(name, value, values)
 
         else:
+            lower = opt['lower']
+            upper = opt['upper']
+            _type = type(opt['val'])
+
             self._check_type(name, value, _type)
 
             if lower is not None:

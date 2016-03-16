@@ -57,10 +57,8 @@ class PredeterminedRunsDriver(Driver):
             Absolute dir of parent `System`.
         """
         root = self.root
-        if self._num_par_doe < 1:
-            raise ValueError("'%s': _num_par_doe must be >= 1 but value is %s." %
-                              (self.pathname, self._num_par_doe))
-        if not MPI:
+
+        if not MPI or self._num_par_doe < 1:
             self._num_par_doe = 1
             self._load_balance = False
 
@@ -202,41 +200,15 @@ class PredeterminedRunsDriver(Driver):
     def _run_serial(self, root):
         """This runs a DOE in serial on a single process."""
 
-        runlist = self._build_runlist()
-
-        for case in runlist:
+        for case in self._build_runlist():
             metadata = self._prep_case(case)
 
             terminate, exc = self._try_case(root, metadata)
 
             if exc is not None:
-                raise exc
+                raise exc[0], exc[1], exc[2]
 
             self.recorders.record_iteration(root, metadata)
-
-            self.iter_count += 1
-
-    def _run_lb(self, root):
-        """This runs the DOE in parallel with load balancing.  A new case
-        is distributed to a worker process as soon as it finishes its
-        previous case.  The rank 0 process is the 'master' process and does
-        not run cases itself.  The master does nothing but distribute the
-        cases to the workers and collect the results.
-        """
-        runlist = self._distrib_lb_build_runlist()
-
-        # For each runlist entry, run the system and record the results
-        for case in runlist:
-            if self._full_comm.rank == 0:
-                # we're the master rank and case is a completed case
-                self.recorders.record_case(root, case)
-            else:  # we're a worker
-                metadata = self._prep_case(case)
-
-                self._try_case(root, metadata)
-
-                # keep meta for worker to send to master
-                self._last_meta = metadata
 
             self.iter_count += 1
 
@@ -244,9 +216,7 @@ class PredeterminedRunsDriver(Driver):
         """This runs the DOE in parallel where cases are evenly distributed
         among all processes.
         """
-        runlist = self._get_case_w_nones(self._distrib_build_runlist())
-
-        for case in runlist:
+        for case in self._get_case_w_nones(self._distrib_build_runlist()):
             if case is None: # dummy cases have case == None
                 # must take part in collective Allreduce call
                 any_proc_is_true(self._full_comm, False)
@@ -258,12 +228,33 @@ class PredeterminedRunsDriver(Driver):
 
                 if any_proc_is_true(self._full_comm, terminate):
                     if exc:
-                        raise exc
+                        raise exc[0], exc[1], exc[2]
                     else:
                         raise RuntimeError("an exception was raised by another MPI process.")
 
             self.recorders.record_iteration(root, metadata,
                                             dummy=(case is None))
+            self.iter_count += 1
+
+    def _run_lb(self, root):
+        """This runs the DOE in parallel with load balancing.  A new case
+        is distributed to a worker process as soon as it finishes its
+        previous case.  The rank 0 process is the 'master' process and does
+        not run cases itself.  The master does nothing but distribute the
+        cases to the workers and collect the results.
+        """
+        for case in self._distrib_lb_build_runlist():
+            if self._full_comm.rank == 0:
+                # we're the master rank and case is a completed case
+                self.recorders.record_case(root, case)
+            else:  # we're a worker
+                metadata = self._prep_case(case)
+
+                self._try_case(root, metadata)
+
+                # keep meta for worker to send to master
+                self._last_meta = metadata
+
             self.iter_count += 1
 
     def _get_case_w_nones(self, it):
