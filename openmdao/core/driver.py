@@ -728,11 +728,6 @@ class Driver(object):
         with system._dircontext:
             system.solve_nonlinear(metadata=metadata)
 
-            # Make sure our residuals are up-to-date
-            #system.apply_nonlinear(system.params, system.unknowns, system.resids,
-            #                       metadata=metadata)
-
-
         self.recorders.record_iteration(system, metadata)
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
