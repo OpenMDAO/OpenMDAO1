@@ -1040,8 +1040,15 @@ class Problem(object):
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
         the current design point. """
-        if self.root.is_active():
-            self.driver.run_once(self)
+        root = self.root
+        driver = self.driver
+        if root.is_active():
+            driver.run_once(self)
+
+            # Make sure our residuals are up-to-date
+            with root._dircontext:
+                root.apply_nonlinear(root.params, root.unknowns, root.resids,
+                                     metadata=driver.metadata)
 
             # if we're running under MPI, ensure that all of the processes
             # are finished in order to ensure that scripting code outside of
@@ -1050,7 +1057,7 @@ class Problem(object):
             # potentially other pass_by_obj variables.
             if MPI:
                 if trace: debug("waiting on problem run() comm.barrier")
-                self.root.comm.barrier()
+                root.comm.barrier()
                 if trace: debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
