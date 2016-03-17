@@ -269,12 +269,12 @@ class TestFileRef(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err).replace('\\\\','\\').replace('/private',''), "FileRef param 'sink2.ascii_in' is unconnected but will "
+            self.assertTrue("FileRef param 'sink2.ascii_in' is unconnected but will "
                              "be overwritten by the following FileRef unknown(s): "
                              "['src.ascii_dat']. Files referred to by the FileRef unknowns are: "
                              "['%s']. To remove this error, make a "
                              "connection between sink2.ascii_in and a FileRef unknown." %
-                             os.path.join(self.tmpdir, 'ascii.dat'))
+                             os.path.join(self.tmpdir, 'ascii.dat') in str(err).replace('\\\\','\\').replace('/private',''), )
         else:
             self.fail("Exception expected")
 
@@ -294,14 +294,14 @@ class TestFileRef(unittest.TestCase):
         except Exception as err:
             # osx tacks a /private to the beginning of the tmp pathname, resulting
             # in test diffs, so just get rid of it
-            self.assertEqual(str(err).replace('/private',''), "input file '%s' is "
-                             "referenced from FileRef param(s) ['sink.ascii_in', "
-                             "'sink2.ascii_in'], which are connected to multiple output "
-                             "FileRefs: ['src.ascii_dat', 'src2.ascii_dat']. Those FileRefs "
-                             "reference the following files: %s." %
-                             (os.path.join(self.tmpdir, 'ascii_final.dat'),
-                              [os.path.join(self.tmpdir, 'ascii.dat'),
-                              os.path.join(self.tmpdir, 'ascii.dat')]))
+            msg = "Input file '%s' is referenced from FileRef param(s) ['sink.ascii_in', " \
+                "'sink2.ascii_in'], which are connected to multiple output " \
+                "FileRefs: ['src.ascii_dat', 'src2.ascii_dat']. Those FileRefs "  \
+                "reference the following files: %s." % (
+                 os.path.join(self.tmpdir, 'ascii_final.dat'),
+                 [os.path.join(self.tmpdir, 'ascii.dat'),
+                 os.path.join(self.tmpdir, 'ascii.dat')])
+            self.assertTrue(msg in str(err).replace('/private',''))
         else:
             self.fail("Exception expected")
 

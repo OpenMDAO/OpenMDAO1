@@ -508,10 +508,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
+            self.assertTrue("Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
                              "[['C1', 'C2', 'C3']]. To fix this error, change to a different linear solver, "
-                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
+                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended)."
+                             in str(err))
         else:
             self.fail("Exception expected")
 
@@ -523,10 +523,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
+            self.assertTrue("Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
                              "implicit states ['C1.y2_command']. To fix this error, change to a different "
-                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
+                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended)."
+                             in str(err))
         else:
             self.fail("Exception expected")
 
@@ -581,7 +581,6 @@ class SimpleImplicit(Component):
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
 
-        # print "soofoo", self.J['x','x']
         for voi in vois:
             if mode == "fwd":
                 sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'], -rhs_vec[voi].vec)

@@ -37,12 +37,12 @@ class TestUnitComp(unittest.TestCase):
         prob.root.add('pc', IndepVarComp('x', 0., units='ft'))
         prob.root.connect('pc.x', 'uc.in')
 
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(Exception) as cm:
             prob.setup(check=False)
 
         expected_msg = "Unit 'ft' in source 'pc.x' is incompatible with unit 'degC' in target 'uc.in'."
 
-        self.assertEqual(expected_msg, str(cm.exception))
+        self.assertTrue(expected_msg in str(cm.exception))
 
     def test_same_name(self):
         with self.assertRaises(ValueError) as cm:
