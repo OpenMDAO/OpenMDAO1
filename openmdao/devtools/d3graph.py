@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+from six import iteritems
 
 import webbrowser
 
@@ -12,7 +13,7 @@ viewer_options = {
     'collapse_tree': {
         'expand_level': 1,
     },
-    'partition_tree': {
+    'partition_tree_n2': {
         'size_1': True,
     }
 }
@@ -24,35 +25,37 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
     """
 
     def _tree_dict(ss, level):
-        dct = { 'name': ss.name }
+        dct = { 'name': ss.name, 'type': 'subsystem' }
         children = [_tree_dict(s, level+1) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
             for vname, meta in ss.unknowns.items():
                 size = meta['size'] if meta['size'] and not size_1 else 1
-                children.append({'name': vname, 'size': size })
+                implicit = False
+                if meta.get('state'):
+                    implicit = True
+                children.append({'name': vname, 'type': 'unknown', 'implicit': implicit})
 
             for vname, meta in ss.params.items():
                 size = meta['size'] if meta['size'] and not size_1 else 1
-                children.append({'name': vname, 'size': size })
+                children.append({'name': vname, 'type': 'param'})
 
         if level > expand_level:
-            dct['_children'] = children
             dct['children'] = None
         else:
             dct['children'] = children
-            dct['_children'] = None
 
         return dct
 
     tree = _tree_dict(system, 1)
     if not tree['name']:
         tree['name'] = 'root'
+        tree['type'] = 'root'
 
     return tree
 
-def view_tree(system, viewer='collapse_tree', expand_level=9999,
-              outfile='tree.html', show_browser=True):
+def view_tree(problem, viewer='partition_tree_n2', expand_level=9999,
+              outfile='partition_tree_n2.html', show_browser=False):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -60,8 +63,8 @@ def view_tree(system, viewer='collapse_tree', expand_level=9999,
 
     Args
     ----
-    system : system
-        The root system for the desired tree.
+    problem : Problem()
+        The Problem (after problem.setup()) for the desired tree.
 
     viewer : str, optional
         The type of web viewer used to view the tree. Options are:
@@ -83,7 +86,7 @@ def view_tree(system, viewer='collapse_tree', expand_level=9999,
     if 'expand_level' in options:
         options['expand_level'] = expand_level
 
-    tree = _system_tree_dict(system, **options)
+    tree = _system_tree_dict(problem.root, **options)
     viewer += '.template'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -92,11 +95,17 @@ def view_tree(system, viewer='collapse_tree', expand_level=9999,
         template = f.read()
 
     treejson = json.dumps(tree)
+
+    myList = []
+    for target, (src, idxs) in iteritems(problem._probdata.connections):
+        myList.append({'src':src, 'tgt':target})
+    connsjson = json.dumps(myList)
+
     with open(outfile, 'w') as f:
-        f.write(template % treejson)
+        f.write(template % (treejson, connsjson))
 
     if show_browser:
-        webview(outfile)
+        _view(outfile)
 
 
 def webview(outfile):
