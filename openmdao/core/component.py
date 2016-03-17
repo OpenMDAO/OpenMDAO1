@@ -61,7 +61,7 @@ class Component(System):
     def __init__(self):
         super(Component, self).__init__()
         self._post_setup_vars = False
-        self._jacobian_cache = OrderedDict()
+        self._jacobian_cache = {}
 
         self._init_params_dict = OrderedDict() # for storage of initial var data
         self._init_unknowns_dict = OrderedDict() # for storage of initial var data
@@ -767,7 +767,7 @@ class Component(System):
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
 
-        jac = OrderedDict()
+        jac = {}
         csparams = ComplexStepTgtVecWrapper(params)
         csunknowns = ComplexStepSrcVecWrapper(unknowns)
         csresids = ComplexStepSrcVecWrapper(resids)
@@ -829,3 +829,39 @@ class Component(System):
             stepvec.set_complex_var(None)
 
         return jac
+
+    def alloc_jacobian(self):
+        """
+        Creates a jacobian dictionary with the keys pre-populated and correct
+        array sizes allocated. caches the result in the component, and
+        returns that cache if it finds it.
+
+        Returns
+        -----------
+        dict
+            pre-allocated jacobian dictionary
+        """
+
+        if self._jacobian_cache is not None and len(self._jacobian_cache) > 0:
+            return self._jacobian_cache
+
+        self._jacobian_cache = jac = {}
+
+        u_vec = self.unknowns
+        p_vec = self.params
+        states = self.states
+
+        for u_var in u_vec:
+            meta = u_vec.metadata(u_var)
+            u_size = meta['size']
+
+            for p_var in p_vec:
+                p_size = p_vec.metadata(p_var)['size']
+                jac[u_var, p_var] = np.zeros((u_size, p_size))
+
+            for s_var in states:
+                s_size = u_vec.metadata(s_var)['size']
+                jac[u_var, s_var] = np.zeros((u_size, s_size))
+
+        return jac
+
