@@ -60,6 +60,8 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
             "Parameters": params,
             "Unknowns":   unknowns,
             "Residuals":  resids,
+            'success': 1,
+            'msg': '',
         }
 
         if params is None:
@@ -82,21 +84,23 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 
         for label, values in iteritems(groupings):
             actual = actual_group.get(label, None)
+            if isinstance(values, int):
+                test.assertEqual(actual, values)
+            else:
+                # If len(actual) == len(expected) and actual <= expected, then
+                # actual == expected.
+                test.assertEqual(len(actual), len(values))
 
-            # If len(actual) == len(expected) and actual <= expected, then
-            # actual == expected.
-            test.assertEqual(len(actual), len(values))
+                for key, val in values:
+                    found_val = actual.get(key, sentinel)
 
-            for key, val in values:
-                found_val = actual.get(key, sentinel)
+                    if found_val is sentinel:
+                        test.fail("Did not find key '{0}'".format(key))
 
-                if found_val is sentinel:
-                    test.fail("Did not find key '{0}'".format(key))
-
-                try:
-                    assert_rel_error(test, found_val, val, tolerance)
-                except TypeError:
-                    test.assertEqual(val, found_val)
+                    try:
+                        assert_rel_error(test, found_val, val, tolerance)
+                    except TypeError:
+                        test.assertEqual(val, found_val)
 
 def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
