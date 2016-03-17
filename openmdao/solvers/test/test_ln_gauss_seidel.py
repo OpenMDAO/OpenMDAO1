@@ -581,7 +581,6 @@ class SimpleImplicit(Component):
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
 
-        # print "soofoo", self.J['x','x']
         for voi in vois:
             if mode == "fwd":
                 sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'], -rhs_vec[voi].vec)
