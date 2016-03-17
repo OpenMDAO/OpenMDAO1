@@ -9,7 +9,7 @@ import numpy as np
 
 from openmdao.api import IndepVarComp, Component, Group, Problem, \
                          FullFactorialDriver, InMemoryRecorder, AnalysisError
-
+from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.core.mpi_wrap import MPI, debug, MultiProcFailCheck
 from openmdao.test.mpi_util import MPITestCase
 
@@ -19,32 +19,6 @@ if MPI: # pragma: no cover
 else:
     # if you didn't use `mpirun`, then use the numpy data passing
     from openmdao.api import BasicImpl as impl
-
-class Mult(Component):
-    def __init__(self, fails=(), critical=False):
-        super(Mult, self).__init__()
-        self.iter_count = 0
-        self.fails = fails # case numbers to fail on
-        self.critical = critical
-
-        self.add_param('x', val=0.)
-        self.add_param('c', val=0.)
-        self.add_output('y', shape=1)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        if MPI:
-            time.sleep((MPI.COMM_WORLD.rank+1.0)*0.1)
-        unknowns['y'] = params['c']*params['x']
-
-        try:
-            if self.iter_count in self.fails:
-                if self.critical:
-                    raise RuntimeError("OMG, a critical error!")
-                else:
-                    raise AnalysisError("just an analysis error")
-        finally:
-            self.iter_count += 1
-
 
 class ParallelDOETestCase(MPITestCase):
 
@@ -56,7 +30,7 @@ class ParallelDOETestCase(MPITestCase):
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
-        root.add('mult', Mult())
+        root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -96,9 +70,9 @@ class ParallelDOETestCase(MPITestCase):
             fail_rank = 0
 
         if self.comm.rank == fail_rank:
-            root.add('mult', Mult(fails=[3], critical=True))
+            root.add('mult', ExecComp4Test("y=c*x", fails=[3], critical=True))
         else:
-            root.add('mult', Mult())
+            root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -143,9 +117,9 @@ class ParallelDOETestCase(MPITestCase):
 
         fail_rank = 1  # raise exception from this rank
         if self.comm.rank == fail_rank:
-            root.add('mult', Mult(fails=[3, 4]))
+            root.add('mult', ExecComp4Test("y=c*x", fails=[3,4]))
         else:
-            root.add('mult', Mult())
+            root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -195,7 +169,7 @@ class LBParallelDOETestCase(MPITestCase):
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
-        root.add('mult', Mult())
+        root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -237,9 +211,9 @@ class LBParallelDOETestCase(MPITestCase):
             fail_rank = 0
 
         if self.comm.rank == fail_rank:
-            root.add('mult', Mult(fails=[3], critical=True))
+            root.add('mult', ExecComp4Test("y=c*x", fails=[3], critical=True))
         else:
-            root.add('mult', Mult())
+            root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -294,9 +268,9 @@ class LBParallelDOETestCase(MPITestCase):
             fail_rank = 0
 
         if self.comm.rank == fail_rank:
-            root.add('mult', Mult(fails=[3,4,5], critical=False))
+            root.add('mult', ExecComp4Test("y=c*x", fails=[3,4,5]))
         else:
-            root.add('mult', Mult())
+            root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -348,7 +322,7 @@ class LBParallelDOETestCase6(MPITestCase):
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
-        root.add('mult', Mult())
+        root.add('mult', ExecComp4Test("y=c*x"))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
