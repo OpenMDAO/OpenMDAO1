@@ -851,16 +851,24 @@ class Component(System):
         p_vec = self.params
         states = self.states
 
+        # Caching while caching
+        p_size_storage = {}
+        for p_var in iterkeys(p_vec):
+            p_size_storage[p_var] = p_vec.metadata(p_var)['size']
+
+        u_size_storage = {}
         for u_var in iterkeys(u_vec):
-            meta = u_vec.metadata(u_var)
-            u_size = meta['size']
+            u_size_storage[p_var] = u_vec.metadata(u_var)['size']
+
+        for u_var in iterkeys(u_vec):
+            u_size = u_size_storage[p_var]
 
             for p_var in iterkeys(p_vec):
-                p_size = p_vec.metadata(p_var)['size']
+                p_size = p_size_storage[p_var]
                 jac[u_var, p_var] = np.zeros((u_size, p_size))
 
             for s_var in states:
-                s_size = u_vec.metadata(s_var)['size']
+                s_size = u_size_storage[p_var]
                 jac[u_var, s_var] = np.zeros((u_size, s_size))
 
         return jac
