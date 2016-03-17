@@ -314,7 +314,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         p.check_partial_derivatives(out_stream=mystream, compact_print=True)
 
         text = mystream.getvalue()
-        expected = "'f'             wrt 'x'             |  4.052892e+00 | 4.101284e+00 |  4.839170e-02\n"
+        expected = "'f'             wrt 'x'             |  4.052892e+00 | 4.101284e+00 |  4.839170e-02 |  1.194004e-02"
         self.assertTrue(expected in text)
 
 class TestProblemFullFD(unittest.TestCase):

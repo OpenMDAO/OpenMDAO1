@@ -2330,35 +2330,41 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if compact_print:
                 if jac_fwd and jac_rev:
                     if not started:
-                        out_str_tmpl = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
-                        out_str = out_str_tmpl.format(_pad_name('<unknown>'), _pad_name('<param>'),
-                            _pad_name('fwd mag.', 10, quotes=False), _pad_name('rev mag.', 10, quotes=False),
-                            _pad_name('fd mag.', 10, quotes=False), _pad_name('a(fwd-fd)', 10, quotes=False),
-                            _pad_name('a(rev-fd)', 10, quotes=False), _pad_name('r(fwd-rev)', 10, quotes=False),
-                            _pad_name('r(rev-fd)', 10, quotes=False)
+                        tmp1 = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fwd mag.', 10, quotes=False),
+                                              _pad_name('rev mag.', 10, quotes=False),
+                                              _pad_name('fd mag.', 10, quotes=False),
+                                              _pad_name('a(fwd-fd)', 10, quotes=False),
+                                              _pad_name('a(rev-fd)', 10, quotes=False),
+                                              _pad_name('r(fwd-rev)', 10, quotes=False),
+                                              _pad_name('r(rev-fd)', 10, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')
                         started=True
 
-                    out_str_tmpl = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
-                    out_stream.write(out_str_tmpl.format(_pad_name(u_name), _pad_name(p_name),
-                                                         magfor, magrev, magfd, abs1, abs2,
-                                                         rel1, rel2))
+                    tmp1 = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfor, magrev, magfd, abs1, abs2,
+                                                 rel1, rel2))
 
                 elif jac_fd and jac_fd2:
                     if not started:
-                        out_str_tmpl = "{0} wrt {1} | {2} | {3} | {4}\n"
-                        out_str = out_str_tmpl.format(_pad_name('<unknown>'), _pad_name('<param>'),
-                            _pad_name('fd1 mag.', 13, quotes=False), _pad_name('fd2 mag.', 12, quotes=False),
-                            _pad_name('abs(fd2 - fd1)', 12, quotes=False)
+                        tmp1 = "{0} wrt {1} | {2} | {3} | {4} | {5}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fd1 mag.', 13, quotes=False),
+                                              _pad_name('fd2 mag.', 12, quotes=False),
+                                              _pad_name('ab(fd2 - fd1)', 12, quotes=False),
+                                              _pad_name('rel(fd2 - fd1)', 12, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')
                         started=True
 
-                    out_str_tmpl = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e}\n"
-                    out_stream.write(out_str_tmpl.format(_pad_name(u_name), _pad_name(p_name), magfd, magfd2, abs4))
+                    tmp1 = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e} | {5: .6e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfd, magfd2, abs4, rel4))
             else:
 
                 if started:
