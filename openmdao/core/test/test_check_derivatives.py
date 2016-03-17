@@ -109,6 +109,42 @@ class TestProblemCheckPartials(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
+    def test_simple_implicit_run_once(self):
+
+        class SIC2(SimpleImplicitComp):
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Simple iterative solve. (Babylonian method)."""
+
+                super(SIC2, self).solve_nonlinear(params, unknowns, resids)
+
+                # This mimics a problem with residuals that aren't up-to-date
+                # with the solve
+                resids['z'] = 999.999
+
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SIC2())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run_once()
+
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
     def test_simple_implicit_complex_step(self):
 
         prob = Problem()

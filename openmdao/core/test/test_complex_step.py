@@ -172,7 +172,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         msg = "The solver in 'mda' requires derivatives. We "
         msg += "currently do not support complex step around it."
 
-        self.assertEqual(str(cm.exception), msg)
+        self.assertTrue(msg in str(cm.exception))
 
     def test_sub_unsupported(self):
 
@@ -189,7 +189,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         msg = "Complex step is currently not supported for groups"
         msg += " other than root."
 
-        self.assertEqual(str(cm.exception), msg)
+        self.assertTrue(msg in str(cm.exception))
 
     def test_array_values_diff_shape_units(self):
         prob = Problem()

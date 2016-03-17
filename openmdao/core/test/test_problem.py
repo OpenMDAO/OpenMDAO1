@@ -50,7 +50,7 @@ class TestProblem(unittest.TestCase):
             prob.setup(check=False)
         except Exception as error:
             msg = "Target 'G3.C4.x' is connected to multiple unknowns: ['G2.C1.x', 'G3.C3.y']"
-            self.assertEqual(text_type(error), msg)
+            self.assertTrue(msg in str(error))
         else:
             self.fail("Error expected")
 
@@ -357,7 +357,7 @@ class TestProblem(unittest.TestCase):
         raised_error = raised_error.replace('(3L,', '(3,')
 
         expected = shape_err % ('(2,)', "'A.y'", '(3,)', "'B.y'")
-        self.assertEqual(raised_error, expected)
+        self.assertTrue(expected in raised_error)
 
         # Shape mismatch in implicit connection
         prob = Problem()
@@ -374,7 +374,7 @@ class TestProblem(unittest.TestCase):
         raised_error = raised_error.replace('(3L,', '(3,')
 
         expected = shape_err % ('(2,)', "'A.y' (y)", '(3,)', "'B.y' (y)")
-        self.assertEqual(raised_error, expected)
+        self.assertTrue(expected in raised_error)
 
         # Shape mismatch in explicit connection
         prob = Problem()
@@ -391,7 +391,7 @@ class TestProblem(unittest.TestCase):
         raised_error = raised_error.replace('(3L,', '(3,')
 
         expected = shape_err % ('(2,)', "'C.y'", '(3,)', "'B.y'")
-        self.assertEqual(raised_error, expected)
+        self.assertTrue(expected in raised_error)
 
         # Shape mismatch in implicit connection
         prob = Problem()
@@ -407,7 +407,7 @@ class TestProblem(unittest.TestCase):
         raised_error = raised_error.replace('(3L,', '(3,')
 
         expected = shape_err % ('(2,)', "'C.y' (y)", '(3,)', "'B.y' (y)")
-        self.assertEqual(raised_error, expected)
+        self.assertTrue(expected in raised_error)
 
         # Explicit
         prob = Problem()
@@ -519,7 +519,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "'B.x' src_indices contains a negative index (-1).")
+            self.assertTrue("'B.x' src_indices contains a negative index (-1)." in str(err))
         else:
             self.fail("Exception expected")
 
@@ -542,9 +542,8 @@ class TestProblem(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "'B.x' src_indices contains an index (5) that exceeds the bounds "
-                             "of source variable 'A.y' of size 5.")
+            self.assertTrue("'B.x' src_indices contains an index (5) that exceeds the bounds "
+                             "of source variable 'A.y' of size 5." in str(err))
         else:
             self.fail("Exception expected")
 
@@ -722,7 +721,7 @@ class TestProblem(unittest.TestCase):
             prob.setup(check=False)
         expected = "Shape (2,) of source 'B1.y' must be the same as " \
                    "shape (3,) of target 'C1.x'."
-        self.assertEqual(expected, str(cm.exception))
+        self.assertTrue(expected in str(cm.exception))
 
         # Mismatched Scalar to Array Value
         prob = Problem()
@@ -805,24 +804,23 @@ class TestProblem(unittest.TestCase):
         root.ln_solver.options['mode'] = 'rev'
         sub1.ln_solver.options['mode'] = 'rev'
 
-        try:
-            mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
-        except Exception as err:
-            msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
-            self.assertEqual(text_type(err), msg)
-        else:
-            self.fail('Exception expected')
+        prob._setup_errors = []
+        mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
+
+        msg  = "Group 'sub2' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
+        self.assertTrue(msg in prob._setup_errors[0])
+
 
         sub1.ln_solver.options['mode'] = 'fwd'
         sub2.ln_solver.options['mode'] = 'rev'
 
-        try:
-            mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
-        except Exception as err:
-            msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
-            self.assertEqual(text_type(err), msg)
-        else:
-            self.fail('Exception expected')
+
+        prob._setup_errors = []
+        mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)
+
+        msg  = "Group 'sub1' has mode 'fwd' but the root group has mode 'rev'. Modes must match to use parallel derivative groups."
+        self.assertTrue(msg in prob._setup_errors[0])
+
 
         sub1.ln_solver.options['mode'] = 'rev'
         mode = prob._check_for_parallel_derivs(['a'], ['x'], True, False)

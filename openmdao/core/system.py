@@ -420,7 +420,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = OrderedDict()
+        jac = {}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -498,7 +498,7 @@ class System(object):
                 p_size = np.size(target_input)
                 p_idxs = range(p_size)
 
-            # Size our Outputs
+            # Size our Outputs and allocate
             for u_name in chain(fd_unknowns, pass_unknowns):
                 if qoi_indices and u_name in qoi_indices:
                     u_size = len(qoi_indices[u_name])
