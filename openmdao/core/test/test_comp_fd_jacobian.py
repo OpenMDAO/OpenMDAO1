@@ -331,9 +331,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'step_size' values: [('comp.x2', 1e-06), "
-                             "('comp2.x2', 1.001e-06)]")
+                             "('comp2.x2', 1.001e-06)]" in str(err))
 
     def test_fd_options_step_type_ambiguous(self):
 
@@ -350,9 +350,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'step_type' values: [('comp.x2', 'absolute'), "
-                             "('comp2.x2', 'relative')]")
+                             "('comp2.x2', 'relative')]" in str(err))
 
     def test_fd_options_form_ambiguous(self):
 
@@ -369,9 +369,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'form' values: [('comp.x2', 'central'), "
-                             "('comp2.x2', 'forward')]")
+                             "('comp2.x2', 'forward')]" in str(err))
 
     def test_fd_options_step_type_precedence(self):
 

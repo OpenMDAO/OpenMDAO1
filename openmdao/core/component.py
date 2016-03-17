@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -61,7 +61,7 @@ class Component(System):
     def __init__(self):
         super(Component, self).__init__()
         self._post_setup_vars = False
-        self._jacobian_cache = OrderedDict()
+        self._jacobian_cache = {}
 
         self._init_params_dict = OrderedDict() # for storage of initial var data
         self._init_unknowns_dict = OrderedDict() # for storage of initial var data
@@ -767,7 +767,7 @@ class Component(System):
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
 
-        jac = OrderedDict()
+        jac = {}
         csparams = ComplexStepTgtVecWrapper(params)
         csunknowns = ComplexStepSrcVecWrapper(unknowns)
         csresids = ComplexStepSrcVecWrapper(resids)
