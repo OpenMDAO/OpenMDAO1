@@ -66,7 +66,7 @@ class MultiPoint(Group):
 
         self.add('aggregate', Summer(size))
 
-class BenchmarkMultipoint(unittest.TestCase):
+class BM(unittest.TestCase):
     """A few 'brute force' multipoint cases (1K, 2K, 5K)"""
 
     def _setup_bm(self, npts):
