@@ -8,7 +8,7 @@ import sys
 import os
 import traceback
 from six.moves import zip
-from six import next
+from six import next, PY3
 
 import numpy
 
@@ -203,7 +203,12 @@ class PredeterminedRunsDriver(Driver):
             terminate, exc = self._try_case(root, metadata)
 
             if exc is not None:
-                raise exc[0], exc[1], exc[2]
+                if PY3:
+                    raise exc[0].with_traceback(exc[1], exc[2])
+                else:
+                    # exec needed here since otherwise python3 will
+                    # barf with a syntax error  :(
+                    exec('raise exc[0], exc[1], exc[2]')
 
             self.recorders.record_iteration(root, metadata)
 
@@ -225,7 +230,12 @@ class PredeterminedRunsDriver(Driver):
 
                 if any_proc_is_true(self._full_comm, terminate):
                     if exc:
-                        raise exc[0], exc[1], exc[2]
+                        if PY3:
+                            raise exc[0].with_traceback(exc[1], exc[2])
+                        else:
+                            # exec needed here since otherwise python3 will
+                            # barf with a syntax error  :(
+                            exec('raise exc[0], exc[1], exc[2]')
                     else:
                         raise RuntimeError("an exception was raised by another MPI process.")
 
