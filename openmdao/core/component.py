@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -851,11 +851,11 @@ class Component(System):
         p_vec = self.params
         states = self.states
 
-        for u_var in u_vec:
+        for u_var in iterkeys(u_vec):
             meta = u_vec.metadata(u_var)
             u_size = meta['size']
 
-            for p_var in p_vec:
+            for p_var in iterkeys(p_vec):
                 p_size = p_vec.metadata(p_var)['size']
                 jac[u_var, p_var] = np.zeros((u_size, p_size))
 
