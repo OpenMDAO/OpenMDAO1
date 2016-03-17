@@ -264,7 +264,9 @@ class TestComponentDerivatives(unittest.TestCase):
         p = Problem()
         root = p.root = Group()
 
-        root.add('comp1', SimpleArrayComp())
+        root.add('comp1', ExecComp(["y[0]=x[0]*2.0+x[1]*7.0",
+                                    "y[1]=x[0]*5.0-x[1]*3.0+x[2]*1.5"],
+                                    x=np.zeros(3), y=np.zeros(2)))
         root.add('comp2', SimpleImplicitComp())
 
         root.ln_solver.options['maxiter'] = 2
@@ -275,7 +277,7 @@ class TestComponentDerivatives(unittest.TestCase):
 
         self.assertTrue(len(J) == 1)
         self.assertTrue(('y', 'x') in J)
-        self.assertTrue(J[('y', 'x')].shape == (2, 2))
+        self.assertTrue(J[('y', 'x')].shape == (2,3))
 
         # Implicit
         J = root.comp2.alloc_jacobian()
