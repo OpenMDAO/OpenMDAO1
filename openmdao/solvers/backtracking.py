@@ -100,7 +100,7 @@ class BackTracking(LineSearch):
         # Initial execution really belongs to our parent driver's iteration,
         # so use its info.
         fnorm = resids.norm()
-        if self.options['iprint'] > 0:
+        if solver.options['iprint'] > 0:
             self.print_norm(solver.print_name, system.pathname, solver.iter_count,
                             fnorm, fnorm0)
 

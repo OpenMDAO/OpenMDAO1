@@ -142,7 +142,7 @@ class ScipyGMRES(LinearSolver):
 
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
-                                0, 0, msg=msg, solver='LN')
+                                0, 0, msg=msg, indent=1, solver='LN')
 
             unknowns_mat[voi] = d_unknowns
 
