@@ -829,3 +829,46 @@ class Component(System):
             stepvec.set_complex_var(None)
 
         return jac
+
+    def alloc_jacobian(self):
+        """
+        Creates a jacobian dictionary with the keys pre-populated and correct
+        array sizes allocated. caches the result in the component, and
+        returns that cache if it finds it.
+
+        Returns
+        -----------
+        dict
+            pre-allocated jacobian dictionary
+        """
+
+        if self._jacobian_cache is not None and len(self._jacobian_cache) > 0:
+            return self._jacobian_cache
+
+        self._jacobian_cache = jac = {}
+
+        u_vec = self.unknowns
+        p_vec = self.params
+        states = self.states
+
+        # Caching while caching
+        p_size_storage = [(n, m['size']) for n,m in iteritems(p_vec)
+                            if not m.get('pass_by_obj') and not m.get('remote')]
+
+        s_size_storage = []
+        u_size_storage = []
+        for n, meta in iteritems(u_vec):
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            if meta.get('state'):
+                s_size_storage.append((n, meta['size']))
+            u_size_storage.append((n, meta['size']))
+
+        for u_var, u_size in u_size_storage:
+            for p_var, p_size in p_size_storage:
+                jac[u_var, p_var] = np.zeros((u_size, p_size))
+
+            for s_var, s_size in s_size_storage:
+                jac[u_var, s_var] = np.zeros((u_size, s_size))
+
+        return jac
