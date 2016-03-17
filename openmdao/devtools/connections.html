@@ -24,22 +24,24 @@ window.onload = function() {
     var LEFT_MARGIN=100;
     var diagonal = d3.svg.diagonal();
 
+    var srcs = data.srcs;
+    var targets = data.targets;
+    var links = data.links;
+
     var left_data = []
     var right_data = []
     var link_data = []
 
-    var count = data.length;
+    var count = links.length;
     for (i=0; i<count; ++i) {
-        left_data[i] = {
-            "name": data[i]['source'],
-            "x": LEFT_MARGIN-35,
-            "y": i*10+50
-        }
-        right_data[i] = {
-            "name": data[i]['target'],
-            "x": w-RIGHT_MARGIN,
-            "y": i*10+50
-        }
+        left_data[i] = srcs[links[i].source]
+        left_data[i].x = LEFT_MARGIN-35,
+        left_data[i].y = i*10+50
+
+        right_data[i] = targets[links[i].target]
+        right_data[i].x = w-RIGHT_MARGIN,
+        right_data[i].y = i*10+50
+
         link_data[i] = { 'source': left_data[i], 'target': right_data[i] }
     }
 

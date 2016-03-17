@@ -79,8 +79,21 @@ def view_graph(system, viewer='connections',
         Defaults to True.
     """
     connections = system._probdata.connections
-    conns = [{'source':s, 'target':t} for t,(s,_) in iteritems(connections)]
+    srcs = []
+    targets = []
+    links = []
+    idxs = {}
+    for t, (s, _) in iteritems(connections):
+        if t not in idxs:
+            targets.append({'name': t})
+            idxs[t] = len(targets)-1
+        if s not in idxs:
+            srcs.append({'name': s})
+            idxs[s] = len(srcs)-1
 
+        links.append({'source': idxs[s], 'target': idxs[t]})
+
+    data = { 'srcs': srcs, 'targets': targets, 'links': links }
     viewer += '.html'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -88,7 +101,7 @@ def view_graph(system, viewer='connections',
     with open(os.path.join(code_dir, viewer), "r") as f:
         template = f.read()
 
-    graphjson = json.dumps(conns)
+    graphjson = json.dumps(data)
 
     with open(outfile, 'w') as f:
         s = template % graphjson
