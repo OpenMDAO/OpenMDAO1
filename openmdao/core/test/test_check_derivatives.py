@@ -60,7 +60,7 @@ class TestProblemCheckPartials(unittest.TestCase):
                                        compact_print=True)
 
         text = mystream.getvalue()
-        expected = "'y1'            wrt 'x1'            | 8.0000e+00 | 8.0000e+00 |  8.0000e+00 | 2.0013e-06 | 2.0013e-06 | 2.0013e-06 | 2.0013e-06"
+        expected = "'y1'            wrt 'x1'            | 8.0000e+00 | 8.0000e+00 |  8.0000e+00 | 2.0013e-06 | 2.0013e-06 | 2.5016e-07 | 2.5016e-07"
         self.assertTrue(expected in text)
 
 

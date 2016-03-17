@@ -1708,8 +1708,10 @@ class Problem(object):
             diff = requested.difference(allcompnames)
 
             if diff:
+                sorted_diff = list(diff)
+                sorted_diff.sort()
                 msg = "The following are not valid comp names: "
-                msg += str(list(diff))
+                msg += str(sorted_diff)
                 raise RuntimeError(msg)
 
             comps = [root._subsystem(c_name) for c_name in comps]
@@ -2339,7 +2341,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                         out_stream.write('-'*len(out_str)+'\n')
                         started=True
 
-                    out_str_tmpl = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {6:.4e} | {6:.4e}\n"
+                    out_str_tmpl = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
                     out_stream.write(out_str_tmpl.format(_pad_name(u_name), _pad_name(p_name),
                                                          magfor, magrev, magfd, abs1, abs2,
                                                          rel1, rel2))
