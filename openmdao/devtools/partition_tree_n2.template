@@ -554,9 +554,7 @@
             var domainArray = [];
             for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
                 matrix[i] = d3.range(d3RightTextNodesArrayZoomed.length).map(function(j) {
-                  return {x: j, y: i, z: 0,
-                   implicit: (d3RightTextNodesArrayZoomed[j].implicit) ? true: false,
-                   type: d3RightTextNodesArrayZoomed[j].type};
+                  return {x: j, y: i, z: 0, obj: d3RightTextNodesArrayZoomed[j]};
                 });
                 matrix[i][i].z += 1;//link.value;
                 domainArray.push(i);
@@ -593,14 +591,7 @@
 
 
 
-  function cell_corners(d)
-  {
-     if (d.type == "scalar") {
-          return 100. * x_n2.rangeBand();
-     } else {
-         return 0.0 ;
-       }
-  }
+
 
   function cell_opacity(d)
   {
@@ -614,7 +605,7 @@
   function cell_fill(d)
   {
      if (d.x == d.y) {
-          return (d.implicit) ? "orange" : "#444";
+          return (d.obj.implicit) ? "orange" : "#444";
      } else {
          return 'grey' ;
        }
@@ -622,13 +613,30 @@
 
   function row_func(row) {
 
-    var cell = d3.select(this).selectAll(".cell")
-        //.data(row.filter(function(d) { return ( d.z > 0 && d.type == "array"); }))
-        .data(row.filter(function(d) { return ( d.z > 0 ); }));
+    var cellSubsystem = d3.select(this).selectAll(".cell_subsystem")
+        .data(row.filter(function(d) { return ( d.z > 0 && d.obj.type === "subsystem"); }));
 
-      cell.enter()
+    var cellScalar = d3.select(this).selectAll(".cell_scalar")
+        .data(row.filter(function(d) { return ( d.z > 0 && d.obj.type === "unknown" && d.obj.dtype !== "ndarray"); }));
+
+    var cellArray = d3.select(this).selectAll(".cell_array")
+        .data(row.filter(function(d) { return ( d.z > 0 && d.obj.type === "unknown" && d.obj.dtype === "ndarray"); }));
+
+    cellSubsystem.enter().append("g")
+        .attr("class", "cell_subsystem")
+            .attr("transform", function(d, i) { return "translate(" + (x_n2(d.x)+x_n2.rangeBand()*.5) + "," + y_n2.rangeBand()*.5 + ")"; })
+            .append("ellipse")
+            .attr("rx", x_n2.rangeBand()*.5)
+            .attr("ry", y_n2.rangeBand()*.5)
+            .style("fill-opacity", cell_opacity)
+            .style("fill", cell_fill)
+            .filter( function(d,i) { if ( d.x == d.y ) return true;})
+            .on("mouseover", mouseover_n2 )
+            .on("mouseout", mouseout_n2);
+
+      cellScalar.enter()
         .append("rect")
-        .attr("class", "cell")
+        .attr("class", "cell_scalar")
         .attr("x", function(d) { return x_n2(d.x); })
         .attr("width", x_n2.rangeBand())
         .attr("height", y_n2.rangeBand())
@@ -637,19 +645,18 @@
         .filter( function(d,i) { if ( d.x == d.y ) return true;})
         .on("mouseover", mouseover_n2 )
         .on("mouseout", mouseout_n2);
-/*
-        cell.enter().append("g")
-            .attr("class", "cell")
+
+        cellArray.enter().append("g")
+            .attr("class", "cell_array")
             .attr("transform", function(d, i) { return "translate(" + (x_n2(d.x)+x_n2.rangeBand()*.5) + "," + y_n2.rangeBand()*.5 + ")rotate(-45)"; })
             .append("ellipse")
-            .attr("class", "cell")
             .attr("rx", x_n2.rangeBand()*.5)
             .attr("ry", y_n2.rangeBand()*.25)
             .style("fill-opacity", cell_opacity)
             .style("fill", cell_fill)
             .filter( function(d,i) { if ( d.x == d.y ) return true;})
             .on("mouseover", mouseover_n2 )
-            .on("mouseout", mouseout_n2);*/
+            .on("mouseout", mouseout_n2);
   }
 
 

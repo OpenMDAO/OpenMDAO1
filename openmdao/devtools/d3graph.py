@@ -30,15 +30,17 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
 
         if isinstance(ss, Component):
             for vname, meta in ss.unknowns.items():
-                size = meta['size'] if meta['size'] and not size_1 else 1
+                dtype=type(meta['val']).__name__
+                #size = meta['size'] if meta['size'] and not size_1 else 1
                 implicit = False
                 if meta.get('state'):
                     implicit = True
-                children.append({'name': vname, 'type': 'unknown', 'implicit': implicit})
+                children.append({'name': vname, 'type': 'unknown', 'implicit': implicit, 'dtype': dtype})
 
             for vname, meta in ss.params.items():
-                size = meta['size'] if meta['size'] and not size_1 else 1
-                children.append({'name': vname, 'type': 'param'})
+                dtype=type(meta['val']).__name__
+                #size = meta['size'] if meta['size'] and not size_1 else 1
+                children.append({'name': vname, 'type': 'param', 'dtype': dtype})
 
         if level > expand_level:
             dct['children'] = None
