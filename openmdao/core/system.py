@@ -679,7 +679,6 @@ class System(object):
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    #dresids.vec *= -1.0
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -696,17 +695,10 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     try:
-                        # Sign on the local Jacobian needs to be -1 before
-                        # we add in the fake residual. Since we can't modify
-                        # the 'du' vector at this point without stomping on the
-                        # previous component's contributions, we can multiply
-                        # our local 'arg' by -1, and then revert it afterwards.
-                        #dresids.vec *= -1.0
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        #dresids.vec *= -1.0
                     finally:
                         dparams._apply_unit_derivatives()
 

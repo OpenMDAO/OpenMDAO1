@@ -124,8 +124,10 @@ class TestResidual(unittest.TestCase):
 
         p.root._sys_apply_linear('rev', do_apply=p.root._do_apply, vois=(None, ))
         assert_rel_error(self, p.root.dumat[None]['x'][0], 3.0, 1e-8)
+        assert_rel_error(self, p.root.dumat[None]['a'], 1.0, 1e-8)
+        assert_rel_error(self, p.root.dumat[None]['b'], 0.0, 1e-8)
 
-        # rev 1
+        # rev 2
         p.root.drmat[None].vec[:] = 0.0
         p.root.dumat[None].vec[:] = 0.0
         p.root.clear_dparams()

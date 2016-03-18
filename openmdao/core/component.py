@@ -496,6 +496,14 @@ class Component(System):
             `VecWrapper` containing residuals. (r)
         """
 
+        # Note, we solve a slightly modified version of the unified
+        # derivatives equations in OpenMDAO.
+        # (dR/du) * (du/dr) = -I
+        # The minus side on the right hand side comes from defining the
+        # explicit residual to be ynew - yold instead of yold - ynew. The
+        # advantage of this is that the derivative of an explicit residual is
+        # the same sign as the derivative of the explicit unknown.
+
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
         resids.vec[:] = -unknowns.vec
