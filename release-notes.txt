@@ -8,7 +8,7 @@ Features:
 * Setup error messages are now all delayed until the end of setup.
 
 Bug fixes:
-* Fixed bug in FD check_partials that gave partials of by 8 orders of magnitude and a negative sign.
+* Fixed bug in FD check_partials that gave partials off by 8 orders of magnitude and a negative sign.
 
 ---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.6.2 Alpha Release Notes
