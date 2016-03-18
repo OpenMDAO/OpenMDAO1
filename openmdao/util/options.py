@@ -169,7 +169,7 @@ class OptionsDictionary(object):
         docstring = []
         for (name, val) in sorted(self.items()):
             docstring.extend(["    ", dictname, "['", name, "']",
-                                " :  ", type(val).__name__, "("])
+                                " : ", type(val).__name__, "("])
             if isinstance(val, str):
                 docstring.append("'%s'"%val)
             else:

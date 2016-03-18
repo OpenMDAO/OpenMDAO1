@@ -21,6 +21,8 @@ class Brent(NonLinearSolver):
 
     Options
     -------
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at max_iter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
     options['max_iter'] :  int(100)
@@ -41,7 +43,6 @@ class Brent(NonLinearSolver):
         if given, name of the variable to pull the upper bound value from.This variable must be a parameter on of of the child components of the containing system
     options['xtol'] :  int(0)
         The routine converges when a root is known to lie within xtol of the value return. Should be >= 0. The routine modifies this to take into account the relative precision of doubles.
-
     """
 
     def __init__(self):
@@ -206,4 +207,3 @@ class Brent(NonLinearSolver):
                             self.basenorm)
 
         return resids._dat[self.s_var_name].val[idx]
-

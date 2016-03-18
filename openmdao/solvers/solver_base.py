@@ -16,6 +16,8 @@ class SolverBase(object):
                'residual to stdout each iteration, set to 2 to print ' \
                'subiteration residuals as well.'
         self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
+        self.options.add_option('err_on_maxiter', False,
+            desc='If True, raise an AnalysisError if not converged at max_iter.')
         self.recorders = RecordingManager()
         self.local_meta = None
 
@@ -99,7 +101,7 @@ class SolverBase(object):
 
         """
         #start the docstring off
-        docstring = '    \"\"\"\n'
+        docstrings = ['    \"\"\"']
 
         #Put options into docstring
         firstTime = 1
@@ -107,13 +109,13 @@ class SolverBase(object):
         for key, value in sorted(vars(self).items()):
             if type(value)==OptionsDictionary:
                 if firstTime:  #start of Options docstring
-                    docstring += '\n    Options\n    -------\n'
+                    docstrings.extend(['','    Options','    -------'])
                     firstTime = 0
-                docstring += value._generate_docstring(key)
+                docstrings.append(value._generate_docstring(key))
 
         #finish up docstring
-        docstring += '\n    \"\"\"\n'
-        return docstring
+        docstrings.extend(['    \"\"\"',''])
+        return '\n'.join(docstrings)
 
 
 class LinearSolver(SolverBase):

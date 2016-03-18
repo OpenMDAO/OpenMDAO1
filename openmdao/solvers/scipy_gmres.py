@@ -20,6 +20,8 @@ class ScipyGMRES(LinearSolver):
     -------
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at max_iter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each
         iteration, set to 2 to print subiteration residuals as well.

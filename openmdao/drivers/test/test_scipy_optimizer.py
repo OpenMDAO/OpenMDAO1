@@ -676,8 +676,26 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['disp'] = False
 
         test_string = prob.driver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    options[\'disp\'] :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    options[\'maxiter\'] :  int(200)\n        Maximum number of iterations.\n    options[\'optimizer\'] :  str(\'SLSQP\')\n        Name of optimizer to use\n    options[\'tol\'] :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
-        self.assertEqual(original_string, test_string)
+        # original_string = '    """\n\n    Options\n    -------\n    options[\'disp\'] :  bool(False)\n        Set to False to prevent printing of Scipy convergence messages\n    options[\'maxiter\'] :  int(200)\n        Maximum number of iterations.\n    options[\'optimizer\'] :  str(\'SLSQP\')\n        Name of optimizer to use\n    options[\'tol\'] :  float(1e-08)\n        Tolerance for termination. For detailed control, use solver-specific options.\n\n    """\n'
+        # self.assertEqual(original_string, test_string)
+        original_string = \
+"""    \"\"\"
+
+    Options
+    -------
+    options['disp'] : bool(False)
+        Set to False to prevent printing of Scipy convergence messages
+    options['maxiter'] : int(200)
+        Maximum number of iterations.
+    options['optimizer'] : str('SLSQP')
+        Name of optimizer to use
+    options['tol'] : float(1e-08)
+        Tolerance for termination. For detailed control, use solver-specific options.
+
+    \"\"\"
+"""
+        for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
+            self.assertEqual(sorig, stest)
 
 if __name__ == "__main__":
     unittest.main()
