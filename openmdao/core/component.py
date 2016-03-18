@@ -852,24 +852,23 @@ class Component(System):
         states = self.states
 
         # Caching while caching
-        p_size_storage = {}
-        for p_var in iterkeys(p_vec):
-            p_size_storage[p_var] = p_vec.metadata(p_var)['size']
+        p_size_storage = [(n, m['size']) for n,m in iteritems(p_vec)
+                            if not m.get('pass_by_obj') and not m.get('remote')]
 
-        u_size_storage = {}
-        for u_var in iterkeys(u_vec):
-            u_size_storage[p_var] = u_vec.metadata(u_var)['size']
+        s_size_storage = []
+        u_size_storage = []
+        for n, meta in iteritems(u_vec):
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            if meta.get('state'):
+                s_size_storage.append((n, meta['size']))
+            u_size_storage.append((n, meta['size']))
 
-        for u_var in iterkeys(u_vec):
-            u_size = u_size_storage[p_var]
-
-            for p_var in iterkeys(p_vec):
-                p_size = p_size_storage[p_var]
+        for u_var, u_size in u_size_storage:
+            for p_var, p_size in p_size_storage:
                 jac[u_var, p_var] = np.zeros((u_size, p_size))
 
-            for s_var in states:
-                s_size = u_size_storage[p_var]
+            for s_var, s_size in s_size_storage:
                 jac[u_var, s_var] = np.zeros((u_size, s_size))
 
         return jac
-
