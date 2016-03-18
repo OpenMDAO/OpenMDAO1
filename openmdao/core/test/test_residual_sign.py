@@ -1,4 +1,4 @@
-""" Test to guide converting over to a correctly-signed residual."""
+""" Test to guide converting over to a correctly-signed residual derivatives."""
 
 import unittest
 
