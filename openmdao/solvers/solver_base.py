@@ -17,7 +17,7 @@ class SolverBase(object):
                'subiteration residuals as well.'
         self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
         self.options.add_option('err_on_maxiter', False,
-            desc='If True, raise an AnalysisError if not converged at max_iter.')
+            desc='If True, raise an AnalysisError if not converged at maxiter.')
         self.recorders = RecordingManager()
         self.local_meta = None
 

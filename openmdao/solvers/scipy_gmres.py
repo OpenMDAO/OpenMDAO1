@@ -21,7 +21,7 @@ class ScipyGMRES(LinearSolver):
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
     options['err_on_maxiter'] : bool(False)
-        If True, raise an AnalysisError if not converged at max_iter.
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each
         iteration, set to 2 to print subiteration residuals as well.
@@ -134,6 +134,8 @@ class ScipyGMRES(LinearSolver):
                 print(msg.format(system.name, options['maxiter']))
                 #logger.error(msg, system.name, info)
                 msg = 'FAILED to converge after max iterations'
+                if self.options['err_on_maxiter']:
+                    raise AnalysisError(msg)
             elif info < 0:
                 msg = "ERROR in solve in '{}': gmres failed"
                 print(msg.format(system.name))
@@ -149,7 +151,6 @@ class ScipyGMRES(LinearSolver):
             unknowns_mat[voi] = d_unknowns
 
             #print(system.name, 'Linear solution vec', d_unknowns)
-
 
         return unknowns_mat
 

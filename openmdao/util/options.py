@@ -59,6 +59,21 @@ class OptionsDictionary(object):
 
         self._options[name] = opt
 
+    def remove_option(self, name):
+        """
+        Removes the named option.  Does nothing if the option is not found.
+
+        Args
+        ----
+        name : str
+            Name of the option to remove.
+
+        """
+        try:
+            del self._options[name]
+        except KeyError:
+            pass
+            
     def __getitem__(self, name):
         try:
             return self._options[name]['val']

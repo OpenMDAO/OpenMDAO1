@@ -12,7 +12,7 @@ class BackTracking(LineSearch):
     options['atol'] :  float(1e-10)
         Absolute convergence tolerancee for line search.
     options['err_on_maxiter'] : bool(False)
-        If True, raise an AnalysisError if not converged at max_iter.
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout
         each iteration, set to 2 to print subiteration residuals as well.
@@ -132,5 +132,9 @@ class BackTracking(LineSearch):
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, itercount,
                                 fnorm, fnorm0, indent=1, solver='LS')
+
+        if itercount == maxiter and fnorm > atol and fnorm/fnorm0 > rtol \
+                and self.options['err_on_maxiter']:
+           raise AnalysisError("maxiter was exceeded without convergence. (fnorm=%s)" % fnorm)
 
         return fnorm

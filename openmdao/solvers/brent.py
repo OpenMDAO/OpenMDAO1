@@ -22,10 +22,10 @@ class Brent(NonLinearSolver):
     Options
     -------
     options['err_on_maxiter'] : bool(False)
-        If True, raise an AnalysisError if not converged at max_iter.
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-    options['max_iter'] :  int(100)
+    options['maxiter'] :  int(100)
         if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.
     options['rtol'] :  float64(4.4408920985e-16)
         The routine converges when a root is known to lie within rtol times the value returned of the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.
@@ -57,7 +57,7 @@ class Brent(NonLinearSolver):
             desc='The routine converges when a root is known to lie within rtol times the value returned of '
                  'the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.')
 
-        opt.add_option('max_iter', 100,
+        opt.add_option('maxiter', 100,
             desc='if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.')
 
         opt.add_option('state_var', '', desc="name of the state-variable/residual the solver should with")
@@ -150,7 +150,7 @@ class Brent(NonLinearSolver):
         else:
             upper = self.options['upper_bound']
 
-        kwargs = {'maxiter': self.options['max_iter'],
+        kwargs = {'maxiter': self.options['maxiter'],
                   'a': lower,
                   'b': upper,
                   'full_output': True,
@@ -177,15 +177,22 @@ class Brent(NonLinearSolver):
 
         resid_norm = abs(resids._dat[self.s_var_name].val[idx])
 
+        if self.iter_count == self.options['maxiter'] or isnan(resid_norm):
+            failed = True
+            msg = 'FAILED to converge after max iterations'
+        else:
+            failed = False
+
         if self.options['iprint'] > 0:
 
-            if self.iter_count == self.options['max_iter'] or isnan(resid_norm):
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not failed:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count,
                             resid_norm, resid_norm_0, msg=msg)
+
+        if failed and self.options['err_on_maxiter']:
+            raise AnalysisError(msg)
 
     def _eval(self, x, params, unknowns, resids):
         """Callback function for evaluating f(x)"""
