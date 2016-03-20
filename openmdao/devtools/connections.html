@@ -5,84 +5,185 @@
 <meta charset="utf-8">
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <style>
+
+#connections {
+    overflow: auto;
+}
+
+#nothing {
+    display: none;
+}
+
+/* font for all visible node text */
+.node_label {
+    fill: black;
+    font-size: 12px;
+    font-family: sans-serif;
+}
+
+.left_label {
+    text-anchor: end;
+}
+
+.right_label {
+    text-anchor: start;
+}
+
+#center_lines {
+
+}
+
 .link {
   fill: none;
   stroke: #ccc;
   stroke-width: 1.5px;
 }
+
 </style>
 </head>
 <body>
 <script type="text/javascript">
 
-var data = %s;
+var data = <connection_data>;
+
+function getPixelDims(scratch,t) {
+    // scratch is an element with the correct styling,
+    // t is the text to be counted in pixels
+    scratch.empty();
+    scratch.append(document.createTextNode(t));
+    return { width: scratch.outerWidth(), height: scratch.outerHeight() } ;
+}
+
+function getListDims(elem) {
+    listDims = {width:0,height:0};
+    for ( var i = 0; i < nodes.length ; i++) {
+        dim = getPixelDims(scratch, page.name);
+       // this will calculate the width/height in pixels of the largest label
+        listDims.width = Math.max(listDims.width, dim.width);
+        listDims.height = Math.max(listDims.height, dim.height);
+    }
+    return listDims;
+}
+
+// we're going to fix the nodes that are pages into two columns
+ for ( var i = 0, c=0; i < nodes.length ; i++) {
+     var page = nodes[i];
+     if (page.fixed) {
+         page.right= (c > pageCount/2);
+         // y dimension calc same for each column
+         page.y = ((c % (pageCount/2)) + .5) * (pageRectSize.height)  ;
+
+         // x based on right or left column
+         page.x = page.right ?
+                     width - pageRectSize.width - options.labelOffset  :
+                     page.dim.width + options.labelOffset ;
+         c++;
+     }
+
+}
 
 window.onload = function() {
 
-    var w=900, h=500;
-    var RIGHT_MARGIN=100;
-    var LEFT_MARGIN=100;
+    var w=window.innerWidth, h=window.innerHeight;
     var diagonal = d3.svg.diagonal();
 
     var srcs = data.srcs;
     var targets = data.targets;
     var links = data.links;
 
+    var LEFT_MARGIN = d3.max(srcs, function(s) { return s.name.length; });
+    var RIGHT_MARGIN = d3.max(targets, function(t) { return t.name.length; });
+
     var left_data = []
     var right_data = []
     var link_data = []
 
-    var count = links.length;
-    for (i=0; i<count; ++i) {
-        left_data[i] = srcs[links[i].source]
-        left_data[i].x = LEFT_MARGIN-35,
-        left_data[i].y = i*10+50
+    // var count = srcs.length;
+    // for (i=0; i<count; ++i) {
+    //     left_data[i] = srcs[i]
+    //     left_data[i].x = LEFT_MARGIN,
+    //     left_data[i].y = i*20+50
+    // }
+    // count = targets.length;
+    // for (i=0; i<count; ++i) {
+    //     right_data[i] = targets[i]
+    //     right_data[i].x = w-RIGHT_MARGIN,
+    //     right_data[i].y = i*20+50
+    // }
+    // count = links.length;
+    // for (i=0; i<count; ++i) {
+    //     link_data[i] = {
+    //         'source': left_data[links[i].source],
+    //         'target': right_data[links[i].target] }
+    // }
 
-        right_data[i] = targets[links[i].target]
-        right_data[i].x = w-RIGHT_MARGIN,
-        right_data[i].y = i*10+50
+    var left_labels = d3.select("#left_labels")
+        .selectAll("svg:text")
+        .data(srcs)
+        .enter().append("svg:text")
+        .attr("class", "node_label")
+        .attr("class", "left_label")
+	    .attr('x', function(d,i) { return 100; })
+		.attr('y', function(d,i) { return i*20+50; })
+		.attr('dy', '.5em')
+		.text(function(d,i){ return d.name });
 
-        link_data[i] = { 'source': left_data[i], 'target': right_data[i] }
-    }
+    var right_labels = d3.select("#right_labels")
+        .selectAll("svg:text")
+        .data(targets)
+        .enter().append("svg:text")
+        .attr("class", "node_label")
+        .attr("class", "right_label")
+	    .attr('x', function(d,i) { return 600; })
+		.attr('y', function(d,i) { return i*20+50; })
+		.attr('dy', '.5em')
+		.text(function(d,i){ return d.name });
 
-    var svg = d3.select("body").append("div")
-        .attr("class", "chart")
-        .style("width", w + "px")
+    var svg = d3.select("center_lines")
         .style("height", h + "px")
-      .append("svg:svg")
-        .attr("width", w)
-        .attr("height", h);
+        .style("width", w + "px");
 
-    left_labels = svg.selectAll('.left_labels')
-    	.data(left_data).enter().append('svg:text')
-    		.attr('x', function(d,i) { return d.x; })
-    		.attr('y', function(d,i) { return d.y; })
-    		.attr('dy', '.35em')
-    		.attr('font-size', 10)
-    		.attr('font-weight', 'bold')
-    		.attr('text-anchor', 'end')
-    		.text(function(d,i){ return d.name})
-    		.attr('fill', 'black');
+    // left_labels = svg.selectAll('.left_labels')
+    // 	.data(left_data).enter().append('svg:text')
+    // 		.attr('x', function(d,i) { return d.x; })
+    // 		.attr('y', function(d,i) { return d.y; })
+    // 		.attr('dy', '.35em')
+    // 		.attr('font-size', 20)
+    // 		.attr('font-weight', 'bold')
+    // 		.attr('text-anchor', 'end')
+    // 		.text(function(d,i){ return d.name})
+    // 		.attr('fill', 'black');
 
-    right_labels = svg.selectAll('.right_labels')
-    	.data(right_data).enter().append('svg:text')
-            .attr('x', function(d,i) { return d.x; })
-            .attr('y', function(d,i) { return d.y; })
-    		.attr('dy', '.35em')
-    		.attr('dx', 35)
-    		.attr('font-weight', 'bold')
-    		.attr('font-size', 10)
-            .attr('text-anchor', 'start')
-    		.text(function(d,i){ return d.name})
-    		.attr('fill', 'black');
+    // right_labels = svg.selectAll('.right_labels')
+    // 	.data(right_data).enter().append('svg:text')
+    //         .attr('x', function(d,i) { return d.x; })
+    //         .attr('y', function(d,i) { return d.y; })
+    // 		.attr('dy', '.35em')
+    // 		.attr('dx', 35)
+    // 		.attr('font-weight', 'bold')
+    // 		.attr('font-size', 10)
+    //         .attr('text-anchor', 'start')
+    // 		.text(function(d,i){ return d.name})
+    // 		.attr('fill', 'black');
 
-    var links = svg.selectAll(".link")
-        .data(link_data)
-      .enter().append("path")
-        .attr("class", "link")
-        .attr("d", diagonal);
+    // var links = svg.selectAll(".link")
+    //     .data(link_data)
+    //   .enter().append("path")
+    //     .attr("class", "link")
+    //     .attr("d", diagonal);
 
 }
 </script>
+<div id="connections">
+    <svg>
+        <g id="left_labels">
+        </g>
+        <g id="center_lines">
+        </g>
+        <g id="right_labels">
+        </g>
+    </svg>
+    <span id="nothing" class="node"></span>
+</div>
 </body>
 </html>

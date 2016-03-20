@@ -86,11 +86,21 @@ def view_graph(system, viewer='connections',
     for t, (s, _) in iteritems(connections):
         if t not in idxs:
             targets.append({'name': t})
-            idxs[t] = len(targets)-1
+            idxs[t] = None
         if s not in idxs:
             srcs.append({'name': s})
-            idxs[s] = len(srcs)-1
+            idxs[s] = None
 
+    srcs = sorted(srcs)
+    targets = sorted(targets)
+
+    for i, s in enumerate(srcs):
+        idxs[s['name']] = i
+
+    for i, t in enumerate(targets):
+        idxs[t['name']] = i
+
+    for t, (s,_) in iteritems(connections):
         links.append({'source': idxs[s], 'target': idxs[t]})
 
     data = { 'srcs': srcs, 'targets': targets, 'links': links }
@@ -104,7 +114,7 @@ def view_graph(system, viewer='connections',
     graphjson = json.dumps(data)
 
     with open(outfile, 'w') as f:
-        s = template % graphjson
+        s = template.replace("<connection_data>", graphjson)
         f.write(s)
 
     if show_browser:
