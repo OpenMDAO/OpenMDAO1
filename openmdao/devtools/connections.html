@@ -10,10 +10,6 @@
     overflow: auto;
 }
 
-#nothing {
-    display: none;
-}
-
 /* font for all visible node text */
 .node_label {
     fill: black;
@@ -46,131 +42,83 @@
 
 var data = <connection_data>;
 
-function getPixelDims(scratch,t) {
-    // scratch is an element with the correct styling,
-    // t is the text to be counted in pixels
-    scratch.empty();
-    scratch.append(document.createTextNode(t));
-    return { width: scratch.outerWidth(), height: scratch.outerHeight() } ;
-}
-
-function getListDims(elem) {
-    listDims = {width:0,height:0};
-    for ( var i = 0; i < nodes.length ; i++) {
-        dim = getPixelDims(scratch, page.name);
-       // this will calculate the width/height in pixels of the largest label
-        listDims.width = Math.max(listDims.width, dim.width);
-        listDims.height = Math.max(listDims.height, dim.height);
-    }
-    return listDims;
-}
-
-// we're going to fix the nodes that are pages into two columns
- for ( var i = 0, c=0; i < nodes.length ; i++) {
-     var page = nodes[i];
-     if (page.fixed) {
-         page.right= (c > pageCount/2);
-         // y dimension calc same for each column
-         page.y = ((c % (pageCount/2)) + .5) * (pageRectSize.height)  ;
-
-         // x based on right or left column
-         page.x = page.right ?
-                     width - pageRectSize.width - options.labelOffset  :
-                     page.dim.width + options.labelOffset ;
-         c++;
-     }
-
-}
-
 window.onload = function() {
 
     var w=window.innerWidth, h=window.innerHeight;
-    var diagonal = d3.svg.diagonal();
+    var diagonal = d3.svg.diagonal()
+         .source(function f(d) {
+             return {"x": d.source.x, "y": d.source.y }}
+         )
+         .target(function f(d) {
+             return {"x": d.target.x, "y": d.target.y }}
+         );
 
     var srcs = data.srcs;
     var targets = data.targets;
-    var links = data.links;
+    var link_data = data.links;
+    // var right_nodes = [];
+    // var left_nodes = [];
 
-    var LEFT_MARGIN = d3.max(srcs, function(s) { return s.name.length; });
-    var RIGHT_MARGIN = d3.max(targets, function(t) { return t.name.length; });
+    var left_labels = d3.select("#left_labels");
 
-    var left_data = []
-    var right_data = []
-    var link_data = []
-
-    // var count = srcs.length;
-    // for (i=0; i<count; ++i) {
-    //     left_data[i] = srcs[i]
-    //     left_data[i].x = LEFT_MARGIN,
-    //     left_data[i].y = i*20+50
-    // }
-    // count = targets.length;
-    // for (i=0; i<count; ++i) {
-    //     right_data[i] = targets[i]
-    //     right_data[i].x = w-RIGHT_MARGIN,
-    //     right_data[i].y = i*20+50
-    // }
-    // count = links.length;
-    // for (i=0; i<count; ++i) {
-    //     link_data[i] = {
-    //         'source': left_data[links[i].source],
-    //         'target': right_data[links[i].target] }
-    // }
-
-    var left_labels = d3.select("#left_labels")
-        .selectAll("svg:text")
+    left_labels.selectAll("text")
         .data(srcs)
-        .enter().append("svg:text")
+        .enter().append("text")
         .attr("class", "node_label")
         .attr("class", "left_label")
-	    .attr('x', function(d,i) { return 100; })
-		.attr('y', function(d,i) { return i*20+50; })
 		.attr('dy', '.5em')
 		.text(function(d,i){ return d.name });
 
-    var right_labels = d3.select("#right_labels")
-        .selectAll("svg:text")
+    var text_height = d3.select('.left_label').node().getBBox().height;
+    var left_width = left_labels.node().getBBox().width;
+
+    d3.selectAll('.left_label')
+        .attr('x', function(d, i) { return left_width })
+        .attr('y', function(d, i) { return i*text_height })
+        .each(function (d, i) { d.x = left_width; d.y = i*text_height; });
+
+    var right_labels = d3.select("#right_labels");
+
+    right_labels.selectAll("text")
         .data(targets)
-        .enter().append("svg:text")
+        .enter().append("text")
         .attr("class", "node_label")
         .attr("class", "right_label")
-	    .attr('x', function(d,i) { return 600; })
-		.attr('y', function(d,i) { return i*20+50; })
+		.attr('y', function(d,i) { return i*text_height; })
 		.attr('dy', '.5em')
 		.text(function(d,i){ return d.name });
 
-    var svg = d3.select("center_lines")
-        .style("height", h + "px")
+    var right_width = right_labels.node().getBBox().width;
+
+    d3.selectAll('.right_label')
+        .attr('x', function(d, i) { return w - right_width; })
+        .each(function (d, i) { d.x = w-right_width; d.y = i*text_height; });
+
+    var left_height = d3.select('#left_labels').node().getBBox().height
+    var right_height = d3.select('#right_labels').node().getBBox().height
+    var max_height = 0;
+
+    if (left_height > right_height) {
+        max_height = left_height;
+    }
+    else {
+        max_height = right_height;
+    }
+
+    var svg = d3.select("svg")
+        .style("height", max_height + "px")
         .style("width", w + "px");
 
-    // left_labels = svg.selectAll('.left_labels')
-    // 	.data(left_data).enter().append('svg:text')
-    // 		.attr('x', function(d,i) { return d.x; })
-    // 		.attr('y', function(d,i) { return d.y; })
-    // 		.attr('dy', '.35em')
-    // 		.attr('font-size', 20)
-    // 		.attr('font-weight', 'bold')
-    // 		.attr('text-anchor', 'end')
-    // 		.text(function(d,i){ return d.name})
-    // 		.attr('fill', 'black');
+    for (i = 0; i < link_data.length; i++) {
+        link_data[i].source = srcs[i];
+        link_data[i].target = targets[i];
+    }
 
-    // right_labels = svg.selectAll('.right_labels')
-    // 	.data(right_data).enter().append('svg:text')
-    //         .attr('x', function(d,i) { return d.x; })
-    //         .attr('y', function(d,i) { return d.y; })
-    // 		.attr('dy', '.35em')
-    // 		.attr('dx', 35)
-    // 		.attr('font-weight', 'bold')
-    // 		.attr('font-size', 10)
-    //         .attr('text-anchor', 'start')
-    // 		.text(function(d,i){ return d.name})
-    // 		.attr('fill', 'black');
-
-    // var links = svg.selectAll(".link")
-    //     .data(link_data)
-    //   .enter().append("path")
-    //     .attr("class", "link")
-    //     .attr("d", diagonal);
+    var links = d3.select("#center_lines").selectAll(".link")
+        .data(link_data)
+      .enter().append("path")
+        .attr("class", "link")
+        .attr("d", diagonal);
 
 }
 </script>
@@ -183,7 +131,6 @@ window.onload = function() {
         <g id="right_labels">
         </g>
     </svg>
-    <span id="nothing" class="node"></span>
 </div>
 </body>
 </html>
