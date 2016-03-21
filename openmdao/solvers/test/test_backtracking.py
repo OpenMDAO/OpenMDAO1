@@ -81,8 +81,7 @@ class TestBackTracking(unittest.TestCase):
         try:
             top.run()
         except AnalysisError as err:
-            self.assertTrue(": backtracking failed to converge after 2 iterations. (fnorm="
-                             in str(err))
+            self.assertEqual(str(err), "Solve in '': BackTracking failed to converge after 2 iterations.")
         else:
             self.fail("AnalysisError expected")
 

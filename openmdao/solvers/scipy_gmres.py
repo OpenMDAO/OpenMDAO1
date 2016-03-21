@@ -7,6 +7,7 @@ from six import iteritems
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import MultLinearSolver
 from collections import OrderedDict
 
@@ -129,9 +130,9 @@ class ScipyGMRES(MultLinearSolver):
             self.system = None
 
             if info > 0:
-                msg = "Solve in '{}': gmres failed to converge " \
-                          "after {} iterations".format(system.name,
-                                                       options['maxiter'])
+                msg = "Solve in '%s': ScipyGMRES failed to converge " \
+                          "after %d iterations" % (system.pathname,
+                                                   self.iter_count)
                 #logger.error(msg, system.name, info)
                 if self.options['err_on_maxiter']:
                     raise AnalysisError(msg)

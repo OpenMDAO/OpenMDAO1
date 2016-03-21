@@ -59,7 +59,7 @@ class TestNewton(unittest.TestCase):
         try:
             prob.run()
         except AnalysisError as err:
-            self.assertEqual(str(err), ": FAILED to converge after 2 iterations")
+            self.assertEqual(str(err), "Solve in '': Newton FAILED to converge after 2 iterations")
         else:
             self.fail("expected AnalysisError")
 

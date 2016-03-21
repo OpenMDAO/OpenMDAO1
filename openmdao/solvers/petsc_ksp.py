@@ -12,6 +12,7 @@ from petsc4py import PETSc
 import numpy as np
 from collections import OrderedDict
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LinearSolver
 
 trace = os.environ.get("OPENMDAO_TRACE")
@@ -205,8 +206,8 @@ class PetscKSP(LinearSolver):
             self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
 
-            if self.iter_count == maxiter:
-                msg = 'FAILED to converge after hitting max iterations'
+            if self.iter_count >= maxiter:
+                msg = 'FAILED to converge in %d iterations' % self.iter_count
                 fail = True
             else:
                 fail = False
@@ -220,7 +221,8 @@ class PetscKSP(LinearSolver):
             unknowns_mat[voi] = sol_vec
 
             if fail and self.options['err_on_maxiter']:
-                raise AnalysisError(msg)
+                raise AnalysisError("Solve in '%s': PetscKSP %s" %
+                                    (system.pathname, msg))
 
             #print system.name, 'Linear solution vec', d_unknowns
 
@@ -242,6 +244,8 @@ class PetscKSP(LinearSolver):
 
         system = self.system
         mode = self.mode
+
+        self.iter_count += 1
 
         voi = self.voi
         if mode == 'fwd':

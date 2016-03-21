@@ -5,6 +5,7 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LinearSolver
 
 
@@ -206,8 +207,8 @@ class LinearGaussSeidel(LinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
-        if maxiter > 1 and self.iter_count == maxiter:
-            msg = 'FAILED to converge after max iterations'
+        if maxiter > 1 and self.iter_count >= maxiter:
+            msg = 'FAILED to converge after %d iterations' % self.iter_count
             failed = True
         else:
             failed = False
@@ -220,7 +221,8 @@ class LinearGaussSeidel(LinearSolver):
                             f_norm0, indent=1, solver='LN', msg=msg)
 
         if failed and self.options['err_on_maxiter']:
-            raise AnalysisError(msg)
+            raise AnalysisError("Solve in '%s': LinearGaussSeidel %s" %
+                                (system.pathname, msg))
 
         return sol_buf
 

@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ScipyGMRES, \
-    DirectSolver, ExecComp, LinearGaussSeidel
+    DirectSolver, ExecComp, LinearGaussSeidel, AnalysisError
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -267,6 +267,32 @@ class TestScipyGMRES(unittest.TestCase):
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
+
+    def test_analysis_error(self):
+
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.ln_solver.options['maxiter'] = 2
+        prob.root.ln_solver.options['err_on_maxiter'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        try:
+            J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': ScipyGMRES failed to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_converge_diverge_groups(self):
 

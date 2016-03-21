@@ -2,6 +2,7 @@
 
 from math import isnan
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -113,8 +114,8 @@ class NLGaussSeidel(NonLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                                 basenorm)
 
-        if self.iter_count == maxiter or isnan(normval):
-            msg = 'FAILED to converge after max iterations'
+        if self.iter_count >= maxiter or isnan(normval):
+            msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
             fail = False
@@ -127,4 +128,5 @@ class NLGaussSeidel(NonLinearSolver):
                             basenorm, msg=msg)
 
         if fail and self.options['err_on_maxiter']:
-            raise AnalysisError(msg)
+            raise AnalysisError("Solve in '%s': NLGaussSeidel %s" %
+                                (system.pathname, msg))

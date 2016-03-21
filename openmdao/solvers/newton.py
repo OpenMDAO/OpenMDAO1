@@ -141,8 +141,8 @@ class Newton(NonLinearSolver):
         #update_local_meta(local_meta, (self.iter_count, 0))
         #system.children_solve_nonlinear(local_meta)
 
-        if self.iter_count == maxiter or isnan(f_norm):
-            msg = 'FAILED to converge after %d iterations' % maxiter
+        if self.iter_count >= maxiter or isnan(f_norm):
+            msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
             fail = False
@@ -156,7 +156,8 @@ class Newton(NonLinearSolver):
                             f_norm, f_norm0, msg=msg)
 
         if fail and self.options['err_on_maxiter']:
-            raise AnalysisError("%s: %s" % (system.pathname, msg))
+            raise AnalysisError("Solve in '%s': Newton %s" % (system.pathname,
+                                                              msg))
 
     def print_all_convergence(self):
         """ Turns on iprint for this solver and all subsolvers. Override if
