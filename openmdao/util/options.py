@@ -1,5 +1,6 @@
 """ OptionsDictionary class definition. """
-from copy import deepcopy
+
+import warnings
 from six import iteritems
 
 class OptionsDictionary(object):
@@ -17,6 +18,7 @@ class OptionsDictionary(object):
 
     def __init__(self, read_only=True):
         self._options = {}
+        self._deprecations = {}
         self.read_only = read_only
 
     def add_option(self, name, value, lower=None, upper=None, values=None,
@@ -73,19 +75,54 @@ class OptionsDictionary(object):
             del self._options[name]
         except KeyError:
             pass
-            
+
+    def add_deprecation(self, oldname, newname):
+        """
+        For renamed options, maps the old name to the new name and prints
+        a DeprecationWarning on each get/set that uses the old name.
+
+        Args
+        ----
+        oldname : str
+            The deprecated name.
+
+        newname : str
+            The correct name.
+        """
+        if newname not in self._options:
+            raise NameError("The '%s' option was not found." % newname)
+        self._deprecations[oldname] = newname
+
     def __getitem__(self, name):
         try:
             return self._options[name]['val']
         except KeyError:
-            raise KeyError("Option '{}' has not been added".format(name))
+            try:
+                newname = self._deprecations[name]
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
+                              (name, newname),
+                              DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+                return self._options[newname]['val']
+            except KeyError:
+                raise KeyError("Option '{}' has not been added".format(name))
 
     def __contains__(self, name):
-        return name in self._options
+        return name in self._options or name in self._deprecations
 
     def __setitem__(self, name, value):
         if name not in self._options:
-            raise KeyError("Option '{}' has not been added".format(name))
+            if name in self._deprecations:
+                newname = self._deprecations[name]
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
+                              (name, newname),
+                              DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+                name = newname
+            else:
+                raise KeyError("Option '{}' has not been added".format(name))
 
         opt = self._options[name]
         self._check(name, value, opt)
