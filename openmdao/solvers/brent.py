@@ -71,6 +71,9 @@ class Brent(NonLinearSolver):
         opt.add_option('var_upper_bound', '', desc='if given, name of the variable to pull the upper bound value from.'
             'This variable must be a parameter on of of the child components of the containing system')
 
+        # we renamed max_iter to maxiter to match all the other solvers
+        opt.add_deprecation('max_iter', 'maxiter')
+
         self.xstar = None
 
         self.print_name = 'BRENT'

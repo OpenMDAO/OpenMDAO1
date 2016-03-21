@@ -1,6 +1,7 @@
 """ Unit test for the Brent, one variable nonlinear solver. """
 
 import unittest
+import warnings
 from six import iteritems
 
 import numpy as np
@@ -50,7 +51,7 @@ class IndexCompTest(Component):
         r['x'][2] = p['a'] * x**p['n'] + p['b'] * x - p['c']
 
 
-class TestBrentDriver(unittest.TestCase):
+class TestBrentSolver(unittest.TestCase):
 
     def setUp(self):
         p = Problem()
@@ -58,6 +59,18 @@ class TestBrentDriver(unittest.TestCase):
         p.root.add('comp', CompTest(), promotes=['a','x','n','b','c'])
         p.root.nl_solver = Brent()
         self.prob = p
+
+    def test_deprecated_option(self):
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            self.prob.root.nl_solver.options['max_iter'] = 100
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                     "Option 'max_iter' is deprecated. Use 'maxiter' instead.")
 
     def test_no_state_var_err(self):
 
