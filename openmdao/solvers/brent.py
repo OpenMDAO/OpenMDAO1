@@ -7,6 +7,7 @@ from math import isnan
 import numpy as np
 from scipy.optimize import brentq
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -156,8 +157,9 @@ class Brent(NonLinearSolver):
         kwargs = {'maxiter': self.options['maxiter'],
                   'a': lower,
                   'b': upper,
-                  'full_output': True,
-                  'args': (params, unknowns, resids)}
+                  'full_output': False, # False, because we don't use the info, so just wastes operations
+                  'args': (params, unknowns, resids)
+                  }
 
         if self.options['xtol']:
             kwargs['xtol'] = self.options['xtol']
@@ -175,16 +177,18 @@ class Brent(NonLinearSolver):
         self.sys.apply_nonlinear(params, unknowns, resids)
         self.basenorm = resid_norm_0 = abs(resids._dat[self.s_var_name].val[idx])
 
-        xstar, r = brentq(self._eval, **kwargs)
+        failed = False
+        try:
+            xstar = brentq(self._eval, **kwargs)
+        except RuntimeError as err:
+            msg = str(err)
+            if 'different signs' in msg:
+                raise
+            failed = True
+
         self.sys = None
 
         resid_norm = abs(resids._dat[self.s_var_name].val[idx])
-
-        if self.iter_count == self.options['maxiter'] or isnan(resid_norm):
-            failed = True
-            msg = 'FAILED to converge after max iterations'
-        else:
-            failed = False
 
         if self.options['iprint'] > 0:
 

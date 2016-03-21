@@ -6,7 +6,7 @@ from six import iteritems
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, LinearGaussSeidel, \
-    Newton, ExecComp, ScipyGMRES
+    Newton, ExecComp, ScipyGMRES, AnalysisError
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
@@ -44,6 +44,25 @@ class TestNewton(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+    def test_sellar_analysis_error(self):
+
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = Newton()
+        prob.root.nl_solver.options['err_on_maxiter'] = True
+        prob.root.nl_solver.options['maxiter'] = 2
+
+
+        prob.setup(check=False)
+
+        try:
+            prob.run()
+        except AnalysisError as err:
+            self.assertEqual(str(err), ": FAILED to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
+
 
     def test_sellar_derivs(self):
 

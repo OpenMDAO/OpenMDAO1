@@ -7,7 +7,7 @@ from six import iteritems
 import numpy as np
 from scipy.optimize import brentq
 
-from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, ExecComp
+from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, ExecComp, AnalysisError
 
 from openmdao.test.util import assert_rel_error
 
@@ -85,6 +85,7 @@ class TestBrentSolver(unittest.TestCase):
 
         p = self.prob
         p.root.nl_solver.options['state_var'] = 'x'
+
         p.root.ln_solver=ScipyGMRES()
         p.setup(check=False)
 
@@ -92,6 +93,23 @@ class TestBrentSolver(unittest.TestCase):
 
         assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
         assert_rel_error(self, p.root.resids['x'], 0, .0001)
+
+    def test_brent_analysis_error(self):
+
+        p = self.prob
+        p.root.nl_solver.options['state_var'] = 'x'
+        p.root.nl_solver.options['err_on_maxiter'] = True
+        p.root.nl_solver.options['maxiter'] = 2
+
+        p.root.ln_solver=ScipyGMRES()
+        p.setup(check=False)
+
+        try:
+            p.run()
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Failed to converge after 2 iterations.")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_brent_converge_index(self):
 

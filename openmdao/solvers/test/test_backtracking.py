@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, Component
+from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, Component, AnalysisError
 from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.newton import Newton
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -61,6 +61,30 @@ class TestBackTracking(unittest.TestCase):
 
         assert_rel_error(self, top['y1'], 25.58830273, .00001)
         assert_rel_error(self, top['state_eq.y2_command'], 12.05848819, .00001)
+
+    def test_newton_with_backtracking_analysis_error(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.root.nl_solver.line_search.options['atol'] = 1e-12
+        top.root.nl_solver.line_search.options['rtol'] = 1e-12
+        top.root.nl_solver.line_search.options['maxiter'] = 2
+        top.root.nl_solver.line_search.options['err_on_maxiter'] = True
+
+        # This is a very contrived test, but we step 8 times farther than we
+        # should, then allow the line search to backtrack 3 steps, which
+        # takes us back to 1.0.
+        top.root.nl_solver.options['alpha'] = 8.0
+
+        top.setup(check=False)
+
+        try:
+            top.run()
+        except AnalysisError as err:
+            self.assertTrue(": backtracking failed to converge after 2 iterations. (fnorm="
+                             in str(err))
+        else:
+            self.fail("AnalysisError expected")
 
     def test_bounds_backtracking(self):
 

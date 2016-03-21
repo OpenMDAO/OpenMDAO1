@@ -113,11 +113,18 @@ class NLGaussSeidel(NonLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                                 basenorm)
 
+        if self.iter_count == maxiter or isnan(normval):
+            msg = 'FAILED to converge after max iterations'
+            fail = True
+        else:
+            fail = False
+
         if self.options['iprint'] > 0:
-            if self.iter_count == maxiter or isnan(normval):
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not fail:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                             basenorm, msg=msg)
+
+        if fail and self.options['err_on_maxiter']:
+            raise AnalysisError(msg)

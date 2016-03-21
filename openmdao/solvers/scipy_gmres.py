@@ -130,17 +130,18 @@ class ScipyGMRES(MultLinearSolver):
 
             if info > 0:
                 msg = "Solve in '{}': gmres failed to converge " \
-                                      "after {} iterations"
-                print(msg.format(system.name, options['maxiter']))
+                          "after {} iterations".format(system.name,
+                                                       options['maxiter'])
                 #logger.error(msg, system.name, info)
-                msg = 'FAILED to converge after max iterations'
                 if self.options['err_on_maxiter']:
                     raise AnalysisError(msg)
+                print(msg)
+                msg = 'FAILED to converge after max iterations'
             elif info < 0:
-                msg = "ERROR in solve in '{}': gmres failed"
-                print(msg.format(system.name))
+                msg = "ERROR in solve in '{}': gmres failed".format(system.pathname)
+                raise RuntimeError(msg)
                 #logger.error(msg, system.name)
-                msg = 'ERROR returned from GMRES'
+                #msg = 'ERROR returned from GMRES'
             else:
                 msg = 'Converged'
 

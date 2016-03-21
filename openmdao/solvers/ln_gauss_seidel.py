@@ -206,14 +206,21 @@ class LinearGaussSeidel(LinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
+        if maxiter > 1 and self.iter_count == maxiter:
+            msg = 'FAILED to converge after max iterations'
+            failed = True
+        else:
+            failed = False
+
         if self.options['iprint'] > 0:
-            if maxiter > 1 and self.iter_count == maxiter:
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not failed:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, f_norm,
                             f_norm0, indent=1, solver='LN', msg=msg)
+
+        if failed and self.options['err_on_maxiter']:
+            raise AnalysisError(msg)
 
         return sol_buf
 

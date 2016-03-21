@@ -181,6 +181,8 @@ class PetscKSP(LinearSolver):
                                rtol=options['rtol'])
 
         unknowns_mat = OrderedDict()
+        maxiter = self.options['maxiter']
+
         for voi, rhs in iteritems(rhs_mat):
 
             sol_vec = np.zeros(rhs.shape)
@@ -203,15 +205,22 @@ class PetscKSP(LinearSolver):
             self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
 
+            if self.iter_count == maxiter:
+                msg = 'FAILED to converge after hitting max iterations'
+                fail = True
+            else:
+                fail = False
+
             if self.options['iprint'] > 0:
-                if self.iter_count == self.options['maxiter']:
-                    msg = 'FAILED to converge after hitting max iterations'
-                else:
+                if not fail:
                     msg = 'Converged'
-                    self.print_norm(self.print_name, system.pathname,
-                                    self.iter_count, 0, 0, msg=msg, solver='LN')
+                self.print_norm(self.print_name, system.pathname,
+                                self.iter_count, 0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = sol_vec
+
+            if fail and self.options['err_on_maxiter']:
+                raise AnalysisError(msg)
 
             #print system.name, 'Linear solution vec', d_unknowns
 

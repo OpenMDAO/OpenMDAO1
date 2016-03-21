@@ -1,5 +1,6 @@
 """ Line search using backtracking."""
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LineSearch
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -133,8 +134,9 @@ class BackTracking(LineSearch):
                 self.print_norm(self.print_name, system.pathname, itercount,
                                 fnorm, fnorm0, indent=1, solver='LS')
 
-        if itercount == maxiter and fnorm > atol and fnorm/fnorm0 > rtol \
-                and self.options['err_on_maxiter']:
-           raise AnalysisError("maxiter was exceeded without convergence. (fnorm=%s)" % fnorm)
+        if itercount == maxiter and self.options['err_on_maxiter']:
+           raise AnalysisError("%s: backtracking failed to converge after %d "
+                               "iterations. (fnorm=%s)" % (system.pathname,
+                                                           maxiter, fnorm))
 
         return fnorm
