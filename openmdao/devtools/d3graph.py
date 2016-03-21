@@ -82,26 +82,18 @@ def view_graph(system, viewer='connections',
     srcs = []
     targets = []
     links = []
-    idxs = {}
+    seen = set()
     for t, (s, _) in iteritems(connections):
-        if t not in idxs:
-            targets.append({'name': t})
-            idxs[t] = None
-        if s not in idxs:
+        targets.append({'name': t})
+        if s not in seen:
+            seen.add(s)
             srcs.append({'name': s})
-            idxs[s] = None
 
     srcs = sorted(srcs)
     targets = sorted(targets)
 
-    for i, s in enumerate(srcs):
-        idxs[s['name']] = i
-
-    for i, t in enumerate(targets):
-        idxs[t['name']] = i
-
     for t, (s,_) in iteritems(connections):
-        links.append({'source': idxs[s], 'target': idxs[t]})
+        links.append({'source': s, 'target': t})
 
     data = { 'srcs': srcs, 'targets': targets, 'links': links }
     viewer += '.html'

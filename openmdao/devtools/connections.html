@@ -10,19 +10,57 @@
     overflow: auto;
 }
 
+.node {
+  font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  fill: #bbb;
+}
+
+.node:hover {
+  fill: #000;
+}
+
+.link {
+  stroke: steelblue;
+  stroke-opacity: .4;
+  fill: none;
+  pointer-events: none;
+}
+
+.node:hover,
+.node--source,
+.node--target {
+  font-weight: 700;
+}
+
+.link--source,
+.link--target {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
+.link--source {
+  stroke: #d62728;
+}
+
+.link--target {
+  stroke: #2ca02c;
+}
+
 /* font for all visible node text */
 .node_label {
-    fill: black;
-    font-size: 12px;
-    font-family: sans-serif;
+    font-weight: 700;
+    font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    fill: #bbb;
 }
 
 .left_label {
     text-anchor: end;
+    fill: #2ca02c;
 }
 
 .right_label {
     text-anchor: start;
+    fill: #d62728;
 }
 
 #center_lines {
@@ -47,19 +85,19 @@ window.onload = function() {
     var w=window.innerWidth, h=window.innerHeight;
     var diagonal = d3.svg.diagonal()
          .source(function f(d) {
-             return {"x": d.source.x, "y": d.source.y }}
+             return {"x": nodes[d.source].x, "y": nodes[d.source].y }}
          )
          .target(function f(d) {
-             return {"x": d.target.x, "y": d.target.y }}
+             return {"x": nodes[d.target].x, "y": nodes[d.target].y }}
          );
 
     var srcs = data.srcs;
     var targets = data.targets;
     var link_data = data.links;
-    // var right_nodes = [];
-    // var left_nodes = [];
+    var nodes = {};
 
     var left_labels = d3.select("#left_labels");
+    var right_labels = d3.select("#right_labels");
 
     left_labels.selectAll("text")
         .data(srcs)
@@ -67,7 +105,10 @@ window.onload = function() {
         .attr("class", "node_label")
         .attr("class", "left_label")
 		.attr('dy', '.5em')
-		.text(function(d,i){ return d.name });
+        .each(function (d) { nodes[d.name] = {"x":0, "y":0}; })
+		.text(function(d,i){ return d.name })
+        .on("mouseover", mouseovered)
+        .on("mouseout", mouseouted);
 
     var text_height = d3.select('.left_label').node().getBBox().height;
     var left_width = left_labels.node().getBBox().width;
@@ -75,9 +116,10 @@ window.onload = function() {
     d3.selectAll('.left_label')
         .attr('x', function(d, i) { return left_width })
         .attr('y', function(d, i) { return i*text_height })
-        .each(function (d, i) { d.x = left_width; d.y = i*text_height; });
-
-    var right_labels = d3.select("#right_labels");
+        .each(function (d, i) {
+            nodes[d.name].x = left_width;
+            nodes[d.name].y = i*text_height;
+        });
 
     right_labels.selectAll("text")
         .data(targets)
@@ -86,13 +128,19 @@ window.onload = function() {
         .attr("class", "right_label")
 		.attr('y', function(d,i) { return i*text_height; })
 		.attr('dy', '.5em')
-		.text(function(d,i){ return d.name });
+        .each(function (d) { nodes[d.name] = {"x":0, "y":0}; })
+		.text(function(d,i){ return d.name })
+        .on("mouseover", mouseovered)
+        .on("mouseout", mouseouted);
 
     var right_width = right_labels.node().getBBox().width;
 
     d3.selectAll('.right_label')
         .attr('x', function(d, i) { return w - right_width; })
-        .each(function (d, i) { d.x = w-right_width; d.y = i*text_height; });
+        .each(function (d, i) {
+            nodes[d.name].x = w-right_width;
+            nodes[d.name].y = i*text_height;
+        });
 
     var left_height = d3.select('#left_labels').node().getBBox().height
     var right_height = d3.select('#right_labels').node().getBBox().height
@@ -109,11 +157,6 @@ window.onload = function() {
         .style("height", max_height + "px")
         .style("width", w + "px");
 
-    for (i = 0; i < link_data.length; i++) {
-        link_data[i].source = srcs[i];
-        link_data[i].target = targets[i];
-    }
-
     var links = d3.select("#center_lines").selectAll(".link")
         .data(link_data)
       .enter().append("path")
@@ -121,6 +164,32 @@ window.onload = function() {
         .attr("d", diagonal);
 
 }
+
+function mouseovered(d) {
+  node
+      .each(function(n) { n.target = n.source = false; });
+
+  link
+      .classed("link--target", function(l) { if (l.target === d) return l.source.source = true; })
+      .classed("link--source", function(l) { if (l.source === d) return l.target.target = true; })
+    .filter(function(l) { return l.target === d || l.source === d; })
+      .each(function() { this.parentNode.appendChild(this); });
+
+  node
+      .classed("node--target", function(n) { return n.target; })
+      .classed("node--source", function(n) { return n.source; });
+}
+
+function mouseouted(d) {
+  link
+      .classed("link--target", false)
+      .classed("link--source", false);
+
+  node
+      .classed("node--target", false)
+      .classed("node--source", false);
+}
+
 </script>
 <div id="connections">
     <svg>
