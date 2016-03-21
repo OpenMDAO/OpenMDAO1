@@ -156,8 +156,10 @@ class CsvRecorder(BaseRecorder):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
-        # put None's in all of the non-derivative columns except the success column
-        row = [metadata['success']] + [None]*(self.ncol-2)
+        # put None's in all of the non-derivative columns except
+        # the success column
+        row = [None]*(self.ncol-1)
+        row[0] = metadata['success']
 
         row.append(str([derivs]))
         self.writer.writerow(row)
