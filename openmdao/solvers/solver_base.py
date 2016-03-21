@@ -162,6 +162,45 @@ class LinearSolver(SolverBase):
         """
         pass
 
+class MultLinearSolver(LinearSolver):
+    """Base class for ScipyGMRES and DirectSolver.  Adds a mult method.
+    """
+    def mult(self, arg):
+        """ Applies Jacobian matrix. Mode is determined by the
+        system. This is a GMRES callback and is called by DirectSolver.solve.
+
+        Args
+        ----
+        arg : ndarray
+            Incoming vector
+
+        Returns
+        -------
+        ndarray : Matrix vector product of arg with jacobian
+        """
+
+        system = self.system
+        mode = self.mode
+
+        voi = self.voi
+        if mode == 'fwd':
+            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
+        else:
+            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
+
+        # Set incoming vector
+        sol_vec.vec[:] = arg
+
+        # Start with a clean slate
+        rhs_vec.vec[:] = 0.0
+        system.clear_dparams()
+
+        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
+
+        #print("arg", arg)
+        #print("result", rhs_vec.vec)
+        return rhs_vec.vec
+
 
 class NonLinearSolver(SolverBase):
     """ Base class for all nonlinear solvers. Inherit from this class to create a

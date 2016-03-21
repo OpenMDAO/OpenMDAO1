@@ -7,11 +7,11 @@ from six import iteritems
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.solvers.solver_base import LinearSolver
+from openmdao.solvers.solver_base import MultLinearSolver
 from collections import OrderedDict
 
 
-class ScipyGMRES(LinearSolver):
+class ScipyGMRES(MultLinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so it should never be
     used in an MPI setting. A preconditioner can be specified by placing
     another linear solver into `self.preconditioner`.
@@ -153,42 +153,6 @@ class ScipyGMRES(LinearSolver):
             #print(system.name, 'Linear solution vec', d_unknowns)
 
         return unknowns_mat
-
-    def mult(self, arg):
-        """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
-        system.
-
-        Args
-        ----
-        arg : ndarray
-            Incoming vector
-
-        Returns
-        -------
-        ndarray : Matrix vector product of arg with jacobian
-        """
-
-        system = self.system
-        mode = self.mode
-
-        voi = self.voi
-        if mode == 'fwd':
-            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
-        else:
-            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
-
-        # Set incoming vector
-        sol_vec.vec[:] = arg
-
-        # Start with a clean slate
-        rhs_vec.vec[:] = 0.0
-        system.clear_dparams()
-
-        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
-
-        #print("arg", arg)
-        #print("result", rhs_vec.vec)
-        return rhs_vec.vec
 
     def _precon(self, arg):
         """ GMRES Callback: applies a preconditioner by calling

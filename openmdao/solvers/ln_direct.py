@@ -3,30 +3,23 @@ linalg.solve. Inherits from ScipyGMRES just for the mult function."""
 
 import numpy as np
 
-from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.solver_base import MultLinearSolver
 from collections import OrderedDict
 
 
-class DirectSolver(ScipyGMRES):
+class DirectSolver(MultLinearSolver):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
     linalg.solve.
 
-    Options
-    -------
-    options['atol'] :  float(1e-12)
-        Absolute convergence tolerance.
-    options['err_on_maxiter'] : bool(False)
-        If True, raise an AnalysisError if not converged at maxiter.
-    options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-    options['maxiter'] :  int(1000)
-        Maximum number of iterations.
-    options['mode'] :  str('auto')
-        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
-    options['precondition'] :  bool(False)
-        Set to True to turn on preconditioning.
-
     """
+
+    def __init__(self):
+        super(DirectSolver, self).__init__()
+        self.options.remove_option("err_on_maxiter")
+        self.options.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
+                       desc="Derivative calculation mode, set to 'fwd' for " +
+                       "forward mode, 'rev' for reverse mode, or 'auto' to " +
+                       "let OpenMDAO determine the best mode.")
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
