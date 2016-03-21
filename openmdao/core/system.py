@@ -679,13 +679,12 @@ class System(object):
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids.vec *= -1.0
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids._dat[var].val += val
+                        dresids._dat[var].val -= val
             else:
                 # This zeros out some vars that are not in the local .vec, so we can't just
                 # do dparams.vec[:] = 0.0 for example.
@@ -696,17 +695,10 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     try:
-                        # Sign on the local Jacobian needs to be -1 before
-                        # we add in the fake residual. Since we can't modify
-                        # the 'du' vector at this point without stomping on the
-                        # previous component's contributions, we can multiply
-                        # our local 'arg' by -1, and then revert it afterwards.
-                        dresids.vec *= -1.0
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        dresids.vec *= -1.0
                     finally:
                         dparams._apply_unit_derivatives()
 
@@ -714,7 +706,7 @@ class System(object):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns._dat[var].val += val
+                        dunknowns._dat[var].val -= val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """

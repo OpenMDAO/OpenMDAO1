@@ -122,7 +122,7 @@ class Newton(NonLinearSolver):
             system._sys_linearize(params, unknowns, resids, total_derivs=False)
 
             # Calculate direction to take step
-            arg.vec[:] = resids.vec
+            arg.vec[:] = -resids.vec
             with system._dircontext:
                 system.solve_linear(system.dumat, system.drmat,
                                     [None], mode='fwd', solver=self.ln_solver)

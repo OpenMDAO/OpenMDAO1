@@ -1539,9 +1539,12 @@ class Problem(object):
                 for voi in params:
                     vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
-                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    # only set a -1.0 in the entry if that var is 'owned' by this rank
+                    # Note, we solve a slightly modified version of the unified
+                    # derivatives equations in OpenMDAO.
+                    # (dR/du) * (du/dr) = -I
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        rhs[vkey][voi_idxs[vkey][i]] = -1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
