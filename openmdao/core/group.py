@@ -486,7 +486,6 @@ class Group(System):
         unknowns_dict = self._unknowns_dict
 
         self.comm = comm
-        to_prom_name = self._sysdata.to_prom_name
 
         # create implementation specific VecWrappers
         if voi is None:
