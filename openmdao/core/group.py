@@ -486,13 +486,12 @@ class Group(System):
         unknowns_dict = self._unknowns_dict
 
         self.comm = comm
+        to_prom_name = self._sysdata.to_prom_name
 
         # create implementation specific VecWrappers
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata,
                                                        self._probdata, comm)
-            self.states = set(n for n, m in iteritems(self.unknowns)
-                                if 'state' in m and m['state'])
             self.resids = impl.create_src_vecwrapper(self._sysdata,
                                                      self._probdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata,
@@ -519,6 +518,9 @@ class Group(System):
                               relevance=self._probdata.relevance,
                               var_of_interest=None, store_byobjs=True,
                               alloc_complex=alloc_complex)
+
+            self.states = set(n for n, m in iteritems(self.unknowns)
+                                if 'state' in m and m['state'])
 
         # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
@@ -1278,7 +1280,7 @@ class Group(System):
             The name of a variable of interest.
 
         """
-            
+
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
         to_prom_name = self._sysdata.to_prom_name
         uacc = self.unknowns._dat
