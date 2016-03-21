@@ -72,7 +72,7 @@ class Brent(NonLinearSolver):
             'This variable must be a parameter on of of the child components of the containing system')
 
         # we renamed max_iter to maxiter to match all the other solvers
-        opt.add_deprecation('max_iter', 'maxiter')
+        opt._add_deprecation('max_iter', 'maxiter')
 
         self.xstar = None
 

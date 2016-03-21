@@ -76,7 +76,7 @@ class OptionsDictionary(object):
         except KeyError:
             pass
 
-    def add_deprecation(self, oldname, newname):
+    def _add_deprecation(self, oldname, newname):
         """
         For renamed options, maps the old name to the new name and prints
         a DeprecationWarning on each get/set that uses the old name.
@@ -99,11 +99,7 @@ class OptionsDictionary(object):
         except KeyError:
             try:
                 newname = self._deprecations[name]
-                warnings.simplefilter('always', DeprecationWarning)
-                warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
-                              (name, newname),
-                              DeprecationWarning,stacklevel=2)
-                warnings.simplefilter('ignore', DeprecationWarning)
+                _print_deprecation(name, newname)
                 return self._options[newname]['val']
             except KeyError:
                 raise KeyError("Option '{}' has not been added".format(name))
@@ -115,11 +111,7 @@ class OptionsDictionary(object):
         if name not in self._options:
             if name in self._deprecations:
                 newname = self._deprecations[name]
-                warnings.simplefilter('always', DeprecationWarning)
-                warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
-                              (name, newname),
-                              DeprecationWarning,stacklevel=2)
-                warnings.simplefilter('ignore', DeprecationWarning)
+                _print_deprecation(name, newname)
                 name = newname
             else:
                 raise KeyError("Option '{}' has not been added".format(name))
@@ -145,6 +137,10 @@ class OptionsDictionary(object):
         """
         if name in self._options:
             return self._options[name]['val']
+        elif name in self._deprecations:
+            newname = self._deprecations[name]
+            _print_deprecation(name, newname)
+            return self._options[name]['val']
         return default
 
     def iteritems(self):
@@ -158,9 +154,6 @@ class OptionsDictionary(object):
             Iterator returning the name and option for each option.
         """
         return ((name, opt['val']) for name, opt in iteritems(self._options))
-
-    def get_desc(self, name):
-        return self._options[name]['desc']
 
     def _check(self, name, value, opt):
         """ Type checking happens here. """
@@ -233,3 +226,10 @@ class OptionsDictionary(object):
                 docstring.extend(["        ", desc, "\n"])
 
         return ''.join(docstring)
+
+def _print_deprecation(name, newname):
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
+                  (name, newname),
+                  DeprecationWarning,stacklevel=2)
+    warnings.simplefilter('ignore', DeprecationWarning)
