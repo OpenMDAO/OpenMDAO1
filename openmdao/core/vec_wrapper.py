@@ -867,13 +867,13 @@ class SrcVecWrapper(VecWrapper):
 
             upper = meta.get('upper')
             if upper is not None:
-                alpha_bound = numpy.min((val - upper)/duvec[name])
+                alpha_bound = numpy.min((upper - val)/duvec[name])
                 if alpha_bound >= 0.0:
                     new_alpha = min(new_alpha, alpha_bound)
 
             lower = meta.get('lower')
             if lower is not None:
-                alpha_bound = numpy.min((val - lower)/duvec[name])
+                alpha_bound = numpy.min((lower - val)/duvec[name])
                 if alpha_bound >= 0.0:
                     new_alpha = min(new_alpha, alpha_bound)
 
