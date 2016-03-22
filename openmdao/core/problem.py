@@ -672,7 +672,12 @@ class Problem(object):
         iterated_states = set()
         group_states = []
 
+        has_iter_solver = {}
         for group in self.root.subgroups(recurse=True, include_self=True):
+            try:
+                has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
+            except KeyError:
+                pass
 
             # Look for nl solvers that require derivs under Complex Step.
             opt = group.fd_options
@@ -691,10 +696,25 @@ class Problem(object):
                         msg += "currently do not support complex step around it."
                         self._setup_errors.append(msg.format(sub.name))
 
+            parts = group.pathname.split('.')
+            for i in range(len(parts)):
+                # if an ancestor solver iterates, we're ok
+                if has_iter_solver['.'.join(parts[:i])]:
+                    is_iterated_somewhere = True
+                    break
+            else:
+                is_iterated_somewhere = False
+
+            # if we're iterated at this level or somewhere above, then it's
+            # ok if we have cycles or states.
+            if is_iterated_somewhere:
+                continue
+
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
-                # an error.
+                # an error if current lin solver or ancestor lin solver doesn't
+                # iterate.
                 graph = group._get_sys_graph()
                 strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                           if len(s) > 1]
@@ -1541,9 +1561,12 @@ class Problem(object):
                 for voi in params:
                     vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
-                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    # only set a -1.0 in the entry if that var is 'owned' by this rank
+                    # Note, we solve a slightly modified version of the unified
+                    # derivatives equations in OpenMDAO.
+                    # (dR/du) * (du/dr) = -I
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        rhs[vkey][voi_idxs[vkey][i]] = -1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
