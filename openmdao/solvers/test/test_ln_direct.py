@@ -5,6 +5,7 @@ import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ExecComp, DirectSolver, \
                          LinearGaussSeidel
+from openmdao.core.test.test_residual_sign import SimpleImplicitSL
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarStateConnection
@@ -663,6 +664,29 @@ class TestDirectSolverAssemble(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+    def test_implicit_solve_linear(self):
+
+        p = Problem()
+        p.root = Group()
+
+        dvars = ( ('a', 3.), ('b', 10.))
+        p.root.add('desvars', IndepVarComp(dvars), promotes=['a', 'b'])
+
+        sg = p.root.add('sg', Group(), promotes=["*"])
+        sg.add('si', SimpleImplicitSL(), promotes=['a', 'b', 'x'])
+
+        p.root.add('func', ExecComp('f = 2*x0+a'), promotes=['f', 'x0', 'a'])
+        p.root.connect('x', 'x0', src_indices=[1])
+
+        p.driver.add_objective('f')
+        p.driver.add_desvar('a')
+
+        p.setup(check=False)
+        p['x'] = np.array([1.5, 2.])
+
+        p.run()
+        J = p.calc_gradient(['a'], ['f'], mode='fwd')
 
 if __name__ == "__main__":
     unittest.main()
