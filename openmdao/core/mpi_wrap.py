@@ -6,9 +6,11 @@ import io
 from contextlib import contextmanager
 import traceback
 
+import numpy
 import six
 from six import PY3
 
+trace = os.environ.get('OPENMDAO_TRACE')
 
 def _redirect_streams(to_fd):
     """
@@ -83,9 +85,9 @@ class FakeComm(object):
         self.size = 1
 
 @contextmanager
-def MultiProcFailCheck():
+def MultiProcFailCheck(comm):
     """ Wrap this around code that you want to globally fail if it fails
-    on any MPI process in MPI_WORLD.  If not running under MPI, don't
+    on any MPI process in comm.  If not running under MPI, don't
     handle any exceptions.
     """
     if MPI is None:
@@ -94,14 +96,30 @@ def MultiProcFailCheck():
         try:
             yield
         except:
-            fails = MPI.COMM_WORLD.allgather(traceback.format_exc())
+            fails = comm.allgather(traceback.format_exc())
         else:
-            fails = MPI.COMM_WORLD.allgather('')
+            fails = comm.allgather('')
 
         for i, f in enumerate(fails):
             if f:
                 raise RuntimeError("a test failed in (at least) rank %d: traceback follows\n%s"
                                     % (i, f))
+
+def any_proc_is_true(comm, expr):
+    """Returns True if expr is True in any proc in the given comm."""
+
+    any_true = numpy.array(0, dtype=int)
+
+    if trace:
+        debug("Allreduce for any_proc_is_true")
+    # some mpi versions don't support Allreduce with boolean types
+    # and logical operators, so just use ints and MPI.SUM instead.
+    comm.Allreduce(numpy.array(1 if expr else 0, dtype=int),
+                   any_true, op=MPI.SUM)
+    if trace:
+        debug("Allreduce DONE")
+
+    return any_true > 0
 
 
 if os.environ.get('USE_PROC_FILES'):

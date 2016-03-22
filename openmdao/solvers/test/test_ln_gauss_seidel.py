@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import fsolve
 
 from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp, \
-                         Component, ScipyGMRES
+                         Component, ScipyGMRES, AnalysisError
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives, StateConnection
@@ -398,6 +398,44 @@ class TestLinearGaussSeidel(unittest.TestCase):
         # Obviously this test doesn't do much right now, but I need to verify
         # we don't get a keyerror here.
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
+
+    def test_sellar_analysis_error(self):
+
+        prob = Problem()
+        prob.root = SellarDerivatives()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['maxiter'] = 2
+        prob.root.ln_solver.options['err_on_maxiter'] = True
+        prob.root.ln_solver.options['atol'] = 1e-12
+        prob.root.ln_solver.options['rtol'] = 1e-12
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        indep_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        try:
+            J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': LinearGaussSeidel FAILED to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_sellar_derivs_grouped(self):
 

@@ -2,6 +2,7 @@
 
 from math import isnan
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
@@ -21,6 +22,8 @@ class Newton(NonLinearSolver):
         Initial over-relaxation factor.
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout
         each iteration, set to 2 to print subiteration residuals as well.
@@ -138,15 +141,23 @@ class Newton(NonLinearSolver):
         #update_local_meta(local_meta, (self.iter_count, 0))
         #system.children_solve_nonlinear(local_meta)
 
+        if self.iter_count >= maxiter or isnan(f_norm):
+            msg = 'FAILED to converge after %d iterations' % self.iter_count
+            fail = True
+        else:
+            fail = False
+
         if self.options['iprint'] > 0:
 
-            if self.iter_count == maxiter or isnan(f_norm):
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not fail:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count,
                             f_norm, f_norm0, msg=msg)
+
+        if fail and self.options['err_on_maxiter']:
+            raise AnalysisError("Solve in '%s': Newton %s" % (system.pathname,
+                                                              msg))
 
     def print_all_convergence(self):
         """ Turns on iprint for this solver and all subsolvers. Override if

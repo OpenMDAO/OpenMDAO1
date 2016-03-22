@@ -104,13 +104,14 @@ class HDF5Recorder(BaseRecorder):
         """
 
         iteration_coordinate = metadata['coord']
-        timestamp = metadata['timestamp']
         group_name = format_iteration_coordinate(iteration_coordinate)
 
         f = self.out
 
         group = f.require_group(group_name)
-        group.attrs['timestamp'] = timestamp
+        group.attrs['timestamp'] = metadata['timestamp']
+        group.attrs['success'] = metadata['success']
+        group.attrs['msg'] = metadata['msg']
 
         pairings = []
 

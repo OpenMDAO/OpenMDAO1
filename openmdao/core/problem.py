@@ -635,7 +635,7 @@ class Problem(object):
 
         self._check_solvers()
 
-        # Prep for case recording
+        # Prep for case recording and record metadata
         self._start_recorders()
 
         if self._setup_errors:

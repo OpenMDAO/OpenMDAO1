@@ -60,6 +60,12 @@ class _SysData(object):
         else:
             return name
 
+class AnalysisError(Exception):
+    """
+    This exception indicates that a possibly recoverable numerical
+    error occurred in an analysis code or a subsolver.
+    """
+    pass
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should

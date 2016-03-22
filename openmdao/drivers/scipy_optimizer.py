@@ -42,9 +42,9 @@ class ScipyOptimizer(Driver):
     -------
     options['disp'] :  bool(True)
         Set to False to prevent printing of Scipy convergence messages
-    options['maxiter'] :  int(200)
+    options['maxiter'] : int(200)
         Maximum number of iterations.
-    options['optimizer'] :  str('SLSQP')
+    options['optimizer'] : str('SLSQP')
         Name of optimizer to use
     options['tol'] :  float(1e-06)
         Tolerance for termination. For detailed control, use solver-specific options.

@@ -10,11 +10,13 @@ from six import StringIO, iteritems
 import numpy as np
 from numpy import array
 
-from openmdao.api import Problem, ScipyOptimizer
+from openmdao.api import Problem, Group, ScipyOptimizer, IndepVarComp, \
+                         FullFactorialDriver
 from openmdao.recorders.csv_recorder import CsvRecorder
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 from openmdao.test.sellar import SellarDerivativesGrouped
+from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
 from collections import OrderedDict
@@ -93,6 +95,8 @@ class TestCsvRecorder(unittest.TestCase):
                     self.assertEqual(tuple(saved_results[unknown[0]]), unknown)
                     self.assertTrue(tuple(saved_results[unknown[0]]) == unknown, tuple(saved_results[unknown[0]]) + unknown)
 
+        return saved_results
+
     def test_only_resids_recorded(self):
         prob = Problem()
         prob.root = ConvergeDiverge()
@@ -119,7 +123,8 @@ class TestCsvRecorder(unittest.TestCase):
             ("p.x", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None,
+                                          expected_resids),), self.eps)
 
     def test_only_unknowns_recorded(self):
         prob = Problem()
@@ -145,7 +150,8 @@ class TestCsvRecorder(unittest.TestCase):
             ("p.x", 2.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, expected_unknowns, None),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), None,
+                                         expected_unknowns, None),), self.eps)
 
     def test_only_params_recorded(self):
         prob = Problem()
@@ -172,7 +178,8 @@ class TestCsvRecorder(unittest.TestCase):
             ("comp7.x2", -46.5)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, None, None),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                         None, None),), self.eps)
 
     def test_basic(self):
         prob = Problem()
@@ -226,7 +233,9 @@ class TestCsvRecorder(unittest.TestCase):
             ("p.x", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                          expected_unknowns, expected_resids),),
+                                          self.eps)
 
     def test_includes(self):
         prob = Problem()
@@ -253,7 +262,9 @@ class TestCsvRecorder(unittest.TestCase):
             ("comp1.y2", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                         expected_unknowns, expected_resids),),
+                                         self.eps)
 
     def test_includes_and_excludes(self):
         prob = Problem()
@@ -279,7 +290,9 @@ class TestCsvRecorder(unittest.TestCase):
             ("comp1.y1", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                          expected_unknowns, expected_resids),),
+                                          self.eps)
 
     def test_solver_record(self):
         prob = Problem()
@@ -329,7 +342,9 @@ class TestCsvRecorder(unittest.TestCase):
             ("p.x", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                         expected_unknowns, expected_resids),),
+                                         self.eps)
 
     def test_sublevel_record(self):
 
@@ -354,7 +369,9 @@ class TestCsvRecorder(unittest.TestCase):
             ("C2.y", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                         expected_unknowns, expected_resids),),
+                                         self.eps)
 
     def test_multilevel_record(self):
         # FIXME: this test fails with the csv recorder
@@ -406,8 +423,10 @@ class TestCsvRecorder(unittest.TestCase):
         ]
 
         expected = []
-        expected.append((solver_coordinate, (t0, t1), g1_expected_params, g1_expected_unknowns, g1_expected_resids))
-        expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
+        expected.append((solver_coordinate, (t0, t1), g1_expected_params,
+                         g1_expected_unknowns, g1_expected_resids))
+        expected.append((driver_coordinate, (t0, t1), driver_expected_params,
+                         driver_expected_unknowns, driver_expected_resids))
 
         self.assertIterationDataRecorded(expected, self.eps)
 
@@ -416,14 +435,11 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.driver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+              "Recording of metadata is not supported by CsvRecorder.")
 
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
@@ -440,14 +456,11 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ConvergeDiverge()
         prob.root.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                "Recording of metadata is not supported by CsvRecorder.")
 
     def test_root_solver_doesnt_record_metadata(self):
         prob = Problem()
@@ -464,14 +477,11 @@ class TestCsvRecorder(unittest.TestCase):
         prob.root = ExampleGroup()
         prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
         self.recorder.options['record_metadata'] = True
-        prob.setup(check=False)
-        prob.cleanup()
-
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+               "Recording of metadata is not supported by CsvRecorder.")
 
     def test_subsolver_doesnt_record_metadata(self):
         prob = Problem()
@@ -592,6 +602,42 @@ class TestCsvRecorder(unittest.TestCase):
         assert_rel_error(self, J1[2][0], 1.94989079, .00001)
         assert_rel_error(self, J1[2][1], 1.0775421, .00001)
         assert_rel_error(self, J1[2][2], 0.09692762, .00001)
+
+    def test_csv_failures(self):
+        problem = Problem()
+        root = problem.root = Group()
+        root.add('indep_var', IndepVarComp('x', val=1.0))
+        root.add('const', IndepVarComp('c', val=2.0))
+
+        root.add('mult', ExecComp4Test("y=c*x", fails=[3, 4]))
+
+        root.connect('indep_var.x', 'mult.x')
+        root.connect('const.c', 'mult.c')
+
+        num_levels = 15
+        problem.driver = FullFactorialDriver(num_levels=num_levels)
+        problem.driver.add_desvar('indep_var.x',
+                                  lower=1.0, upper=float(num_levels))
+        problem.driver.add_objective('mult.y')
+
+        problem.driver.add_recorder(self.recorder)
+
+        problem.setup(check=False)
+
+        problem.run()
+
+        lines = self.io.getvalue().split('\n')
+        vnames = lines[0].split(',')
+        succ_idx = vnames.index('success')
+
+        fails = []
+        for i, line in enumerate(lines[1:]):
+            succ = line.split(',',1)[0]
+            if succ == '0':
+                fails.append(i)
+
+        self.assertEqual(fails, [3,4])
+
 
 if __name__ == "__main__":
     unittest.main()
