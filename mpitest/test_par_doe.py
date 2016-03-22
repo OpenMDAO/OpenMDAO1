@@ -267,8 +267,9 @@ class LBParallelDOETestCase(MPITestCase):
         else:
             fail_rank = 0
 
+        fail_idxs = [3,4,5]
         if self.comm.rank == fail_rank:
-            root.add('mult', ExecComp4Test("y=c*x", fails=[3,4,5]))
+            root.add('mult', ExecComp4Test("y=c*x", fails=fail_idxs))
         else:
             root.add('mult', ExecComp4Test("y=c*x"))
 
@@ -294,21 +295,35 @@ class LBParallelDOETestCase(MPITestCase):
 
         num_cases = len(problem.driver.recorders[0].iters)
 
-        if MPI:
-            lens = problem.comm.allgather(num_cases)
-            self.assertEqual(sum(lens), num_levels)
+        if MPI and self.comm.rank > 0:
+            self.assertEqual(num_cases, 0)
         else:
             self.assertEqual(num_cases, num_levels)
 
         nfails = 0
+        cases_in_fail_rank = 0
         for data in problem.driver.recorders[0].iters:
             if not data['success']:
                 nfails += 1
+            if data['unknowns']['mult.case_rank'] == fail_rank:
+                cases_in_fail_rank += 1
 
         if self.comm.rank == 0:
             # FIXME: for now, all cases get sent back to the master process (0),
             # even when recorders are parallel.
-            self.assertEqual(nfails, 3)
+
+            # there's a chance that the fail rank didn't get enough
+            # cases to actually fail 3 times, so we need to check
+            # how many cases it actually got.
+
+            if cases_in_fail_rank > 5:
+                self.assertEqual(nfails, 3)
+            elif cases_in_fail_rank > 4:
+                self.assertEqual(nfails, 2)
+            elif cases_in_fail_rank > 3:
+                self.assertEqual(nfails, 1)
+            else:
+                self.assertEqual(nfails, 0)
         else:
             self.assertEqual(nfails, 0)
 

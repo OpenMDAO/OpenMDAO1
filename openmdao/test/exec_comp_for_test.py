@@ -4,6 +4,7 @@ import time
 
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.system import AnalysisError
+from openmdao.core.mpi_wrap import MPI
 
 class ExecComp4Test(ExecComp):
     """
@@ -48,10 +49,17 @@ class ExecComp4Test(ExecComp):
         self.fails = fails
         self.critical = critical
 
+        # make a case_rank output so that we can see in tests which rank
+        # ran a case
+        self.add_output('case_rank', 0, pass_by_obj=True)
+
     def get_req_procs(self):
         return self.req_procs
 
     def solve_nonlinear(self, params, unknowns, resids):
+        if MPI:
+            unknowns['case_rank'] = MPI.COMM_WORLD.rank
+
         if self.trace:
             print(self.pathname, "solve_nonlinear")
         try:
