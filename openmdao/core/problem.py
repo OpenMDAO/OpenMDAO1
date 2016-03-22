@@ -27,6 +27,7 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
@@ -711,7 +712,8 @@ class Problem(object):
                 group_states.append((group, states))
 
                 # this group has an iterative lin solver, so all states in it are ok
-                if group.ln_solver.options['maxiter'] > 1:
+                if isinstance(group.ln_solver, DirectSolver) or \
+                   group.ln_solver.options['maxiter'] > 1:
                     iterated_states.update(states)
                 else:
                     # see if any states are in comps that have their own
