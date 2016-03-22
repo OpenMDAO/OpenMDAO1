@@ -62,7 +62,7 @@ class DirectSolver(MultLinearSolver):
             return
 
         u_vec = system.unknowns
-        self.jacobian = np.eye(u_vec.vec.size)
+        self.jacobian = -np.eye(u_vec.vec.size)
 
         # Clear the index cache
         self.icache = {}
@@ -128,20 +128,30 @@ class DirectSolver(MultLinearSolver):
                 u_vec = system.unknowns
                 var_names = u_vec.keys()
 
-                for sub in system.subsystems(recurse=True, include_self=True):
+                for sub in system.components(recurse=True, include_self=False):
 
                     jac = sub._jacobian_cache
+
+                    # This method won't work on components where apply_linear
+                    # is overridden.
                     if jac is None:
-                        continue
+                        msg = "The 'assemble' jacobian_method is not supported when " + \
+                             "'apply_linear' is used on a component (%s)." % sub.pathname
+                        raise RuntimeError(msg)
 
                     sub_u = sub.unknowns
-                    sub_p = sub.params
                     sub_name = sub.pathname
                     icache = self.icache
 
                     for key in jac:
                         o_var, i_var = key
                         key2 = (sub_name, key)
+
+                        # Derivs wrt states, but states live in u_vec
+                        if i_var in sub.states:
+                            sub_p = sub_u
+                        else:
+                            sub_p = sub.params
 
                         # Skip anything not relevant
                         if o_var not in sub_u or i_var not in sub_p:
@@ -153,14 +163,20 @@ class DirectSolver(MultLinearSolver):
                             meta = sub_p.metadata(i_var)
                             i_var_pro = meta['top_promoted_name']
 
-                            if i_var_pro not in var_names:
+                            # States are fine ...
+                            if i_var in sub.states:
+                                pass
+
+                            #... but inputs need to find their source.
+                            elif i_var_pro not in var_names:
                                 if i_var_pro in conn:
                                     i_var_src = conn[i_var_pro][0]
                                 else:
                                     i_var_abs = meta['pathname']
                                     i_var_src = conn[i_var_abs][0]
 
-                                # Promoted/Absolute gets kind of ridiculous sometimes
+                                # Promoted/Absolute gets kind of ridiculous
+                                # sometimes
                                 if i_var_src not in u_vec:
                                     for name in u_vec:
                                         meta = u_vec.metadata(name)
@@ -188,9 +204,9 @@ class DirectSolver(MultLinearSolver):
                             (o_start, o_end, i_start, i_end) = icache[key2]
 
                         if mode=='fwd':
-                            partials[o_start:o_end, i_start:i_end] = -jac[o_var, i_var]
+                            partials[o_start:o_end, i_start:i_end] = jac[o_var, i_var]
                         else:
-                            partials[i_start:i_end, o_start:o_end] = -jac[o_var, i_var].T
+                            partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
 
             deriv = np.linalg.solve(partials, rhs)
 

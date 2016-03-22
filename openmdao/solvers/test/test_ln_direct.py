@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ExecComp, DirectSolver, \
-                         LinearGaussSeidel
+                         LinearGaussSeidel, Newton
 from openmdao.core.test.test_residual_sign import SimpleImplicitSL
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
@@ -311,6 +311,35 @@ class TestDirectSolver(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+    def test_implicit_solve_linear(self):
+
+        p = Problem()
+        p.root = Group()
+
+        dvars = ( ('a', 3.), ('b', 10.))
+        p.root.add('desvars', IndepVarComp(dvars), promotes=['a', 'b'])
+
+        sg = p.root.add('sg', Group(), promotes=["*"])
+        sg.add('si', SimpleImplicitSL(), promotes=['a', 'b', 'x'])
+
+        p.root.add('func', ExecComp('f = 2*x0+a'), promotes=['f', 'x0', 'a'])
+        p.root.connect('x', 'x0', src_indices=[1])
+
+        p.driver.add_objective('f')
+        p.driver.add_desvar('a')
+
+        p.root.nl_solver = Newton()
+        p.root.nl_solver.options['rtol'] = 1e-10
+        p.root.nl_solver.options['atol'] = 1e-10
+        p.root.ln_solver = DirectSolver()
+
+        p.setup(check=False)
+        p['x'] = np.array([1.5, 2.])
+
+        p.run()
+        J = p.calc_gradient(['a'], ['f'], mode='rev')
+        assert_rel_error(self, J[0][0], 1.57735, 1e-6)
+
 
 class TestDirectSolverAssemble(unittest.TestCase):
     """ Tests the DirectSolver using the method that assembles a Jacobian."""
@@ -327,11 +356,13 @@ class TestDirectSolverAssemble(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        with self.assertRaises(RuntimeError) as cm:
+            J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
 
-        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        expected_msg = "The 'assemble' jacobian_method is not supported when " + \
+                       "'apply_linear' is used on a component (mycomp)."
+
+        self.assertEqual(str(cm.exception), expected_msg)
 
     def test_simple_matvec_subbed(self):
         group = Group()
@@ -347,11 +378,13 @@ class TestDirectSolverAssemble(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        with self.assertRaises(RuntimeError) as cm:
+            J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
 
-        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        expected_msg = "The 'assemble' jacobian_method is not supported when " + \
+                       "'apply_linear' is used on a component (sub.mycomp)."
+
+        self.assertEqual(str(cm.exception), expected_msg)
 
     def test_array2D(self):
         group = Group()
@@ -387,11 +420,13 @@ class TestDirectSolverAssemble(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        with self.assertRaises(RuntimeError) as cm:
+            J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
 
-        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+        expected_msg = "The 'assemble' jacobian_method is not supported when " + \
+                       "'apply_linear' is used on a component (sub.mycomp)."
+
+        self.assertEqual(str(cm.exception), expected_msg)
 
     def test_simple_jac(self):
         group = Group()
@@ -682,11 +717,18 @@ class TestDirectSolverAssemble(unittest.TestCase):
         p.driver.add_objective('f')
         p.driver.add_desvar('a')
 
+        p.root.nl_solver = Newton()
+        p.root.nl_solver.options['rtol'] = 1e-10
+        p.root.nl_solver.options['atol'] = 1e-10
+        p.root.ln_solver = DirectSolver()
+        p.root.ln_solver.options['jacobian_method'] = 'assemble'
+
         p.setup(check=False)
         p['x'] = np.array([1.5, 2.])
 
         p.run()
-        J = p.calc_gradient(['a'], ['f'], mode='fwd')
+        J = p.calc_gradient(['a'], ['f'], mode='rev')
+        assert_rel_error(self, J[0][0], 1.57735, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

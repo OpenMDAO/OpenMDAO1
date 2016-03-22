@@ -677,7 +677,10 @@ class Problem(object):
             try:
                 has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
             except KeyError:
-                pass
+
+                # DirectSolver handles coupled derivatives without iteration
+                if isinstance(group.ln_solver, DirectSolver):
+                    has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
             opt = group.fd_options
