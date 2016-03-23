@@ -98,7 +98,7 @@ class DirectSolver(MultLinearSolver):
 
         Returns
         -------
-        ndarray : Solution vectors
+        dict of ndarray : Solution vectors
         """
 
         self.system = system
