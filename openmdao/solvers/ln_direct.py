@@ -24,9 +24,9 @@ class DirectSolver(MultLinearSolver):
         reverse mode, or 'auto' to let OpenMDAO determine the best mode.
     options['jacobian_method'] : str('MVP')
         Method to assemble the jacobian to solve. Select 'MVP' to build the
-        Jacobian by calling apply_linear with columns of identify. Select
+        Jacobian by calling apply_linear with columns of identity. Select
         'assemble' to build the Jacobian by taking the calculated Jacobians in
-        each component and placing them directly into a clean matrix."
+        each component and placing them directly into a clean identity matrix."
     """
 
     def __init__(self):
@@ -39,10 +39,10 @@ class DirectSolver(MultLinearSolver):
         self.options.add_option('jacobian_method', 'MVP', values=['MVP', 'assemble'],
                                 desc="Method to assemble the jacobian to solve. " +
                                 "Select 'MVP' to build the Jacobian by calling " +
-                                "apply_linear with columns of identify. Select " +
+                                "apply_linear with columns of identity. Select " +
                                 "'assemble' to build the Jacobian by taking the " +
                                 "calculated Jacobians in each component and placing " +
-                                "them directly into a clean matrix.")
+                                "them directly into a clean identity matrix.")
 
         self.jacobian = None
         self.mode = None
@@ -61,6 +61,9 @@ class DirectSolver(MultLinearSolver):
         if self.options['jacobian_method'] == 'MVP':
             return
 
+        # Note, we solve a slightly modified version of the unified
+        # derivatives equations in OpenMDAO.
+        # (dR/du) * (du/dr) = -I
         u_vec = system.unknowns
         self.jacobian = -np.eye(u_vec.vec.size)
 
@@ -183,8 +186,6 @@ class DirectSolver(MultLinearSolver):
                                         if meta['pathname'] == i_var_src:
                                             i_var_src = name
                                             break
-                                    else:
-                                        print('hey')
 
                                 i_var_pro = u_vec.metadata(i_var_src)['top_promoted_name']
 
