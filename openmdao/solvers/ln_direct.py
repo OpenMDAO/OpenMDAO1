@@ -143,8 +143,7 @@ class DirectSolver(MultLinearSolver):
                     sub_u = sub.unknowns
                     sub_name = sub.pathname
                     icache = self.icache
-                    sub_to_prom_name = sub._probdata.to_prom_name
-                    sys_to_prom_name = system._sysdata.to_prom_name
+                    sys_prom_name = system._sysdata.to_prom_name
 
                     for key in jac:
                         o_var, i_var = key
@@ -165,8 +164,8 @@ class DirectSolver(MultLinearSolver):
 
                             o_var_abs = '.'.join((sub_name, o_var))
                             i_var_abs = '.'.join((sub_name, i_var))
-                            i_var_pro = sub_to_prom_name[i_var_abs]
-                            o_var_pro = sub_to_prom_name[o_var_abs]
+                            i_var_pro = sys_prom_name[i_var_abs]
+                            o_var_pro = sys_prom_name[o_var_abs]
 
                             # States are fine ...
                             if i_var in sub.states:
@@ -175,7 +174,7 @@ class DirectSolver(MultLinearSolver):
                             #... but inputs need to find their source.
                             elif i_var_pro not in u_vec:
                                 i_var_src = conn[i_var_abs][0]
-                                i_var_pro = sys_to_prom_name[i_var_src]
+                                i_var_pro = sys_prom_name[i_var_src]
 
                             # Map names back to this solver level. Need to do
                             # this when Directsolver is in a sub group.
