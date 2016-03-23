@@ -208,10 +208,6 @@ class DirectSolver(MultLinearSolver):
                         i_var_pro = sys_prom_name[i_var_abs]
                         o_var_pro = sys_prom_name[o_var_abs]
 
-                        # Output is not relevant
-                        if o_var_pro not in u_vec:
-                            continue
-
                         # States are fine ...
                         if i_var in sub.states:
                             pass
