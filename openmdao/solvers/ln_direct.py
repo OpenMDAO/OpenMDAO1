@@ -143,6 +143,8 @@ class DirectSolver(MultLinearSolver):
                     sub_u = sub.unknowns
                     sub_name = sub.pathname
                     icache = self.icache
+                    sub_to_prom_name = sub._probdata.to_prom_name
+                    sys_to_prom_name = system._sysdata.to_prom_name
 
                     for key in jac:
                         o_var, i_var = key
@@ -160,9 +162,11 @@ class DirectSolver(MultLinearSolver):
 
                         # We cache the location of each variable in our jacobian
                         if key2 not in icache:
-                            o_var_pro = sub_u.metadata(o_var)['top_promoted_name']
-                            meta = sub_p.metadata(i_var)
-                            i_var_pro = meta['top_promoted_name']
+
+                            o_var_abs = '.'.join((sub_name, o_var))
+                            i_var_abs = '.'.join((sub_name, i_var))
+                            i_var_pro = sub_to_prom_name[i_var_abs]
+                            o_var_pro = sub_to_prom_name[o_var_abs]
 
                             # States are fine ...
                             if i_var in sub.states:
@@ -173,17 +177,12 @@ class DirectSolver(MultLinearSolver):
                                 if i_var_pro in conn:
                                     i_var_src = conn[i_var_pro][0]
                                 else:
-                                    i_var_abs = meta['pathname']
                                     i_var_src = conn[i_var_abs][0]
 
                                 # Promoted/Absolute gets kind of ridiculous
                                 # sometimes
                                 if i_var_src not in u_vec:
-                                    for name in u_vec:
-                                        meta = u_vec.metadata(name)
-                                        if meta['pathname'] == i_var_src:
-                                            i_var_src = name
-                                            break
+                                    i_var_src = sys_to_prom_name[i_var_src]
 
                                 i_var_pro = u_vec.metadata(i_var_src)['top_promoted_name']
 
