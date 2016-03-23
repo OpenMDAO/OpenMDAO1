@@ -407,6 +407,28 @@ class TestDirectSolverAssemble(unittest.TestCase):
         diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
         assert_rel_error(self, diff, 0.0, 1e-8)
 
+    def test_array2D_no_decompose(self):
+        group = Group()
+        group.add('x_param', IndepVarComp('x', np.ones((2, 2))), promotes=['*'])
+        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+
+        prob = Problem()
+        prob.root = group
+        prob.root.ln_solver = DirectSolver()
+        prob.root.ln_solver.options['jacobian_method'] = 'assemble'
+        prob.root.ln_solver.options['save_LU_decomposition'] = False
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        Jbase = prob.root.mycomp._jacobian_cache
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
     def test_simple_in_group_matvec(self):
         group = Group()
         sub = group.add('sub', Group(), promotes=['x', 'y'])
@@ -729,6 +751,26 @@ class TestDirectSolverAssemble(unittest.TestCase):
         p.run()
         J = p.calc_gradient(['a'], ['f'], mode='rev')
         assert_rel_error(self, J[0][0], 1.57735, 1e-6)
+
+    def test_unrel_var_in_Jac(self):
+
+        p = Problem()
+        root = p.root = Group()
+        root.add('p', IndepVarComp('x', 4.0))
+        root.add('comp', ExecComp(['y1 = 1.5*x1 + 2.0*x2', 'y2 = 3.0*x1 - x2']))
+
+        root.connect('p.x', 'comp.x1')
+        p.driver.add_objective('comp.y1')
+        p.driver.add_desvar('p.x')
+
+        p.root.ln_solver = DirectSolver()
+        p.root.ln_solver.options['jacobian_method'] = 'assemble'
+
+        p.setup(check=False)
+        p.run()
+
+        J = p.calc_gradient(['p.x'], ['comp.y1'], mode='fwd')
+        assert_rel_error(self, J[0][0], 1.5, 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

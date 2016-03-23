@@ -128,6 +128,12 @@ class System(object):
         self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
                             # <= the number of parallel FDs
 
+
+        # This gets set to True when linearize is called. Solvers can set
+        # this to false and then monitor it so they know when, for example,
+        # to regenerate a Jacobian.
+        self._jacobian_changed = False
+
         self._reset() # initialize some attrs that are set during setup
 
     def _reset(self):
@@ -776,6 +782,7 @@ class System(object):
                     if len(shape) < 2:
                         jc[key] = jc[key].reshape((shape[0], 1))
 
+        self._jacobian_changed = True
         return self._jacobian_cache
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
