@@ -1051,7 +1051,7 @@ class Problem(object):
         for opt, saved in iteritems(self._root_options):
             current = self.root.fd_options[opt]
             if current != saved:
-                msg = "The '%s' option needs to be set before setup." % opt
+                msg = "The '%s' option cannot be changed after setup." % opt
                 raise RuntimeError(msg)
 
     def run(self):

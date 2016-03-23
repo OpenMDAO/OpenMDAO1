@@ -871,7 +871,7 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(RuntimeError) as err:
             top.run()
 
-        expected_msg = "The 'form' option needs to be set before setup."
+        expected_msg = "The 'form' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -884,7 +884,7 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(RuntimeError) as err:
             top.run()
 
-        expected_msg = "The 'extra_check_partials_form' option needs to be set before setup."
+        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
 
