@@ -92,7 +92,6 @@ class DirectSolver(MultLinearSolver):
         dict of ndarray : Solution vectors
         """
 
-        # TODO: When to record?
         self.system = system
 
         if self.mode is None:
@@ -129,9 +128,8 @@ class DirectSolver(MultLinearSolver):
 
                 partials = self.jacobian
                 u_vec = system.unknowns
-                var_names = u_vec.keys()
 
-                for sub in system.components(recurse=True, include_self=False):
+                for sub in system.components(recurse=True, include_self=True):
 
                     jac = sub._jacobian_cache
 
@@ -171,7 +169,7 @@ class DirectSolver(MultLinearSolver):
                                 pass
 
                             #... but inputs need to find their source.
-                            elif i_var_pro not in var_names:
+                            elif i_var_pro not in u_vec:
                                 if i_var_pro in conn:
                                     i_var_src = conn[i_var_pro][0]
                                 else:
