@@ -9,10 +9,10 @@ from openmdao.api import Problem, Group, Component, IndepVarComp, ScipyGMRES, Ex
 from openmdao.test.util import assert_rel_error
 
 
-class SimpleImplicit(Component):
+class SimpleImplicitSL(Component):
 
     def __init__(self):
-        super(SimpleImplicit, self).__init__()
+        super(SimpleImplicitSL, self).__init__()
 
         self.add_param('a', shape=1., step_size=1e-3)
         self.add_param('b', shape=1)
@@ -94,7 +94,7 @@ class TestResidual(unittest.TestCase):
         p.root.add('desvars', IndepVarComp(dvars), promotes=['a', 'b'])
 
         sg = p.root.add('sg', Group(), promotes=["*"])
-        sg.add('si', SimpleImplicit(), promotes=['a', 'b', 'x'])
+        sg.add('si', SimpleImplicitSL(), promotes=['a', 'b', 'x'])
 
         p.root.add('func', ExecComp('f = 2*x0+a'), promotes=['f', 'x0', 'a'])
         p.root.connect('x', 'x0', src_indices=[1])

@@ -162,9 +162,11 @@ class LinearSolver(SolverBase):
         """
         pass
 
+
 class MultLinearSolver(LinearSolver):
     """Base class for ScipyGMRES and DirectSolver.  Adds a mult method.
     """
+
     def mult(self, arg):
         """ Applies Jacobian matrix. Mode is determined by the
         system. This is a GMRES callback and is called by DirectSolver.solve.
