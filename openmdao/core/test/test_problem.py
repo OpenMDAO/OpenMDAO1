@@ -859,6 +859,35 @@ class TestProblem(unittest.TestCase):
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
         self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
 
+    def test_error_change_after_setup(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Canna do this
+        top.root.fd_options['form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Canna do this
+        top.root.fd_options['extra_check_partials_form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+
 class TestCheckSetup(unittest.TestCase):
 
     def test_out_of_order(self):
