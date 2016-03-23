@@ -176,13 +176,6 @@ class DirectSolver(MultLinearSolver):
                                 i_var_src = conn[i_var_abs][0]
                                 i_var_pro = sys_prom_name[i_var_src]
 
-                            # Map names back to this solver level. Need to do
-                            # this when Directsolver is in a sub group.
-                            if i_var_pro.startswith(sys_name):
-                                i_var_pro = i_var_pro[(len(sys_name)):]
-                            if o_var_pro.startswith(sys_name):
-                                o_var_pro = o_var_pro[(len(sys_name)):]
-
                             o_start, o_end = u_vec._dat[o_var_pro].slice
                             i_start, i_end = u_vec._dat[i_var_pro].slice
 
