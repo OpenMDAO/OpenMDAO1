@@ -169,11 +169,13 @@ class DirectSolver(MultLinearSolver):
             if self.mode != mode:
                 self.setup(system)
             self.mode = mode
-            sys_name = system.name + '.'
-            conn = system.connections
 
+            sys_name = system.name + '.'
             partials = self.jacobian
             u_vec = system.unknowns
+            icache = self.icache
+            conn = system.connections
+            sys_prom_name = system._sysdata.to_prom_name
 
             for sub in system.components(recurse=True, include_self=True):
 
@@ -188,18 +190,10 @@ class DirectSolver(MultLinearSolver):
 
                 sub_u = sub.unknowns
                 sub_name = sub.pathname
-                icache = self.icache
-                sys_prom_name = system._sysdata.to_prom_name
 
                 for key in jac:
                     o_var, i_var = key
                     key2 = (sub_name, key)
-
-                    # Derivs wrt states, but states live in u_vec
-                    if i_var in sub.states:
-                        sub_p = sub_u
-                    else:
-                        sub_p = sub.params
 
                     # We cache the location of each variable in our jacobian
                     if key2 not in icache:
