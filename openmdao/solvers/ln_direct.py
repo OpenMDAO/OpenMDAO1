@@ -1,5 +1,6 @@
 """ OpenMDAO LinearSolver that explicitly solves the linear system using
-linalg.solve. Inherits from MultLinearSolver just for the mult function."""
+linalg.solve or scipy LU factor/solve. Inherits from MultLinearSolver just
+for the mult function."""
 
 from collections import OrderedDict
 
