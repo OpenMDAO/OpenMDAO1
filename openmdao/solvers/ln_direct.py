@@ -174,17 +174,8 @@ class DirectSolver(MultLinearSolver):
 
                             #... but inputs need to find their source.
                             elif i_var_pro not in u_vec:
-                                if i_var_pro in conn:
-                                    i_var_src = conn[i_var_pro][0]
-                                else:
-                                    i_var_src = conn[i_var_abs][0]
-
-                                # Promoted/Absolute gets kind of ridiculous
-                                # sometimes
-                                if i_var_src not in u_vec:
-                                    i_var_src = sys_to_prom_name[i_var_src]
-
-                                i_var_pro = u_vec.metadata(i_var_src)['top_promoted_name']
+                                i_var_src = conn[i_var_abs][0]
+                                i_var_pro = sys_to_prom_name[i_var_src]
 
                             # Map names back to this solver level. Need to do
                             # this when Directsolver is in a sub group.
