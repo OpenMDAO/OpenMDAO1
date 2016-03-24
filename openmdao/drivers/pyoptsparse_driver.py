@@ -451,7 +451,7 @@ class pyOptSparseDriver(Driver):
             print("Exception: %s" % str(msg))
             print(70*"=",tb,70*"=")
             fail = 1
-            func_dict = dv_dict
+            func_dict = {}
 
         #print("Functions calculated")
         #print(func_dict)
