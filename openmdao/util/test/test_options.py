@@ -7,6 +7,7 @@ from openmdao.api import OptionsDictionary
 
 
 class TestOptions(unittest.TestCase):
+
     def test_options_dictionary(self):
         self.options = OptionsDictionary()
 
@@ -94,6 +95,30 @@ class TestOptions(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertEqual(str(w[0].message),
                      "Option 'max_iter' is deprecated. Use 'maxiter' instead.")
+
+    def test_locking(self):
+
+        opt1 = OptionsDictionary()
+        opt1.add_option('zzz', 10.0, lock_on_setup=True)
+        opt2 = OptionsDictionary()
+        opt2.add_option('xxx', 10.0, lock_on_setup=True)
+
+        opt1['zzz'] = 15.0
+        opt2['xxx'] = 12.0
+
+        OptionsDictionary.locked = True
+
+        with self.assertRaises(RuntimeError) as err:
+            opt1['zzz'] = 14.0
+
+        expected_msg = "The 'zzz' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        with self.assertRaises(RuntimeError) as err:
+            opt2['xxx'] = 13.0
+
+        expected_msg = "The 'xxx' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
 
 if __name__ == "__main__":
     unittest.main()

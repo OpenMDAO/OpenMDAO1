@@ -7,6 +7,7 @@ import sys
 import json
 import warnings
 import traceback
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
@@ -31,12 +32,13 @@ from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
-from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
+from openmdao.util.options import OptionsDictionary
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
+
 
 class _ProbData(object):
     """
@@ -96,10 +98,6 @@ class Problem(object):
 
         self.pathname = ''
 
-        # Used to check if user changed any of these options.
-        self._saved_options = {}
-        self.restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
-        self.restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -633,28 +631,8 @@ class Problem(object):
                 stream.write("%s\n" % err)
             raise RuntimeError(stream.getvalue())
 
-        # The user is not allowed to change certain options after setup. In
-        # order to figure out if they get changed, we needed to save copies
-        # of them in problem.
-        restricted_fd_options = self.restricted_fd_options
-        restricted_ln_options = self.restricted_ln_options
-        saved_options = self._saved_options
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            sub_name = sub.pathname
-
-            fd_options = sub.fd_options
-            for opt in restricted_fd_options:
-                key = (sub_name, opt)
-                saved_options[key] = fd_options[opt]
-
-            if not hasattr(sub, 'ln_solver'):
-                continue
-
-            ln_options = sub.ln_solver.options
-            for opt in restricted_ln_options:
-                if opt in ln_options:
-                    key = (sub_name, opt)
-                    saved_options[key] = ln_options[opt]
+        # Lock any restricted options in the options dictionaries.
+        OptionsDictionary.locked = True
 
         # check for any potential issues
         if check or force_check:
@@ -1068,42 +1046,10 @@ class Problem(object):
         here are those that would generate a cryptic error message. We can
         raise a readable error for the user."""
 
-        saved_options = self._saved_options
-
         # New message if you forget to run setup first.
-        if len(saved_options) == 0:
+        if not self.root.fd_options.locked:
             msg = "setup() must be called before running the model."
             raise RuntimeError(msg)
-
-        # If the user changes these settings, a weird error is raised, so
-        # raise a readable error.
-        restricted_fd_options = self.restricted_fd_options
-        restricted_ln_options = self.restricted_ln_options
-        saved_options = self._saved_options
-        for sub in self.root.subsystems(recurse=True, include_self=True):
-            sub_name = sub.pathname
-
-            fd_options = sub.fd_options
-            for opt in restricted_fd_options:
-                key = (sub_name, opt)
-                saved = saved_options[key]
-                current = fd_options[opt]
-                if current != saved:
-                    msg = "The '%s' option cannot be changed after setup." % opt
-                    raise RuntimeError(msg)
-
-            if not hasattr(sub, 'ln_solver'):
-                continue
-
-            ln_options = sub.ln_solver.options
-            for opt in restricted_ln_options:
-                if opt in ln_options:
-                    key = (sub_name, opt)
-                    saved = saved_options[key]
-                    current = ln_options[opt]
-                    if current != saved:
-                        msg = "The '%s' option cannot be changed after setup." % opt
-                        raise RuntimeError(msg)
 
     def run(self):
         """ Runs the Driver in self.driver. """
@@ -1964,11 +1910,13 @@ class Problem(object):
 
                 # Cache old form so we can overide temporarily
                 save_form = opt['form']
+                OptionsDictionary.locked = False
                 opt['form'] = opt['extra_check_partials_form']
 
                 jac_fd2 = fd_func(params, unknowns, resids)
 
                 opt['form'] = save_form
+                OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],

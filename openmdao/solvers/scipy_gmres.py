@@ -50,7 +50,8 @@ class ScipyGMRES(MultLinearSolver):
                        "let OpenMDAO determine the best mode.")
         opt.add_option('restart', 20, lower=0,
                        desc='Number of iterations between restarts. Larger values ' +
-                       'increase iteration cost, but may be necessary for convergence')
+                       'increase iteration cost, but may be necessary for convergence',
+                       lock_on_setup=True)
 
         # These are defined whenever we call solve to provide info we need in
         # the callback.

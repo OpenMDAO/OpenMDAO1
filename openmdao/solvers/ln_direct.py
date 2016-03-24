@@ -40,7 +40,9 @@ class DirectSolver(MultLinearSolver):
         self.options.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
-                       "let OpenMDAO determine the best mode.")
+                       "let OpenMDAO determine the best mode.",
+                       lock_on_setup=True)
+
         self.options.add_option('jacobian_method', 'MVP', values=['MVP', 'assemble'],
                                 desc="Method to assemble the jacobian to solve. " +
                                 "Select 'MVP' to build the Jacobian by calling " +

@@ -3,6 +3,7 @@
 import warnings
 from six import iteritems
 
+
 class OptionsDictionary(object):
     """ A dictionary for storing options for components/drivers/solvers. It
     is generally used like a standard Python dictionary, except that 1) you
@@ -13,16 +14,29 @@ class OptionsDictionary(object):
     ----
     read_only : bool
         If this is True, these options should not be modified at run time,
-        and should not be printed in the docs.
-    ."""
+        and should not be printed in the docs."""
+
+    # When this is True, variables marked as 'lock_on_setup' cannot be
+    # changed. In all of OpenMDAO's default OptDicts, this will be set to
+    # True on setup.
+    locked = False
 
     def __init__(self, read_only=True):
         self._options = {}
         self._deprecations = {}
+
+        # When this is True, no variables in the dictionary can be modified.
         self.read_only = read_only
 
+        # Start out with all dictionaries unlocked. Nobody should be creating
+        # them after setup.
+        # TODO: This really is a hack, but we couldn't figure out a way
+        # around it.
+        OptionsDictionary.locked = False
+
+
     def add_option(self, name, value, lower=None, upper=None, values=None,
-                   desc=''):
+                   desc='', lock_on_setup=False):
         """ Adds an option to this options dictionary.
 
         Args
@@ -50,11 +64,12 @@ class OptionsDictionary(object):
             raise ValueError("Option '{}' already exists".format(name))
 
         opt = {
-            'val':    value,
-            'lower':  lower,
-            'upper':  upper,
-            'values': values,
-            'desc' :  desc,
+            'val': value,
+            'lower' : lower,
+            'upper' : upper,
+            'values' : values,
+            'desc' : desc,
+            'lock_on_setup' : lock_on_setup
         }
 
         self._check(name, value, opt)
@@ -62,8 +77,7 @@ class OptionsDictionary(object):
         self._options[name] = opt
 
     def remove_option(self, name):
-        """
-        Removes the named option.  Does nothing if the option is not found.
+        """ Removes the named option.  Does nothing if the option is not found.
 
         Args
         ----
@@ -77,8 +91,7 @@ class OptionsDictionary(object):
             pass
 
     def _add_deprecation(self, oldname, newname):
-        """
-        For renamed options, maps the old name to the new name and prints
+        """ For renamed options, maps the old name to the new name and prints
         a DeprecationWarning on each get/set that uses the old name.
 
         Args
@@ -108,6 +121,8 @@ class OptionsDictionary(object):
         return name in self._options or name in self._deprecations
 
     def __setitem__(self, name, value):
+        """ Set an option using dictionary-like access."""
+
         if name not in self._options:
             if name in self._deprecations:
                 newname = self._deprecations[name]
@@ -122,13 +137,14 @@ class OptionsDictionary(object):
 
     def __setattr__(self, name, value):
         """ To prevent user error, disallow direct setting."""
-        if name in ['_options', 'read_only', '_deprecations']:
+        if name in ['_options', 'read_only', '_deprecations', 'locked']:
             super(OptionsDictionary, self).__setattr__(name, value)
         else:
             raise ValueError("Use dict-like access for option '{}'".format(name))
 
     def get(self, name, default=None):
-        """
+        """ Gets a value from this OptionsDictionary.
+
         Returns
         -------
         object
@@ -157,6 +173,12 @@ class OptionsDictionary(object):
 
     def _check(self, name, value, opt):
         """ Type checking happens here. """
+
+        # Raise an error when trying to set a restricted variable after
+        # setup.
+        if self.locked and opt['lock_on_setup']:
+            msg = "The '%s' option cannot be changed after setup." % name
+            raise RuntimeError(msg)
 
         values = opt['values']
 
@@ -202,8 +224,7 @@ class OptionsDictionary(object):
             raise ValueError(msg.format(name, values))
 
     def _generate_docstring(self, dictname):
-        """
-        Generates a numpy-style docstring for an OptionsDictionary.
+        """ Generates a numpy-style docstring for an OptionsDictionary.
 
         Returns
         -------

@@ -14,6 +14,8 @@ from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.util import assert_equal_jacobian, assert_rel_error
+from openmdao.util.options import OptionsDictionary
+
 
 class FDpropsComp(Component):
 
@@ -469,6 +471,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
         J = prob.calc_gradient(indep_list, unknowns_list, return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'backward'
