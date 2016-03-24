@@ -34,7 +34,6 @@ class OptionsDictionary(object):
         # around it.
         OptionsDictionary.locked = False
 
-
     def add_option(self, name, value, lower=None, upper=None, values=None,
                    desc='', lock_on_setup=False):
         """ Adds an option to this options dictionary.
