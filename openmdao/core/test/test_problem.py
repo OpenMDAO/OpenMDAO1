@@ -615,8 +615,8 @@ class TestProblem(unittest.TestCase):
 
         try:
             prob.run()
-        except AttributeError as err:
-            msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
+        except RuntimeError as err:
+            msg = "setup() must be called before running the model."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -858,6 +858,77 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
         self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
+
+    def test_error_change_after_setup(self):
+
+        # Tests error messages for the 5 options that we should never change
+        # after setup is called.
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        top.root.fd_options['form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        top.root.fd_options['extra_check_partials_form'] = 'complex_step'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        top.root.fd_options['force_fd'] = True
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'force_fd' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        top.root.ln_solver.options['mode'] = 'rev'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'mode' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        top.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'single_voi_relevance_reduction' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
 
 class TestCheckSetup(unittest.TestCase):
 
