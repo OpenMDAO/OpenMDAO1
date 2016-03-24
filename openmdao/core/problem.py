@@ -98,6 +98,8 @@ class Problem(object):
 
         # Used to check if user changed any of these options.
         self._saved_options = {}
+        self.restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
+        self.restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -632,8 +634,8 @@ class Problem(object):
             raise RuntimeError(stream.getvalue())
 
         # The user is not allowed to change these options after setup.
-        restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
-        restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
+        restricted_fd_options = self.restricted_fd_options
+        restricted_ln_options = self.restricted_ln_options
         saved_options = self._saved_options
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub_name = sub.pathname
@@ -1069,8 +1071,8 @@ class Problem(object):
 
         # If the user changes these settings, a weird error is raised, so
         # raise a readable error.
-        restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
-        restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
+        restricted_fd_options = self.restricted_fd_options
+        restricted_ln_options = self.restricted_ln_options
         saved_options = self._saved_options
         for sub in self.root.subsystems(recurse=True, include_self=True):
             sub_name = sub.pathname
