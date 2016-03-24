@@ -1325,9 +1325,7 @@ class TestPyoptSparse(unittest.TestCase):
         with self.assertRaises(Exception) as err:
             prob.run()
 
-        # pyopt's message is not very informative
-        expected_msg = ""
-        self.assertEqual(str(err.exception), expected_msg)
+        # pyopt's failure message differs by platform and is not informative anyway
 
     def test_analysis_error_sensfunc(self):
 
@@ -1407,10 +1405,7 @@ class TestPyoptSparse(unittest.TestCase):
         with self.assertRaises(Exception) as err:
             prob.run()
 
-        # pyopt's message is not very informative
-        expected_msg = ""
-        self.assertEqual(str(err.exception), expected_msg)
-
+        # pyopt's failure message differs by platform and is not informative anyway
 
 if __name__ == "__main__":
     unittest.main()
