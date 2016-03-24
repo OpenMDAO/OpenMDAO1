@@ -633,7 +633,9 @@ class Problem(object):
                 stream.write("%s\n" % err)
             raise RuntimeError(stream.getvalue())
 
-        # The user is not allowed to change these options after setup.
+        # The user is not allowed to change certain options after setup. In
+        # order to figure out if they get changed, we needed to save copies
+        # of them in problem.
         restricted_fd_options = self.restricted_fd_options
         restricted_ln_options = self.restricted_ln_options
         saved_options = self._saved_options
@@ -1062,9 +1064,13 @@ class Problem(object):
         return results
 
     def pre_run_check(self):
-        """ Last chance for some checks."""
+        """ Last chance for some checks. The checks that should be performed
+        here are those that would generate a cryptic error message. We can
+        raise a readable error for the user."""
+
         saved_options = self._saved_options
-        # New message if you forget to run setup.
+
+        # New message if you forget to run setup first.
         if len(saved_options) == 0:
             msg = "setup() must be called before run()."
             raise RuntimeError(msg)

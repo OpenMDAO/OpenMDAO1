@@ -861,11 +861,14 @@ class TestProblem(unittest.TestCase):
 
     def test_error_change_after_setup(self):
 
+        # Tests error messages for the 5 options that we should never change
+        # after setup is called.
+
         top = Problem()
         top.root = SellarStateConnection()
         top.setup(check=False)
 
-        # Canna do this
+        # Not permitted to change this
         top.root.fd_options['form'] = 'complex_step'
 
         with self.assertRaises(RuntimeError) as err:
@@ -878,7 +881,7 @@ class TestProblem(unittest.TestCase):
         top.root = SellarStateConnection()
         top.setup(check=False)
 
-        # Canna do this
+        # Not permitted to change this
         top.root.fd_options['extra_check_partials_form'] = 'complex_step'
 
         with self.assertRaises(RuntimeError) as err:
@@ -891,7 +894,7 @@ class TestProblem(unittest.TestCase):
         top.root = SellarStateConnection()
         top.setup(check=False)
 
-        # Canna do this
+        # Not permitted to change this
         top.root.fd_options['force_fd'] = True
 
         with self.assertRaises(RuntimeError) as err:
@@ -904,7 +907,7 @@ class TestProblem(unittest.TestCase):
         top.root = SellarStateConnection()
         top.setup(check=False)
 
-        # Canna do this
+        # Not permitted to change this
         top.root.ln_solver.options['mode'] = 'rev'
 
         with self.assertRaises(RuntimeError) as err:
@@ -917,7 +920,7 @@ class TestProblem(unittest.TestCase):
         top.root = SellarStateConnection()
         top.setup(check=False)
 
-        # Canna do this
+        # Not permitted to change this
         top.root.ln_solver.options['single_voi_relevance_reduction'] = True
 
         with self.assertRaises(RuntimeError) as err:
