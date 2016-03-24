@@ -615,8 +615,8 @@ class TestProblem(unittest.TestCase):
 
         try:
             prob.run()
-        except AttributeError as err:
-            msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
+        except RuntimeError as err:
+            msg = "setup() must be called before run()."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -885,6 +885,45 @@ class TestProblem(unittest.TestCase):
             top.run()
 
         expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Canna do this
+        top.root.fd_options['force_fd'] = True
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'force_fd' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Canna do this
+        top.root.ln_solver.options['mode'] = 'rev'
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'mode' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Canna do this
+        top.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "The 'single_voi_relevance_reduction' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
 

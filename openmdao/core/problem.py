@@ -97,7 +97,7 @@ class Problem(object):
         self.pathname = ''
 
         # Used to check if user changed any of these options.
-        self._root_options = {}
+        self._saved_options = {}
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -632,9 +632,25 @@ class Problem(object):
             raise RuntimeError(stream.getvalue())
 
         # The user is not allowed to change these options after setup.
-        options = ['form', 'extra_check_partials_form']
-        for opt in options:
-            self._root_options[opt] = self.root.fd_options[opt]
+        restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
+        restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
+        saved_options = self._saved_options
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            sub_name = sub.pathname
+
+            fd_options = sub.fd_options
+            for opt in restricted_fd_options:
+                key = (sub_name, opt)
+                saved_options[key] = fd_options[opt]
+
+            if not hasattr(sub, 'ln_solver'):
+                continue
+
+            ln_options = sub.ln_solver.options
+            for opt in restricted_ln_options:
+                if opt in ln_options:
+                    key = (sub_name, opt)
+                    saved_options[key] = ln_options[opt]
 
         # check for any potential issues
         if check or force_check:
@@ -1045,14 +1061,41 @@ class Problem(object):
 
     def pre_run_check(self):
         """ Last chance for some checks."""
+        saved_options = self._saved_options
+        # New message if you forget to run setup.
+        if len(saved_options) == 0:
+            msg = "setup() must be called before run()."
+            raise RuntimeError(msg)
 
         # If the user changes these settings, a weird error is raised, so
         # raise a readable error.
-        for opt, saved in iteritems(self._root_options):
-            current = self.root.fd_options[opt]
-            if current != saved:
-                msg = "The '%s' option cannot be changed after setup." % opt
-                raise RuntimeError(msg)
+        restricted_fd_options = ['form', 'extra_check_partials_form', 'force_fd']
+        restricted_ln_options = ['mode', 'single_voi_relevance_reduction']
+        saved_options = self._saved_options
+        for sub in self.root.subsystems(recurse=True, include_self=True):
+            sub_name = sub.pathname
+
+            fd_options = sub.fd_options
+            for opt in restricted_fd_options:
+                key = (sub_name, opt)
+                saved = saved_options[key]
+                current = fd_options[opt]
+                if current != saved:
+                    msg = "The '%s' option cannot be changed after setup." % opt
+                    raise RuntimeError(msg)
+
+            if not hasattr(sub, 'ln_solver'):
+                continue
+
+            ln_options = sub.ln_solver.options
+            for opt in restricted_ln_options:
+                if opt in ln_options:
+                    key = (sub_name, opt)
+                    saved = saved_options[key]
+                    current = ln_options[opt]
+                    if current != saved:
+                        msg = "The '%s' option cannot be changed after setup." % opt
+                        raise RuntimeError(msg)
 
     def run(self):
         """ Runs the Driver in self.driver. """
