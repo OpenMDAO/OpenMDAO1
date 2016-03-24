@@ -616,7 +616,7 @@ class TestProblem(unittest.TestCase):
         try:
             prob.run()
         except RuntimeError as err:
-            msg = "setup() must be called before run()."
+            msg = "setup() must be called before running the model."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')

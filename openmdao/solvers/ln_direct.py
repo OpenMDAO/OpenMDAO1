@@ -12,8 +12,8 @@ from openmdao.solvers.solver_base import MultLinearSolver
 
 class DirectSolver(MultLinearSolver):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
-    linalg.solve. The user can choose to have the jacobian assemblled
-    directly or throuugh matrix-vector product.
+    linalg.solve. The user can choose to have the jacobian assembled
+    directly or through matrix-vector product.
 
     Options
     -------

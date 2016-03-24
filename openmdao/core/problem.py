@@ -1072,7 +1072,7 @@ class Problem(object):
 
         # New message if you forget to run setup first.
         if len(saved_options) == 0:
-            msg = "setup() must be called before run()."
+            msg = "setup() must be called before running the model."
             raise RuntimeError(msg)
 
         # If the user changes these settings, a weird error is raised, so
