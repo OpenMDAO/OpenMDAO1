@@ -429,9 +429,6 @@ class pyOptSparseDriver(Driver):
             except AnalysisError:
                 fail = 1
 
-            except Exception:
-                raise
-
             func_dict = self.get_objectives() # this returns a new OrderedDict
             func_dict.update(self.get_constraints())
 
@@ -503,9 +500,6 @@ class pyOptSparseDriver(Driver):
                     for ikey, ival in iteritems(dv_dict):
                         isize = len(ival)
                         sens_dict[okey][ikey] = np.zeros((osize, isize))
-
-            except Exception:
-                raise
 
             # Support for sub-index sparsity by returning the Jacobian in a
             # pyopt sparse format.
