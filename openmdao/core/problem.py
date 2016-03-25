@@ -620,8 +620,14 @@ class Problem(object):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
+        # If we force_fd root and don't need derivatives in solvers, then we
+        # don't have to allocate any deriv vectors.
+        alloc_derivs = not self.root.fd_options['force_fd']
+        for sub in self.root.subgroups(recurse=True, include_self=True):
+            alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
+
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, impl=self._impl)
+        self.root._setup_vectors(param_owners, impl=self._impl, alloc_derivs=alloc_derivs)
 
         # Prepare Driver
         self.driver._setup()
