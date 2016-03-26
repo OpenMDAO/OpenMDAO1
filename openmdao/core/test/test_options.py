@@ -1,6 +1,7 @@
 """ Test for the OptionsDictionary """
 
 import unittest
+import warnings
 from six import PY2
 from openmdao.api import OptionsDictionary
 
@@ -76,6 +77,23 @@ class TestOptions(unittest.TestCase):
 
         self.assertEqual("Use dict-like access for option 'maxiter'", str(cm.exception))
 
+        #test removal
+        self.assertTrue('conmin_diff' in self.options)
+        self.options.remove_option('conmin_diff')
+        self.assertFalse('conmin_diff' in self.options)
+
+        # test Deprecation
+        self.options._add_deprecation('max_iter', 'maxiter')
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            self.options['max_iter'] = 5
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                     "Option 'max_iter' is deprecated. Use 'maxiter' instead.")
 
 if __name__ == "__main__":
     unittest.main()

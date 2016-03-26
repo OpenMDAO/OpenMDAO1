@@ -99,6 +99,9 @@ class TestDumpRecorder(unittest.TestCase):
             line = sout.readline()
             self.assertEqual("Iteration Coordinate: {0}\n".format(icoord), line)
 
+            line = sout.readline()
+            self.assertEqual("Iteration succeeded: yes\n", line)
+
             groupings = []
 
             if params is not None:
@@ -577,14 +580,14 @@ class TestDumpRecorder(unittest.TestCase):
         sout = open(self.filename)
         lines = sout.readlines()
 
-        self.assertEqual(lines[12].rstrip(), 'Derivatives:')
-        self.assertTrue('  con1 wrt x:' in lines[13])
-        self.assertTrue('  con1 wrt z:' in lines[14])
-        self.assertTrue('  con2 wrt x:' in lines[15])
-        self.assertTrue('  con2 wrt z:' in lines[16])
-        self.assertTrue('  obj wrt x:' in lines[17])
-        self.assertTrue('  obj wrt z:' in lines[18])
-        self.assertTrue('1.784' in lines[18])
+        self.assertEqual(lines[14].rstrip(), 'Derivatives:')
+        self.assertTrue('  con1 wrt x:' in lines[15])
+        self.assertTrue('  con1 wrt z:' in lines[16])
+        self.assertTrue('  con2 wrt x:' in lines[17])
+        self.assertTrue('  con2 wrt z:' in lines[18])
+        self.assertTrue('  obj wrt x:' in lines[19])
+        self.assertTrue('  obj wrt z:' in lines[20])
+        self.assertTrue('1.784' in lines[20])
 
     def test_root_derivs_array(self):
         prob = Problem()
@@ -615,10 +618,10 @@ class TestDumpRecorder(unittest.TestCase):
         sout = open(self.filename)
         lines = sout.readlines()
 
-        self.assertEqual(lines[12].rstrip(), 'Derivatives:')
-        self.assertTrue('9.61' in lines[13])
-        self.assertTrue('0.784' in lines[14])
-        self.assertTrue('1.077' in lines[15])
+        self.assertEqual(lines[14].rstrip(), 'Derivatives:')
+        self.assertTrue('9.61' in lines[15])
+        self.assertTrue('0.784' in lines[16])
+        self.assertTrue('1.077' in lines[17])
 
 
 if __name__ == "__main__":

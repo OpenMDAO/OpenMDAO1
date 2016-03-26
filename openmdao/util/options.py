@@ -1,5 +1,6 @@
 """ OptionsDictionary class definition. """
-from copy import deepcopy
+
+import warnings
 from six import iteritems
 
 class OptionsDictionary(object):
@@ -17,6 +18,7 @@ class OptionsDictionary(object):
 
     def __init__(self, read_only=True):
         self._options = {}
+        self._deprecations = {}
         self.read_only = read_only
 
     def add_option(self, name, value, lower=None, upper=None, values=None,
@@ -47,35 +49,80 @@ class OptionsDictionary(object):
             print("raising an error")
             raise ValueError("Option '{}' already exists".format(name))
 
-        self._options[name] = {
+        opt = {
             'val':    value,
-            'lower':    lower,
-            'upper':   upper,
+            'lower':  lower,
+            'upper':  upper,
             'values': values,
-            'desc' : desc,
+            'desc' :  desc,
         }
 
-        self._check(name, value)
+        self._check(name, value, opt)
+
+        self._options[name] = opt
+
+    def remove_option(self, name):
+        """
+        Removes the named option.  Does nothing if the option is not found.
+
+        Args
+        ----
+        name : str
+            Name of the option to remove.
+
+        """
+        try:
+            del self._options[name]
+        except KeyError:
+            pass
+
+    def _add_deprecation(self, oldname, newname):
+        """
+        For renamed options, maps the old name to the new name and prints
+        a DeprecationWarning on each get/set that uses the old name.
+
+        Args
+        ----
+        oldname : str
+            The deprecated name.
+
+        newname : str
+            The correct name.
+        """
+        if newname not in self._options:
+            raise NameError("The '%s' option was not found." % newname)
+        self._deprecations[oldname] = newname
 
     def __getitem__(self, name):
         try:
             return self._options[name]['val']
         except KeyError:
-            raise KeyError("Option '{}' has not been added".format(name))
+            try:
+                newname = self._deprecations[name]
+                _print_deprecation(name, newname)
+                return self._options[newname]['val']
+            except KeyError:
+                raise KeyError("Option '{}' has not been added".format(name))
 
     def __contains__(self, name):
-        return name in self._options
+        return name in self._options or name in self._deprecations
 
     def __setitem__(self, name, value):
         if name not in self._options:
-            raise KeyError("Option '{}' has not been added".format(name))
+            if name in self._deprecations:
+                newname = self._deprecations[name]
+                _print_deprecation(name, newname)
+                name = newname
+            else:
+                raise KeyError("Option '{}' has not been added".format(name))
 
-        self._check(name, value)
-        self._options[name]['val'] = value
+        opt = self._options[name]
+        self._check(name, value, opt)
+        opt['val'] = value
 
     def __setattr__(self, name, value):
         """ To prevent user error, disallow direct setting."""
-        if name in ['_options', 'read_only']:
+        if name in ['_options', 'read_only', '_deprecations']:
             super(OptionsDictionary, self).__setattr__(name, value)
         else:
             raise ValueError("Use dict-like access for option '{}'".format(name))
@@ -89,6 +136,10 @@ class OptionsDictionary(object):
             default value that was passed in.
         """
         if name in self._options:
+            return self._options[name]['val']
+        elif name in self._deprecations:
+            newname = self._deprecations[name]
+            _print_deprecation(name, newname)
             return self._options[name]['val']
         return default
 
@@ -104,21 +155,20 @@ class OptionsDictionary(object):
         """
         return ((name, opt['val']) for name, opt in iteritems(self._options))
 
-    def get_desc(self, name):
-        return self._options[name]['desc']
-
-    def _check(self, name, value):
+    def _check(self, name, value, opt):
         """ Type checking happens here. """
-        lower = self._options[name]['lower']
-        upper = self._options[name]['upper']
-        values = self._options[name]['values']
-        _type = type(self._options[name]['val'])
+
+        values = opt['values']
 
         if values is not None:
             # Only need to check if we are in the list if we are an enum
             self._check_values(name, value, values)
 
         else:
+            lower = opt['lower']
+            upper = opt['upper']
+            _type = type(opt['val'])
+
             self._check_type(name, value, _type)
 
             if lower is not None:
@@ -164,7 +214,7 @@ class OptionsDictionary(object):
         docstring = []
         for (name, val) in sorted(self.items()):
             docstring.extend(["    ", dictname, "['", name, "']",
-                                " :  ", type(val).__name__, "("])
+                                " : ", type(val).__name__, "("])
             if isinstance(val, str):
                 docstring.append("'%s'"%val)
             else:
@@ -176,3 +226,10 @@ class OptionsDictionary(object):
                 docstring.extend(["        ", desc, "\n"])
 
         return ''.join(docstring)
+
+def _print_deprecation(name, newname):
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn("Option '%s' is deprecated. Use '%s' instead." %
+                  (name, newname),
+                  DeprecationWarning,stacklevel=2)
+    warnings.simplefilter('ignore', DeprecationWarning)

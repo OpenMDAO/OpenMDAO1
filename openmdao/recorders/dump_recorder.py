@@ -123,6 +123,8 @@ class DumpRecorder(BaseRecorder):
         fmat = "Iteration Coordinate: {0:s}\n"
         write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
 
+        self._write_success_info(metadata)
+
         if self.options['record_params']:
             write("Params:\n")
             for param, val in sorted(iteritems(self._filter_vector(params,
@@ -143,6 +145,15 @@ class DumpRecorder(BaseRecorder):
 
         # Flush once per iteration to allow external scripts to process the data.
         self.out.flush()
+
+    def _write_success_info(self, metadata):
+        """Writes 'Iteration succeeded: yes/no', followed by the error msg
+        if latest iteration didn't succeed.
+        """
+        self.out.write("Iteration succeeded: %s\n" %
+                           'yes' if metadata['success'] else 'no')
+        if not metadata['success']:
+            self.out.write("Error msg: %s\n" % metadata['msg'])
 
     def record_derivatives(self, derivs, metadata):
         """Writes the derivatives that were calculated for the driver.
@@ -165,6 +176,8 @@ class DumpRecorder(BaseRecorder):
 
         fmat = "Iteration Coordinate: {0:s}/Derivs\n"
         write(fmat.format(format_iteration_coordinate(iteration_coordinate)))
+
+        self._write_success_info(metadata)
 
         write("Derivatives:\n")
         if isinstance(derivs, dict):

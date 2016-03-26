@@ -95,6 +95,8 @@ class SqliteRecorder(BaseRecorder):
         group_name = format_iteration_coordinate(iteration_coordinate)
 
         data['timestamp'] = timestamp
+        data['success'] = metadata['success']
+        data['msg'] = metadata['msg']
 
         if self.options['record_params']:
             data['Parameters'] = self._filter_vector(params, 'p', iteration_coordinate)
@@ -127,6 +129,8 @@ class SqliteRecorder(BaseRecorder):
         group_name = '%s/derivs' % group_name
 
         data['timestamp'] = timestamp
+        data['success'] = metadata['success']
+        data['msg'] = metadata['msg']
         data['Derivatives'] = derivs
 
         self.out[group_name] = data

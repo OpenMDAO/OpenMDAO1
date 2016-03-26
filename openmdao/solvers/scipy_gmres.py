@@ -7,11 +7,12 @@ from six import iteritems
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.solvers.solver_base import LinearSolver
+from openmdao.core.system import AnalysisError
+from openmdao.solvers.solver_base import MultLinearSolver
 from collections import OrderedDict
 
 
-class ScipyGMRES(LinearSolver):
+class ScipyGMRES(MultLinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so it should never be
     used in an MPI setting. A preconditioner can be specified by placing
     another linear solver into `self.preconditioner`.
@@ -20,6 +21,8 @@ class ScipyGMRES(LinearSolver):
     -------
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each
         iteration, set to 2 to print subiteration residuals as well.
@@ -127,16 +130,19 @@ class ScipyGMRES(LinearSolver):
             self.system = None
 
             if info > 0:
-                msg = "Solve in '{}': gmres failed to converge " \
-                                      "after {} iterations"
-                print(msg.format(system.name, options['maxiter']))
+                msg = "Solve in '%s': ScipyGMRES failed to converge " \
+                          "after %d iterations" % (system.pathname,
+                                                   self.iter_count)
                 #logger.error(msg, system.name, info)
+                if self.options['err_on_maxiter']:
+                    raise AnalysisError(msg)
+                print(msg)
                 msg = 'FAILED to converge after max iterations'
             elif info < 0:
-                msg = "ERROR in solve in '{}': gmres failed"
-                print(msg.format(system.name))
+                msg = "ERROR in solve in '{}': gmres failed".format(system.pathname)
+                raise RuntimeError(msg)
                 #logger.error(msg, system.name)
-                msg = 'ERROR returned from GMRES'
+                #msg = 'ERROR returned from GMRES'
             else:
                 msg = 'Converged'
 
@@ -148,44 +154,7 @@ class ScipyGMRES(LinearSolver):
 
             #print(system.name, 'Linear solution vec', d_unknowns)
 
-
         return unknowns_mat
-
-    def mult(self, arg):
-        """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
-        system.
-
-        Args
-        ----
-        arg : ndarray
-            Incoming vector
-
-        Returns
-        -------
-        ndarray : Matrix vector product of arg with jacobian
-        """
-
-        system = self.system
-        mode = self.mode
-
-        voi = self.voi
-        if mode == 'fwd':
-            sol_vec, rhs_vec = system.dumat[voi], system.drmat[voi]
-        else:
-            sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
-
-        # Set incoming vector
-        sol_vec.vec[:] = arg
-
-        # Start with a clean slate
-        rhs_vec.vec[:] = 0.0
-        system.clear_dparams()
-
-        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
-
-        #print("arg", arg)
-        #print("result", rhs_vec.vec)
-        return rhs_vec.vec
 
     def _precon(self, arg):
         """ GMRES Callback: applies a preconditioner by calling

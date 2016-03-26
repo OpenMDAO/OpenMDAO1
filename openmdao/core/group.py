@@ -491,8 +491,6 @@ class Group(System):
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata,
                                                        self._probdata, comm)
-            self.states = set(n for n, m in iteritems(self.unknowns)
-                                if 'state' in m and m['state'])
             self.resids = impl.create_src_vecwrapper(self._sysdata,
                                                      self._probdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata,
@@ -519,6 +517,9 @@ class Group(System):
                               relevance=self._probdata.relevance,
                               var_of_interest=None, store_byobjs=True,
                               alloc_complex=alloc_complex)
+
+            self.states = set(n for n, m in iteritems(self.unknowns)
+                                if 'state' in m and m['state'])
 
         # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
@@ -836,7 +837,7 @@ class Group(System):
         # Don't solve if user requests finite difference in this group.
         if self.fd_options['force_fd']:
             for voi in vois:
-                sol_vec[voi].vec[:] = rhs_vec[voi].vec
+                sol_vec[voi].vec[:] = -rhs_vec[voi].vec
                 return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
@@ -1278,7 +1279,7 @@ class Group(System):
             The name of a variable of interest.
 
         """
-            
+
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
         to_prom_name = self._sysdata.to_prom_name
         uacc = self.unknowns._dat

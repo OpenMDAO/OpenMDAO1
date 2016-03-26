@@ -12,6 +12,7 @@ from petsc4py import PETSc
 import numpy as np
 from collections import OrderedDict
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LinearSolver
 
 trace = os.environ.get("OPENMDAO_TRACE")
@@ -73,6 +74,8 @@ class PetscKSP(LinearSolver):
     -------
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
     options['maxiter'] :  int(100)
@@ -179,6 +182,8 @@ class PetscKSP(LinearSolver):
                                rtol=options['rtol'])
 
         unknowns_mat = OrderedDict()
+        maxiter = self.options['maxiter']
+
         for voi, rhs in iteritems(rhs_mat):
 
             sol_vec = np.zeros(rhs.shape)
@@ -201,15 +206,23 @@ class PetscKSP(LinearSolver):
             self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
 
+            if self.iter_count >= maxiter:
+                msg = 'FAILED to converge in %d iterations' % self.iter_count
+                fail = True
+            else:
+                fail = False
+
             if self.options['iprint'] > 0:
-                if self.iter_count == self.options['maxiter']:
-                    msg = 'FAILED to converge after hitting max iterations'
-                else:
+                if not fail:
                     msg = 'Converged'
-                    self.print_norm(self.print_name, system.pathname,
-                                    self.iter_count, 0, 0, msg=msg, solver='LN')
+                self.print_norm(self.print_name, system.pathname,
+                                self.iter_count, 0, 0, msg=msg, solver='LN')
 
             unknowns_mat[voi] = sol_vec
+
+            if fail and self.options['err_on_maxiter']:
+                raise AnalysisError("Solve in '%s': PetscKSP %s" %
+                                    (system.pathname, msg))
 
             #print system.name, 'Linear solution vec', d_unknowns
 
@@ -231,6 +244,8 @@ class PetscKSP(LinearSolver):
 
         system = self.system
         mode = self.mode
+
+        self.iter_count += 1
 
         voi = self.voi
         if mode == 'fwd':
