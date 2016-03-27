@@ -6,31 +6,70 @@
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <style>
 
+html, body {
+    overflow: hidden;
+}
+
 #src_container {
-    overflow: auto;
+    display: inline-block;
+    border-width: thin;
+    border-style: solid;
+    border-color: red;
+}
+
+#src_filter {
+    name: "Unknown group";
+}
+
+#sources {
+    border-width: thin;
+    border-style: solid;
+    border-color: #007e7e;
+    overflow-x: auto;
+    direction: rtl;
+}
+
+.src_label {
+    text-align: right;
+    fill: #2ca02c;
 }
 
 #tgt_container {
-    overflow: auto;
+    display: inline-block;
+    border-width: thin;
+    border-style: solid;
+    border-color: red;
+}
+
+#targets {
+    border-width: thin;
+    border-style: solid;
+    border-color: #007e7e;
+    overflow-x: auto;
+    direction: ltr;
+}
+
+#tgt_filter {
+    name: "Param group";
+}
+
+.tgt_label {
+    fill: #d62728;
+}
+
+select {
+    size: 10;
 }
 
 ul {
     list-style-type: none;
+    display: inline-block;
+    overflow: auto;
 }
 
 li {
   font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
   fill: #bbb;
-}
-
-.src_label {
-    text-anchor: end;
-    fill: #2ca02c;
-}
-
-.tgt_label {
-    text-anchor: start;
-    fill: #d62728;
 }
 
 </style>
@@ -42,90 +81,79 @@ var data = <connection_data>;
 
 window.onload = function() {
 
-    var w=window.innerWidth, h=window.innerHeight;
+    var w=window.innerWidth, h=window.innerHeight-100;
 
     var srcs = data.srcs;
     var targets = data.targets;
-    var link_data = data.links;
-    var nodes = {};
+    var tgt2src = data.tgt2src;
+    var src2tgts = data.src2tgts;
+    var src_groups = data.src_groups;
+    var tgt_groups = data.tgt_groups;
 
-    d3.select("#src_vars")
+    var src_filter = d3.select("#src_filter")
+        .selectAll("option")
+        .data(src_groups)
+        .enter()
+        .append("option")
+        .text(function(d, i){ return d.name})
+
+    var tgt_filter = d3.select("#tgt_filter")
+        .selectAll("option")
+        .data(tgt_groups)
+        .enter()
+        .append("option")
+        .text(function(d, i){ return d.name})
+
+    var src_list = d3.select("#src_list")
         .selectAll("li")
         .data(srcs)
-        .enter().append("li")
+        .enter()
+        .append("li")
         .attr("class", "node_label")
         .attr("class", "src_label")
 		.text(function(d,i){ return d.name });
 
-    //var text_height = d3.select('.src_label').node().getBBox().height;
-    //var left_width = left_labels.node().getBBox().width;
-
-    // d3.selectAll('.left_label')
-    //     .attr('x', function(d, i) { return left_width })
-    //     .attr('y', function(d, i) { return i*text_height })
-    //     .each(function (d, i) {
-    //         nodes[d.name].x = left_width;
-    //         nodes[d.name].y = i*text_height;
-    //     });
-
-    d3.select("#tgt_vars")
+    var tgt_list = d3.select("#tgt_list")
         .selectAll("li")
         .data(targets)
-        .enter().append("li")
+        .enter()
+        .append("li")
         .attr("class", "node_label")
         .attr("class", "tgt_label")
 		.text(function(d,i){ return d.name });
 
-    // var right_width = right_labels.node().getBBox().width;
-    //
-    // d3.selectAll('.right_label')
-    //     .attr('x', function(d, i) { return w - right_width; })
-    //     .each(function (d, i) {
-    //         nodes[d.name].x = w-right_width;
-    //         nodes[d.name].y = i*text_height;
-    //     });
+    d3.selectAll("ul")
+        .style("height", h+"px");
+}
 
-    // var left_height = d3.select('#left_labels').node().getBBox().height
-    // var right_height = d3.select('#right_labels').node().getBBox().height
-    // var max_height = 0;
-    //
-    // if (left_height > right_height) {
-    //     max_height = left_height;
-    // }
-    // else {
-    //     max_height = right_height;
-    // }
-    //
-    // var svg = d3.select("svg")
-    //     .style("height", max_height + "px")
-    //     .style("width", w + "px");
+function src_group_changed() {
+    var selectBox = document.getElementById("src_filter");
+    var selectedValue = selectBox.options[selectBox.selectedIndex].value;
+    alert(selectedValue)
+}
 
-    // var links = d3.select("#center_lines").selectAll(".link")
-    //     .data(link_data)
-    //   .enter().append("path")
-    //     .attr("class", "link")
-    //     .attr("d", diagonal);
-
+function tgt_group_changed() {
+    var selectBox = document.getElementById("tgt_filter");
+    var selectedValue = selectBox.options[selectBox.selectedIndex].value;
+    alert(selectedValue)
 }
 
 </script>
-<div id="connections">
-    <div id="sources">
-        <select id="src_filter">
+    <div id="src_container">
+        <select onchange="src_group_changed()" id="src_filter">
         </select>
-        <div id="src_container">
-            <ul id="src_vars">
+        <div id="sources">
+            <ul id="src_list">
             </ul>
         </div>
     </div>
-    <div id="targets">
-        <select id="tgt_filter">
+    <div id="tgt_container">
+        <select onchange="tgt_group_changed()" id="tgt_filter">
         </select>
-        <div id="tgt_container">
-            <ul id="tgt_vars">
+        <div id="targets">
+            <ul id="tgt_list">
             </ul>
         </div>
     </div>
-</div>
 </body>
 </html>

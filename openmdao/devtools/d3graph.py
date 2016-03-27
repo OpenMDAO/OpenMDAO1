@@ -79,23 +79,37 @@ def view_graph(system, viewer='connections',
         Defaults to True.
     """
     connections = system._probdata.connections
-    srcs = []
-    targets = []
-    links = []
-    seen = set()
+    tgt2src = {}
+    src2tgts = {}
+
     for t, (s, _) in iteritems(connections):
-        targets.append({'name': t})
-        if s not in seen:
-            seen.add(s)
-            srcs.append({'name': s})
+        tgt2src[t] = s
+        if s not in src2tgts:
+            src2tgts[s] = [t]
+        else:
+            src2tgts[s].append(t)
 
-    srcs = sorted(srcs)
-    targets = sorted(targets)
+    src_groups = set()
+    tgt_groups = set()
+    for s in src2tgts:
+        parts = s.split('.')
+        for i in range(len(parts)):
+            src_groups.add('.'.join(parts[:i]))
 
-    for t, (s,_) in iteritems(connections):
-        links.append({'source': s, 'target': t})
+    for t in tgt2src:
+        parts = t.split('.')
+        for i in range(len(parts)):
+            tgt_groups.add('.'.join(parts[:i]))
 
-    data = { 'srcs': srcs, 'targets': targets, 'links': links }
+    data = {
+        'srcs': sorted({'name':n} for n in src2tgts),
+        'targets': sorted({'name':n} for n in tgt2src),
+        'tgt2src': tgt2src,
+        'src2tgts': src2tgts,
+        'src_groups': [{'name':n} for n in sorted(src_groups)],
+        'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
+    }
+
     viewer += '.html'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
