@@ -62,8 +62,12 @@ ul {
 }
 
 li {
-  font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font: 300 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
   fill: #bbb;
+}
+
+.node--select {
+  font-weight: 700;
 }
 
 </style>
@@ -75,6 +79,7 @@ var data = <connection_data>;
 
 var srcs = data.srcs;
 var targets = data.targets;
+var nodes = data.srcs + data.targets;
 var tgt2src = data.tgt2src;
 var src2tgts = data.src2tgts;
 var src_groups = data.src_groups;
@@ -117,16 +122,27 @@ function fill_vars(selector, vlist, prefix, klass, clickfunc) {
         .append("li")
         .filter(function(d){return d.name.startsWith(prefix)})
         .attr("class", klass)
+        .attr("class", "node")
         .on("click", clickfunc)
 		.text(function(d,i){ return d.name });
 }
 
 function on_src_click(d) {
-    alert(d.name)
+    d3.selectAll(".node")
+        .classed("node--select", function(n) { return (n.name === d.name); });
+
+    fill_vars("#tgt_list", src2tgts[d.name], "", "tgt_label", on_tgt_click);
 }
 
 function on_tgt_click(d) {
-    alert(d.name)
+    d3.selectAll(".node")
+        .classed("node--select", function(n) { return (n.name === d.name); });
+
+    var src = tgt2src[d.name];
+    console.log(src)
+    fill_vars("#src_list", [src], "", "src_label", on_src_click);
+    fill_vars("#tgt_list", src2tgts[src.name], "", "tgt_label", on_tgt_click);
+
 }
 
 function src_group_changed() {

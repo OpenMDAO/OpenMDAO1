@@ -83,11 +83,11 @@ def view_graph(system, viewer='connections',
     src2tgts = {}
 
     for t, (s, _) in iteritems(connections):
-        tgt2src[t] = s
+        tgt2src[t] = {"name": s}
         if s not in src2tgts:
-            src2tgts[s] = [t]
+            src2tgts[s] = [{"name": t}]
         else:
-            src2tgts[s].append(t)
+            src2tgts[s].append({"name": t})
 
     src_groups = set()
     tgt_groups = set()
