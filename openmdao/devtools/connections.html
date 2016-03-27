@@ -29,11 +29,6 @@ html, body {
     direction: rtl;
 }
 
-.src_label {
-    text-align: right;
-    fill: #2ca02c;
-}
-
 #tgt_container {
     display: inline-block;
     border-width: thin;
@@ -51,10 +46,6 @@ html, body {
 
 #tgt_filter {
     name: "Param group";
-}
-
-.tgt_label {
-    fill: #d62728;
 }
 
 select {
@@ -79,16 +70,16 @@ li {
 
 var data = <connection_data>;
 
+var srcs = data.srcs;
+var targets = data.targets;
+var tgt2src = data.tgt2src;
+var src2tgts = data.src2tgts;
+var src_groups = data.src_groups;
+var tgt_groups = data.tgt_groups;
+
 window.onload = function() {
 
     var w=window.innerWidth, h=window.innerHeight-100;
-
-    var srcs = data.srcs;
-    var targets = data.targets;
-    var tgt2src = data.tgt2src;
-    var src2tgts = data.src2tgts;
-    var src_groups = data.src_groups;
-    var tgt_groups = data.tgt_groups;
 
     var src_filter = d3.select("#src_filter")
         .selectAll("option")
@@ -104,38 +95,54 @@ window.onload = function() {
         .append("option")
         .text(function(d, i){ return d.name})
 
-    var src_list = d3.select("#src_list")
-        .selectAll("li")
-        .data(srcs)
-        .enter()
-        .append("li")
-        .attr("class", "node_label")
-        .attr("class", "src_label")
-		.text(function(d,i){ return d.name });
-
-    var tgt_list = d3.select("#tgt_list")
-        .selectAll("li")
-        .data(targets)
-        .enter()
-        .append("li")
-        .attr("class", "node_label")
-        .attr("class", "tgt_label")
-		.text(function(d,i){ return d.name });
+    fill_vars("#src_list", srcs, "");
+    fill_vars("#tgt_list", targets, "");
 
     d3.selectAll("ul")
         .style("height", h+"px");
 }
 
+function fill_vars(selector, vlist, prefix) {
+    // first, clear out old stuff
+    d3.select(selector)
+        .selectAll("li")
+        .remove();
+
+    d3.select(selector).selectAll("li")
+        .data(vlist)
+        .enter()
+        .append("li")
+        .filter(function(d){return d.name.startsWith(prefix)})
+		.text(function(d,i){ return d.name });
+}
+
+function fill_sources(slist, prefix) {
+    // first, clear out old stuff
+    var src_list = d3.select("#src_list")
+        .selectAll("li")
+        .remove();
+
+    d3.select("#src_list").selectAll("li")
+        .data(slist)
+        .enter()
+        .append("li")
+        .filter(function(d){return d.name.startsWith(prefix)})
+        .attr("class", "node_label")
+        .attr("class", "src_label")
+		.text(function(d,i){ return d.name });
+}
+
+
 function src_group_changed() {
     var selectBox = document.getElementById("src_filter");
-    var selectedValue = selectBox.options[selectBox.selectedIndex].value;
-    alert(selectedValue)
+    var group = selectBox.options[selectBox.selectedIndex].value;
+    fill_vars("#src_list", srcs, group);
 }
 
 function tgt_group_changed() {
     var selectBox = document.getElementById("tgt_filter");
-    var selectedValue = selectBox.options[selectBox.selectedIndex].value;
-    alert(selectedValue)
+    var group = selectBox.options[selectBox.selectedIndex].value;
+    fill_vars("#tgt_list", targets, group);
 }
 
 </script>
