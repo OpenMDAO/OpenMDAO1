@@ -29,6 +29,9 @@ html, body {
     direction: rtl;
 }
 
+.src_label {
+}
+
 #tgt_container {
     display: inline-block;
     border-width: thin;
@@ -95,14 +98,14 @@ window.onload = function() {
         .append("option")
         .text(function(d, i){ return d.name})
 
-    fill_vars("#src_list", srcs, "");
-    fill_vars("#tgt_list", targets, "");
+    fill_vars("#src_list", srcs, "", "src_label", on_src_click);
+    fill_vars("#tgt_list", targets, "", "tgt_label", on_tgt_click);
 
     d3.selectAll("ul")
         .style("height", h+"px");
 }
 
-function fill_vars(selector, vlist, prefix) {
+function fill_vars(selector, vlist, prefix, klass, clickfunc) {
     // first, clear out old stuff
     d3.select(selector)
         .selectAll("li")
@@ -113,36 +116,29 @@ function fill_vars(selector, vlist, prefix) {
         .enter()
         .append("li")
         .filter(function(d){return d.name.startsWith(prefix)})
+        .attr("class", klass)
+        .on("click", clickfunc)
 		.text(function(d,i){ return d.name });
 }
 
-function fill_sources(slist, prefix) {
-    // first, clear out old stuff
-    var src_list = d3.select("#src_list")
-        .selectAll("li")
-        .remove();
-
-    d3.select("#src_list").selectAll("li")
-        .data(slist)
-        .enter()
-        .append("li")
-        .filter(function(d){return d.name.startsWith(prefix)})
-        .attr("class", "node_label")
-        .attr("class", "src_label")
-		.text(function(d,i){ return d.name });
+function on_src_click(d) {
+    alert(d.name)
 }
 
+function on_tgt_click(d) {
+    alert(d.name)
+}
 
 function src_group_changed() {
     var selectBox = document.getElementById("src_filter");
     var group = selectBox.options[selectBox.selectedIndex].value;
-    fill_vars("#src_list", srcs, group);
+    fill_vars("#src_list", srcs, group, "src_label", on_src_click);
 }
 
 function tgt_group_changed() {
     var selectBox = document.getElementById("tgt_filter");
     var group = selectBox.options[selectBox.selectedIndex].value;
-    fill_vars("#tgt_list", targets, group);
+    fill_vars("#tgt_list", targets, group, "tgt_label", on_tgt_click);
 }
 
 </script>
