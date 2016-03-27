@@ -130,19 +130,18 @@ function fill_vars(selector, vlist, prefix, klass, clickfunc) {
 function on_src_click(d) {
     d3.selectAll(".node")
         .classed("node--select", function(n) { return (n.name === d.name); });
-
+    reset_select("#tgt_filter");
     fill_vars("#tgt_list", src2tgts[d.name], "", "tgt_label", on_tgt_click);
 }
 
 function on_tgt_click(d) {
+    var src = tgt2src[d.name];
     d3.selectAll(".node")
         .classed("node--select", function(n) { return (n.name === d.name); });
 
-    var src = tgt2src[d.name];
-    console.log(src)
+    reset_select("#src_filter");
     fill_vars("#src_list", [src], "", "src_label", on_src_click);
-    fill_vars("#tgt_list", src2tgts[src.name], "", "tgt_label", on_tgt_click);
-
+    //fill_vars("#tgt_list", src2tgts[src.name], "", "tgt_label", on_tgt_click);
 }
 
 function src_group_changed() {
@@ -155,6 +154,13 @@ function tgt_group_changed() {
     var selectBox = document.getElementById("tgt_filter");
     var group = selectBox.options[selectBox.selectedIndex].value;
     fill_vars("#tgt_list", targets, group, "tgt_label", on_tgt_click);
+}
+
+function reset_select(selector) {
+    var options = document.querySelectorAll(selector+" option");
+    for (var i = 0, l = options.length; i < l; i++) {
+        options[i].selected = options[i].defaultSelected;
+    }
 }
 
 </script>
