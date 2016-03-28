@@ -215,6 +215,14 @@ class NonLinearSolver(SolverBase):
         each iteration, set to 2 to print subiteration residuals as well.
     """
 
+    def __init__(self):
+        """ Initialize the default supports for nl solvers."""
+        super(NonLinearSolver, self).__init__()
+
+        # What this solver supports
+        self.supports = OptionsDictionary(read_only=True)
+        self.supports.add_option('uses_derivatives', False)
+
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
 
