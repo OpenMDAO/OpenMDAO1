@@ -10,7 +10,7 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
     LinearGaussSeidel
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
-
+from openmdao.util.options import OptionsDictionary
 
 # check that pyoptsparse is installed
 # if it is, try to use SNOPT but fall back to SLSQP
@@ -290,6 +290,9 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         assert_rel_error(self, J['con1.c']['p2.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p1.x'], .0, 1e-3)
         assert_rel_error(self, J['con2.c']['p2.x'], -3.0, 1e-3)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         prob.root.ln_solver.options['mode'] = 'fwd'
         prob.setup(check=False)

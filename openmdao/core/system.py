@@ -103,12 +103,14 @@ class System(object):
 
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
-                       desc="Set to True to finite difference this system.")
+                       desc="Set to True to finite difference this system.",
+                       lock_on_setup=True)
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central', 'complex_step'],
                        desc="Finite difference mode. (forward, backward, central) "
                        "You can also set to 'complex_step' to peform the complex "
-                       "step method if your components support it.")
+                       "step method if your components support it.",
+                       lock_on_setup=True)
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
@@ -118,7 +120,8 @@ class System(object):
                        values=[None, 'forward', 'backward', 'central', 'complex_step'],
                        desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
                        " During check_partial_derivatives, you can optionally do a "
-                       "second finite difference with a different mode.")
+                       "second finite difference with a different mode.",
+                       lock_on_setup=True)
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called even though you are using FD.')
 

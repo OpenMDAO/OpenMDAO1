@@ -12,8 +12,8 @@ from openmdao.solvers.solver_base import MultLinearSolver
 
 class DirectSolver(MultLinearSolver):
     """ OpenMDAO LinearSolver that explicitly solves the linear system using
-    linalg.solve. The user can choose to have the jacobian assemblled
-    directly or throuugh matrix-vector product.
+    linalg.solve. The user can choose to have the jacobian assembled
+    directly or through matrix-vector product.
 
     Options
     -------
@@ -40,7 +40,9 @@ class DirectSolver(MultLinearSolver):
         self.options.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
-                       "let OpenMDAO determine the best mode.")
+                       "let OpenMDAO determine the best mode.",
+                       lock_on_setup=True)
+
         self.options.add_option('jacobian_method', 'MVP', values=['MVP', 'assemble'],
                                 desc="Method to assemble the jacobian to solve. " +
                                 "Select 'MVP' to build the Jacobian by calling " +

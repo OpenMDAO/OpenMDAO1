@@ -7,6 +7,7 @@ import sys
 import json
 import warnings
 import traceback
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
@@ -31,12 +32,13 @@ from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
-from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
+from openmdao.util.options import OptionsDictionary
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
+
 
 class _ProbData(object):
     """
@@ -70,24 +72,6 @@ class Problem(object):
     comm : an MPI communicator (real or fake), optional
         A communicator that can be used for distributed operations when running
         under MPI. If not specified, the default "COMM_WORLD" will be used.
-
-    Options
-    -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
-        Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
-        Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
-        Set to True if you want linearize to be called even though you are using FD.
-
     """
 
     def __init__(self, root=None, driver=None, impl=None, comm=None):
@@ -113,6 +97,7 @@ class Problem(object):
             self.driver = driver
 
         self.pathname = ''
+
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -646,6 +631,9 @@ class Problem(object):
                 stream.write("%s\n" % err)
             raise RuntimeError(stream.getvalue())
 
+        # Lock any restricted options in the options dictionaries.
+        OptionsDictionary.locked = True
+
         # check for any potential issues
         if check or force_check:
             return self.check_setup(out_stream)
@@ -1053,8 +1041,19 @@ class Problem(object):
 
         return results
 
+    def pre_run_check(self):
+        """ Last chance for some checks. The checks that should be performed
+        here are those that would generate a cryptic error message. We can
+        raise a readable error for the user."""
+
+        # New message if you forget to run setup first.
+        if not self.root.fd_options.locked:
+            msg = "setup() must be called before running the model."
+            raise RuntimeError(msg)
+
     def run(self):
         """ Runs the Driver in self.driver. """
+        self.pre_run_check()
         if self.root.is_active():
             self.driver.run(self)
 
@@ -1071,6 +1070,7 @@ class Problem(object):
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
         the current design point. """
+        self.pre_run_check()
         root = self.root
         driver = self.driver
         if root.is_active():
@@ -1910,11 +1910,13 @@ class Problem(object):
 
                 # Cache old form so we can overide temporarily
                 save_form = opt['form']
+                OptionsDictionary.locked = False
                 opt['form'] = opt['extra_check_partials_form']
 
                 jac_fd2 = fd_func(params, unknowns, resids)
 
                 opt['form'] = save_form
+                OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
