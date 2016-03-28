@@ -1,12 +1,13 @@
 """ Unit test for the Problem class. """
 
-import unittest
 import sys
+import unittest
+import warnings
 
-import numpy as np
 from six import text_type, PY3
 from six.moves import cStringIO
-import warnings
+
+import numpy as np
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          LinearGaussSeidel, ScipyGMRES, Driver
@@ -14,6 +15,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
+from openmdao.util.options import OptionsDictionary
 
 if PY3:
     def py3fix(s):
@@ -21,6 +23,7 @@ if PY3:
 else:
     def py3fix(s):
         return s
+
 
 class TestProblem(unittest.TestCase):
 
@@ -615,8 +618,8 @@ class TestProblem(unittest.TestCase):
 
         try:
             prob.run()
-        except AttributeError as err:
-            msg = "'unknowns' has not been initialized, setup() must be called before 'x' can be accessed"
+        except RuntimeError as err:
+            msg = "setup() must be called before running the model."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -766,7 +769,11 @@ class TestProblem(unittest.TestCase):
         #else:
             #self.fail('Exception expected')
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         root.ln_solver.options['mode'] = 'fwd'
+
         mode = prob._check_for_parallel_derivs(['a', 'b'], ['x'], False, False)
         self.assertEqual(mode, 'fwd')
 
@@ -858,6 +865,67 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
         self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
+
+    def test_error_change_after_setup(self):
+
+        # Tests error messages for the 5 options that we should never change
+        # after setup is called.
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        with self.assertRaises(RuntimeError) as err:
+            top.root.fd_options['form'] = 'complex_step'
+
+        expected_msg = "The 'form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        with self.assertRaises(RuntimeError) as err:
+            top.root.fd_options['extra_check_partials_form'] = 'complex_step'
+
+        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        with self.assertRaises(RuntimeError) as err:
+            top.root.fd_options['force_fd'] = True
+
+        expected_msg = "The 'force_fd' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        with self.assertRaises(RuntimeError) as err:
+            top.root.ln_solver.options['mode'] = 'rev'
+
+        expected_msg = "The 'mode' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        # Not permitted to change this
+        with self.assertRaises(RuntimeError) as err:
+            top.root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        expected_msg = "The 'single_voi_relevance_reduction' option cannot be changed after setup."
+        self.assertEqual(str(err.exception), expected_msg)
+
 
 class TestCheckSetup(unittest.TestCase):
 

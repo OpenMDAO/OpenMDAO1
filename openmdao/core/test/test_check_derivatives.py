@@ -13,6 +13,7 @@ from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 
 class TestProblemCheckPartials(unittest.TestCase):
@@ -372,10 +373,11 @@ class TestProblemFullFD(unittest.TestCase):
 
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
-        prob.setup(check=False)
-        prob.run()
 
         prob.root.fd_options['force_fd'] = True
+
+        prob.setup(check=False)
+        prob.run()
 
         indep_list = ['sub1.comp1.x1']
         unknown_list = ['comp7.y1']
@@ -383,7 +385,11 @@ class TestProblemFullFD(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
+
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
@@ -394,10 +400,10 @@ class TestProblemFullFD(unittest.TestCase):
         par = root.add('par', ParallelGroup())
         par.add('sub', ConvergeDivergeGroups())
 
+        prob.root.fd_options['force_fd'] = True
+
         prob.setup(check=False)
         prob.run()
-
-        prob.root.fd_options['force_fd'] = True
 
         # Make sure we don't get a key error.
         data = prob.check_total_derivatives(out_stream=None)

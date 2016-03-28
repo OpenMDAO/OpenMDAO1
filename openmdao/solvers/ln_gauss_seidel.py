@@ -42,13 +42,15 @@ class LinearGaussSeidel(LinearSolver):
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
-                       "let OpenMDAO determine the best mode.")
+                       "let OpenMDAO determine the best mode.",
+                       lock_on_setup=True)
         opt.add_option('single_voi_relevance_reduction',
                         False, values=[True, False],
                         desc="If True, use relevance reduction even for"
                               " individual variables of interest. This "
                               "may increase performance but will use "
-                              "more memory.")
+                              "more memory.",
+                        lock_on_setup=True)
 
         self.print_name = 'LN_GS'
 
