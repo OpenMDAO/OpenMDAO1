@@ -411,7 +411,7 @@ class Component(System):
                                    fref.fname, self.pathname))
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, impl=None):
+                       top_unknowns=None, impl=None, alloc_derivs=True):
         """
         Set up local `VecWrappers` to store this component's variables.
 
@@ -429,6 +429,9 @@ class Component(System):
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
+
+        alloc_derivs : bool(True)
+            If True, allocate the derivative vectors.
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()

@@ -366,7 +366,7 @@ class Group(System):
                 self._local_subsystems.append(sub)
 
     def _setup_vectors(self, param_owners, parent=None,
-                       top_unknowns=None, impl=None):
+                       top_unknowns=None, impl=None, alloc_derivs=True):
         """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
@@ -385,6 +385,9 @@ class Group(System):
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
             `DataTransfer` objects.
+
+        alloc_derivs : bool(True)
+            If True, allocate the derivative vectors.
         """
         self._sysdata.comm = self.comm
 
@@ -416,6 +419,10 @@ class Group(System):
             max_usize, self._shared_u_offsets = \
                 self._get_shared_vec_info(self._unknowns_dict)
 
+            # Only allocate deriv vectors if needed.
+            if not alloc_derivs:
+                max_usize = max_psize = 0
+
             # other vecs will be sub-sliced from this one
             self._shared_du_vec = np.zeros(max_usize)
             self._shared_dr_vec = np.zeros(max_usize)
@@ -424,6 +431,11 @@ class Group(System):
             self._create_vecs(my_params, voi=None, impl=impl)
             top_unknowns = self.unknowns
         else:
+
+            # Only allocate deriv vectors if needed.
+            if not alloc_derivs:
+                max_psize = 0
+
             self._shared_dp_vec = np.zeros(max_psize)
 
             # map promoted name in parent to corresponding promoted name in this view
@@ -456,7 +468,7 @@ class Group(System):
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
-                               impl=self._impl)
+                               impl=self._impl, alloc_derivs=alloc_derivs)
 
 
         # now that all of the vectors and subvecs are allocated, calculate
