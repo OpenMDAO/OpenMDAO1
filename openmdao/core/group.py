@@ -448,7 +448,7 @@ class Group(System):
         self._owning_ranks = self._get_owning_ranks()
         self._sysdata.owning_ranks = self._owning_ranks
 
-        self._setup_data_transfer(my_params, None)
+        self._setup_data_transfer(my_params, None, alloc_derivs)
 
         all_vois = set([None])
         if self._probdata.top_lin_gs:
@@ -463,7 +463,7 @@ class Group(System):
                         self._create_views(top_unknowns, parent, my_params,
                                            voi)
 
-                    self._setup_data_transfer(my_params, voi)
+                    self._setup_data_transfer(my_params, voi, alloc_derivs)
 
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
@@ -1274,7 +1274,7 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
-    def _setup_data_transfer(self, my_params, var_of_interest):
+    def _setup_data_transfer(self, my_params, var_of_interest, alloc_derivs):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
         connections that involve parameters for which this `Group`
@@ -1290,6 +1290,8 @@ class Group(System):
         var_of_interest : str or None
             The name of a variable of interest.
 
+        alloc_derivs : bool
+            If True, deriv vecs have been allocated.
         """
 
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
@@ -1372,6 +1374,13 @@ class Group(System):
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
+        if alloc_derivs:
+            uvec = self.dumat[var_of_interest]
+            pvec = self.dpmat[var_of_interest]
+        else:
+            uvec = self.unknowns
+            pvec = self.params
+
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataTransfer
@@ -1393,15 +1402,13 @@ class Group(System):
                     if flats or byobjs:
                         # create a 'partial' scatter to each subsystem
                         self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
-                            self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                        self.dpmat[var_of_interest],
+                            self._impl.create_data_xfer(uvec, pvec,
                                                         srcs, tgts, flats, byobjs,
                                                         modename[mode], self._sysdata)
 
             # add a full scatter for the current direction
             self._data_xfer[('', modename[mode], var_of_interest)] = \
-                self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                            self.dpmat[var_of_interest],
+                self._impl.create_data_xfer(uvec, pvec,
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
