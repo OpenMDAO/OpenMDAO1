@@ -55,10 +55,10 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
 
     return tree
 
-def view_graph(system, viewer='connections',
+def view_connections(system, viewer='connections',
                outfile='graph.html', show_browser=True):
     """
-    Generates a self-contained html file containing a graph viewer
+    Generates a self-contained html file containing a connection viewer
     of the specified type.  Optionally pops up a web browser to
     view the file.
 
@@ -68,8 +68,7 @@ def view_graph(system, viewer='connections',
         The root system for the desired tree.
 
     viewer : str, optional
-        The type of web viewer used to view the graph. Options are:
-        hier_edge_bundling.
+        The type of web viewer used to view the connections.
 
     outfile : str, optional
         The name of the output html file.  Defaults to 'graph.html'.
@@ -85,9 +84,9 @@ def view_graph(system, viewer='connections',
     for t, (s, _) in iteritems(connections):
         tgt2src[t] = {"name": s}
         if s not in src2tgts:
-            src2tgts[s] = [{"name": t}]
+            src2tgts[s] = {"src": s, "tgts": [{"name": t}]}
         else:
-            src2tgts[s].append({"name": t})
+            src2tgts[s]["tgts"].append({"name": t})
 
     src_groups = set()
     tgt_groups = set()
