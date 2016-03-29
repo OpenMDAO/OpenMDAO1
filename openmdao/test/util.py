@@ -142,12 +142,14 @@ def assert_no_force_fd(group):
     Parameters
     ----------
     group : OpenMDAO Group
-        The system which is recursively checked for the use of "force_fd=True".
+        The system which is recursively checked for the use of
+        `fd_options["force_fd"]=True`
 
     Raises
     ------
     AssertionError
-        If a subsystem of group is found to be using fd_options["force_fd=True"]
+        If a subsystem of group is found to be using
+        `fd_options["force_fd"]=True`
     """
     msg = "System {0} is using finite difference derivatives."
     for system in group.subsystems(recurse=True):
