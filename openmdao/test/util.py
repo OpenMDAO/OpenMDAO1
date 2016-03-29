@@ -151,6 +151,7 @@ def assert_no_force_fd(group):
         If a subsystem of group is found to be using
         `fd_options["force_fd"]=True`
     """
-    msg = "System {0} is using finite difference derivatives."
-    for system in group.subsystems(recurse=True, include_self=True):
-        assert not system.fd_options['force_fd'], msg.format(system.pathname)
+    subs = [s.pathname for s in group.subsystems(recurse=True, include_self=True)
+            if s.fd_options['force_fd']]
+    assert not subs, "One or more systems are using " \
+                     "fd_options['force_fd']=True: " + str(subs)
