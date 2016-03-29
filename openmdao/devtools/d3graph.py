@@ -78,15 +78,13 @@ def view_connections(system, viewer='connections',
         Defaults to True.
     """
     connections = system._probdata.connections
-    tgt2src = {}
     src2tgts = {}
 
     for t, (s, _) in iteritems(connections):
-        tgt2src[t] = {"name": s}
         if s not in src2tgts:
-            src2tgts[s] = {"src": s, "tgts": [{"name": t}]}
+            src2tgts[s] = [t]
         else:
-            src2tgts[s]["tgts"].append({"name": t})
+            src2tgts[s].append(t)
 
     src_groups = set()
     tgt_groups = set()
@@ -95,16 +93,13 @@ def view_connections(system, viewer='connections',
         for i in range(len(parts)):
             src_groups.add('.'.join(parts[:i]))
 
-    for t in tgt2src:
+    for t in connections:
         parts = t.split('.')
         for i in range(len(parts)):
             tgt_groups.add('.'.join(parts[:i]))
 
     data = {
-        'srcs': sorted({'name':n} for n in src2tgts),
-        'targets': sorted({'name':n} for n in tgt2src),
-        'tgt2src': tgt2src,
-        'src2tgts': src2tgts,
+        'src2tgts': [(s,ts) for s,ts in iteritems(src2tgts)],
         'src_groups': [{'name':n} for n in sorted(src_groups)],
         'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
     }

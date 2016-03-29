@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+<style>
+
+html, body {
+    overflow: hidden;
+}
+
+#tab_div {
+    overflow: auto;
+}
+
+#src_filter {
+    name: "Unknown group";
+}
+
+#tgt_filter {
+    name: "Param group";
+}
+
+#scroller {
+    overflow:scroll;
+    height:800px;
+}
+
+select {
+    size: 10;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+td {
+    font: 300 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    padding: 5px;
+    text-align: left;
+}
+
+th {
+    font: 700 16px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    padding: 5px;
+    text-align: left;
+}
+
+#conn_table {
+    width: 100%;
+}
+
+#inner_table {
+    width: 100%;
+}
+
+#filters {
+    width: 100%;
+}
+
+</style>
+</head>
+<body>
+<script type="text/javascript">
+
+var data = <connection_data>;
+
+var src2tgts = data.src2tgts;
+var src_groups = data.src_groups;
+var tgt_groups = data.tgt_groups;
+
+var src_prefix="", tgt_prefix="";
+
+window.onload = function() {
+
+    var w=window.innerWidth, h=window.innerHeight-100;
+
+    var src_filter = d3.select("#src_filter")
+        .selectAll("option")
+        .data(src_groups)
+        .enter()
+        .append("option")
+        .text(function(d, i){ return d.name})
+
+    var tgt_filter = d3.select("#tgt_filter")
+        .selectAll("option")
+        .data(tgt_groups)
+        .enter()
+        .append("option")
+        .text(function(d, i){ return d.name})
+
+    fill_vars();
+}
+
+function fill_vars() {
+    // first, clear out old stuff
+    d3.select("#inner_table").select("tbody")
+        .selectAll("tr")
+        .remove();
+
+    var i,j;
+    var tbl = d3.select('table');
+
+    var rows = [];
+    var cols = [];
+
+    for (i=0; i<src2tgts.length; i++) {
+        if (src2tgts[i][0].startsWith(src_prefix)) {
+            cols = [];
+            for (j=0; j<src2tgts[i][1].length; j++) {
+                if (src2tgts[i][1][j].startsWith(tgt_prefix)) {
+                    cols.push(src2tgts[i][1][j]);
+                }
+            }
+            if (cols.length > 0) {
+                rows.push({
+                    "Unknowns": src2tgts[i][0],
+                    "Params": cols[0],
+                    "len": cols.length
+                });
+                for (j=1; j<cols.length; j++) {
+                    rows.push({
+                        "Unknowns": "",
+                        "Params": cols[j],
+                        "len": cols.length
+                    });
+                }
+            }
+        }
+    }
+
+    var columns = ['Unknowns', 'Params']
+    tabulate(rows, columns);
+}
+
+// The table generation function
+function tabulate(data, columns) {
+    var table = d3.select("#inner_table"),
+        tbody = table.select("tbody");
+
+    // create a row for each object in the data
+    var rows = tbody.selectAll("tr")
+        .data(data)
+        .enter()
+        .append("tr");
+
+    // create a cell in each row for each column
+    var cells = rows.selectAll("td")
+        .data(function(row) {
+            return columns.map(function(column) {
+                return {column: column, value: row[column]};
+            });
+        })
+        .enter()
+        .append("td")
+        .html(function(d) { return d.value; });
+
+    return table;
+}
+
+function src_group_changed() {
+    var selectBox = document.getElementById("src_filter");
+    src_prefix = selectBox.options[selectBox.selectedIndex].value;
+    fill_vars();
+}
+
+function tgt_group_changed() {
+    var selectBox = document.getElementById("tgt_filter");
+    tgt_prefix = selectBox.options[selectBox.selectedIndex].value;
+    fill_vars();
+}
+
+</script>
+    <div id="filters">
+        <span>Unknowns Group:<select onchange="src_group_changed()" id="src_filter">
+        </select></span>
+        <span>Params Group:<select onchange="tgt_group_changed()" id="tgt_filter">
+        </select></span>
+    </div>
+    <h2>Connections</h2>
+        <table id="conn_table">
+         <thead>
+          <tr>
+            <th>Unknowns</th>
+            <th>Params</th>
+          </tr>
+         </thead>
+         <tbody>
+             <tr>
+                 <td colspan=2>
+                     <div id="scroller">
+                         <table id="inner_table">
+                             <tbody>
+                             </tbody>
+                         </table>
+                     </div>
+                 </td>
+             </tr>
+         </tbody>
+        </table>
+</body>
+</html>
