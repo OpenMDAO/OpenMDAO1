@@ -1349,6 +1349,7 @@ class System(object):
 
         pdict = self._params_dict
         conns = self.connections
+        to_prom_name = self._sysdata.to_prom_name
 
         p_conn = [p for p in pdict if p in conns]
         p_unconn = [p for p in pdict if p not in conns]
@@ -1369,9 +1370,14 @@ class System(object):
             print("-------------------------", file=stream)
 
         for param in p_unconn:
+            prom_param = to_prom_name[param]
             if param.startswith(name):
                 param = param[len(name):]
-            print(param)
+
+            if prom_param != param:
+                print("%s (%s))" % (param, prom_param))
+            else:
+                print(param)
 
         if len(p_outscope) == 0:
             print('')
