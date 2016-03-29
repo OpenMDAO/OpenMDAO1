@@ -3,7 +3,6 @@ system has multiple components."""
 
 import unittest
 
-
 from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 

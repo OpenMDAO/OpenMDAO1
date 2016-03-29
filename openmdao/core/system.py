@@ -103,12 +103,14 @@ class System(object):
 
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
-                       desc="Set to True to finite difference this system.")
+                       desc="Set to True to finite difference this system.",
+                       lock_on_setup=True)
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central', 'complex_step'],
                        desc="Finite difference mode. (forward, backward, central) "
                        "You can also set to 'complex_step' to peform the complex "
-                       "step method if your components support it.")
+                       "step method if your components support it.",
+                       lock_on_setup=True)
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
@@ -118,7 +120,8 @@ class System(object):
                        values=[None, 'forward', 'backward', 'central', 'complex_step'],
                        desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
                        " During check_partial_derivatives, you can optionally do a "
-                       "second finite difference with a different mode.")
+                       "second finite difference with a different mode.",
+                       lock_on_setup=True)
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called even though you are using FD.')
 
@@ -127,6 +130,12 @@ class System(object):
         self._num_par_fds = 1 # this will be >1 for ParallelFDGroup
         self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
                             # <= the number of parallel FDs
+
+
+        # This gets set to True when linearize is called. Solvers can set
+        # this to false and then monitor it so they know when, for example,
+        # to regenerate a Jacobian.
+        self._jacobian_changed = False
 
         self._reset() # initialize some attrs that are set during setup
 
@@ -776,6 +785,7 @@ class System(object):
                     if len(shape) < 2:
                         jc[key] = jc[key].reshape((shape[0], 1))
 
+        self._jacobian_changed = True
         return self._jacobian_cache
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):

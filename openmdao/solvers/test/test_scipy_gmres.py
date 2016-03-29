@@ -12,6 +12,7 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, DoubleArrayComp, \
                                        FanInGrouped, ArrayComp2D, FanOutAllGrouped
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 
 class TestScipyGMRES(unittest.TestCase):
@@ -395,6 +396,9 @@ class TestScipyGMRES(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
