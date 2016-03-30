@@ -10,50 +10,72 @@ html, body {
     overflow: hidden;
 }
 
-#src_filter {
-}
-
-#tgt_filter {
-}
-
 #scroller {
     overflow: auto;
-    height: 100%;
 }
 
 .prom_match {
-    
+
 }
 
 select {
     size: 10;
-    padding-left: 15px;
 }
 
-table, th, td {
-    border: 1px solid black;
-    border-collapse: collapse;
-    height: 100%;
+table {
+    font-family:Arial, Helvetica, sans-serif;
+    color:#black;
+	font-size:12px;
+	text-shadow: 1px 1px 0px #fff;
+	background:#eaebec;
+	margin:20px;
+	border:#ccc 1px solid;
+
+	-moz-border-radius:3px;
+	-webkit-border-radius:3px;
+	border-radius:3px;
+
+	-moz-box-shadow: 0 1px 2px #d1d1d1;
+	-webkit-box-shadow: 0 1px 2px #d1d1d1;
+	box-shadow: 0 1px 2px #d1d1d1;
 }
 
-td {
-    font: 300 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
-    padding: 5px;
-    text-align: left;
+table th {
+	padding:11px 15px 12px 15px;
+	border-top:1px solid #fafafa;
+	border-bottom:1px solid #e0e0e0;
+
+	background: #ededed;
 }
 
-th {
-    font: 700 16px "Helvetica Neue", Helvetica, Arial, sans-serif;
-    padding: 5px;
-    text-align: left;
+table td {
+	border-top: 1px solid #ffffff;
+	border-bottom:1px solid #e0e0e0;
+	border-left: 1px solid #e0e0e0;
+
+    background: #e6e6e6;
+}
+
+table tr.even td {
+    background: #f2f2f2;
+}
+
+table tr:hover td {
+	background: #f2f2f2;
 }
 
 #conn_table {
-    width: 100%;
+    width: 95%;
 }
 
 #filters {
     width: 100%;
+    margin-left: 20px;
+}
+
+h3 {
+    margin: 1px;
+    padding: 1px;
 }
 
 </style>
@@ -75,9 +97,6 @@ window.onresize = resize;
 
 window.onload = function() {
 
-    w=window.innerWidth;
-    h=window.innerHeight-150;
-
     var src_filter = d3.select("#src_filter")
         .selectAll("option")
         .data(src_groups)
@@ -96,17 +115,18 @@ window.onload = function() {
 }
 
 function resize() {
-    w=window.innerWidth;
-    h=window.innerHeight-150;
-
     fill_vars();
+}
+
+function window_height() {
+    return window.innerHeight-120;
 }
 
 function fill_vars() {
     var tbl = d3.select('table');
 
     d3.select("#scroller")
-         .style("height", h+"px");
+         .style("height", window_height()+"px");
 
     // first, clear out old stuff
     tbl.select("tbody")
@@ -156,7 +176,8 @@ function tabulate(data, columns) {
     var rows = tbody.selectAll("tr")
         .data(data)
         .enter()
-        .append("tr");
+        .append("tr")
+        .classed("even", function(d,i) { return i % 2 == 0; });
 
     // create a cell in each row for each column
     var cells = rows.selectAll("td")
@@ -185,20 +206,21 @@ function tgt_group_changed() {
 }
 
 </script>
-    <h2>Connections</h2>
     <div id="filters">
-        <span>Unknowns Group:<select onchange="src_group_changed()" id="src_filter">
-        </select>
-        <span>Params Group:<select onchange="tgt_group_changed()" id="tgt_filter">
-        </select></span>
+        <div>
+           <h3>Unknowns Group</h3>
+           <select id="src_filter" onchange="src_group_changed()"></select>
+       </div>
+       <div>
+            <h3>Params Group</h3>
+            <select id="tgt_filter" onchange="tgt_group_changed()"></select>
+       </div>
+   </div>
     <h2></h2>
     <div id="scroller">
         <table id="conn_table">
          <thead>
-          <tr>
-            <th>Unknowns</th>
-            <th>Params</th>
-          </tr>
+          <tr><th>Unknowns</th><th>Params</th></tr>
          </thead>
          <tbody>
          </tbody>
