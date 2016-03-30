@@ -54,6 +54,17 @@ table td {
 	border-left: 1px solid #e0e0e0;
 
     background: #e6e6e6;
+    text-align: center;
+}
+
+table td:first-child {
+	text-align: right;
+    padding-right: 10px;
+}
+
+table td:last-child {
+    text-align: left;
+    padding-left: 10px;
 }
 
 table tr.even td {
@@ -61,7 +72,7 @@ table tr.even td {
 }
 
 table tr:hover td {
-	background: #f2f2f2;
+	background: #ccffff;
 }
 
 #conn_table {
@@ -102,6 +113,7 @@ var data = <connection_data>;
 
 var src2tgts = data.src2tgts;
 var proms = data.proms;
+var units = data.units;
 var src_groups = data.src_groups;
 var tgt_groups = data.tgt_groups;
 
@@ -164,21 +176,23 @@ function fill_vars() {
             if (cols.length > 0) {
                 rows.push({
                     "Unknowns": src2tgts[i][0],
+                    "UUnits": units[src2tgts[i][0]],
+                    "PUnits": units[cols[0]],
                     "Params": cols[0],
-                    "len": cols.length
                 });
                 for (j=1; j<cols.length; j++) {
                     rows.push({
                         "Unknowns": "",
+                        "UUnits": "",
+                        "PUnits": units[cols[j]],
                         "Params": cols[j],
-                        "len": cols.length
                     });
                 }
             }
         }
     }
 
-    var columns = ['Unknowns', 'Params']
+    var columns = ['Unknowns', 'UUnits', 'PUnits', 'Params']
     tabulate(rows, columns);
 }
 
@@ -239,7 +253,7 @@ function tgt_group_changed() {
     <div id="scroller">
         <table id="conn_table">
          <thead>
-          <tr><th>Unknowns</th><th>Params</th></tr>
+          <tr><th>Unknowns</th><th colspan=2>Units</th><th>Params</th></tr>
          </thead>
          <tbody>
          </tbody>

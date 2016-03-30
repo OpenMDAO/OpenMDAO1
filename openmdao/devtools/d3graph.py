@@ -79,6 +79,8 @@ def view_connections(system, viewer='connections',
     """
     connections = system._probdata.connections
     src2tgts = {}
+    units = {n: m.get('units','') for n,m in chain(iteritems(system._unknowns_dict),
+                                                   iteritems(system._params_dict))}
 
     for t, (s, _) in iteritems(connections):
         if s not in src2tgts:
@@ -101,6 +103,7 @@ def view_connections(system, viewer='connections',
     data = {
         'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts))],
         'proms': system._sysdata.to_prom_name,
+        'units': units,
         'src_groups': [{'name':n} for n in sorted(src_groups)],
         'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
     }
