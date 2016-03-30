@@ -99,7 +99,8 @@ def view_connections(system, viewer='connections',
             tgt_groups.add('.'.join(parts[:i]))
 
     data = {
-        'src2tgts': [(s,ts) for s,ts in iteritems(src2tgts)],
+        'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts))],
+        'proms': system._sysdata.to_prom_name,
         'src_groups': [{'name':n} for n in sorted(src_groups)],
         'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
     }

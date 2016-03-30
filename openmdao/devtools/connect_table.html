@@ -10,30 +10,30 @@ html, body {
     overflow: hidden;
 }
 
-#tab_div {
-    overflow: auto;
-}
-
 #src_filter {
-    name: "Unknown group";
 }
 
 #tgt_filter {
-    name: "Param group";
 }
 
 #scroller {
-    overflow:scroll;
-    height:800px;
+    overflow: auto;
+    height: 100%;
+}
+
+.prom_match {
+    
 }
 
 select {
     size: 10;
+    padding-left: 15px;
 }
 
 table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
+    height: 100%;
 }
 
 td {
@@ -52,10 +52,6 @@ th {
     width: 100%;
 }
 
-#inner_table {
-    width: 100%;
-}
-
 #filters {
     width: 100%;
 }
@@ -68,14 +64,19 @@ th {
 var data = <connection_data>;
 
 var src2tgts = data.src2tgts;
+var proms = data.proms;
 var src_groups = data.src_groups;
 var tgt_groups = data.tgt_groups;
 
 var src_prefix="", tgt_prefix="";
+var w, h;
+
+window.onresize = resize;
 
 window.onload = function() {
 
-    var w=window.innerWidth, h=window.innerHeight-100;
+    w=window.innerWidth;
+    h=window.innerHeight-150;
 
     var src_filter = d3.select("#src_filter")
         .selectAll("option")
@@ -94,14 +95,25 @@ window.onload = function() {
     fill_vars();
 }
 
+function resize() {
+    w=window.innerWidth;
+    h=window.innerHeight-150;
+
+    fill_vars();
+}
+
 function fill_vars() {
+    var tbl = d3.select('table');
+
+    d3.select("#scroller")
+         .style("height", h+"px");
+
     // first, clear out old stuff
-    d3.select("#inner_table").select("tbody")
+    tbl.select("tbody")
         .selectAll("tr")
         .remove();
 
     var i,j;
-    var tbl = d3.select('table');
 
     var rows = [];
     var cols = [];
@@ -137,7 +149,7 @@ function fill_vars() {
 
 // The table generation function
 function tabulate(data, columns) {
-    var table = d3.select("#inner_table"),
+    var table = d3.select("#conn_table"),
         tbody = table.select("tbody");
 
     // create a row for each object in the data
@@ -150,7 +162,7 @@ function tabulate(data, columns) {
     var cells = rows.selectAll("td")
         .data(function(row) {
             return columns.map(function(column) {
-                return {column: column, value: row[column]};
+                return {column: column, "value": row[column]};
             });
         })
         .enter()
@@ -173,13 +185,14 @@ function tgt_group_changed() {
 }
 
 </script>
+    <h2>Connections</h2>
     <div id="filters">
         <span>Unknowns Group:<select onchange="src_group_changed()" id="src_filter">
-        </select></span>
+        </select>
         <span>Params Group:<select onchange="tgt_group_changed()" id="tgt_filter">
         </select></span>
-    </div>
-    <h2>Connections</h2>
+    <h2></h2>
+    <div id="scroller">
         <table id="conn_table">
          <thead>
           <tr>
@@ -188,17 +201,8 @@ function tgt_group_changed() {
           </tr>
          </thead>
          <tbody>
-             <tr>
-                 <td colspan=2>
-                     <div id="scroller">
-                         <table id="inner_table">
-                             <tbody>
-                             </tbody>
-                         </table>
-                     </div>
-                 </td>
-             </tr>
          </tbody>
         </table>
+    </div>
 </body>
 </html>
