@@ -73,6 +73,21 @@ table tr:hover td {
     margin-left: 20px;
 }
 
+#htable_container {
+    width: 100%;
+    display: table;
+    border-spacing: 10px;
+    margin-left: 10px;
+}
+
+#htable_row {
+    display: table-row;
+}
+
+.htable_data {
+    display: table-cell;
+}
+
 h3 {
     margin: 1px;
     padding: 1px;
@@ -206,16 +221,20 @@ function tgt_group_changed() {
 }
 
 </script>
-    <div id="filters">
-        <div>
-           <h3>Unknowns Group</h3>
-           <select id="src_filter" onchange="src_group_changed()"></select>
-       </div>
-       <div>
-            <h3>Params Group</h3>
-            <select id="tgt_filter" onchange="tgt_group_changed()"></select>
-       </div>
-   </div>
+    <header>
+        <div id="htable_container">
+            <div id="htable_row">
+               <div class="htable_data">
+                   <h3>Unknowns Group</h3>
+                   <select id="src_filter" onchange="src_group_changed()"></select>
+               </div>
+               <div class="htable_data">
+                    <h3>Params Group</h3>
+                    <select id="tgt_filter" onchange="tgt_group_changed()"></select>
+                </div>
+            </div>
+        </div>
+   </header>
     <h2></h2>
     <div id="scroller">
         <table id="conn_table">
