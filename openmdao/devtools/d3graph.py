@@ -55,7 +55,7 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
 
     return tree
 
-def view_connections(system, viewer='connections',
+def view_connections(system, viewer='connect_table',
                outfile='graph.html', show_browser=True):
     """
     Generates a self-contained html file containing a connection viewer
