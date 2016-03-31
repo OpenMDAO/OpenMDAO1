@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -50,13 +50,18 @@ class Component(System):
         Default finite difference stepsize
     fd_options['step_type'] :  str('absolute')
         Set to absolute, relative
-
+    fd_options['extra_check_partials_form'] :  None or str
+        Finite difference mode: ("forward", "backward", "central", "complex_step")
+        During check_partial_derivatives, you can optionally do a
+        second finite difference with a different mode.
+    fd_options['linearize'] : bool(False)
+        Set to True if you want linearize to be called even though you are using FD.
     """
 
     def __init__(self):
         super(Component, self).__init__()
         self._post_setup_vars = False
-        self._jacobian_cache = OrderedDict()
+        self._jacobian_cache = {}
 
         self._init_params_dict = OrderedDict() # for storage of initial var data
         self._init_unknowns_dict = OrderedDict() # for storage of initial var data
@@ -406,7 +411,7 @@ class Component(System):
                                    fref.fname, self.pathname))
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, impl=None):
+                       top_unknowns=None, impl=None, alloc_derivs=True):
         """
         Set up local `VecWrappers` to store this component's variables.
 
@@ -424,6 +429,9 @@ class Component(System):
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
+
+        alloc_derivs : bool(True)
+            If True, allocate the derivative vectors.
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
@@ -490,6 +498,14 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
+
+        # Note, we solve a slightly modified version of the unified
+        # derivatives equations in OpenMDAO.
+        # (dR/du) * (du/dr) = -I
+        # The minus side on the right hand side comes from defining the
+        # explicit residual to be ynew - yold instead of yold - ynew. The
+        # advantage of this is that the derivative of an explicit residual is
+        # the same sign as the derivative of the explicit unknown.
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
@@ -613,7 +629,7 @@ class Component(System):
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-            sol_vec[voi].vec[:] = rhs_vec[voi].vec
+            sol_vec[voi].vec[:] = -rhs_vec[voi].vec
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
              sizes=False):
@@ -706,7 +722,7 @@ class Component(System):
         return umap
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
-                              fd_params=None, fd_unknowns=None,
+                              fd_params=None, fd_states=None, fd_unknowns=None,
                               poi_indices=None, qoi_indices=None):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
@@ -735,6 +751,10 @@ class Component(System):
             calculated. This is used by problem to limit the derivatives that
             are taken.
 
+        fd_states : list of strings, optional
+            List of state name strings for derivatives to be taken with respect to.
+            This is used by problem to limit the derivatives that are taken.
+
         poi_indices: dict of list of integers, optional
             Should be an empty list, as there is no subcomponent relevance reduction.
 
@@ -758,7 +778,7 @@ class Component(System):
         # Use settings in the system dict unless variables override.
         step_size = self.fd_options.get('step_size', 1.0e-6)
 
-        jac = OrderedDict()
+        jac = {}
         csparams = ComplexStepTgtVecWrapper(params)
         csunknowns = ComplexStepSrcVecWrapper(unknowns)
         csresids = ComplexStepSrcVecWrapper(resids)
@@ -770,8 +790,13 @@ class Component(System):
         else:
             resultvec = csunknowns
 
+        # Manual override of states.
+        if fd_states is not None:
+            states = fd_states
+
         # Compute gradient for this param or state.
         for p_name in chain(fd_params, states):
+
 
             # States are stepped in unknowns, not params
             if p_name in states:
@@ -813,5 +838,48 @@ class Component(System):
             # Need to clear this out because our next input might be a
             # different vector (state vs param)
             stepvec.set_complex_var(None)
+
+        return jac
+
+    def alloc_jacobian(self):
+        """
+        Creates a jacobian dictionary with the keys pre-populated and correct
+        array sizes allocated. caches the result in the component, and
+        returns that cache if it finds it.
+
+        Returns
+        -----------
+        dict
+            pre-allocated jacobian dictionary
+        """
+
+        if self._jacobian_cache is not None and len(self._jacobian_cache) > 0:
+            return self._jacobian_cache
+
+        self._jacobian_cache = jac = {}
+
+        u_vec = self.unknowns
+        p_vec = self.params
+        states = self.states
+
+        # Caching while caching
+        p_size_storage = [(n, m['size']) for n,m in iteritems(p_vec)
+                            if not m.get('pass_by_obj') and not m.get('remote')]
+
+        s_size_storage = []
+        u_size_storage = []
+        for n, meta in iteritems(u_vec):
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            if meta.get('state'):
+                s_size_storage.append((n, meta['size']))
+            u_size_storage.append((n, meta['size']))
+
+        for u_var, u_size in u_size_storage:
+            for p_var, p_size in p_size_storage:
+                jac[u_var, p_var] = np.zeros((u_size, p_size))
+
+            for s_var, s_size in s_size_storage:
+                jac[u_var, s_var] = np.zeros((u_size, s_size))
 
         return jac

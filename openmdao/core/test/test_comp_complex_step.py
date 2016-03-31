@@ -7,6 +7,7 @@ import numpy as np
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.group import Group
 from openmdao.core.problem import Problem
+from openmdao.core.test.test_comp_fd_jacobian import TestProb
 from openmdao.core.test.test_units import SrcComp, TgtCompC, TgtCompF, TgtCompK
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
@@ -206,6 +207,30 @@ class ComplexStepComponentTests(unittest.TestCase):
         J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x'])
         assert_rel_error(self, diff, 0.0, 1e-8)
+
+    def test_override_states(self):
+
+        expected_keys=[('y', 'x'), ('y', 'z'), ('z', 'x'), ('z', 'z')]
+
+        p = TestProb()
+        p.setup(check=False)
+
+        params = p.root.ci1.params
+        unknowns = p.root.ci1.unknowns
+        resids = p.root.ci1.resids
+
+        jac = p.root.ci1.fd_jacobian(params, unknowns, resids)
+        self.assertEqual(set(expected_keys), set(jac.keys()))
+
+        # Don't compute derivs wrt 'z'
+        expected_keys=[('y', 'x'), ('z', 'x')]
+
+        params = p.root.ci1.params
+        unknowns = p.root.ci1.unknowns
+        resids = p.root.ci1.resids
+
+        jac = p.root.ci1.fd_jacobian(params, unknowns, resids, fd_states=[])
+        self.assertEqual(set(expected_keys), set(jac.keys()))
 
 if __name__ == "__main__":
     unittest.main()

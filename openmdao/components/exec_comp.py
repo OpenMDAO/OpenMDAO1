@@ -68,6 +68,12 @@ class ExecComp(Component):
         Default finite difference stepsize
     fd_options['step_type'] :  str('absolute')
         Set to absolute, relative
+    fd_options['extra_check_partials_form'] :  None or str
+        Finite difference mode: ("forward", "backward", "central", "complex_step")
+        During check_partial_derivatives, you can optionally do a
+        second finite difference with a different mode.
+    fd_options['linearize'] : bool(False)
+        Set to True if you want linearize to be called even though you are using FD.
 
     Notes
     -----
@@ -97,7 +103,7 @@ class ExecComp(Component):
             exprs = [exprs]
 
         outs = set()
-        allvars = set()
+        self._allvars = allvars = set()
 
         # find all of the variables and which ones are outputs
         for expr in exprs:
@@ -134,6 +140,10 @@ class ExecComp(Component):
             else:
                 self.add_param(var, val, **units_kwarg)
 
+        # need to exclude any non-pbo unknowns (like case_rank in ExecComp4Test)
+        self._non_pbo_unknowns = [u for u in self._init_unknowns_dict
+                                      if u in allvars]
+
         self._to_colons = {}
         from_colons = {}
         for n in allvars:
@@ -151,7 +161,6 @@ class ExecComp(Component):
                 exprs[i] = exprs[i].replace(n, from_colons[n])
 
         self._codes = [compile(expr, expr, 'exec') for expr in exprs]
-
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -197,6 +206,7 @@ class ExecComp(Component):
         step = self.complex_stepsize * 1j
 
         J = OrderedDict()
+        non_pbo_unknowns = self._non_pbo_unknowns
 
         for param in params:
 
@@ -225,7 +235,7 @@ class ExecComp(Component):
                 # solve with complex param value
                 self.solve_nonlinear(pwrap, uwrap, resids)
 
-                for u in unknowns:
+                for u in non_pbo_unknowns:
                     jval = imag(uwrap[u] / self.complex_stepsize)
                     if (u, param) not in J: # create the dict entry
                         J[(u, param)] = numpy.zeros((jval.size, psize))

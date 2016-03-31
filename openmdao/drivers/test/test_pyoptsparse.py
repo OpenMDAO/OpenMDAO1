@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
+from openmdao.core.system import AnalysisError
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
 from openmdao.test.util import assert_rel_error
@@ -32,6 +33,70 @@ except:
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
+
+class ParaboloidAE(Component):
+    """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+
+    This version raises an analysis error 50% of the time.
+
+    The AE in ParaboloidAE stands for AnalysisError, and is not a
+    reference to the Don Bluth film Tian A.E."""
+
+    def __init__(self):
+        super(ParaboloidAE, self).__init__()
+
+        self.add_param('x', val=0.0)
+        self.add_param('y', val=0.0)
+
+        self.add_output('f_xy', val=0.0)
+
+        self.eval_iter_count = 0
+        self.eval_fail_at = 3
+
+        self.grad_iter_count = 0
+        self.grad_fail_at = 100
+
+        self.fail_hard = False
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+        Optimal solution (minimum): x = 6.6667; y = -7.3333
+        """
+
+        if self.eval_iter_count == self.eval_fail_at:
+            self.eval_iter_count = 0
+
+            if self.fail_hard:
+                raise RuntimeError('This should error.')
+            else:
+                raise AnalysisError('Try again.')
+
+        x = params['x']
+        y = params['y']
+
+        unknowns['f_xy'] = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+        self.eval_iter_count += 1
+
+    def linearize(self, params, unknowns, resids):
+        """ Jacobian for our paraboloid."""
+
+        if self.grad_iter_count == self.grad_fail_at:
+            self.grad_iter_count = 0
+
+            if self.fail_hard:
+                raise RuntimeError('This should error.')
+            else:
+                raise AnalysisError('Try again.')
+
+        x = params['x']
+        y = params['y']
+        J = {}
+
+        J['f_xy','x'] = 2.0*x - 6.0 + y
+        J['f_xy','y'] = 2.0*y + 8.0 + x
+        self.grad_iter_count += 1
+        return J
 
 
 class TestPyoptSparse(unittest.TestCase):
@@ -1190,6 +1255,157 @@ class TestPyoptSparse(unittest.TestCase):
 
         sub_sparsity = prob.driver.sub_sparsity
         self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 9)
+
+    def test_analysis_error_objfunc(self):
+
+        # Component raises an analysis error during some runs, and pyopt
+        # attempts to recover.
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', ParaboloidAE(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+        # Normally it takes 9 iterations, but takes 13 here because of the
+        # analysis failures. (note SLSQP takes 5 instead of 4)
+        if OPTIMIZER == 'SLSQP':
+            self.assertEqual(prob.driver.iter_count, 5)
+        else:
+            self.assertEqual(prob.driver.iter_count, 13)
+
+    def test_raised_error_objfunc(self):
+
+        # Component fails hard this time during execution, so we expect
+        # pyoptsparse to raise.
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', ParaboloidAE(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.root.comp.fail_hard = True
+
+        prob.setup(check=False)
+
+        with self.assertRaises(Exception) as err:
+            prob.run()
+
+        # pyopt's failure message differs by platform and is not informative anyway
+
+    def test_analysis_error_sensfunc(self):
+
+        # Component raises an analysis error during some linearize calls, and
+        # pyopt attempts to recover.
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', ParaboloidAE(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.root.comp.grad_fail_at = 2
+        prob.root.comp.eval_fail_at = 100
+
+        prob.setup(check=False)
+        prob.run()
+
+        # SLSQP does a bad job recovering from gradient failures
+        if OPTIMIZER == 'SLSQP':
+            tol = 1e-2
+        else:
+            tol = 1e-6
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, tol)
+        assert_rel_error(self, prob['y'], -7.833334, tol)
+
+        # Normally it takes 9 iterations, but takes 12 here because of the
+        # gradfunc failures. (note SLSQP just doesn't do well)
+        if OPTIMIZER == 'SNOPT':
+            self.assertEqual(prob.driver.iter_count, 12)
+
+    def test_raised_error_sensfunc(self):
+
+        # Component fails hard this time during gradient eval, so we expect
+        # pyoptsparse to raise.
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', ParaboloidAE(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.root.comp.fail_hard = True
+        prob.root.comp.grad_fail_at = 2
+        prob.root.comp.eval_fail_at = 100
+
+        prob.setup(check=False)
+
+        with self.assertRaises(Exception) as err:
+            prob.run()
+
+        # pyopt's failure message differs by platform and is not informative anyway
 
 if __name__ == "__main__":
     unittest.main()

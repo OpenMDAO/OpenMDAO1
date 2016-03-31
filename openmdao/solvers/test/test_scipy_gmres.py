@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ScipyGMRES, \
-    DirectSolver, ExecComp, LinearGaussSeidel
+    DirectSolver, ExecComp, LinearGaussSeidel, AnalysisError
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -12,6 +12,7 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, DoubleArrayComp, \
                                        FanInGrouped, ArrayComp2D, FanOutAllGrouped
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 
 class TestScipyGMRES(unittest.TestCase):
@@ -268,6 +269,32 @@ class TestScipyGMRES(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
+    def test_analysis_error(self):
+
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.ln_solver.options['maxiter'] = 2
+        prob.root.ln_solver.options['err_on_maxiter'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        try:
+            J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': ScipyGMRES failed to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
+
     def test_converge_diverge_groups(self):
 
         prob = Problem()
@@ -370,6 +397,9 @@ class TestScipyGMRES(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
@@ -386,8 +416,29 @@ class TestScipyGMRES(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         test_string = prob.root.ln_solver.generate_docstring()
-        original_string = '    """\n\n    Options\n    -------\n    options[\'atol\'] :  float(1e-12)\n        Absolute convergence tolerance.\n    options[\'iprint\'] :  int(0)\n        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.\n    options[\'maxiter\'] :  int(1000)\n        Maximum number of iterations.\n    options[\'mode\'] :  str(\'auto\')\n        Derivative calculation mode, set to \'fwd\' for forward mode, \'rev\' for reverse mode, or \'auto\' to let OpenMDAO determine the best mode.\n    options[\'restart\'] :  int(20)\n        Number of iterations between restarts. Larger values increase iteration cost, but may be necessary for convergence\n\n    """\n'
-        self.assertEqual(original_string, test_string)
+
+        original_string = \
+"""    \"\"\"
+
+    Options
+    -------
+    options['atol'] : float(1e-12)
+        Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
+    options['iprint'] : int(0)
+        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+    options['maxiter'] : int(1000)
+        Maximum number of iterations.
+    options['mode'] : str('auto')
+        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
+    options['restart'] : int(20)
+        Number of iterations between restarts. Larger values increase iteration cost, but may be necessary for convergence
+
+    \"\"\"
+"""
+        for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
+            self.assertEqual(sorig, stest)
 
 
 class TestScipyGMRESPreconditioner(unittest.TestCase):

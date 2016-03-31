@@ -258,6 +258,42 @@ class TestComponentDerivatives(unittest.TestCase):
         msg = msg.replace('3L', '3')
         self.assertEqual(msg, "In component 'comp', the derivative of 'y2' wrt 'x1' should have shape '(3, 2)' but has shape '(3, 3)' instead.")
 
+    def test_alloc_jacobian(self):
+        # Testing the helper function
+
+        p = Problem()
+        root = p.root = Group()
+
+        root.add('comp1', ExecComp(["y[0]=x[0]*2.0+x[1]*7.0",
+                                    "y[1]=x[0]*5.0-x[1]*3.0+x[2]*1.5"],
+                                    x=np.zeros(3), y=np.zeros(2)))
+        root.add('comp2', SimpleImplicitComp())
+
+        root.ln_solver.options['maxiter'] = 2
+        p.setup(check=False)
+
+        # Explciit
+        J = root.comp1.alloc_jacobian()
+
+        self.assertTrue(len(J) == 1)
+        self.assertTrue(('y', 'x') in J)
+        self.assertTrue(J[('y', 'x')].shape == (2,3))
+
+        # Implicit
+        J = root.comp2.alloc_jacobian()
+
+        self.assertTrue(len(J) == 4)
+        self.assertTrue(('y', 'x') in J)
+        self.assertTrue(('y', 'z') in J)
+        self.assertTrue(('z', 'x') in J)
+        self.assertTrue(('z', 'z') in J)
+        self.assertTrue(J[('y', 'x')].shape == (1, 1))
+        self.assertTrue(J[('y', 'z')].shape == (1, 1))
+        self.assertTrue(J[('z', 'x')].shape == (1, 1))
+        self.assertTrue(J[('z', 'z')].shape == (1, 1))
+
+        p.run()
+
 
 if __name__ == "__main__":
     unittest.main()

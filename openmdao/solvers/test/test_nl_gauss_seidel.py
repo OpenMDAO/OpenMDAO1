@@ -5,7 +5,7 @@ import unittest
 
 from six.moves import cStringIO
 
-from openmdao.api import Problem, NLGaussSeidel
+from openmdao.api import Problem, NLGaussSeidel, AnalysisError
 from openmdao.test.sellar import SellarNoDerivatives, SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 
@@ -34,6 +34,23 @@ class TestNLGaussSeidel(unittest.TestCase):
             self.assertEqual(nd1, 2*nd2)
         else:
             self.assertEqual(2*nd1, nd2)
+
+    def test_sellar_analysis_error(self):
+
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = NLGaussSeidel()
+        prob.root.nl_solver.options['maxiter'] = 2
+        prob.root.nl_solver.options['err_on_maxiter'] = True
+
+        prob.setup(check=False)
+
+        try:
+            prob.run()
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': NLGaussSeidel FAILED to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_sellar_group(self):
 

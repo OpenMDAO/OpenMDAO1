@@ -1,5 +1,6 @@
 import unittest
-from openmdao.util.record_util import create_local_meta, update_local_meta, format_iteration_coordinate
+from openmdao.util.record_util import create_local_meta, update_local_meta, \
+                                      format_iteration_coordinate
 
 
 class RecordUtilTest(unittest.TestCase):

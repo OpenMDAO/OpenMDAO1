@@ -4,10 +4,6 @@ import sys
 import json
 
 import webbrowser
-from itertools import chain
-from six import iteritems
-
-import networkx as nx
 
 from openmdao.core.component import Component
 

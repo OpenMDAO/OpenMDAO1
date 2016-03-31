@@ -1,9 +1,12 @@
 """ Base class for all systems in OpenMDAO."""
 
+from __future__ import print_function
+
 import sys
 import os
-from fnmatch import fnmatch, translate
 import re
+from collections import OrderedDict
+from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
@@ -12,17 +15,17 @@ from six import string_types, iteritems, itervalues, iterkeys
 import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
-from openmdao.util.options import OptionsDictionary
-from collections import OrderedDict
-from openmdao.core.vec_wrapper import VecWrapper
-from openmdao.core.vec_wrapper import _PlaceholderVecWrapper
-from openmdao.util.type_util import real_types
-from openmdao.util.string_util import name_relative_to
+from openmdao.core.vec_wrapper import VecWrapper, _PlaceholderVecWrapper
+from openmdao.units.units import get_conversion_tuple
 from openmdao.util.file_util import DirContext
+from openmdao.util.options import OptionsDictionary
+from openmdao.util.string_util import name_relative_to
+from openmdao.util.type_util import real_types
 
 trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
+
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -57,6 +60,12 @@ class _SysData(object):
         else:
             return name
 
+class AnalysisError(Exception):
+    """
+    This exception indicates that a possibly recoverable numerical
+    error occurred in an analysis code or a subsolver.
+    """
+    pass
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -94,23 +103,39 @@ class System(object):
 
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
-                       desc="Set to True to finite difference this system.")
+                       desc="Set to True to finite difference this system.",
+                       lock_on_setup=True)
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central', 'complex_step'],
                        desc="Finite difference mode. (forward, backward, central) "
                        "You can also set to 'complex_step' to peform the complex "
-                       "step method if your components support it.")
+                       "step method if your components support it.",
+                       lock_on_setup=True)
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
+        opt.add_option('extra_check_partials_form', None,
+                       values=[None, 'forward', 'backward', 'central', 'complex_step'],
+                       desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
+                       " During check_partial_derivatives, you can optionally do a "
+                       "second finite difference with a different mode.",
+                       lock_on_setup=True)
+        opt.add_option('linearize', False,
+                       desc='Set to True if you want linearize to be called even though you are using FD.')
 
         self._impl = None
 
         self._num_par_fds = 1 # this will be >1 for ParallelFDGroup
         self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
                             # <= the number of parallel FDs
+
+
+        # This gets set to True when linearize is called. Solvers can set
+        # this to false and then monitor it so they know when, for example,
+        # to regenerate a Jacobian.
+        self._jacobian_changed = False
 
         self._reset() # initialize some attrs that are set during setup
 
@@ -341,7 +366,7 @@ class System(object):
             meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
-                    fd_params=None, fd_unknowns=None, pass_unknowns=(),
+                    fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
                     poi_indices=None, qoi_indices=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
@@ -370,6 +395,10 @@ class System(object):
             List of output or state name strings for derivatives to be
             calculated. This is used by problem to limit the derivatives that
             are taken.
+
+        fd_states : list of strings, optional
+            List of state name strings for derivatives to be taken with respect to.
+            This is used by problem to limit the derivatives that are taken.
 
         pass_unknowns : list of strings, optional
             List of outputs that are also finite difference inputs. OpenMDAO
@@ -406,7 +435,7 @@ class System(object):
         form = self.fd_options.get('form', 'forward')
         step_type = self.fd_options.get('step_type', 'relative')
 
-        jac = OrderedDict()
+        jac = {}
         cache2 = None
 
         # Prepare for calculating partial derivatives or total derivatives
@@ -418,6 +447,10 @@ class System(object):
             run_model = self.apply_nonlinear
             resultvec = resids
             states = self.states
+
+            # Manual override of states.
+            if fd_states is not None:
+                states = fd_states
 
         cache1 = resultvec.vec.copy()
 
@@ -480,7 +513,7 @@ class System(object):
                 p_size = np.size(target_input)
                 p_idxs = range(p_size)
 
-            # Size our Outputs
+            # Size our Outputs and allocate
             for u_name in chain(fd_unknowns, pass_unknowns):
                 if qoi_indices and u_name in qoi_indices:
                     u_size = len(qoi_indices[u_name])
@@ -526,6 +559,7 @@ class System(object):
                         # delta resid is delta unknown
                         resultvec.vec[:] -= cache1
                         resultvec.vec[:] *= (1.0/step)
+                        # Note: vector division is slower than vector mult.
 
                     elif fdform == 'backward':
 
@@ -538,6 +572,7 @@ class System(object):
                         # delta resid is delta unknown
                         resultvec.vec[:] -= cache1
                         resultvec.vec[:] *= (-1.0/step)
+                        # Note: vector division is slower than vector mult.
 
                     elif fdform == 'central':
 
@@ -556,6 +591,7 @@ class System(object):
                         # central difference formula
                         resultvec.vec[:] -= cache2
                         resultvec.vec[:] *= (-0.5/step)
+                        # Note: vector division is slower than vector mult.
 
                         target_input[idx] += step
 
@@ -569,7 +605,8 @@ class System(object):
                         inputs._dat[param_key].imag_val[idx] -= fdstep
 
                         # delta resid is delta unknown
-                        resultvec.vec[:] = resultvec.imag_vec/fdstep
+                        resultvec.vec[:] = resultvec.imag_vec*(1.0/fdstep)
+                        # Note: vector division is slower than vector mult.
                         probdata.in_complex_step = False
 
                     for u_name in fd_unknowns:
@@ -657,13 +694,12 @@ class System(object):
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids.vec *= -1.0
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids._dat[var].val += val
+                        dresids._dat[var].val -= val
             else:
                 # This zeros out some vars that are not in the local .vec, so we can't just
                 # do dparams.vec[:] = 0.0 for example.
@@ -674,17 +710,10 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     try:
-                        # Sign on the local Jacobian needs to be -1 before
-                        # we add in the fake residual. Since we can't modify
-                        # the 'du' vector at this point without stomping on the
-                        # previous component's contributions, we can multiply
-                        # our local 'arg' by -1, and then revert it afterwards.
-                        dresids.vec *= -1.0
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        dresids.vec *= -1.0
                     finally:
                         dparams._apply_unit_derivatives()
 
@@ -692,7 +721,7 @@ class System(object):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns._dat[var].val += val
+                        dunknowns._dat[var].val -= val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
@@ -716,6 +745,17 @@ class System(object):
 
         """
         with self._dircontext:
+            try:
+                linearize = self.jacobian
+            except AttributeError:
+                linearize = self.linearize
+            else:
+                warnings.simplefilter('always', DeprecationWarning)
+                warnings.warn("%s: The 'jacobian' method is deprecated. Please "
+                              "rename 'jacobian' to 'linearize'." %
+                              self.pathname, DeprecationWarning,stacklevel=2)
+                warnings.simplefilter('ignore', DeprecationWarning)
+
             if self.fd_options['force_fd']:
                 #force_fd should compute semi-totals across all children,
                 #    unless total_derivs=False is specifically requested
@@ -731,19 +771,9 @@ class System(object):
                         fd_func = self.fd_jacobian
                     self._jacobian_cache = fd_func(params, unknowns, resids,
                                                    total_derivs=False)
-
+                if self.fd_options['linearize']:
+                    linearize(params, unknowns, resids) #call it, just in case user was doing something in prep for solve_linear
             else:
-                try:
-                    linearize = self.jacobian
-                except AttributeError:
-                    linearize = self.linearize
-                else:
-                    warnings.simplefilter('always', DeprecationWarning)
-                    warnings.warn("%s: The 'jacobian' method is deprecated. Please "
-                                  "rename 'jacobian' to 'linearize'." %
-                                  self.pathname, DeprecationWarning,stacklevel=2)
-                    warnings.simplefilter('ignore', DeprecationWarning)
-
                 self._jacobian_cache = linearize(params, unknowns, resids)
 
             if self._jacobian_cache is not None:
@@ -755,6 +785,7 @@ class System(object):
                     if len(shape) < 2:
                         jc[key] = jc[key].reshape((shape[0], 1))
 
+        self._jacobian_changed = True
         return self._jacobian_cache
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
@@ -1237,6 +1268,70 @@ class System(object):
                 stream.write('\n\n')
         else:
             stream.write("\nNo states in %s.\n" % pathname)
+
+    def list_unit_conv(self, stream=sys.stdout):
+        """ List all unit conversions that are being handled by OpenMDAO
+        (including those with units defined only on one side of the
+        connection.)
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the state info to. Default is sys.stdout.
+
+        Returns
+        -------
+            List of unit conversions.
+        """
+
+        params_dict = self._params_dict
+        unknowns_dict = self._unknowns_dict
+        connections = self.connections
+
+        # Find all unit conversions
+        unit_diffs = {}
+        pbos = []
+        for target, (source, idxs) in iteritems(connections):
+
+            # Unfortunately, we don't know our own connections. If any end is
+            # not in the vectors, then skip it.
+            if target not in params_dict or source not in unknowns_dict:
+                continue
+
+            tmeta = params_dict[target]
+            smeta = unknowns_dict[source]
+
+            source = name_relative_to(self.pathname, source)
+            target = name_relative_to(self.pathname, target)
+
+            if smeta.get('pass_by_obj'):
+                pbos.append(source)
+
+            # If we have a conversion, there should be a conversion factor
+            # tucked away in the params meta. Otherwise, if one end has units
+            # and the other doesn't, add those too.
+            t_units = tmeta.get('units')
+            s_units = smeta.get('units')
+            conv = tmeta.get('unit_conv')
+            if conv or (bool(t_units) != bool(s_units)):
+                unit_diffs[(source, target)] = (s_units,
+                                                t_units)
+
+        if unit_diffs:
+            tuples = sorted(iteritems(unit_diffs))
+            print("\nUnit Conversions", file=stream)
+
+            for (src, tgt), (sunit, tunit) in tuples:
+
+                if src in pbos:
+                    pbo_str = ' (pass_by_obj)'
+                else:
+                    pbo_str = ''
+                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
+                      file=stream)
+
+            return tuples
+        return []
 
 
 class _DummyContext(object):

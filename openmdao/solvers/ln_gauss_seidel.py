@@ -5,6 +5,7 @@ from __future__ import print_function
 from six import iteritems, itervalues
 from collections import OrderedDict
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LinearSolver
 
 
@@ -15,6 +16,8 @@ class LinearGaussSeidel(LinearSolver):
     -------
     options['atol'] :  float(1e-12)
         Absolute convergence tolerance.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
     options['maxiter'] :  int(1)
@@ -39,13 +42,15 @@ class LinearGaussSeidel(LinearSolver):
         opt.add_option('mode', 'auto', values=['fwd', 'rev', 'auto'],
                        desc="Derivative calculation mode, set to 'fwd' for " +
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
-                       "let OpenMDAO determine the best mode.")
+                       "let OpenMDAO determine the best mode.",
+                       lock_on_setup=True)
         opt.add_option('single_voi_relevance_reduction',
                         False, values=[True, False],
                         desc="If True, use relevance reduction even for"
                               " individual variables of interest. This "
                               "may increase performance but will use "
-                              "more memory.")
+                              "more memory.",
+                        lock_on_setup=True)
 
         self.print_name = 'LN_GS'
 
@@ -204,14 +209,22 @@ class LinearGaussSeidel(LinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
+        if maxiter > 1 and self.iter_count >= maxiter:
+            msg = 'FAILED to converge after %d iterations' % self.iter_count
+            failed = True
+        else:
+            failed = False
+
         if self.options['iprint'] > 0:
-            if maxiter > 1 and self.iter_count == maxiter:
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not failed:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, f_norm,
                             f_norm0, indent=1, solver='LN', msg=msg)
+
+        if failed and self.options['err_on_maxiter']:
+            raise AnalysisError("Solve in '%s': LinearGaussSeidel %s" %
+                                (system.pathname, msg))
 
         return sol_buf
 

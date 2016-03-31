@@ -13,6 +13,7 @@ from openmdao.test.converge_diverge import ConvergeDivergeGroups
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 try:
     from openmdao.solvers.petsc_ksp import PetscKSP
@@ -150,7 +151,12 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
+
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
@@ -172,7 +178,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         msg = "The solver in 'mda' requires derivatives. We "
         msg += "currently do not support complex step around it."
 
-        self.assertEqual(str(cm.exception), msg)
+        self.assertTrue(msg in str(cm.exception))
 
     def test_sub_unsupported(self):
 
@@ -189,7 +195,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         msg = "Complex step is currently not supported for groups"
         msg += " other than root."
 
-        self.assertEqual(str(cm.exception), msg)
+        self.assertTrue(msg in str(cm.exception))
 
     def test_array_values_diff_shape_units(self):
         prob = Problem()
@@ -438,6 +444,9 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
