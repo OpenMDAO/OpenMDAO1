@@ -78,11 +78,17 @@ def view_connections(system, viewer='connect_table',
         Defaults to True.
     """
     connections = system._probdata.connections
+    to_prom = system._sysdata.to_prom_name
     src2tgts = {}
     units = {n: m.get('units','') for n,m in chain(iteritems(system._unknowns_dict),
                                                    iteritems(system._params_dict))}
 
-    for t, (s, _) in iteritems(connections):
+    sizes = {}
+    for t, (s, idxs) in iteritems(connections):
+        if idxs is not None:
+            sizes[t] = len(idxs)
+        else:
+            sizes[t] = system._params_dict[t]['size']
         if s not in src2tgts:
             src2tgts[s] = [t]
         else:
@@ -102,8 +108,9 @@ def view_connections(system, viewer='connect_table',
 
     data = {
         'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts))],
-        'proms': system._sysdata.to_prom_name,
+        'proms': to_prom,
         'units': units,
+        'sizes': sizes,
         'src_groups': [{'name':n} for n in sorted(src_groups)],
         'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
     }
