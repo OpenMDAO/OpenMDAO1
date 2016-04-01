@@ -30,7 +30,7 @@ class DirectSolver(MultLinearSolver):
         'assemble' to build the Jacobian by taking the calculated Jacobians in
         each component and placing them directly into a clean identity matrix.
     options['solve_method'] : str('LU')
-        Solution method, either 'solve' for linalg.solve,  or 'LU' for
+        Solution method, either 'solve' for linalg.solve, or 'LU' for
         linalg.lu_factor and linalg.lu_solve.
     """
 
