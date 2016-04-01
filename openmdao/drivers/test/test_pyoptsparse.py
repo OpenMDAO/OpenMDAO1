@@ -1454,7 +1454,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.setup(check=False)
         prob.run()
-
+        
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
@@ -1494,6 +1494,7 @@ class TestPyoptSparse(unittest.TestCase):
         
   
     def test_snopt_fd_solution(self):
+                
         if OPTIMIZER is not 'SNOPT':
             raise unittest.SkipTest()
             
@@ -1527,7 +1528,7 @@ class TestPyoptSparse(unittest.TestCase):
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)  
     
     def test_snopt_fd_is_called(self):
-    
+            
         if OPTIMIZER is not 'SNOPT':
             raise unittest.SkipTest()
     
@@ -1563,13 +1564,15 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
 
     def test_snopt_fd_option_error(self):
-
+    
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        
         root.add('comp', Paraboloid(), promotes=['*'])
+        
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
