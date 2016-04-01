@@ -38,6 +38,9 @@ class Newton(NonLinearSolver):
     def __init__(self):
         super(Newton, self).__init__()
 
+        # What we support
+        self.supports['uses_derivatives'] = True
+
         opt = self.options
         opt.add_option('atol', 1e-12, lower=0.0,
                        desc='Absolute convergence tolerance.')

@@ -155,6 +155,8 @@ To activate it, you just need to set the `form` option on a Compontent to
     top.setup()
     top.run()
     self = top.root
+    from openmdao.util.options import OptionsDictionary
+    OptionsDictionary.locked = False
 
 .. testoutput:: fd_example
    :hide:

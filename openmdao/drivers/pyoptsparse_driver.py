@@ -17,6 +17,7 @@ import numpy as np
 from pyoptsparse import Optimization
 
 from openmdao.core.driver import Driver
+from openmdao.core.system import AnalysisError
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from collections import OrderedDict
 
@@ -418,7 +419,7 @@ class pyOptSparseDriver(Driver):
             1 for unsuccessful function evaluation
         """
 
-        fail = 1
+        fail = 0
         metadata = self.metadata
         system = self.root
 
@@ -433,8 +434,13 @@ class pyOptSparseDriver(Driver):
             self.iter_count += 1
             update_local_meta(metadata, (self.iter_count,))
 
-            with self.root._dircontext:
-                system.solve_nonlinear(metadata=metadata)
+            try:
+                with self.root._dircontext:
+                    system.solve_nonlinear(metadata=metadata)
+
+            # Let the optimizer try to handle the error
+            except AnalysisError:
+                fail = 1
 
             func_dict = self.get_objectives() # this returns a new OrderedDict
             func_dict.update(self.get_constraints())
@@ -446,8 +452,6 @@ class pyOptSparseDriver(Driver):
             # Get the double-sided constraint evaluations
             #for key, con in iteritems(self.get_2sided_constraints()):
             #    func_dict[name] = np.array(con.evaluate(self.parent))
-
-            fail = 0
 
         except Exception as msg:
             tb = traceback.format_exc()
@@ -486,12 +490,29 @@ class pyOptSparseDriver(Driver):
             1 for unsuccessful function evaluation
         """
 
-        fail = 1
+        fail = 0
 
         try:
-            sens_dict = self.calc_gradient(dv_dict, self.quantities,
-                                           return_format='dict',
-                                           sparsity=self.sparsity)
+
+            try:
+                sens_dict = self.calc_gradient(dv_dict, self.quantities,
+                                               return_format='dict',
+                                               sparsity=self.sparsity)
+
+            # Let the optimizer try to handle the error
+            except AnalysisError:
+                fail = 1
+
+                # We need to cobble together a sens_dict of the correct size.
+                # Best we can do is return zeros.
+
+                sens_dict = OrderedDict()
+                for okey, oval in iteritems(func_dict):
+                    sens_dict[okey] = OrderedDict()
+                    osize = len(oval)
+                    for ikey, ival in iteritems(dv_dict):
+                        isize = len(ival)
+                        sens_dict[okey][ikey] = np.zeros((osize, isize))
 
             # Support for sub-index sparsity by returning the Jacobian in a
             # pyopt sparse format.
@@ -513,8 +534,6 @@ class pyOptSparseDriver(Driver):
 
                     coo['coo'] = [np.array(row), np.array(col), np.array(data)]
                     sens_dict[con][desvar] = coo
-
-            fail = 0
 
         except Exception as msg:
             tb = traceback.format_exc()
