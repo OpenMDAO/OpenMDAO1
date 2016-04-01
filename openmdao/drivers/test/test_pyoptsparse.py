@@ -1192,10 +1192,8 @@ class TestPyoptSparse(unittest.TestCase):
         sub_sparsity = prob.driver.sub_sparsity
         self.assertEquals(len(sub_sparsity['seg0.r_i']['y_i']), 9)
 
-    def test_snopt_diff_gradients(self):
-        if OPTIMIZER is not 'SNOPT':
-            raise unittest.SkipTest()
-
+    def test_pyopt_fd_solution(self):
+        
         prob = Problem()
         root = prob.root = Group()
 
@@ -1206,7 +1204,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.options['snopt_diff'] = True
+        prob.driver.options['gradient method'] = 'pyopt_fd'
         
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
@@ -1222,14 +1220,11 @@ class TestPyoptSparse(unittest.TestCase):
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
         
-    def test_snopt_diff_is_called(self):
-    
-        if OPTIMIZER is not 'SNOPT':
-            raise unittest.SkipTest()
+    def test_pyopt_fd_is_called(self):
     
         class ParaboloidApplyLinear(Paraboloid):
             def apply_linear(params, unknowns, resids):
-                raise Exception("OpenMDAO's finite difference has been called. snopt_diff\
+                raise Exception("OpenMDAO's finite difference has been called. pyopt_fd\
                                 \ option has failed.")
 
         prob = Problem()
@@ -1242,7 +1237,70 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.options['snopt_diff'] = True
+        prob.driver.options['gradient method'] = 'pyopt_fd'
+        
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+        
+        prob.run()
+        
+    def test_snopt_fd_solution(self):
+        if OPTIMIZER is not 'SNOPT':
+            raise unittest.SkipTest()
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['gradient method'] = 'snopt_fd'
+        
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+        
+    def test_snopt_fd_is_called(self):
+    
+        if OPTIMIZER is not 'SNOPT':
+            raise unittest.SkipTest()
+    
+        class ParaboloidApplyLinear(Paraboloid):
+            def apply_linear(params, unknowns, resids):
+                raise Exception("OpenMDAO's finite difference has been called. snopt_fd\
+                                \ option has failed.")
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', ParaboloidApplyLinear(), promotes=['*'])
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['gradient method'] = 'snopt_fd'
         
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
@@ -1255,7 +1313,7 @@ class TestPyoptSparse(unittest.TestCase):
         
         prob.run()
             
-    def test_snopt_diff_option(self):
+    def test_snopt_fd_option_error(self):
 
         prob = Problem()
         root = prob.root = Group()
@@ -1267,7 +1325,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.options['snopt_diff'] = True
+        prob.driver.options['gradient method'] = 'snopt_fd'
         
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
@@ -1283,7 +1341,7 @@ class TestPyoptSparse(unittest.TestCase):
             
         exception = raises_cm.exception
         
-        msg = "SNOPT's internal finite difference method can only be used with SNOPT"
+        msg = "SNOPT's internal finite difference can only be used with SNOPT"
         
         self.assertEqual(exception.args[0], msg)
     

@@ -65,12 +65,10 @@ class pyOptSparseDriver(Driver):
         Name of optimizers to use
     options['print_results'] :  bool(True)
         Print pyOpt results if True
-    options['pyopt_diff'] :  bool(True)
-        Set to True to let pyOpt calculate the gradient
+    options['gradient method'] :  str('openmdao', 'pyopt_fd', 'snopt_fd')
+        Finite difference implementation to use ('snopt_fd' may only be used with SNOPT)
     options['title'] :  str('Optimization using pyOpt_sparse')
         Title of this optimization run
-    options['snopt_diff'] : bool(False)
-        Set to True to let SNOPT calculate the gradient.
     """
 
     def __init__(self):
@@ -95,12 +93,10 @@ class pyOptSparseDriver(Driver):
                                 desc='Title of this optimization run')
         self.options.add_option('print_results', True,
                                 desc='Print pyOpt results if True')
-        self.options.add_option('pyopt_diff', False,
-                                desc='Set to True to let pyOpt calculate the gradient')
-        self.options.add_option('snopt_diff', False,
-                                desc='Set to True to let SNOPT calculate the gradient\
-                                if using SNOPT as the optimizer')
-
+        self.options.add_option('gradient method', 'openmdao', 
+                                values={'openmdao', 'pyopt_fd', 'snopt_fd'},
+                                desc='Finite difference implementation to use')
+       
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
 
@@ -276,21 +272,27 @@ class pyOptSparseDriver(Driver):
         self._problem = problem
 
         # Execute the optimization problem
-        if self.options['pyopt_diff']:
+        if self.options['gradient method'] == 'pyopt_fd':  
+              
             # Use pyOpt's internal finite difference
             fd_step = problem.root.fd_options['step_size']
-            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
-        elif self.options['snopt_diff']:
-            if self.options['optimizer']=='SNOPT':
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file) 
+                       
+        elif self.options['gradient method'] == 'snopt_fd':        
+            if self.options['optimizer']=='SNOPT':            
+            
+                # Use SNOPT's internal finite difference
                 fd_step = problem.root.fd_options['step_size']
                 sol = opt(opt_prob, sens=None, sensStep=fd_step, storeHistory=self.hist_file)
+                                
             else:
-                msg = "SNOPT's internal finite difference method can only be used with SNOPT"
-                raise Exception(msg)
+                msg = "SNOPT's internal finite difference can only be used with SNOPT"
+                raise Exception(msg)                
         else:
+        
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)
-
+            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)          
+            
         self._problem = None
 
         # Print results
