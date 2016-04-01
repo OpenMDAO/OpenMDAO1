@@ -7,6 +7,7 @@ from math import isnan
 import numpy as np
 from scipy.optimize import brentq
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -21,9 +22,11 @@ class Brent(NonLinearSolver):
 
     Options
     -------
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
-    options['max_iter'] :  int(100)
+    options['maxiter'] :  int(100)
         if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.
     options['rtol'] :  float64(4.4408920985e-16)
         The routine converges when a root is known to lie within rtol times the value returned of the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.
@@ -41,7 +44,6 @@ class Brent(NonLinearSolver):
         if given, name of the variable to pull the upper bound value from.This variable must be a parameter on of of the child components of the containing system
     options['xtol'] :  int(0)
         The routine converges when a root is known to lie within xtol of the value return. Should be >= 0. The routine modifies this to take into account the relative precision of doubles.
-
     """
 
     def __init__(self):
@@ -56,7 +58,7 @@ class Brent(NonLinearSolver):
             desc='The routine converges when a root is known to lie within rtol times the value returned of '
                  'the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.')
 
-        opt.add_option('max_iter', 100,
+        opt.add_option('maxiter', 100,
             desc='if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.')
 
         opt.add_option('state_var', '', desc="name of the state-variable/residual the solver should with")
@@ -69,6 +71,9 @@ class Brent(NonLinearSolver):
             'This variable must be a parameter on of of the child components of the containing system')
         opt.add_option('var_upper_bound', '', desc='if given, name of the variable to pull the upper bound value from.'
             'This variable must be a parameter on of of the child components of the containing system')
+
+        # we renamed max_iter to maxiter to match all the other solvers
+        opt._add_deprecation('max_iter', 'maxiter')
 
         self.xstar = None
 
@@ -149,11 +154,12 @@ class Brent(NonLinearSolver):
         else:
             upper = self.options['upper_bound']
 
-        kwargs = {'maxiter': self.options['max_iter'],
+        kwargs = {'maxiter': self.options['maxiter'],
                   'a': lower,
                   'b': upper,
-                  'full_output': True,
-                  'args': (params, unknowns, resids)}
+                  'full_output': False, # False, because we don't use the info, so just wastes operations
+                  'args': (params, unknowns, resids)
+                  }
 
         if self.options['xtol']:
             kwargs['xtol'] = self.options['xtol']
@@ -171,20 +177,29 @@ class Brent(NonLinearSolver):
         self.sys.apply_nonlinear(params, unknowns, resids)
         self.basenorm = resid_norm_0 = abs(resids._dat[self.s_var_name].val[idx])
 
-        xstar, r = brentq(self._eval, **kwargs)
+        failed = False
+        try:
+            xstar = brentq(self._eval, **kwargs)
+        except RuntimeError as err:
+            msg = str(err)
+            if 'different signs' in msg:
+                raise
+            failed = True
+
         self.sys = None
 
         resid_norm = abs(resids._dat[self.s_var_name].val[idx])
 
         if self.options['iprint'] > 0:
 
-            if self.iter_count == self.options['max_iter'] or isnan(resid_norm):
-                msg = 'FAILED to converge after max iterations'
-            else:
+            if not failed:
                 msg = 'converged'
 
             self.print_norm(self.print_name, system.pathname, self.iter_count,
                             resid_norm, resid_norm_0, msg=msg)
+
+        if failed and self.options['err_on_maxiter']:
+            raise AnalysisError(msg)
 
     def _eval(self, x, params, unknowns, resids):
         """Callback function for evaluating f(x)"""
@@ -206,4 +221,3 @@ class Brent(NonLinearSolver):
                             self.basenorm)
 
         return resids._dat[self.s_var_name].val[idx]
-

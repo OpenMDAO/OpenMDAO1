@@ -2,17 +2,21 @@
 Baseclass for design-of-experiments Drivers that have pre-determined
 parameter sets.
 """
+from __future__ import print_function
+
+import sys
 import os
 import traceback
 from six.moves import zip
-from six import next
+from six import next, PY3
 
 import numpy
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.util.array_util import evenly_distrib_idxs
-from openmdao.core.mpi_wrap import MPI, debug
+from openmdao.core.mpi_wrap import MPI, debug, any_proc_is_true
+from openmdao.core.system import AnalysisError
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
@@ -53,11 +57,10 @@ class PredeterminedRunsDriver(Driver):
             Absolute dir of parent `System`.
         """
         root = self.root
-        if self._num_par_doe < 1:
-            raise ValueError("'%s': _num_par_doe must be >= 1 but value is %s." %
-                              (self.pathname, self._num_par_doe))
-        if not MPI:
+
+        if not MPI or self._num_par_doe < 1:
             self._num_par_doe = 1
+            self._load_balance = False
 
         self._full_comm = comm
 
@@ -146,38 +149,120 @@ class PredeterminedRunsDriver(Driver):
         """
         self.iter_count = 0
 
-        if MPI and self._num_par_doe > 1:
-            if self._load_balance:
-                runlist = self._distrib_lb_build_runlist()
-            else:
-                runlist = self._get_case_w_nones(self._distrib_build_runlist())
-        else:
-            runlist = self._build_runlist()
-
         with problem.root._dircontext:
-            # For each runlist entry, run the system and record the results
-            for case in runlist:
+            if self._num_par_doe > 1:
+                if self._load_balance:
+                    self._run_lb(problem.root)
+                else:
+                    self._run_par_doe(problem.root)
+            else:
+                self._run_serial(problem.root)
 
-                if MPI and self._load_balance and self._full_comm.rank == 0:
-                    # we're the master rank and case is a completed case
-                    self.recorders.record_case(problem.root, case)
-                elif case is not None: # dummy cases have case == None
-                    metadata = create_local_meta(None, 'Driver')
-                    update_local_meta(metadata, (self.iter_count,))
-                    for dv_name, dv_val in case:
-                        self.set_desvar(dv_name, dv_val)
+    def _prep_case(self, case):
+        """Create metadata for the case and set design variables.
+        """
+        metadata = create_local_meta(None, 'Driver')
+        update_local_meta(metadata, (self.iter_count,))
+        for dv_name, dv_val in case:
+            self.set_desvar(dv_name, dv_val)
+        return metadata
 
-                    problem.root.solve_nonlinear(metadata=metadata)
+    def _try_case(self, root, metadata):
+        """Run a case and save exception info and mark the metadata
+        if the case fails.
+        """
 
-                    if self._load_balance:
-                        # keep meta for worker to send to master
-                        self._last_meta = metadata
+        terminate = False
+        exc = None
 
-                if not MPI or not self._load_balance:
-                    self.recorders.record_iteration(problem.root, metadata,
-                                                    dummy=(case is None))
+        try:
+            root.solve_nonlinear(metadata=metadata)
+        except AnalysisError:
+            metadata['msg'] = traceback.format_exc()
+            metadata['success'] = 0
+        except Exception:
+            if self._load_balance:
+                # any exception besides AnalysisError causes termination
+                metadata['msg'] = traceback.format_exc()
+                print(metadata['msg'])
+                # this will tell master to stop sending cases
+                metadata['terminate'] = True
+            else:
+                exc = sys.exc_info()
+                print(traceback.format_exc())
+                terminate = True
 
-                self.iter_count += 1
+        return terminate, exc
+
+    def _run_serial(self, root):
+        """This runs a DOE in serial on a single process."""
+
+        for case in self._build_runlist():
+            metadata = self._prep_case(case)
+
+            terminate, exc = self._try_case(root, metadata)
+
+            if exc is not None:
+                if PY3:
+                    raise exc[0].with_traceback(exc[1], exc[2])
+                else:
+                    # exec needed here since otherwise python3 will
+                    # barf with a syntax error  :(
+                    exec('raise exc[0], exc[1], exc[2]')
+
+            self.recorders.record_iteration(root, metadata)
+
+            self.iter_count += 1
+
+    def _run_par_doe(self, root):
+        """This runs the DOE in parallel where cases are evenly distributed
+        among all processes.
+        """
+        for case in self._get_case_w_nones(self._distrib_build_runlist()):
+            if case is None: # dummy cases have case == None
+                # must take part in collective Allreduce call
+                any_proc_is_true(self._full_comm, False)
+
+            else:  # case is not a dummy case
+                metadata = self._prep_case(case)
+
+                terminate, exc = self._try_case(root, metadata)
+
+                if any_proc_is_true(self._full_comm, terminate):
+                    if exc:
+                        if PY3:
+                            raise exc[0].with_traceback(exc[1], exc[2])
+                        else:
+                            # exec needed here since otherwise python3 will
+                            # barf with a syntax error  :(
+                            exec('raise exc[0], exc[1], exc[2]')
+                    else:
+                        raise RuntimeError("an exception was raised by another MPI process.")
+
+            self.recorders.record_iteration(root, metadata,
+                                            dummy=(case is None))
+            self.iter_count += 1
+
+    def _run_lb(self, root):
+        """This runs the DOE in parallel with load balancing.  A new case
+        is distributed to a worker process as soon as it finishes its
+        previous case.  The rank 0 process is the 'master' process and does
+        not run cases itself.  The master does nothing but distribute the
+        cases to the workers and collect the results.
+        """
+        for case in self._distrib_lb_build_runlist():
+            if self._full_comm.rank == 0:
+                # we're the master rank and case is a completed case
+                self.recorders.record_case(root, case)
+            else:  # we're a worker
+                metadata = self._prep_case(case)
+
+                self._try_case(root, metadata)
+
+                # keep meta for worker to send to master
+                self._last_meta = metadata
+
+            self.iter_count += 1
 
     def _get_case_w_nones(self, it):
         """A wrapper around a case generator that returns None cases if
@@ -235,10 +320,13 @@ class PredeterminedRunsDriver(Driver):
             sent = 0
 
             # cases left for each par doe
-            cases = {n:{'count': 0, 'p':{}, 'u':{}, 'r':{}, 'meta':{}}
+            cases = {n:{'count': 0, 'terminate': 0, 'p':{}, 'u':{}, 'r':{},
+                        'meta':{'success': 1, 'msg': ''}}
                                     for n in self._id_map}
 
-            # create a mapping of ranks to doe_ids
+            # create a mapping of ranks to doe_ids, to handle those cases
+            # where a single DOE is executed across multiple processes, i.e.,
+            # for each process, we need to know which case it's working on.
             doe_ids = {}
             for doe_id, tup in self._id_map.items():
                 size, offset = tup
@@ -253,6 +341,7 @@ class PredeterminedRunsDriver(Driver):
                 except StopIteration:
                     break
                 size, offset = self._id_map[i]
+                # send the case to all of the subprocs that will work on it
                 for j in range(size):
                     if trace:
                         debug('Sending Seed case %d, %d' % (i, j))
@@ -266,38 +355,70 @@ class PredeterminedRunsDriver(Driver):
             if sent > 0:
                 more_cases = True
                 while True:
-                    if trace:
-                        debug("Waiting on case")
+                    if trace: debug("Waiting on case")
                     worker, p, u, r, meta = comm.recv(tag=2)
-                    if trace:
-                        debug("Case Recieved from Worker %d" % worker )
+                    if trace: debug("Case Recieved from Worker %d" % worker )
+
                     received += 1
+
                     caseinfo = cases[doe_ids[worker]]
                     caseinfo['count'] -= 1
                     caseinfo['p'].update(p)
                     caseinfo['u'].update(u)
                     caseinfo['r'].update(r)
-                    caseinfo['meta'].update(meta)
+
+                    # save certain parts of existing metadata so we don't hide failures
+                    oldmeta = caseinfo['meta']
+                    success = oldmeta['success']
+                    if not success:
+                        msg = oldmeta['msg']
+                        oldmeta.update(meta)
+                        oldmeta['success'] = success
+                        oldmeta['msg'] = msg
+                    else:
+                        oldmeta.update(meta)
+
+                    caseinfo['terminate'] += meta.get('terminate', 0)
+
                     if caseinfo['count'] == 0:
                         # we've received case from all procs with that doe_id
-                        # so the case is complete.  Send it to recorders
-                        yield caseinfo
-                        if more_cases:
-                            try:
-                                case = list(next(runiter))
-                            except StopIteration:
-                                more_cases = False
-                            else:
-                                size, offset = self._id_map[doe_ids[worker]]
-                                for j in range(size):
-                                    if trace:
-                                        debug("Sending New Case to Worker %d" % worker )
-                                    comm.send(case, j+offset, tag=1)
-                                    if trace:
-                                        debug("Case Sent to Worker %d" % worker )
-                                    cases[doe_ids[worker]]['count'] += 1
-                                    sent += 1
+                        # so the case is complete.
 
+                        # worker has experienced some critical error, so we'll
+                        # stop sending new cases and start to wrap things up
+                        if caseinfo['terminate'] > 0:
+                            more_cases = False
+                            print("Worker %d has requested termination. No more new "
+                                  "cases will be distributed. Worker traceback was:\n%s" %
+                                  (worker, meta['msg']))
+                        else:
+
+                            # Send case to recorders
+                            yield caseinfo
+
+                            if more_cases:
+                                try:
+                                    case = list(next(runiter))
+                                except StopIteration:
+                                    more_cases = False
+                                else:
+                                    # send a new case to every proc that works on
+                                    # cases with the current worker
+                                    doe = doe_ids[worker]
+                                    size, offset = self._id_map[doe]
+                                    cases[doe]['terminate'] = 0
+                                    cases[doe]['meta'] = {'success': 1, 'msg': ''}
+                                    for j in range(size):
+                                        if trace:
+                                            debug("Sending New Case to Worker %d" % worker )
+                                        comm.send(case, j+offset, tag=1)
+                                        if trace:
+                                            debug("Case Sent to Worker %d" % worker )
+                                        cases[doe]['count'] += 1
+                                        sent += 1
+
+                    # don't stop until we hear back from every worker process
+                    # we sent a case to
                     if received == sent:
                         break
 
@@ -305,28 +426,30 @@ class PredeterminedRunsDriver(Driver):
             for rank in range(1, self._full_comm.size):
                 if trace:
                     debug("Make Worker Stop on Rank %d" % rank )
-                comm.isend(None, rank, tag=1)
+                comm.send(None, rank, tag=1)
                 if trace:
                     debug("Worker has Stopped on Rank %d" % rank )
 
         else:   # worker
             while True:
                 # wait on a case from the master
-                if trace:
-                    debug("Receiving Case from Master")
+                if trace: debug("Receiving Case from Master")
+
                 case = comm.recv(source=0, tag=1)
-                if trace:
-                    debug("Case Received from Master")
+
+                if trace: debug("Case Received from Master")
                 if case is None: # we're done
                     break
+
                 # yield the case so it can be executed
                 yield case
+
                 # get local vars from RecordingManager
                 params, unknowns, resids = self.recorders._get_local_case_data(self.root)
 
                 # tell the master we're done with that case and send local vars
-                if trace:
-                    debug("Send Master Local Vars")
+                if trace: debug("Send Master Local Vars")
+
                 comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0, tag=2)
-                if trace:
-                    debug("Local Vars Sent to Master")
+
+                if trace: debug("Local Vars Sent to Master")

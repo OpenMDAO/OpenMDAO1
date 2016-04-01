@@ -14,6 +14,8 @@ from openmdao.test.simple_comps import SimpleArrayComp, \
                                       SimpleImplicitComp
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.util import assert_equal_jacobian, assert_rel_error
+from openmdao.util.options import OptionsDictionary
+
 
 class FDpropsComp(Component):
 
@@ -170,6 +172,27 @@ class CompFDTestCase(unittest.TestCase):
 
         assert_equal_jacobian(self, jac, expected_jac, 1e-5)
 
+    def test_override_states(self):
+
+        expected_keys=[('y', 'x'), ('y', 'z'), ('z', 'x'), ('z', 'z')]
+
+        params = self.p.root.ci1.params
+        unknowns = self.p.root.ci1.unknowns
+        resids = self.p.root.ci1.resids
+
+        jac = self.p.root.ci1.fd_jacobian(params, unknowns, resids)
+        self.assertEqual(set(expected_keys), set(jac.keys()))
+
+        # Don't compute derivs wrt 'z'
+        expected_keys=[('y', 'x'), ('z', 'x')]
+
+        params = self.p.root.ci1.params
+        unknowns = self.p.root.ci1.unknowns
+        resids = self.p.root.ci1.resids
+
+        jac = self.p.root.ci1.fd_jacobian(params, unknowns, resids, fd_states=[])
+        self.assertEqual(set(expected_keys), set(jac.keys()))
+
 
 class CompFDinSystemTestCase(unittest.TestCase):
     """ Tests automatic finite difference of a component in a full problem."""
@@ -310,9 +333,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'step_size' values: [('comp.x2', 1e-06), "
-                             "('comp2.x2', 1.001e-06)]")
+                             "('comp2.x2', 1.001e-06)]" in str(err))
 
     def test_fd_options_step_type_ambiguous(self):
 
@@ -329,9 +352,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'step_type' values: [('comp.x2', 'absolute'), "
-                             "('comp2.x2', 'relative')]")
+                             "('comp2.x2', 'relative')]" in str(err))
 
     def test_fd_options_form_ambiguous(self):
 
@@ -348,9 +371,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
         try:
             prob.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err), "The following parameters have the same promoted name, "
+            self.assertTrue("The following parameters have the same promoted name, "
                              "'x2', but different 'form' values: [('comp.x2', 'central'), "
-                             "('comp2.x2', 'forward')]")
+                             "('comp2.x2', 'forward')]" in str(err))
 
     def test_fd_options_step_type_precedence(self):
 
@@ -448,6 +471,9 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
         J = prob.calc_gradient(indep_list, unknowns_list, return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-6)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         # Make sure it gives good result with small stepsize
         comp.fd_options['form'] = 'backward'

@@ -7,6 +7,7 @@ import sys
 import json
 import warnings
 import traceback
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
@@ -20,22 +21,24 @@ from openmdao.core.component import Component
 from openmdao.core.parallel_group import ParallelGroup
 from openmdao.core.parallel_fd_group import ParallelFDGroup
 from openmdao.core.basic_impl import BasicImpl
-from openmdao.core._checks import check_connections
+from openmdao.core._checks import check_connections, _both_names
 from openmdao.core.driver import Driver
 from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
-from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
+from openmdao.util.options import OptionsDictionary
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
+
 
 class _ProbData(object):
     """
@@ -69,18 +72,6 @@ class Problem(object):
     comm : an MPI communicator (real or fake), optional
         A communicator that can be used for distributed operations when running
         under MPI. If not specified, the default "COMM_WORLD" will be used.
-
-    Options
-    -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
-        Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
-        Set to absolute, relative
-
     """
 
     def __init__(self, root=None, driver=None, impl=None, comm=None):
@@ -106,6 +97,7 @@ class Problem(object):
             self.driver = driver
 
         self.pathname = ''
+
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -268,8 +260,9 @@ class Problem(object):
             if srcs is not None:
                 if len(srcs) > 1:
                     src_names = (n for n, idx in srcs)
-                    raise RuntimeError("Target '%s' is connected to multiple unknowns: %s" %
-                                       (tgt, sorted(src_names)))
+                    self._setup_errors.append("Target '%s' is connected to "
+                                              "multiple unknowns: %s" %
+                                               (tgt, sorted(src_names)))
                 connections[tgt] = srcs[0]
 
         return connections
@@ -278,83 +271,77 @@ class Problem(object):
         """For all sets of connected inputs, find any differences in units
         or initial value.
         """
-        input_diffs = {}
-
         # loop over all dangling inputs
         for tgt, connected_inputs in iteritems(self._input_inputs):
 
             # figure out if any connected inputs have different initial
             # values or different units
-            if tgt not in input_diffs:
+            tgt_idx = connected_inputs.index(tgt)
+            units = [params_dict[n].get('units') for n in connected_inputs]
+            vals = [params_dict[n]['val'] for n in connected_inputs]
 
-                tgt_idx = connected_inputs.index(tgt)
-                units = [params_dict[n].get('units') for n in connected_inputs]
-                vals = [params_dict[n]['val'] for n in connected_inputs]
+            diff_units = []
 
-                diff_units = []
+            for i, u in enumerate(units):
+                if i != tgt_idx and u != units[tgt_idx]:
+                    if units[tgt_idx] is None:
+                        sname, s = connected_inputs[i], u
+                        tname, t = connected_inputs[tgt_idx], units[tgt_idx]
+                    else:
+                        sname, s = connected_inputs[tgt_idx], units[tgt_idx]
+                        tname, t = connected_inputs[i], u
 
-                for i, u in enumerate(units):
-                    if i != tgt_idx and u != units[tgt_idx]:
-                        if units[tgt_idx] is None:
-                            sname, s = connected_inputs[i], u
-                            tname, t = connected_inputs[tgt_idx], units[tgt_idx]
-                        else:
-                            sname, s = connected_inputs[tgt_idx], units[tgt_idx]
-                            tname, t = connected_inputs[i], u
+                    diff_units.append((connected_inputs[i], u))
 
-                        # report these in check_setup later
-                        self._unit_diffs[(sname, tname)] = (s, t)
-                        diff_units.append((connected_inputs[i], u))
+            if isinstance(vals[tgt_idx], np.ndarray):
+                diff_vals = [(connected_inputs[i],v) for i,v in
+                               enumerate(vals) if not
+                                   (isinstance(v, np.ndarray) and
+                                      v.shape==vals[tgt_idx].shape and
+                                      (v==vals[tgt_idx]).all())]
+            else:
+                vtype = type(vals[tgt_idx])
+                diff_vals = [(connected_inputs[i],v) for i,v in
+                                 enumerate(vals) if vtype!=type(v) or
+                                                      v!=vals[tgt_idx]]
 
-                if isinstance(vals[tgt_idx], np.ndarray):
-                    diff_vals = [(connected_inputs[i],v) for i,v in
-                                   enumerate(vals) if not
-                                       (isinstance(v, np.ndarray) and
-                                          v.shape==vals[tgt_idx].shape and
-                                          (v==vals[tgt_idx]).all())]
-                else:
-                    vtype = type(vals[tgt_idx])
-                    diff_vals = [(connected_inputs[i],v) for i,v in
-                                     enumerate(vals) if vtype!=type(v) or
-                                                          v!=vals[tgt_idx]]
+            # if tgt has no unknown source, units MUST match, unless
+            # one of them is None. At this point, connections contains
+            # only unknown to input connections, so if the target is
+            # in connections, it has an unknown source.
 
-                # if tgt has no unknown source, units MUST match, unless
-                # one of them is None. At this point, connections contains
-                # only unknown to input connections, so if the target is
-                # in connections, it has an unknown source.
+            if diff_units:
+                filt = set([u for n,u in diff_units])
+                if None in filt:
+                    filt.remove(None)
+                if filt:
+                    proms = set([params_dict[item]['top_promoted_name'] \
+                                 for item in connected_inputs])
 
-                if diff_units:
-                    filt = set([u for n,u in diff_units])
-                    if None in filt:
-                        filt.remove(None)
-                    if filt:
-                        proms = set([params_dict[item]['top_promoted_name'] \
-                                     for item in connected_inputs])
+                    # All params are promoted, so extra message for clarity.
+                    if len(proms) == 1:
+                        msg = "The following connected inputs are promoted to " + \
+                            "'%s', but have different units" % proms.pop()
+                    else:
+                        msg = "The following connected inputs have no source and different " + \
+                              "units"
 
-                        # All params are promoted, so extra message for clarity.
-                        if len(proms) == 1:
-                            msg = "The following connected inputs are promoted to " + \
-                                "'%s', but have different units" % proms.pop()
-                        else:
-                            msg = "The following connected inputs have no source and different " + \
-                                  "units"
+                    msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
+                                            diff_units)
+                    correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
+                    msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
+                           " with defined units."
 
-                        msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
-                                                diff_units)
-                        correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
-                        msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
-                               " with defined units."
-
-                        raise RuntimeError(msg)
-                if diff_vals:
-                    msg = ("The following sourceless connected inputs have "
-                           "different initial values: "
-                           "%s.  Connect one of them to the output of "
-                           "an IndepVarComp to ensure that they have the "
-                           "same initial value." %
-                           (sorted([(tgt,params_dict[tgt]['val'])]+
-                                             diff_vals)))
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
+            if diff_vals:
+                msg = ("The following sourceless connected inputs have "
+                       "different initial values: "
+                       "%s.  Connect one of them to the output of "
+                       "an IndepVarComp to ensure that they have the "
+                       "same initial value." %
+                       (sorted([(tgt,params_dict[tgt]['val'])]+
+                                         diff_vals)))
+                self._setup_errors.append(msg)
 
         # now check for differences in step_size, step_type, or form for
         # promoted inputs
@@ -374,24 +361,23 @@ class Problem(object):
                         forms[f] = name
 
                 if len(step_sizes) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
                                   "'step_size' values: %s" % (promname,
                                   sorted([(v,k) for k,v in step_sizes.items()])))
 
                 if len(step_types) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
                                   "'step_type' values: %s" % (promname,
                                  sorted([(v,k) for k,v in step_types.items()])))
 
                 if len(forms) > 1:
-                    raise RuntimeError("The following parameters have the same "
+                    self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different 'form' "
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
 
-        return input_diffs
 
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they
@@ -424,6 +410,8 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
+        self._setup_errors = []
+
         # if we modify the system tree, we'll need to call _init_sys_data,
         # _setup_variables and _setup_connections again
         tree_changed = False
@@ -505,7 +493,7 @@ class Problem(object):
 
         if MPI:
             for s in self.root.components(recurse=True):
-                # get rid of check for setup_distrib_idxs when we move to beta
+                # TODO: get rid of check for setup_distrib_idxs when we move to beta
                 if hasattr(s, 'setup_distrib_idxs') or (
                          hasattr(s, 'setup_distrib') and (s.setup_distrib
                                                 is not Component.setup_distrib)):
@@ -525,8 +513,9 @@ class Problem(object):
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
-        check_connections(connections, params_dict, unknowns_dict,
-                          self.root._sysdata.to_prom_name)
+        self._setup_errors.extend(check_connections(connections, params_dict,
+                                               unknowns_dict,
+                                               self.root._sysdata.to_prom_name))
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -544,7 +533,7 @@ class Problem(object):
             if path not in connections:
                 if 'pass_by_obj' not in meta or not meta['pass_by_obj']:
                     if meta['shape'] == ():
-                        raise RuntimeError("Unconnected param '{}' is missing "
+                        self._setup_errors.append("Unconnected param '{}' is missing "
                                            "a shape or default value.".format(path))
 
         for path, meta in iteritems(unknowns_dict):
@@ -616,8 +605,14 @@ class Problem(object):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
+        # If we force_fd root and don't need derivatives in solvers, then we
+        # don't have to allocate any deriv vectors.
+        alloc_derivs = not self.root.fd_options['force_fd']
+        for sub in self.root.subgroups(recurse=True, include_self=True):
+            alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
+
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, impl=self._impl)
+        self.root._setup_vectors(param_owners, impl=self._impl, alloc_derivs=alloc_derivs)
 
         # Prepare Driver
         self.driver._setup()
@@ -632,8 +627,18 @@ class Problem(object):
 
         self._check_solvers()
 
-        # Prep for case recording
+        # Prep for case recording and record metadata
         self._start_recorders()
+
+        if self._setup_errors:
+            stream = cStringIO()
+            stream.write("\nThe following errors occurred during setup:\n")
+            for err in self._setup_errors:
+                stream.write("%s\n" % err)
+            raise RuntimeError(stream.getvalue())
+
+        # Lock any restricted options in the options dictionaries.
+        OptionsDictionary.locked = True
 
         # check for any potential issues
         if check or force_check:
@@ -661,7 +666,15 @@ class Problem(object):
         iterated_states = set()
         group_states = []
 
+        has_iter_solver = {}
         for group in self.root.subgroups(recurse=True, include_self=True):
+            try:
+                has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
+            except KeyError:
+
+                # DirectSolver handles coupled derivatives without iteration
+                if isinstance(group.ln_solver, DirectSolver):
+                    has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
             opt = group.fd_options
@@ -671,24 +684,39 @@ class Problem(object):
                 if group.name != '':
                     msg = "Complex step is currently not supported for groups"
                     msg += " other than root."
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
 
                 # Complex Step, so check for deriv requirement in subsolvers
                 for sub in self.root.subgroups(recurse=True, include_self=True):
                     if hasattr(sub.nl_solver, 'ln_solver'):
                         msg = "The solver in '{}' requires derivatives. We "
                         msg += "currently do not support complex step around it."
-                        raise RuntimeError(msg.format(sub.name))
+                        self._setup_errors.append(msg.format(sub.name))
+
+            parts = group.pathname.split('.')
+            for i in range(len(parts)):
+                # if an ancestor solver iterates, we're ok
+                if has_iter_solver['.'.join(parts[:i])]:
+                    is_iterated_somewhere = True
+                    break
+            else:
+                is_iterated_somewhere = False
+
+            # if we're iterated at this level or somewhere above, then it's
+            # ok if we have cycles or states.
+            if is_iterated_somewhere:
+                continue
 
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
-                # an error.
+                # an error if current lin solver or ancestor lin solver doesn't
+                # iterate.
                 graph = group._get_sys_graph()
                 strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                           if len(s) > 1]
                 if strong:
-                    raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                    self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
                                    "solver with maxiter==1 but it contains "
                                    "cycles %s. To fix this error, change to "
                                    "a different linear solver, e.g. ScipyGMRES "
@@ -701,7 +729,8 @@ class Problem(object):
                 group_states.append((group, states))
 
                 # this group has an iterative lin solver, so all states in it are ok
-                if group.ln_solver.options['maxiter'] > 1:
+                if isinstance(group.ln_solver, DirectSolver) or \
+                   group.ln_solver.options['maxiter'] > 1:
                     iterated_states.update(states)
                 else:
                     # see if any states are in comps that have their own
@@ -723,7 +752,7 @@ class Problem(object):
             # don't live in a Component that defines its own solve_linear method.
 
             if uniterated_states:
-                raise RuntimeError("Group '%s' has a LinearGaussSeidel "
+                self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
                                "solver with maxiter==1 but it contains "
                                "implicit states %s. To fix this error, "
                                "change to a different linear solver, e.g. "
@@ -760,39 +789,6 @@ class Problem(object):
                   file=out_stream)
 
         return (self.root._probdata.relevance.mode, self._calculated_mode)
-
-    def list_unit_conv(self, stream=sys.stdout):
-        """ List all unit conversions that are being handled by OpenMDAO
-        (including those with units defined only on one side of the
-        connection.)
-
-        Args
-        ----
-        stream : output stream, optional
-            Stream to write the state info to. Default is sys.stdout.
-
-        Returns
-        -------
-            List of unit conversions.
-        """
-
-        if self._unit_diffs:
-            tuples = sorted(iteritems(self._unit_diffs))
-            print("\nUnit Conversions", file=stream)
-
-            vec = self.root.unknowns
-            pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
-
-            for (src, tgt), (sunit, tunit) in tuples:
-                if src in pbos:
-                    pbo_str = ' (pass_by_obj)'
-                else:
-                    pbo_str = ''
-                print("%s -> %s : %s -> %s%s" % (src, tgt, sunit, tunit, pbo_str),
-                      file=stream)
-
-            return tuples
-        return []
 
     def _check_no_unknown_comps(self, out_stream=sys.stdout):
         """ Check for components without unknowns. """
@@ -1051,8 +1047,19 @@ class Problem(object):
 
         return results
 
+    def pre_run_check(self):
+        """ Last chance for some checks. The checks that should be performed
+        here are those that would generate a cryptic error message. We can
+        raise a readable error for the user."""
+
+        # New message if you forget to run setup first.
+        if not self.root.fd_options.locked:
+            msg = "setup() must be called before running the model."
+            raise RuntimeError(msg)
+
     def run(self):
         """ Runs the Driver in self.driver. """
+        self.pre_run_check()
         if self.root.is_active():
             self.driver.run(self)
 
@@ -1069,8 +1076,16 @@ class Problem(object):
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
         the current design point. """
-        if self.root.is_active():
-            self.driver.run_once(self)
+        self.pre_run_check()
+        root = self.root
+        driver = self.driver
+        if root.is_active():
+            driver.run_once(self)
+
+            # Make sure our residuals are up-to-date
+            with root._dircontext:
+                root.apply_nonlinear(root.params, root.unknowns, root.resids,
+                                     metadata=driver.metadata)
 
             # if we're running under MPI, ensure that all of the processes
             # are finished in order to ensure that scripting code outside of
@@ -1079,7 +1094,7 @@ class Problem(object):
             # potentially other pass_by_obj variables.
             if MPI:
                 if trace: debug("waiting on problem run() comm.barrier")
-                self.root.comm.barrier()
+                root.comm.barrier()
                 if trace: debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
@@ -1555,9 +1570,12 @@ class Problem(object):
                 for voi in params:
                     vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
-                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    # only set a -1.0 in the entry if that var is 'owned' by this rank
+                    # Note, we solve a slightly modified version of the unified
+                    # derivatives equations in OpenMDAO.
+                    # (dR/du) * (du/dr) = -I
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        rhs[vkey][voi_idxs[vkey][i]] = -1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
@@ -1664,7 +1682,8 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
+                                  compact_print=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1674,6 +1693,14 @@ class Problem(object):
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to suppress.
+
+        comps : None or list_like
+            List of component names to check the partials of (all others will be skipped).
+            Set to None (default) to run all components
+
+        compact_print : bool
+            Set to True to just print the essentials, one line per unknown-param
+            pair.
 
         Returns
         -------
@@ -1712,12 +1739,43 @@ class Problem(object):
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for comp in root.components(recurse=True):
-            cname = comp.pathname
+        allcomps = root.components(recurse=True)
+        if comps is None:
+            comps = allcomps
+        else:
+            allcompnames = set([c.pathname for c in allcomps])
+            requested = set(comps)
+            diff = requested.difference(allcompnames)
 
-            # No need to check comps that don't have any derivs.
-            if comp.fd_options['force_fd']:
-                continue
+            if diff:
+                sorted_diff = list(diff)
+                sorted_diff.sort()
+                msg = "The following are not valid comp names: "
+                msg += str(sorted_diff)
+                raise RuntimeError(msg)
+
+            comps = [root._subsystem(c_name) for c_name in comps]
+
+        for comp in comps:
+            cname = comp.pathname
+            opt = comp.fd_options
+
+            fwd_rev = True
+            if opt['extra_check_partials_form']:
+                f_d_2 = True
+                fd_desc = opt['form']
+                fd_desc2 = opt['extra_check_partials_form']
+            else:
+                f_d_2 = False
+                fd_desc = None
+                fd_desc2 = None
+
+            # If we don't have analytic, then only continue if we are
+            # comparing 2 different fds.
+            if opt['force_fd']:
+                if not f_d_2:
+                    continue
+                fwd_rev = False
 
             # IndepVarComps are just clutter too.
             if isinstance(comp, IndepVarComp):
@@ -1727,6 +1785,7 @@ class Problem(object):
             jac_fwd = OrderedDict()
             jac_rev = OrderedDict()
             jac_fd = OrderedDict()
+            jac_fd2 = OrderedDict()
 
             params = comp.params
             unknowns = comp.unknowns
@@ -1754,6 +1813,10 @@ class Problem(object):
 
             # Create all our keys and allocate Jacs
             for p_name in param_list:
+
+                # No need to pre-allocate if we are not calculating them
+                if not fwd_rev:
+                    break
 
                 dinputs = dunknowns if p_name in states else dparams
                 p_size = np.size(dinputs[p_name])
@@ -1783,46 +1846,48 @@ class Problem(object):
                     jac_rev[(u_name, p_name)] = np.zeros((u_size, p_size))
 
             # Reverse derivatives first
-            for u_name in unkn_list:
-                u_size = np.size(dunknowns[u_name])
+            if fwd_rev:
+                for u_name in unkn_list:
+                    u_size = np.size(dunknowns[u_name])
 
-                # Send columns of identity
-                for idx in range(u_size):
-                    dresids.vec[:] = 0.0
-                    root.clear_dparams()
-                    dunknowns.vec[:] = 0.0
+                    # Send columns of identity
+                    for idx in range(u_size):
+                        dresids.vec[:] = 0.0
+                        root.clear_dparams()
+                        dunknowns.vec[:] = 0.0
 
-                    dresids._dat[u_name].val[idx] = 1.0
-                    try:
-                        comp.apply_linear(params, unknowns, dparams,
-                                          dunknowns, dresids, 'rev')
-                    finally:
-                        dparams._apply_unit_derivatives()
+                        dresids._dat[u_name].val[idx] = 1.0
+                        try:
+                            comp.apply_linear(params, unknowns, dparams,
+                                              dunknowns, dresids, 'rev')
+                        finally:
+                            dparams._apply_unit_derivatives()
 
-                    for p_name in param_list:
+                        for p_name in param_list:
 
-                        dinputs = dunknowns if p_name in states else dparams
-                        jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
+                            dinputs = dunknowns if p_name in states else dparams
+                            jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
-            for p_name in param_list:
+            if fwd_rev:
+                for p_name in param_list:
 
-                dinputs = dunknowns if p_name in states else dparams
-                p_size = np.size(dinputs[p_name])
+                    dinputs = dunknowns if p_name in states else dparams
+                    p_size = np.size(dinputs[p_name])
 
-                # Send columns of identity
-                for idx in range(p_size):
-                    dresids.vec[:] = 0.0
-                    root.clear_dparams()
-                    dunknowns.vec[:] = 0.0
+                    # Send columns of identity
+                    for idx in range(p_size):
+                        dresids.vec[:] = 0.0
+                        root.clear_dparams()
+                        dunknowns.vec[:] = 0.0
 
-                    dinputs._dat[p_name].val[idx] = 1.0
-                    dparams._apply_unit_derivatives()
-                    comp.apply_linear(params, unknowns, dparams,
-                                      dunknowns, dresids, 'fwd')
+                        dinputs._dat[p_name].val[idx] = 1.0
+                        dparams._apply_unit_derivatives()
+                        comp.apply_linear(params, unknowns, dparams,
+                                          dunknowns, dresids, 'fwd')
 
-                    for u_name, u_val in dresids.vec_val_iter():
-                        jac_fwd[(u_name, p_name)][:, idx] = u_val
+                        for u_name, u_val in dresids.vec_val_iter():
+                            jac_fwd[(u_name, p_name)][:, idx] = u_val
 
             # Finite Difference goes last
             dresids.vec[:] = 0.0
@@ -1830,17 +1895,40 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if comp.fd_options['form'] == 'complex_step':
+            if opt['form'] == 'complex_step':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
             jac_fd = fd_func(params, unknowns, resids)
 
+            # Extra Finite Difference if requested
+            if f_d_2:
+                dresids.vec[:] = 0.0
+                root.clear_dparams()
+                dunknowns.vec[:] = 0.0
+
+                # Component can request to use complex step.
+                if opt['extra_check_partials_form'] == 'complex_step':
+                    fd_func = comp.complex_step_jacobian
+                else:
+                    fd_func = comp.fd_jacobian
+
+                # Cache old form so we can overide temporarily
+                save_form = opt['form']
+                OptionsDictionary.locked = False
+                opt['form'] = opt['extra_check_partials_form']
+
+                jac_fd2 = fd_func(params, unknowns, resids)
+
+                opt['form'] = save_form
+                OptionsDictionary.locked = True
+
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
-                                 c_name=cname)
+                                 c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
+                                 fd_desc2=fd_desc2, compact_print=compact_print)
 
         return data
 
@@ -1988,7 +2076,7 @@ class Problem(object):
                     msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
                           " Modes must match to use parallel derivative groups."
                     msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
-                    raise RuntimeError(msg)
+                    self._setup_errors.append(msg)
 
         return mode
 
@@ -2061,8 +2149,6 @@ class Problem(object):
         unknowns_dict : OrderedDict
             A dict of unknowns metadata for the whole `Problem`.
         """
-        self._unit_diffs = {}
-
         to_prom_name = self.root._sysdata.to_prom_name
 
         for target, (source, idxs) in iteritems(connections):
@@ -2071,11 +2157,6 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
-                # for later reporting in check_setup, keep track of any unit differences,
-                # even for connections where one side has units and the other doesn't
-                if 'units' in tmeta or 'units' in smeta:
-                    self._unit_diffs[(source, target)] = (smeta.get('units'),
-                                                          tmeta.get('units'))
                 continue
 
             src_unit = smeta['units']
@@ -2085,12 +2166,14 @@ class Problem(object):
                 scale, offset = get_conversion_tuple(src_unit, tgt_unit)
             except TypeError as err:
                 if str(err) == "Incompatible units":
-                    msg = "Unit '{s[units]}' in source '{sprom}' "\
-                        "is incompatible with unit '{t[units]}' "\
-                        "in target '{tprom}'.".format(s=smeta, t=tmeta,
-                                                                 sprom=to_prom_name[source],
-                                                                 tprom=to_prom_name[target])
-                    raise TypeError(msg)
+                    msg = "Unit '{0}' in source {1} "\
+                        "is incompatible with unit '{2}' "\
+                        "in target {3}.".format(src_unit,
+                                                  _both_names(smeta, to_prom_name),
+                                                  tgt_unit,
+                                                  _both_names(tmeta, to_prom_name))
+                    self._setup_errors.append(msg)
+                    continue
                 else:
                     raise
 
@@ -2098,8 +2181,6 @@ class Problem(object):
             # in the parameter metadata
             if scale != 1.0 or offset != 0.0:
                 tmeta['unit_conv'] = (scale, offset)
-                self._unit_diffs[(source, target)] = (smeta.get('units'),
-                                                      tmeta.get('units'))
 
     def _add_implicit_connections(self, connections):
         """
@@ -2179,11 +2260,28 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 
+def _pad_name(name, pad_num=13, quotes=True):
+    """ Pads a string so that they all line up when stacked."""
+    l_name = len(name)
+    if l_name < pad_num:
+        pad = pad_num - l_name
+        if quotes:
+            pad_str = "'{name}'{sep:<{pad}}"
+        else:
+            pad_str = "{name}{sep:<{pad}}"
+        pad_name = pad_str.format(name=name, sep='', pad=pad)
+        return pad_name
+    else:
+        return '{0}'.format(name)
+
+
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
-                         out_stream, c_name='root'):
+                         out_stream, c_name='root', jac_fd2=None, fd_desc=None,
+                         fd_desc2=None, compact_print=False):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
-    checks."""
+    checks.
+    """
     started = False
 
     for p_name in params:
@@ -2215,6 +2313,13 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 magrev = None
 
+            if jac_fd2:
+                Jsub_fd2 = jac_fd2[key]
+                ldata['J_fd2'] = Jsub_fd2
+                magfd2 = np.linalg.norm(Jsub_fd2)
+            else:
+                magfd2 = None
+
             ldata['magnitude'] = (magfor, magrev, magfd)
 
             if jac_fwd:
@@ -2231,10 +2336,15 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 abs3 = None
 
+            if jac_fd2:
+                abs4 = np.linalg.norm(Jsub_fd2 - Jsub_fd)
+            else:
+                abs4 = None
+
             ldata['abs error'] = (abs1, abs2, abs3)
 
             if magfd == 0.0:
-                rel1 = rel2 = rel3 = float('nan')
+                rel1 = rel2 = rel3 = rel4 = float('nan')
             else:
                 if jac_fwd:
                     rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
@@ -2251,51 +2361,117 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 else:
                     rel3 = None
 
+                if jac_fd2:
+                    rel4 = np.linalg.norm(Jsub_fd2 - Jsub_fd)/magfd
+                else:
+                    rel4 = None
+
             ldata['rel error'] = (rel1, rel2, rel3)
 
             if out_stream is None:
                 continue
 
-            if started:
-                out_stream.write(' -'*30 + '\n')
+            if compact_print:
+                if jac_fwd and jac_rev:
+                    if not started:
+                        tmp1 = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fwd mag.', 10, quotes=False),
+                                              _pad_name('rev mag.', 10, quotes=False),
+                                              _pad_name('fd mag.', 10, quotes=False),
+                                              _pad_name('a(fwd-fd)', 10, quotes=False),
+                                              _pad_name('a(rev-fd)', 10, quotes=False),
+                                              _pad_name('r(fwd-rev)', 10, quotes=False),
+                                              _pad_name('r(rev-fd)', 10, quotes=False)
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    tmp1 = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfor, magrev, magfd, abs1, abs2,
+                                                 rel1, rel2))
+
+                elif jac_fd and jac_fd2:
+                    if not started:
+                        tmp1 = "{0} wrt {1} | {2} | {3} | {4} | {5}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fd1 mag.', 13, quotes=False),
+                                              _pad_name('fd2 mag.', 12, quotes=False),
+                                              _pad_name('ab(fd2 - fd1)', 12, quotes=False),
+                                              _pad_name('rel(fd2 - fd1)', 12, quotes=False)
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    tmp1 = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e} | {5: .6e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfd, magfd2, abs4, rel4))
             else:
-                started = True
 
-            # Optional file_like output
-            out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
+                if started:
+                    out_stream.write(' -'*30 + '\n')
+                else:
+                    started = True
 
-            if jac_fwd:
-                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-            if jac_rev:
-                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            if jac_fwd and jac_rev:
-                out_stream.write('         Fd Magnitude : %.6e\n\n' % magfd)
+                # Optional file_like output
+                out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
 
-            if jac_fwd:
-                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-            if jac_rev:
-                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n\n' % abs3)
+                if jac_fwd:
+                    out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                if jac_rev:
+                    out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                if not jac_fwd and not jac_rev:
+                    out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
+                if jac_fd:
+                    out_stream.write('         Fd Magnitude : %.6e' % magfd)
+                    if fd_desc:
+                        out_stream.write(' (%s)' % fd_desc)
+                    out_stream.write('\n')
+                if jac_fd2:
+                    out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
+                    if fd_desc2:
+                        out_stream.write(' (%s)' % fd_desc2)
+                    out_stream.write('\n')
+                out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-            if jac_rev:
-                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n\n' % rel3)
+                if jac_fwd:
+                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                if jac_rev:
+                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
+                if jac_fd2:
+                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
+                out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-                out_stream.write(str(Jsub_for))
+                if jac_fwd:
+                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                if jac_rev:
+                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
+                if jac_fd2:
+                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
+                out_stream.write('\n')
+
+                if jac_fwd:
+                    out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                    out_stream.write(str(Jsub_for))
+                    out_stream.write('\n\n')
+                if jac_rev:
+                    out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                    out_stream.write(str(Jsub_rev))
+                    out_stream.write('\n\n')
+                out_stream.write('    Raw FD Derivative (Jfd)\n\n')
+                out_stream.write(str(Jsub_fd))
                 out_stream.write('\n\n')
-            if jac_rev:
-                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-                out_stream.write(str(Jsub_rev))
-                out_stream.write('\n\n')
-            out_stream.write('    Raw FD Derivative (Jfor)\n\n')
-            out_stream.write(str(Jsub_fd))
-            out_stream.write('\n')
+                if jac_fd2:
+                    out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
+                    out_stream.write(str(Jsub_fd2))
+                    out_stream.write('\n\n')
 
 def _needs_iteration(comp):
     """Return True if the given component needs an iterative

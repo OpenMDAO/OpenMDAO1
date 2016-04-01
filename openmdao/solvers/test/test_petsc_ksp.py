@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, ExecComp, DirectSolver, \
-                         LinearGaussSeidel
+                         LinearGaussSeidel, AnalysisError
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped
@@ -12,6 +12,7 @@ from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, DoubleArrayComp, \
                                        FanInGrouped, ArrayComp2D, FanOutAllGrouped
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 try:
     from openmdao.solvers.petsc_ksp import PetscKSP
@@ -277,6 +278,32 @@ class TestPetscKSPSerial(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['p.x'][0][0], -40.75, 1e-6)
 
+    def test_analysis_error(self):
+
+        prob = Problem(impl=impl)
+        prob.root = ConvergeDiverge()
+        prob.root.ln_solver = PetscKSP()
+        prob.root.ln_solver.options['maxiter'] = 2
+        prob.root.ln_solver.options['err_on_maxiter'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        indep_list = ['p.x']
+        unknown_list = ['comp7.y1']
+
+        prob.run()
+
+        # Make sure value is fine.
+        assert_rel_error(self, prob['comp7.y1'], -102.7, 1e-6)
+
+        try:
+            J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': PetscKSP FAILED to converge in 6 iterations")
+        else:
+            self.fail("expected AnalysisError")
+
     def test_converge_diverge_groups(self):
 
         prob = Problem(impl=impl)
@@ -379,6 +406,9 @@ class TestPetscKSPSerial(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')

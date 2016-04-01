@@ -1,15 +1,19 @@
 """ Unit test for the Gauss Seidel linear solver. """
 
 import unittest
-import numpy as np
 
-from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp
+import numpy as np
+from scipy.optimize import fsolve
+
+from openmdao.api import Group, Problem, LinearGaussSeidel, IndepVarComp, ExecComp, \
+                         Component, ScipyGMRES, AnalysisError
 from openmdao.test.converge_diverge import ConvergeDiverge, SingleDiamond, \
                                            ConvergeDivergeGroups, SingleDiamondGrouped
 from openmdao.test.sellar import SellarDerivativesGrouped, SellarDerivatives, StateConnection
 from openmdao.test.simple_comps import SimpleCompDerivMatVec, FanOut, FanIn, \
                                        FanOutGrouped, FanInGrouped, ArrayComp2D
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 
 class TestLinearGaussSeidel(unittest.TestCase):
@@ -386,6 +390,9 @@ class TestLinearGaussSeidel(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
@@ -395,6 +402,44 @@ class TestLinearGaussSeidel(unittest.TestCase):
         # Obviously this test doesn't do much right now, but I need to verify
         # we don't get a keyerror here.
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
+
+    def test_sellar_analysis_error(self):
+
+        prob = Problem()
+        prob.root = SellarDerivatives()
+        prob.root.ln_solver = LinearGaussSeidel()
+        prob.root.ln_solver.options['maxiter'] = 2
+        prob.root.ln_solver.options['err_on_maxiter'] = True
+        prob.root.ln_solver.options['atol'] = 1e-12
+        prob.root.ln_solver.options['rtol'] = 1e-12
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Just make sure we are at the right answer
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        indep_list = ['x', 'z']
+        unknown_list = ['obj', 'con1', 'con2']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        try:
+            J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Solve in '': LinearGaussSeidel FAILED to converge after 2 iterations")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_sellar_derivs_grouped(self):
 
@@ -435,6 +480,9 @@ class TestLinearGaussSeidel(unittest.TestCase):
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
+
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
 
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
@@ -485,6 +533,9 @@ class TestLinearGaussSeidel(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
@@ -505,10 +556,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
+            self.assertTrue("Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains cycles "
                              "[['C1', 'C2', 'C3']]. To fix this error, change to a different linear solver, "
-                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
+                             "e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended)."
+                             in str(err))
         else:
             self.fail("Exception expected")
 
@@ -520,13 +571,98 @@ class TestLinearGaussSeidel(unittest.TestCase):
         try:
             p.setup(check=False)
         except Exception as err:
-            self.assertEqual(str(err),
-                             "Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
+            self.assertTrue("Group '' has a LinearGaussSeidel solver with maxiter==1 but it contains "
                              "implicit states ['C1.y2_command']. To fix this error, change to a different "
-                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended).")
+                             "linear solver, e.g. ScipyGMRES or PetscKSP, or increase maxiter (not recommended)."
+                             in str(err))
         else:
             self.fail("Exception expected")
 
+
+class SimpleImplicit(Component):
+
+    def __init__(self):
+        super(SimpleImplicit, self).__init__()
+
+        self.add_param('a', shape=1., step_size=1e-3)
+        self.add_param('b', shape=1)
+
+        self.add_state('x', val=np.ones(2))
+        # self.fd_options['force_fd'] = True
+        # self.fd_options['form'] = 'complex_step'
+
+    def apply_nonlinear(self, p, u, r):
+
+        x0,x1 = u['x']
+        r['x'][0] = x0**2 - x1**2 + p['a']
+        r['x'][1] = p['b']*x0*x1
+
+    def _r(self, x, p, u, r):
+        u['x'] = x
+        self.apply_nonlinear(p, u, r)
+        return r['x']
+
+    def solve_nonlinear(self, p, u, r):
+        x = fsolve(self._r, u['x'], args=(p, u, r))
+        u['x'] = x
+        # u['x'] = np.array([0., 3.])
+
+        # self.apply_nonlinear(p, u, r)
+
+    def linearize(self, p, u, r):
+        J = {}
+        x0,x1 = u['x']
+
+        J['x','a'] = np.array([[1.],
+                               [0.]])
+        J['x','b'] = np.array([[0.],
+                               [x0*x1]])
+        J['x','x'] = np.array([[2.*x0, -2.*x1],
+                               [p['b']*x1, p['b']*x0]])
+        self.J = J
+
+        return J
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
+        if mode == 'fwd':
+            sol_vec, rhs_vec = self.dumat, self.drmat
+        else:
+            sol_vec, rhs_vec = self.drmat, self.dumat
+
+        for voi in vois:
+            if mode == "fwd":
+                sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'], -rhs_vec[voi].vec)
+            else:
+                sol_vec[voi].vec[:] = np.linalg.solve(self.J['x','x'].T, -rhs_vec[voi].vec)
+
+
+class TestLinearGaussSeidelAsPrecon(unittest.TestCase):
+
+    def test_relevance_issue(self):
+
+        p = Problem()
+        p.root = Group()
+
+        dvars = ( ('a', 3.), ('b', 10.))
+        p.root.add('desvars', IndepVarComp(dvars), promotes=['a', 'b'])
+
+        sg = p.root.add('sg', Group(), promotes=["*"])
+        sg.add('si', SimpleImplicit(), promotes=['a', 'b', 'x'])
+
+        p.root.add('func', ExecComp('f = 2*x0+a'), promotes=['f', 'x0', 'a'])
+        p.root.connect('x', 'x0', src_indices=[1])
+
+        p.root.ln_solver = ScipyGMRES()
+        p.root.ln_solver.preconditioner = LinearGaussSeidel()
+
+        p.driver.add_objective('f')
+        p.driver.add_desvar('a')
+
+        p.setup(check=False)
+        p.run_once()
+
+        # Make sure we don't get a KeyError
+        p.check_total_derivatives(out_stream=None)
 
 if __name__ == "__main__":
     unittest.main()

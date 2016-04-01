@@ -66,6 +66,8 @@ class InMemoryRecorder(BaseRecorder):
 
         data['timestamp'] = metadata['timestamp']
         data['iter'] = format_iteration_coordinate(iteration_coordinate)
+        data['success'] = metadata['success']
+        data['msg'] = metadata['msg']
 
         if self.options['record_params']:
             data['params'] = {p:v for p,v in

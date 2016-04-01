@@ -133,3 +133,25 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
         if err > tolerance:
             test_case.fail('error for %s is %.3e, is larger than'
                 'tolerance %.3e' % (str(up_pair), err, tolerance))
+
+
+def assert_no_force_fd(group):
+    """ Traverses the given group recursively.  If any subsystems are found
+    where `fd_options['force_fd'] = True`, an AssertionError is raised.
+
+    Parameters
+    ----------
+    group : OpenMDAO Group
+        The system which is recursively checked for the use of
+        `fd_options["force_fd"]=True`
+
+    Raises
+    ------
+    AssertionError
+        If a subsystem of group is found to be using
+        `fd_options["force_fd"]=True`
+    """
+    subs = [s.pathname for s in group.subsystems(recurse=True, include_self=True)
+            if s.fd_options['force_fd']]
+    assert not subs, "One or more systems are using " \
+                     "fd_options['force_fd']=True: " + str(subs)

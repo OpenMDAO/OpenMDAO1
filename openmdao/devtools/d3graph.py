@@ -2,12 +2,11 @@
 import os
 import sys
 import json
-
-import webbrowser
 from itertools import chain
+
 from six import iteritems
 
-import networkx as nx
+import webbrowser
 
 from openmdao.core.component import Component
 
@@ -56,7 +55,7 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
     return tree
 
 def view_connections(system, viewer='connect_table',
-               outfile='graph.html', show_browser=True):
+                     outfile='connections.html', show_browser=True):
     """
     Generates a self-contained html file containing a connection viewer
     of the specified type.  Optionally pops up a web browser to
@@ -71,7 +70,7 @@ def view_connections(system, viewer='connect_table',
         The type of web viewer used to view the connections.
 
     outfile : str, optional
-        The name of the output html file.  Defaults to 'graph.html'.
+        The name of the output html file.  Defaults to 'connections.html'.
 
     show_browser : bool, optional
         If True, pop up a browser to view the generated html file.

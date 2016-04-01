@@ -18,6 +18,12 @@ class IndepVarComp(Component):
         Default finite difference stepsize
     fd_options['step_type'] :  str('absolute')
         Set to absolute, relative
+    fd_options['extra_check_partials_form'] :  None or str
+        Finite difference mode: ("forward", "backward", "central", "complex_step")
+        During check_partial_derivatives, you can optionally do a
+        second finite difference with a different mode.
+    fd_options['linearize'] : bool(False)
+        Set to True if you want linearize to be called even though you are using FD.
     """
 
     def __init__(self, name, val=None, **kwargs):
@@ -81,13 +87,22 @@ class IndepVarComp(Component):
         else:
             sol_vec, rhs_vec = self.drmat, self.dumat
 
+        # Note, we solve a slightly modified version of the unified
+        # derivatives equations in OpenMDAO.
+        # (dR/du) * (du/dr) = -I
+        # The minus side on the right hand side comes from defining the
+        # explicit residual to be ynew - yold instead of yold - ynew. The
+        # advantage of this is that the derivative of an explicit residual is
+        # the same sign as the derivative of the explicit unknown. This
+        # introduces a minus one here.
+
         for voi in vois:
             if gs_outputs is None:
-                rhs_vec[voi].vec[:] += sol_vec[voi].vec
+                rhs_vec[voi].vec[:] -= sol_vec[voi].vec
             else:
                 for var, meta in iteritems(self.dumat[voi]):
                     if var in gs_outputs[voi]:
-                        rhs_vec[voi][var] += sol_vec[voi][var]
+                        rhs_vec[voi][var] -= sol_vec[voi][var]
 
     def _sys_linearize(self, params, unknowns, resids, force_fd=False):
         """ No linearization needed for this one"""

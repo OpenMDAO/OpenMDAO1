@@ -1,6 +1,3 @@
-"""
-.. _`external_code.py`:
-"""
 
 import sys
 import os
@@ -8,6 +5,7 @@ import os
 import numpy.distutils
 from numpy.distutils.exec_command import find_executable
 
+from openmdao.core.system import AnalysisError
 from openmdao.core.component import Component
 from openmdao.util.options import OptionsDictionary
 from openmdao.util.shell_proc import STDOUT, DEV_NULL, ShellProc
@@ -26,29 +24,38 @@ class ExternalCode(Component):
     fd_options['force_fd'] :  bool(False)
         Set to True to finite difference this system.
     fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
+        Finite difference mode. (forward, backward, central) You can also set
+        to 'complex_step' to peform the complex step method if your components
+        support it.
     fd_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
     fd_options['step_type'] :  str('absolute')
         Set to absolute, relative
-    options['check_external_outputs'] :  bool(True)
-        Check that all input or output external files exist
+    fd_options['extra_check_partials_form'] :  None or str
+        Finite difference mode: ("forward", "backward", "central", "complex_step")
+        During check_partial_derivatives, you can optionally do a
+        second finite difference with a different mode.
+    fd_options['linearize'] : bool(False)
+        Set to True if you want linearize to be called even though you are using FD.
+
     options['command'] :  list([])
-        command to be executed
+        Command to be executed. Command must be a list of command line args.
     options['env_vars'] :  dict({})
         Environment variables required by the command
     options['external_input_files'] :  list([])
-        (optional) list of input file names to check the pressence of before solve_nonlinear
+        (optional) list of input file names to check the existence of before solve_nonlinear
     options['external_output_files'] :  list([])
-        (optional) list of input file names to check the pressence of after solve_nonlinear
+        (optional) list of input file names to check the existence of after solve_nonlinear
     options['poll_delay'] :  float(0.0)
-        Delay between polling for command completion. A value of zero will use an internally computed default
+        Delay between polling for command completion. A value of zero will use
+        an internally computed default.
     options['timeout'] :  float(0.0)
-        Maximum time to wait for command completion. A value of zero implies an infinite wait
-    options['on_timeout'] :  str('raise')
-        Timeout behavior, either "raise" an exception or "continue" running OpenMDAO
-    options['on_error'] :  str('raise')
-        Behavior on error returned from code, either "raise" an exception or "continue" running OpenMDAO
+        Maximum time in seconds to wait for command completion. A value of zero
+        implies an infinite wait. If the timeout interval is exceeded, an
+        AnalysisError will be raised.
+    options['fail_hard'] :  bool(True)
+        Behavior on error returned from code, either raise a 'hard' error (RuntimeError) if True
+        or a 'soft' error (AnalysisError) if False.
 
 
     """
@@ -62,26 +69,21 @@ class ExternalCode(Component):
         # Input options for this Component
         self.options = OptionsDictionary()
         self.options.add_option('command', [], desc='command to be executed')
-        self.options.add_option('env_vars', {}, desc='Environment variables required by the command')
+        self.options.add_option('env_vars', {},
+                           desc='Environment variables required by the command')
         self.options.add_option('poll_delay', 0.0, lower=0.0,
             desc='Delay between polling for command completion. A value of zero will use an internally computed default')
         self.options.add_option('timeout', 0.0, lower=0.0,
                                 desc='Maximum time to wait for command completion. A value of zero implies an infinite wait')
-        self.options.add_option('check_external_outputs', True,
-            desc='Check that all input or output external files exist')
-
         self.options.add_option( 'external_input_files', [],
-            desc='(optional) list of input file names to check the pressence of before solve_nonlinear')
+            desc='(optional) list of input file names to check the existence of before solve_nonlinear')
         self.options.add_option( 'external_output_files', [],
-            desc='(optional) list of input file names to check the pressence of after solve_nonlinear')
-        self.options.add_option('on_timeout', 'raise', values=['raise', 'continue'],
-            desc='Timeout behavior, either "raise" an exception or "continue" running OpenMDAO')
-        self.options.add_option('on_error', 'raise', values=['raise', 'continue'],
-            desc='Behavior on error returned from code, either "raise" an exception or "continue" running OpenMDAO')
+            desc='(optional) list of input file names to check the existence of after solve_nonlinear')
+        self.options.add_option('fail_hard', True,
+            desc="If True, external code errors raise a 'hard' exception (RuntimeError).  Otherwise raise a 'soft' exception (AnalysisError).")
 
         # Outputs of the run of the component or items that will not work with the OptionsDictionary
         self.return_code = 0 # Return code from the command
-        self.timed_out = False # True if the command timed-out
         self.stdin  = self.DEV_NULL
         self.stdout = None
         self.stderr = "error.out"
@@ -96,102 +98,79 @@ class ExternalCode(Component):
         """
 
         # check for the command
-        if not self.options['command']:
+        cmd = [c for c in self.options['command'] if c.strip()]
+        if not cmd:
             out_stream.write( "The command cannot be empty")
         else:
-            if isinstance(self.options['command'], str):
-                program_to_execute = self.options['command']
-            else:
-                program_to_execute = self.options['command'][0]
+            program_to_execute = self.options['command'][0]
             command_full_path = find_executable( program_to_execute )
 
             if not command_full_path:
-                msg = "The command to be executed, '%s', cannot be found" % program_to_execute
-                out_stream.write(msg)
+                out_stream.write("The command to be executed, '%s', "
+                                 "cannot be found" % program_to_execute)
 
         # Check for missing input files
-        missing_files = self._check_for_files(input=True)
-        for iotype, path in missing_files:
-            msg = "The %s file %s is missing" % ( iotype, path )
-            out_stream.write(msg)
+        missing = self._check_for_files(self.options['external_input_files'])
+        if missing:
+            out_stream.write("The following input files are missing at setup "
+                             " time: %s" % missing)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """Runs the component
         """
 
         self.return_code = -12345678
-        self.timed_out = False
-        self.errored_out = False
 
         if not self.options['command']:
             raise ValueError('Empty command list')
 
-        # self.check_files(inputs=True)
+        if self.options['fail_hard']:
+            err_class = RuntimeError
+        else:
+            err_class = AnalysisError
 
         return_code = None
-        error_msg = ''
+
         try:
+            missing = self._check_for_files(self.options['external_input_files'])
+            if missing:
+                raise err_class("The following input files are missing: %s"
+                                % sorted(missing))
             return_code, error_msg = self._execute_local()
 
             if return_code is None:
-                self.timed_out = True
-                if self.options['on_timeout'] == 'raise':
-                    raise RuntimeError('Timed out')
+                raise AnalysisError('Timed out after %s sec.' %
+                                     self.options['timeout'])
 
             elif return_code:
-                self.errored_out = True
-                if self.options['on_error'] == 'raise':
-                    if isinstance(self.stderr, str):
-                        if os.path.exists(self.stderr):
-                            stderrfile = open(self.stderr, 'r')
-                            error_desc = stderrfile.read()
-                            stderrfile.close()
-                            err_fragment = "\nError Output:\n%s" % error_desc
-                        else:
-                            err_fragment = "\n[stderr %r missing]" % self.stderr
+                if isinstance(self.stderr, str):
+                    if os.path.exists(self.stderr):
+                        stderrfile = open(self.stderr, 'r')
+                        error_desc = stderrfile.read()
+                        stderrfile.close()
+                        err_fragment = "\nError Output:\n%s" % error_desc
                     else:
-                        err_fragment = error_msg
+                        err_fragment = "\n[stderr %r missing]" % self.stderr
+                else:
+                    err_fragment = error_msg
 
-                    raise RuntimeError('return_code = %d%s' % (return_code,
-                                                               err_fragment))
+                raise err_class('return_code = %d%s' % (return_code,
+                                                        err_fragment))
 
-            if self.options['check_external_outputs']:
-                missing_files = self._check_for_files(input=False)
-                msg = ""
-                for iotype, path in missing_files:
-                    msg +=  "%s file %s is missing\n" % (iotype, path)
+            missing = self._check_for_files(self.options['external_output_files'])
+            if missing:
+                raise err_class("The following output files are missing: %s"
+                                % sorted(missing))
 
-                if msg:
-                    raise RuntimeError( "Missing files: %s" % msg )
-                # self.check_files(inputs=False)
         finally:
             self.return_code = -999999 if return_code is None else return_code
 
-    def _check_for_files(self, input=True):
-        """
-        Check that all 'specific' input external files exist.
-
-        input: bool
-            If True, check inputs. Else check outputs
-        """
-
-        missing_files = []
-
-        if input:
-            files = self.options['external_input_files']
-        else:
-            files = self.options['external_output_files']
-
-        for path in files:
-            if not os.path.exists(path):
-                missing_files.append(('input', path))
-
-        return missing_files
+    def _check_for_files(self, files):
+        """ Check that specified files exist. """
+        return [path for path in files if not os.path.exists(path)]
 
     def _execute_local(self):
         """ Run command. """
-        #self._logger.info('executing %s...', self.options['command'])
-        # start_time = time.time()
 
         # check to make sure command exists
         if isinstance(self.options['command'], str):
@@ -213,7 +192,6 @@ class ExternalCode(Component):
         self._process = \
             ShellProc(command_for_shell_proc, self.stdin,
                       self.stdout, self.stderr, self.options['env_vars'])
-        #self._logger.debug('PID = %d', self._process.pid)
 
         try:
             return_code, error_msg = \
@@ -221,9 +199,5 @@ class ExternalCode(Component):
         finally:
             self._process.close_files()
             self._process = None
-
-        # et = time.time() - start_time
-        #if et >= 60:  #pragma no cover
-            #self._logger.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)

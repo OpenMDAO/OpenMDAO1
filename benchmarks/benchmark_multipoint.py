@@ -1,12 +1,10 @@
 from __future__ import print_function
+import unittest
 from six.moves import range
 import numpy as np
 
-from openmdao.core.component import Component
-from openmdao.core.group import Group
-
-from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.exec_comp import ExecComp
+import time
+from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp
 
 
 class Plus(Component):
@@ -34,12 +32,9 @@ class Point(Group):
     def __init__(self, adder, scalar):
         super(Point, self).__init__()
 
-        # self.add('plus', ExecComp('f1 = x + %f'%adder, x=np.random.random()), promotes=['*'])
-        # self.add('times', ExecComp('f2 = %f*f1'%scalar), promotes=['*'])
-
         self.add('plus', Plus(adder), promotes=['*'])
         self.add('times', Times(scalar), promotes=['*'])
-        self.set_order(('plus','times'))
+        self.set_order(('plus','times')) # helps speed up setup
 
 class Summer(Component):
 
@@ -63,47 +58,56 @@ class MultiPoint(Group):
         super(MultiPoint, self).__init__()
 
         size = len(adders)
-        # self.add('desvar', IndepVarComp('X', val=10*np.arange(size, dtype=float)), promotes=['*'])
 
         for i,(a,s) in enumerate(zip(adders, scalars)):
             c_name = 'p%d'%i
             self.add(c_name, Point(a,s))
-            # self.connect('X', c_name+'.x', src_indices=[i])
             self.connect(c_name+'.f2','aggregate.y%d'%i)
 
         self.add('aggregate', Summer(size))
 
-if __name__ == '__main__':
-    import time
-    from openmdao.core.problem import Problem
+class BM(unittest.TestCase):
+    """A few 'brute force' multipoint cases (1K, 2K, 5K)"""
 
-    prob = Problem()
+    def _setup_bm(self, npts):
 
-    size = 10000
-    print ("SIZE: %d" % size)
+        prob = Problem()
 
-    adders =  np.random.random(size)
-    scalars = np.random.random(size)
+        size = npts
 
-    prob.root = MultiPoint(adders, scalars)
+        adders =  np.random.random(size)
+        scalars = np.random.random(size)
 
-    st = time.time()
-    print("setup started")
-    prob.setup(check=False)
-    print("setup time", time.time() - st)
+        prob.root = MultiPoint(adders, scalars)
 
-    print("num connections:",len(prob.root.connections))
-    print("num unknowns:", len(prob.root._unknowns_dict),
-          "size:", prob.root.unknowns.vec.size)
-    print("num params:", len(prob.root._params_dict),
-          "size:", prob.root.params.vec.size)
+        st = time.time()
+        prob.setup(check=False)
 
-    # prob['p0.x'] = 10
-    # prob['p1.x'] = 13
-    # prob['p2.x'] = 15
-    st = time.time()
-    print("run started")
-    prob.run()
-    print("run time", time.time() - st)
+        # print("num connections:",len(prob.root.connections))
+        # print("num unknowns:", len(prob.root._unknowns_dict),
+        #       "size:", prob.root.unknowns.vec.size)
+        # print("num params:", len(prob.root._params_dict),
+        #       "size:", prob.root.params.vec.size)
+        #
+        return prob
 
-    print(prob['aggregate.total'])
+    def benchmark_setup_5K(self):
+        self._setup_bm(5000)
+
+    def benchmark_setup_2K(self):
+        self._setup_bm(2000)
+
+    def benchmark_setup_1K(self):
+        self._setup_bm(1000)
+
+    def benchmark_run_5K(self):
+        p = self._setup_bm(5000)
+        p.run()
+
+    def benchmark_run_2K(self):
+        p = self._setup_bm(2000)
+        p.run()
+
+    def benchmark_run_1K(self):
+        p = self._setup_bm(1000)
+        p.run()
