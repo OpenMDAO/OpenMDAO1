@@ -98,7 +98,7 @@ class TestAssertions(unittest.TestCase):
         prob.root.add('paraboloid', Paraboloid(), promotes=['x', 'y', 'f_xy'])
         prob.root.add('p1', IndepVarComp('x', 2.0),promotes=['x'])
         prob.root.add('p2', IndepVarComp('y', 2.0),promotes=['y'])
-        prob.setup()
+        prob.setup(check=False)
         assert_no_force_fd(prob.root)
 
     def test_assert_no_force_fd_expect_failure(self):
@@ -109,7 +109,7 @@ class TestAssertions(unittest.TestCase):
         paraboloid.fd_options['force_fd'] = True
         prob.root.add('p1', IndepVarComp('x', 2.0),promotes=['x'])
         prob.root.add('p2', IndepVarComp('y', 2.0),promotes=['y'])
-        prob.setup()
+        prob.setup(check=False)
         try:
             assert_no_force_fd(prob.root)
         except AssertionError as exc:
