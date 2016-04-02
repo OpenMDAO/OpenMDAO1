@@ -14,8 +14,10 @@ html, body {
     overflow: auto;
 }
 
-.prom_match {
-
+/* highlighting for targets set from outside of selected target scope */
+.outscope {
+    color: #9812d0;
+    font-weight: bold;
 }
 
 .unit_diff {
@@ -151,6 +153,7 @@ function window_height() {
 }
 
 function fill_vars() {
+    var noconn = "NO CONNECTION";
     var tbl = d3.select('table');
 
     d3.select("#scroller")
@@ -161,12 +164,19 @@ function fill_vars() {
         .selectAll("tr")
         .remove();
 
-    var i,j;
+    var i, j, source, proms, promt, tgt, tgts, in_scope;
 
     var rows = [];
     var cols = [];
 
-    if (tgt_prefix == "NO CONNECTION") {
+    // use scope to determine when a source comes from
+    // outside of the selected group of the target.
+    var scope = false;
+    if (src_prefix != noconn && tgt_prefix != noconn && tgt_prefix != "") {
+        scope = tgt_prefix;
+    }
+
+    if (tgt_prefix == noconn) {
         for (i=0; i<noconn_srcs.length; i++) {
             if (noconn_srcs[i].startsWith(src_prefix)) {
                 rows.push({
@@ -175,27 +185,37 @@ function fill_vars() {
                     "Size": "",
                     "PUnits": "",
                     "Params": tgt_prefix,
+                    "in_scope": true,
                 });
             }
         }
     }
     else {
         for (i=0; i<src2tgts.length; i++) {
-            if (src2tgts[i][0].startsWith(src_prefix)) {
+            source = src2tgts[i][0];
+
+            if (source.startsWith(src_prefix)) {
                 cols = [];
-                for (j=0; j<src2tgts[i][1].length; j++) {
-                    if (src2tgts[i][1][j].startsWith(tgt_prefix)) {
-                        cols.push(src2tgts[i][1][j]);
+                tgts = src2tgts[i][1];
+                for (j=0; j<tgts.length; j++) {
+                    if (tgts[j].startsWith(tgt_prefix)) {
+                        cols.push(tgts[j]);
                     }
                 }
                 if (cols.length > 0) {
                     for (j=0; j<cols.length; j++) {
+                        in_scope = true;
+                        tgt = cols[j];
+                        if (scope == tgt_prefix && source != noconn) {
+                            in_scope = source.startsWith(tgt_prefix);
+                        }
                         rows.push({
-                            "Unknowns": src2tgts[i][0],
-                            "UUnits": units[src2tgts[i][0]],
-                            "Size": sizes[cols[j]],
-                            "PUnits": units[cols[j]],
-                            "Params": cols[j],
+                            "Unknowns": source,
+                            "UUnits": units[source],
+                            "Size": sizes[tgt],
+                            "PUnits": units[tgt],
+                            "Params": tgt,
+                            "in_scope": in_scope,
                         });
                     }
                 }
@@ -219,27 +239,39 @@ function tabulate(data, columns) {
         .append("tr")
         .classed("even", function(d,i) { return i % 2 == 0; });
 
-    var diff;
+    var udiff;
+    var in_scope;
 
     // create a cell in each row for each column
     var cells = rows.selectAll("td")
         .data(function(row) {
             return columns.map(function(column) {
+                in_scope = true;
+                udiff = false;
+
+                // find different units
                 if (column == "UUnits") {
-                    diff = row[column] != row["PUnits"];
+                    udiff = row[column] != row["PUnits"];
                 }
                 else if (column == "PUnits") {
-                    diff = row["UUnits"] != row[column];
+                    udiff = row["UUnits"] != row[column];
                 }
-                else {
-                    diff = false;
+                else if (column == "Params") {
+                    in_scope = row["in_scope"];
                 }
-                return {column: column, "value": row[column], "diff": diff};
+
+                return {
+                    column: column,
+                    "value": row[column],
+                    "udiff": udiff,
+                    "in_scope": in_scope,
+                };
             });
         })
         .enter()
         .append("td")
-        .classed("unit_diff", function(d) { return d.diff; })
+        .classed("unit_diff", function(d) { return d.udiff; })
+        .classed("outscope", function(d) { return !d.in_scope; })
         .html(function(d) { return d.value; });
 
     return table;
@@ -262,11 +294,11 @@ function tgt_group_changed() {
         <div id="htable_container">
             <div id="htable_row">
                <div class="htable_data">
-                   <h3>Unknowns Group</h3>
+                   <h3>Filter by Source Group</h3>
                    <select id="src_filter" onchange="src_group_changed()"></select>
                </div>
                <div class="htable_data">
-                    <h3>Params Group</h3>
+                    <h3>Filter by Target Group</h3>
                     <select id="tgt_filter" onchange="tgt_group_changed()"></select>
                 </div>
             </div>
@@ -276,7 +308,7 @@ function tgt_group_changed() {
     <div id="scroller">
         <table id="conn_table">
          <thead>
-          <tr><th>Unknowns</th><th>Units</th><th>Size</th><th>Units</th><th>Params</th></tr>
+          <tr><th>Source</th><th>Units</th><th>Size</th><th>Units</th><th>Target</th></tr>
          </thead>
          <tbody>
          </tbody>
