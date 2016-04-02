@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from openmdao.api import Component, Group, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES
+from openmdao.api import Problem, Component, Group, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES, ScipyOptimizer, SqliteRecorder
 
 class SellarDis1(Component):
     """Component containing Discipline 1."""
@@ -112,21 +112,19 @@ class SellarDerivatives(Group):
 if __name__ == '__main__':
     # Setup and run the model.
 
-    from openmdao.core.problem import Problem
-    from openmdao.drivers.scipy_optimizer import ScipyOptimizer
-    from openmdao.api import pyOptSparseDriver
-    from openmdao.api import SqliteRecorder
-
     top = Problem()
     top.root = SellarDerivatives()
 
-    # top.driver = ScipyOptimizer()
-    # top.driver.options['optimizer'] = 'SLSQP'
-    # top.driver.options['tol'] = 1.0e-8
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+    top.driver.options['tol'] = 1.0e-8
 
+    # This is for testing with SNOPT via pyOptSparse
+    '''
+    from openmdao.api import pyOptSparseDriver
     top.driver = pyOptSparseDriver()
     top.driver.options['optimizer'] = 'SNOPT'
-
+    '''
 
     top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
                          upper=np.array([10.0, 10.0]))
