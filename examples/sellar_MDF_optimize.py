@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from openmdao.api import Problem, Component, Group, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES, ScipyOptimizer, SqliteRecorder
+from openmdao.api import Component, Group, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES
 
 class SellarDis1(Component):
     """Component containing Discipline 1."""
@@ -110,6 +110,9 @@ class SellarDerivatives(Group):
 
 
 if __name__ == '__main__':
+
+    from openmdao.api import Problem, ScipyOptimizer, SqliteRecorder
+
     # Setup and run the model.
 
     top = Problem()
