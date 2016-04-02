@@ -105,13 +105,25 @@ def view_connections(system, viewer='connect_table',
         for i in range(len(parts)):
             tgt_groups.add('.'.join(parts[:i]))
 
+    # reverse sort so that "NO CONNECTION" shows up at the bottom
+    src2tgts['NO CONNECTION'] = sorted([t for t in to_prom
+                                    if t not in system._unknowns_dict and
+                                       t not in connections], reverse=True)
+
+    src_groups = [{'name':n} for n in sorted(src_groups)]
+    src_groups.insert(1, {'name': "NO CONNECTION"})
+    tgt_groups = [{'name':n} for n in sorted(tgt_groups)]
+    tgt_groups.insert(1, {'name': "NO CONNECTION"})
+
     data = {
-        'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts))],
+        'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts), reverse=True)],
         'proms': to_prom,
         'units': units,
         'sizes': sizes,
-        'src_groups': [{'name':n} for n in sorted(src_groups)],
-        'tgt_groups': [{'name':n} for n in sorted(tgt_groups)],
+        'src_groups': src_groups,
+        'tgt_groups': tgt_groups,
+        'noconn_srcs': sorted((n for n in system._unknowns_dict
+                               if n not in src2tgts), reverse=True),
     }
 
     viewer += '.html'

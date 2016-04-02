@@ -116,6 +116,7 @@ var units = data.units;
 var sizes = data.sizes;
 var src_groups = data.src_groups;
 var tgt_groups = data.tgt_groups;
+var noconn_srcs = data.noconn_srcs;
 
 var src_prefix="", tgt_prefix="";
 var w, h;
@@ -165,30 +166,38 @@ function fill_vars() {
     var rows = [];
     var cols = [];
 
-    for (i=0; i<src2tgts.length; i++) {
-        if (src2tgts[i][0].startsWith(src_prefix)) {
-            cols = [];
-            for (j=0; j<src2tgts[i][1].length; j++) {
-                if (src2tgts[i][1][j].startsWith(tgt_prefix)) {
-                    cols.push(src2tgts[i][1][j]);
-                }
-            }
-            if (cols.length > 0) {
+    if (tgt_prefix == "NO CONNECTION") {
+        for (i=0; i<noconn_srcs.length; i++) {
+            if (noconn_srcs[i].startsWith(src_prefix)) {
                 rows.push({
-                    "Unknowns": src2tgts[i][0],
-                    "UUnits": units[src2tgts[i][0]],
-                    "Size": sizes[cols[0]],
-                    "PUnits": units[cols[0]],
-                    "Params": cols[0],
+                    "Unknowns": noconn_srcs[i],
+                    "UUnits": units[noconn_srcs[i]],
+                    "Size": "",
+                    "PUnits": "",
+                    "Params": tgt_prefix,
                 });
-                for (j=1; j<cols.length; j++) {
-                    rows.push({
-                        "Unknowns": "",
-                        "UUnits": units[src2tgts[i][0]],
-                        "Size": sizes[cols[j]],
-                        "PUnits": units[cols[j]],
-                        "Params": cols[j],
-                    });
+            }
+        }
+    }
+    else {
+        for (i=0; i<src2tgts.length; i++) {
+            if (src2tgts[i][0].startsWith(src_prefix)) {
+                cols = [];
+                for (j=0; j<src2tgts[i][1].length; j++) {
+                    if (src2tgts[i][1][j].startsWith(tgt_prefix)) {
+                        cols.push(src2tgts[i][1][j]);
+                    }
+                }
+                if (cols.length > 0) {
+                    for (j=0; j<cols.length; j++) {
+                        rows.push({
+                            "Unknowns": src2tgts[i][0],
+                            "UUnits": units[src2tgts[i][0]],
+                            "Size": sizes[cols[j]],
+                            "PUnits": units[cols[j]],
+                            "Params": cols[j],
+                        });
+                    }
                 }
             }
         }
