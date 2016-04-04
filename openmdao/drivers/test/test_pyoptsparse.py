@@ -1456,8 +1456,8 @@ class TestPyoptSparse(unittest.TestCase):
         prob.run()
         
         # Minimum should be at (7.166667, -7.833334)
-        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-4)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-4)
         
     def test_pyopt_fd_is_called(self):
     
