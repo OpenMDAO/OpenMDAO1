@@ -416,7 +416,7 @@ class TestDirectSolverAssemble(unittest.TestCase):
         prob.root = group
         prob.root.ln_solver = DirectSolver()
         prob.root.ln_solver.options['jacobian_method'] = 'assemble'
-        prob.root.ln_solver.options['save_LU_decomposition'] = False
+        prob.root.ln_solver.options['solve_method'] = 'solve'
         prob.setup(check=False)
         prob.run()
 
