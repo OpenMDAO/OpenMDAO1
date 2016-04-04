@@ -808,8 +808,15 @@ class System(object):
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):
+            scaler = dresids.metadata(unknown).get('scaler')
             if param in states:
                 arg_vec = dunknowns
+                scaler2 = dunknowns.metadata(param).get('scaler')
+                if scaler2:
+                    if scaler:
+                        scaler = scaler/scaler2
+                    else:
+                        scaler=1.0/scaler2
             else:
                 arg_vec = dparams
 
@@ -817,12 +824,22 @@ class System(object):
 
             try:
                 if isvw:
+
                     if fwd:
                         vec = dresids._flat(unknown)
-                        vec += J.dot(arg_vec._flat(param))
+
+                        if scaler:
+                            vec += J.dot(arg_vec._flat(param))/scaler
+                        else:
+                            vec += J.dot(arg_vec._flat(param))
                     else:
-                        shape = arg_vec._dat[param].meta['shape']
-                        arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
+                        vec = arg_vec._flat(param)
+
+                        if scaler:
+                            vec += J.T.dot(dresids._flat(unknown))/scaler
+                        else:
+                            vec += J.T.dot(dresids._flat(unknown))
+
                 else: # plain dicts were passed in for unit testing...
                     if fwd:
                         vec = dresids[unknown]
@@ -833,7 +850,7 @@ class System(object):
             except KeyError:
                 continue # either didn't find param in dparams/dunknowns or
                          # didn't find unknown in dresids
-            except ValueError:
+            except ValueError as err:
                 # Provide a user-readable message that locates the problem
                 # derivative term.
                 req_shape = (len(dresids[unknown].flat), len(arg_vec[param].flat))

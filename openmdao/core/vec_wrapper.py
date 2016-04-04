@@ -123,44 +123,85 @@ class Accessor(object):
         else:
             shapes_same = (shape == val.size or shape == (val.size,))
 
+        scaler = meta.get('scaler')
+
         # No unit conversion.
         # dparams vector does no unit conversion.
         if scale is None or vecwrapper.deriv_units:
-            if alloc_complex:
-                flatfunc = self._get_arr_complex
-                if is_scalar:
-                    func = self._get_scalar_complex
-                elif shapes_same:
-                    func = flatfunc
+
+            if scaler:
+                if alloc_complex:
+                    flatfunc = self._get_arr_complex
+                    if is_scalar:
+                        func = self._get_scalar_complex_scaler
+                    elif shapes_same:
+                        func = self._get_arr_complex_scaler
+                    else:
+                        func = self._get_arr_diff_shape_complex_scaler
                 else:
-                    func = self._get_arr_diff_shape_complex
+                    flatfunc = self._get_arr
+                    if is_scalar:
+                        func = self._get_scalar_scaler
+                    elif shapes_same:
+                        func = self._get_arr_scaler
+                    else:
+                        func = self._get_arr_diff_shape_scaler
+
             else:
-                flatfunc = self._get_arr
-                if is_scalar:
-                    func = self._get_scalar
-                elif shapes_same:
-                    func = flatfunc
+                if alloc_complex:
+                    flatfunc = self._get_arr_complex
+                    if is_scalar:
+                        func = self._get_scalar_complex
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape_complex
                 else:
-                    func = self._get_arr_diff_shape
+                    flatfunc = self._get_arr
+                    if is_scalar:
+                        func = self._get_scalar
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape
 
         # We have a unit conversion
         else:
-            if alloc_complex:
-                flatfunc = self._get_arr_units_complex
-                if is_scalar:
-                    func = self._get_scalar_units_complex
-                elif shapes_same:
-                    func = flatfunc
+            if scaler:
+                if alloc_complex:
+                    flatfunc = self._get_arr_units_complex_scaler
+                    if is_scalar:
+                        func = self._get_scalar_units_complex_scaler
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_units_diff_shape_complex_scaler
                 else:
-                    func = self._get_arr_units_diff_shape_complex
+                    flatfunc = self._get_arr_units_scaler
+                    if is_scalar:
+                        func = self._get_scalar_units_scaler
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_units_diff_shape_scaler
+
             else:
-                flatfunc = self._get_arr_units
-                if is_scalar:
-                    func = self._get_scalar_units
-                elif shapes_same:
-                    func = flatfunc
+                if alloc_complex:
+                    flatfunc = self._get_arr_units_complex
+                    if is_scalar:
+                        func = self._get_scalar_units_complex
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_units_diff_shape_complex
                 else:
-                    func = self._get_arr_units_diff_shape
+                    flatfunc = self._get_arr_units
+                    if is_scalar:
+                        func = self._get_scalar_units
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_units_diff_shape
 
         return func, flatfunc
 
@@ -171,6 +212,20 @@ class Accessor(object):
             return self._remote_access_error
         elif self.pbo:
             return self._set_pbo
+
+        scaler = meta.get('scaler')
+
+        if scaler:
+            if meta['shape'] == 1:
+                if alloc_complex:
+                    return self._set_scalar_complex_scaler
+                else:
+                    return self._set_scalar_scaler
+            else:
+                if alloc_complex:
+                    return self._set_arr_complex_scaler
+                else:
+                    return self._set_arr_scaler
         else:
             if meta['shape'] == 1:
                 if alloc_complex:
@@ -196,8 +251,13 @@ class Accessor(object):
         return vec
 
     def _get_arr(self):
-        """Array with same shape"""
+        """Array with same shape."""
         return self.val
+
+    def _get_arr_scaler(self):
+        """Array with same shape, with scaling."""
+        scaler = self.meta['scaler']
+        return scaler*self.val
 
     def _get_arr_complex(self):
         """Array with same shape, complex support."""
@@ -206,9 +266,22 @@ class Accessor(object):
         else:
             return self.val
 
+    def _get_arr_complex_scaler(self):
+        """Array with same shape, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            return scaler*(self.val + self.imag_val*1j)
+        else:
+            return scaler*self.val
+
     def _get_arr_diff_shape(self):
-        """Array with different shape"""
+        """Array with different shape."""
         return self.val.reshape(self.meta['shape'])
+
+    def _get_arr_diff_shape_scaler(self):
+        """Array with different shape, with scaling."""
+        scaler = self.meta['scaler']
+        return scaler*(self.val.reshape(self.meta['shape']))
 
     def _get_arr_diff_shape_complex(self):
         """Array with different shape, complex support."""
@@ -218,9 +291,23 @@ class Accessor(object):
             val = self.val
         return val.reshape(self.meta['shape'])
 
+    def _get_arr_diff_shape_complex_scaler(self):
+        """Array with different shape, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        return scaler*(val.reshape(self.meta['shape']))
+
     def _get_scalar(self):
-        """Fast scalar"""
+        """Fast scalar."""
         return self.val[0]
+
+    def _get_scalar_scaler(self):
+        """Fast scalar, with scaling."""
+        scaler = self.meta['scaler']
+        return scaler*self.val[0]
 
     def _get_scalar_complex(self):
         """Fast scalar, complex support."""
@@ -229,12 +316,27 @@ class Accessor(object):
         else:
             return self.val[0]
 
+    def _get_scalar_complex_scaler(self):
+        """Fast scalar, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            return scaler*(self.val[0] + self.imag_val[0]*1j)
+        else:
+            return scaler*self.val[0]
+
     def _get_arr_units(self):
-        """Array with same shape and unit conversion"""
+        """Array with same shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
         return vec
+
+    def _get_arr_units_scaler(self):
+        """Array with same shape and unit conversion, with scaling."""
+        scaler = self.meta['scaler']
+        scale, offset = self.meta['unit_conv']
+        vec = self.val + offset
+        return vec*scale*scaler
 
     def _get_arr_units_complex(self):
         """Array with same shape and unit conversion, complex support."""
@@ -247,11 +349,31 @@ class Accessor(object):
         vec *= scale
         return vec
 
+    def _get_arr_units_complex_scaler(self):
+        """Array with same shape and unit conversion, complex support, with
+        scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        scale, offset = self.meta['unit_conv']
+        vec = val + offset
+        return vec*scale*scaler
+
     def _get_arr_units_diff_shape(self):
-        """Array with diff shape and unit conversion"""
+        """Array with diff shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
+        return vec.reshape(self.meta['shape'])
+
+    def _get_arr_units_diff_shape_scaler(self):
+        """Array with diff shape and unit conversion, with scaling."""
+        scaler = self.meta['scaler']
+        scale, offset = self.meta['unit_conv']
+        vec = self.val + offset
+        vec *= scale*scaler
         return vec.reshape(self.meta['shape'])
 
     def _get_arr_units_diff_shape_complex(self):
@@ -265,19 +387,47 @@ class Accessor(object):
         vec *= scale
         return vec.reshape(self.meta['shape'])
 
+    def _get_arr_units_diff_shape_complex_scaler(self):
+        """Array with diff shape and unit conversion, complex support, with
+        scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        scale, offset = self.meta['unit_conv']
+        vec = val + offset
+        vec *= scale*scaler
+        return vec.reshape(self.meta['shape'])
+
     def _get_scalar_units(self):
-        """Scalar with unit conversion"""
+        """Scalar with unit conversion."""
         scale, offset = self.meta['unit_conv']
         return scale*(self.val[0] + offset)
+
+    def _get_scalar_units_scaler(self):
+        """Scalar with unit conversion, with scaling."""
+        scale, offset = self.meta['unit_conv']
+        return scaler*scale*(self.val[0] + offset)
 
     def _get_scalar_units_complex(self):
         """Scalar with unit conversion, complex support."""
         if self.probdata.in_complex_step:
             val = self.val[0] + self.imag_val[0]*1j
         else:
-            val = self.val   [0]
+            val = self.val[0]
         scale, offset = self.meta['unit_conv']
         return scale*(val + offset)
+
+    def _get_scalar_units_complex_scaler(self):
+        """Scalar with unit conversion, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            val = self.val[0] + self.imag_val[0]*1j
+        else:
+            val = self.val   [0]
+        scale, offset = self.meta['unit_conv']
+        return scaler*scale*(val + offset)
 
     def _set_arr(self, value):
         """Set an array value."""
@@ -302,6 +452,36 @@ class Accessor(object):
             self.imag_val[0] = imag(value)
         else:
             self.val[0] = value
+
+    def _set_arr_scaler(self, value):
+        """Set an array value, with scaling."""
+        scaler = self.meta['scaler']
+        self.val[:] = value.flat/scaler
+
+    def _set_arr_complex_scaler(self, value):
+        """Set an array value, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            value = value/scaler
+            self.val[:] = real(value)
+            self.imag_val[:] = imag(value)
+        else:
+            self.val[:] = value.flat/scaler
+
+    def _set_scalar_scaler(self, value):
+        """Set a scalar value, with scaling."""
+        scaler = self.meta['scaler']
+        self.val[0] = value/scaler
+
+    def _set_scalar_complex_scaler(self, value):
+        """Set a scalar value, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            value = value/scaler
+            self.val[0] = value
+            self.imag_val[0] = imag(value)
+        else:
+            self.val[0] = value/scaler
 
     def _set_pbo(self, value):
         self.val.val = value
