@@ -694,6 +694,7 @@ class System(object):
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    dresids._apply_scaler_derivatives()
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -709,6 +710,7 @@ class System(object):
                     val[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
+                    dresids._apply_scaler_derivatives()
                     try:
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
@@ -808,37 +810,21 @@ class System(object):
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):
-            scaler = dresids.metadata(unknown).get('scaler')
+
             if param in states:
                 arg_vec = dunknowns
-                scaler2 = dunknowns.metadata(param).get('scaler')
-                if scaler2:
-                    if scaler:
-                        scaler = scaler/scaler2
-                    else:
-                        scaler=1.0/scaler2
             else:
                 arg_vec = dparams
 
             # Vectors are flipped during adjoint
-
             try:
                 if isvw:
-
                     if fwd:
                         vec = dresids._flat(unknown)
-
-                        if scaler:
-                            vec += J.dot(arg_vec._flat(param))/scaler
-                        else:
-                            vec += J.dot(arg_vec._flat(param))
+                        vec += J.dot(arg_vec._flat(param))
                     else:
                         vec = arg_vec._flat(param)
-
-                        if scaler:
-                            vec += J.T.dot(dresids._flat(unknown))/scaler
-                        else:
-                            vec += J.T.dot(dresids._flat(unknown))
+                        vec += J.T.dot(dresids._flat(unknown))
 
                 else: # plain dicts were passed in for unit testing...
                     if fwd:
@@ -847,9 +833,11 @@ class System(object):
                     else:
                         shape = arg_vec[param].shape
                         arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
+
             except KeyError:
                 continue # either didn't find param in dparams/dunknowns or
                          # didn't find unknown in dresids
+
             except ValueError as err:
                 # Provide a user-readable message that locates the problem
                 # derivative term.

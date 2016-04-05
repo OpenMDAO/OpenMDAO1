@@ -520,10 +520,11 @@ class Group(System):
             self.unknowns.setup(unknowns_dict,
                                 relevance=self._probdata.relevance,
                                 var_of_interest=None, store_byobjs=True,
-                                alloc_complex=alloc_complex)
+                                alloc_complex=alloc_complex, vectype='u')
             self.resids.setup(unknowns_dict,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None, alloc_complex=alloc_complex)
+                              var_of_interest=None, alloc_complex=alloc_complex,
+                              vectype='r')
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
                               relevance=self._probdata.relevance,
@@ -544,10 +545,12 @@ class Group(System):
 
             dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
-                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
+                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:],
+                            vectype='du')
             dresids.setup(unknowns_dict, relevance=self._probdata.relevance,
                           var_of_interest=voi,
-                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
+                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:],
+                          vectype='dr')
             dparams.setup(None, params_dict, self.unknowns, my_params,
                           self.connections, relevance=self._probdata.relevance,
                           var_of_interest=voi,

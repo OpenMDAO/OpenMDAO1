@@ -91,7 +91,7 @@ class Accessor(object):
         self.meta = meta
 
         self.get, self.flat = self._setup_get_funct(vecwrapper, meta, alloc_complex)
-        self.set = self._setup_set_funct(meta, alloc_complex)
+        self.set = self._setup_set_funct(vecwrapper, meta, alloc_complex)
 
     def _setup_get_funct(self, vecwrapper, meta, alloc_complex):
         """
@@ -205,7 +205,7 @@ class Accessor(object):
 
         return func, flatfunc
 
-    def _setup_set_funct(self, meta, alloc_complex):
+    def _setup_set_funct(self, vecwrapper, meta, alloc_complex):
         """ Sets up our fast set functions."""
 
         if self.remote:
@@ -213,7 +213,9 @@ class Accessor(object):
         elif self.pbo:
             return self._set_pbo
 
-        scaler = meta.get('scaler')
+        scaler = None
+        if not vecwrapper.deriv_scaler:
+            scaler = meta.get('scaler')
 
         if scaler:
             if meta['shape'] == 1:
@@ -526,6 +528,10 @@ class VecWrapper(object):
         # Automatic unit conversion in target vectors
         self.deriv_units = False
 
+        # Scaling support in source vectors
+        self.deriv_scaler = False
+        self.vectype = None
+
         # Supports complex step
         self.alloc_complex = False
 
@@ -757,6 +763,7 @@ class VecWrapper(object):
         """
         view = self.__class__(system._sysdata, system._probdata, comm)
         view.alloc_complex = self.alloc_complex
+        view.deriv_scaler = self.deriv_scaler
         view_size = 0
 
         start = -1
@@ -927,7 +934,8 @@ class SrcVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False, shared_vec=None, alloc_complex=False):
+              store_byobjs=False, shared_vec=None, alloc_complex=False,
+              vectype='u'):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -955,7 +963,16 @@ class SrcVecWrapper(VecWrapper):
         alloc_complex : bool, optional
             If True, allocate space for the imaginary part of the vector and
             configure all functions to support complex computation.
+
+        vectype : str('u'), optional
+            Type of vector, can be 'u' (unknown), 'r' (resids), 'du' dunknowns,
+            or 'dr' dresids.
         """
+
+        # dunknowns/dresids vector has some additional behavior
+        self.vectype = vectype
+        if not store_byobjs:
+            self.deriv_scaler = True
 
         vec_size = 0
         to_prom_name = self._sysdata.to_prom_name
@@ -1061,6 +1078,16 @@ class SrcVecWrapper(VecWrapper):
         numpy.seterr(divide=old_warn['divide'])
 
         return max(0.0, new_alpha)
+
+    def _apply_scaler_derivatives(self):
+        """ Applies derivative of the scaling factor to the contents sitting
+        in dunknowns.
+        """
+        if self.deriv_scaler:
+            for name, acc in iteritems(self._dat):
+                meta = acc.meta
+                if 'scaler' in meta:
+                    acc.val *= 1.0/meta['scaler']
 
 
 class TgtVecWrapper(VecWrapper):
