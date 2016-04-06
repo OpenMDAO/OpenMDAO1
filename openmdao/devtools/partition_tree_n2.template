@@ -92,12 +92,11 @@
 </head>
 
 <body>
-    <div id="body">
-        <div id="footer">
-            d3.layout.partition
-            <div class="hint">click or option-click to descend or ascend</div>
-        </div>
+    <div id="instructions">
+        <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
+        <p>Left click on a node to navigate.  Right click on a node to collapse/uncollapse.</p>
     </div>
+    <div id="body"></div>
     <script type="text/javascript">
         var w = 1120,
             h = 600,
@@ -190,7 +189,8 @@
                 .attr("transform", function(d) {
                     return "translate(" + x(clickedMinimizedNode.x0) + "," + y(clickedMinimizedNode.y0) + ")";
                 })
-                .on("click", click);
+                .on("click", click)
+                .on("contextmenu", rightClick);
 
 
             nodeEnter.append("svg:rect")
@@ -219,9 +219,9 @@
                 })
                 .attr("class", getClass);
 
-            d3.select(window).on("click", function() {
-                click(root);
-            });
+            //d3.select(window).on("click", function() {
+            //    click(root);
+            //});
 
             var nodeUpdate = d3SelectAllSvgGroup.transition()
                 .duration(750)
@@ -421,17 +421,25 @@
 
 
 
+        //right click => collapse
+        function rightClick(d) {
+            if (!d.children) return;
+            if(d3.event.button != 2) return;
+            if (d.parent) { //dont allow minimizing on root node
+                toggle(d);
+                update(d);
+            }
+            d3.event.preventDefault();
+            d3.event.stopPropagation();
+        }
+
+        //left click => navigate
         function click(d) {
             if (!d.children) return;
-
-            if (d3.event && d3.event.altKey) {
-                if (d.parent) { //dont allow minimizing on root node
-                    toggle(d);
-                }
-            } else {
-                zoomedElement = d;
-            }
+            if(d3.event.button != 0) return;
+            zoomedElement = d;
             update(d);
+            d3.event.preventDefault();
             d3.event.stopPropagation();
         }
 
