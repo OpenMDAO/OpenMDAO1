@@ -145,16 +145,13 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Correct derivatives
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
-        print(J)
-        #assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
-        print(J)
-        #assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
-        print(J)
-        #assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
 
     def test_simple_implicit(self):
 

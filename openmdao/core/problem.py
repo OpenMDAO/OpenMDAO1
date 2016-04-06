@@ -1862,6 +1862,7 @@ class Problem(object):
                                               dunknowns, dresids, 'rev')
                         finally:
                             dparams._apply_unit_derivatives()
+                            dresids._apply_scaler_derivatives()
 
                         for p_name in param_list:
 
@@ -1885,6 +1886,7 @@ class Problem(object):
                         dparams._apply_unit_derivatives()
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'fwd')
+                        dresids._apply_scaler_derivatives()
 
                         for u_name, u_val in dresids.vec_val_iter():
                             jac_fwd[(u_name, p_name)][:, idx] = u_val

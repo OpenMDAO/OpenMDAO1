@@ -710,7 +710,6 @@ class System(object):
                     val[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
-                    dresids._apply_scaler_derivatives()
                     try:
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
@@ -718,6 +717,7 @@ class System(object):
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     finally:
                         dparams._apply_unit_derivatives()
+                        dresids._apply_scaler_derivatives()
 
                 for var, val in dresids.vec_val_iter():
                     # Skip all states
@@ -824,7 +824,7 @@ class System(object):
                         vec += J.dot(arg_vec._flat(param))
                     else:
                         vec = arg_vec._flat(param)
-                        vec += J.T.dot(dresids._flat(unknown))
+                        vec += J.T.dot(dresids[unknown].flat)
 
                 else: # plain dicts were passed in for unit testing...
                     if fwd:

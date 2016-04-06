@@ -30,7 +30,7 @@ class _ByObjWrapper(object):
 # using a slotted object here to save memory
 class Accessor(object):
     __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-                 'get', 'set', 'flat', 'probdata']
+                 'get', 'set', 'flat', 'probdata', 'vectype']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
@@ -68,6 +68,7 @@ class Accessor(object):
             If True, this variable is an unconnected param.
         """
         self.owned = owned
+        self.vectype = None
 
         self.pbo = bool(dangling or meta.get('pass_by_obj'))
         self.remote = meta.get('remote')
@@ -101,6 +102,7 @@ class Accessor(object):
 
         val = meta['val']
         flatfunc = None
+        self.vectype = vecwrapper.vectype
 
         if self.remote:
             return self._remote_access_error, self._remote_access_error
@@ -123,6 +125,7 @@ class Accessor(object):
         else:
             shapes_same = (shape == val.size or shape == (val.size,))
 
+        scaler = None
         scaler = meta.get('scaler')
 
         # No unit conversion.
@@ -258,7 +261,10 @@ class Accessor(object):
 
     def _get_arr_scaler(self):
         """Array with same shape, with scaling."""
-        scaler = self.meta['scaler']
+        if self.vectype == 'dr':
+            scaler = 1.0/self.meta['scaler']
+        else:
+            scaler = self.meta['scaler']
         return scaler*self.val
 
     def _get_arr_complex(self):
@@ -308,7 +314,10 @@ class Accessor(object):
 
     def _get_scalar_scaler(self):
         """Fast scalar, with scaling."""
-        scaler = self.meta['scaler']
+        if self.vectype == 'dr':
+            scaler = 1.0/self.meta['scaler']
+        else:
+            scaler = self.meta['scaler']
         return scaler*self.val[0]
 
     def _get_scalar_complex(self):
@@ -764,6 +773,7 @@ class VecWrapper(object):
         view = self.__class__(system._sysdata, system._probdata, comm)
         view.alloc_complex = self.alloc_complex
         view.deriv_scaler = self.deriv_scaler
+        view.vectype = self.vectype
         view_size = 0
 
         start = -1
