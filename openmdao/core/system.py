@@ -717,7 +717,7 @@ class System(object):
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     finally:
                         dparams._apply_unit_derivatives()
-                        dresids._apply_scaler_derivatives()
+                        dunknowns._apply_scaler_derivatives()
 
                 for var, val in dresids.vec_val_iter():
                     # Skip all states
@@ -821,7 +821,7 @@ class System(object):
                 if isvw:
                     if fwd:
                         vec = dresids._flat(unknown)
-                        vec += J.dot(arg_vec._flat(param))
+                        vec += J.dot(arg_vec[param].flat)
                     else:
                         vec = arg_vec._flat(param)
                         vec += J.T.dot(dresids[unknown].flat)

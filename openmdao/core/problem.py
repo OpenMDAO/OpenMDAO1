@@ -1862,7 +1862,7 @@ class Problem(object):
                                               dunknowns, dresids, 'rev')
                         finally:
                             dparams._apply_unit_derivatives()
-                            dresids._apply_scaler_derivatives()
+                            dunknowns._apply_scaler_derivatives()
 
                         for p_name in param_list:
 

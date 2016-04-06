@@ -115,6 +115,41 @@ class SimpleImplicitComp(Component):
 
         return J
 
+class SimpleImplicitCompApply(SimpleImplicitComp):
+    """ Use apply_lineaer instead."""
+
+    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                     mode):
+        """Returns the product of the incoming vector with the Jacobian."""
+
+        if mode == 'fwd':
+            if 'y' in dresids:
+                if 'x' in dparams:
+                    dresids['y'] += dparams['x']
+                if 'z' in dunknowns:
+                    dresids['y'] += 2.0*dunknowns['z']
+
+            if 'z' in dresids:
+                if 'x' in dparams:
+                    dresids['z'] += (np.array([unknowns['z']])).dot(dparams['x'])
+                if 'z' in dunknowns:
+                    dresids['z'] += (np.array([params['x'] + 1.0])).dot(dunknowns['z'])
+
+        elif mode == 'rev':
+            #dparams['x'] = self.multiplier*dresids['y']
+            if 'y' in dresids:
+                if 'x' in dparams:
+                    dparams['x'] += dresids['y']
+                if 'z' in dunknowns:
+                    dunknowns['z'] += 2.0*dresids['y']
+
+            if 'z' in dresids:
+                if 'x' in dparams:
+                    dparams['x'] += (np.array([unknowns['z']])).dot(dresids['z'])
+                if 'z' in dunknowns:
+                    dunknowns['z'] += (np.array([params['x'] + 1.0])).dot(dresids['z'])
+
+
 class TestVecWrapperScaler(unittest.TestCase):
 
     def test_basic(self):
@@ -166,8 +201,30 @@ class TestVecWrapperScaler(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        #J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd')
-        #print J
+        data = prob.check_partial_derivatives(out_stream=None)
+        #data = prob.check_partial_derivatives()
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+    def test_simple_implicit_apply(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitCompApply())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run()
 
         data = prob.check_partial_derivatives(out_stream=None)
         data = prob.check_partial_derivatives()
@@ -180,7 +237,6 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -125,8 +125,9 @@ class Accessor(object):
         else:
             shapes_same = (shape == val.size or shape == (val.size,))
 
-        scaler = None
         scaler = meta.get('scaler')
+        if self.vectype == 'dr' and meta.get('state'):
+            scaler = None
 
         # No unit conversion.
         # dparams vector does no unit conversion.
@@ -1098,6 +1099,8 @@ class SrcVecWrapper(VecWrapper):
                 meta = acc.meta
                 if 'scaler' in meta:
                     if self.vectype == 'dr':
+                        if meta.get('state'):
+                            continue
                         scaler = 1.0/meta['scaler']
                     else:
                         scaler = meta['scaler']
