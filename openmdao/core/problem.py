@@ -1552,7 +1552,11 @@ class Problem(object):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
+                    if voi in poi_indices:
+                        # offset doesn't matter since we only care about the size
+                        in_idxs = duvec.to_idx_array(poi_indices[voi])
+                    else:
+                        in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -1607,9 +1611,8 @@ class Problem(object):
                             if nproc > 1:
                                 # TODO: make this use Bcast for efficiency
                                 if trace:
-                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s"%
-                                            (dxval, owned[item]))
-                                    debug("input_list: %s, output_list: %s" % (input_list, output_list))
+                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s, param=%s, item=%s" %
+                                            (dxval, owned[item], param, item))
                                 dxval = comm.bcast(dxval, root=owned[item])
                                 if trace:
                                     debug("dxval bcast DONE")
