@@ -1097,7 +1097,11 @@ class SrcVecWrapper(VecWrapper):
             for name, acc in iteritems(self._dat):
                 meta = acc.meta
                 if 'scaler' in meta:
-                    acc.val *= 1.0/meta['scaler']
+                    if self.vectype == 'dr':
+                        scaler = 1.0/meta['scaler']
+                    else:
+                        scaler = meta['scaler']
+                    acc.val *= scaler
 
 
 class TgtVecWrapper(VecWrapper):

@@ -166,6 +166,9 @@ class TestVecWrapperScaler(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
+        #J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd')
+        #print J
+
         data = prob.check_partial_derivatives(out_stream=None)
         data = prob.check_partial_derivatives()
 
