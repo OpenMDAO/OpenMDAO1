@@ -131,24 +131,27 @@ class Accessor(object):
         if scale is None or vecwrapper.deriv_units:
 
             scaler = None
+            # Need the unknowns vector to unscale the value when any get is
+            # called during apply_linear, apply_nonlinear, or linearize. No
+            # other vectors return scaled values on get.
             if vecwrapper.vectype == 'u':
                 scaler = meta.get('scaler')
 
             if scaler:
                 if alloc_complex:
-                    flatfunc = self._get_arr_complex
+                    flatfunc = self._get_arr_complex_scaler
                     if is_scalar:
                         func = self._get_scalar_complex_scaler
                     elif shapes_same:
-                        func = self._get_arr_complex_scaler
+                        func = flatfunc
                     else:
                         func = self._get_arr_diff_shape_complex_scaler
                 else:
-                    flatfunc = self._get_arr
+                    flatfunc = self._get_arr_scaler
                     if is_scalar:
                         func = self._get_scalar_scaler
                     elif shapes_same:
-                        func = self._get_arr_scaler
+                        func = flatfunc
                     else:
                         func = self._get_arr_diff_shape_scaler
 
@@ -249,13 +252,11 @@ class Accessor(object):
         if self.probdata.in_complex_step:
             if self.disable_scale:
                 return self.val + self.imag_val*1j
-            else:
-                return scaler*(self.val + self.imag_val*1j)
+            return scaler*(self.val + self.imag_val*1j)
         else:
             if self.disable_scale:
                 return self.val
-            else:
-                return scaler*self.val
+            return scaler*self.val
 
     def _get_arr_diff_shape(self):
         """Array with different shape."""
@@ -987,7 +988,7 @@ class SrcVecWrapper(VecWrapper):
 
     def _scale_derivatives(self):
         """ Applies derivative of the scaling factor to the contents sitting
-        in dunknowns.
+        in dunknowns or dresids.
         """
         for name, acc in iteritems(self._dat):
             meta = acc.meta
@@ -1000,8 +1001,9 @@ class SrcVecWrapper(VecWrapper):
                     if self.vectype == 'dr':
                         if not meta.get('state'):
                             scaler /= meta['scaler']
-                    else:
-                        scaler *= meta['scaler']
+                    elif self.vectype == 'du':
+                        if meta.get('state'):
+                            scaler *= meta['scaler']
                 acc.val *= scaler
 
     def _scale_values(self):
@@ -1236,19 +1238,6 @@ class TgtVecWrapper(VecWrapper):
                 meta = acc.meta
                 if 'unit_conv' in meta:
                     acc.val *= meta['unit_conv'][0]
-
-    # def _apply_units(self):
-    #     """ Applies the unit conversion factor to params
-    #     sitting in vector.
-    #     """
-    #     for name, acc in iteritems(self._dat):
-    #         meta = acc.meta
-    #         if 'unit_conv' in meta and acc.owned:
-    #             scale, offset = meta['unit_conv']
-    #             val = meta['val']
-    #             if offset != 0.0:
-    #                 val += offset
-    #             val *= scale
 
 
 class _PlaceholderVecWrapper(object):

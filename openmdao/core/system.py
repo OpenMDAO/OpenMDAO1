@@ -710,6 +710,12 @@ class System(object):
                 for _, val in dunknowns.vec_val_iter():
                     val[:] = 0.0
 
+                for var, val in dresids.vec_val_iter():
+                    # Skip all states
+                    if (gsouts is None or var in gsouts) and \
+                            var not in states:
+                        dunknowns._dat[var].val -= val
+
                 if do_apply[(self.pathname, voi)]:
                     try:
                         dresids._scale_derivatives()
@@ -720,12 +726,6 @@ class System(object):
                     finally:
                         dparams._apply_unit_derivatives()
                         dunknowns._scale_derivatives()
-
-                for var, val in dresids.vec_val_iter():
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                            var not in states:
-                        dunknowns._dat[var].val -= val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """

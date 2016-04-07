@@ -228,6 +228,49 @@ class SellarStateConnection(Group):
         self.nl_solver = Newton()
 
 
+class ArrayComp2D(Component):
+    """2D Array component."""
+
+    def __init__(self):
+        super(ArrayComp2D, self).__init__()
+
+        # Params
+        self.add_param('x', np.zeros((2, 2)))
+
+        # Unknowns
+        self.add_output('y', np.zeros((2, 2)), scaler=5.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ Doesn't do much."""
+
+        x = params['x']
+        y = unknowns['y']
+
+        y[0][0] = 2.0*x[0][0] + 1.0*x[0][1] + \
+                  3.0*x[1][0] + 7.0*x[1][1]
+
+        y[0][1] = 4.0*x[0][0] + 2.0*x[0][1] + \
+                  6.0*x[1][0] + 5.0*x[1][1]
+
+        y[1][0] = 3.0*x[0][0] + 6.0*x[0][1] + \
+                  9.0*x[1][0] + 8.0*x[1][1]
+
+        y[1][1] = 1.0*x[0][0] + 3.0*x[0][1] + \
+                  2.0*x[1][0] + 4.0*x[1][1]
+
+        unknowns['y'] = y
+
+    def linearize(self, params, unknowns, resids):
+        """Analytical derivatives."""
+
+        J = {}
+        J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
+                                [4.0, 2.0, 6.0, 5.0],
+                                [3.0, 6.0, 9.0, 8.0],
+                                [1.0, 3.0, 2.0, 4.0]])
+        return J
+
+
 class TestVecWrapperScaler(unittest.TestCase):
 
     def test_basic(self):
@@ -241,6 +284,62 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         top.driver.add_desvar('p.x', 2000.0)
         top.driver.add_objective('comp2.y')
+
+        top.setup(check=False)
+        top.run()
+
+        # correct execution
+        assert_rel_error(self, top['comp2.y'], 12.0, 1e-6)
+
+        # in-component query is unscaled
+        assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
+
+        # afterwards direct query is unscaled
+        assert_rel_error(self, root.unknowns['comp1.y'], 6000.0, 1e-6)
+
+        # OpenMDAO behind-the-scenes query is scaled
+        # (So, internal storage is scaled)
+        assert_rel_error(self, root.unknowns._dat['comp1.y'].val, 6.0, 1e-6)
+
+        # Correct derivatives
+        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+
+        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+
+        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
+        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+
+        # Clean up old FD
+        top.run()
+
+        # Make sure check_partials works too
+        data = top.check_partial_derivatives(out_stream=None)
+        #data = top.check_partial_derivatives()
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+    def test_basic_gmres(self):
+        top = Problem()
+        root = top.root = Group()
+        root.add('p', IndepVarComp('x', 2000.0))
+        root.add('comp1', BasicComp())
+        root.add('comp2', ExecComp(['y = 2.0*x']))
+        root.connect('p.x', 'comp1.x')
+        root.connect('comp1.y', 'comp2.x')
+
+        top.driver.add_desvar('p.x', 2000.0)
+        top.driver.add_objective('comp2.y')
+
+        root.ln_solver = ScipyGMRES()
 
         top.setup(check=False)
         top.run()
@@ -352,7 +451,7 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Partials
         data = prob.check_partial_derivatives(out_stream=None)
-        data = prob.check_partial_derivatives()
+        #data = prob.check_partial_derivatives()
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -544,6 +643,26 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+    def test_array2D(self):
+        group = Group()
+        group.add('x_param', IndepVarComp('x', np.ones((2, 2))), promotes=['*'])
+        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
+
+        prob = Problem()
+        prob.root = group
+        #prob.root.ln_solver = ScipyGMRES()
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        Jbase = prob.root.mycomp._jacobian_cache
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x']/5.0)
+        assert_rel_error(self, diff, 0.0, 1e-8)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x']/5.0)
+        assert_rel_error(self, diff, 0.0, 1e-8)
 
 if __name__ == "__main__":
     unittest.main()

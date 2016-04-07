@@ -731,7 +731,7 @@ class Group(System):
     def _sys_apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """
         Evaluates the residuals of our children systems. This wrapper
-        performs any neceesary pre/post operations.
+        performs any necessary pre/post operations.
 
         Args
         ----

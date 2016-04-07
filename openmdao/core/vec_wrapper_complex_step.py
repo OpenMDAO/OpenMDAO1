@@ -318,5 +318,6 @@ class ComplexStepSrcVecWrapper(object):
         """ Turns off automatic scaling when getting a value via the
         dictionary accessor. It is only turned off in the unknowns vector
         during solve_nonlinear to allow the user to get a reference to the
-        unknown so that it can be flled by index."""
+        unknown so that it can be flled by index.
+        """
         self.vecwrap._disable_scaling()

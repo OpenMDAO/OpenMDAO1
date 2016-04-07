@@ -486,7 +486,7 @@ class Component(System):
         previously calculated output. Thus, an explicit component must
         execute its solve nonlinear method. Implicit components should
         override this and calculate their residuals in place. This wrapper
-        performs any neceesary pre/post operations.
+        performs any necessary pre/post operations.
 
         Args
         ----
@@ -544,7 +544,7 @@ class Component(System):
     def _sys_solve_nonlinear(self, params, unknowns, resids):
         """
         Runs the component. The user is required to define this function in
-        all components. This wrapper performs any neceesary pre/post
+        all components. This wrapper performs any necessary pre/post
         operations.
 
         Args
