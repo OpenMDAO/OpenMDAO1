@@ -7,8 +7,9 @@ from six import iteritems
 
 import numpy as np
 
-from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, ScipyGMRES
+from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, ScipyGMRES, Newton
 from openmdao.test.util import assert_rel_error
+from openmdao.test.sellar import SellarDis1withDerivatives, SellarDis2withDerivatives
 
 
 class BasicComp(Component):
@@ -56,7 +57,7 @@ class SimpleImplicitComp(Component):
     dz_dx = -4/(x+1)**2 = -1.7777777777777777
     """
 
-    def __init__(self):
+    def __init__(self, scaler=10.0, resid_scaler=1.0):
         super(SimpleImplicitComp, self).__init__()
 
         # Params
@@ -66,7 +67,7 @@ class SimpleImplicitComp(Component):
         self.add_output('y', 0.0)
 
         # States
-        self.add_state('z', 0.0, scaler=10.0, resid_scaler=1.0)
+        self.add_state('z', 0.0, scaler=scaler, resid_scaler=resid_scaler)
 
         self.maxiter = 10
         self.atol = 1.0e-12
@@ -153,6 +154,80 @@ class SimpleImplicitCompApply(SimpleImplicitComp):
                     dunknowns['z'] += (np.array([params['x'] + 1.0])).dot(dresids['z'])
 
 
+class StateConnection(Component):
+    """ Define connection with an explicit equation. This version allows
+    scaling of state and residual."""
+
+    def __init__(self, resid_scaler=1.0):
+        super(StateConnection, self).__init__()
+
+        # Inputs
+        self.add_param('y2_actual', 1.0)
+
+        # States
+        self.add_state('y2_command', val=1.0, resid_scaler=resid_scaler)
+
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Don't solve; just calculate the residual."""
+
+        y2_actual = params['y2_actual']
+        y2_command = unknowns['y2_command']
+
+        resids['y2_command'] = y2_actual - y2_command
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ This is a dummy comp that doesn't modify its state."""
+        pass
+
+    def linearize(self, params, unknowns, resids):
+        """Analytical derivatives."""
+
+        J = {}
+
+        # State equation
+        J[('y2_command', 'y2_command')] = -1.0
+        J[('y2_command', 'y2_actual')] = 1.0
+
+        return J
+
+
+class SellarStateConnection(Group):
+    """ Group containing the Sellar MDA. This version uses the disciplines
+    with derivatives."""
+
+    def __init__(self, resid_scaler=1.0):
+        super(SellarStateConnection, self).__init__()
+
+        self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
+
+        sub = self.add('sub', Group(), promotes=['x', 'z', 'y1', 'state_eq.y2_actual',
+                                                 'state_eq.y2_command', 'd1.y2', 'd2.y2'])
+        sub.ln_solver = ScipyGMRES()
+
+        subgrp = sub.add('state_eq_group', Group(), promotes=['state_eq.y2_actual',
+                                                              'state_eq.y2_command'])
+        subgrp.ln_solver = ScipyGMRES()
+        subgrp.add('state_eq', StateConnection(resid_scaler=resid_scaler))
+
+        sub.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1'])
+        sub.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1'])
+
+        self.connect('state_eq.y2_command', 'd1.y2')
+        self.connect('d2.y2', 'state_eq.y2_actual')
+
+        self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
+                                     z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
+                 promotes=['x', 'z', 'y1', 'obj'])
+        self.connect('d2.y2', 'obj_cmp.y2')
+
+        self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+        self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
+        self.connect('d2.y2', 'con_cmp2.y2')
+
+        self.nl_solver = Newton()
+
+
 class TestVecWrapperScaler(unittest.TestCase):
 
     def test_basic(self):
@@ -174,12 +249,13 @@ class TestVecWrapperScaler(unittest.TestCase):
         assert_rel_error(self, top['comp2.y'], 12.0, 1e-6)
 
         # in-component query is unscaled
-        #assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
+        assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
 
-        # afterwards query is scaled
-        #assert_rel_error(self, root.unknowns['comp1.y'], 6.0, 1e-6)
+        # afterwards direct query is unscaled
+        assert_rel_error(self, root.unknowns['comp1.y'], 6000.0, 1e-6)
 
         # OpenMDAO behind-the-scenes query is scaled
+        # (So, internal storage is scaled)
         assert_rel_error(self, root.unknowns._dat['comp1.y'].val, 6.0, 1e-6)
 
         # Correct derivatives
@@ -243,6 +319,46 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+    def test_simple_implicit_resid(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp(resid_scaler=0.001))
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run()
+        print(prob.root.comp.resids['z'])
+
+        # Correct total derivatives (we can do this one manually)
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd')
+        assert_rel_error(self, J[0][0], -2.5555511, 1e-5)
+
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='rev')
+        assert_rel_error(self, J[0][0], -2.5555511, 1e-5)
+
+        J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fd')
+        assert_rel_error(self, J[0][0], -2.5555511, 1e-5)
+
+        # Clean up old FD
+        prob.run()
+
+        # Partials
+        data = prob.check_partial_derivatives(out_stream=None)
+        data = prob.check_partial_derivatives()
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-3)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-3)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-3)
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
@@ -413,6 +529,21 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+    def test_sellar_state_connection(self):
+
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.root.nl_solver = Newton()
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
 
 if __name__ == "__main__":
     unittest.main()

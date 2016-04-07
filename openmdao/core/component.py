@@ -500,7 +500,7 @@ class Component(System):
             `VecWrapper` containing residuals. (r)
         """
         self.apply_nonlinear(params, unknowns, resids)
-        #resids._scale_values()
+        resids._scale_values()
 
     def apply_nonlinear(self, params, unknowns, resids):
         """
