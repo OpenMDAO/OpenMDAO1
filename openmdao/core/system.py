@@ -440,11 +440,11 @@ class System(object):
 
         # Prepare for calculating partial derivatives or total derivatives
         if total_derivs:
-            run_model = self.solve_nonlinear
+            run_model = self._sys_solve_nonlinear
             resultvec = unknowns
             states = ()
         else:
-            run_model = self.apply_nonlinear
+            run_model = self._sys_apply_nonlinear
             resultvec = resids
             states = self.states
 
@@ -690,11 +690,12 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     dparams._apply_unit_derivatives()
+                    dunknowns._scale_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids._apply_scaler_derivatives()
+                    dresids._scale_derivatives()
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -711,13 +712,14 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     try:
+                        dresids._scale_derivatives()
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     finally:
                         dparams._apply_unit_derivatives()
-                        dunknowns._apply_scaler_derivatives()
+                        dunknowns._scale_derivatives()
 
                 for var, val in dresids.vec_val_iter():
                     # Skip all states

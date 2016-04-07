@@ -479,6 +479,29 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
+    def _sys_apply_nonlinear(self, params, unknowns, resids):
+        """
+        Evaluates the residuals for this component. For explicit components,
+        the residual is the output produced by the current params minus the
+        previously calculated output. Thus, an explicit component must
+        execute its solve nonlinear method. Implicit components should
+        override this and calculate their residuals in place. This wrapper
+        performs any neceesary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+        """
+        self.apply_nonlinear(params, unknowns, resids)
+        #resids._scale_values()
+
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit
@@ -511,12 +534,33 @@ class Component(System):
         # cache the old values of the unknowns.
         resids.vec[:] = -unknowns.vec
 
-        self.solve_nonlinear(params, unknowns, resids)
+        self._sys_solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
         resids.vec[:] += unknowns.vec
         unknowns.vec[:] -= resids.vec
+
+    def _sys_solve_nonlinear(self, params, unknowns, resids):
+        """
+        Runs the component. The user is required to define this function in
+        all components. This wrapper performs any neceesary pre/post
+        operations.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+        """
+        unknowns._disable_scaling()
+        self.solve_nonlinear(params, unknowns, resids)
+        unknowns._scale_values()
 
     def solve_nonlinear(self, params, unknowns, resids):
         """

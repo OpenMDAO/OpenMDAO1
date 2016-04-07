@@ -571,7 +571,7 @@ class TestUnitConversion(unittest.TestCase):
 
         indep_list = ['O_BI', 'Odot_BI']
         unknown_list = ['w_B']
-        Jr = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+        Jr = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                 return_format='dict')
 
         for key, val in iteritems(Jr):
