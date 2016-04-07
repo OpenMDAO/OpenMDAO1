@@ -378,6 +378,71 @@ class MatMatIndicesTestCase(MPITestCase):
         assert_rel_error(self, J['c5.y']['p.x'][0], np.array([20., 25.]), 1e-6)
         assert_rel_error(self, J['c4.y']['p.x'][0], np.array([8., 0.]), 1e-6)
 
+class IndicesTestCase2(MPITestCase):
+
+    N_PROCS = 2
+
+    def setup_model(self, mode):
+        asize = 3
+        prob = Problem(root=Group(), impl=impl)
+        root = prob.root
+        root.ln_solver = LinearGaussSeidel()
+        root.ln_solver.options['mode'] = mode
+
+        G1 = root.add('G1', ParallelGroup())
+        G1.ln_solver.options['mode'] = mode
+
+        par1 = G1.add('par1', Group())
+        par2 = G1.add('par2', Group())
+
+        p1 = par1.add('p', IndepVarComp('x', np.arange(asize, dtype=float)+1.0))
+        p2 = par2.add('p', IndepVarComp('x', np.arange(asize, dtype=float)+10.0))
+
+        c2 = par1.add('c2', ExecComp4Test('y = x * 2.0', lin_delay=1.0,
+                                        x=np.zeros(asize), y=np.zeros(asize)))
+        c3 = par2.add('c3', ExecComp4Test('y = numpy.ones(3).T*x.dot(numpy.arange(3.,6.))',
+                                        lin_delay=1.0,
+                                        x=np.zeros(asize), y=np.zeros(asize)))
+        c4 = par1.add('c4', ExecComp4Test('y = x * 4.0',
+                                          x=np.zeros(asize), y=np.zeros(asize)))
+        c5 = par2.add('c5', ExecComp4Test('y = x * 5.0',
+                                          x=np.zeros(asize), y=np.zeros(asize)))
+
+        prob.driver.add_desvar('G1.par1.p.x', indices=[1, 2])
+        prob.driver.add_desvar('G1.par2.p.x', indices=[1, 2])
+        prob.driver.add_constraint('G1.par1.c4.y', upper=0.0, indices=[1])
+        prob.driver.add_constraint('G1.par2.c5.y', upper=0.0, indices=[2])
+        prob.driver.parallel_derivs(['G1.par1.c4.y', 'G1.par2.c5.y'])
+
+        root.connect('G1.par1.p.x', 'G1.par1.c2.x')
+        root.connect('G1.par2.p.x', 'G1.par2.c3.x')
+        root.connect('G1.par1.c2.y', 'G1.par1.c4.x')
+        root.connect('G1.par2.c3.y', 'G1.par2.c5.x')
+
+        prob.setup(check=False)
+        prob.run()
+
+        return prob
+
+    def test_indices_fwd(self):
+        prob = self.setup_model('fwd')
+
+        J = prob.calc_gradient(['G1.par1.p.x', 'G1.par2.p.x'],
+                               ['G1.par1.c4.y', 'G1.par2.c5.y'],
+                               mode='fwd', return_format='dict')
+
+        assert_rel_error(self, J['G1.par2.c5.y']['G1.par2.p.x'][0], np.array([20., 25.]), 1e-6)
+        assert_rel_error(self, J['G1.par1.c4.y']['G1.par1.p.y'][0], np.array([8., 0.]), 1e-6)
+
+    def test_indices_rev(self):
+        prob = self.setup_model('rev')
+        J = prob.calc_gradient(['G1.par1.p.x', 'G1.par2.p.x'],
+                               ['G1.par1.c4.y', 'G1.par2.c5.y'],
+                               mode='rev', return_format='dict')
+
+        assert_rel_error(self, J['G1.par2.c5.y']['G1.par2.p.x'][0], np.array([20., 25.]), 1e-6)
+        assert_rel_error(self, J['G1.par1.c4.y']['G1.par1.p.x'][0], np.array([8., 0.]), 1e-6)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
