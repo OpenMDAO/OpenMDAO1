@@ -524,7 +524,7 @@
                     return;
                 }
                 var srcObjArray = [];
-                AddLeaves(srcObj.parent, srcObjArray);
+                AddLeaves(srcObj, srcObjArray); /////AddLeaves(srcObj.parent, srcObjArray);
                 for(var obj = srcObj.parent; obj != null; obj = obj.parent){
                     srcObjArray.push(obj);
                 }
@@ -532,7 +532,12 @@
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
                 var tgtObjArray = [];
-                AddLeaves(tgtObj.parent, tgtObjArray);
+                if(tgtObj.type === "param") {
+                    AddLeaves(tgtObj.parent, tgtObjArray);
+                }
+                else {
+                    AddLeaves(tgtObj, tgtObjArray);
+                }
                 for(var obj = tgtObj.parent; obj != null; obj = obj.parent){
                     tgtObjArray.push(obj);
                 }
