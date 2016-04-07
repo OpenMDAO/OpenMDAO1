@@ -432,7 +432,7 @@ class IndicesTestCase2(MPITestCase):
                                mode='fwd', return_format='dict')
 
         assert_rel_error(self, J['G1.par2.c5.y']['G1.par2.p.x'][0], np.array([20., 25.]), 1e-6)
-        assert_rel_error(self, J['G1.par1.c4.y']['G1.par1.p.y'][0], np.array([8., 0.]), 1e-6)
+        assert_rel_error(self, J['G1.par1.c4.y']['G1.par1.p.x'][0], np.array([8., 0.]), 1e-6)
 
     def test_indices_rev(self):
         prob = self.setup_model('rev')
