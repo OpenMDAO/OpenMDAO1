@@ -312,7 +312,17 @@ class ComplexStepSrcVecWrapper(object):
         """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
         in the unknown or residual vectors.
         """
-        self.vecwrap._scale_values()
+        wrap = self.vecwrap
+        for name, acc in iteritems(wrap._dat):
+            meta = acc.meta
+            if 'scaler' in meta and wrap.vectype == 'u':
+                scaler = 1.0/meta['scaler']
+                self.vals[name] *= scaler
+                acc.disable_scale = False
+            elif 'resid_scaler' in meta and wrap.vectype == 'r':
+                scaler = 1.0/meta['resid_scaler']
+                self.vals[name] *= scaler
+                acc.disable_scale = False
 
     def _disable_scaling(self):
         """ Turns off automatic scaling when getting a value via the

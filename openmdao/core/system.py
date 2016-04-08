@@ -840,7 +840,7 @@ class System(object):
                 continue # either didn't find param in dparams/dunknowns or
                          # didn't find unknown in dresids
 
-            except ValueError as err:
+            except ValueError:
                 # Provide a user-readable message that locates the problem
                 # derivative term.
                 req_shape = (len(dresids[unknown].flat), len(arg_vec[param].flat))

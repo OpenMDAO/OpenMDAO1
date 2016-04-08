@@ -871,7 +871,7 @@ class Component(System):
             for j, idx in enumerate(p_idxs):
 
                 stepvec.step_complex(idx, fdstep)
-                self.apply_nonlinear(csparams, csunknowns, csresids)
+                self._sys_apply_nonlinear(csparams, csunknowns, csresids)
 
                 stepvec.step_complex(idx, -fdstep)
 

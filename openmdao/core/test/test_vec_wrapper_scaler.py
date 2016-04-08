@@ -285,6 +285,8 @@ class TestVecWrapperScaler(unittest.TestCase):
         top.driver.add_desvar('p.x', 2000.0)
         top.driver.add_objective('comp2.y')
 
+        root.comp1.fd_options['extra_check_partials_form'] = 'complex_step'
+
         top.setup(check=False)
         top.run()
 
@@ -393,6 +395,8 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
+        prob.root.comp.fd_options['extra_check_partials_form'] = 'complex_step'
+
         prob.setup(check=False)
         prob.run()
 
@@ -422,6 +426,11 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
+        assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0, 1e-6)
+
     def test_simple_implicit_resid(self):
 
         prob = Problem()
@@ -434,7 +443,7 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         prob.setup(check=False)
         prob.run()
-        print(prob.root.comp.resids['z'])
+        #print(prob.root.comp.resids['z'])
 
         # Correct total derivatives (we can do this one manually)
         J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='fwd')
@@ -461,6 +470,11 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667/0.001, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0/0.001, 1e-6)
 
     def test_simple_implicit_apply(self):
 
@@ -500,6 +514,11 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0, 1e-6)
 
     def test_apply_linear_units(self):
         # Make sure we can index into dparams
