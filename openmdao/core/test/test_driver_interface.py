@@ -492,6 +492,25 @@ class TestDriver(unittest.TestCase):
         raised_error = str(cm.exception)
         self.assertEqual(msg, raised_error)
 
+    def test_unsupported_multiple_obj(self):
+        prob = Problem()
+        prob.root = SellarDerivatives()
+
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
+
+        prob.driver.add_objective('obj')
+
+        # Add duplicate objective
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_objective('x')
+
+        msg = "Attempted to add multiple objectives to a driver that does not " \
+              "support multiple objectives."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+
     def test_no_desvar_bound(self):
 
         prob = Problem()
