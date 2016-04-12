@@ -130,7 +130,8 @@ class PetscSrcVecWrapper(SrcVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type
 
     def setup(self, unknowns_dict, relevance, var_of_interest=None,
-              store_byobjs=False, shared_vec=None, alloc_complex=False):
+              store_byobjs=False, shared_vec=None, alloc_complex=False,
+              vectype='u'):
         """
         Create internal data storage for variables in unknowns_dict.
 
@@ -156,12 +157,17 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         alloc_complex : bool, optional
             If True, allocate space for the imaginary part of the vector and
             configure all functions to support complex computation.
+
+        vectype : str('u'), optional
+            Type of vector, can be 'u' (unknown), 'r' (resids), 'du' dunknowns,
+            or 'dr' dresids.
         """
         super(PetscSrcVecWrapper, self).setup(unknowns_dict, relevance=relevance,
                                               var_of_interest=var_of_interest,
                                               store_byobjs=store_byobjs,
                                               shared_vec=shared_vec,
-                                              alloc_complex=alloc_complex)
+                                              alloc_complex=alloc_complex,
+                                              vectype=vectype)
         if trace:  # pragma: no cover
             debug("'%s': creating src petsc_vec: size(%d) %s vec=%s" %
                   (self._sysdata.pathname, len(self.vec), self.keys(), self.vec))

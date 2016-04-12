@@ -30,7 +30,7 @@ class _ByObjWrapper(object):
 # using a slotted object here to save memory
 class Accessor(object):
     __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-                 'get', 'set', 'flat', 'probdata']
+                 'get', 'set', 'flat', 'probdata', 'vectype', 'disable_scale']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
@@ -68,6 +68,8 @@ class Accessor(object):
             If True, this variable is an unconnected param.
         """
         self.owned = owned
+        self.vectype = None
+        self.disable_scale = False
 
         self.pbo = bool(dangling or meta.get('pass_by_obj'))
         self.remote = meta.get('remote')
@@ -91,7 +93,7 @@ class Accessor(object):
         self.meta = meta
 
         self.get, self.flat = self._setup_get_funct(vecwrapper, meta, alloc_complex)
-        self.set = self._setup_set_funct(meta, alloc_complex)
+        self.set = self._setup_set_funct(vecwrapper, meta, alloc_complex)
 
     def _setup_get_funct(self, vecwrapper, meta, alloc_complex):
         """
@@ -101,6 +103,7 @@ class Accessor(object):
 
         val = meta['val']
         flatfunc = None
+        self.vectype = vecwrapper.vectype
 
         if self.remote:
             return self._remote_access_error, self._remote_access_error
@@ -126,22 +129,49 @@ class Accessor(object):
         # No unit conversion.
         # dparams vector does no unit conversion.
         if scale is None or vecwrapper.deriv_units:
-            if alloc_complex:
-                flatfunc = self._get_arr_complex
-                if is_scalar:
-                    func = self._get_scalar_complex
-                elif shapes_same:
-                    func = flatfunc
+
+            scaler = None
+            # Need the unknowns vector to unscale the value when any get is
+            # called during apply_linear, apply_nonlinear, or linearize. No
+            # other vectors return scaled values on get.
+            if vecwrapper.vectype == 'u':
+                scaler = meta.get('scaler')
+
+            if scaler:
+                if alloc_complex:
+                    flatfunc = self._get_arr_complex_scaler
+                    if is_scalar:
+                        func = self._get_scalar_complex_scaler
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape_complex_scaler
                 else:
-                    func = self._get_arr_diff_shape_complex
+                    flatfunc = self._get_arr_scaler
+                    if is_scalar:
+                        func = self._get_scalar_scaler
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape_scaler
+
             else:
-                flatfunc = self._get_arr
-                if is_scalar:
-                    func = self._get_scalar
-                elif shapes_same:
-                    func = flatfunc
+                if alloc_complex:
+                    flatfunc = self._get_arr_complex
+                    if is_scalar:
+                        func = self._get_scalar_complex
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape_complex
                 else:
-                    func = self._get_arr_diff_shape
+                    flatfunc = self._get_arr
+                    if is_scalar:
+                        func = self._get_scalar
+                    elif shapes_same:
+                        func = flatfunc
+                    else:
+                        func = self._get_arr_diff_shape
 
         # We have a unit conversion
         else:
@@ -164,24 +194,24 @@ class Accessor(object):
 
         return func, flatfunc
 
-    def _setup_set_funct(self, meta, alloc_complex):
+    def _setup_set_funct(self, vecwrapper, meta, alloc_complex):
         """ Sets up our fast set functions."""
 
         if self.remote:
             return self._remote_access_error
         elif self.pbo:
             return self._set_pbo
-        else:
-            if meta['shape'] == 1:
-                if alloc_complex:
-                    return self._set_scalar_complex
-                else:
-                    return self._set_scalar
+
+        if meta['shape'] == 1:
+            if alloc_complex:
+                return self._set_scalar_complex
             else:
-                if alloc_complex:
-                    return self._set_arr_complex
-                else:
-                    return self._set_arr
+                return self._set_scalar
+        else:
+            if alloc_complex:
+                return self._set_arr_complex
+            else:
+                return self._set_arr
 
     # accessor functions
     def _get_pbo(self):
@@ -196,8 +226,18 @@ class Accessor(object):
         return vec
 
     def _get_arr(self):
-        """Array with same shape"""
+        """Array with same shape."""
         return self.val
+
+    def _get_arr_scaler(self):
+        """Array with same shape, with scaling."""
+        if self.disable_scale:
+            return self.val
+        if self.vectype == 'dr':
+            scaler = 1.0/self.meta['scaler']
+        else:
+            scaler = self.meta['scaler']
+        return scaler*self.val
 
     def _get_arr_complex(self):
         """Array with same shape, complex support."""
@@ -206,9 +246,28 @@ class Accessor(object):
         else:
             return self.val
 
+    def _get_arr_complex_scaler(self):
+        """Array with same shape, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            if self.disable_scale:
+                return self.val + self.imag_val*1j
+            return scaler*(self.val + self.imag_val*1j)
+        else:
+            if self.disable_scale:
+                return self.val
+            return scaler*self.val
+
     def _get_arr_diff_shape(self):
-        """Array with different shape"""
+        """Array with different shape."""
         return self.val.reshape(self.meta['shape'])
+
+    def _get_arr_diff_shape_scaler(self):
+        """Array with different shape, with scaling."""
+        if self.disable_scale:
+            return self.val.reshape(self.meta['shape'])
+        scaler = self.meta['scaler']
+        return scaler*(self.val.reshape(self.meta['shape']))
 
     def _get_arr_diff_shape_complex(self):
         """Array with different shape, complex support."""
@@ -218,9 +277,30 @@ class Accessor(object):
             val = self.val
         return val.reshape(self.meta['shape'])
 
+    def _get_arr_diff_shape_complex_scaler(self):
+        """Array with different shape, complex support, with scaling."""
+        if self.disable_scale:
+            return val.reshape(self.meta['shape'])
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            val = self.val + self.imag_val*1j
+        else:
+            val = self.val
+        return scaler*(val.reshape(self.meta['shape']))
+
     def _get_scalar(self):
-        """Fast scalar"""
+        """Fast scalar."""
         return self.val[0]
+
+    def _get_scalar_scaler(self):
+        """Fast scalar, with scaling."""
+        if self.disable_scale:
+            return self.val[0]
+        if self.vectype == 'dr':
+            scaler = 1.0/self.meta['scaler']
+        else:
+            scaler = self.meta['scaler']
+        return scaler*self.val[0]
 
     def _get_scalar_complex(self):
         """Fast scalar, complex support."""
@@ -229,8 +309,20 @@ class Accessor(object):
         else:
             return self.val[0]
 
+    def _get_scalar_complex_scaler(self):
+        """Fast scalar, complex support, with scaling."""
+        scaler = self.meta['scaler']
+        if self.probdata.in_complex_step:
+            if self.disable_scale:
+                return self.val[0] + self.imag_val[0]*1j
+            return scaler*(self.val[0] + self.imag_val[0]*1j)
+        else:
+            if self.disable_scale:
+                return self.val[0]
+            return scaler*self.val[0]
+
     def _get_arr_units(self):
-        """Array with same shape and unit conversion"""
+        """Array with same shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
@@ -248,7 +340,7 @@ class Accessor(object):
         return vec
 
     def _get_arr_units_diff_shape(self):
-        """Array with diff shape and unit conversion"""
+        """Array with diff shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
@@ -266,7 +358,7 @@ class Accessor(object):
         return vec.reshape(self.meta['shape'])
 
     def _get_scalar_units(self):
-        """Scalar with unit conversion"""
+        """Scalar with unit conversion."""
         scale, offset = self.meta['unit_conv']
         return scale*(self.val[0] + offset)
 
@@ -275,7 +367,7 @@ class Accessor(object):
         if self.probdata.in_complex_step:
             val = self.val[0] + self.imag_val[0]*1j
         else:
-            val = self.val   [0]
+            val = self.val[0]
         scale, offset = self.meta['unit_conv']
         return scale*(val + offset)
 
@@ -345,6 +437,9 @@ class VecWrapper(object):
 
         # Automatic unit conversion in target vectors
         self.deriv_units = False
+
+        # Scaling support in source vectors
+        self.vectype = None
 
         # Supports complex step
         self.alloc_complex = False
@@ -577,6 +672,7 @@ class VecWrapper(object):
         """
         view = self.__class__(system._sysdata, system._probdata, comm)
         view.alloc_complex = self.alloc_complex
+        view.vectype = self.vectype
         view_size = 0
 
         start = -1
@@ -747,7 +843,8 @@ class SrcVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False, shared_vec=None, alloc_complex=False):
+              store_byobjs=False, shared_vec=None, alloc_complex=False,
+              vectype='u'):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -775,7 +872,14 @@ class SrcVecWrapper(VecWrapper):
         alloc_complex : bool, optional
             If True, allocate space for the imaginary part of the vector and
             configure all functions to support complex computation.
+
+        vectype : str('u'), optional
+            Type of vector, can be 'u' (unknown), 'r' (resids), 'du' (dunknowns),
+            or 'dr' (dresids).
         """
+
+        # dunknowns/dresids vector has some additional behavior
+        self.vectype = vectype
 
         vec_size = 0
         to_prom_name = self._sysdata.to_prom_name
@@ -881,6 +985,51 @@ class SrcVecWrapper(VecWrapper):
         numpy.seterr(divide=old_warn['divide'])
 
         return max(0.0, new_alpha)
+
+    def _scale_derivatives(self):
+        """ Applies derivative of the scaling factor to the contents sitting
+        in dunknowns or dresids.
+        """
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'scaler' in meta or 'resid_scaler' in meta:
+                scaler = 1.0
+                if 'resid_scaler' in meta:
+                    if self.vectype == 'dr':
+                        scaler /= meta['resid_scaler']
+                if 'scaler' in meta:
+                    if self.vectype == 'dr':
+                        if not meta.get('state'):
+                            scaler /= meta['scaler']
+                    elif self.vectype == 'du':
+                        if meta.get('state'):
+                            scaler *= meta['scaler']
+                acc.val *= scaler
+
+    def _scale_values(self):
+        """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
+        in the unknown or residual vectors.
+        """
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'scaler' in meta and self.vectype == 'u':
+                scaler = 1.0/meta['scaler']
+                acc.val *= scaler
+                acc.disable_scale = False
+            elif 'resid_scaler' in meta and self.vectype == 'r':
+                scaler = 1.0/meta['resid_scaler']
+                acc.val *= scaler
+                acc.disable_scale = False
+
+    def _disable_scaling(self):
+        """ Turns off automatic scaling when getting a value via the
+        dictionary accessor. It is only turned off in the unknowns vector
+        during solve_nonlinear to allow the user to get a reference to the
+        unknown so that it can be flled by index."""
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'scaler' in meta:
+                acc.disable_scale = True
 
 
 class TgtVecWrapper(VecWrapper):
@@ -1089,19 +1238,6 @@ class TgtVecWrapper(VecWrapper):
                 meta = acc.meta
                 if 'unit_conv' in meta:
                     acc.val *= meta['unit_conv'][0]
-
-    # def _apply_units(self):
-    #     """ Applies the unit conversion factor to params
-    #     sitting in vector.
-    #     """
-    #     for name, acc in iteritems(self._dat):
-    #         meta = acc.meta
-    #         if 'unit_conv' in meta and acc.owned:
-    #             scale, offset = meta['unit_conv']
-    #             val = meta['val']
-    #             if offset != 0.0:
-    #                 val += offset
-    #             val *= scale
 
 
 class _PlaceholderVecWrapper(object):

@@ -440,11 +440,11 @@ class System(object):
 
         # Prepare for calculating partial derivatives or total derivatives
         if total_derivs:
-            run_model = self.solve_nonlinear
+            run_model = self._sys_solve_nonlinear
             resultvec = unknowns
             states = ()
         else:
-            run_model = self.apply_nonlinear
+            run_model = self._sys_apply_nonlinear
             resultvec = resids
             states = self.states
 
@@ -690,10 +690,12 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     dparams._apply_unit_derivatives()
+                    dunknowns._scale_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    dresids._scale_derivatives()
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -708,20 +710,22 @@ class System(object):
                 for _, val in dunknowns.vec_val_iter():
                     val[:] = 0.0
 
+                for var, val in dresids.vec_val_iter():
+                    # Skip all states
+                    if (gsouts is None or var in gsouts) and \
+                            var not in states:
+                        dunknowns._dat[var].val -= val
+
                 if do_apply[(self.pathname, voi)]:
                     try:
+                        dresids._scale_derivatives()
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     finally:
                         dparams._apply_unit_derivatives()
-
-                for var, val in dresids.vec_val_iter():
-                    # Skip all states
-                    if (gsouts is None or var in gsouts) and \
-                            var not in states:
-                        dunknowns._dat[var].val -= val
+                        dunknowns._scale_derivatives()
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
@@ -808,21 +812,22 @@ class System(object):
                              if p not in dparams])
 
         for (unknown, param), J in iteritems(self._jacobian_cache):
+
             if param in states:
                 arg_vec = dunknowns
             else:
                 arg_vec = dparams
 
             # Vectors are flipped during adjoint
-
             try:
                 if isvw:
                     if fwd:
                         vec = dresids._flat(unknown)
-                        vec += J.dot(arg_vec._flat(param))
+                        vec += J.dot(arg_vec[param].flat)
                     else:
-                        shape = arg_vec._dat[param].meta['shape']
-                        arg_vec[param] += J.T.dot(dresids._flat(unknown)).reshape(shape)
+                        vec = arg_vec._flat(param)
+                        vec += J.T.dot(dresids[unknown].flat)
+
                 else: # plain dicts were passed in for unit testing...
                     if fwd:
                         vec = dresids[unknown]
@@ -830,9 +835,11 @@ class System(object):
                     else:
                         shape = arg_vec[param].shape
                         arg_vec[param] += J.T.dot(dresids[unknown].flat).reshape(shape)
+
             except KeyError:
                 continue # either didn't find param in dparams/dunknowns or
                          # didn't find unknown in dresids
+
             except ValueError:
                 # Provide a user-readable message that locates the problem
                 # derivative term.
