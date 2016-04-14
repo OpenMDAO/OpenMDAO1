@@ -618,5 +618,45 @@ class TestGroup(unittest.TestCase):
         base = 'States in model:\n\ncomp.z\nValue: [[ 2.]\n [ 2.]\n [ 2.]]\nResidual: [[ 0.]\n [ 0.]\n [ 0.]]'
         self.assertTrue(base in stream.getvalue())
 
+    def test_list_params(self):
+
+        top = Problem()
+        root = top.root = Group()
+        g1 = root.add('g1', Group(), promotes=['b', 'f'])
+        g2 = g1.add('g2', Group(), promotes=['c', 'e'])
+
+        root.add('comp1', ExecComp(['b = a']), promotes=['b'])
+        g1.add('comp2', ExecComp(['c = b + p1']), promotes=['b', 'c'])
+        g1.add('comp3', ExecComp(['c_a = b_a + p2']))
+        g2.add('comp4', ExecComp(['d = c + p3']), promotes=['c', 'd'])
+        g2.add('comp5', ExecComp(['d_a = c_a + p4']))
+        g2.add('comp6', ExecComp(['e = d + p5']), promotes=['d', 'e'])
+        g2.add('comp7', ExecComp(['e_a = d_a + p6']))
+        g1.add('comp8', ExecComp(['f = e + p7']), promotes=['f', 'e'])
+        g1.add('comp9', ExecComp(['f_a = e_a + p8']))
+        root.add('comp10', ExecComp(['g = f + p9']), promotes=['f'])
+        root.add('comp11', ExecComp(['g_a = f_a + p10']))
+
+        root.connect('b', 'g1.comp3.b_a')
+        root.connect('g1.comp3.c_a', 'g1.g2.comp5.c_a')
+        root.connect('g1.g2.comp5.d_a', 'g1.g2.comp7.d_a')
+        root.connect('g1.g2.comp7.e_a', 'g1.comp9.e_a')
+        root.connect('g1.comp9.f_a', 'comp11.f_a')
+
+        root.add('p1', IndepVarComp('a', 1.0))
+        root.connect('p1.a', 'comp1.a')
+
+        top.setup(check=False)
+
+        plist1, plist2 = g2.list_params(stream=None)
+
+        self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6'])
+        self.assertEqual(plist2, ['g1.g2.comp4.c', 'g1.g2.comp5.c_a'])
+
+        plist1, plist2 = g1.list_params(stream=None)
+
+        self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6', 'g1.comp2.p1', 'g1.comp3.p2', 'g1.comp8.p7', 'g1.comp9.p8'])
+        self.assertEqual(plist2, ['g1.comp2.b', 'g1.comp3.b_a'])
+
 if __name__ == "__main__":
     unittest.main()
