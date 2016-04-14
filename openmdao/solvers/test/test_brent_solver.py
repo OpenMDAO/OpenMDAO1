@@ -75,7 +75,7 @@ class TestBrentSolver(unittest.TestCase):
     def test_no_state_var_err(self):
 
         try:
-            self.prob.setup()
+            self.prob.setup(check=False)
         except ValueError as err:
             self.assertEqual(str(err), "'state_var' option in Brent solver of root must be specified")
         else:
