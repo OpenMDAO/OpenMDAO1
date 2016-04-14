@@ -1333,6 +1333,67 @@ class System(object):
             return tuples
         return []
 
+    def list_params(self, stream=sys.stdout):
+        """ Returns a list of parameters that are unconnected at this level
+        of the hierarchy.
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the state info to. Default is sys.stdout.
+
+        Returns
+        -------
+            List of unconnected params.
+        """
+
+        pdict = self._params_dict
+        conns = self.connections
+        to_prom_name = self._sysdata.to_prom_name
+
+        p_conn = [p for p in pdict if p in conns]
+        p_unconn = [p for p in pdict if p not in conns]
+
+        name = self.pathname
+        if name != '':
+            name += '.'
+
+        p_outscope = [p for p in p_conn if not conns[p][0].startswith(name)]
+
+        if len(p_unconn) == 0:
+            print('')
+            print("No unconnected parameters found.", file=stream)
+            print("---------------------------------", file=stream)
+        else:
+            print('')
+            print("Unconnected parameters:", file=stream)
+            print("-------------------------", file=stream)
+
+        for param in p_unconn:
+            prom_param = to_prom_name[param]
+            if param.startswith(name):
+                param = param[len(name):]
+
+            if prom_param != param:
+                print("%s (%s))" % (param, prom_param))
+            else:
+                print(param)
+
+        if len(p_outscope) == 0:
+            print('')
+            print("No parameters connected to sources in higher groups.", file=stream)
+            print("-----------------------------------------------------", file=stream)
+        else:
+            print('')
+            print("Parameters connected to sources in higher groups:", file=stream)
+            print("--------------------------------------------------", file=stream)
+
+        for param in p_outscope:
+            print("%s: connected to '%s'" % (param.lstrip(name), conns[param][0]))
+
+        print('')
+        return p_unconn, p_outscope
+
 
 class _DummyContext(object):
     """Used in place of DirContext for those systems that don't define their
