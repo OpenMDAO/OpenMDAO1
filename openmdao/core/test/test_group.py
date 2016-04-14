@@ -648,12 +648,12 @@ class TestGroup(unittest.TestCase):
 
         top.setup(check=False)
 
-        plist1, plist2 = g2.list_params()
+        plist1, plist2 = g2.list_params(stream=None)
 
         self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6'])
         self.assertEqual(plist2, ['g1.g2.comp4.c', 'g1.g2.comp5.c_a'])
 
-        plist1, plist2 = g1.list_params()
+        plist1, plist2 = g1.list_params(stream=None)
 
         self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6', 'g1.comp2.p1', 'g1.comp3.p2', 'g1.comp8.p7', 'g1.comp9.p8'])
         self.assertEqual(plist2, ['g1.comp2.b', 'g1.comp3.b_a'])

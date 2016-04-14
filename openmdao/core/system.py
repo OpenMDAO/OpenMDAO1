@@ -1334,17 +1334,17 @@ class System(object):
         return []
 
     def list_params(self, stream=sys.stdout):
-        """ Returns a list of parameters that are unconnected at this level
-        of the hierarchy.
+        """ Returns a list of parameters that are unconnected, and a list of
+        params that are only connected at a higher level of the hierarchy.
 
         Args
         ----
         stream : output stream, optional
-            Stream to write the state info to. Default is sys.stdout.
+            Stream to write the params info to. Default is sys.stdout.
 
         Returns
         -------
-            List of unconnected params.
+            List of unconnected params, List of params connected in a higher scope.
         """
 
         pdict = self._params_dict
@@ -1361,11 +1361,11 @@ class System(object):
         p_outscope = [p for p in p_conn if not conns[p][0].startswith(name)]
 
         if len(p_unconn) == 0:
-            print('')
+            print('', file=stream)
             print("No unconnected parameters found.", file=stream)
             print("---------------------------------", file=stream)
         else:
-            print('')
+            print('', file=stream)
             print("Unconnected parameters:", file=stream)
             print("-------------------------", file=stream)
 
@@ -1375,23 +1375,26 @@ class System(object):
                 param = param[len(name):]
 
             if prom_param != param:
-                print("%s (%s))" % (param, prom_param))
+                print("%s (%s))" % (param, prom_param), file=stream)
             else:
-                print(param)
+                print(param, file=stream)
 
         if len(p_outscope) == 0:
-            print('')
-            print("No parameters connected to sources in higher groups.", file=stream)
-            print("-----------------------------------------------------", file=stream)
+            print('', file=stream)
+            print("No parameters connected to sources in higher groups.",
+                  file=stream)
+            print("-----------------------------------------------------",
+                  file=stream)
         else:
-            print('')
+            print('', file=stream)
             print("Parameters connected to sources in higher groups:", file=stream)
             print("--------------------------------------------------", file=stream)
 
         for param in p_outscope:
-            print("%s: connected to '%s'" % (param.lstrip(name), conns[param][0]))
+            print("%s: connected to '%s'" % (param.lstrip(name), conns[param][0]),
+                  file=stream)
 
-        print('')
+        print('', file=stream)
         return p_unconn, p_outscope
 
 
